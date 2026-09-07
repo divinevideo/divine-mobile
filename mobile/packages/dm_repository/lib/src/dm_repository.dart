@@ -6208,6 +6208,31 @@ class DmRepository {
       throw ArgumentError.value(content, 'content', 'must not be empty');
     }
 
+    // Divine does not support a self-addressed conversation (#8351, decided on
+    // #8261). [sendMessage] and the file path already refuse one; this path did
+    // not, so a group whose only recipient was the sender still published a
+    // wrap the app cannot read back — the receive path drops a participant list
+    // that collapses to one pubkey (#2824) — and that nobody can delete, since
+    // funnelcake matches a kind-5 against the wrap's throwaway ephemeral author
+    // rather than the real sender (#8699).
+    //
+    // Returned rather than thrown, and one result per recipient, matching the
+    // send gate below: callers branch on `success` per recipient.
+    //
+    // Only the self-ONLY case is refused. Whether a group send keeps its sender
+    // in the recipient list is an open product decision (#8359), so a group
+    // that also carries real recipients is left exactly as it was. Note
+    // `recipientPubkeys` is non-empty by the guard above, so `every` cannot be
+    // vacuously true here.
+    if (recipientPubkeys.every(_isSelf)) {
+      return [
+        for (final _ in recipientPubkeys)
+          const NIP17SendResult.failure(
+            'refused: a message cannot be addressed to its own sender',
+          ),
+      ];
+    }
+
     // Send gate (#176) — group all-or-nothing: a restricted sender (protected
     // minor) may only message a group where EVERY recipient is approved.
     // Per-recipient gating in sendRumor alone would still deliver to the

@@ -1849,6 +1849,71 @@ void main() {
         );
       });
 
+      // The one-to-one and file send paths refuse a self-addressed message
+      // (#8351, decided on #8261); the group path did not, so a group whose
+      // only recipient is the sender still published (#8699).
+      test('refuses a group addressed only to the sender (#8699)', () async {
+        final repository = createRepository(); // viewer is _validPubkeyA
+
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [_validPubkeyA],
+          content: 'note to self',
+        );
+
+        expect(results, hasLength(1));
+        expect(results.every((r) => !r.success), isTrue);
+        expect(results.first.error, contains('refused'));
+        verifyNever(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: any(named: 'recipientPubkey'),
+            targetRelays: any(named: 'targetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          ),
+        );
+      });
+
+      // Matches on the sender's own key regardless of casing, like [_isSelf].
+      test('refuses a self-only group whatever the pubkey casing', () async {
+        final repository = createRepository();
+
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [_validPubkeyA.toUpperCase()],
+          content: 'note to self',
+        );
+
+        expect(results.every((r) => !r.success), isTrue);
+        expect(results.first.error, contains('refused'));
+      });
+
+      // A group containing the sender AND real recipients is deliberately NOT
+      // refused: whether a group send keeps its sender in the recipient list is
+      // an open product decision (#8359). Only the self-ONLY case is settled,
+      // so this pins the boundary rather than letting the guard widen silently.
+      test('does not refuse a group that also has a real recipient', () async {
+        // The sender passes the gate, the real recipient does not, so the send
+        // stops at the #176 gate rather than the self-only refusal. Stopping
+        // there is the proof: the guard under test would have returned before
+        // any gate call at all.
+        when(
+          () => mockMessageService.canSendTo(_validPubkeyA),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockMessageService.canSendTo(_validPubkeyB),
+        ).thenAnswer((_) async => false);
+
+        final repository = createRepository();
+
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [_validPubkeyA, _validPubkeyB],
+          content: 'group including me',
+        );
+
+        expect(results.first.error, contains('blocked'));
+        verify(() => mockMessageService.canSendTo(_validPubkeyB)).called(1);
+      });
+
       test(
         'all-or-nothing: any non-approved participant blocks the whole '
         'group send (#176)',
