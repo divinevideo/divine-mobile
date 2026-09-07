@@ -3830,10 +3830,11 @@ void main() {
           ),
         );
         addTimelineClip();
+        final notifier = container.read(videoEditorProvider.notifier);
 
-        expect(await editorNotifier.autosaveChanges(), isTrue);
+        expect(await notifier.autosaveChanges(), isTrue);
         expect(
-          editorNotifier.deferredFileCleanupForTest,
+          notifier.deferredFileCleanupForTest,
           containsAll([kept.path, goner.path]),
         );
         expect(kept.existsSync(), isTrue);
@@ -3843,8 +3844,8 @@ void main() {
           isTrue,
         );
 
-        await editorNotifier.reset(keepAutosavedDraft: true);
-        await drainDeferredCleanup(editorNotifier);
+        await notifier.reset(keepAutosavedDraft: true);
+        await settleBackgroundWork();
 
         expect(
           kept.existsSync(),
