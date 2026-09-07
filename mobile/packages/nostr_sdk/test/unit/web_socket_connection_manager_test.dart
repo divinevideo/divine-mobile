@@ -337,6 +337,15 @@ void main() {
         expect(slowManager.state, equals(ConnectionState.disconnected));
         expect(errors, isNotEmpty);
         expect(errors.first, contains('timed out'));
+        // Without the duration, a stalled host and a caller out of budget
+        // log the same line.
+        expect(
+          logMessages,
+          contains(
+            'Connection timed out after '
+            '${const Duration(milliseconds: 100)}',
+          ),
+        );
 
         await slowManager.dispose();
       });

@@ -208,6 +208,7 @@ class WebSocketConnectionManager {
     _setState(ConnectionState.connecting);
 
     WebSocketChannel? channel;
+    Duration? handshakeTimeout;
     try {
       final uri = Uri.parse(url);
       if (uri.scheme != 'ws' && uri.scheme != 'wss') {
@@ -217,7 +218,7 @@ class WebSocketConnectionManager {
       // Budget first: a socket created with no time left to await it leaves
       // `channel.ready` unlistened, so its later failure escapes as an
       // unhandled zone error — what the `await` below exists to prevent.
-      final handshakeTimeout = _remainingOr(config.connectionTimeout, deadline);
+      handshakeTimeout = _remainingOr(config.connectionTimeout, deadline);
       if (handshakeTimeout == Duration.zero) {
         log('Connect abandoned: $url - no handshake time left');
         _setState(ConnectionState.disconnected);
@@ -271,7 +272,9 @@ class WebSocketConnectionManager {
       _setState(ConnectionState.disconnected);
       return false;
     } on TimeoutException {
-      log('Connection timed out before its allowed deadline');
+      // Name the budget: it is now min(connectionTimeout, time left), so a
+      // stall and a spent deadline would otherwise log identically.
+      log('Connection timed out after $handshakeTimeout');
       _emitError('Connection timed out');
       // Clean up the channel that never finished connecting
       await _closeOrphanedChannel(channel);
