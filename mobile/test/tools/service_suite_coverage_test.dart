@@ -26,11 +26,14 @@ void main() {
       String on = 'on:\n  pull_request:\n    branches: [main]\n',
       String stepCondition = '',
     }) {
-      final suiteLines = suites
-          .map(
-            (suite) => '          integration_test/e2e/${suite}_test.dart \\\n',
-          )
-          .join();
+      // Same shape as the real workflow: 12-space indent, and the last suite
+      // carries the '; do' rather than it sitting on a line of its own.
+      final suiteLines = suites.indexed.map((entry) {
+        final isLast = entry.$1 == suites.length - 1;
+        final terminator = isLast ? '; do\n' : ' \\\n';
+        return '            integration_test/e2e/${entry.$2}_test.dart'
+            '$terminator';
+      }).join();
       File(workflowPath)
         ..createSync(recursive: true)
         ..writeAsStringSync('''
@@ -42,8 +45,7 @@ jobs:
       ${includeAnchor ? '- name: 🚀 Run service integration tests' : '- name: Different step'}
 $stepCondition        run: |
           for suite in \\
-$suiteLines          ; do
-            flutter test "\$suite"
+$suiteLines            flutter test "\$suite"
           done
 $afterLoop
 ''');
@@ -98,6 +100,23 @@ $afterLoop
 
       expect(result.exitCode, equals(0), reason: result.stdout.toString());
       expect(result.stdout, contains('no new entries'));
+    });
+
+    test('accounts for every suite in the committed workflow and manifest', () {
+      final result = Process.runSync(
+        'bash',
+        [scriptPath],
+        environment: {
+          'SERVICE_SUITE_BASE_REF': 'refs/heads/service-suite-test-no-base',
+          'SERVICE_SUITE_ALLOW_NO_BASE': '1',
+        },
+      );
+
+      expect(
+        result.exitCode,
+        equals(0),
+        reason: 'stdout=${result.stdout} stderr=${result.stderr}',
+      );
     });
 
     test('fails when a suite is unaccounted for', () {
