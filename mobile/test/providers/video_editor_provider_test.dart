@@ -3505,6 +3505,7 @@ void main() {
     late AppDatabase database;
     late ProviderContainer container;
     late Directory tempDir;
+    late VideoEditorNotifier editorNotifier;
     var containerDisposed = false;
 
     void disposeContainer() {
@@ -3512,6 +3513,16 @@ void main() {
       containerDisposed = true;
       container.dispose();
     }
+
+    // Bounds every drain. The 20x pumpEventQueue poll this replaced bounded
+    // itself and failed with its own reason string; a bare await on a wedged
+    // cleanup instead hangs to the suite timeout with nothing naming deferred
+    // cleanup as the stuck party.
+    Future<void> drainDeferredCleanup(VideoEditorNotifier notifier) =>
+        notifier.pendingDeferredCleanupForTest.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('deferred file cleanup did not settle'),
+        );
 
     setUpAll(() {
       registerFallbackValue(
@@ -3543,15 +3554,28 @@ void main() {
           databaseProvider.overrideWithValue(database),
         ],
       );
+      // Captured here, not in tearDown: a test that disposes the container
+      // itself must still get the drain, and `container.read` throws once the
+      // container is gone.
+      editorNotifier = container.read(videoEditorProvider.notifier);
     });
 
     tearDown(() async {
-      disposeContainer();
-      // Let any fire-and-forget onDispose flush finish querying the DB before
-      // we close it, so a still-deferred file doesn't race a closed database.
-      await pumpEventQueue();
-      await database.close();
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      try {
+        // Unconditional: every test needs the deferred cleanup to stop
+        // querying the DAOs before the database closes under it. The old
+        // `if (!containerDisposed)` guard skipped the drain entirely for the
+        // three tests that dispose the container themselves.
+        disposeContainer();
+        await drainDeferredCleanup(editorNotifier);
+      } finally {
+        // The drain can throw — the reference check inside
+        // `deleteFilesIfUnreferenced` is unguarded — and an open database or
+        // a leftover temp dir would then outlive this suite in the merged
+        // test isolate.
+        await database.close();
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      }
     });
 
     // Stubs the next autosave to hand [orphan] to the deferral sink instead of
@@ -3588,21 +3612,12 @@ void main() {
           );
     }
 
-    Future<void> expectFileReaped(File file, {required String reason}) async {
-      for (var attempt = 0; attempt < 20; attempt++) {
-        await pumpEventQueue();
-        if (!file.existsSync()) return;
-      }
-
-      expect(file.existsSync(), isFalse, reason: reason);
-    }
-
     test('an autosave keeps its orphaned files alive', () async {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
 
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
 
       expect(
         orphan.existsSync(),
@@ -3618,31 +3633,59 @@ void main() {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
-      // reset() is the real session-end hook (publish / discard / start-over),
-      // not the @visibleForTesting flush — this exercises the wiring an app
-      // actually hits when the editor closes.
       await notifier.reset(keepAutosavedDraft: true);
+      await drainDeferredCleanup(notifier);
 
-      await expectFileReaped(
-        orphan,
-        reason: 'session end reaps a deferred file once nothing references it',
+      expect(
+        orphan.existsSync(),
+        isFalse,
+        reason:
+            'session end reaps a deferred file without waiting for container '
+            'teardown',
       );
       expect(notifier.deferredFileCleanupForTest, isEmpty);
+    });
+
+    test('reset cleanup remains awaitable during container teardown', () async {
+      final orphan = stubDeferringAutosave();
+      addTimelineClip();
+      final notifier = container.read(videoEditorProvider.notifier);
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+
+      await notifier.reset(keepAutosavedDraft: true);
+      // The precondition this test exists for: reset's flush is still in
+      // flight here, so the reap below is the one reset started rather than
+      // one onDispose ran. reset(keepAutosavedDraft: true) has no await after
+      // it starts the flush, so it cannot have finished.
+      expect(orphan.existsSync(), isTrue);
+      disposeContainer();
+      await drainDeferredCleanup(notifier);
+
+      expect(
+        orphan.existsSync(),
+        isFalse,
+        reason: 'onDispose must not hide cleanup that reset already started',
+      );
     });
 
     test('container teardown reaps deferred files as a safety net', () async {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
-      await container.read(videoEditorProvider.notifier).autosaveChanges();
+      final notifier = container.read(videoEditorProvider.notifier);
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
       expect(orphan.existsSync(), isTrue);
 
-      // Drives the real ref.onDispose wiring, not the @visibleForTesting flush.
       disposeContainer();
+      await drainDeferredCleanup(notifier);
 
-      await expectFileReaped(
-        orphan,
+      expect(
+        orphan.existsSync(),
+        isFalse,
         reason: 'onDispose reaps deferred files left when reset never ran',
       );
     });
@@ -3729,14 +3772,16 @@ void main() {
         finalRenderedClip: renderedClip('new-rendered', newRendered),
       );
 
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
       expect(oldRendered.existsSync(), isTrue);
       expect(notifier.deferredFileCleanupForTest, contains(oldRendered.path));
 
       disposeContainer();
+      await drainDeferredCleanup(notifier);
 
-      await expectFileReaped(
-        oldRendered,
+      expect(
+        oldRendered.existsSync(),
+        isFalse,
         reason:
             'onDispose must reap a replaced rendered export once the new '
             'draft row no longer references it',

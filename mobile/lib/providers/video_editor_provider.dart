@@ -121,7 +121,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// the pre-split source clip after a split), so deleting them mid-session
   /// breaks undo/redo — it lands on a clip whose source file is gone. We hold
   /// them here and reap them at editor-session end via
-  /// [_flushDeferredFileCleanup] ([reset], with [build]'s `onDispose` as a
+  /// [_startDeferredFileCleanup] ([reset], with [build]'s `onDispose` as a
   /// teardown safety net), once the history that could resurrect them no longer
   /// exists. The reaper still runs each path through the reference check, so a
   /// file the user restored (and a later autosave re-referenced) is kept.
@@ -131,6 +131,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// run from `onDispose` without reading providers after disposal.
   DraftsDao? _deferredCleanupDraftsDao;
   ClipsDao? _deferredCleanupClipsDao;
+
+  /// In-flight [_startDeferredFileCleanup] operations, held only so
+  /// [pendingDeferredCleanupForTest] can await them. Production never reads
+  /// this back; the cleanup calls stay fire-and-forget.
+  final Set<Future<void>> _pendingDeferredCleanup = {};
 
   /// Get clip manager notifier.
   ClipManagerNotifier get _clipManager =>
@@ -167,7 +172,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       // session end). Best-effort and fire-and-forget: the container is tearing
       // down. On mobile this often never fires (OS kill), which is why [reset]
       // is the primary reaper.
-      unawaited(_flushDeferredFileCleanup());
+      _startDeferredFileCleanup();
       Log.debug(
         '🧹 VideoEditorNotifier disposed',
         name: 'VideoEditorNotifier',
@@ -277,7 +282,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
-    unawaited(_flushDeferredFileCleanup());
+    _startDeferredFileCleanup();
     draftId = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
@@ -821,11 +826,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   /// Reap the clip/thumbnail files deferred during this session (see
-  /// [_deferredFileCleanup]). Runs at editor-session end ([reset]) and as a
-  /// teardown safety net ([build]'s `onDispose`); both call it, and it clears
-  /// the set so a second call is a no-op. Each path still goes through the
-  /// draft/library reference check, so anything a surviving draft (or the
-  /// library) references is kept — only genuinely-orphaned files are removed.
+  /// [_deferredFileCleanup]). Reached through [_startDeferredFileCleanup] at
+  /// editor-session end ([reset]) and as a teardown safety net ([build]'s
+  /// `onDispose`); it clears the set, so a second call is a no-op. Each path
+  /// still goes through the draft/library reference check, so anything a
+  /// surviving draft (or the library) references is kept — only
+  /// genuinely-orphaned files are removed.
+  ///
+  /// Reach it through [_startDeferredFileCleanup] rather than calling it
+  /// directly: a direct call is invisible to [pendingDeferredCleanupForTest].
   Future<void> _flushDeferredFileCleanup() async {
     if (_deferredFileCleanup.isEmpty) return;
     final draftsDao = _deferredCleanupDraftsDao;
@@ -839,6 +848,21 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       draftsDao: draftsDao,
       clipsDao: clipsDao,
     );
+  }
+
+  /// Starts a best-effort cleanup without blocking the editor lifecycle.
+  ///
+  /// The handle goes into [_pendingDeferredCleanup] so tests can await it;
+  /// that set is the only reason this is not a bare `unawaited(...)`. It is a
+  /// set rather than one slot because [reset] and [build]'s `onDispose` can
+  /// each have an operation running, and a single slot would drop the first.
+  void _startDeferredFileCleanup() {
+    late final Future<void> operation;
+    operation = _flushDeferredFileCleanup().whenComplete(() {
+      _pendingDeferredCleanup.remove(operation);
+    });
+    _pendingDeferredCleanup.add(operation);
+    unawaited(operation);
   }
 
   /// Queue clip-owned files that became unreachable in the live editor state.
@@ -858,6 +882,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Test hook: the set of files awaiting cleanup.
   @visibleForTesting
   Set<String> get deferredFileCleanupForTest => _deferredFileCleanup;
+
+  /// Completes when the cleanups in flight *at the moment it is read*
+  /// complete.
+  ///
+  /// A snapshot, not a barrier: it ignores anything started afterwards and
+  /// resolves immediately when nothing is in flight, so read it after the
+  /// call whose cleanup you mean to await. It also covers only
+  /// [_startDeferredFileCleanup] — other fire-and-forget work on this
+  /// notifier and on [ClipManagerNotifier] settles on its own schedule.
+  @visibleForTesting
+  Future<void> get pendingDeferredCleanupForTest async {
+    await Future.wait(_pendingDeferredCleanup.toList());
+  }
 
   /// Save the current video project as a draft.
   ///
