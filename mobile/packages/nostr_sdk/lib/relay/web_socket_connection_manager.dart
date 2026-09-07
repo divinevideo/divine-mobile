@@ -214,6 +214,16 @@ class WebSocketConnectionManager {
         throw ArgumentError('Invalid WebSocket URL scheme: ${uri.scheme}');
       }
 
+      // Budget first: a socket created with no time left to await it leaves
+      // `channel.ready` unlistened, so its later failure escapes as an
+      // unhandled zone error — what the `await` below exists to prevent.
+      final handshakeTimeout = _remainingOr(config.connectionTimeout, deadline);
+      if (handshakeTimeout == Duration.zero) {
+        log('Connect abandoned: $url - no handshake time left');
+        _setState(ConnectionState.disconnected);
+        return false;
+      }
+
       log('Connecting to $url');
       channel = _channelFactory.create(uri);
       _channel = channel;
@@ -222,8 +232,6 @@ class WebSocketConnectionManager {
       // IOWebSocketChannel.connect() returns immediately and DNS/TLS
       // failures surface as unhandled async errors in the zone instead
       // of being caught here.
-      final handshakeTimeout = _remainingOr(config.connectionTimeout, deadline);
-      if (handshakeTimeout == Duration.zero) throw TimeoutException('deadline');
       await channel.ready.timeout(handshakeTimeout);
 
       // A dispose, a disconnect, or a newer connect can all run inside the
