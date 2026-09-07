@@ -9,7 +9,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/providers/app_lifecycle_provider.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/router.dart';
@@ -61,14 +61,12 @@ void main() {
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
             videoEventServiceProvider.overrideWithValue(fakeVideoService),
-            appForegroundProvider.overrideWithValue(
-              const AsyncValue.data(true),
-            ),
             overlayPolicyProvider.overrideWithValue(OverlayPolicy.alwaysOn),
             analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
         );
+        container.read(appForegroundProvider.notifier).setForeground(true);
 
         await tester.pumpWidget(
           UncontrolledProviderScope(
@@ -126,11 +124,11 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(mockAuthService),
           videoEventServiceProvider.overrideWithValue(fakeVideoService),
-          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
           analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
+      container.read(appForegroundProvider.notifier).setForeground(true);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -178,11 +176,11 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(mockAuthService),
           videoEventServiceProvider.overrideWithValue(fakeVideoService),
-          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
           analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
+      container.read(appForegroundProvider.notifier).setForeground(true);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
