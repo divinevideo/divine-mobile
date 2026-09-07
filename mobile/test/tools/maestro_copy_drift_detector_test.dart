@@ -851,5 +851,31 @@ void main() {
       expect(res.exitCode, 1);
       expect(res.stderr, contains('DRIFT'));
     });
+
+    test('does not excuse a stale tap that is only a multiline substring', () {
+      writeArb({
+        'removeBody': 'This will\nSign you out immediately\nfrom this device',
+      });
+      writeFlow(
+        'asserts/menu.yaml',
+        '- assertVisible: |-\n'
+            '    This will\n'
+            '    Sign you out immediately\n'
+            '    from this device\n'
+            '- tapOn: Sign you out\n',
+      );
+      writeManifest(
+        'removeBody\te2e/maestro/asserts/menu.yaml'
+        '\tbound:This will Sign you out immediately from this device\n',
+      );
+
+      // The multiline binds, but "Sign you out" is a separate stale tap, not a
+      // constituent line of the block scalar, so it must still fail.
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('UNBOUND'));
+      expect(res.stderr, contains('Sign you out'));
+    });
   });
 }

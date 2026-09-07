@@ -178,6 +178,7 @@ def flow_literals(path):
     accessibility labels emit each non-blank line plus any contained multi-line
     ARB value so titles, subtitles, and paragraph copy receive bindings."""
     lits = []
+    member_lines = set()
 
     def add_literal(value):
         v = unquote(value)
@@ -217,14 +218,25 @@ def flow_literals(path):
                     index += 1
                 normalized_lines = [norm(line) for line in block_lines]
                 for multiline_value in multiline_values:
-                    if any(" ".join(normalized_lines[start:end]) == multiline_value
-                           for start in range(len(normalized_lines))
-                           for end in range(start + 1, len(normalized_lines) + 1)):
+                    span = next(
+                        ((start, end)
+                         for start in range(len(normalized_lines))
+                         for end in range(start + 1, len(normalized_lines) + 1)
+                         if " ".join(normalized_lines[start:end])
+                         == multiline_value),
+                        None,
+                    )
+                    if span is not None:
                         add_literal(multiline_value)
+                        # Only the block-scalar lines that actually compose the
+                        # bound multiline are excused from the inverse check —
+                        # an unrelated literal that is merely a substring of it
+                        # (e.g. a separate stale tapOn) must still be caught.
+                        member_lines.update(normalized_lines[span[0]:span[1]])
             else:
                 add_literal(v)
             break
-    return lits
+    return lits, member_lines
 
 mobile_dir = os.path.abspath(os.path.join(e2e_dir, "..", ".."))
 
@@ -270,9 +282,13 @@ flows.sort()
 found = {}
 total_literals = set()  # every asserted/tapped literal extracted, bound or not
 literals_by_flow = {}   # flow_relpath -> set of extracted literals
+multiline_members_by_flow = {}  # flow_relpath -> block lines of a bound multiline
 for fpath in flows:
     rel = os.path.relpath(fpath, mobile_dir)
-    for lit in flow_literals(fpath):
+    lits, member_lines = flow_literals(fpath)
+    if member_lines:
+        multiline_members_by_flow[rel] = member_lines
+    for lit in lits:
         total_literals.add((lit, rel))
         literals_by_flow.setdefault(rel, set()).add(lit)
         keys = exact_values.get(lit)
@@ -480,13 +496,11 @@ rendered_pairs = {
     if rendered is not None
 }
 rendered_literals = {rendered for rendered, _rel in rendered_pairs}
-bound_multiline_parts = set()
-for multiline in multiline_values:
-    for rel in {rel for (lit, rel) in found if lit == multiline}:
-        bound_multiline_parts.update(
-            (lit, rel) for lit in literals_by_flow.get(rel, set())
-            if lit in multiline
-        )
+bound_multiline_parts = {
+    (lit, rel)
+    for rel, members in multiline_members_by_flow.items()
+    for lit in members
+}
 
 def validate_inverse_literals():
     failures = 0
