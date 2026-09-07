@@ -100,9 +100,9 @@ void main() {
       });
 
       test('returns urgent when below minimum_version', () async {
-        when(() => client.fetchLatestRelease()).thenAnswer(
-          (_) async => buildInfo(minimumVersion: '1.0.6'),
-        );
+        when(
+          () => client.fetchLatestRelease(),
+        ).thenAnswer((_) async => buildInfo(minimumVersion: '1.0.6'));
 
         final repo = buildRepo();
         final result = await repo.checkForUpdate();
@@ -161,10 +161,7 @@ void main() {
         final repo = buildRepo();
         final result = await repo.checkForUpdate();
 
-        expect(
-          result!.releaseHighlights,
-          equals(['Feature A', 'Feature B']),
-        );
+        expect(result!.releaseHighlights, equals(['Feature A', 'Feature B']));
       });
 
       test('returns none on fetch failure', () async {
@@ -178,6 +175,32 @@ void main() {
         expect(result!.urgency, equals(UpdateUrgency.none));
       });
 
+      test('keeps a cached available update when the fetch fails', () async {
+        SharedPreferences.setMockInitialValues({
+          UpdatePrefsKeys.lastChecked: DateTime.now()
+              .subtract(const Duration(hours: 25))
+              .toIso8601String(),
+          UpdatePrefsKeys.latestVersion: '1.0.8',
+          UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+        });
+        prefs = await SharedPreferences.getInstance();
+        when(
+          () => client.fetchLatestRelease(),
+        ).thenThrow(const AppVersionFetchException('no network'));
+
+        final repo = buildRepo(installSource: InstallSource.playStore);
+        final result = await repo.checkForUpdate();
+
+        expect(
+          result,
+          const UpdateCheckResult(
+            urgency: UpdateUrgency.none,
+            downloadUrl: DownloadUrls.playStore,
+            latestVersion: '1.0.8',
+          ),
+        );
+      });
+
       test('returns null on first install', () async {
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
@@ -186,10 +209,7 @@ void main() {
         final result = await repo.checkForUpdate();
 
         expect(result, isNull);
-        expect(
-          prefs.getString(UpdatePrefsKeys.lastChecked),
-          isNotNull,
-        );
+        expect(prefs.getString(UpdatePrefsKeys.lastChecked), isNotNull);
       });
 
       test('returns null when within 24h TTL', () async {
@@ -207,11 +227,100 @@ void main() {
         verifyNever(() => client.fetchLatestRelease());
       });
 
-      test('gentle dismissed hides until next version', () async {
-        await prefs.setString(
-          UpdatePrefsKeys.dismissedVersion,
-          '1.0.8',
+      test('persists the resolved update for the next launch', () async {
+        when(
+          () => client.fetchLatestRelease(),
+        ).thenAnswer((_) async => buildInfo());
+
+        final repo = buildRepo(installSource: InstallSource.playStore);
+        final result = await repo.checkForUpdate();
+
+        expect(result!.latestVersion, equals('1.0.8'));
+        expect(prefs.getString(UpdatePrefsKeys.latestVersion), equals('1.0.8'));
+        expect(
+          prefs.getString(UpdatePrefsKeys.downloadUrl),
+          equals(DownloadUrls.playStore),
         );
+      });
+
+      test('restores a cached available update within the 24h TTL', () async {
+        SharedPreferences.setMockInitialValues({
+          UpdatePrefsKeys.lastChecked: DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+          UpdatePrefsKeys.latestVersion: '1.0.8',
+          UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+        });
+        prefs = await SharedPreferences.getInstance();
+
+        final repo = buildRepo(installSource: InstallSource.playStore);
+        final result = await repo.checkForUpdate();
+
+        expect(
+          result,
+          const UpdateCheckResult(
+            urgency: UpdateUrgency.none,
+            downloadUrl: DownloadUrls.playStore,
+            latestVersion: '1.0.8',
+          ),
+        );
+        verifyNever(() => client.fetchLatestRelease());
+      });
+
+      test(
+        'clears the cached update once the check reports no update',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            UpdatePrefsKeys.lastChecked: DateTime.now()
+                .subtract(const Duration(hours: 25))
+                .toIso8601String(),
+            UpdatePrefsKeys.latestVersion: '1.0.8',
+            UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+          });
+          prefs = await SharedPreferences.getInstance();
+          when(
+            () => client.fetchLatestRelease(),
+          ).thenAnswer((_) async => buildInfo());
+
+          final repo = buildRepo(
+            currentVersion: '1.0.8',
+            installSource: InstallSource.playStore,
+          );
+          final result = await repo.checkForUpdate();
+
+          expect(result, equals(const UpdateCheckResult.none()));
+          expect(prefs.getString(UpdatePrefsKeys.latestVersion), isNull);
+          expect(prefs.getString(UpdatePrefsKeys.downloadUrl), isNull);
+        },
+      );
+
+      test(
+        'ignores a cached update after the app reaches that version',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            UpdatePrefsKeys.lastChecked: DateTime.now()
+                .subtract(const Duration(hours: 1))
+                .toIso8601String(),
+            UpdatePrefsKeys.latestVersion: '1.0.8',
+            UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+          });
+          prefs = await SharedPreferences.getInstance();
+
+          final repo = buildRepo(
+            currentVersion: '1.0.8',
+            installSource: InstallSource.playStore,
+          );
+          final result = await repo.checkForUpdate();
+
+          expect(result, isNull);
+          expect(prefs.getString(UpdatePrefsKeys.latestVersion), isNull);
+          expect(prefs.getString(UpdatePrefsKeys.downloadUrl), isNull);
+          verifyNever(() => client.fetchLatestRelease());
+        },
+      );
+
+      test('gentle dismissed hides until next version', () async {
+        await prefs.setString(UpdatePrefsKeys.dismissedVersion, '1.0.8');
         await prefs.setString(
           UpdatePrefsKeys.dismissedAt,
           DateTime.now().toIso8601String(),
@@ -230,10 +339,7 @@ void main() {
       });
 
       test('moderate reappears after 3-day cooldown', () async {
-        await prefs.setString(
-          UpdatePrefsKeys.dismissedVersion,
-          '1.0.8',
-        );
+        await prefs.setString(UpdatePrefsKeys.dismissedVersion, '1.0.8');
         await prefs.setString(
           UpdatePrefsKeys.dismissedAt,
           DateTime.now().subtract(const Duration(days: 4)).toIso8601String(),
@@ -252,10 +358,7 @@ void main() {
       });
 
       test('new version resets dismissal', () async {
-        await prefs.setString(
-          UpdatePrefsKeys.dismissedVersion,
-          '1.0.7',
-        );
+        await prefs.setString(UpdatePrefsKeys.dismissedVersion, '1.0.7');
         await prefs.setString(
           UpdatePrefsKeys.dismissedAt,
           DateTime.now().toIso8601String(),
@@ -283,10 +386,7 @@ void main() {
           prefs.getString(UpdatePrefsKeys.dismissedVersion),
           equals('1.0.8'),
         );
-        expect(
-          prefs.getString(UpdatePrefsKeys.dismissedAt),
-          isNotNull,
-        );
+        expect(prefs.getString(UpdatePrefsKeys.dismissedAt), isNotNull);
       });
     });
   });

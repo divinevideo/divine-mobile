@@ -12163,4 +12163,28 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'Er is een nieuwe update. Bekijk hem →';
+
+  @override
+  String get updateModerateTitle =>
+      'Er is een update sinds je laatste controle';
+
+  @override
+  String get updateUrgentTitle => 'Je mist belangrijke oplossingen';
+
+  @override
+  String get updateNotNow => 'Niet nu';
+
+  @override
+  String get updateAction => 'Bijwerken';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Nieuw in $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Update beschikbaar';
 }

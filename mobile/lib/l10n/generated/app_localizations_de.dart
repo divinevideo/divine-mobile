@@ -12246,4 +12246,29 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'Ein frisches Update ist da. Schau es dir an →';
+
+  @override
+  String get updateModerateTitle =>
+      'Seit deinem letzten Besuch gibt es ein Update';
+
+  @override
+  String get updateUrgentTitle => 'Dir fehlen wichtige Fehlerbehebungen';
+
+  @override
+  String get updateNotNow => 'Nicht jetzt';
+
+  @override
+  String get updateAction => 'Aktualisieren';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Neu in $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Update verfügbar';
 }

@@ -12084,4 +12084,28 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'ایک نئی اپ ڈیٹ آ گئی ہے۔ دیکھیں ←';
+
+  @override
+  String get updateModerateTitle =>
+      'آپ کے آخری بار چیک کرنے کے بعد ایک اپ ڈیٹ آئی ہے';
+
+  @override
+  String get updateUrgentTitle => 'آپ اہم اصلاحات سے محروم ہیں';
+
+  @override
+  String get updateNotNow => 'ابھی نہیں';
+
+  @override
+  String get updateAction => 'اپ ڈیٹ کریں';
+
+  @override
+  String updateNewIn(String version) {
+    return '$version میں نیا:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'اپ ڈیٹ دستیاب ہے';
 }

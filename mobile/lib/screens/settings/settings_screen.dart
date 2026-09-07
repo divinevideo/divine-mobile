@@ -12,6 +12,7 @@ import 'package:keycast_flutter/keycast_flutter.dart'
     show SessionExpiredException;
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/settings_account/settings_account_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -767,16 +768,23 @@ class _VersionTile extends ConsumerWidget {
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                _appVersion.isEmpty
-                    ? context.l10n.settingsVersionEmpty
-                    : context.l10n.settingsVersion(_appVersion),
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.mutedText,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      _appVersion.isEmpty
+                          ? context.l10n.settingsVersionEmpty
+                          : context.l10n.settingsVersion(_appVersion),
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.mutedText,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SettingsUpdateAction(),
+              ],
             ),
           ),
         ),

@@ -12190,4 +12190,29 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'Uma nova atualização acabou de chegar. Confira →';
+
+  @override
+  String get updateModerateTitle =>
+      'Há uma atualização desde a última vez que você verificou';
+
+  @override
+  String get updateUrgentTitle => 'Você está sem correções importantes';
+
+  @override
+  String get updateNotNow => 'Agora não';
+
+  @override
+  String get updateAction => 'Atualizar';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Novidades na versão $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Atualização disponível';
 }

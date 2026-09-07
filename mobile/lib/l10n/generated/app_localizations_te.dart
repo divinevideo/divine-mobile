@@ -12439,4 +12439,28 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get updateGentleBanner => 'కొత్త అప్‌డేట్ వచ్చింది. చూడండి →';
+
+  @override
+  String get updateModerateTitle =>
+      'మీరు చివరిసారి చూసిన తర్వాత ఒక అప్‌డేట్ వచ్చింది';
+
+  @override
+  String get updateUrgentTitle => 'మీకు ముఖ్యమైన పరిష్కారాలు అందడం లేదు';
+
+  @override
+  String get updateNotNow => 'ఇప్పుడు వద్దు';
+
+  @override
+  String get updateAction => 'అప్‌డేట్ చేయండి';
+
+  @override
+  String updateNewIn(String version) {
+    return '$versionలో కొత్తవి:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'అప్‌డేట్ అందుబాటులో ఉంది';
 }

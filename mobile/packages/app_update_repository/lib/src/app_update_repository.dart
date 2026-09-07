@@ -12,6 +12,12 @@ abstract class UpdatePrefsKeys {
 
   /// Key for the last-checked timestamp.
   static const lastChecked = 'update_last_checked';
+
+  /// Key for the latest version found during the last successful check.
+  static const latestVersion = 'update_latest_version';
+
+  /// Key for the store URL resolved during the last successful check.
+  static const downloadUrl = 'update_download_url';
 }
 
 /// Cooldown before showing the moderate dialog again after dismissal.
@@ -41,12 +47,14 @@ class AppUpdateRepository {
 
   /// Checks for updates, respecting the 24h cache TTL.
   ///
-  /// Returns `null` if the check should be skipped:
-  /// - First install (no prior check recorded)
-  /// - Within the 24h TTL window
+  /// Returns `null` when the check is skipped and no update is known:
+  /// first install, or inside the 24h TTL window with nothing cached.
+  ///
+  /// Inside the TTL window, and when the network fetch fails, a previously
+  /// found update comes back with [UpdateUrgency.none] so Settings keeps
+  /// offering it without replaying a transient banner or dialog.
   ///
   /// Returns [UpdateCheckResult] with the appropriate urgency otherwise.
-  /// Returns [UpdateCheckResult.none] on network failures (silent skip).
   Future<UpdateCheckResult?> checkForUpdate() async {
     // Skip on first install.
     final lastChecked = _prefs.getString(UpdatePrefsKeys.lastChecked);
@@ -63,14 +71,16 @@ class AppUpdateRepository {
     if (lastCheckedAt != null &&
         DateTime.now().difference(lastCheckedAt) <
             AppVersionConstants.cacheTtl) {
-      return null;
+      return _restoreCachedUpdate();
     }
 
     final AppVersionInfo info;
     try {
       info = await _client.fetchLatestRelease();
     } on AppVersionFetchException {
-      return const UpdateCheckResult.none();
+      // An offline launch must not retract an update the app already found.
+      final cached = await _restoreCachedUpdate();
+      return cached ?? const UpdateCheckResult.none();
     }
 
     await _prefs.setString(
@@ -79,6 +89,7 @@ class AppUpdateRepository {
     );
 
     if (!isOlderThan(_currentVersion, info.latestVersion)) {
+      await _clearCachedUpdate();
       return const UpdateCheckResult.none();
     }
 
@@ -87,6 +98,11 @@ class AppUpdateRepository {
     final rawUrgency = _determineUrgency(info, age);
     final urgency = _applyDismissalRules(rawUrgency, info.latestVersion);
 
+    await Future.wait([
+      _prefs.setString(UpdatePrefsKeys.latestVersion, info.latestVersion),
+      _prefs.setString(UpdatePrefsKeys.downloadUrl, downloadUrl),
+    ]);
+
     return UpdateCheckResult(
       urgency: urgency,
       downloadUrl: downloadUrl,
@@ -94,6 +110,31 @@ class AppUpdateRepository {
       releaseHighlights: info.releaseHighlights,
       releaseNotesUrl: info.releaseNotesUrl,
     );
+  }
+
+  Future<UpdateCheckResult?> _restoreCachedUpdate() async {
+    final latestVersion = _prefs.getString(UpdatePrefsKeys.latestVersion);
+    final downloadUrl = _prefs.getString(UpdatePrefsKeys.downloadUrl);
+    if (latestVersion == null || downloadUrl == null) return null;
+    if (!isOlderThan(_currentVersion, latestVersion)) {
+      await _clearCachedUpdate();
+      return null;
+    }
+
+    // The cache keeps Settings useful between network checks without replaying
+    // a transient banner or dialog on every app launch.
+    return UpdateCheckResult(
+      urgency: UpdateUrgency.none,
+      downloadUrl: downloadUrl,
+      latestVersion: latestVersion,
+    );
+  }
+
+  Future<void> _clearCachedUpdate() async {
+    await Future.wait([
+      _prefs.remove(UpdatePrefsKeys.latestVersion),
+      _prefs.remove(UpdatePrefsKeys.downloadUrl),
+    ]);
   }
 
   /// Records that the user dismissed the nudge for [version].

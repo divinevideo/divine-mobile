@@ -11500,4 +11500,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => '新しいアップデートが公開されました。チェックする →';
+
+  @override
+  String get updateModerateTitle => '前回の確認後にアップデートが公開されました';
+
+  @override
+  String get updateUrgentTitle => '重要な修正が適用されていません';
+
+  @override
+  String get updateNotNow => '後で';
+
+  @override
+  String get updateAction => 'アップデート';
+
+  @override
+  String updateNewIn(String version) {
+    return '$version の新機能:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'アップデートがあります';
 }

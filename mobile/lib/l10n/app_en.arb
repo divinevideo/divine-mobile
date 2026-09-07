@@ -8313,5 +8313,13 @@
   "accountStatusMoveAccount": "Move your account",
   "@accountStatusMoveAccount": {"description": "Button opening the account portability page."},
   "accountStatusRetry": "Try again",
-  "@accountStatusRetry": {"description": "Button that refetches the account status."}
+  "@accountStatusRetry": {"description": "Button that refetches the account status."},
+  "updateGentleBanner": "A fresh update just dropped. Check it out →",
+  "updateModerateTitle": "There's been an update since you last checked",
+  "updateUrgentTitle": "You're missing important fixes",
+  "updateNotNow": "Not now",
+  "updateAction": "Update",
+  "updateNewIn": "New in {version}:",
+  "@updateNewIn": {"description": "Heading before highlights for an available app update.", "placeholders": {"version": {"type": "String"}}},
+  "settingsUpdateAvailable": "Update available"
 }

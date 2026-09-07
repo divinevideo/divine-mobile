@@ -12009,4 +12009,29 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'Pembaruan baru saja hadir. Lihat sekarang →';
+
+  @override
+  String get updateModerateTitle =>
+      'Ada pembaruan sejak terakhir kali kamu memeriksa';
+
+  @override
+  String get updateUrgentTitle => 'Kamu melewatkan perbaikan penting';
+
+  @override
+  String get updateNotNow => 'Nanti saja';
+
+  @override
+  String get updateAction => 'Perbarui';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Yang baru di $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Pembaruan tersedia';
 }

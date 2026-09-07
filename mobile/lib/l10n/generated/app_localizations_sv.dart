@@ -12098,4 +12098,29 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'En ny uppdatering har kommit. Kolla in den →';
+
+  @override
+  String get updateModerateTitle =>
+      'Det finns en uppdatering sedan du kollade senast';
+
+  @override
+  String get updateUrgentTitle => 'Du saknar viktiga korrigeringar';
+
+  @override
+  String get updateNotNow => 'Inte nu';
+
+  @override
+  String get updateAction => 'Uppdatera';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Nytt i $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Uppdatering tillgänglig';
 }
