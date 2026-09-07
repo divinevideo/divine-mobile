@@ -16,6 +16,7 @@ SUITE_PATH_ROOT="${SERVICE_SUITE_PATH_ROOT:-$MOBILE_DIR}"
 MANIFEST_FILE="${SERVICE_SUITE_MANIFEST_FILE:-$E2E_DIR/service_suite_exclusions.txt}"
 MANIFEST_REPO_PATH="${MANIFEST_FILE#"$REPO_DIR"/}"
 BASE_REF="${SERVICE_SUITE_BASE_REF:-origin/main}"
+WORKFLOW_PARSER="${SERVICE_SUITE_WORKFLOW_PARSER:-$SCRIPT_DIR/lib/service_suite_workflow_parser.dart}"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
@@ -45,45 +46,17 @@ parse_manifest() {
   ' "$1"
 }
 
-parse_workflow_suites() {
-  awk '
-    /SERVICE_SUITE_LIST_START/ { capture = 1; next }
-    /SERVICE_SUITE_LIST_END/ { capture = 0; next }
-    !capture { next }
-    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
-    /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=\([[:space:]]*$/ { inside = 1; next }
-    /^[[:space:]]*\)[[:space:]]*$/ { inside = 0; next }
-    {
-      entry = $0
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry)
-      if (!inside) {
-        printf "Unexpected line %d between the suite-list markers: %s\n", FNR, entry > "/dev/stderr"
-        invalid = 1
-        next
-      }
-      if (entry !~ /^integration_test\/e2e\/[[:alnum:]_.\/-]+_test\.dart$/) {
-        printf "Unrecognized suite-array entry on line %d: %s\n", FNR, entry > "/dev/stderr"
-        invalid = 1
-        next
-      }
-      print entry
-    }
-    END { exit invalid }
-  ' "$1"
-}
-
 find "$E2E_DIR" -type f -name '*_test.dart' -print \
   | sed "s|^$SUITE_PATH_ROOT/||" \
   | sort > "$scratch/all"
 
-start_markers="$(grep -c 'SERVICE_SUITE_LIST_START' "$WORKFLOW_FILE" || true)"
-end_markers="$(grep -c 'SERVICE_SUITE_LIST_END' "$WORKFLOW_FILE" || true)"
-if [ "$start_markers" -ne 1 ] || [ "$end_markers" -ne 1 ]; then
-  echo "FAIL [service_suite_coverage]: workflow must contain exactly one service-suite list marker pair."
+parser_error="$scratch/workflow_parser_error"
+if ! dart run "$WORKFLOW_PARSER" --workflow "$WORKFLOW_FILE" --all \
+  2> "$parser_error" | sort > "$scratch/included"; then
+  cat "$parser_error" >&2
+  echo "FAIL [service_suite_coverage]: could not parse the workflow suite lists."
   exit 1
 fi
-
-parse_workflow_suites "$WORKFLOW_FILE" | sort > "$scratch/included"
 
 parse_manifest "$MANIFEST_FILE" | sort > "$scratch/excluded"
 
