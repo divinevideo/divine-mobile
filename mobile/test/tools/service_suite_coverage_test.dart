@@ -117,6 +117,22 @@ $afterLoop
       expect(result.stdout, contains('no longer offending'));
     });
 
+    test('passes with a clear message once the manifest is fully drained', () {
+      File(
+        '$mobileDirectory/integration_test/e2e/excluded_test.dart',
+      ).deleteSync();
+      File(baselinePath).writeAsStringSync('# header only, no entries left\n');
+
+      final result = run();
+
+      expect(
+        result.exitCode,
+        equals(0),
+        reason: 'stdout=${result.stdout} stderr=${result.stderr}',
+      );
+      expect(result.stdout, contains('no new entries'));
+    });
+
     test('fails when an exclusion has no reason', () {
       writeBaseline(['integration_test/e2e/excluded_test.dart']);
 

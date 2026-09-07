@@ -66,7 +66,7 @@ invalid_entries="$(printf '%s\n' "$manifest_entries" | grep -vE '^integration_te
 $(printf '%s\n' "$invalid_entries" | sed 's/^/  /')"
 
 manifest_paths="$(printf '%s\n' "$manifest_entries" | sed 's/[[:space:]]*#.*//; s/[[:space:]]*$//')"
-duplicate_exclusions="$(printf '%s\n' "$manifest_paths" | grep -v '^$' | sort | uniq -d)"
+duplicate_exclusions="$(printf '%s\n' "$manifest_paths" | grep -v '^$' | sort | uniq -d || true)"
 [ -z "$duplicate_exclusions" ] || fail "exclusion manifest contains duplicate path(s):
 $(printf '%s\n' "$duplicate_exclusions" | sed 's/^/  /')"
 MANIFEST_PATHS="$(printf '%s\n' "$manifest_paths" | grep -v '^$' | sort -u || true)"
