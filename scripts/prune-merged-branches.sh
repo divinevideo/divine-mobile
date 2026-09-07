@@ -134,16 +134,23 @@ merged_pr_contains_commit() {
 # recommendation.
 tip_contained_in_base() {
   local compare_status
-  compare_status="$(
+  if ! compare_status="$(
     "$GH" api graphql \
       -f query='query($owner:String!,$name:String!,$base:String!,$head:String!){repository(owner:$owner,name:$name){ref(qualifiedName:$base){compare(headRef:$head){status}}}}' \
       -f owner="${REPO%%/*}" -f name="${REPO#*/}" \
       -f base="$BASE_BRANCH" -f head="$1" \
       --jq '.data.repository.ref.compare.status' 2>/dev/null
-  )" || return 0
+  )"; then
+    echo "Warning: could not verify whether $1 is contained in $BASE_BRANCH; keeping it." >&2
+    return 0
+  fi
   case "$compare_status" in
+    IDENTICAL|BEHIND) return 0 ;;
     AHEAD|DIVERGED) return 1 ;;
-    *) return 0 ;;
+    *)
+      echo "Warning: GitHub returned no recognized containment status for $1; keeping it." >&2
+      return 0
+      ;;
   esac
 }
 
@@ -190,11 +197,11 @@ while IFS= read -r branch; do
   elif [ -n "$wt" ] && [ -d "$wt" ] \
     && merged_pr_contains_commit "$tip" \
     && ! tip_contained_in_base "$tip"; then
-    # Only worktree branches get this lookup: it is one API call per branch,
-    # and a branch with no worktree costs a ref, not 4GB of build output. Tips
-    # already on main belong to fresh worktrees, not squashed-away PR heads, so
-    # the containment check runs last — only for branches this would otherwise
-    # call MERGED-TIP.
+    # Only worktree branches get these lookups: every candidate checks for a
+    # merged PR, then candidates with one check containment. A branch with no
+    # worktree costs a ref, not 4GB of build output. Tips already on main belong
+    # to fresh worktrees, not squashed-away PR heads, so containment runs last —
+    # only for branches this would otherwise call MERGED-TIP.
     verdict="MERGED-TIP"
   else
     verdict="KEEP"

@@ -66,6 +66,7 @@ void main() {
       List<String> mergedTipShas = const [],
       List<String> containedShas = const [],
       bool compareFails = false,
+      String? compareStatus,
       List<String> args = const [],
     }) {
       return Process.runSync(
@@ -83,6 +84,7 @@ void main() {
           'FAKE_MERGED_TIP_SHAS': mergedTipShas.join('\n'),
           'FAKE_CONTAINED_SHAS': containedShas.join('\n'),
           if (compareFails) 'FAKE_COMPARE_FAILS': '1',
+          'FAKE_COMPARE_STATUS': ?compareStatus,
           'FAKE_GH_ARGS': ghArgs.path,
         },
       );
@@ -121,6 +123,10 @@ if [ "$1" = "api" ] && [ "${2:-}" = "graphql" ]; then
   if [ "${FAKE_COMPARE_FAILS:-}" = "1" ]; then
     echo "simulated compare failure" >&2
     exit 1
+  fi
+  if [ -n "${FAKE_COMPARE_STATUS+x}" ]; then
+    printf '%s\n' "$FAKE_COMPARE_STATUS"
+    exit 0
   fi
   head=""
   for arg in "$@"; do
@@ -455,6 +461,32 @@ exit 2
       expect(result.exitCode, 0, reason: result.stderr.toString());
       expect(result.stdout, contains('KEEP           pr-8888'));
       expect(result.stdout, contains('0 likely prunable'));
+      expect(
+        result.stderr,
+        contains('could not verify whether $tip is contained in main'),
+      );
+    });
+
+    test('warns and keeps a worktree for an unknown containment status', () {
+      makeBranch('pr-8889', 'review checkout');
+      final tip = branchTip('pr-8889');
+      final worktree = Directory(p.join(sandbox.path, 'pr-8889'));
+      git(['worktree', 'add', worktree.path, 'pr-8889']);
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+        compareStatus: '',
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           pr-8889'));
+      expect(result.stdout, contains('0 likely prunable'));
+      expect(
+        result.stderr,
+        contains('GitHub returned no recognized containment status for $tip'),
+      );
     });
 
     test('asks about containment only after a merged PR contains the tip', () {
