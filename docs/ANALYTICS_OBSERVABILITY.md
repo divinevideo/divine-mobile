@@ -202,9 +202,13 @@ Use Firebase Analytics events to inspect:
 Use Firebase Performance to inspect:
 
 - network request traces for media/API domains
-- custom traces only when the span represents a real user wait; for
-  `feed_load_*`, filter by `completion` and follow the
-  [feed-load trace semantics](../mobile/docs/FEED_LOAD_TRACES.md)
+- custom traces when the span represents a real user wait
+
+The existing `feed_load_*` traces are an exception: they measure subscription
+attempts, including background retries and re-subscriptions, rather than a
+user-visible surface load. Filter them by `completion` and follow the
+[feed-load trace semantics](../mobile/docs/FEED_LOAD_TRACES.md). New
+user-visible feed instrumentation should use the `surface_load` contract above.
 
 ## First Dashboard To Build
 
