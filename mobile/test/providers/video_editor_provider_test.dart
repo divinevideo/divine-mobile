@@ -3514,6 +3514,16 @@ void main() {
       container.dispose();
     }
 
+    // Bounds every drain. The 20x pumpEventQueue poll this replaced bounded
+    // itself and failed with its own reason string; a bare await on a wedged
+    // cleanup instead hangs to the suite timeout with nothing naming deferred
+    // cleanup as the stuck party.
+    Future<void> drainDeferredCleanup(VideoEditorNotifier notifier) =>
+        notifier.pendingDeferredCleanupForTest.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('deferred file cleanup did not settle'),
+        );
+
     setUpAll(() {
       registerFallbackValue(
         DivineVideoDraft.create(
@@ -3557,7 +3567,7 @@ void main() {
         // `if (!containerDisposed)` guard skipped the drain entirely for the
         // three tests that dispose the container themselves.
         disposeContainer();
-        await editorNotifier.pendingDeferredCleanupForTest;
+        await drainDeferredCleanup(editorNotifier);
       } finally {
         // The drain can throw — the reference check inside
         // `deleteFilesIfUnreferenced` is unguarded — and an open database or
@@ -3627,7 +3637,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
       await notifier.reset(keepAutosavedDraft: true);
-      await notifier.pendingDeferredCleanupForTest;
+      await drainDeferredCleanup(notifier);
 
       expect(
         orphan.existsSync(),
@@ -3646,7 +3656,7 @@ void main() {
 
       await notifier.reset(keepAutosavedDraft: true);
       disposeContainer();
-      await notifier.pendingDeferredCleanupForTest;
+      await drainDeferredCleanup(notifier);
 
       expect(
         orphan.existsSync(),
@@ -3664,7 +3674,7 @@ void main() {
       expect(orphan.existsSync(), isTrue);
 
       disposeContainer();
-      await notifier.pendingDeferredCleanupForTest;
+      await drainDeferredCleanup(notifier);
 
       expect(
         orphan.existsSync(),
@@ -3760,7 +3770,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(oldRendered.path));
 
       disposeContainer();
-      await notifier.pendingDeferredCleanupForTest;
+      await drainDeferredCleanup(notifier);
 
       expect(
         oldRendered.existsSync(),
