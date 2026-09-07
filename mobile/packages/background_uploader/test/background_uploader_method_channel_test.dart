@@ -36,6 +36,18 @@ void main() {
   });
 
   group('native platform calls', () {
+    test('defaults to the channel name native registers', () async {
+      // The suite drives an injected test channel so it cannot strand a
+      // handler on the shared one, which also means nothing else pins the
+      // name native actually registers. Dispose immediately: the constructor
+      // installs a handler on the real channel.
+      final nativeDefault = MethodChannelBackgroundUploader();
+      addTearDown(nativeDefault.dispose);
+
+      expect(nativeDefault.methodChannel.name, equals('background_uploader'));
+      expect(channel.name, isNot(equals(nativeDefault.methodChannel.name)));
+    });
+
     test('isSupported delegates to native platform', () async {
       expect(await platform.isSupported(), isTrue);
     });
