@@ -27,6 +27,7 @@ const legacyV1NormalizationRepairTables = <String>[
   'pending_profile_saves',
   'dm_message_reactions',
   'pending_view_events',
+  'pending_reports',
   'pending_product_events',
   'pending_gift_wraps',
   'processed_gift_wraps',
@@ -81,6 +82,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     Conversations,
     OutgoingDms,
     PendingViewEvents,
+    PendingReports,
     PendingProductEvents,
     PendingGiftWraps,
     ProcessedGiftWraps,
@@ -112,6 +114,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ConversationsDao,
     OutgoingDmsDao,
     PendingViewEventsDao,
+    PendingReportsDao,
     PendingProductEventsDao,
     PendingGiftWrapsDao,
     ProcessedGiftWrapsDao,
@@ -131,7 +134,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -216,6 +219,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 14) {
         await _repairSchemaV14();
+      }
+      if (from < 15) {
+        await m.createTable(pendingReports);
       }
     },
     beforeOpen: (details) async {
@@ -1151,6 +1157,31 @@ class AppDatabase extends _$AppDatabase {
       ON pending_view_events (created_at)
     ''');
 
+    final pendingReportsResult = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='pending_reports'",
+    ).get();
+
+    if (pendingReportsResult.isEmpty) {
+      await customStatement('''
+        CREATE TABLE "pending_reports" (
+          "report_id" TEXT NOT NULL,
+          "user_pubkey" TEXT NOT NULL,
+          "event_json" TEXT NOT NULL,
+          "target_relays" TEXT NULL,
+          "zendesk_payload" TEXT NOT NULL,
+          "relay_status" TEXT NOT NULL,
+          "zendesk_status" TEXT NOT NULL,
+          "relay_attempts" INTEGER NOT NULL DEFAULT 0,
+          "zendesk_attempts" INTEGER NOT NULL DEFAULT 0,
+          "last_error" TEXT NULL,
+          "last_attempt_at" INTEGER NULL,
+          "created_at" INTEGER NOT NULL,
+          PRIMARY KEY ("report_id")
+        )
+      ''');
+    }
+
     final pendingProductEventsResult = await customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' "
       "AND name='pending_product_events'",
@@ -1464,6 +1495,11 @@ class AppDatabase extends _$AppDatabase {
         'video_event_kind',
         'phase',
         'app_version',
+      ],
+      'pending_reports': [
+        'report_id',
+        'relay_status',
+        'zendesk_status',
       ],
     };
 

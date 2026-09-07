@@ -2026,6 +2026,7 @@ const _v1NormalizationTables = <String>[
   'pending_profile_saves',
   'dm_message_reactions',
   'pending_view_events',
+  'pending_reports',
   'pending_product_events',
   'pending_gift_wraps',
   'processed_gift_wraps',
