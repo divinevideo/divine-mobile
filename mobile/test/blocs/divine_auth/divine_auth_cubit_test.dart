@@ -1401,6 +1401,51 @@ void main() {
           );
 
           blocTest<DivineAuthCubit, DivineAuthState>(
+            'maps EMAIL_ALREADY_EXISTS to the same recovery as CONFLICT',
+            setUp: () {
+              when(
+                () => mockOAuth.headlessRegister(
+                  email: any(named: 'email'),
+                  password: any(named: 'password'),
+                  scope: any(named: 'scope'),
+                ),
+              ).thenAnswer(
+                (_) async => (
+                  HeadlessRegisterResult.error(
+                    'Email already registered',
+                    code: 'EMAIL_ALREADY_EXISTS',
+                  ),
+                  testVerifier,
+                ),
+              );
+            },
+            build: buildCubit,
+            seed: () => const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+            ),
+            act: (cubit) => cubit.submit(),
+            expect: () => [
+              const DivineAuthFormState(
+                email: testEmail,
+                password: testPassword,
+                isSubmitting: true,
+              ),
+              isA<DivineAuthFormState>()
+                  .having(
+                    (s) => s.generalError,
+                    'generalError',
+                    contains('already registered'),
+                  )
+                  .having(
+                    (s) => s.showLoginOptionsRecovery,
+                    'showLoginOptionsRecovery',
+                    isTrue,
+                  ),
+            ],
+          );
+
+          blocTest<DivineAuthCubit, DivineAuthState>(
             'maps invalid_email error code to localized message',
             setUp: () {
               when(
@@ -1415,6 +1460,45 @@ void main() {
                   HeadlessRegisterResult.error(
                     'Bad email',
                     code: 'invalid_email',
+                  ),
+                  testVerifier,
+                ),
+              );
+            },
+            build: buildCubit,
+            seed: () => const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+            ),
+            act: (cubit) => cubit.submit(),
+            expect: () => [
+              const DivineAuthFormState(
+                email: testEmail,
+                password: testPassword,
+                isSubmitting: true,
+              ),
+              isA<DivineAuthFormState>().having(
+                (s) => s.generalError,
+                'generalError',
+                contains('valid email'),
+              ),
+            ],
+          );
+
+          blocTest<DivineAuthCubit, DivineAuthState>(
+            'maps INVALID_EMAIL error code to localized message',
+            setUp: () {
+              when(
+                () => mockOAuth.headlessRegister(
+                  email: any(named: 'email'),
+                  password: any(named: 'password'),
+                  scope: any(named: 'scope'),
+                ),
+              ).thenAnswer(
+                (_) async => (
+                  HeadlessRegisterResult.error(
+                    'Bad email',
+                    code: 'INVALID_EMAIL',
                   ),
                   testVerifier,
                 ),

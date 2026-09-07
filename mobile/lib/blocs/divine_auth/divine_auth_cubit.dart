@@ -321,7 +321,9 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
           current.copyWith(
             isSubmitting: false,
             generalError: errorMsg,
-            showLoginOptionsRecovery: result.errorCode == 'CONFLICT',
+            showLoginOptionsRecovery:
+                result.errorCode == 'CONFLICT' ||
+                result.errorCode == 'EMAIL_ALREADY_EXISTS',
           ),
         );
       }
@@ -638,8 +640,10 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   ) {
     switch (errorCode) {
       case 'CONFLICT':
+      case 'EMAIL_ALREADY_EXISTS':
         return 'This email is already registered. Please sign in instead.';
       case 'invalid_email':
+      case 'INVALID_EMAIL':
         return 'Please enter a valid email address.';
       case 'weak_password':
         return 'Password is too weak. Please use a stronger password.';
