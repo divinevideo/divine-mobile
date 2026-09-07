@@ -22,6 +22,22 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
 
+/// Creates the transparent route used to fly a library thumbnail into preview.
+Route<void> videoClipPreviewRoute({
+  required DivineVideoClip clip,
+  VoidCallback? onDelete,
+}) {
+  return PageRouteBuilder<void>(
+    opaque: false,
+    pageBuilder: (_, _, _) => VideoClipPreview(clip: clip, onDelete: onDelete),
+    transitionsBuilder: (_, animation, _, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+    transitionDuration: const Duration(milliseconds: 200),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+  );
+}
+
 class VideoClipPreview extends ConsumerStatefulWidget {
   const VideoClipPreview({required this.clip, this.onDelete, super.key});
 

@@ -20,6 +20,7 @@ import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
+import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../helpers/go_router.dart';
@@ -98,7 +99,11 @@ void main() {
       originalAspectRatio: 9 / 16,
     );
 
-    Widget buildTestWidget({DivineVideoClip? clip, VoidCallback? onDelete}) {
+    Widget buildTestWidget({
+      DivineVideoClip? clip,
+      VoidCallback? onDelete,
+      Widget? home,
+    }) {
       return ProviderScope(
         overrides: [
           gallerySaveServiceProvider.overrideWithValue(mockGallerySaveService),
@@ -108,12 +113,14 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: VideoClipPreview(
-                clip: clip ?? testClip,
-                onDelete: onDelete,
-              ),
-            ),
+            home:
+                home ??
+                Scaffold(
+                  body: VideoClipPreview(
+                    clip: clip ?? testClip,
+                    onDelete: onDelete,
+                  ),
+                ),
           ),
         ),
       );
@@ -148,10 +155,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       final semantics = tester.getSemantics(find.byType(VideoClipPreview));
 
-      expect(
-        semantics.label,
-        l10n.videoMetadataClosePreviewSemanticLabel,
-      );
+      expect(semantics.label, l10n.videoMetadataClosePreviewSemanticLabel);
       expect(
         semantics.getSemanticsData().hasAction(SemanticsAction.tap),
         isTrue,
@@ -374,21 +378,29 @@ void main() {
       /// The grid bounds its decode to the cell rather than the screen, so the
       /// two ends of the flight carry different values and a test can tell
       /// which one is flying.
-      const gridCacheHeight = 120;
+      const gridCardKey = Key('hero-flight-grid-card');
+
+      int gridCacheHeight(WidgetTester tester) =>
+          (tester.view.physicalSize.width / 2).round();
 
       Widget buildFlightApp(DivineVideoClip clip) {
-        return ProviderScope(
-          overrides: [
-            gallerySaveServiceProvider.overrideWithValue(
-              mockGallerySaveService,
-            ),
-          ],
-          child: MockGoRouterProvider(
-            goRouter: mockGoRouter,
-            child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: _GridCardStub(clip: clip, cacheHeight: gridCacheHeight),
+        return buildTestWidget(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 80,
+                height: 140,
+                child: Builder(
+                  builder: (context) => VideoClipThumbnailCard(
+                    key: gridCardKey,
+                    clip: clip,
+                    showSelectionIndicator: false,
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(videoClipPreviewRoute(clip: clip)),
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -400,7 +412,7 @@ void main() {
       void evictAfterTest(WidgetTester tester, String path) {
         addTearDown(() {
           for (final height in <int?>[
-            gridCacheHeight,
+            gridCacheHeight(tester),
             tester.view.physicalSize.height.round(),
           ]) {
             PaintingBinding.instance.imageCache.evict(
@@ -412,9 +424,9 @@ void main() {
 
       /// Taps the grid card and stops halfway through the push flight.
       Future<void> flyToPreview(WidgetTester tester) async {
-        await tester.tap(find.byKey(_GridCardStub.tapKey));
+        await tester.tap(find.byKey(gridCardKey));
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump(const Duration(milliseconds: 100));
       }
 
       /// Waits for the shuttle's decode to actually fail, then renders it.
@@ -467,7 +479,10 @@ void main() {
           flyingThumbnail(tester).cacheHeight,
           tester.view.physicalSize.height.round(),
         );
-        expect(flyingThumbnail(tester).cacheHeight, isNot(gridCacheHeight));
+        expect(
+          flyingThumbnail(tester).cacheHeight,
+          isNot(gridCacheHeight(tester)),
+        );
 
         await tester.pumpAndSettle();
         expect(find.byType(StopMotionPlayer), findsOneWidget);
@@ -477,7 +492,7 @@ void main() {
         // the placeholder it used to live in.
         Navigator.of(tester.element(find.byType(VideoClipPreview))).pop();
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(
           flyingThumbnail(tester).cacheHeight,
@@ -628,55 +643,6 @@ DivineVideoClip _stopMotionClip({
     targetAspectRatio: .vertical,
     originalAspectRatio: 9 / 16,
   );
-}
-
-/// The library grid's side of the flight: the source [Hero] the preview flies
-/// from, and the tap that pushes the preview route.
-///
-/// Mirrors `VideoClipThumbnailCard` where the flight is concerned — same tag,
-/// same error-tolerant thumbnail, and the card's own background painted
-/// outside the hero.
-class _GridCardStub extends StatelessWidget {
-  const _GridCardStub({required this.clip, required this.cacheHeight});
-
-  static const tapKey = Key('grid-card-stub');
-
-  final DivineVideoClip clip;
-  final int cacheHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: SizedBox(
-          width: 80,
-          height: 140,
-          child: GestureDetector(
-            key: tapKey,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  body: VideoClipPreview(clip: clip),
-                ),
-              ),
-            ),
-            child: ColoredBox(
-              color: context.vineColors.card,
-              child: Hero(
-                tag: videoClipPreviewHeroTag(clip.id),
-                child: ClipThumbnailImage(
-                  path: clip.thumbnailPath!,
-                  fit: BoxFit.cover,
-                  cacheHeight: cacheHeight,
-                  placeholder: const VideoClipThumbnailPlaceholder(),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 const _transparentPngBytes = <int>[
