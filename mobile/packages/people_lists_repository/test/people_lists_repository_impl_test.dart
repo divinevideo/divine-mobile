@@ -528,6 +528,60 @@ void main() {
         final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
         expect(stored.single.pubkeys, equals(const [_memberB]));
       });
+
+      test(
+        'preserves foreign tags, surviving p-tag fields, and content',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['alt', 'Written by another client'],
+              ['p', _memberA, 'wss://relay.example', 'friend'],
+              ['p', _memberB, 'wss://other.example', 'bestie'],
+              ['expiration', '2000000000'],
+            ],
+            content: 'nip44-encrypted-private-members',
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [remote], timedOut: false, noRelays: false),
+          );
+          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+            final event = invocation.positionalArguments.first as Event;
+            return PublishSuccess(event: event);
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          final result = await repository.removePubkey(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            pubkey: _memberA,
+          );
+
+          expect(result.status, PeopleListPublishStatus.submitted);
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          // The removed member loses every matching tag; the foreign tags and
+          // the surviving member's relay hint and petname survive verbatim.
+          expect(published.tags, const [
+            ['d', 'shared-list'],
+            ['alt', 'Written by another client'],
+            ['p', _memberB, 'wss://other.example', 'bestie'],
+            ['expiration', '2000000000'],
+          ]);
+          expect(published.content, 'nip44-encrypted-private-members');
+        },
+      );
     });
 
     group('inconclusive reconcile before a replacement (#8273)', () {
