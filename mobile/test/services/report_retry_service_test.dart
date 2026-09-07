@@ -205,8 +205,8 @@ void main() {
     await service.initialize();
 
     foreground.add(true);
-    // let the unawaited sweep run
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    // Drain the unawaited sweep deterministically rather than racing a timer.
+    await pumpEventQueue();
 
     expect(await dao.getById('r1'), isNull);
     await service.dispose();

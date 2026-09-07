@@ -1491,8 +1491,10 @@ class PendingReports extends Table {
   @override
   String get tableName => 'pending_reports';
 
-  /// Matches `ContentReport.reportId`; also the Zendesk `external_id` so a
-  /// retry updates the ticket rather than filing a duplicate.
+  /// Matches `ContentReport.reportId`; also passed as the Zendesk `external_id`
+  /// (best-effort, REST path only). Zendesk does not upsert on external_id, so
+  /// this does not prevent a duplicate on a lost-ACK retry; it lets moderation
+  /// tooling merge the rare duplicate by report id.
   TextColumn get reportId => text().named('report_id')();
 
   TextColumn get userPubkey => text().named('user_pubkey')();

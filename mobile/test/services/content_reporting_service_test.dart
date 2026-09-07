@@ -22,6 +22,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
+class _MockPendingReportsDao extends Mock implements PendingReportsDao {}
+
 class _FakeEvent extends Fake implements Event {}
 
 String _validEventId(String hexDigit) => List.filled(64, hexDigit).join();
@@ -29,6 +31,16 @@ String _validEventId(String hexDigit) => List.filled(64, hexDigit).join();
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
+    registerFallbackValue(ReportChannel.relay);
+    registerFallbackValue(
+      PendingReport(
+        reportId: 'fallback',
+        userPubkey: 'fallback',
+        eventJson: '{}',
+        zendeskPayload: '{}',
+        createdAt: DateTime.utc(2026),
+      ),
+    );
   });
 
   // Outside the ContentReportingService group on purpose: these tags are a
@@ -1922,6 +1934,64 @@ void main() {
         ),
       ).captured;
       expect((captured.single as Event).id, 'e' * 64);
+    });
+
+    test('a queue enqueue failure does not block the report send', () async {
+      // The queue is enrichment; a DB failure must degrade to the pre-queue
+      // one-shot send rather than sinking a (possibly child-safety) report.
+      final throwingDao = _MockPendingReportsDao();
+      when(() => throwingDao.enqueue(any())).thenThrow(
+        StateError('database is locked'),
+      );
+
+      final crs = ContentReportingService(
+        nostrService: mockNostrService,
+        authService: mockAuthService,
+        prefs: prefs,
+        moderationRelayUrl: 'wss://relay.divine.video',
+        pendingReportsDao: throwingDao,
+      );
+      await crs.initialize();
+
+      final reportEvent = signedEvent('f' * 64);
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => reportEvent);
+      when(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => PublishSuccess(event: reportEvent));
+
+      final result = await crs.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('c'),
+        reason: ContentFilterReason.spam,
+        details: 'spam',
+      );
+
+      // The relay leg still ran and the report is reported delivered; the
+      // enqueue throw never reached the caller.
+      expect(result.success, isTrue);
+      expect(result.delivery, ReportDelivery.reached);
+      verify(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).called(1);
+      // No channel bookkeeping was attempted because the enqueue failed.
+      verifyNever(
+        () => throwingDao.markChannelDone(
+          reportId: any(named: 'reportId'),
+          channel: any(named: 'channel'),
+        ),
+      );
     });
   });
 }

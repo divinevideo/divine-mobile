@@ -256,8 +256,13 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
     )..where((t) => t.reportId.equals(reportId))).go();
   }
 
-  /// Deletes every queued report belonging to [userPubkey]. Used on account
-  /// switch/wipe so one account's reports never sweep under another.
+  /// Deletes every queued report belonging to [userPubkey].
+  ///
+  /// Provided for account-switch/wipe parity with the sibling `outgoing_dms`
+  /// outbox, so one account's undelivered reports never sweep under another.
+  /// Not yet wired into the wipe path — see #8053 (whether an undelivered
+  /// report should be dropped on wipe for privacy parity or kept for
+  /// durability is an open product decision).
   Future<int> deleteAllForUser(String userPubkey) {
     return (delete(
       pendingReports,
