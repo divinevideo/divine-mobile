@@ -151,3 +151,46 @@ slow; check the cheap things first.
    `dvines.org`. Confirm requests appear from **both** platforms and that each
    endpoint shows as one aggregated pattern with placeholders — a list of
    near-identical URLs differing by one segment means a missing rule.
+
+## Feed time to first frame
+
+Feed time to first frame (TTFF) is measured separately from Firebase network
+requests. `InfiniteVideoFeed` starts a monotonic timer when a video becomes the
+active page and stops it when `DivineVideoPlayerController.firstFrameRendered`
+reports that the native player painted a frame. The resulting
+`FeedFirstFrameMetric` carries the full Nostr event id, feed index, elapsed
+time, and whether playback opened from the local media cache. It is published
+through `FeedFirstFrameMetrics.events` and logged under the stable
+`FeedFirstFrame` logger name.
+
+The enforced performance protocol is:
+
+- Android emulator backed by `local_stack/`.
+- Blossom traffic throttled to `625k` bytes per second (5 Mbps).
+- The ten incompressible seeded feed videos supplied by the local stack.
+- One sample per distinct active video, including the initially visible item.
+- Nearest-rank p90 of the ten activation-to-first-frame durations.
+- A 5,000 ms p90 ceiling.
+- Two consecutive failing runs constitute a regression. The CI lane retries
+  the complete test once and fails only when both executions fail.
+
+This is a native decode measurement and therefore does not run in the Linux
+service-test lane. The dedicated `perf-feed-ttff` Codemagic workflow uses the
+fixed `linux_x2` Android runner and is manually triggered while the Codemagic
+GitHub event integration tracked by #7504 remains unavailable. It is owned by
+the mobile playback team. Every run retains the merged JSONL timelines and
+Patrol reports; assertion failures also print the per-video table and p90.
+The `github_credentials` Codemagic group must provide secure
+`GHCR_PULL_TOKEN` (a PAT with `read:packages`) and its
+`GHCR_PULL_USERNAME`, because the invite fixture image is private.
+
+Run the same protocol locally from `mobile/`:
+
+```bash
+THROTTLE_RATE=625k mise run local_up
+THROTTLE_RATE=625k mise run e2e_test integration_test/perf/feed_ttff_test.dart
+```
+
+Do not adjust the ceiling from a single run. Re-baseline only after at least 30
+successful runs on the fixed runner, and document the old and new p50/p90 plus
+the reason for the change in the pull request.

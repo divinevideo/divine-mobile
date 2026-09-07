@@ -120,6 +120,27 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             step_names.index("Run Maestro Smoke Tests"),
         )
 
+    def test_feed_ttff_workflow_runs_the_budget_on_android(self) -> None:
+        workflow = self._resolved_config()["workflows"]["perf-feed-ttff"]
+
+        self.assertEqual("linux_x2", workflow["instance_type"])
+        self.assertEqual("625k", workflow["environment"]["vars"]["THROTTLE_RATE"])
+        self.assertEqual([], workflow["triggering"]["events"])
+        self.assertIn("github_credentials", workflow["environment"]["groups"])
+        step_names = [step["name"] for step in workflow["scripts"]]
+        self.assertIn("Launch Android emulator", step_names)
+        self.assertIn("Run feed TTFF budget twice on failure", step_names)
+
+        runner = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if step["name"] == "Run feed TTFF budget twice on failure"
+        )
+        self.assertIn("GHCR_PULL_TOKEN", runner)
+        self.assertIn("local_stack/up.sh --pull=missing", runner)
+        self.assertEqual(2, runner.count("feed_ttff_test.dart"))
+        self.assertIn("test_reports/*.jsonl", workflow["artifacts"])
+
     def test_pod_install_only_targets_the_app_workspace(self) -> None:
         pod_install = self._definition_block("pod_install")
 

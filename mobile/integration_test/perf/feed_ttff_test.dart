@@ -1,7 +1,10 @@
-// ABOUTME: Performance test measuring feed video TTFF under throttled network
-// ABOUTME: Scrolls Popular feed; TTFF metrics come from [POOLED] logs in JSONL
+// ABOUTME: Enforces fullscreen-feed first-frame latency under a 5 Mbps network
+// ABOUTME: Samples native first-frame events instead of fixed waits or log scraping
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:infinite_video_feed/infinite_video_feed.dart';
+import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:patrol/patrol.dart';
 
@@ -10,13 +13,38 @@ import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
 import '../helpers/test_setup.dart';
+import 'feed_ttff_budget.dart';
+
+Future<bool> _waitForSampleCount(
+  WidgetTester tester,
+  Map<String, FeedFirstFrameMetric> samples,
+  int count, {
+  int maxSeconds = 15,
+}) async {
+  for (var i = 0; i < maxSeconds * 4; i++) {
+    await tester.pump(const Duration(milliseconds: 250));
+    if (samples.length >= count) return true;
+  }
+  return false;
+}
 
 void main() {
   ignorePlatformSemanticsHandle();
 
   group('time to first frame', () {
-    patrolTest('feed TTFF under throttled network', ($) async {
+    patrolTest('feed TTFF stays within the 5 Mbps p90 budget', ($) async {
       final tester = $.tester;
+      final samplesByVideoId = <String, FeedFirstFrameMetric>{};
+      final metricSubscription = FeedFirstFrameMetrics.events.listen((metric) {
+        samplesByVideoId.putIfAbsent(metric.videoId, () => metric);
+        logPhase(
+          'perf: ttff videoId=${metric.videoId} index=${metric.index} '
+          'durationMs=${metric.duration.inMilliseconds} '
+          'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
+        );
+      });
+      addTearDown(metricSubscription.cancel);
+
       final originalOnError = suppressSetStateErrors();
       addTearDown(() => restoreErrorHandler(originalOnError));
       final originalErrorBuilder = saveErrorWidgetBuilder();
@@ -25,60 +53,77 @@ void main() {
       launchAppGuarded(app.main);
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      // --- Register a fresh user ---
       logPhase('perf: register_start');
       await navigateToCreateAccount(tester);
       final email = 'perf-${DateTime.now().millisecondsSinceEpoch}@test.com';
       await registerNewUser(tester, email, 'TestPass123!');
 
-      // --- Verify email via DB bypass ---
       logPhase('perf: verify_email');
       final token = await getVerificationToken(email);
       await callVerifyEmail(token);
 
-      // --- Wait for feed to appear (polling detection) ---
+      final l10n = lookupAppLocalizations(const Locale('en'));
       logPhase('perf: wait_for_feed');
-      final feedLoaded = await waitForText(tester, 'For You', maxSeconds: 30);
-      if (!feedLoaded) {
-        fail('Feed did not load within 30s after email verification');
-      }
+      final feedLoaded = await waitForText(
+        tester,
+        l10n.feedModeForYou,
+        maxSeconds: 30,
+      );
+      expect(
+        feedLoaded,
+        isTrue,
+        reason: 'Feed did not load within 30s after email verification',
+      );
 
-      // --- Switch to Popular feed via mode picker bottom sheet ---
-      logPhase('perf: switch_to_popular');
-      // Tap the current mode label to open the bottom sheet
-      await tester.tap(find.text('For You'));
-      await tester.pump(const Duration(milliseconds: 500));
-      // Select Popular from the bottom sheet
-      final popularFound = await waitForText(tester, 'Popular', maxSeconds: 5);
-      if (!popularFound) {
-        fail('Feed mode bottom sheet did not show "Popular" option');
-      }
-      await tester.tap(find.text('Popular'));
-      await pumpUntilSettled(tester, maxSeconds: 3);
+      final firstSampleArrived = await _waitForSampleCount(
+        tester,
+        samplesByVideoId,
+        1,
+      );
+      expect(
+        firstSampleArrived,
+        isTrue,
+        reason: 'The first feed video never rendered a native frame',
+      );
 
-      // --- Wait for Popular feed to load videos ---
-      logPhase('perf: popular_feed_loading');
-      await pumpUntilSettled(tester);
-
-      // --- Scroll through 10 videos ---
-      for (var i = 0; i < 10; i++) {
-        logPhase('perf: scroll_video_$i');
-        // Fling up to advance to the next video in the fullscreen feed
+      while (samplesByVideoId.length < feedTtffSampleCount) {
+        final expectedCount = samplesByVideoId.length + 1;
+        logPhase('perf: scroll_for_sample_$expectedCount');
         final size = tester.view.physicalSize / tester.view.devicePixelRatio;
         await tester.flingFrom(
           Offset(size.width / 2, size.height * 0.8),
           Offset(0, -size.height * 0.6),
           800,
         );
-        // Allow time for video to load and start playing
-        await tester.pump(const Duration(seconds: 3));
+        final sampleArrived = await _waitForSampleCount(
+          tester,
+          samplesByVideoId,
+          expectedCount,
+        );
+        expect(
+          sampleArrived,
+          isTrue,
+          reason:
+              'No first-frame metric arrived for feed sample '
+              '$expectedCount of $feedTtffSampleCount',
+        );
       }
 
-      logPhase('perf: scroll_complete');
+      final samples = samplesByVideoId.values
+          .take(feedTtffSampleCount)
+          .toList();
+      final p90 = feedTtffPercentile(samples, percentile: 90);
+      final evidence = formatFeedTtffSamples(samples);
+      logPhase('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
+      expect(
+        p90,
+        lessThanOrEqualTo(feedTtffP90Budget),
+        reason:
+            '$evidence\n'
+            'p90=${p90.inMilliseconds}ms exceeded '
+            '${feedTtffP90Budget.inMilliseconds}ms',
+      );
 
-      // --- Cleanup ---
-      // Inline restore is required by the framework's end-of-body
-      // ErrorWidget.builder check; the addTearDown above covers throws.
       restoreErrorWidgetBuilder(originalErrorBuilder);
       drainAsyncErrors(tester);
     });

@@ -63,7 +63,10 @@ void main() {
 
     // Ensure high quality so prefetching is enabled
     BandwidthTrackerService.instance.clearSamples();
-    BandwidthTrackerService.instance.recordTimeToFirstFrame(200);
+    BandwidthTrackerService.instance.recordSample(
+      videoSizeBytes: 655360,
+      loadTimeMs: 1000,
+    );
   });
 
   group(GridPrefetchMixin, () {
@@ -223,7 +226,10 @@ void main() {
       testWidgets('does not prefetch on low bandwidth', (tester) async {
         // Set bandwidth to low
         BandwidthTrackerService.instance.clearSamples();
-        BandwidthTrackerService.instance.recordTimeToFirstFrame(5000);
+        BandwidthTrackerService.instance.recordSample(
+          videoSizeBytes: 131072,
+          loadTimeMs: 1000,
+        );
         expect(BandwidthTrackerService.instance.shouldUseHighQuality, isFalse);
 
         await tester.pumpWidget(
