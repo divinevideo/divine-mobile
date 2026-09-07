@@ -431,7 +431,47 @@ void main() {
         final signature = state.videoUpdateSignature;
 
         expect(identical(signature, state.videoUpdateSignature), isTrue);
-        expect(() => signature.add('changed'), throwsUnsupportedError);
+        // Index assignment, not `add`: a fixed-length list already rejects
+        // `add`, so asserting on it would pass against `.toList(growable:
+        // false)` too. Rejecting `[i] =` is what `List.unmodifiable` adds.
+        expect(() => signature[0] = 'changed', throwsUnsupportedError);
+      });
+
+      test('copyWith reuses the signature when videos is untouched', () {
+        final state = FullscreenFeedState(
+          videos: [createTestVideo('video1')],
+        );
+        final signature = state.videoUpdateSignature;
+
+        final sameVideos = state.copyWith(currentIndex: 1);
+        expect(identical(sameVideos.videoUpdateSignature, signature), isTrue);
+
+        final newVideos = state.copyWith(
+          videos: [createTestVideo('video2')],
+        );
+        expect(identical(newVideos.videoUpdateSignature, signature), isFalse);
+        expect(newVideos.videoUpdateSignature, isNot(equals(signature)));
+      });
+
+      test('a materialized signature is a snapshot, not a live view', () {
+        // The bloc's filter helpers return the source list by reference when
+        // no filter applies, so two states can share one list instance. Once
+        // a state has materialized its signature, a later in-place mutation
+        // of that shared list must still register as a change. A recomputing
+        // getter would report both states equal and drop the update.
+        final shared = [createTestVideo('video1')];
+        final before = FullscreenFeedState(videos: shared);
+        final signature = before.videoUpdateSignature;
+        expect(signature, hasLength(1));
+
+        shared[0] = createTestVideo(
+          'video1',
+          rawTags: const {'views': '42'},
+        );
+        final after = FullscreenFeedState(videos: shared);
+
+        expect(after.videoUpdateSignature, isNot(equals(signature)));
+        expect(before, isNot(equals(after)));
       });
     });
 
