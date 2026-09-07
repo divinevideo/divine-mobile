@@ -41,7 +41,11 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final _recordStopwatch = Stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
-  late final EditorBackgroundWork _backgroundWork;
+
+  /// Not `late final`: Riverpod reuses this notifier instance when the
+  /// provider is invalidated and calls [build] again, and a second
+  /// assignment to a `late final` field throws `LateInitializationError`.
+  late EditorBackgroundWork _backgroundWork;
 
   /// Undo window before a scheduled deletion is committed to library
   /// trash for good. The snackbar must outlast this so the user can

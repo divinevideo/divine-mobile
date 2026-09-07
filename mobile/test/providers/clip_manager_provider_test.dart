@@ -93,6 +93,20 @@ void main() {
       expect(state.totalDuration, equals(const Duration(seconds: 2)));
     });
 
+    group('provider lifecycle', () {
+      test('rebuilds after the provider is invalidated', () {
+        final first = container.read(clipManagerProvider.notifier);
+
+        container.invalidate(clipManagerProvider);
+        final second = container.read(clipManagerProvider.notifier);
+
+        // Riverpod reuses the notifier and re-runs build, so anything build
+        // assigns has to tolerate being assigned twice.
+        expect(identical(first, second), isTrue);
+        expect(container.read(clipManagerProvider).clips, isEmpty);
+      });
+    });
+
     group('muteAllClips', () {
       test('sets every clip volume to zero', () {
         final notifier = container.read(clipManagerProvider.notifier);
