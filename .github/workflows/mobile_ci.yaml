@@ -30,8 +30,17 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
       app: ${{ steps.scope.outputs.app }}
       native: ${{ steps.scope.outputs.native }}
+      android: ${{ steps.scope.outputs.android }}
+      ios: ${{ steps.scope.outputs.ios }}
+      service: ${{ steps.scope.outputs.service }}
+      goldens: ${{ steps.scope.outputs.goldens }}
+      maestro_static: ${{ steps.scope.outputs.maestro_static }}
+      smoke: ${{ steps.scope.outputs.smoke }}
+      performance: ${{ steps.scope.outputs.performance }}
+      ci_config: ${{ steps.scope.outputs.ci_config }}
     steps:
       # Fetch only the test-backed detector. The changed-file list itself still
       # comes from the REST API, avoiding a full-history checkout on the
@@ -47,6 +56,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           QUEUE_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           QUEUE_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
         run: bash mobile/scripts/ci/detect_mobile_ci_scope.sh
 
   codex-config:
@@ -749,7 +760,7 @@ jobs:
   goldens:
     name: Goldens
     needs: changes
-    if: ${{ needs.changes.outputs.app == 'true' }}
+    if: ${{ needs.changes.outputs.goldens == 'true' || inputs.update_goldens }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -830,9 +841,11 @@ jobs:
           VGV_TAG_GATE_RESULT: ${{ needs.vgv-tag-gate.result }}
           GOLDENS_RESULT: ${{ needs.goldens.result }}
           APP_CI_REQUIRED: ${{ needs.changes.outputs.app }}
+          GOLDENS_REQUIRED: ${{ needs.changes.outputs.goldens }}
           UPDATE_GOLDENS: ${{ inputs.update_goldens }}
         run: |
           echo "app-ci-required: ${APP_CI_REQUIRED}"
+          echo "goldens-required: ${GOLDENS_REQUIRED}"
           echo "codemagic-groups: ${CODEMAGIC_GROUPS_RESULT}"
           echo "generated-files: ${GENERATED_FILES_RESULT}"
           echo "ci-config-tests: ${CI_CONFIG_TESTS_RESULT}"
@@ -863,18 +876,24 @@ jobs:
             exit 1
           fi
 
-          results=(
+          required_results=(
             "${CI_CONFIG_TESTS_RESULT}"
             "${GENERATED_FILES_RESULT}"
             "${FORMAT_RESULT}"
             "${ANALYZE_RESULT}"
             "${TESTS_RESULT}"
             "${VGV_TAG_GATE_RESULT}"
-            "${GOLDENS_RESULT}"
           )
 
+          if [ "${GOLDENS_REQUIRED}" = "true" ]; then
+            required_results+=("${GOLDENS_RESULT}")
+          elif [[ "${GOLDENS_RESULT}" != "success" && "${GOLDENS_RESULT}" != "skipped" ]]; then
+            echo "Goldens failed or were cancelled despite not being required."
+            exit 1
+          fi
+
           if [ "${APP_CI_REQUIRED}" = "false" ]; then
-            for result in "${results[@]}"; do
+            for result in "${required_results[@]}"; do
               if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
                 echo "One or more Mobile CI jobs failed or were cancelled."
                 exit 1
@@ -884,7 +903,7 @@ jobs:
             exit 0
           fi
 
-          for result in "${results[@]}"; do
+          for result in "${required_results[@]}"; do
             if [ "${result}" != "success" ]; then
               echo "One or more Mobile CI jobs failed."
               exit 1

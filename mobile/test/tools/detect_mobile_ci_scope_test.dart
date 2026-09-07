@@ -1,5 +1,5 @@
-// ABOUTME: Tests Mobile CI scope detection across PR and merge-queue events.
-// ABOUTME: Pins app/native classification and every fall-open API boundary.
+// ABOUTME: Tests Mobile CI and QA scope detection across GitHub event types.
+// ABOUTME: Pins focused classifications and every fail-open API boundary.
 
 import 'dart:io';
 
@@ -56,6 +56,8 @@ esac
       required String event,
       List<String> changedFiles = const [],
       int changedTotal = 0,
+      String pushBeforeSha = 'push-before',
+      String pushAfterSha = 'push-after',
     }) {
       final result = Process.runSync(
         'bash',
@@ -69,6 +71,8 @@ esac
           'PR_NUMBER': '7058',
           'QUEUE_BASE_SHA': 'base-sha',
           'QUEUE_HEAD_SHA': 'head-sha',
+          'PUSH_BEFORE_SHA': pushBeforeSha,
+          'PUSH_AFTER_SHA': pushAfterSha,
           'FAKE_CHANGED_FILES': changedFiles.join('\n'),
           'FAKE_CHANGED_TOTAL': '$changedTotal',
         },
@@ -93,9 +97,30 @@ esac
       ({ProcessResult result, Map<String, String> outputs}) run, {
       required bool app,
       required bool native,
+      Map<String, bool> also = const {},
     }) {
       expect(run.result.exitCode, 0, reason: run.result.stderr.toString());
-      expect(run.outputs, {'app': '$app', 'native': '$native'});
+      expect(run.outputs['app'], '$app');
+      expect(run.outputs['native'], '$native');
+      expect(
+        run.outputs.keys,
+        containsAll(<String>{
+          'docs_only',
+          'app',
+          'native',
+          'android',
+          'ios',
+          'service',
+          'goldens',
+          'maestro_static',
+          'smoke',
+          'performance',
+          'ci_config',
+        }),
+      );
+      for (final entry in also.entries) {
+        expect(run.outputs[entry.key], '${entry.value}', reason: entry.key);
+      }
     }
 
     for (final event in ['pull_request', 'merge_group']) {
@@ -109,6 +134,12 @@ esac
             ),
             app: true,
             native: false,
+            also: const {
+              'docs_only': false,
+              'android': true,
+              'ios': true,
+              'smoke': true,
+            },
           );
         });
 
@@ -148,6 +179,11 @@ esac
             ),
             app: false,
             native: false,
+            also: const {
+              'docs_only': false,
+              'maestro_static': true,
+              'ci_config': true,
+            },
           );
         });
 
@@ -160,6 +196,7 @@ esac
             ),
             app: false,
             native: false,
+            also: const {'docs_only': true},
           );
         });
 
@@ -172,6 +209,7 @@ esac
             ),
             app: true,
             native: true,
+            also: const {'android': false, 'ios': true, 'smoke': true},
           );
         });
       });
@@ -252,6 +290,16 @@ esac
         ),
         app: true,
         native: true,
+        also: const {
+          'android': true,
+          'ios': true,
+          'service': true,
+          'goldens': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
       );
     });
 
@@ -284,8 +332,63 @@ esac
       );
     });
 
-    test('push falls open to preserve the full main-branch matrix', () {
-      expectScope(runDetector(event: 'push'), app: true, native: true);
+    test('push classifies the actual before/after comparison', () {
+      expectScope(
+        runDetector(event: 'push', changedFiles: ['docs/release-notes.md']),
+        app: false,
+        native: false,
+        also: const {'docs_only': true, 'smoke': false},
+      );
+    });
+
+    test('push falls open when the before SHA is all zeroes', () {
+      expectScope(
+        runDetector(
+          event: 'push',
+          pushBeforeSha: '0000000000000000000000000000000000000000',
+        ),
+        app: true,
+        native: true,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'service': true,
+          'goldens': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
+      );
+    });
+
+    test('classifies focused QA scopes independently', () {
+      final run = runDetector(
+        event: 'pull_request',
+        changedFiles: [
+          'mobile/lib/screens/feed/video_feed_page.dart',
+          'mobile/e2e/maestro/flows/feed.yaml',
+          '.github/workflows/mobile_ci.yaml',
+        ],
+        changedTotal: 3,
+      );
+
+      expectScope(
+        run,
+        app: true,
+        native: true,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'goldens': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
+      );
     });
   });
 }
