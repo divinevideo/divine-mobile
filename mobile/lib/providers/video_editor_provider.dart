@@ -849,13 +849,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// [build]'s `onDispose` callback.
   void _startDeferredFileCleanup() {
     late final Future<void> operation;
-    operation = () async {
-      try {
-        await _flushDeferredFileCleanup();
-      } finally {
-        _pendingDeferredCleanup.remove(operation);
-      }
-    }();
+    operation = _flushDeferredFileCleanup().whenComplete(() {
+      _pendingDeferredCleanup.remove(operation);
+    });
     _pendingDeferredCleanup.add(operation);
     unawaited(operation);
   }
