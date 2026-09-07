@@ -356,9 +356,9 @@ String _key(String seed) {
   return buffer.toString().substring(0, 64);
 }
 
-final _me = _key('9a');
-final _stranger = _key('7f');
-final _other = _key('8e');
+final String _me = _key('9a');
+final String _stranger = _key('7f');
+final String _other = _key('8e');
 
 bool _allFollowed(DmInboxFixtures fixtures, conversation) {
   final others = (conversation.participantPubkeys as List<String>)

@@ -149,6 +149,7 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
             controller: tabController,
             tabs: _tabs,
             classification: classification,
+            placement: _placement,
           ),
           Divider(height: 1, thickness: 1, color: colors.outlineDisabled),
           Expanded(
@@ -255,11 +256,33 @@ class _InboxTabBar extends StatelessWidget {
     required this.controller,
     required this.tabs,
     required this.classification,
+    required this.placement,
   });
 
   final TabController controller;
   final List<DmInboxBucket> tabs;
   final DmInboxClassification classification;
+  final OfficialPlacement placement;
+
+  /// Unread rows a tab is actually showing.
+  ///
+  /// In the pinned layout Official has no tab of its own and its rows are
+  /// rendered at the top of Inbox, so they have to count there — otherwise
+  /// the layout chosen to make official messages harder to miss is the one
+  /// where they carry no badge anywhere.
+  int _unreadFor(DmInboxBucket bucket) {
+    // Likely spam deliberately does not contribute an unread count — a badge
+    // on it would reward the spammer with the attention the bucket exists to
+    // withhold.
+    if (bucket == DmInboxBucket.likelySpam) return 0;
+    final shown = [
+      ...classification.bucket(bucket),
+      if (bucket == DmInboxBucket.inbox &&
+          placement == OfficialPlacement.pinnedInInbox)
+        ...classification.official,
+    ];
+    return shown.where((c) => !c.isRead).length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -290,15 +313,7 @@ class _InboxTabBar extends StatelessWidget {
               height: 46,
               child: _TabLabel(
                 label: bucket.label,
-                // Likely spam deliberately does not contribute an unread
-                // count — a badge on it would reward the spammer with the
-                // attention the bucket exists to withhold.
-                unread: bucket == DmInboxBucket.likelySpam
-                    ? 0
-                    : classification
-                          .bucket(bucket)
-                          .where((c) => !c.isRead)
-                          .length,
+                unread: _unreadFor(bucket),
               ),
             ),
         ],

@@ -1,6 +1,7 @@
 // ABOUTME: PROTOTYPE (#8076) — proves the four-tab screen renders and that
 // ABOUTME: request content stays concealed until the user opens it.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 
@@ -51,6 +52,41 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Lisbon'), findsOneWidget);
+      });
+
+      testWidgets('counts pinned official rows in the Inbox badge', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+
+        String badgeOn(String tab) {
+          final label = find.ancestor(
+            of: find.text(tab),
+            matching: find.byType(Tab),
+          );
+          return find
+              .descendant(of: label, matching: find.byType(Text))
+              .evaluate()
+              .map((e) => (e.widget as Text).data)
+              .join('|');
+        }
+
+        expect(badgeOn('Inbox'), equals('Inbox|2'));
+        expect(badgeOn('Official'), equals('Official|2'));
+
+        // Move Official into Inbox; its rows now render there.
+        await tester.tap(find.byTooltip('Tune classification'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Official gets its own tab'));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Official'), findsNothing);
+        expect(find.text('Divine Support'), findsOneWidget);
+        expect(find.text('Divine Trust & Safety'), findsOneWidget);
+        // 2 inbox + 2 official, not 2.
+        expect(badgeOn('Inbox'), equals('Inbox|4'));
       });
 
       testWidgets('shows official messages unconcealed and unblockable', (
