@@ -72,7 +72,26 @@ List<CaptionMention> pruneCaptionMentions(
 ) {
   if (mentions.isEmpty) return mentions;
   final kept = mentions
-      .where((mention) => text.contains('@${mention.display}'))
+      .where((mention) => containsMentionToken(text, mention.display))
       .toList(growable: false);
   return kept.length == mentions.length ? mentions : kept;
+}
+
+/// Whether [text] contains `@display` as a complete mention token.
+bool containsMentionToken(String text, String display) {
+  final token = display.startsWith('@') ? display : '@$display';
+  var searchStart = 0;
+  while (searchStart < text.length) {
+    final index = text.indexOf(token, searchStart);
+    if (index < 0) return false;
+    if (isMentionTokenBoundary(text, index + token.length)) return true;
+    searchStart = index + token.length;
+  }
+  return false;
+}
+
+/// Whether [offset] ends a mention instead of continuing its handle.
+bool isMentionTokenBoundary(String text, int offset) {
+  if (offset >= text.length) return true;
+  return !RegExp('[A-Za-z0-9_.-]').hasMatch(text[offset]);
 }

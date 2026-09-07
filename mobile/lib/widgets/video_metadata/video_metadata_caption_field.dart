@@ -142,6 +142,17 @@ class _CaptionFieldView extends ConsumerWidget {
     context.read<CaptionMentionsCubit>().clear();
   }
 
+  bool _canSelectSuggestion(String displayName) {
+    final insertion = applyMentionSelection(
+      text: controller.text,
+      cursor: controller.selection.baseOffset,
+      display: displayName,
+    );
+    return insertion != null &&
+        insertion.text.characters.length <=
+            VideoEditorConstants.descriptionLimit;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
@@ -195,6 +206,7 @@ class _CaptionFieldView extends ConsumerWidget {
         ),
         if (enableMentionAutocomplete)
           _CaptionMentionSuggestions(
+            canSelect: _canSelectSuggestion,
             onSelect: (pubkey, displayName) =>
                 _onSuggestionSelected(context, ref, pubkey, displayName),
           ),
@@ -208,8 +220,12 @@ class _CaptionFieldView extends ConsumerWidget {
 /// The metadata form scrolls, so an overlay anchored to the field would drift
 /// away from it; an inline list stays put and pushes the fields below down.
 class _CaptionMentionSuggestions extends StatelessWidget {
-  const _CaptionMentionSuggestions({required this.onSelect});
+  const _CaptionMentionSuggestions({
+    required this.canSelect,
+    required this.onSelect,
+  });
 
+  final bool Function(String displayName) canSelect;
   final void Function(String pubkey, String displayName) onSelect;
 
   @override
@@ -221,7 +237,11 @@ class _CaptionMentionSuggestions extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: MentionOverlay(suggestions: suggestions, onSelect: onSelect),
+      child: MentionOverlay(
+        suggestions: suggestions,
+        canSelect: canSelect,
+        onSelect: onSelect,
+      ),
     );
   }
 }

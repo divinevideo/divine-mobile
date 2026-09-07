@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/mention_pattern.dart';
+import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -324,7 +325,8 @@ bool _rangeMatchesSelectedToken(
 ) {
   final selectedText = text.substring(start, end);
   final token = display.startsWith('@') ? display : '@$display';
-  return selectedText == token || selectedText == display;
+  return (selectedText == token || selectedText == display) &&
+      isMentionTokenBoundary(text, end);
 }
 
 _MentionTokenRange? _findSelectedTokenRange(
@@ -339,7 +341,10 @@ _MentionTokenRange? _findSelectedTokenRange(
     if (index < 0) return null;
 
     final range = _MentionTokenRange(start: index, end: index + token.length);
-    if (!_rangeOverlapsAny(range, occupiedRanges)) return range;
+    if (isMentionTokenBoundary(text, range.end) &&
+        !_rangeOverlapsAny(range, occupiedRanges)) {
+      return range;
+    }
     searchStart = index + token.length;
   }
 

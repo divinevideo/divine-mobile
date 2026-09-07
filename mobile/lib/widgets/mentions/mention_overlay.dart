@@ -1,5 +1,5 @@
-// ABOUTME: Autocomplete overlay for @mentions in comment input
-// ABOUTME: Shows user suggestions from comment participants
+// ABOUTME: Shared autocomplete overlay for @mentions in text inputs
+// ABOUTME: Shows account suggestions and their verified identifiers
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
@@ -12,45 +12,20 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 @immutable
-class MentionNip05Claim {
-  const MentionNip05Claim({required this.pubkey, required this.nip05});
-
-  final String pubkey;
-  final String nip05;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is MentionNip05Claim &&
-          runtimeType == other.runtimeType &&
-          pubkey == other.pubkey &&
-          nip05 == other.nip05;
-
-  @override
-  int get hashCode => Object.hash(pubkey, nip05);
-}
-
-// Riverpod's family builder preserves its full generic type when inferred.
-// ignore: specify_nonobvious_property_types
-final mentionNip05VerificationProvider =
-    FutureProvider.family<Nip05VerificationStatus, MentionNip05Claim>((
-      ref,
-      claim,
-    ) {
-      final service = ref.watch(nip05VerificationServiceProvider);
-      return service.getVerificationStatus(claim.pubkey, claim.nip05);
-    });
-
-/// Overlay widget showing mention suggestions above the comment input.
+/// Overlay widget showing mention suggestions near a text input.
 class MentionOverlay extends ConsumerWidget {
   const MentionOverlay({
     required this.suggestions,
     required this.onSelect,
+    this.canSelect,
     super.key,
   });
 
   /// List of mention suggestions to display.
   final List<MentionSuggestion> suggestions;
+
+  /// Optional predicate used to disable suggestions that cannot be inserted.
+  final bool Function(String displayName)? canSelect;
 
   /// Callback when a suggestion is selected. Returns (hex pubkey, displayName).
   final void Function(String pubkey, String displayName) onSelect;
@@ -82,26 +57,9 @@ class MentionOverlay extends ConsumerWidget {
           itemBuilder: (context, index) {
             return _MentionSuggestionItem(
               suggestion: suggestions[index],
-              onTap: () {
-                final suggestion = suggestions[index];
-                final npub = NostrKeyUtils.encodePubKey(suggestion.pubkey);
-                // Use displayName from BLoC search results, fall back to
-                // cached profile lookup, then npub as last resort
-                final cachedProfile = ref
-                    .read(userProfileReactiveProvider(suggestion.pubkey))
-                    .value;
-                // Sanitized rather than swapped for bestDisplayName: that
-                // getter substitutes a generated name for a profile with no
-                // name at all, which would shadow the npub fallback below.
-                final resolvedName =
-                    suggestion.displayName ??
-                    cachedProfile?.displayName ??
-                    cachedProfile?.name;
-                final displayName = resolvedName == null
-                    ? npub
-                    : UserProfile.sanitizeDisplayName(resolvedName);
-                onSelect(suggestion.pubkey, displayName);
-              },
+              canSelect: canSelect,
+              onSelect: (displayName) =>
+                  onSelect(suggestions[index].pubkey, displayName),
             );
           },
         ),
@@ -111,10 +69,15 @@ class MentionOverlay extends ConsumerWidget {
 }
 
 class _MentionSuggestionItem extends ConsumerWidget {
-  const _MentionSuggestionItem({required this.suggestion, required this.onTap});
+  const _MentionSuggestionItem({
+    required this.suggestion,
+    required this.onSelect,
+    this.canSelect,
+  });
 
   final MentionSuggestion suggestion;
-  final VoidCallback onTap;
+  final void Function(String displayName) onSelect;
+  final bool Function(String displayName)? canSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,45 +108,55 @@ class _MentionSuggestionItem extends ConsumerWidget {
             displayNip05 != null
         ? displayNip05
         : npub;
+    // Sanitized rather than swapped for bestDisplayName: that getter
+    // substitutes a generated name for a profile with no name at all, which
+    // would shadow the npub fallback.
+    final selectionName = rawDisplayName == null
+        ? npub
+        : UserProfile.sanitizeDisplayName(rawDisplayName);
+    final enabled = canSelect?.call(selectionName) ?? true;
 
     return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          spacing: 10,
-          children: [
-            UserAvatar(
-              size: 32,
-              imageUrl: picture,
-              name: displayName,
-              placeholderSeed: suggestion.pubkey,
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (displayName != null)
+      onTap: enabled ? () => onSelect(selectionName) : null,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            spacing: 10,
+            children: [
+              UserAvatar(
+                size: 32,
+                imageUrl: picture,
+                name: displayName,
+                placeholderSeed: suggestion.pubkey,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (displayName != null)
+                      Text(
+                        displayName,
+                        style: VineTheme.labelLargeFont(
+                          color: context.vineColors.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     Text(
-                      displayName,
-                      style: VineTheme.labelLargeFont(
-                        color: context.vineColors.onSurface,
+                      identifier,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceMuted,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis, // UI truncation only
                     ),
-                  Text(
-                    identifier,
-                    style: VineTheme.bodySmallFont(
-                      color: context.vineColors.onSurfaceMuted,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis, // UI truncation only
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

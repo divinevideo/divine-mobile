@@ -320,6 +320,18 @@ void main() {
         );
       });
 
+      test('recordCaptionMention ignores an identical pick', () {
+        container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice)
+          ..recordCaptionMention(alice);
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice]),
+        );
+      });
+
       test('drops a mention once its handle is edited out of the caption', () {
         final notifier = container.read(videoEditorProvider.notifier)
           ..updateMetadata(description: 'hi @alice')

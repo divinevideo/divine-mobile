@@ -507,6 +507,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// caption is legitimate, and the publisher matches each binding to its own
   /// occurrence. Stale entries are pruned when the caption text next changes.
   void recordCaptionMention(CaptionMention mention) {
+    if (state.captionMentions.contains(mention)) return;
     state = state.copyWith(
       captionMentions: [...state.captionMentions, mention],
     );

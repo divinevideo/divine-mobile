@@ -210,7 +210,7 @@ void main() {
         await flushAutosaveDebounce(tester);
       });
 
-      testWidgets('rejects a picked mention that would exceed the limit', (
+      testWidgets('disables a picked mention that would exceed the limit', (
         tester,
       ) async {
         final container = await pumpField(tester);
@@ -218,6 +218,13 @@ void main() {
 
         await tester.enterText(find.byType(TextField).first, caption);
         await tester.pumpAndSettle();
+
+        final suggestion = find.ancestor(
+          of: find.text('OG-AB'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(suggestion).onTap, isNull);
+
         await tester.tap(find.text('OG-AB'));
         await tester.pumpAndSettle();
 

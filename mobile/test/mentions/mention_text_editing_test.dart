@@ -105,6 +105,13 @@ void main() {
       );
     });
 
+    test('drops a picked handle edited into a longer token', () {
+      expect(
+        pruneCaptionMentions(const [alice], 'hi @aliceandra'),
+        isEmpty,
+      );
+    });
+
     test('returns the same list when nothing is dropped', () {
       const mentions = <CaptionMention>[];
       expect(pruneCaptionMentions(mentions, 'anything'), same(mentions));
