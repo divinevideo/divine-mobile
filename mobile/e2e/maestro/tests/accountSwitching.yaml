@@ -1,0 +1,48 @@
+appId: co.openvine.app.staging
+---
+# TC to use the experimental account-switching entry point as the replacement
+# for the removed destructive logout journey.
+
+# 1. Enable the user-visible experiment.
+- runFlow: ../utils/openSettings.yaml
+- scrollUntilVisible:
+    element:
+      id: experimental_features_tile
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: experimental_features_tile
+- scrollUntilVisible:
+    element:
+      id: feature_flag_account_switching
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: feature_flag_account_switching
+- tapOn:
+    id: back_button
+
+# 2. Leave the current session without removing its remembered account.
+- scrollUntilVisible:
+    element:
+      id: account_switch_action
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: account_switch_action
+
+# 3. The returning-user welcome screen proves that the account was retained.
+- extendedWaitUntil:
+    visible:
+      id: continue_as_button
+    timeout: 30000
+- assertVisible:
+    id: use_another_account_button
+
+# 4. Continue with the remembered account so the regression suite can proceed.
+- tapOn:
+    id: continue_as_button
+- extendedWaitUntil:
+    visible:
+      id: home_tab
+    timeout: 30000

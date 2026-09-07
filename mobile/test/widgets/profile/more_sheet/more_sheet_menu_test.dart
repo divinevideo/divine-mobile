@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_menu.dart';
 
@@ -71,9 +72,7 @@ void main() {
     testWidgets('hides Unblock when onBlockTap is null and blocked', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        buildSubject(blockable: false, isBlocked: true),
-      );
+      await tester.pumpWidget(buildSubject(blockable: false, isBlocked: true));
 
       expect(
         find.text(l10n.profileUnblockDisplayName(displayName)),
@@ -95,6 +94,10 @@ void main() {
 
       expect(
         find.text(l10n.profileUnfollowDisplayName(displayName)),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.profileUnfollowAction),
         findsOneWidget,
       );
     });

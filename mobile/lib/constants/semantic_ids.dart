@@ -154,6 +154,14 @@ abstract class SemanticIds {
   static const String profileEditButton = 'edit_profile_button';
   static const String profileBackButton = 'profile_back_button';
   static const String profileMoreButton = 'profile_more_button';
+  static const String profileUnfollowAction = 'profile_unfollow_action';
+
+  static const String settingsExperimentalFeaturesRow =
+      'experimental_features_tile';
+  static const String settingsAccountSwitchAction = 'account_switch_action';
+
+  static const String featureFlagAccountSwitching =
+      'feature_flag_account_switching';
 
   /// Profile content tabs. The bar is icon-only and its tab count varies by
   /// profile (6 on the own profile, 5 on another user's), so tests address a
