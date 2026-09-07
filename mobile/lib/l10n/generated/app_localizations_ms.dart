@@ -12102,4 +12102,29 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'Kemas kini baharu sudah tiba. Lihat sekarang →';
+
+  @override
+  String get updateModerateTitle =>
+      'Terdapat kemas kini sejak semakan terakhir anda';
+
+  @override
+  String get updateUrgentTitle => 'Anda kehilangan pembaikan penting';
+
+  @override
+  String get updateNotNow => 'Bukan sekarang';
+
+  @override
+  String get updateAction => 'Kemas kini';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Baharu dalam $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Kemas kini tersedia';
 }

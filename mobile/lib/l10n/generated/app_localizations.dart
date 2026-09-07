@@ -20351,6 +20351,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get accountStatusRetry;
+
+  /// No description provided for @updateGentleBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'A fresh update just dropped. Check it out →'**
+  String get updateGentleBanner;
+
+  /// No description provided for @updateModerateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s been an update since you last checked'**
+  String get updateModerateTitle;
+
+  /// No description provided for @updateUrgentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re missing important fixes'**
+  String get updateUrgentTitle;
+
+  /// No description provided for @updateNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get updateNotNow;
+
+  /// No description provided for @updateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateAction;
+
+  /// Heading before highlights for an available app update.
+  ///
+  /// In en, this message translates to:
+  /// **'New in {version}:'**
+  String updateNewIn(String version);
+
+  /// No description provided for @settingsUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get settingsUpdateAvailable;
 }
 
 class _AppLocalizationsDelegate

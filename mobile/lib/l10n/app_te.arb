@@ -8307,5 +8307,12 @@
   "accountStatusRetry": "మళ్లీ ప్రయత్నించండి",
   "@accountStatusRetry": {
     "description": "Button that refetches the account status."
-  }
+  },
+  "updateGentleBanner": "కొత్త అప్‌డేట్ వచ్చింది. చూడండి →",
+  "updateModerateTitle": "మీరు చివరిసారి చూసిన తర్వాత ఒక అప్‌డేట్ వచ్చింది",
+  "updateUrgentTitle": "మీకు ముఖ్యమైన పరిష్కారాలు అందడం లేదు",
+  "updateNotNow": "ఇప్పుడు వద్దు",
+  "updateAction": "అప్‌డేట్ చేయండి",
+  "updateNewIn": "{version}లో కొత్తవి:",
+  "settingsUpdateAvailable": "అప్‌డేట్ అందుబాటులో ఉంది"
 }

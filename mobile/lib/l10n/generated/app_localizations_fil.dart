@@ -12207,4 +12207,27 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'May bagong update. Tingnan ito →';
+
+  @override
+  String get updateModerateTitle => 'May update mula noong huli mong tingnan';
+
+  @override
+  String get updateUrgentTitle => 'May mahahalagang pag-aayos na wala ka pa';
+
+  @override
+  String get updateNotNow => 'Hindi ngayon';
+
+  @override
+  String get updateAction => 'I-update';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Bago sa $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'May update';
 }

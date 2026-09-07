@@ -67,12 +67,12 @@ class ShellChrome extends StatelessWidget {
               onBackPressed: showBackButton ? onBackPressed : null,
             ),
       // Keep the branch container in the same slot regardless of tab so
-      // switching to/from home never reparents it (which would relayout all
-      // four kept-alive branches). The UpdateBanner only shows on home.
+      // switching tabs never reparents it (which would relayout all four
+      // kept-alive branches). Keep update availability visible on every tab.
       body: Column(
         children: [
           Expanded(child: child),
-          if (currentIndex == 0) const UpdateBanner(),
+          const UpdateBanner(),
         ],
       ),
       // PointerInterceptor ensures the bottom nav receives taps on web even

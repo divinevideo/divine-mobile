@@ -12353,4 +12353,28 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'A apărut o actualizare nouă. Descoper-o →';
+
+  @override
+  String get updateModerateTitle =>
+      'Există o actualizare de la ultima verificare';
+
+  @override
+  String get updateUrgentTitle => 'Îți lipsesc remedieri importante';
+
+  @override
+  String get updateNotNow => 'Nu acum';
+
+  @override
+  String get updateAction => 'Actualizează';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Noutăți în $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Actualizare disponibilă';
 }

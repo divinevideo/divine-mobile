@@ -15,6 +15,8 @@ Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(UpdateBanner, () {
     late _MockAppUpdateBloc bloc;
 
@@ -40,7 +42,10 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text(UpdateCopy.gentle), findsNothing);
+      expect(
+        find.text(l10n.updateGentleBanner),
+        findsNothing,
+      );
     });
 
     testWidgets('renders banner when urgency is gentle', (tester) async {
@@ -54,7 +59,10 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text(UpdateCopy.gentle), findsOneWidget);
+      expect(
+        find.text(l10n.updateGentleBanner),
+        findsOneWidget,
+      );
     });
 
     testWidgets('dismiss button dispatches AppUpdateDismissed', (tester) async {
@@ -83,7 +91,10 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text(UpdateCopy.gentle), findsNothing);
+      expect(
+        find.text(l10n.updateGentleBanner),
+        findsNothing,
+      );
     });
   });
 }

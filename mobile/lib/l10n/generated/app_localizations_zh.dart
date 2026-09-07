@@ -11369,4 +11369,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => '新版本刚刚上线。去看看 →';
+
+  @override
+  String get updateModerateTitle => '自上次检查后已有新版本';
+
+  @override
+  String get updateUrgentTitle => '你缺少重要修复';
+
+  @override
+  String get updateNotNow => '暂不';
+
+  @override
+  String get updateAction => '更新';
+
+  @override
+  String updateNewIn(String version) {
+    return '$version 新增内容：';
+  }
+
+  @override
+  String get settingsUpdateAvailable => '有可用更新';
 }

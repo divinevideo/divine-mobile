@@ -105,7 +105,7 @@ void main() {
 
     group('AppUpdateDismissed', () {
       blocTest<AppUpdateBloc, AppUpdateState>(
-        'calls repository.dismissUpdate and sets urgency to none',
+        'clears urgency but keeps the resolved update reachable',
         build: buildBloc,
         seed: () => const AppUpdateState(
           status: AppUpdateStatus.resolved,
@@ -118,11 +118,17 @@ void main() {
         },
         act: (bloc) => bloc.add(const AppUpdateDismissed()),
         expect: () => [
-          isA<AppUpdateState>().having(
-            (s) => s.urgency,
-            'urgency',
-            UpdateUrgency.none,
-          ),
+          isA<AppUpdateState>()
+              .having((s) => s.urgency, 'urgency', UpdateUrgency.none)
+              // Settings keeps offering the update after the nudge is
+              // dismissed, so the resolved release must survive the emit.
+              .having((s) => s.status, 'status', AppUpdateStatus.resolved)
+              .having((s) => s.latestVersion, 'latestVersion', '1.0.8')
+              .having(
+                (s) => s.downloadUrl,
+                'downloadUrl',
+                DownloadUrls.github,
+              ),
         ],
         verify: (_) {
           verify(() => repository.dismissUpdate('1.0.8')).called(1);
