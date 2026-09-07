@@ -197,9 +197,6 @@ VideoEventService videoEventService(Ref ref) {
     videoFilterBuilder: videoFilterBuilder,
     performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
   );
-  // Without this, every NostrService client swap (auth cold start, account
-  // switch) orphans a service whose periodic timers and auth subscription
-  // keep running against the disposed EventRouter above (#6174).
   ref.onDispose(service.dispose);
   var persistedDeletions = const <ContentDeletion>[];
   try {
