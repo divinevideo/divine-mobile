@@ -1285,6 +1285,65 @@ void main() {
         }
       });
 
+      testWidgets('does not time a frame that lands while inactive', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        const videoId =
+            'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                isActive: false,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+
+          expect(metrics, isEmpty);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
       testWidgets('does not autoplay when canAutoPlay returns false', (
         tester,
       ) async {

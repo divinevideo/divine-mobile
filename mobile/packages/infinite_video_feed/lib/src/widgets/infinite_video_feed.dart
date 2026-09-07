@@ -932,7 +932,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final timer = _activeFirstFrameTimer;
     if (timer == null || timer.index != index) return;
     await controller.firstFrameRendered;
+    // The feed can go inactive while the native player is still decoding. A
+    // frame that lands afterwards did not cost the viewer this wait, so drop
+    // the sample rather than reporting the hidden span as activation latency.
     if (!mounted ||
+        !_isActive ||
         index != _currentIndex ||
         !identical(_controllers[index], controller) ||
         !identical(_activeFirstFrameTimer, timer)) {
