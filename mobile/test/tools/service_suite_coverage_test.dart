@@ -201,6 +201,31 @@ $afterLoop
       expect(run().exitCode, equals(0));
     });
 
+    test('accounts for suites nested below integration_test/e2e', () {
+      File('$mobileDirectory/integration_test/e2e/dm/nested_test.dart')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('// fixture\n');
+
+      final unaccounted = run();
+
+      expect(unaccounted.exitCode, equals(1));
+      expect(unaccounted.stdout, contains('NEW entr(y/ies)'));
+      expect(unaccounted.stdout, contains('dm/nested_test.dart'));
+
+      writeBaseline([
+        'integration_test/e2e/excluded_test.dart # requires full stack',
+        'integration_test/e2e/dm/nested_test.dart # requires full stack',
+      ]);
+
+      final excluded = run();
+
+      expect(
+        excluded.exitCode,
+        equals(0),
+        reason: 'stdout=${excluded.stdout} stderr=${excluded.stderr}',
+      );
+    });
+
     test('fails when the workflow anchor is missing', () {
       writeWorkflow(includeAnchor: false);
 

@@ -48,7 +48,7 @@ loop_end_count="$(printf '%s\n' "$step_tail" | grep -cE '; do[[:space:]]*$' || t
 [ "$loop_end_count" -eq 1 ] || fail "expected exactly one service-suite loop end, found $loop_end_count"
 
 loop_body="$(printf '%s\n' "$step_tail" | sed -n '/^[[:space:]]*for suite in \\$/,/; do[[:space:]]*$/p')"
-run_list_raw="$(printf '%s\n' "$loop_body" | grep -oE 'integration_test/e2e/[A-Za-z0-9_]+_test\.dart' || true)"
+run_list_raw="$(printf '%s\n' "$loop_body" | grep -oE 'integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart' || true)"
 [ -n "$run_list_raw" ] || fail "service-suite loop contains no E2E suite paths"
 
 duplicate_runs="$(printf '%s\n' "$run_list_raw" | sort | uniq -d)"
@@ -61,7 +61,7 @@ while IFS= read -r suite; do
 done <<< "$RUN_LIST"
 
 manifest_entries="$(sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$BASELINE_FILE")"
-invalid_entries="$(printf '%s\n' "$manifest_entries" | grep -vE '^integration_test/e2e/[A-Za-z0-9_]+_test\.dart[[:space:]]+#[[:space:]]*[^[:space:]].*$' || true)"
+invalid_entries="$(printf '%s\n' "$manifest_entries" | grep -vE '^integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart[[:space:]]+#[[:space:]]*[^[:space:]].*$' || true)"
 [ -z "$invalid_entries" ] || fail "every exclusion must be a canonical suite path followed by a nonempty '# reason':
 $(printf '%s\n' "$invalid_entries" | sed 's/^/  /')"
 
@@ -83,7 +83,7 @@ $(printf '%s\n' "$overlap" | sed 's/^/  /')
 fi
 
 emit_current() {
-  find "$E2E_DIR" -maxdepth 1 -type f -name '*_test.dart' -print \
+  find "$E2E_DIR" -type f -name '*_test.dart' -print \
     | sed "s#^$MOBILE_DIR/##" \
     | sort -u \
     | comm -23 - <(printf '%s\n' "$RUN_LIST")
