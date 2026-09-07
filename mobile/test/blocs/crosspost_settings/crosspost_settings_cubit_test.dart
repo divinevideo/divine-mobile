@@ -770,7 +770,7 @@ void main() {
         });
       });
 
-      test('stale poll result does not overwrite toggle result', () async {
+      test('stale poll result does not overwrite toggle result', () {
         final pollCompleter = Completer<CrosspostStatus>();
         when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer(
           (_) async => const BlueskyCrosspostAccountStatus(
@@ -796,25 +796,37 @@ void main() {
           ),
         );
 
-        final cubit = buildCubit(pollInterval: const Duration(milliseconds: 1));
-        addTearDown(cubit.close);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        fakeAsync((fake) {
+          final cubit = buildCubit(
+            pollInterval: const Duration(milliseconds: 1),
+          );
+          fake.flushMicrotasks();
 
-        await cubit.toggleCrosspost(enabled: false);
-        pollCompleter.complete(
-          const CrosspostStatus(
-            crosspostEnabled: true,
-            provisioningState: AtprotoProvisioningState.pending,
-          ),
-        );
-        await Future<void>.delayed(Duration.zero);
+          _expectProvisioningPollerArmed(
+            fake,
+            const Duration(milliseconds: 1),
+          );
+          fake.elapse(const Duration(milliseconds: 1));
+          fake.flushMicrotasks();
+          verify(() => repository.loadKeycastStatus()).called(1);
 
-        expect(cubit.state.enabled, isFalse);
-        expect(
-          cubit.state.provisioningState,
-          AtprotoProvisioningState.disabled,
-        );
+          unawaited(cubit.toggleCrosspost(enabled: false));
+          fake.flushMicrotasks();
+          pollCompleter.complete(
+            const CrosspostStatus(
+              crosspostEnabled: true,
+              provisioningState: AtprotoProvisioningState.pending,
+            ),
+          );
+          fake.flushMicrotasks();
+
+          expect(cubit.state.enabled, isFalse);
+          expect(
+            cubit.state.provisioningState,
+            AtprotoProvisioningState.disabled,
+          );
+          cubit.close();
+        });
       });
 
       test('poll that fires during toggle does not start', () {
