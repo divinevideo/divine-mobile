@@ -13,3 +13,13 @@ key.properties
 **/*.keystore
 **/*.jks
 /.keys/
+
+# Divine tracks the Gradle wrapper so a fresh clone or worktree can run
+# gradle-based tooling without first running `flutter build`. Flutter only
+# injects gradlew from GradleUtils.getExecutable, i.e. when the flutter tool
+# itself is about to exec Gradle -- never on `flutter pub get`. See #7201.
+# The root .gitignore keeps ignoring every other android/ directory; only this
+# app's wrapper is tracked.
+!/gradlew
+!/gradlew.bat
+!/gradle/wrapper/gradle-wrapper.jar

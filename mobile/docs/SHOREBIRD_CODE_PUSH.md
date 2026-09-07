@@ -547,17 +547,12 @@ Apple approves a version such as `1.0.20`, its pre-release train is closed and
 a higher build number does not reopen it. Bump the version in
 `mobile/pubspec.yaml`; the iOS preflight checks this before invoking Shorebird.
 
-**`shorebird init` fails with "Unable to initialize gradlew".** `gradlew` is
-gitignored, so a fresh worktree has no wrapper, and `init` calls it directly
-rather than through `flutter build`. See #7201. Workaround:
-
-```
-echo "flutter.sdk=$HOME/flutter" > mobile/android/local.properties
-cd mobile && flutter build apk --config-only   # injects the wrapper
-```
-
-`init` also needs a JDK for that call, which a machine set up only for iOS
-work will not have.
+**`shorebird init` needs a JDK.** It calls `android/gradlew` directly for
+flavor detection, so a machine set up only for iOS work will not have the JDK
+that call needs; `mise install` provides one (pinned in `mobile/mise.toml`).
+The wrapper itself is tracked as of #7201, so a fresh worktree no longer needs
+a `flutter build` first — see
+[ANDROID_LOCAL_SETUP.md](ANDROID_LOCAL_SETUP.md).
 
 **The patch-source validator does not exist on older patch lines.** A release
 whose baseline predates #7844 has no `mobile/scripts/shorebird_patch_source.rb`

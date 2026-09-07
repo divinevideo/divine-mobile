@@ -1,0 +1,9 @@
+# The Gradle wrapper is tracked (see #7201) so a fresh clone or worktree can run
+# gradle-based tooling without first running `flutter build`. Its two launcher
+# scripts have different, load-bearing line endings, and this repo sets neither
+# core.autocrlf nor core.eol -- so pin them here rather than trusting each
+# contributor's git config. A gradlew rewritten to CRLF fails at exec time with
+# "bad interpreter".
+mobile/android/gradlew                            text eol=lf
+mobile/android/gradlew.bat                        text eol=crlf
+mobile/android/gradle/wrapper/gradle-wrapper.jar  binary

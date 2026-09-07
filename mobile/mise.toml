@@ -1,5 +1,10 @@
 [tools]
 flutter = "3.44.9"
+# Android/Gradle builds need a JDK, and nothing else provisions one. 17 is what
+# the build actually targets: app/build.gradle.kts sets source/targetCompatibility
+# and jvmTarget to 17, and codemagic.yaml pins `java: 17` for every Android
+# workflow. Pinning it here keeps a local `./gradlew` on the same JDK as CI.
+java = "temurin-17"
 
 [tasks.local_up]
 description = "Start all local E2E services"

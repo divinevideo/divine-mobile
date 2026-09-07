@@ -75,7 +75,7 @@ fi
 # Run dart format check on the staged files only (fast).
 # Strip the leading "mobile/" prefix because we cd'd into mobile above.
 STAGED_FORMAT_PATHS=$(echo "$STAGED_DART_FILES" | sed 's|^mobile/||')
-if ! echo "$STAGED_FORMAT_PATHS" | xargs mise exec -- dart format --output=none --set-exit-if-changed 2>/dev/null; then
+if ! echo "$STAGED_FORMAT_PATHS" | xargs mise exec -- dart format --output=none --set-exit-if-changed; then
     echo ""
     echo "Format check failed!"
     echo "Run: cd mobile && mise exec -- dart format lib test integration_test"
@@ -379,7 +379,7 @@ echo ""
 
 # Run flutter analyze (mirrors CI)
 echo "Running analyzer..."
-if ! mise exec -- flutter analyze lib test integration_test 2>/dev/null; then
+if ! mise exec -- flutter analyze lib test integration_test; then
     echo ""
     echo "Analysis failed!"
     echo "Fix the issues above before pushing."

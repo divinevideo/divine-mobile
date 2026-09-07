@@ -241,6 +241,35 @@ esac
       );
     });
 
+    test('gradle wrapper guard changes run native checks', () {
+      // The guard reads mobile/android/** and its own script, so a change to
+      // the script alone must still schedule the native-gated step that runs
+      // it (#7201) -- otherwise editing the guard could not re-verify it.
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['mobile/scripts/check_gradle_wrapper_checksum.sh'],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: true,
+      );
+    });
+
+    test('gitattributes changes run wrapper checks', () {
+      // The tracked wrapper launchers depend on their root-level line-ending
+      // attributes, so changing that file must run the app and native gates.
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['.gitattributes'],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: true,
+      );
+    });
+
     test('push falls open to preserve the full main-branch matrix', () {
       expectScope(runDetector(event: 'push'), app: true, native: true);
     });

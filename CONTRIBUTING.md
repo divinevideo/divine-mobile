@@ -158,6 +158,10 @@ flutter pub get
 flutter doctor
 ```
 
+Building or debugging the **Android** app needs a JDK and an Android SDK on top
+of that — see [mobile/docs/ANDROID_LOCAL_SETUP.md](mobile/docs/ANDROID_LOCAL_SETUP.md).
+Flutter tests, analysis and the web build do not.
+
 ## Worktree-First Workflow
 
 Start every task from a fresh branch created from `origin/main`:

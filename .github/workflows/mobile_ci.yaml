@@ -141,6 +141,16 @@ jobs:
       - name: 🍏 Verify iOS shipping target versions
         if: ${{ needs.changes.outputs.native == 'true' }}
         run: bash scripts/check_ios_shipping_versions.sh
+      - name: 🐘 Verify the tracked Gradle wrapper is the pinned artifact
+        # The wrapper is tracked (#7201) so a fresh clone or worktree can run
+        # gradle tooling without a prior `flutter build`. That makes
+        # gradle-wrapper.jar the one third-party binary here that
+        # check_dependency_provenance.sh does not cover -- it reads pubspec
+        # sources only. Gated on `native` for the same reason as the two steps
+        # around it: the guard's only inputs are mobile/android/** and its own
+        # script.
+        if: ${{ needs.changes.outputs.native == 'true' }}
+        run: bash scripts/check_gradle_wrapper_checksum.sh
       - name: 🌐 Verify backend-host defaults stay on *.divine.video
         run: bash scripts/check_backend_host_defaults.sh
       - name: 🪵 Verify no raw logging in production code
