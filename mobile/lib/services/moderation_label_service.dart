@@ -79,6 +79,10 @@ enum _LabelerHistoryStop {
   /// A page went unanswered, or the walk ran out of its per-load budget.
   /// Whatever arrived is still applied and the labeler stays retryable.
   incomplete,
+
+  /// The service was disposed, or the labeler was unloaded, mid-walk.
+  /// Nothing the walk collected may be applied.
+  cancelled,
 }
 
 /// Service for subscribing to Kind 1985 label events from labeler pubkeys.
@@ -215,6 +219,26 @@ class ModerationLabelService {
   /// Set by [dispose]; stops an in-flight load from arming a new retry.
   bool _disposed = false;
 
+  /// Bumped whenever a labeler's rows are dropped because the labeler itself
+  /// is going away.
+  ///
+  /// Nothing cancels an awaited page, so an unfollow or a pubkey rotation part
+  /// way through a multi-page walk would otherwise be undone by that walk
+  /// reapplying its rows and latching the labeler once it finished. A walk
+  /// carries the generation it started with and abandons itself when it no
+  /// longer matches.
+  final Map<String, int> _labelerLoadGenerations = {};
+
+  int _labelerLoadGeneration(String pubkey) =>
+      _labelerLoadGenerations[pubkey] ?? 0;
+
+  void _invalidateLabelerLoad(String pubkey) =>
+      _labelerLoadGenerations[pubkey] = _labelerLoadGeneration(pubkey) + 1;
+
+  /// Whether a walk started at [generation] may still act on its result.
+  bool _isLabelerLoadCurrent(String pubkey, int generation) =>
+      !_disposed && _labelerLoadGeneration(pubkey) == generation;
+
   /// Active subscriptions.
   final Map<String, StreamSubscription<dynamic>> _subscriptions = {};
 
@@ -329,13 +353,25 @@ class ModerationLabelService {
       _LabelerHistoryStop stop,
     })
   >
-  _loadLabelerHistory(String pubkey) async {
+  _loadLabelerHistory(String pubkey, int generation) async {
     final collected = <Event>[];
     final seenIds = <String>{};
     int? until;
     var pages = 0;
 
     while (true) {
+      // dispose() and _unloadLabeler() cannot cancel a page already awaited,
+      // so re-check between pages rather than keep querying the shared client
+      // on behalf of a labeler nothing wants any more.
+      if (!_isLabelerLoadCurrent(pubkey, generation)) {
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.cancelled,
+        );
+      }
+
       // Defensive stop: the loop below always terminates for a relay that
       // reports the end of a labeler's history, so reaching this cap means the
       // relay never does (see [defaultMaxLabelerHistoryPages]). Stop, apply
@@ -461,7 +497,24 @@ class ModerationLabelService {
     }
 
     try {
-      final result = await _loadLabelerHistory(pubkey);
+      final generation = _labelerLoadGeneration(pubkey);
+      final result = await _loadLabelerHistory(pubkey, generation);
+
+      // The final page's await is its own window: dispose() or an unfollow can
+      // land after the walk's last check and before this one. Applying past
+      // that point would restore rows _unloadLabeler() just dropped, and
+      // latching would mark a labeler nobody subscribes to as loaded.
+      if (result.stop == _LabelerHistoryStop.cancelled ||
+          !_isLabelerLoadCurrent(pubkey, generation)) {
+        Log.debug(
+          'Discarding labeler load for ${pubkeyForLogs(pubkey)}: it was '
+          'unloaded or the service was disposed while loading',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
       final events = result.events;
       final isIncomplete = result.stop == _LabelerHistoryStop.incomplete;
 
@@ -878,6 +931,9 @@ class ModerationLabelService {
   }
 
   Future<void> _unloadLabeler(String pubkey) async {
+    // Synchronously, before the first await: a walk in flight has to see this
+    // the moment the caller decides the labeler is going away.
+    _invalidateLabelerLoad(pubkey);
     await _subscriptions[pubkey]?.cancel();
     _subscriptions.remove(pubkey);
     _removePendingLabelerRetry(pubkey);
@@ -1045,6 +1101,7 @@ class ModerationLabelService {
 
     for (final pubkey in retired) {
       // Clean up any labels fetched from the old key
+      _invalidateLabelerLoad(pubkey);
       _removePendingLabelerRetry(pubkey);
       _removeLabelsForLabeler(pubkey);
       _loadedLabelers.remove(pubkey);
