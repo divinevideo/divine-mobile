@@ -166,6 +166,80 @@ void main() {
       });
     });
 
+    group('encodeReserved', () {
+      test('edits members over the complete source event', () {
+        final payload = Nip51PeopleListCodec.encodeReserved(
+          dTag: Nip51PeopleListCodec.notifyDTag,
+          title: 'Notify',
+          pubkeys: const [memberPubkeyA, memberPubkeyB],
+          sourceTags: const [
+            ['d', 'notify', 'extra-position'],
+            ['title', 'Renamed elsewhere'],
+            ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+            ['p', memberPubkeyA, 'wss://backup.example'],
+            ['alt', 'Notification subscriptions'],
+          ],
+          sourceContent: 'nip44-ciphertext-written-by-another-client',
+        );
+
+        expect(payload.tags, const [
+          ['d', 'notify', 'extra-position'],
+          ['title', 'Renamed elsewhere'],
+          ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+          ['p', memberPubkeyA, 'wss://backup.example'],
+          ['alt', 'Notification subscriptions'],
+          ['p', memberPubkeyB],
+        ]);
+        expect(payload.content, 'nip44-ciphertext-written-by-another-client');
+      });
+
+      test('removes every source tag for a removed member', () {
+        final payload = Nip51PeopleListCodec.encodeReserved(
+          dTag: Nip51PeopleListCodec.notifyDTag,
+          title: 'Notify',
+          pubkeys: const [memberPubkeyB],
+          sourceTags: const [
+            ['d', 'notify'],
+            ['p', memberPubkeyA, 'wss://relay.example'],
+            ['p', memberPubkeyA, 'wss://backup.example'],
+            ['p', memberPubkeyB, 'wss://relay.example'],
+          ],
+          sourceContent: '',
+        );
+
+        expect(payload.tags, const [
+          ['d', 'notify'],
+          ['p', memberPubkeyB, 'wss://relay.example'],
+        ]);
+      });
+
+      test('rejects partial or mismatched source data', () {
+        expect(
+          () => Nip51PeopleListCodec.encodeReserved(
+            dTag: Nip51PeopleListCodec.notifyDTag,
+            title: 'Notify',
+            pubkeys: const [],
+            sourceTags: const [
+              ['d', 'notify'],
+            ],
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => Nip51PeopleListCodec.encodeReserved(
+            dTag: Nip51PeopleListCodec.notifyDTag,
+            title: 'Notify',
+            pubkeys: const [],
+            sourceTags: const [
+              ['d', 'block'],
+            ],
+            sourceContent: '',
+          ),
+          throwsArgumentError,
+        );
+      });
+    });
+
     group('decode', () {
       test('parses a kind 30000 event into a UserList', () {
         final event = Event(

@@ -85,38 +85,11 @@ abstract final class Nip51PeopleListCodec {
       );
     }
     if (sourceTags != null) {
-      if (_firstTagValue(sourceTags, 'd') != list.id) {
-        throw ArgumentError.value(
-          sourceTags,
-          'sourceTags',
-          'must contain the d tag represented by the list',
-        );
-      }
-      final wanted = list.pubkeys.where((pubkey) => pubkey.isNotEmpty).toSet();
-      final sourced = <String>{};
-      final tags = <List<String>>[];
-
-      for (final tag in sourceTags) {
-        if (tag.length < 2 || tag[0] != 'p' || tag[1].isEmpty) {
-          tags.add(List<String>.of(tag));
-          continue;
-        }
-        final pubkey = tag[1];
-        if (wanted.contains(pubkey)) {
-          tags.add(List<String>.of(tag));
-          sourced.add(pubkey);
-        }
-      }
-
-      for (final pubkey in list.pubkeys) {
-        if (pubkey.isNotEmpty && sourced.add(pubkey)) {
-          tags.add(['p', pubkey]);
-        }
-      }
-      return PeopleListEventPayload(
-        kind: kind,
-        tags: tags,
-        content: sourceContent!,
+      return _encodeMembershipEdit(
+        dTag: list.id,
+        pubkeys: list.pubkeys,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent!,
       );
     }
 
@@ -152,15 +125,34 @@ abstract final class Nip51PeopleListCodec {
   ///
   /// An empty [pubkeys] is legitimate — it is how the user clears the list —
   /// and produces an event with `d` and `title` but no `p` tags.
+  ///
+  /// When [sourceTags] is supplied, membership is edited over the complete
+  /// source event and [sourceContent] passes through verbatim. The source
+  /// arguments must either both be present or both be absent.
   static PeopleListEventPayload encodeReserved({
     required String dTag,
     required String title,
     required Iterable<String> pubkeys,
+    List<List<String>>? sourceTags,
+    String? sourceContent,
   }) {
     assert(
       reservedDTags.contains(dTag),
       'encodeReserved is only for app-managed lists in reservedDTags',
     );
+    if ((sourceTags == null) != (sourceContent == null)) {
+      throw ArgumentError(
+        'sourceTags and sourceContent must both be present or both be absent',
+      );
+    }
+    if (sourceTags != null) {
+      return _encodeMembershipEdit(
+        dTag: dTag,
+        pubkeys: pubkeys,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent!,
+      );
+    }
     return PeopleListEventPayload(
       kind: kind,
       tags: [
@@ -233,6 +225,47 @@ abstract final class Nip51PeopleListCodec {
   static Iterable<String> _memberPubkeys(List<List<String>> tags) => tags
       .where((tag) => tag.length >= 2 && tag[0] == 'p' && tag[1].isNotEmpty)
       .map((tag) => tag[1]);
+
+  static PeopleListEventPayload _encodeMembershipEdit({
+    required String dTag,
+    required Iterable<String> pubkeys,
+    required List<List<String>> sourceTags,
+    required String sourceContent,
+  }) {
+    if (_firstTagValue(sourceTags, 'd') != dTag) {
+      throw ArgumentError.value(
+        sourceTags,
+        'sourceTags',
+        'must contain the d tag represented by the list',
+      );
+    }
+    final wanted = pubkeys.where((pubkey) => pubkey.isNotEmpty).toSet();
+    final sourced = <String>{};
+    final tags = <List<String>>[];
+
+    for (final tag in sourceTags) {
+      if (tag.length < 2 || tag[0] != 'p' || tag[1].isEmpty) {
+        tags.add(List<String>.of(tag));
+        continue;
+      }
+      final pubkey = tag[1];
+      if (wanted.contains(pubkey)) {
+        tags.add(List<String>.of(tag));
+        sourced.add(pubkey);
+      }
+    }
+
+    for (final pubkey in pubkeys) {
+      if (pubkey.isNotEmpty && sourced.add(pubkey)) {
+        tags.add(['p', pubkey]);
+      }
+    }
+    return PeopleListEventPayload(
+      kind: kind,
+      tags: tags,
+      content: sourceContent,
+    );
+  }
 
   static String? _firstTagValue(List<List<String>> tags, String name) {
     for (final tag in tags) {
