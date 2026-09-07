@@ -128,6 +128,17 @@ completes the same trace as `first_relay_event`. By the time EOSE can report a
 positive relay count, that earlier completion has already won. An EOSE with no
 listener-delivered events reports `eose_empty` instead.
 
+`timeout` also undercounts, because the 30-second fuse is keyed by
+`SubscriptionType` rather than by load: starting a load of a given type cancels
+the previous load's fuse, and the handler additionally does nothing if the
+subscription it belongs to is no longer the active one. That is normally
+harmless, since a replacing load completes the one it replaced as `cancelled`.
+It is not harmless where loads of one type run concurrently —
+`HashtagService.subscribeToHashtagVideos` passes `replace: false` so several
+hashtag subscriptions can be live at once. The earlier load loses its fuse and
+stays pending until unsubscribe or teardown, reporting `cancelled` or
+`disposed`. So `timeout` is a floor on 30-second stalls, not a count of them.
+
 ## Durations are not interchangeable
 
 The trace starts immediately before the cache lookup. This has two important
