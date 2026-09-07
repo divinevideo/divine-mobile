@@ -21,7 +21,7 @@ single-purpose direct renderers. The complete inventory is:
 
 | Render task | Construction | Reaches |
 |---|---|---|
-| final export, seam preview, merge clips, and save clip to library | `lib/services/video_editor/video_editor_render_service.dart:1219` | `_concatenateSegments` |
+| final export, seam preview, merge clips, and save clip to library | `lib/services/video_editor/video_editor_render_service.dart:1215` | `_concatenateSegments` |
 | per-clip aspect-ratio normalization | `lib/services/video_editor/video_editor_render_service.dart:1111` | `renderWithEncoderFallback` |
 | limit clip duration and crop to aspect ratio | `lib/services/video_editor/video_editor_render_service.dart:855`, `:942` | `_cancelAndRender` |
 | bake chroma key | `lib/services/video_editor/chroma_key_bake_service.dart:172`, `:194` | `renderNativeVideoToFile` |
