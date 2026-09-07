@@ -1771,6 +1771,54 @@ void main() {
           );
         },
       );
+
+      test(
+        'stops at the page cap against a relay that never signals the end',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            maxLabelerHistoryPages: 3,
+          );
+          // A hostile relay fabricates a full page at exactly the requested
+          // `until` on every response, so the cursor steps backward forever.
+          // Without the cap this never terminates.
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          // Terminated at the cap rather than hanging, and applied what it had.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(3);
+          expect(paged.getContentWarnings('target_dup_1'), hasLength(1));
+          expect(paged.getContentWarnings('target_dup_2'), hasLength(1));
+        },
+      );
     });
   });
 }

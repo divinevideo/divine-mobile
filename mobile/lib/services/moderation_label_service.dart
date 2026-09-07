@@ -82,11 +82,13 @@ class ModerationLabelService {
     required SharedPreferences sharedPreferences,
     bool Function()? canQueryRelays,
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
+    int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
   }) : _nostrClient = nostrClient,
        _authService = authService,
        _prefs = sharedPreferences,
        _canQueryRelays = canQueryRelays ?? (() => true),
-       _labelerHistoryPageSize = labelerHistoryPageSize;
+       _labelerHistoryPageSize = labelerHistoryPageSize,
+       _maxLabelerHistoryPages = maxLabelerHistoryPages;
 
   final NostrClient _nostrClient;
   // ignore: unused_field
@@ -106,6 +108,20 @@ class ModerationLabelService {
   static const int defaultLabelerHistoryPageSize = 500;
 
   final int _labelerHistoryPageSize;
+
+  /// Hard ceiling on labeler-history pages per load.
+  ///
+  /// A well-behaved relay always ends the walk with a short page or an
+  /// unadvanceable cursor, so this never fires in practice. It is a defensive
+  /// stop against an untrusted relay that never signals the end — e.g. one that
+  /// fabricates events at the requested `until` on every response, which would
+  /// otherwise step the cursor backward forever. At the default page size this
+  /// still allows a very large history (500 * 500k events) before capping. If
+  /// it is ever hit for a real labeler, that is the signal to move to persisted
+  /// labels or per-target queries rather than a cold-start full scan. #8252.
+  static const int defaultMaxLabelerHistoryPages = 1000;
+
+  final int _maxLabelerHistoryPages;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
   static const String _subscribedLabelersKey = 'subscribed_labeler_pubkeys';
@@ -298,8 +314,24 @@ class ModerationLabelService {
     final collected = <Event>[];
     final seenIds = <String>{};
     int? until;
+    var pages = 0;
 
     while (true) {
+      // Defensive stop: the loop below always terminates for a relay that
+      // reports the end of a labeler's history, so reaching this cap means the
+      // relay never does (see [defaultMaxLabelerHistoryPages]). Stop and apply
+      // what we have rather than query unboundedly.
+      if (pages++ >= _maxLabelerHistoryPages) {
+        Log.warning(
+          'Labeler history paging hit the $_maxLabelerHistoryPages-page cap '
+          'for ${pubkeyForLogs(pubkey)}; applying ${collected.length} '
+          'event(s) and stopping',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        break;
+      }
+
       // queryEventsDetailed, not queryEvents: the latter discards `timedOut`
       // and `noRelays`, so a load nobody answered returns [] and is
       // indistinguishable from "this labeler has no labels" — the caller would
