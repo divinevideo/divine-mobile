@@ -80,3 +80,45 @@ appId: co.openvine.app.staging
     visible:
       id: home_tab
     timeout: 30000
+
+# 6. Put the experiment back the way we found it.
+#
+# The flag persists in SharedPreferences, and `killApp` at the end of the
+# suite does not clear it. Leaving it on inserts the account header -- plus
+# its column spacing -- at the very top of Settings and shifts every row
+# below it, which the flow that runs next navigates by a single unqualified
+# `- scroll` and a fixed text tap, with no retry.
+- runFlow: ../utils/openSettings.yaml
+- scrollUntilVisible:
+    element:
+      id: experimental_features_tile
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: experimental_features_tile
+- scrollUntilVisible:
+    element:
+      id: feature_flag_account_switching
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: feature_flag_account_switching
+    checked: true
+- tapOn:
+    id: feature_flag_account_switching
+- extendedWaitUntil:
+    visible:
+      id: feature_flag_account_switching
+      checked: false
+    timeout: 10000
+
+# Back out to the profile so the next flow's openSettings starts where it
+# expects: feature flags -> Settings -> own profile.
+- tapOn:
+    id: back_button
+- extendedWaitUntil:
+    visible:
+      id: nostr_settings_tile
+    timeout: 30000
+- tapOn:
+    id: back_button
