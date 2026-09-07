@@ -5,6 +5,11 @@
 
 set -euo pipefail
 
+# Byte-wise, locale-independent ordering. lib/list_ratchet.sh exports this too,
+# but it is sourced at the bottom of this file, so every sort/comm above would
+# otherwise run in the caller's collation and disagree with emit_current's.
+export LC_ALL=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="${SERVICE_SUITE_MOBILE_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 REPO_ROOT="$(cd "$MOBILE_DIR/.." && pwd)"
