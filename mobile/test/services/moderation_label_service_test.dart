@@ -1819,6 +1819,53 @@ void main() {
           expect(paged.getContentWarnings('target_dup_2'), hasLength(1));
         },
       );
+
+      test(
+        'a walk stopped by the page cap stays retryable rather than latching '
+        'the omitted history',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            maxLabelerHistoryPages: 2,
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+          await paged.subscribeToLabeler(labeler);
+
+          // 2 pages per walk. Latching the labeler after the cap fired would
+          // short-circuit the second call and leave the omitted history gone
+          // for the rest of the session.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(4);
+        },
+      );
     });
   });
 }
