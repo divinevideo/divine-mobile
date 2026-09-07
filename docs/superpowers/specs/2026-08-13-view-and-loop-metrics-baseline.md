@@ -262,10 +262,11 @@ itself (`mobile/lib/widgets/video_feed_item/video_card_meta.dart:9`): a number
 below the floor "tells a viewer not to bother", and a wall of small counts on
 *other people's* videos discourages posting. On the real distribution, the
 floor shows visitors a count on ~52% of videos, every one of them ≥1000, and a
-date on the rest instead of a discouraging 47. Creators are never gated:
+date on the rest instead of a discouraging two-digit count. Creators are never
+gated:
 `_resolveLoopCount` returns
 `video.totalLoops` unconditionally when `isOwnVideo`, and `totalLoops` is
-additive (`mobile/packages/models/lib/src/video_event.dart:1181-1183`), so a
+additive (`mobile/packages/models/lib/src/video_event.dart:1187-1188`), so a
 creator sees the larger number.
 
 One unreconciled discrepancy, stated rather than smoothed over: the

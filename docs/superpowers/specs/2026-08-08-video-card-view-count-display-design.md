@@ -39,7 +39,7 @@ The live site is `mobile/lib/widgets/video_feed_item/video_feed_item.dart:394`,
 inside `VideoOverlayActions.build`. It renders `videoFeedLoopCountLine` directly
 under the author name, unconditionally — so `0 loops` on a fresh post is real.
 
-`VideoEvent.totalLoops` (`mobile/packages/models/lib/src/video_event.dart:1084`)
+`VideoEvent.totalLoops` (`mobile/packages/models/lib/src/video_event.dart:1187-1188`)
 is:
 
 ```dart

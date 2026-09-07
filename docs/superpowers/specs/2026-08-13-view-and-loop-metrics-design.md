@@ -138,7 +138,7 @@ direction that decides it.
 
 **The card does not render this metric today, despite the label.**
 `VideoEvent.totalLoops`
-(`mobile/packages/models/lib/src/video_event.dart:1149`) is:
+(`mobile/packages/models/lib/src/video_event.dart:1187-1188`) is:
 
 ```dart
 int get totalLoops =>
@@ -325,7 +325,7 @@ This is Flutter-client behavior. Divine Web currently diverges: its card renders
 - "The public count is effectively never shown — 9,996 videos in 10,000 render a date instead." It is shown on roughly half of them.
 - "A date is the better default for this catalogue." The archival-artifact reading — that "Apr 22, 2014" reframes a clip as an artifact — assumed a date is what almost every card renders. It is not, so the argument no longer reaches the conclusion it was offered for. Whether a date reads better than a count on a given card is untested in either direction; nothing here settles it, and no decision in this document should be read as resting on it.
 
-What holds the floor up instead is the argument the constant's own doc comment gives: a number below the floor tells a viewer not to bother, and a wall of small counts on *other people's* videos discourages a visitor from posting. On the real distribution the floor does exactly that — a count on ~52% of videos, every one of them at or above 1000, and a date on the rest instead of a discouraging 47.
+What holds the floor up instead is the argument the constant's own doc comment gives: a number below the floor tells a viewer not to bother, and a wall of small counts on *other people's* videos discourages a visitor from posting. On the real distribution the floor does exactly that — a count on ~52% of videos, every one of them at or above 1000, and a date on the rest instead of a discouraging two-digit count.
 
 Creator retention is untouched by any of this and was never gated by the floor. `_resolveLoopCount` returns `video.totalLoops` unconditionally when `isOwnVideo`, and `totalLoops` is additive, so a creator who claimed a Vine account sees archival loops plus live views. The retention effect the video-card spec cites — crossing ~100 views roughly doubling the chance a new creator keeps posting — operates on the creator's own number, which has no floor.
 
