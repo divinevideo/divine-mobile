@@ -16,8 +16,11 @@ Tag shape:
 ["client", "Divine", "31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile", "wss://relay.divine.video"]
 ```
 
-The app injects this centrally in `nostr_client` and skips protocol-sensitive
-outer wrapper kinds such as `kind:1059` gift wraps.
+The app injects this through both `nostr_client`'s publish preparation and
+`SignerFactory.createAndSignEvent`, with both paths skipping protocol-sensitive
+kinds. That includes every NIP-59 outer wrapper — both the `kind:1059` gift
+wrap and the ephemeral `kind:21059` — because those are broadcast in the clear
+and a public `client` tag on one would undercut NIP-17's metadata guarantee.
 
 ## Handler event
 

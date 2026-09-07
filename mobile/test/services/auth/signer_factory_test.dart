@@ -326,6 +326,25 @@ void main() {
         expect(event!.tags.any((t) => t.first == 'client'), isFalse);
       });
 
+      // The apps bridge hands this method a caller-supplied kind, so the
+      // exclusion set is the only thing standing between a NIP-59 wrapper and
+      // a public attribution tag on this path. NIP-59 defines two outer
+      // wrapper kinds; 21059 arrived after the set was written (#8177).
+      test('omits the NIP-89 client tag for ephemeral gift wraps even when '
+          'enabled', () async {
+        await Nip89ClientTag.setEnabled(enabled: true);
+
+        final event = await factory.createAndSignEvent(
+          identity: localIdentity(),
+          authSource: AuthenticationSource.importedKeys,
+          kind: EventKind.ephemeralGiftWrap,
+          content: 'sealed',
+        );
+
+        expect(event, isNotNull);
+        expect(event!.tags.any((t) => t.first == 'client'), isFalse);
+      });
+
       test('does not duplicate a caller-supplied client tag', () async {
         await Nip89ClientTag.setEnabled(enabled: true);
 

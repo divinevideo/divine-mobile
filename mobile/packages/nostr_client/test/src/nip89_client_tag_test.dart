@@ -68,6 +68,22 @@ void main() {
       expect(event.id, originalId);
     });
 
+    test('skips NIP-59 ephemeral gift wraps', () async {
+      final event = _event(
+        kind: EventKind.ephemeralGiftWrap,
+        tags: const [
+          ['p', _pubkey],
+        ],
+      );
+      final originalId = event.id;
+
+      final changed = await Nip89ClientTag.applyToEvent(event);
+
+      expect(changed, isFalse);
+      expect(event.tags, isNot(contains(Nip89ClientTag.tag)));
+      expect(event.id, originalId);
+    });
+
     test('respects opt-out preference', () async {
       await Nip89ClientTag.setEnabled(enabled: false);
       final event = _event();

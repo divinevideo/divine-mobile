@@ -100,6 +100,16 @@ class EventKind {
 
   static const int nwcInfoEvent = 13194;
 
+  /// NIP-59 ephemeral gift wrap. The outer wrapper for real-time wrapped
+  /// messaging ("live chat or real-time gaming"), structurally identical to
+  /// [giftWrap] but with ephemeral semantics — relays MUST NOT store it.
+  ///
+  /// Like [giftWrap] it is broadcast in the clear to the recipient's relays,
+  /// so its public tags must never carry identifying metadata. NIP-59 added
+  /// this kind after Divine's NIP-89 client-tag exclusion set was written
+  /// (#8177); keep the two wrapper kinds together wherever one is handled.
+  static const int ephemeralGiftWrap = 21059;
+
   static const int authentication = 22242;
 
   static const int nwcRequestEvent = 23194;

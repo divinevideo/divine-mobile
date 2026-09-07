@@ -20,9 +20,23 @@ abstract final class Nip89ClientTag {
   /// Relay hint embedded in the NIP-89 client tag.
   static const String relayHint = 'wss://relay.divine.video';
 
+  /// Kinds that must never carry the public `client` tag.
+  ///
+  /// The app's signing path consults this set before it appends the tag and
+  /// signs, and that path takes a caller-supplied kind — including a kind
+  /// chosen by a third-party app through the Nostr apps bridge. This set is
+  /// its only guard, so an omission here is a real exposure rather than a
+  /// missing belt alongside a brace.
   static const Set<int> _excludedKinds = {
+    // NIP-59 requires a seal's tags be empty ("Tags MUST always be empty in a
+    // `kind:13`"), so this entry is a spec requirement, not a preference.
     EventKind.sealEventKind,
+    // Both NIP-59 outer wrappers. They are broadcast in the clear to the
+    // recipient's relays, so a `client` tag on either is publicly visible and
+    // would undercut NIP-17's "No Metadata Leak" guarantee. Keep them together:
+    // 21059 was added to NIP-59 after this set was first written (#8177).
     EventKind.giftWrap,
+    EventKind.ephemeralGiftWrap,
     EventKind.authentication,
     EventKind.nostrRemoteSigning,
     EventKind.blossomHttpAuth,
