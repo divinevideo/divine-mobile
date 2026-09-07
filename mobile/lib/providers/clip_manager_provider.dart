@@ -42,10 +42,22 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
 
-  /// Not `late final`: Riverpod reuses this notifier instance when the
-  /// provider is invalidated and calls [build] again, and a second
-  /// assignment to a `late final` field throws `LateInitializationError`.
-  late EditorBackgroundWork _backgroundWork;
+  /// Nullable rather than `late`, which would throw a
+  /// `LateInitializationError` in two ways. Riverpod reuses this notifier
+  /// instance when the provider is invalidated and calls [build] again, so the
+  /// field is assigned twice — which rules out `late final`. And a test
+  /// subclass that replaces [build] without calling `super.build()` never
+  /// assigns it at all, which rules out bare `late`; that stub shape is
+  /// already in the suite, so [_editorBackgroundWork] resolves lazily too.
+  EditorBackgroundWork? _backgroundWork;
+
+  EditorBackgroundWork get _editorBackgroundWork {
+    final existing = _backgroundWork;
+    if (existing != null) return existing;
+    final backgroundWork = ref.read(editorBackgroundWorkProvider);
+    _backgroundWork = backgroundWork;
+    return backgroundWork;
+  }
 
   /// Undo window before a scheduled deletion is committed to library
   /// trash for good. The snackbar must outlast this so the user can
@@ -267,7 +279,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
-    _backgroundWork.track(_generateClipProof(clip));
+    _editorBackgroundWork.track(_generateClipProof(clip));
 
     return clip;
   }
