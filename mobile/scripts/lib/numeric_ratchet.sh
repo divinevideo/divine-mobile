@@ -227,8 +227,21 @@ run_numeric_ratchet() {
         fi
         new_count="$(awk -F "$TAB" -v key="$rename_new" '$1 == key { print $2; exit }' "$BASE_F")"
         old_count="$(awk -F "$TAB" -v key="$rename_old" '$1 == key { print $2; exit }' "$MAIN_F")"
-        if [[ -z "$old_count" || "$new_count" -gt "$old_count" ]]; then
-          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new exceeds old ceiling $rename_old"
+        # Validate before comparing. Both counts come from a row a human
+        # hand-edits, and bash arithmetic on a non-numeric operand makes
+        # `[[ -gt ]]` return 2 rather than 1 — which `if` reads as false, so the
+        # failure branch is skipped and the guard prints OK and exits 0. A bare
+        # word is worse still: it is an unset name under `set -u`, which kills
+        # the script with empty output and no failure banner at all.
+        if ! [[ "$new_count" =~ ^[0-9]+$ ]] || ! [[ "$old_count" =~ ^[0-9]+$ ]]; then
+          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new has a non-numeric ceiling"
+          echo "  branch baseline $rename_new: ${new_count:-<missing>}"
+          echo "  ${BASE_REF} $rename_old: ${old_count:-<missing>}"
+          echo "  -> $NEW_HINT"
+          fail=1
+        elif [[ "$new_count" -gt "$old_count" ]]; then
+          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new exceeds old ceiling $rename_old (was $old_count -> now $new_count)"
+          echo "  -> $NEW_HINT"
           fail=1
         fi
         added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"

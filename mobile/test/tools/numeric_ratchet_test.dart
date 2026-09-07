@@ -192,6 +192,40 @@ run_numeric_ratchet
         expect(res.stdout, contains('exceeds old ceiling'));
       });
 
+      test('rejects a non-numeric count on an annotated row', () {
+        // The feature asks humans to hand-edit this row, so a stray character
+        // in the count column is the expected typo. Bash arithmetic on a
+        // non-numeric operand makes `[[ -gt ]]` return 2, not 1, which `if`
+        // reads as false — before this guard the script printed OK and exited
+        // 0 with a 9999-count key holding a ceiling of 5.
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t9999, # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t9999\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1, reason: res.stdout.toString());
+        expect(res.stdout, contains('non-numeric ceiling'));
+      });
+
+      test('reports a rename annotation written without the hash', () {
+        // Dropping the '#' leaves a bare word in the count column. Under
+        // `set -u` that used to abort the script mid-run: empty stdout, no
+        // FAIL banner, no footer, and the temp claim file left behind.
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4 renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('FAIL [probe]'));
+        expect(res.stdout, contains('non-numeric ceiling'));
+        expect(res.stdout, contains('footer'));
+      });
+
       test('rejects a claim whose old key is absent from the base', () {
         baseline.writeAsStringSync(
           '# probe baseline\na\t5\nc\t3 # renamed-from: missing\n',
