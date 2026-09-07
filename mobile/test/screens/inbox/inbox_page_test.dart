@@ -384,6 +384,9 @@ void main() {
           ).read(_profileRepoSwap.notifier).state = 1;
           await tester.pump();
 
+          // Pin the ref.listen handoff: unchanged widget identities alone
+          // would also pass if the profile-repository flip were never handled.
+          verify(readyProfileRepo.watchVanishedPubkeys).called(1);
           expect(
             readBloc(tester),
             same(conversationBloc),
