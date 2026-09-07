@@ -123,8 +123,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// them here and reap them at editor-session end via
   /// [_startDeferredFileCleanup] ([reset], with [build]'s `onDispose` as a
   /// teardown safety net), once the history that could resurrect them no longer
-  /// exists. The reaper still runs each path through the reference check, so a
-  /// file the user restored (and a later autosave re-referenced) is kept.
+  /// exists. The entry point first waits for autosaves already in flight, so
+  /// paths they defer cannot miss that session-end reap. The reaper still runs
+  /// each path through the reference check, so a file the user restored (and a
+  /// later autosave re-referenced) is kept.
   final Set<String> _deferredFileCleanup = {};
 
   /// DAOs captured while a valid [Ref] is in scope, so the teardown reaper can
@@ -136,6 +138,12 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// [pendingDeferredCleanupForTest] can await them. Production never reads
   /// this back; the cleanup calls stay fire-and-forget.
   final Set<Future<void>> _pendingDeferredCleanup = {};
+
+  /// Autosaves currently writing deferred orphan paths.
+  ///
+  /// Session-end cleanup snapshots these operations before it starts, so an
+  /// autosave already in flight cannot add paths after the reaper has passed.
+  final Set<Future<void>> _activeAutosaves = {};
 
   /// Get clip manager notifier.
   ClipManagerNotifier get _clipManager =>
@@ -267,10 +275,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// unless [keepAutosavedDraft] is true.
   ///
   /// This is the editor-session boundary (publish, discard, start-over), so it
-  /// reaps any [_deferredFileCleanup] now that the undo/redo history protecting
-  /// those files is gone. [build]'s `onDispose` only fires at container
-  /// teardown (app shutdown), which a mobile OS kill routinely skips — relying
-  /// on it alone would leak the deferred files for the whole app run.
+  /// waits for autosaves already in flight, then reaps any
+  /// [_deferredFileCleanup] now that the undo/redo history protecting those
+  /// files is gone. [build]'s `onDispose` only fires at container teardown (app
+  /// shutdown), which a mobile OS kill routinely skips — relying on it alone
+  /// would leak the deferred files for the whole app run.
   Future<void> reset({bool keepAutosavedDraft = false}) async {
     Log.debug(
       '🔄 Resetting editor state',
@@ -777,7 +786,23 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// This method is typically called periodically or on significant changes
   /// to prevent data loss. Unlike [saveAsDraft], autosave uses a fixed
   /// [autoSaveId] to maintain a single recovery point.
-  Future<bool> autosaveChanges() async {
+  Future<bool> autosaveChanges() {
+    final operation = _performAutosave();
+    late final Future<void> completion;
+    // Session-end cleanup Future.waits on these to learn only that the autosave
+    // finished, not whether it succeeded. Swallow errors so a rejected autosave
+    // future can't reject that wait and skip cleanup; the error is already
+    // logged and surfaced to callers through [operation].
+    completion = operation
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          _activeAutosaves.remove(completion);
+        });
+    _activeAutosaves.add(completion);
+    return operation;
+  }
+
+  Future<bool> _performAutosave() async {
     final clipCount = _clips.length;
     final hasTitle = state.title.isNotEmpty;
 
@@ -828,9 +853,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Reap the clip/thumbnail files deferred during this session (see
   /// [_deferredFileCleanup]). Reached through [_startDeferredFileCleanup] at
   /// editor-session end ([reset]) and as a teardown safety net ([build]'s
-  /// `onDispose`); it clears the set, so a second call is a no-op. Each path
-  /// still goes through the draft/library reference check, so anything a
-  /// surviving draft (or the library) references is kept — only
+  /// `onDispose`). The entry point waits for autosaves already in flight before
+  /// this method snapshots and clears the set, so their deferred paths join the
+  /// same reap. Each path still goes through the draft/library reference check,
+  /// so anything a surviving draft (or the library) references is kept — only
   /// genuinely-orphaned files are removed.
   ///
   /// Reach it through [_startDeferredFileCleanup] rather than calling it
@@ -856,11 +882,16 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// that set is the only reason this is not a bare `unawaited(...)`. It is a
   /// set rather than one slot because [reset] and [build]'s `onDispose` can
   /// each have an operation running, and a single slot would drop the first.
+  /// Each operation waits for the autosaves active when it starts before it
+  /// snapshots the deferred paths.
   void _startDeferredFileCleanup() {
+    final activeAutosaves = _activeAutosaves.toList();
     late final Future<void> operation;
-    operation = _flushDeferredFileCleanup().whenComplete(() {
-      _pendingDeferredCleanup.remove(operation);
-    });
+    operation = Future.wait(activeAutosaves)
+        .then((_) => _flushDeferredFileCleanup())
+        .whenComplete(() {
+          _pendingDeferredCleanup.remove(operation);
+        });
     _pendingDeferredCleanup.add(operation);
     unawaited(operation);
   }
@@ -888,9 +919,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// A snapshot, not a barrier: it ignores anything started afterwards and
   /// resolves immediately when nothing is in flight, so read it after the
-  /// call whose cleanup you mean to await. It also covers only
-  /// [_startDeferredFileCleanup] — other fire-and-forget work on this
-  /// notifier and on [ClipManagerNotifier] settles on its own schedule.
+  /// call whose cleanup you mean to await. Cleanup includes autosaves that were
+  /// active when it started, but this snapshot still ignores cleanup operations
+  /// started afterwards. Other fire-and-forget work on this notifier and on
+  /// [ClipManagerNotifier] settles on its own schedule.
   @visibleForTesting
   Future<void> get pendingDeferredCleanupForTest async {
     await Future.wait(_pendingDeferredCleanup.toList());
