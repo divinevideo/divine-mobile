@@ -1520,9 +1520,9 @@ void main() {
               client: nostrClient,
             ),
           );
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(
@@ -1563,8 +1563,9 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        // Drain the queue fully: a leak that surfaces on a later turn must
+        // still reach the zone handler before the isEmpty assertion runs.
+        await pumpEventQueue();
       }, (error, stack) => unhandled.add(error));
 
       expect(unhandled, isEmpty);
@@ -1607,8 +1608,9 @@ void main() {
 
           // Then start sign-out teardown — publishing deregistration throws.
           await beforeSessionTeardownCallback!();
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);

@@ -1426,8 +1426,9 @@ void main() {
             container.read(nostrServiceProvider);
             container.dispose();
 
-            await pumpEventQueue(times: 1);
-            await pumpEventQueue(times: 1);
+            // Drain the queue fully: a leak that surfaces on a later turn must
+            // still reach the zone handler before the isEmpty assertion runs.
+            await pumpEventQueue();
           },
           (error, _) => errors.add(error),
         );
@@ -1473,8 +1474,9 @@ void main() {
           // Dispose mid-init, then let init resume past the await.
           container.dispose();
           factory.initializeCompleters[pubkeyA]!.complete();
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         },
         (error, _) => errors.add(error),
       );
@@ -1512,8 +1514,9 @@ void main() {
           factory.initializeCompleters[pubkeyA]!.completeError(
             StateError('init failed'),
           );
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         },
         (error, _) => errors.add(error),
       );
