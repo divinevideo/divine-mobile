@@ -3487,6 +3487,10 @@ void main() {
     late ProviderContainer container;
     late Directory tempDir;
     late EditorBackgroundWork backgroundWork;
+    // Restored by tearDown rather than addTearDown: addTearDown callbacks run
+    // *before* the group tearDown, so restoring there would pull the stub out
+    // from under the settle boundary that exists to drain proof generation.
+    late void Function() restoreProofFileOverride;
     var containerDisposed = false;
 
     void disposeContainer() {
@@ -3526,6 +3530,8 @@ void main() {
       containerDisposed = false;
       final originalProofFileOverride =
           NativeProofModeService.proofFileOverride;
+      restoreProofFileOverride = () =>
+          NativeProofModeService.proofFileOverride = originalProofFileOverride;
       NativeProofModeService.proofFileOverride =
           (
             file, {
@@ -3536,10 +3542,6 @@ void main() {
             clips,
             editorStateHistory,
           }) async => null;
-      addTearDown(
-        () => NativeProofModeService.proofFileOverride =
-            originalProofFileOverride,
-      );
       when(
         () => mockDraftStorage.draftExists(any()),
       ).thenAnswer((_) async => false);
@@ -3573,6 +3575,7 @@ void main() {
         // test isolate.
         await database.close();
         if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        restoreProofFileOverride();
       }
     });
 
