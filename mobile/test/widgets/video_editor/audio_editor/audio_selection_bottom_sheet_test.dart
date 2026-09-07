@@ -57,23 +57,23 @@ class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 /// so a test can assert on selection rather than on playback plumbing.
 _MockAudioPlaybackService _stubbedAudioService() {
   final service = _MockAudioPlaybackService();
-  when(() => service.positionStream).thenAnswer(
-    (_) => const Stream<Duration>.empty(),
-  );
-  when(() => service.durationStream).thenAnswer(
-    (_) => const Stream<Duration?>.empty(),
-  );
-  when(() => service.headphonesConnectedStream).thenAnswer(
-    (_) => const Stream<bool>.empty(),
-  );
+  when(
+    () => service.positionStream,
+  ).thenAnswer((_) => const Stream<Duration>.empty());
+  when(
+    () => service.durationStream,
+  ).thenAnswer((_) => const Stream<Duration?>.empty());
+  when(
+    () => service.headphonesConnectedStream,
+  ).thenAnswer((_) => const Stream<bool>.empty());
   when(() => service.duration).thenReturn(null);
   when(() => service.isPlaying).thenReturn(false);
-  when(() => service.playingStream).thenAnswer(
-    (_) => const Stream<bool>.empty(),
-  );
-  when(() => service.loadAudio(any())).thenAnswer(
-    (_) async => const Duration(seconds: 5),
-  );
+  when(
+    () => service.playingStream,
+  ).thenAnswer((_) => const Stream<bool>.empty());
+  when(
+    () => service.loadAudio(any()),
+  ).thenAnswer((_) async => const Duration(seconds: 5));
   when(() => service.seek(Duration.zero)).thenAnswer((_) async {});
   when(service.play).thenAnswer((_) async {});
   when(service.pause).thenAnswer((_) async {});
@@ -104,6 +104,8 @@ void main() {
       AudioPlaybackService? audioService,
       String? viewerPubkey,
       Map<String, int>? usageCounts,
+      AudioEvent? consentSound,
+      bool? consentResult,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -134,6 +136,10 @@ void main() {
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
             ),
+            if (consentSound != null && consentResult != null)
+              audioReuseConsentProvider(
+                consentSound,
+              ).overrideWith((ref) => Future.value(consentResult)),
             if (trendingSoundsAsync != null)
               trendingSoundsProvider.overrideWith(
                 () => _FakeTrendingSounds(trendingSoundsAsync),
@@ -347,7 +353,7 @@ void main() {
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
       });
 
-      testWidgets('selects an unmarked classic Vine original sound', (
+      testWidgets('selects an enabled verified archive original sound', (
         tester,
       ) async {
         final classicVideo = VideoEvent(
@@ -357,7 +363,8 @@ void main() {
           content: '',
           timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
           videoUrl: 'https://example.com/classic.mp4',
-          rawTags: const {'platform': 'vine'},
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
         );
         final classicSound = AudioEvent.fromVideoOriginalSound(
           classicVideo,
@@ -365,7 +372,11 @@ void main() {
         );
 
         await tester.pumpWidget(
-          buildWidget(trendingSoundsAsync: AsyncValue.data([classicSound])),
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([classicSound]),
+            consentSound: classicSound,
+            consentResult: true,
+          ),
         );
         await tester.pumpAndSettle();
 

@@ -6,10 +6,12 @@ import 'package:test/test.dart';
 
 void main() {
   group('originalSoundReuseTerms', () {
-    VideoEvent video({required bool isClassicVine, String? marker}) {
-      final rawTags = <String, String>{
-        if (isClassicVine) 'platform': 'vine',
-      };
+    VideoEvent video({
+      required bool isVerifiedArchive,
+      String? marker,
+      bool archiveAudioReuseEnabled = true,
+    }) {
+      final rawTags = <String, String>{};
       if (marker case final value?) {
         rawTags['allow_audio_reuse'] = value;
       }
@@ -20,16 +22,18 @@ void main() {
         content: '',
         timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
         rawTags: rawTags,
+        isVerifiedArchive: isVerifiedArchive,
+        archiveAudioReuseEnabled: archiveAudioReuseEnabled,
       );
     }
 
-    for (final isClassicVine in [false, true]) {
-      final source = isClassicVine ? 'classic Vine' : 'ordinary video';
+    for (final isVerifiedArchive in [false, true]) {
+      final source = isVerifiedArchive ? 'verified archive' : 'ordinary video';
 
       test('grants explicit consent for $source', () {
         expect(
           originalSoundReuseTerms(
-            video(marker: 'true', isClassicVine: isClassicVine),
+            video(marker: 'true', isVerifiedArchive: isVerifiedArchive),
           ),
           isTrue,
         );
@@ -38,7 +42,7 @@ void main() {
       test('honors explicit decline for $source', () {
         expect(
           originalSoundReuseTerms(
-            video(marker: 'false', isClassicVine: isClassicVine),
+            video(marker: 'false', isVerifiedArchive: isVerifiedArchive),
           ),
           isFalse,
         );
@@ -47,19 +51,36 @@ void main() {
       test('fails closed for a malformed marker on $source', () {
         expect(
           originalSoundReuseTerms(
-            video(marker: 'invalid', isClassicVine: isClassicVine),
+            video(marker: 'invalid', isVerifiedArchive: isVerifiedArchive),
           ),
           isFalse,
         );
       });
     }
 
-    test('grants compatibility reuse for an unmarked classic Vine', () {
-      expect(originalSoundReuseTerms(video(isClassicVine: true)), isTrue);
+    test('grants enabled compatibility for an unmarked verified archive', () {
+      expect(originalSoundReuseTerms(video(isVerifiedArchive: true)), isTrue);
     });
 
     test('defers an unmarked ordinary video to viewer-aware policy', () {
-      expect(originalSoundReuseTerms(video(isClassicVine: false)), isNull);
+      expect(originalSoundReuseTerms(video(isVerifiedArchive: false)), isNull);
+    });
+
+    test('fails closed when archive audio compatibility is disabled', () {
+      expect(
+        originalSoundReuseTerms(
+          video(isVerifiedArchive: true, archiveAudioReuseEnabled: false),
+        ),
+        isNull,
+      );
+    });
+
+    test('ignores a self-authored classic Vine platform tag', () {
+      final spoofed = video(
+        isVerifiedArchive: false,
+      ).copyWith(rawTags: const {'platform': 'vine'});
+
+      expect(originalSoundReuseTerms(spoofed), isNull);
     });
   });
 }

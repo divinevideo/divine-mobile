@@ -34,11 +34,9 @@ VideoEvent _video({
   String vineId = 'source-video',
   int createdAt = 101,
   String? reuseMarker = 'true',
-  bool isClassicVine = false,
+  bool isVerifiedArchive = false,
 }) {
-  final rawTags = <String, String>{
-    if (isClassicVine) 'platform': 'vine',
-  };
+  final rawTags = <String, String>{};
   if (reuseMarker case final value?) {
     rawTags['allow_audio_reuse'] = value;
   }
@@ -54,6 +52,8 @@ VideoEvent _video({
     vineId: vineId,
     addressableDTag: vineId,
     rawTags: rawTags,
+    isVerifiedArchive: isVerifiedArchive,
+    archiveAudioReuseEnabled: isVerifiedArchive,
   );
 }
 
@@ -102,8 +102,8 @@ void main() {
       expect(await resolver.verify(_sound()), isFalse);
     });
 
-    test('grants reuse for an unmarked classic Vine source', () async {
-      stubSource([_video(reuseMarker: null, isClassicVine: true)]);
+    test('grants reuse for an enabled verified archive source', () async {
+      stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
 
       expect(await resolver.verify(_sound()), isTrue);
     });
@@ -115,7 +115,7 @@ void main() {
     });
 
     test('honors an explicit decline on a classic Vine source', () async {
-      stubSource([_video(reuseMarker: 'false', isClassicVine: true)]);
+      stubSource([_video(reuseMarker: 'false', isVerifiedArchive: true)]);
 
       expect(await resolver.verify(_sound()), isFalse);
     });

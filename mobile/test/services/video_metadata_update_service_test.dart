@@ -138,6 +138,20 @@ void main() {
   });
 
   group(VideoMetadataUpdateService, () {
+    test('writes an explicit false audio-reuse marker', () async {
+      final result = await service.updateVideo(
+        originalVideo: _testVideo(),
+        editorState: VideoEditorProviderState(),
+        initialCollaboratorPubkeys: const {},
+      );
+
+      expect(result, isA<VideoUpdateSuccess>());
+      expect(
+        capturedTags,
+        contains(equals(['allow_audio_reuse', 'false'])),
+      );
+    });
+
     group('auth guard', () {
       test('returns VideoUpdateFailure when not authenticated', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);

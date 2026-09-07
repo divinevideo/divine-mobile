@@ -485,10 +485,8 @@ void main() {
       );
 
       test('carries definitive reuse terms from the source video', () {
-        VideoEvent video({String? marker, bool isClassicVine = false}) {
-          final rawTags = <String, String>{
-            if (isClassicVine) 'platform': 'vine',
-          };
+        VideoEvent video({String? marker, bool isVerifiedArchive = false}) {
+          final rawTags = <String, String>{};
           if (marker case final value?) {
             rawTags['allow_audio_reuse'] = value;
           }
@@ -503,6 +501,8 @@ void main() {
             vineId: 'vine-123',
             addressableDTag: 'vine-123',
             rawTags: rawTags,
+            isVerifiedArchive: isVerifiedArchive,
+            archiveAudioReuseEnabled: isVerifiedArchive,
           );
         }
 
@@ -510,10 +510,10 @@ void main() {
           video(marker: 'true'),
         );
         final declined = AudioEvent.fromVideoOriginalSound(
-          video(marker: 'false', isClassicVine: true),
+          video(marker: 'false', isVerifiedArchive: true),
         );
         final classicCompatibility = AudioEvent.fromVideoOriginalSound(
-          video(isClassicVine: true),
+          video(isVerifiedArchive: true),
         );
         final unspecified = AudioEvent.fromVideoOriginalSound(video());
 
@@ -522,7 +522,8 @@ void main() {
         expect(declined.allowsReuse, isFalse);
         expect(declined.hasExplicitReuseConsent, isTrue);
         expect(classicCompatibility.allowsReuse, isTrue);
-        expect(classicCompatibility.hasExplicitReuseConsent, isTrue);
+        expect(classicCompatibility.hasExplicitReuseConsent, isFalse);
+        expect(classicCompatibility.requiresCurrentReuseVerification, isTrue);
         expect(unspecified.allowsReuse, isFalse);
         expect(unspecified.hasExplicitReuseConsent, isFalse);
       });

@@ -960,10 +960,8 @@ void main() {
       const creatorPubkey =
           'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-      VideoEvent sourceVideo({String? marker, bool isClassicVine = false}) {
-        final rawTags = <String, String>{
-          if (isClassicVine) 'platform': 'vine',
-        };
+      VideoEvent sourceVideo({String? marker, bool isVerifiedArchive = false}) {
+        final rawTags = <String, String>{};
         if (marker case final value?) {
           rawTags['allow_audio_reuse'] = value;
         }
@@ -975,15 +973,19 @@ void main() {
           timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
           videoUrl: 'https://example.com/video/$sourceVideoId.mp4',
           rawTags: rawTags,
+          isVerifiedArchive: isVerifiedArchive,
+          archiveAudioReuseEnabled: isVerifiedArchive,
         );
       }
 
       // The synthesized original sound carries allowsReuse from the video, so
       // the gate works regardless of whether sourceVideo is threaded through.
-      AudioEvent originalSound({String? marker, bool isClassicVine = false}) =>
-          AudioEvent.fromVideoOriginalSound(
-            sourceVideo(marker: marker, isClassicVine: isClassicVine),
-          );
+      AudioEvent originalSound({
+        String? marker,
+        bool isVerifiedArchive = false,
+      }) => AudioEvent.fromVideoOriginalSound(
+        sourceVideo(marker: marker, isVerifiedArchive: isVerifiedArchive),
+      );
 
       List<Override> gridOverrides() => [
         soundUsageCountProvider(
@@ -1083,13 +1085,35 @@ void main() {
         expect(find.text('Use Sound'), findsOneWidget);
       });
 
-      testWidgets('shows Use Sound for an unmarked classic Vine sound', (
+      testWidgets('shows Use Sound for an enabled verified archive sound', (
         tester,
       ) async {
         await tester.pumpWidget(
           createTestWidget(
             child: SoundDetailScreen(
-              sound: originalSound(isClassicVine: true),
+              sound: originalSound(isVerifiedArchive: true),
+            ),
+            overrides: [
+              ...gridOverrides(),
+              audioReuseConsentProvider(
+                originalSound(isVerifiedArchive: true),
+              ).overrideWith((ref) => Future.value(true)),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('an explicit decline still permits the sound owner', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            viewerPubkey: creatorPubkey,
+            child: SoundDetailScreen(
+              sound: originalSound(marker: 'false', isVerifiedArchive: true),
             ),
             overrides: gridOverrides(),
           ),
@@ -1099,21 +1123,19 @@ void main() {
         expect(find.text('Use Sound'), findsOneWidget);
       });
 
-      testWidgets('an explicit decline overrides the sound owner', (
+      testWidgets('a malformed marker still permits the sound owner', (
         tester,
       ) async {
         await tester.pumpWidget(
           createTestWidget(
             viewerPubkey: creatorPubkey,
-            child: SoundDetailScreen(
-              sound: originalSound(marker: 'false', isClassicVine: true),
-            ),
+            child: SoundDetailScreen(sound: originalSound(marker: 'TRUE')),
             overrides: gridOverrides(),
           ),
         );
         await tester.pump();
 
-        expect(find.text('Use Sound'), findsNothing);
+        expect(find.text('Use Sound'), findsOneWidget);
       });
     });
 

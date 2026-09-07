@@ -243,6 +243,8 @@ class VideoEvent {
     this.moderationLabels = const [],
     this.warnLabels = const [],
     this.proofSummary,
+    this.isVerifiedArchive = false,
+    this.archiveAudioReuseEnabled = false,
     this.eventKind,
     this.sourceRelay,
   }) : content = sanitizeUtf16(content),
@@ -363,6 +365,9 @@ class VideoEvent {
           : ProofVerificationSummary.fromJson(
               json['proofSummary'] as Map<String, dynamic>,
             ),
+      isVerifiedArchive: json['isVerifiedArchive'] as bool? ?? false,
+      archiveAudioReuseEnabled:
+          json['archiveAudioReuseEnabled'] as bool? ?? false,
     );
   }
 
@@ -1015,6 +1020,16 @@ class VideoEvent {
 
   /// Compact proof verification summary returned by Funnelcake REST feeds.
   final ProofVerificationSummary? proofSummary;
+
+  /// Whether Funnelcake matched this exact event to its verified archive.
+  ///
+  /// This server-derived state is never read from Nostr tags.
+  final bool isVerifiedArchive;
+
+  /// Whether Funnelcake currently enables archive audio compatibility.
+  ///
+  /// The server controls this kill switch; absent values fail closed.
+  final bool archiveAudioReuseEnabled;
 
   /// Generic `p` tags that mark users mentioned by this video.
   ///
@@ -1758,6 +1773,8 @@ class VideoEvent {
     List<String>? moderationLabels,
     List<String>? warnLabels,
     ProofVerificationSummary? proofSummary,
+    bool? isVerifiedArchive,
+    bool? archiveAudioReuseEnabled,
     int? eventKind,
     String? sourceRelay,
   }) => VideoEvent(
@@ -1826,6 +1843,9 @@ class VideoEvent {
     moderationLabels: moderationLabels ?? this.moderationLabels,
     warnLabels: warnLabels ?? this.warnLabels,
     proofSummary: proofSummary ?? this.proofSummary,
+    isVerifiedArchive: isVerifiedArchive ?? this.isVerifiedArchive,
+    archiveAudioReuseEnabled:
+        archiveAudioReuseEnabled ?? this.archiveAudioReuseEnabled,
     eventKind: eventKind ?? this.eventKind,
     sourceRelay: sourceRelay ?? this.sourceRelay,
   );
@@ -1912,6 +1932,8 @@ class VideoEvent {
     'contentWarningLabels': contentWarningLabels,
     'moderationLabels': moderationLabels,
     'proofSummary': proofSummary?.toJson(),
+    'isVerifiedArchive': isVerifiedArchive,
+    'archiveAudioReuseEnabled': archiveAudioReuseEnabled,
     'eventKind': eventKind,
     'sourceRelay': sourceRelay,
   };
