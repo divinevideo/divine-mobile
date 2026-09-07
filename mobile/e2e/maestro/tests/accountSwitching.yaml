@@ -17,8 +17,29 @@ appId: co.openvine.app.staging
       id: feature_flag_account_switching
     direction: DOWN
     timeout: 30000
+
+# Pin both ends rather than toggling blind. The row inverts whatever it
+# currently holds and persists it, so a run that starts with the flag already
+# on -- standalone, a re-run after a mid-suite failure, or a build shipped
+# with FF_ACCOUNT_SWITCHING=true -- would turn it OFF here and then fail two
+# steps later at `account_switch_action` with "element not found", pointing
+# nowhere near the cause.
+#
+# The row carries a Semantics `toggled` flag, which Flutter maps to the
+# accessibility node's checked state, so it is driven with `checked:` rather
+# than `text:`. **Maestro does not print the flag in its run log** -- see the
+# note on that selector in e2e/maestro/README.md before "fixing" a line here
+# because the log looks bare.
+- assertVisible:
+    id: feature_flag_account_switching
+    checked: false
 - tapOn:
     id: feature_flag_account_switching
+- extendedWaitUntil:
+    visible:
+      id: feature_flag_account_switching
+      checked: true
+    timeout: 10000
 - tapOn:
     id: back_button
 
