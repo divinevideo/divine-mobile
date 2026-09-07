@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -20,6 +22,15 @@ class _FakeFilter extends Fake implements Filter {}
 
 class _FakeLabelEvent extends Fake implements Event {
   _FakeLabelEvent({required this.pubkey, required this.tags});
+
+  // The live tail (#8255) reads id (dedup) and createdAt (tail watermark).
+  // These fakes model the single-shot backfill only, so fixed values suffice:
+  // an empty id skips dedup, exactly as intended for a one-page load.
+  @override
+  String get id => '';
+
+  @override
+  int get createdAt => 0;
 
   @override
   final String pubkey;
@@ -103,6 +114,13 @@ void main() {
       await contentFilterService.initialize();
       mockNostrClient = _MockNostrClient();
       mockAuthService = _MockAuthService();
+      // The moderation labeler opens a live tail after its backfill (#8255).
+      when(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+        ),
+      ).thenAnswer((_) => StreamController<Event>.broadcast().stream);
       moderationLabelService = ModerationLabelService(
         nostrClient: mockNostrClient,
         authService: mockAuthService,
