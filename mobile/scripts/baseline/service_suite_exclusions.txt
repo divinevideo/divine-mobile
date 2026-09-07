@@ -8,8 +8,8 @@
 # one needs a physical device, the rest need images no GitHub runner can pull.
 # The runner-side half of that story -- including why local_stack cannot start
 # in CI at all -- is in .github/workflows/mobile_service_integration_tests.yaml.
-integration_test/e2e/c2pa_init_test.dart # c2pa_flutter has no Linux desktop implementation
-integration_test/e2e/contact_list_freshness_docker_test.dart # full-stack real-relay twin of contact_list_freshness_test.dart
+integration_test/e2e/c2pa_init_test.dart # c2pa_flutter ships no desktop implementation; needs a physical Android device
+integration_test/e2e/contact_list_freshness_docker_test.dart # requires local_stack up; real-relay twin of contact_list_freshness_test.dart
 integration_test/e2e/deleted_video_visible_to_other_users_test.dart # requires the full local service stack
 integration_test/e2e/dm_optimistic_survives_watch_race_test.dart # requires the full local service stack
 integration_test/e2e/video_creation_flow_test.dart # requires the invite service from the full local stack
