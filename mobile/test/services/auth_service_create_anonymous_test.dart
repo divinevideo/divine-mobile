@@ -82,6 +82,42 @@ void main() {
       expect(prefetchCalls, 0);
     });
 
+    test('createAnonymousAccount keeps the seeded cache when a real '
+        'UserDataCleanupService runs after a sign-out', () async {
+      // The mocked cleanup service above answers shouldClearDataForUser with
+      // false, so it can never sweep following_list_ keys. That is the one
+      // thing standing between the seed and the pre-fetch it exists to skip,
+      // so pin it against the real collaborator on the state a device is
+      // actually in when someone signs out and creates another account.
+      final prefs = await SharedPreferences.getInstance();
+      var prefetchCalls = 0;
+      final first = buildTestAuthService(
+        cleanupService: UserDataCleanupService(prefs),
+        preFetchFollowing: (_) async => prefetchCalls++,
+      );
+      await ignoringDiscoveryErrors(first.createAnonymousAccount);
+      final firstPubkey = first.currentPublicKeyHex!;
+      await ignoringDiscoveryErrors(first.signOut);
+      await first.dispose();
+
+      final second = buildTestAuthService(
+        cleanupService: UserDataCleanupService(prefs),
+        preFetchFollowing: (_) async => prefetchCalls++,
+      );
+      addTearDown(second.dispose);
+
+      await ignoringDiscoveryErrors(second.createAnonymousAccount);
+
+      final secondPubkey = second.currentPublicKeyHex!;
+      expect(secondPubkey, isNot(equals(firstPubkey)));
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey(secondPubkey),
+      );
+      expect(encoded, isNotNull);
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(prefetchCalls, 0);
+    });
+
     test('createAnonymousAccountFromKeyContainer imports the provided key '
         'as an automatic identity', () async {
       final privateKeyHex = generatePrivateKey();
