@@ -60,6 +60,7 @@ enum DivineIconName {
   chatsCircle('chats_circle'),
   chatsTeardrop('chats_teardrop'),
   check('Check'),
+  checkboxSelected('checkbox_selected'),
   checkCircle('check_circle'),
   checks('checks'),
   circleDuo('circle_duo'),

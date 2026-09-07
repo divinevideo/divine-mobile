@@ -710,18 +710,19 @@ void main() {
       });
 
       testWidgets('paints the selected badge per the design', (tester) async {
-        // Figma: vineGreen circle with a stroked check in the dark button
-        // ink, and the selected thumbnail dimmed to half opacity.
+        // Figma: the two-tone selected checkbox asset, untinted, and the
+        // selected thumbnail dimmed to half opacity.
         await tester.pumpWidget(buildGrid(selectedVideoIds: {'video1'}));
         await tester.pump();
 
-        expect(
+        final check = tester.widget<DivineIcon>(
           find.descendant(
             of: selectedBadges(),
-            matching: find.byType(CustomPaint),
+            matching: find.byType(DivineIcon),
           ),
-          findsOneWidget,
         );
+        expect(check.icon, DivineIconName.checkboxSelected);
+        expect(check.color, isNull, reason: 'the asset carries its own ink');
         expect(
           find.byWidgetPredicate(
             (widget) => widget is Opacity && widget.opacity == 0.5,
