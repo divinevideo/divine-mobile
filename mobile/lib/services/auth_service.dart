@@ -3984,7 +3984,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Must be called AFTER signer fields (_keycastSigner, _bunkerSigner,
   /// _amberSigner) and _currentKeyContainer have been set for the session.
   ///
-  /// Passes current session fields to [SignerFactory.buildIdentity].
+  /// Passes a fresh snapshot to [SignerFactory.buildIdentity], never stale state.
   ///
   /// Throws [StateError] if no valid identity can be constructed — this
   /// indicates a programming error in the auth flow, not a user-facing
