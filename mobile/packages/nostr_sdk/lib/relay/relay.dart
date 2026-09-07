@@ -143,7 +143,11 @@ abstract class Relay {
       if (_isReqNaming(message, reissuedIds)) continue;
       if (dropQueuedCloses && _isClose(message)) continue;
       try {
-        final result = await send(message, queueIfFailed: false);
+        final result = await send(
+          message,
+          queueIfFailed: false,
+          skipReconnect: true,
+        );
         if (!result) {
           pendingMessages.add(message);
           log("message send fail onConnected");

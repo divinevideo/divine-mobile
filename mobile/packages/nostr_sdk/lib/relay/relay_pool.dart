@@ -590,6 +590,7 @@ class RelayPool {
 
     if (await relay.connect()) {
       if (autoSubscribe) {
+        var replayFailed = false;
         final msg =
             '🔄 autoSubscribe: re-sending ${_subscriptions.length} '
             'subscriptions to ${relay.url}';
@@ -601,7 +602,19 @@ class RelayPool {
           // relay.getSubscriptions() would return empty after AUTH success.
           relay.saveSubscription(subscription);
           log('🔄 autoSubscribe: sending ${subscription.id} to ${relay.url}');
-          await relay.send(subscription.toJson(), skipReconnect: true);
+          final sent = await relay.send(
+            subscription.toJson(),
+            skipReconnect: true,
+          );
+          replayFailed = replayFailed || !sent;
+        }
+        if (replayFailed) {
+          relay.relayStatus.onError();
+          log(
+            'autoSubscribe replay failed for ${relay.url}; '
+            'reconnecting once for saved-request replay',
+          );
+          if (!await relay.connect()) return false;
         }
       }
       if (init) {

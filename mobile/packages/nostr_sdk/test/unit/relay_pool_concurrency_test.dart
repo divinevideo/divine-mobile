@@ -48,9 +48,12 @@ class _DisconnectingAutoSubscribeRelay extends Relay {
   _DisconnectingAutoSubscribeRelay(String url) : super(url, RelayStatus(url));
 
   bool? receivedSkipReconnect;
+  int connectCount = 0;
+  int sendCount = 0;
 
   @override
   Future<bool> doConnect() async {
+    connectCount++;
     relayStatus.connected = ClientConnected.connected;
     return true;
   }
@@ -67,6 +70,8 @@ class _DisconnectingAutoSubscribeRelay extends Relay {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
+    sendCount++;
+    if (sendCount > 1) return true;
     relayStatus.connected = ClientConnected.disconnect;
     receivedSkipReconnect = skipReconnect;
     if (!skipReconnect) return Completer<bool>().future;
@@ -493,7 +498,7 @@ void main() {
     );
 
     test(
-      'add(autoSubscribe: true) does not reconnect a socket lost after connect',
+      'add(autoSubscribe: true) reconnects a socket lost during replay',
       () async {
         nostr.relayPool.subscribe([
           Filter(kinds: const [1], limit: 1).toJson(),
@@ -506,6 +511,9 @@ void main() {
         await pumpEventQueue();
         expect(relay.receivedSkipReconnect, isTrue);
         expect(await add, isTrue);
+        await pumpEventQueue();
+        expect(relay.connectCount, 2);
+        expect(relay.sendCount, greaterThan(1));
         expect(relay.getSubscriptions(), hasLength(1));
       },
     );
