@@ -138,6 +138,18 @@ consequences:
 - Relay outcomes include the cache lookup and relay subscription setup before
   the named relay milestone.
 
+It also has one consequence in the other direction: **two awaited steps finish
+before the trace starts and are outside every duration on this page.**
+
+- Tearing down the subscription being replaced. `replace` defaults to `true`,
+  so a normal reload awaits `_cancelSubscription` first.
+- Building a sorted filter. When `sortBy` is set, the filter builder makes a
+  relay-capability round trip before the filter exists.
+
+A sorted `feed_load_discovery` can therefore report a fast p95 while the person
+is blocked on the capability probe. "The feed feels slow but the trace says
+200 ms" is that gap, not a broken report.
+
 A warm-cache load normally completes as `cache`; later relay milestones for
 that load do not replace it. Samples such as `first_relay_event` and
 `eose_empty` are therefore biased toward loads without a nonempty cache result.
