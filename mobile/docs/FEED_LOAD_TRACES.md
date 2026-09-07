@@ -35,6 +35,21 @@ one does appear, a new call site added it and this list needs updating.
 Each load owns its own trace handle, even when concurrent loads have the same
 trace name. Reusing an identical subscription does not start another trace.
 
+### The `feed_load_*` glob is shared with Analytics
+
+Firebase **Analytics** already emits three events matching the same glob, from
+`mobile/packages/analytics`: `feed_load_complete` and `feed_load_more` from
+`FeedPerformanceTracker`, and `feed_load_error` from `ErrorAnalyticsTracker`.
+They are a separate dataset in a separate product area, keyed on `feed_type`
+and carrying their own parameters — `total_load_time_ms`, `total_videos`,
+`first_batch_count` — rather than `completion` and `event_count`.
+
+Filtering Performance traces on `completion` excludes all three, which is what
+you want. The trap is reading across the two datasets: `feed_load_complete`
+reports `total_videos`, the count its caller passes as the videos displayed,
+which is not the quantity [`event_count`](#what-event_count-counts) measures
+below.
+
 ## Completion values
 
 Every trace records a `completion` attribute and an `event_count` metric. The
