@@ -73,13 +73,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.3"
-  app_device_integrity:
-    dependency: "direct main"
-    description:
-      path: "overrides/app_device_integrity-1.1.0"
-      relative: true
-    source: path
-    version: "1.1.0"
   app_links:
     dependency: "direct main"
     description:

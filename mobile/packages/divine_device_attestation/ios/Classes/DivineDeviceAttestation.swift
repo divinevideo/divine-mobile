@@ -23,7 +23,7 @@ import Foundation
 /// the queue of challenges waiting on an in-flight provisioning round — a flat
 /// queue would hand one scope's credential to another scope's waiter.
 @available(iOS 14.0, *)
-final class AppDeviceIntegrity {
+final class DivineDeviceAttestation {
     /// A provisioned App Attest key plus the attestation object Apple issued
     /// for it. `isFresh` marks the credential Apple minted during this call —
     /// its attestation already binds the current challenge, so no separate

@@ -1,0 +1,25 @@
+name: divine_device_attestation
+description: "Divine's account-scoped Apple App Attest integration."
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ^3.44.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^10.0.0
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: DivineDeviceAttestationPlugin

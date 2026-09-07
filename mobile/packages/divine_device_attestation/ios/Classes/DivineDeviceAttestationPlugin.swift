@@ -2,10 +2,10 @@ import Flutter
 import UIKit
 
 @available(iOS 14.0, *)
-public class AppDeviceIntegrityPlugin: NSObject, FlutterPlugin {
+public class DivineDeviceAttestationPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "app_attestation", binaryMessenger: registrar.messenger())
-        let instance: AppDeviceIntegrityPlugin = AppDeviceIntegrityPlugin()
+        let instance = DivineDeviceAttestationPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
 
@@ -25,9 +25,9 @@ public class AppDeviceIntegrityPlugin: NSObject, FlutterPlugin {
             // doing that work here froze the UI for ~200ms on every call.
             // Stay off-main and only hop back to deliver the result.
             DispatchQueue.global(qos: .userInitiated).async {
-                guard let deviceIntegrity = AppDeviceIntegrity(challengeString: challengeString, keyScope: keyScope) else {
+                guard let deviceIntegrity = DivineDeviceAttestation(challengeString: challengeString, keyScope: keyScope) else {
                     DispatchQueue.main.async {
-                        result(FlutterError(code: "-4", message: "Failed to initialize AppDeviceIntegrity", details: nil))
+                        result(FlutterError(code: "-4", message: "Failed to initialize DivineDeviceAttestation", details: nil))
                     }
                     return
                 }
