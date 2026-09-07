@@ -1,6 +1,7 @@
 // ABOUTME: Content reporting service for user-generated content violations
 // ABOUTME: Implements NIP-56 reporting events (kind 1984) for Apple compliance and community-driven moderation
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -343,45 +344,34 @@ class ContentReportingService implements ReportChannelDriver {
         }
       }
 
-      // Drive both channels once now. Their outcome is what the UI reports in
-      // this change; a channel that fails stays queued for the background
-      // sweep. Always continue to local save regardless of the outcome.
-      final relayAccepted = await _publishReportEvent(
-        reportEvent,
-        targetRelays,
-      );
+      // Optimistic delivery: once the report is durably queued, return right
+      // away and drive the channels in the background — an immediate best-effort
+      // attempt here, then ReportRetryService on later foregrounds. A caller
+      // with no durable queue (legacy) falls back to a one-shot inline attempt
+      // so its result still reflects whether anything reached a channel. #8053.
+      final ReportDelivery delivery;
       if (queued && dao != null) {
-        await _recordDriveOutcome(
-          dao,
-          reportId,
-          ReportChannel.relay,
-          relayAccepted,
+        unawaited(_driveReportChannelsOnce(reportId));
+        delivery = ReportDelivery.reached;
+      } else {
+        final relayAccepted = await _publishReportEvent(
+          reportEvent,
+          targetRelays,
         );
-      }
-
-      final zendeskFiled = await _fileZendeskTicket(
-        zendeskPayload,
-        externalId: reportId,
-      );
-      if (queued && dao != null) {
-        await _recordDriveOutcome(
-          dao,
-          reportId,
-          ReportChannel.zendesk,
-          zendeskFiled,
+        final zendeskFiled = await _fileZendeskTicket(
+          zendeskPayload,
+          externalId: reportId,
         );
-        // A fully delivered report need not linger in the queue.
-        if (relayAccepted && zendeskFiled) {
-          try {
-            await dao.deleteById(reportId);
-          } catch (e) {
-            Log.warning(
-              'Failed to remove delivered report $reportId from the queue; '
-              'the sweep will find both channels done and drop it: $e',
-              name: 'ContentReportingService',
-              category: LogCategory.system,
-            );
-          }
+        delivery = (relayAccepted || zendeskFiled)
+            ? ReportDelivery.reached
+            : ReportDelivery.localOnly;
+        if (delivery == ReportDelivery.localOnly) {
+          Log.error(
+            'Report $reportId reached no channel: relay and Zendesk both '
+            'failed and there is no durable queue to retry them.',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
         }
       }
 
@@ -402,23 +392,6 @@ class ContentReportingService implements ReportChannelDriver {
 
       _reportHistory.add(report);
       await _saveReportHistory();
-
-      // The report is recorded either way, but only an off-device channel
-      // makes it visible to moderation. Treat the two as a disjunction: a
-      // filed Zendesk ticket means a human has the report even when every
-      // relay refused it, and vice versa.
-      final delivery = (relayAccepted || zendeskFiled)
-          ? ReportDelivery.reached
-          : ReportDelivery.localOnly;
-      if (delivery == ReportDelivery.localOnly) {
-        Log.error(
-          'Report $reportId reached no channel: relay and Zendesk both '
-          'failed. Local history is never replayed, so it is lost unless '
-          'the user submits again.',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      }
 
       Log.debug(
         'Content report submitted: $reportId',
@@ -894,6 +867,70 @@ class ContentReportingService implements ReportChannelDriver {
         name: 'ContentReportingService',
         category: LogCategory.system,
       );
+    }
+  }
+
+  /// Best-effort first delivery attempt for a freshly-enqueued report, run
+  /// unawaited by [reportContent] so the confirmation is not blocked on the
+  /// network. Whatever fails stays queued for [ReportRetryService]'s sweep.
+  /// #8053.
+  Future<void> _driveReportChannelsOnce(String reportId) async {
+    final dao = _pendingReportsDao;
+    if (dao == null) return;
+
+    PendingReport? row;
+    try {
+      row = await dao.getById(reportId);
+    } catch (e) {
+      Log.warning(
+        'Failed to load report $reportId for its first drive: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    if (row == null) return;
+
+    if (row.relayStatus == PendingReportChannelStatus.pending) {
+      await _recordDriveOutcome(
+        dao,
+        reportId,
+        ReportChannel.relay,
+        await _tryDeliver(row, ReportChannel.relay),
+      );
+    }
+    if (row.zendeskStatus == PendingReportChannelStatus.pending) {
+      await _recordDriveOutcome(
+        dao,
+        reportId,
+        ReportChannel.zendesk,
+        await _tryDeliver(row, ReportChannel.zendesk),
+      );
+    }
+
+    // A fully delivered report need not linger in the queue.
+    try {
+      final updated = await dao.getById(reportId);
+      if (updated != null &&
+          updated.relayStatus == PendingReportChannelStatus.done &&
+          updated.zendeskStatus == PendingReportChannelStatus.done) {
+        await dao.deleteById(reportId);
+      }
+    } catch (_) {
+      // Best-effort cleanup; the sweep will drop a both-done row later.
+    }
+  }
+
+  Future<bool> _tryDeliver(PendingReport row, ReportChannel channel) async {
+    try {
+      return await deliverReportChannel(row, channel);
+    } catch (e) {
+      Log.warning(
+        'Report ${row.reportId} ${channel.name} first-drive threw: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+      return false;
     }
   }
 

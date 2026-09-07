@@ -1861,9 +1861,12 @@ void main() {
         details: 'spam',
       );
 
-      // Delivery outcome is unchanged from the pre-queue behavior: the relay
-      // accepted, so the report reached a channel.
+      // Optimistic: the report is reported reached as soon as it is durably
+      // queued, before the channels are driven.
       expect(result.delivery, ReportDelivery.reached);
+
+      // The channels are driven unawaited in the background; let that run.
+      await pumpEventQueue();
 
       // Zendesk is not configured under test, so its leg stays queued for the
       // background sweep while the relay leg is retired.
@@ -1897,6 +1900,9 @@ void main() {
         reason: ContentFilterReason.spam,
         details: 'spam',
       );
+
+      // The background drive runs unawaited; let it attempt and fail.
+      await pumpEventQueue();
 
       final row = await dao.getById(result.reportId!);
       expect(row!.relayStatus, PendingReportChannelStatus.pending);
