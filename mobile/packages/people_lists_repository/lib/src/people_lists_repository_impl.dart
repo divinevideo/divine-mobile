@@ -341,19 +341,21 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     List<List<String>>? sourceTags,
     String? sourceContent,
   }) async {
-    final payload = Nip51PeopleListCodec.encode(
-      list,
-      sourceTags: sourceTags,
-      sourceContent: sourceContent,
-    );
-    final event = Event(
-      ownerPubkey,
-      payload.kind,
-      payload.tags,
-      payload.content,
-    );
-
     try {
+      // encode throws ArgumentError on a malformed or mismatched source, so
+      // it belongs inside the catch: callers only ever see the documented
+      // failure result, never a raw programming-invariant throw.
+      final payload = Nip51PeopleListCodec.encode(
+        list,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent,
+      );
+      final event = Event(
+        ownerPubkey,
+        payload.kind,
+        payload.tags,
+        payload.content,
+      );
       final sent = await _nostrClient.publishEvent(event);
       if (sent is! PublishSuccess) {
         return const PeopleListPublishResult.failed();
