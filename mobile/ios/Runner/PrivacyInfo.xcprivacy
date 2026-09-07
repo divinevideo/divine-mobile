@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Divine app-target privacy manifest (#8803).
+
+  NSPrivacyAccessedAPITypes is intentionally EMPTY. It covers the Runner
+  target's OWN source only, and that source calls no required-reason API in a
+  Release build: the single UserDefaults call in AppDelegate.swift sits inside
+  `#if DEBUG` (the App Store screenshot bridge). Verified against the Release
+  product: `strings` over build/ios/iphoneos/Runner.app/Runner finds zero
+  occurrences of flutter.screenshot_initial_route, flutter.screenshot_seed_clips
+  or SCREENSHOT_INITIAL_ROUTE.
+
+  Required-reason APIs used by first-party pods are declared in those pods' own
+  manifests, which ship as resource bundles inside this app bundle
+  (divine_camera_privacy, LibProofMode_privacy). Apple is explicit that an SDK
+  cannot rely on the host app's manifest, so those declarations must not be
+  duplicated here.
+
+  NSPrivacyCollectedDataTypes is deliberately left empty and is NOT a statement
+  that Divine collects nothing. Populating it is a product/legal decision that
+  must match the App Store Connect privacy label, and is tracked separately;
+  it was out of scope for the required-reason API audit in #8803.
+
+  Ownership and update process: mobile/docs/IOS_PRIVACY_MANIFESTS.md
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>
