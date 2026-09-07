@@ -949,6 +949,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'outgoingDms',
             () => db.outgoingDmsDao.clearAllForUser(userPubkey),
           );
+          // Mirror outgoingDms: a destructive wipe drops the leaving account's
+          // undelivered report queue too, so its identity-bearing rows are not
+          // orphaned (they only ever sweep under this same pubkey). A plain
+          // switch (deleteUserData=false) preserves them, like the DM outbox.
+          // #8053.
+          await requiredDelete(
+            'pendingReports',
+            () => db.pendingReportsDao.deleteAllForUser(userPubkey),
+          );
         }
       };
 
