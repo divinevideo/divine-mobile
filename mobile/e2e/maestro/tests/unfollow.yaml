@@ -27,6 +27,16 @@ tags:
     timeout: 30000
 - tapOn:
     id: profile_more_button
+
+# Wait for the row itself, not just the sheet. It renders only when the
+# viewer already follows this creator, and the sheet slides up while its
+# content runs its own size/opacity transition -- a tap whose coordinates
+# were resolved mid-slide lands on whatever ends up under them, which here
+# is Report and then Block.
+- extendedWaitUntil:
+    visible:
+      id: profile_unfollow_action
+    timeout: 30000
 - tapOn:
     id: profile_unfollow_action
 
