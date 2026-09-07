@@ -83,7 +83,6 @@ The codebase has **253 files in lib/** with an overall test coverage of **45.0%*
 - **E2E test exists**: Partial (`test/integration/revine_end_to_end_test.dart`)
 - **Service unit tests**:
   - ⚠️ `video_sharing_service.dart` - Has unit tests
-  - ⚠️ `social_service.dart` - Has unit tests
 - **Widget coverage**: Live share sheet coverage should be verified against
   the current share action widgets.
 - **Missing Scenarios**:

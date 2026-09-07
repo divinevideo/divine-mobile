@@ -18,9 +18,7 @@
 - [ ] `test/unit/providers/comments_provider_test.dart` - BLOCKS LOADING
 - [ ] `test/unit/screens/video_metadata_screen_wiring_test.dart` - BLOCKS LOADING
 - [ ] `test/unit/services/video_event_service_pagination_test.dart` - BLOCKS LOADING
-- [ ] `test/unit/services/simple_video_cache_tdd_test.dart` - BLOCKS LOADING
 - [ ] `test/unit/services/video_event_service_subscription_test.dart` - BLOCKS LOADING
-- [ ] `test/unit/services/video_cache_service_tdd_test.dart` - BLOCKS LOADING
 - [ ] `test/unit/services/video_event_service_deduplication_test.dart` - BLOCKS LOADING
 - [ ] `test/unit/services/video_event_service_search_test.dart` - BLOCKS LOADING
 
