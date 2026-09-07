@@ -1159,6 +1159,28 @@ class RelayPool {
     }
   }
 
+  /// Tears down the live subscription [subId] on every relay holding it.
+  ///
+  /// The subscription half of [_releaseQuery], and it makes the same
+  /// connected-state decision for the same reason. `CLOSE` is a statement
+  /// about the current socket: sending it on a disconnected relay drives a
+  /// reconnect purely to deliver a teardown frame, and when that fails the
+  /// frame is queued into `pendingMessages` — where it names a subscription
+  /// that only ever existed on the connection that already died.
+  void _releaseSubscription(String subId) {
+    for (final relay in [
+      ..._relaysSnapshot(),
+      ..._tempRelaysSnapshot(),
+      ..._cacheRelaysSnapshot(),
+    ]) {
+      if (relay.relayStatus.connected == ClientConnected.connected) {
+        relay.checkAndCompleteSubscription(subId);
+      } else {
+        relay.discardSubscription(subId);
+      }
+    }
+  }
+
   /// Whether a query saved on [relay] can still produce a terminal frame, and
   /// therefore deserves to hold [_fireQueryCompleteIfSettled] back.
   ///
@@ -2047,23 +2069,9 @@ class RelayPool {
     _subscriptionEoseRelays.remove(id);
     if (subscription != null) {
       // A relay that still holds this REQ never served it, so offer it to the
-      // zombie repair before the CLOSE sweep below drops that evidence.
+      // zombie repair before the teardown sweep below drops that evidence.
       _repairRelaysThatNeverServedSubscription(id);
-      // check query and send close
-      var it = _relaysSnapshot();
-      for (var relay in it) {
-        relay.checkAndCompleteSubscription(id);
-      }
-
-      it = _tempRelaysSnapshot();
-      for (var relay in it) {
-        relay.checkAndCompleteSubscription(id);
-      }
-
-      it = _cacheRelaysSnapshot();
-      for (var relay in it) {
-        relay.checkAndCompleteSubscription(id);
-      }
+      _releaseSubscription(id);
     } else {
       // No matching subscription — treat [id] as a one-shot query. Drop its
       // completion callback so a query cancelled before EOSE doesn't leak a

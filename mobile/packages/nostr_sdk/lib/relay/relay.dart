@@ -92,10 +92,13 @@ abstract class Relay {
   /// to a timeout. Mirrors the post-AUTH replay and the zombie reconnect in
   /// `RelayPool`.
   Future onConnected({String? source}) async {
-    final saved = connectionIsFresh
+    final isFresh = connectionIsFresh;
+    final saved = isFresh
         ? [..._subscriptions.values, ..._queries.values]
         : const <Subscription>[];
-    await _flushPendingMessages(source, {for (final s in saved) s.id});
+    await _flushPendingMessages(source, {
+      for (final s in saved) s.id,
+    }, dropQueuedCloses: isFresh);
     await _reissueSavedRequests(source, saved);
   }
 
@@ -104,10 +107,26 @@ abstract class Relay {
   /// REQ frames naming one of [reissuedIds] are dropped instead of sent: the
   /// saved subscription carries the same REQ and is re-issued right after, and
   /// sending both makes the relay replay its whole stored window twice.
+  ///
+  /// [dropQueuedCloses] drops queued `CLOSE` frames for the same class of
+  /// reason, and is set exactly when this socket is a new one. A relay forgets
+  /// every subscription when its socket dies, so a `CLOSE` queued against the
+  /// previous connection can only name something the fresh socket has never
+  /// heard of. At best that is a wasted frame. At worst it is destructive:
+  /// `RelayPool` re-issues saved subscriptions from its own post-AUTH replay
+  /// and zombie reconnect, off this await chain, so a caller that tore down a
+  /// subscription and later re-subscribed under the same explicit id can have
+  /// the replayed REQ land first — and then this stale `CLOSE` tears down the
+  /// live subscription, which goes silent with no terminal frame.
+  ///
+  /// A reused connection is the opposite case and is left alone: nothing
+  /// cycled, so a queued `CLOSE` may still name a subscription this very
+  /// socket is holding.
   Future<void> _flushPendingMessages(
     String? source,
-    Set<String> reissuedIds,
-  ) async {
+    Set<String> reissuedIds, {
+    required bool dropQueuedCloses,
+  }) async {
     log(
       '[Relay] onConnected[${source ?? "unknown"}]: ${relayStatus.addr} - sending ${pendingMessages.length} pending messages',
     );
@@ -122,6 +141,7 @@ abstract class Relay {
 
     for (var message in messagesToSend) {
       if (_isReqNaming(message, reissuedIds)) continue;
+      if (dropQueuedCloses && _isClose(message)) continue;
       try {
         final result = await send(message, queueIfFailed: false);
         if (!result) {
@@ -145,6 +165,9 @@ abstract class Relay {
 
   bool _isReqNaming(List<dynamic> message, Set<String> ids) =>
       message.length > 1 && message[0] == 'REQ' && ids.contains(message[1]);
+
+  bool _isClose(List<dynamic> message) =>
+      message.isNotEmpty && message[0] == 'CLOSE';
 
   /// Re-sends every REQ this relay is still holding on the fresh socket.
   ///
@@ -307,14 +330,36 @@ abstract class Relay {
   /// Used when the relay itself ended the subscription (a `CLOSED` frame), so
   /// echoing a `CLOSE` back would name a subscription the relay has already
   /// forgotten. Returns whether [id] named a pending query.
-  bool discardQuery(String id) => _queries.remove(id) != null;
+  bool discardQuery(String id) {
+    final discarded = _queries.remove(id) != null;
+    if (discarded) _discardQueuedReq(id);
+    return discarded;
+  }
 
   /// Drops a live subscription without sending `CLOSE`.
   ///
-  /// Used when the relay itself closed the subscription (a `CLOSED` frame), so
-  /// echoing a `CLOSE` back would name a subscription the relay has already
-  /// forgotten. Returns whether [id] named a live subscription.
-  bool discardSubscription(String id) => _subscriptions.remove(id) != null;
+  /// Used whenever the relay has already forgotten the subscription, so a
+  /// `CLOSE` naming it would reach nothing: either the relay ended it itself
+  /// (a `CLOSED` frame), or the socket it lived on is gone. Returns whether
+  /// [id] named a live subscription.
+  bool discardSubscription(String id) {
+    final discarded = _subscriptions.remove(id) != null;
+    if (discarded) _discardQueuedReq(id);
+    return discarded;
+  }
+
+  /// Drops a `REQ` that failed before its saved subscription was discarded.
+  ///
+  /// A fresh socket would otherwise replay the abandoned request without any
+  /// local subscription left to receive its events or send its eventual
+  /// `CLOSE`. Only callers that actually removed a saved request invoke this,
+  /// so deliberately queued, unsaved requests remain eligible for replay.
+  void _discardQueuedReq(String id) {
+    pendingMessages.removeWhere(
+      (message) =>
+          message.length > 1 && message[0] == 'REQ' && message[1] == id,
+    );
+  }
 
   bool checkQuery(String id) {
     return _queries[id] != null;
