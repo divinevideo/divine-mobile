@@ -102,6 +102,23 @@ void main() {
       );
     });
 
+    testWidgets('drives Unfollow through its automation id', (tester) async {
+      // The E2E flow taps this anchor rather than the localized label, so the
+      // identifier has to sit on the node that carries the gesture. Asserting
+      // it merely exists stays green even if it drifts onto an inert wrapper.
+      var unfollowed = 0;
+      await tester.pumpWidget(
+        buildSubject(isFollowing: true, onUnfollow: () => unfollowed++),
+      );
+
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileUnfollowAction),
+      );
+      await tester.pump();
+
+      expect(unfollowed, 1);
+    });
+
     testWidgets('renders Unblock label when blocked', (tester) async {
       await tester.pumpWidget(buildSubject(isBlocked: true));
 
