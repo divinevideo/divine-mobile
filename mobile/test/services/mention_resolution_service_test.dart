@@ -372,6 +372,113 @@ void main() {
       expect(result.resolvedPubkeys, isEmpty);
       expect(result.unresolvedTokens, equals(['alice']));
     });
+
+    // A handle carrying a dot or a hyphen used to tokenize only up to the
+    // separator, so `@OG-AB` searched for `OG` and canonicalized to whoever
+    // owned that shorter handle — a p tag naming the wrong person.
+    group('handles containing dots and hyphens', () {
+      test('resolves the whole hyphenated handle, not its prefix', () async {
+        final bobNpub = NostrKeyUtils.encodePubKey(_bobPubkey);
+        when(
+          () => profileRepository.searchUsersLocally(
+            query: 'OG-AB',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => [_profile(_bobPubkey, name: 'OG-AB')]);
+
+        final result = await service.resolveTextMentions(
+          rawText: 'dedicated to my home-girl @OG-AB',
+        );
+
+        expect(
+          result.canonicalText,
+          equals('dedicated to my home-girl nostr:$bobNpub'),
+        );
+        expect(result.resolvedPubkeys, equals([_bobPubkey]));
+        expect(result.unresolvedTokens, isEmpty);
+        verifyNever(
+          () => profileRepository.searchUsersLocally(
+            query: 'OG',
+            limit: any(named: 'limit'),
+          ),
+        );
+      });
+
+      test(
+        'does not resolve a hyphenated handle to its prefix owner',
+        () async {
+          when(
+            () => profileRepository.searchUsersLocally(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => [_profile(_alicePubkey, name: 'OG')]);
+          when(
+            () => profileRepository.searchUsersFromApi(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => [_profile(_alicePubkey, name: 'OG')]);
+
+          final result = await service.resolveTextMentions(
+            rawText: 'hi @OG-AB',
+          );
+
+          expect(result.canonicalText, equals('hi @OG-AB'));
+          expect(result.resolvedPubkeys, isEmpty);
+        },
+      );
+
+      test('searches a dotted handle as typed', () async {
+        final carolNpub = NostrKeyUtils.encodePubKey(_carolPubkey);
+        when(
+          () => profileRepository.searchUsersLocally(
+            query: 'ickynicki.v2',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [_profile(_carolPubkey, name: 'ickynicki.v2')],
+        );
+
+        final result = await service.resolveTextMentions(
+          rawText: 'inspired by @ickynicki.v2',
+        );
+
+        expect(result.canonicalText, equals('inspired by nostr:$carolNpub'));
+        expect(result.resolvedPubkeys, equals([_carolPubkey]));
+      });
+
+      test(
+        'resolves handles that differ only by separators independently',
+        () async {
+          final aliceNpub = NostrKeyUtils.encodePubKey(_alicePubkey);
+          final bobNpub = NostrKeyUtils.encodePubKey(_bobPubkey);
+          when(
+            () => profileRepository.searchUsersLocally(
+              query: 'og-ab',
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => [_profile(_bobPubkey, name: 'og-ab')]);
+          when(
+            () => profileRepository.searchUsersLocally(
+              query: 'ogab',
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => [_profile(_alicePubkey, name: 'ogab')]);
+
+          final result = await service.resolveTextMentions(
+            rawText: 'shoutout @og-ab and @ogab',
+          );
+
+          expect(
+            result.canonicalText,
+            equals('shoutout nostr:$bobNpub and nostr:$aliceNpub'),
+          );
+          expect(result.resolvedPubkeys, equals([_bobPubkey, _alicePubkey]));
+          expect(result.unresolvedTokens, isEmpty);
+        },
+      );
+    });
   });
 
   group('buildGenericMentionPTags', () {

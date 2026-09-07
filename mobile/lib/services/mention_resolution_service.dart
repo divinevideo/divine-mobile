@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
+import 'package:openvine/constants/mention_pattern.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -12,7 +13,8 @@ const _typedRemoteLookupLimit = 5;
 const _profileSearchLimit = 10;
 
 final _linkifiedTokenRegex = RegExp(
-  r'((?:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(?:https?:\/\/[^\s]+|www\.[^\s]+|(?<![@\w])(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?))|#(\w+)|(?<![A-Za-z0-9])(?:nostr:)?((?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+)\b|(?<![A-Fa-f0-9])([A-Fa-f0-9]{64})(?![A-Fa-f0-9])|@([a-zA-Z][a-zA-Z0-9_]{0,30})',
+  r'((?:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(?:https?:\/\/[^\s]+|www\.[^\s]+|(?<![@\w])(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?))|#(\w+)|(?<![A-Za-z0-9])(?:nostr:)?((?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+)\b|(?<![A-Fa-f0-9])([A-Fa-f0-9]{64})(?![A-Fa-f0-9])|'
+  '$mentionTokenPattern',
   caseSensitive: false,
 );
 
@@ -98,7 +100,7 @@ class MentionResolutionService {
 
     final replacements = <_TextReplacement>[];
     for (final mention in typedMentions) {
-      final pubkey = typedResult.pubkeyByToken[mention.normalizedToken];
+      final pubkey = typedResult.pubkeyByToken[mention.lookupKey];
       if (pubkey == null) continue;
       replacements.add(
         _TextReplacement(
@@ -188,33 +190,34 @@ class MentionResolutionService {
     List<_TypedMention> mentions, {
     required String? currentUserPubkey,
   }) async {
-    final uniqueTokens = <String>[];
+    // Deduplicate case-insensitively while preserving separators in the key.
+    // Profiles may legitimately own both `og-ab` and `ogab`, so collapsing
+    // both to the separator-stripped comparison form would tag the wrong one.
+    final queryByToken = <String, String>{};
     for (final mention in mentions) {
-      if (!uniqueTokens.contains(mention.normalizedToken)) {
-        uniqueTokens.add(mention.normalizedToken);
-      }
+      queryByToken.putIfAbsent(mention.lookupKey, () => mention.token);
     }
 
     final pubkeyByToken = <String, String>{};
     final unresolvedTokens = <String>[];
     var remoteLookups = 0;
 
-    for (final token in uniqueTokens) {
+    for (final MapEntry(key: token, value: query) in queryByToken.entries) {
       String? resolved;
       try {
         final localCandidates = await _profileRepository.searchUsersLocally(
-          query: token,
+          query: query,
           limit: _profileSearchLimit,
         );
-        resolved = _exactSingleMatch(token, localCandidates);
+        resolved = _exactSingleMatch(query, localCandidates);
 
         if (resolved == null && remoteLookups < _typedRemoteLookupLimit) {
           remoteLookups += 1;
           final apiCandidates = await _profileRepository.searchUsersFromApi(
-            query: token,
+            query: query,
             limit: _profileSearchLimit,
           );
-          resolved = _exactSingleMatch(token, apiCandidates);
+          resolved = _exactSingleMatch(query, apiCandidates);
         }
       } on Exception {
         resolved = null;
@@ -279,6 +282,7 @@ List<_TypedMention> _extractTypedMentions(String text) {
         token: token,
         start: match.start,
         end: match.end,
+        lookupKey: token.toLowerCase(),
         normalizedToken: _normalizeMentionValue(token),
       ),
     );
@@ -405,8 +409,8 @@ class _TypedResolutionResult {
   factory _TypedResolutionResult.empty(List<_TypedMention> mentions) {
     final unresolved = <String>[];
     for (final mention in mentions) {
-      if (!unresolved.contains(mention.normalizedToken)) {
-        unresolved.add(mention.normalizedToken);
+      if (!unresolved.contains(mention.lookupKey)) {
+        unresolved.add(mention.lookupKey);
       }
     }
     return _TypedResolutionResult(
@@ -424,12 +428,14 @@ class _TypedMention {
     required this.token,
     required this.start,
     required this.end,
+    required this.lookupKey,
     required this.normalizedToken,
   });
 
   final String token;
   final int start;
   final int end;
+  final String lookupKey;
   final String normalizedToken;
 }
 

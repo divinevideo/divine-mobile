@@ -85,7 +85,8 @@ final RegExp _npubIdentifierPattern = RegExp(
 /// protects. Groups 1 and 2 (URL/email, hashtag) are here only to consume
 /// their own text so a run buried inside them is not mistaken for one.
 ///
-/// The UI's trailing `@([a-zA-Z][a-zA-Z0-9_]{0,30})` alternative is the one
+/// The UI's trailing mention alternative,
+/// `@([a-zA-Z](?:[a-zA-Z0-9_]|[.-](?=[a-zA-Z0-9_])){0,30})`, is the one
 /// deliberate divergence, and it only fires when a letter follows the `@`.
 /// It therefore always wins for `@npub1…` — every bech32 prefix starts with
 /// `n` — and wins over hex only for a letter-initial `@<64-hex>`, capping

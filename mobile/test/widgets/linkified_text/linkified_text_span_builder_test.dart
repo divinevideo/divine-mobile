@@ -287,6 +287,99 @@ void main() {
       expect(spans.single.recognizer, isNull);
     });
 
+    // Divine handles routinely carry a dot or a hyphen — a NIP-05 local part
+    // allows both, and `ickynicki.v2` / `OG-AB` are real reported handles.
+    // The tokenizer stopped at the first one, so `@OG-AB` linked to whoever
+    // owns `OG` and left `-AB` as plain text.
+    group('handles containing dots and hyphens', () {
+      test('keeps a hyphenated handle in one mention span', () {
+        String? tappedMention;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'dedicated to my home-girl @OG-AB',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          onMentionTap: (username) => tappedMention = username,
+        ).build();
+
+        final mentionSpan = spans.tappableSpans.single;
+        expect(mentionSpan.text, equals('@OG-AB'));
+        mentionSpan.tap();
+        expect(tappedMention, equals('OG-AB'));
+      });
+
+      test('keeps a dotted handle in one mention span', () {
+        String? tappedMention;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'inspired by @ickynicki.v2',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          onMentionTap: (username) => tappedMention = username,
+        ).build();
+
+        final mentionSpan = spans.tappableSpans.single;
+        expect(mentionSpan.text, equals('@ickynicki.v2'));
+        mentionSpan.tap();
+        expect(tappedMention, equals('ickynicki.v2'));
+      });
+
+      test('leaves sentence punctuation after a handle outside the span', () {
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'thanks @st.allison.',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          onMentionTap: (_) {},
+        ).build();
+
+        expect(spans.tappableSpans.single.text, equals('@st.allison'));
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('thanks @st.allison.'),
+        );
+      });
+
+      test('leaves a trailing separator outside the span', () {
+        final spans = LinkifiedTextSpanBuilder(
+          text: '@trailing- and @trailing.',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          onMentionTap: (_) {},
+        ).build();
+
+        expect(
+          spans.tappableSpans.map((span) => span.text),
+          equals(['@trailing', '@trailing']),
+        );
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('@trailing- and @trailing.'),
+        );
+      });
+
+      test('still leaves an email address unlinked as a mention', () {
+        final tappedUrls = <String>[];
+        final mentions = <String>[];
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'write to bob@example.com',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          onMentionTap: mentions.add,
+          onUrlTap: (rawUrl) async => tappedUrls.add(rawUrl),
+        ).build();
+
+        spans.tappableSpans.single.tap();
+        expect(mentions, isEmpty);
+        expect(tappedUrls, equals(['bob@example.com']));
+      });
+    });
+
     // `@<64-hex>` resolves on the first character after the `@`. The trailing
     // mention alternative opens with `[a-zA-Z]`, so a letter-initial hex is
     // taken as a 31-character mention while a digit-initial one has no letter
