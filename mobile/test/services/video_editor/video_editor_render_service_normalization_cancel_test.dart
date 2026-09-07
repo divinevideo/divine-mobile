@@ -31,7 +31,11 @@ class _MockPathProviderPlatform extends Fake
 }
 
 class _MockProVideoEditor extends ProVideoEditor {
-  _MockProVideoEditor({required this.resolutions, this.onRender});
+  _MockProVideoEditor({
+    required this.resolutions,
+    this.onRender,
+    this.failEncoderTaskIds = const {},
+  });
 
   /// Reported resolution per source file path. Anything else reports a
   /// already-vertical resolution, which needs no crop.
@@ -39,6 +43,11 @@ class _MockProVideoEditor extends ProVideoEditor {
 
   /// Runs inside `renderVideoToFile`, so a test can cancel mid-render.
   final void Function(VideoRenderData task)? onRender;
+
+  /// Task ids whose render writes its partial output file and then throws a
+  /// [RenderEncoderException], modelling an encoder that fails after starting
+  /// to write. The file is created first so the failure leaves a real partial.
+  final Set<String> failEncoderTaskIds;
 
   /// Every render the service asked the plugin for, in order.
   final List<String> renderedTaskIds = [];
@@ -69,6 +78,9 @@ class _MockProVideoEditor extends ProVideoEditor {
     renderedTaskIds.add(value.id);
     onRender?.call(value);
     File(filePath).createSync(recursive: true);
+    if (failEncoderTaskIds.contains(value.id)) {
+      throw const RenderEncoderException('mock encoder failure');
+    }
     return filePath;
   }
 
@@ -279,6 +291,45 @@ void main() {
           reason:
               'a cancelled persistent export must not orphan a divine_*.mp4 '
               'in the documents directory',
+        );
+      },
+    );
+
+    test(
+      'deletes the partial final output when the final encoder attempt fails '
+      'during concatenation (#8818)',
+      () async {
+        // Not a cancel: the concat render itself fails. The encoder writes a
+        // partial `divine_*.mp4` and then throws on every attempt, so the
+        // retry chain is exhausted and the failure propagates. The partial
+        // must be cleaned up, exactly as on cancel.
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          failEncoderTaskIds: {exportTaskId},
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+          usePersistentStorage: true,
+        );
+
+        // Normalization succeeded for both clips, then the concat render was
+        // attempted and failed.
+        expect(plugin.renderedTaskIds.take(2), [
+          'clip-a_normalized',
+          'clip-b_normalized',
+        ]);
+        expect(plugin.renderedTaskIds, contains(exportTaskId));
+        expect(outputPath, isNull);
+        expect(
+          tempDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason: 'a failed export must not orphan a partial divine_*.mp4',
         );
       },
     );
