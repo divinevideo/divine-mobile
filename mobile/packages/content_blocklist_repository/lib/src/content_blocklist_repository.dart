@@ -1344,11 +1344,12 @@ class ContentBlocklistRepository {
 
     // Recorded BEFORE the local removals are persisted, and so before the
     // publish. A kill anywhere after this leaves an account that is still
-    // hidden plus the intent to unhide it, which the next launch acts on. In
+    // hidden plus the intent to unhide it, which the next launch acts on; in
     // the other order a kill between the two writes left it unhidden locally
     // with nothing to stop the relay's surviving `p` tag from being
-    // re-adopted as a mute on the next launch (#8263).
-    // Only ever advance the watermark. The stored second is what a later
+    // re-adopted as a mute (#8263).
+    //
+    // The watermark only ever advances. The stored second is what a later
     // reconciliation compares a relay list's `created_at` against, so
     // lowering it on a repeat attempt hands back protection an earlier
     // attempt already earned.
