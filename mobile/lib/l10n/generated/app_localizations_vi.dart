@@ -3837,6 +3837,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Thử lại';
 
   @override
+  String get peopleListsLoadFailed =>
+      'Couldn\'t load this list. Check your connection and try again.';
+
+  @override
   String get peopleListsAddButton => 'Thêm';
 
   @override
@@ -4751,6 +4755,17 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count video';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '$count member',
+    );
+    return '$_temp0';
   }
 
   @override

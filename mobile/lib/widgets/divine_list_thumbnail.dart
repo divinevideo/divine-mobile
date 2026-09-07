@@ -7,8 +7,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' hide AspectRatio;
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
@@ -33,16 +35,6 @@ const double _fanSlotAspectRatio = 177 / 236;
 /// From Figma: the right column starts at 66.1% of the media width.
 const _largeTileFraction = 0.661;
 
-/// Placeholder accents for members without a profile picture, matching the
-/// design's colored generic-avatar tiles. Brand accents, not surface tokens:
-/// the tile is media, identical in both appearances.
-const List<Color> _placeholderTones = [
-  VineTheme.accentLime,
-  VineTheme.accentViolet,
-  VineTheme.accentOrange,
-  VineTheme.accentPink,
-];
-
 /// One list rendered as a gallery thumbnail card: media block on top, then
 /// a fixed-height title/description footer.
 ///
@@ -62,6 +54,9 @@ class DivineListThumbnail extends StatelessWidget {
     super.key,
   }) : name = curatedList.name,
        description = curatedList.description,
+       isPrivate = !curatedList.isPublic,
+       _count = curatedList.videoEventIds.length,
+       _kind = _ListKind.videos,
        _media = _VideoFanMedia(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
@@ -74,6 +69,9 @@ class DivineListThumbnail extends StatelessWidget {
     super.key,
   }) : name = userList.name,
        description = userList.description,
+       isPrivate = false,
+       _count = userList.pubkeys.length,
+       _kind = _ListKind.people,
        _media = _PeopleCollageMedia(
          memberPubkeys: userList.pubkeys,
          memberCount: userList.pubkeys.length,
@@ -81,18 +79,44 @@ class DivineListThumbnail extends StatelessWidget {
 
   final String name;
   final String? description;
+
+  /// A device-only list: the owner sees a lock beside the title so a
+  /// private list and a shared one never look the same in My Lists.
+  final bool isPrivate;
   final VoidCallback onTap;
+  final int _count;
+  final _ListKind _kind;
   final Widget _media;
+
+  /// One spoken sentence for the whole card: the name, its visibility when
+  /// private, and the count the badge shows.
+  ///
+  /// The subtree is excluded so a screen reader does not read the title
+  /// twice with a bare count in between — the badge and the footer are
+  /// both decorative once this label carries their content.
+  String _semanticLabel(AppLocalizations l10n) => [
+    name,
+    if (isPrivate) l10n.listVisibilityPrivate,
+    switch (_kind) {
+      _ListKind.videos => l10n.listVideoCount(_count),
+      _ListKind.people => l10n.listMemberCount(_count),
+    },
+  ].join(', ');
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: name,
+      label: _semanticLabel(context.l10n),
       // Without this the card is announced as text: the tap action is
       // exposed by the GestureDetector, but the role is not, so it never
       // shows up in a screen reader's button rotor.
       button: true,
       container: true,
+      // Excluding the subtree also drops the GestureDetector's tap action,
+      // so the node has to expose it itself or assistive tech cannot
+      // activate the card.
+      excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         child: Column(
@@ -101,13 +125,19 @@ class DivineListThumbnail extends StatelessWidget {
           children: [
             _media,
             const SizedBox(height: 8),
-            _Footer(title: name, description: description),
+            _Footer(
+              title: name,
+              description: description,
+              isPrivate: isPrivate,
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+enum _ListKind { videos, people }
 
 /// Overlapping portrait cards arranged left-to-right.
 ///
@@ -247,7 +277,7 @@ class _PeopleCollageMedia extends StatelessWidget {
                     flex: (_largeTileFraction * 1000).round(),
                     child: _MemberTile(
                       pubkey: _pubkeyAt(0),
-                      toneIndex: 0,
+                      slot: 0,
                       seams: Border(right: seam),
                     ),
                   ),
@@ -258,14 +288,14 @@ class _PeopleCollageMedia extends StatelessWidget {
                         Expanded(
                           child: _MemberTile(
                             pubkey: _pubkeyAt(1),
-                            toneIndex: 1,
+                            slot: 1,
                             seams: Border(bottom: halfSeam),
                           ),
                         ),
                         Expanded(
                           child: _MemberTile(
                             pubkey: _pubkeyAt(2),
-                            toneIndex: 2,
+                            slot: 2,
                             seams: Border(top: halfSeam),
                           ),
                         ),
@@ -296,12 +326,14 @@ class _PeopleCollageMedia extends StatelessWidget {
 class _MemberTile extends ConsumerWidget {
   const _MemberTile({
     required this.pubkey,
-    required this.toneIndex,
+    required this.slot,
     required this.seams,
   });
 
   final String? pubkey;
-  final int toneIndex;
+
+  /// Position in the collage; seeds the placeholder tone of an empty slot.
+  final int slot;
 
   /// This tile's share of the collage seams, painted over the image.
   final Border seams;
@@ -314,13 +346,19 @@ class _MemberTile extends ConsumerWidget {
       null => null,
     };
 
+    // Same seed rule as UserAvatar, so a member keeps one accent across
+    // every surface; the ink comes from the same palette so the glyph
+    // reads on every fill rather than washing out on lime.
+    final colors = userAvatarPlaceholderColors(
+      userAvatarToneForSeed(pubkey ?? 'slot-$slot'),
+    );
     final tile = pictureUrl == null || pictureUrl.isEmpty
         ? ColoredBox(
-            color: _placeholderTones[toneIndex % _placeholderTones.length],
-            child: const Center(
+            color: colors.base,
+            child: Center(
               child: DivineIcon(
                 icon: DivineIconName.user,
-                color: VineTheme.whiteText,
+                color: colors.figure,
                 size: 28,
               ),
             ),
@@ -385,10 +423,15 @@ double _scaledLineHeight(BuildContext context, TextStyle style) =>
 /// Both variants share this structure so equal-width cards come out
 /// equal-height and a two-column gallery reads as rows.
 class _Footer extends StatelessWidget {
-  const _Footer({required this.title, required this.description});
+  const _Footer({
+    required this.title,
+    required this.description,
+    required this.isPrivate,
+  });
 
   final String title;
   final String? description;
+  final bool isPrivate;
 
   @override
   Widget build(BuildContext context) {
@@ -396,18 +439,20 @@ class _Footer extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _Title(title: title),
+        _Title(title: title, isPrivate: isPrivate),
         _Description(description: description),
       ],
     );
   }
 }
 
-/// Single-line list title in a fixed one-line box.
+/// Single-line list title in a fixed one-line box, with a lock trailing it
+/// when the list is private.
 class _Title extends StatelessWidget {
-  const _Title({required this.title});
+  const _Title({required this.title, required this.isPrivate});
 
   final String title;
+  final bool isPrivate;
 
   @override
   Widget build(BuildContext context) {
@@ -417,12 +462,28 @@ class _Title extends StatelessWidget {
     return SizedBox(
       height: _scaledLineHeight(context, style),
       width: double.infinity,
-      child: Text(
-        title,
-        style: style,
-        strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      child: Row(
+        spacing: 4,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: style,
+              strutStyle: StrutStyle.fromTextStyle(
+                style,
+                forceStrutHeight: true,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isPrivate)
+            DivineIcon(
+              icon: DivineIconName.lockSimple,
+              size: 16,
+              color: context.vineColors.secondaryText,
+            ),
+        ],
       ),
     );
   }

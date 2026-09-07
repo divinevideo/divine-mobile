@@ -3967,6 +3967,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Spróbuj ponownie';
 
   @override
+  String get peopleListsLoadFailed =>
+      'Couldn\'t load this list. Check your connection and try again.';
+
+  @override
   String get peopleListsAddButton => 'Dodaj';
 
   @override
@@ -4913,6 +4917,17 @@ class AppLocalizationsPl extends AppLocalizations {
       many: '$count filmów',
       few: '$count filmy',
       one: '1 film',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
