@@ -16,8 +16,6 @@
 # Fix a skip rather than regenerating this file. Skip-debt epic: #4337 (WS-1).
 packages/blossom_upload_service/test/src/blossom_upload_service_test.dart	3 # delete: uploadImage returns extensionless canonical blossom url (#4836)
 test/infrastructure/drift_setup_test.dart	1 # delete: asserts schemaVersion 6, now 9; db_client owns migrations (#4836)
-test/providers/curation_provider_lifecycle_test.dart	2 # rewrite: mock authservice lacks authstatestream, init errors out (#4836)
-test/providers/curation_provider_tab_refresh_test.dart	1 # rewrite: unstubbed authstatestream, no videoevent fallback value (#4836)
 test/providers/readiness_gate_providers_test.dart	1 # delete: appready no longer gates on nostr, only on foreground (#4836)
 test/providers/seen_videos_notifier_test.dart	1 # rewrite: races hydration, load lands after the 100ms expect (#4836)
 test/providers/video_events_provider_fresh_test.dart	1 # quarantine: real relay via realintegrationtesthelper, 40s timeout (#4836)

@@ -13,9 +13,9 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+
+import '../helpers/test_provider_overrides.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -23,13 +23,13 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
-class _MockAuthService extends Mock implements AuthService {}
-
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
 
 class _MockVideoEventCache extends Mock implements VideoEventCache {}
+
+class _MockCurationRepository extends Mock implements CurationRepository {}
 
 void main() {
   setUpAll(() {
@@ -41,16 +41,18 @@ void main() {
     late _MockNostrClient mockNostrService;
     late _MockVideoEventService mockVideoEventService;
     late _MockLikesRepository mockLikesRepository;
-    late _MockAuthService mockAuthService;
+    late MockAuthService mockAuthService;
     late _MockFunnelcakeApiClient mockFunnelcakeApiClient;
+    late _MockCurationRepository mockCurationRepository;
     late List<VideoEvent> sampleVideos;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
       mockVideoEventService = _MockVideoEventService();
       mockLikesRepository = _MockLikesRepository();
-      mockAuthService = _MockAuthService();
+      mockAuthService = createMockAuthService();
       mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
+      mockCurationRepository = _MockCurationRepository();
 
       // Create sample videos for editor's picks
       sampleVideos = List.generate(
@@ -80,87 +82,83 @@ void main() {
       when(
         () => mockLikesRepository.getLikeCounts(any()),
       ).thenAnswer((_) async => {});
+      when(
+        () => mockCurationRepository.getVideosForSetType(
+          CurationSetType.editorsPicks,
+        ),
+      ).thenReturn(sampleVideos);
     });
 
     test('curation provider uses keepAlive to persist state', () async {
       // ARRANGE: Create first container
       final container = ProviderContainer(
         overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
+          ...getStandardTestOverrides(
+            mockAuthService: mockAuthService,
+            mockNostrService: mockNostrService,
+          ),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          authServiceProvider.overrideWithValue(mockAuthService),
+          curationRepositoryProvider.overrideWithValue(
+            mockCurationRepository,
+          ),
           funnelcakeApiClientProvider.overrideWithValue(
             mockFunnelcakeApiClient,
           ),
         ],
       );
 
-      // ACT: Read curation provider
-      final curationState = container.read(curationProvider);
+      final subscription = container.listen(curationProvider, (_, _) {});
+      await container.read(curationProvider.notifier).refreshAll();
+      final populatedState = container.read(curationProvider);
 
-      // ASSERT: Provider should initialize synchronously
-      // with loading state
-      expect(
-        curationState.isLoading,
-        isTrue,
-        reason: 'Provider initializes in loading state',
+      subscription.close();
+      await pumpEventQueue();
+
+      expect(container.read(curationProvider), same(populatedState));
+      expect(populatedState.editorsPicks, sampleVideos);
+
+      await pumpEventQueue();
+      container.dispose();
+    });
+
+    test('curation provider initialization completes and populates '
+        'editor picks', () async {
+      // ARRANGE: Create container
+      final container = ProviderContainer(
+        overrides: [
+          ...getStandardTestOverrides(
+            mockAuthService: mockAuthService,
+            mockNostrService: mockNostrService,
+          ),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          curationRepositoryProvider.overrideWithValue(
+            mockCurationRepository,
+          ),
+          funnelcakeApiClientProvider.overrideWithValue(
+            mockFunnelcakeApiClient,
+          ),
+        ],
       );
 
-      // The key point: with @Riverpod(keepAlive: true),
-      // the provider will:
-      // 1. NOT autodispose when unwatched
-      // 2. Persist state across navigation
-      // 3. Complete initialization once and reuse that state
+      // ACT: Read initial state
+      final initialState = container.read(curationProvider);
 
-      // This test verifies the annotation is present and
-      // provider is marked as keepAlive
-      // In production, this prevents the "0 videos" bug when
-      // navigating back to Editor's Pick
+      // ASSERT: Initially loading
+      expect(initialState.isLoading, isTrue);
+      expect(initialState.editorsPicks, isEmpty);
 
+      await container.read(curationProvider.notifier).refreshAll();
+
+      // ACT: Read after initialization
+      final loadedState = container.read(curationProvider);
+      final editorsPicks = container.read(editorsPicksProvider);
+
+      expect(loadedState.editorsPicks, sampleVideos);
+      expect(editorsPicks, sampleVideos);
+
+      await pumpEventQueue();
       container.dispose();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
-
-    test(
-      'curation provider initialization completes and populates '
-      'editor picks',
-      () async {
-        // ARRANGE: Create container
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            funnelcakeApiClientProvider.overrideWithValue(
-              mockFunnelcakeApiClient,
-            ),
-          ],
-        );
-
-        // ACT: Read initial state
-        final initialState = container.read(curationProvider);
-
-        // ASSERT: Initially loading
-        expect(initialState.isLoading, isTrue);
-        expect(initialState.editorsPicks, isEmpty);
-
-        // Wait for async initialization
-        await Future.microtask(() {});
-        await Future.delayed(const Duration(milliseconds: 10));
-
-        // ACT: Read after initialization
-        final loadedState = container.read(curationProvider);
-        final editorsPicks = container.read(editorsPicksProvider);
-
-        // ASSERT: Should be loaded with videos
-        expect(loadedState.isLoading, isFalse);
-        expect(editorsPicks.length, greaterThan(0));
-
-        container.dispose();
-      },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
-    );
+    });
 
     test('curation service initializes with sample data', () {
       // ARRANGE: Create curation service directly

@@ -1,6 +1,7 @@
 // ABOUTME: Tests that curation provider refreshes when Editor's Pick tab becomes active
 // ABOUTME: Verifies the fix for videos showing blank when navigating from video back to tab
 
+import 'package:curation_repository/curation_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -11,9 +12,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+
+import '../helpers/test_provider_overrides.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -21,29 +22,34 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
-class _MockAuthService extends Mock implements AuthService {}
-
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+
+class _MockCurationRepository extends Mock implements CurationRepository {}
+
+class _FakeVideoEvent extends Fake implements VideoEvent {}
 
 void main() {
   setUpAll(() {
     registerFallbackValue(<Filter>[]);
     registerFallbackValue(<String>[]);
+    registerFallbackValue(_FakeVideoEvent());
   });
 
   group('CurationProvider Tab Refresh', () {
     late _MockNostrClient mockNostrService;
     late _MockVideoEventService mockVideoEventService;
     late _MockLikesRepository mockLikesRepository;
-    late _MockAuthService mockAuthService;
+    late MockAuthService mockAuthService;
     late _MockFunnelcakeApiClient mockFunnelcakeApiClient;
+    late _MockCurationRepository mockCurationRepository;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
       mockVideoEventService = _MockVideoEventService();
       mockLikesRepository = _MockLikesRepository();
-      mockAuthService = _MockAuthService();
+      mockAuthService = createMockAuthService();
       mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
+      mockCurationRepository = _MockCurationRepository();
 
       // Stub nostr service to return empty stream (no async fetch for this test)
       when(
@@ -54,6 +60,12 @@ void main() {
       when(
         () => mockLikesRepository.getLikeCounts(any()),
       ).thenAnswer((_) async => {});
+      when(
+        () => mockCurationRepository.getVideosForSetType(
+          CurationSetType.editorsPicks,
+        ),
+      ).thenAnswer((_) => mockVideoEventService.discoveryVideos);
+      when(() => mockCurationRepository.refreshIfNeeded()).thenReturn(null);
     });
 
     test(
@@ -65,9 +77,14 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
+            ...getStandardTestOverrides(
+              mockAuthService: mockAuthService,
+              mockNostrService: mockNostrService,
+            ),
             videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            authServiceProvider.overrideWithValue(mockAuthService),
+            curationRepositoryProvider.overrideWithValue(
+              mockCurationRepository,
+            ),
             funnelcakeApiClientProvider.overrideWithValue(
               mockFunnelcakeApiClient,
             ),
@@ -148,9 +165,14 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
+            ...getStandardTestOverrides(
+              mockAuthService: mockAuthService,
+              mockNostrService: mockNostrService,
+            ),
             videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            authServiceProvider.overrideWithValue(mockAuthService),
+            curationRepositoryProvider.overrideWithValue(
+              mockCurationRepository,
+            ),
             funnelcakeApiClientProvider.overrideWithValue(
               mockFunnelcakeApiClient,
             ),
@@ -189,6 +211,5 @@ void main() {
         container.dispose();
       },
     );
-    // TODO(any): Fix and enable this test
-  }, skip: true);
+  });
 }

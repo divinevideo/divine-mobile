@@ -22,12 +22,16 @@ void main() {
       });
     }
 
-    test('defaults to an unauthenticated session without a public key', () {
+    test('defaults to an inert unauthenticated session', () async {
       final auth = createMockAuthService();
 
       expect(auth.authState, AuthState.unauthenticated);
       expect(auth.isAuthenticated, isFalse);
       expect(auth.currentPublicKeyHex, isNull);
+      expect(auth.isAnonymous, isFalse);
+      expect(auth.hasExpiredOAuthSession, isFalse);
+      expect(await auth.getKnownAccounts(), isEmpty);
+      expect(await auth.getSessionRecoveryAnchorNpub(), isNull);
     });
 
     test('accepts an authenticated state and public key together', () {
