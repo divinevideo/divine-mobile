@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_client/nostr_client.dart'
     show BlockListSigner, SharedPreferencesRelayStorage;
@@ -4094,13 +4095,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     // This allows the router to know which user's following list to check
     try {
       final prefs = await SharedPreferences.getInstance();
+      final pubkeyHex = keyContainer.publicKeyHex;
 
       // Check if we need to clear user-specific data due to identity change
-      final shouldClean = _userDataCleanupService.shouldClearDataForUser(
-        keyContainer.publicKeyHex,
-      );
-
-      if (shouldClean) {
+      if (_userDataCleanupService.shouldClearDataForUser(pubkeyHex)) {
         final oldPubkey = prefs.getString('current_user_pubkey_hex');
         Log.info(
           '_setupUserSession: identity change detected — '
@@ -4133,10 +4131,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
       }
-      await prefs.setString(
-        'current_user_pubkey_hex',
-        keyContainer.publicKeyHex,
-      );
+      await prefs.setString('current_user_pubkey_hex', pubkeyHex);
 
       if (claimLegacyRows) {
         await claimLegacyRowsForCurrentUser();
@@ -4151,7 +4146,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // welcome-screen mismatch detection after the next sign-out.
       await prefs.remove(_kSessionRecoveryAnchorKey);
 
-      final followingCacheKey = 'following_list_${keyContainer.publicKeyHex}';
+      final followingCacheKey = FollowingCacheRecord.storageKey(pubkeyHex);
       final hasFollowingCache = prefs.containsKey(followingCacheKey);
 
       // Pre-fetch following list from REST API BEFORE setting auth state.
@@ -4167,7 +4162,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
         try {
-          await _preFetchFollowing(keyContainer.publicKeyHex);
+          await _preFetchFollowing(pubkeyHex);
           Log.debug(
             '_setupUserSession: following list pre-fetched',
             name: 'AuthService',
@@ -4198,7 +4193,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _setAuthState(AuthState.authenticated);
 
       // Register this account in the known accounts list
-      await _knownAccounts.upsert(keyContainer.publicKeyHex, source);
+      await _knownAccounts.upsert(pubkeyHex, source);
 
       // Store identity keys for multi-account switching
       try {
