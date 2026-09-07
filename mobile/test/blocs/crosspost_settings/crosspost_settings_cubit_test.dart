@@ -679,9 +679,15 @@ void main() {
               pollInterval: const Duration(milliseconds: 1),
             );
             fake.flushMicrotasks();
+
+            // Without this, every assertion below is satisfied by the initial
+            // user load even if provisioning polling never starts (#8806).
+            expect(fake.pendingTimers, isNotEmpty);
             fake.elapse(const Duration(milliseconds: 3));
             fake.flushMicrotasks();
 
+            verify(() => repository.loadKeycastStatus()).called(3);
+            expect(cubit.state.provisioningPollAttempts, 3);
             expect(cubit.state.status, CrosspostSettingsStatus.loaded);
             expect(
               cubit.state.provisioningState,
@@ -814,6 +820,8 @@ void main() {
             pollInterval: const Duration(milliseconds: 1),
           );
           fake.flushMicrotasks();
+
+          expect(fake.pendingTimers, isNotEmpty);
 
           unawaited(cubit.toggleCrosspost(enabled: false));
           fake.flushMicrotasks();
