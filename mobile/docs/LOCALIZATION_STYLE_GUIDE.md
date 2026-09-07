@@ -487,10 +487,14 @@ and if it overturns a decision in this file, change the file too.
 
 The report carries platform, device model, OS and app version, and the
 **resolved app UI locale** — the language the app was actually rendering —
-plus the device locale when it differs (`bug_report_service.dart`, #7939). So a
-copy report already names the language to route it by; a resolved locale that is
-English while the device asked for another language is itself a signal (a
-missing translation forcing the fallback), not a bad string in that language.
+so a copy report already names the language to route it by
+(`bug_report_service.dart`, #7939).
+
+A second field, `deviceLocale`, appears only when the phone asks for a language
+this app does not ship. That one is its own finding: the reader was pushed onto
+the English fallback by a missing translation, which is a different bug from a
+bad string in a language we do ship. A language chosen in Settings is a choice
+rather than a fallback, so it never adds that line.
 
 ### Who signs off
 

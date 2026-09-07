@@ -108,6 +108,12 @@ class BugReportService {
   final ui.Locale Function() _resolvedUiLocaleLoader;
   final ui.Locale Function() _deviceLocaleLoader;
 
+  /// Language codes the app ships a translation for. A device language outside
+  /// this set is what makes the rendered locale a fallback rather than a choice.
+  static final Set<String> _supportedLanguageCodes = {
+    for (final locale in AppLocalizations.supportedLocales) locale.languageCode,
+  };
+
   /// Collect comprehensive diagnostics for bug report
   Future<BugReportData> collectDiagnostics({
     required String userDescription,
@@ -195,25 +201,23 @@ class BugReportService {
         };
       }
 
-      // Record the locale the UI was rendering in. For copy/localization
-      // reports this is the field that routes them: for most of the 21+ locales
-      // there is no native reviewer, so the user's report is the only signal,
-      // and without the language it can't be routed without asking (#7939). The
-      // resolved UI locale is what the user was reading; the device locale is
-      // added (as its full tag) only when its language differs from the resolved
-      // one, since a device set to a language with no translation is reading the
-      // English fallback - a distinct bug from a bad string in that language.
-      // Every supported locale is language-only, so the resolved locale never
-      // carries a region; comparing on language keeps a region-only difference
-      // (e.g. an en-US device reading en) from masquerading as a fallback.
-      // Best-effort: a probe failure must not block the report.
+      // The locale the UI was rendering in is what routes a copy report: for
+      // most of the 21+ locales there is no native reviewer, so the report is
+      // the only signal (#7939). `deviceLocale` is added only when the app
+      // ships no translation for the device's language, because that is the
+      // fallback worth flagging — a language the user picked in Settings is a
+      // choice, not a fallback, and would otherwise read as a missing
+      // translation. Best-effort: a probe failure must not block the report.
       try {
         final resolvedLocale = _resolvedUiLocaleLoader();
         final deviceLocale = _deviceLocaleLoader();
+        final deviceLanguageIsTranslated = _supportedLanguageCodes.contains(
+          deviceLocale.languageCode,
+        );
         deviceInfo = {
           ...deviceInfo,
           'locale': resolvedLocale.toLanguageTag(),
-          if (deviceLocale.languageCode != resolvedLocale.languageCode)
+          if (!deviceLanguageIsTranslated)
             'deviceLocale': deviceLocale.toLanguageTag(),
         };
       } on Object catch (e) {

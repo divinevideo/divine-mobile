@@ -457,9 +457,10 @@ void main() {
       // For most of the 21+ supported locales there is no native reviewer, so
       // a copy report is the only signal - and it can only be routed if it says
       // which language the app was rendering. The resolved UI locale is that
-      // language; the device locale is recorded only when it differs, because
-      // a device set to Amharic that is showing the English fallback is a
-      // different bug from a bad Amharic string (#7939).
+      // language; the device locale is recorded only when the app ships no
+      // translation for it, because a phone set to a language we do not ship
+      // is reading a fallback - a different bug from a bad string in a
+      // language we do ship (#7939).
       test('records the resolved UI locale in deviceInfo', () async {
         final service = BugReportService(
           resolvedUiLocaleLoader: () => const Locale('am'),
@@ -476,32 +477,34 @@ void main() {
       });
 
       test(
-        'records the device locale when it differs from the resolved locale',
+        'records the device locale when the app has no translation for it',
         () async {
+          // Czech is not in AppLocalizations.supportedLocales, so this reader
+          // is on the English fallback rather than reading a bad string.
           final service = BugReportService(
             resolvedUiLocaleLoader: () => const Locale('en'),
-            deviceLocaleLoader: () => const Locale('am', 'ET'),
+            deviceLocaleLoader: () => const Locale('cs', 'CZ'),
           );
 
           final data = await service.collectDiagnostics(
-            userDescription: 'App is in English but my phone is Amharic',
+            userDescription: 'App is in English but my phone is Czech',
           );
 
           expect(data.deviceInfo['locale'], 'en');
-          expect(data.deviceInfo['deviceLocale'], 'am-ET');
+          expect(data.deviceInfo['deviceLocale'], 'cs-CZ');
         },
       );
 
       test(
-        'omits the device locale when only the region differs',
+        'omits the device locale when the user picked another shipped language',
         () async {
-          // Every supported locale is language-only, so the resolved locale
-          // never carries a region. An en-US device reading `en` is reading the
-          // exact language it asked for - there is no fallback to flag, so the
-          // region-only difference must not emit a deviceLocale (#7939).
+          // German is shipped, so an en-reading German phone is a Settings
+          // choice, not a missing translation. Emitting deviceLocale here
+          // would send triage looking for a German translation gap that does
+          // not exist (#7939).
           final service = BugReportService(
             resolvedUiLocaleLoader: () => const Locale('en'),
-            deviceLocaleLoader: () => const Locale('en', 'US'),
+            deviceLocaleLoader: () => const Locale('de', 'DE'),
           );
 
           final data = await service.collectDiagnostics(
@@ -512,6 +515,24 @@ void main() {
           expect(data.deviceInfo.containsKey('deviceLocale'), isFalse);
         },
       );
+
+      test('omits the device locale when only the region differs', () async {
+        // Every supported locale is language-only, so the resolved locale
+        // never carries a region. An en-US device reading `en` is reading the
+        // exact language it asked for - there is no fallback to flag, so the
+        // region-only difference must not emit a deviceLocale (#7939).
+        final service = BugReportService(
+          resolvedUiLocaleLoader: () => const Locale('en'),
+          deviceLocaleLoader: () => const Locale('en', 'US'),
+        );
+
+        final data = await service.collectDiagnostics(
+          userDescription: 'This screen is showing bad copy',
+        );
+
+        expect(data.deviceInfo['locale'], 'en');
+        expect(data.deviceInfo.containsKey('deviceLocale'), isFalse);
+      });
 
       test('a locale probe failure does not block the report', () async {
         final service = BugReportService(
