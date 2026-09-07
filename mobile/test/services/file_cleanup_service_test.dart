@@ -9,9 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -312,13 +314,40 @@ void main() {
         if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
       });
 
+      File write(String name) =>
+          File(p.join(tempDir.path, name))..writeAsBytesSync(const [1, 2, 3]);
+
+      Future<void> saveDraftReferencing(File renderedFile) async {
+        DivineVideoClip clip(String id, File file) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file(file.path),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final storage = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+
+        await storage.saveDraft(
+          DivineVideoDraft.create(
+            id: 'survivor',
+            clips: [clip('timeline', write('timeline.mp4'))],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            finalRenderedClip: clip('rendered', renderedFile),
+          ),
+        );
+      }
+
       test('deletes the reverse caches of a deleted clip', () async {
         // Reading [DivineVideoClip.ownedFilePaths] widened this delete to the
         // cached forward/reversed renders. They were previously enumerated
         // nowhere, so removing a reversed clip leaked both files.
-        File write(String name) =>
-            File(p.join(tempDir.path, name))..writeAsBytesSync(const [1, 2, 3]);
-
         final video = write('clip_rev.mp4');
         final forward = write('clip_rev_forward.mp4');
         final reversed = write('clip_rev_reversed.mp4');
@@ -348,9 +377,6 @@ void main() {
         // The reference check reads the JSON blob, which carries
         // `forwardVideoPath` — a duplicated clip shares the cache and must
         // keep it.
-        File write(String name) =>
-            File(p.join(tempDir.path, name))..writeAsBytesSync(const [1, 2, 3]);
-
         final shared = write('shared_forward.mp4');
         DivineVideoClip clipWithShare(String id, String videoName) =>
             DivineVideoClip(
@@ -375,6 +401,53 @@ void main() {
           shared.existsSync(),
           isTrue,
           reason: 'the surviving library clip still points at this cache',
+        );
+      });
+
+      test('batch cleanup keeps a file referenced by a draft', () async {
+        final kept = write('kept.mp4');
+        final goner = write('goner.mp4');
+        await saveDraftReferencing(kept);
+        expect(
+          await database.draftsDao.isDraftFileReferenced('kept.mp4'),
+          isTrue,
+        );
+        expect(kept.existsSync(), isTrue);
+        expect(goner.existsSync(), isTrue);
+
+        await FileCleanupService.deleteFilesIfUnreferenced(
+          [kept.path, goner.path],
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+
+        expect(
+          kept.existsSync(),
+          isTrue,
+          reason: 'the surviving draft still points at this rendered file',
+        );
+        expect(goner.existsSync(), isFalse);
+      });
+
+      test('single-file cleanup keeps a file referenced by a draft', () async {
+        final kept = write('kept.mp4');
+        await saveDraftReferencing(kept);
+        expect(
+          await database.draftsDao.isDraftFileReferenced('kept.mp4'),
+          isTrue,
+        );
+        expect(kept.existsSync(), isTrue);
+
+        await FileCleanupService.deleteFileIfUnreferenced(
+          kept.path,
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+
+        expect(
+          kept.existsSync(),
+          isTrue,
+          reason: 'the surviving draft still points at this rendered file',
         );
       });
     });

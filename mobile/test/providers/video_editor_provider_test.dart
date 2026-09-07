@@ -3599,12 +3599,19 @@ void main() {
       }
     });
 
-    // Stubs the next autosave to hand [orphan] to the deferral sink instead of
-    // deleting it — the editor's undo history may still need it — and returns
-    // the file it created on disk.
-    File stubDeferringAutosave() {
-      final orphan = File(p.join(tempDir.path, 'orphan.mp4'))
-        ..writeAsBytesSync(const [0, 1, 2, 3]);
+    // Stubs the next autosave to hand the named files to the deferral sink
+    // instead of deleting them — the editor's undo history may still need
+    // them — and returns the files it created on disk.
+    List<File> stubDeferringAutosave([
+      List<String> filenames = const ['orphan.mp4'],
+    ]) {
+      final orphans = filenames
+          .map(
+            (filename) =>
+                File(p.join(tempDir.path, filename))
+                  ..writeAsBytesSync(const [0, 1, 2, 3]),
+          )
+          .toList();
       when(
         () => mockDraftStorage.saveDraft(
           any(),
@@ -3614,9 +3621,9 @@ void main() {
         final defer =
             invocation.namedArguments[#deferOrphanCleanup]
                 as void Function(List<String?>)?;
-        defer?.call([orphan.path]);
+        defer?.call(orphans.map((file) => file.path).toList());
       });
-      return orphan;
+      return orphans;
     }
 
     void addTimelineClip() {
@@ -3634,7 +3641,7 @@ void main() {
     }
 
     test('an autosave keeps its orphaned files alive', () async {
-      final orphan = stubDeferringAutosave();
+      final orphan = stubDeferringAutosave().single;
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
 
@@ -3651,7 +3658,7 @@ void main() {
     });
 
     test('reset reaps deferred files at editor-session end', () async {
-      final orphan = stubDeferringAutosave();
+      final orphan = stubDeferringAutosave().single;
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
       expect(await notifier.autosaveChanges(), isTrue);
@@ -3749,7 +3756,7 @@ void main() {
     });
 
     test('reset cleanup remains awaitable during container teardown', () async {
-      final orphan = stubDeferringAutosave();
+      final orphan = stubDeferringAutosave().single;
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
       expect(await notifier.autosaveChanges(), isTrue);
@@ -3772,7 +3779,7 @@ void main() {
     });
 
     test('container teardown reaps deferred files as a safety net', () async {
-      final orphan = stubDeferringAutosave();
+      final orphan = stubDeferringAutosave().single;
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
       expect(await notifier.autosaveChanges(), isTrue);
@@ -3788,6 +3795,66 @@ void main() {
         reason: 'onDispose reaps deferred files left when reset never ran',
       );
     });
+
+    test(
+      'keeps a draft-referenced deferred file, reaping its peer',
+      () async {
+        final [kept, goner] = stubDeferringAutosave([
+          'kept.mp4',
+          'goner.mp4',
+        ]);
+        final timelineFile = File(p.join(tempDir.path, 'timeline.mp4'))
+          ..writeAsBytesSync(const [4, 5, 6]);
+        final realDraftStorage = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        DivineVideoClip clip(String id, File file) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file(file.path),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+
+        await realDraftStorage.saveDraft(
+          DivineVideoDraft.create(
+            id: 'survivor',
+            clips: [clip('timeline', timelineFile)],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            finalRenderedClip: clip('rendered', kept),
+          ),
+        );
+        addTimelineClip();
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        expect(await notifier.autosaveChanges(), isTrue);
+        expect(
+          notifier.deferredFileCleanupForTest,
+          containsAll([kept.path, goner.path]),
+        );
+        expect(kept.existsSync(), isTrue);
+        expect(goner.existsSync(), isTrue);
+        expect(
+          await database.draftsDao.isDraftFileReferenced('kept.mp4'),
+          isTrue,
+        );
+
+        await notifier.reset(keepAutosavedDraft: true);
+        await settleBackgroundWork();
+
+        expect(
+          kept.existsSync(),
+          isTrue,
+          reason: 'the surviving draft still references this rendered file',
+        );
+        expect(goner.existsSync(), isFalse);
+      },
+    );
 
     test('container teardown reaps a replaced final rendered file', () async {
       // Point the documents dir at this group's unique per-test temp dir
