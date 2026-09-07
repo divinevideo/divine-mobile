@@ -227,6 +227,22 @@ void main() {
         verifyNever(() => client.fetchLatestRelease());
       });
 
+      test('persists the resolved update for the next launch', () async {
+        when(
+          () => client.fetchLatestRelease(),
+        ).thenAnswer((_) async => buildInfo());
+
+        final repo = buildRepo(installSource: InstallSource.playStore);
+        final result = await repo.checkForUpdate();
+
+        expect(result!.latestVersion, equals('1.0.8'));
+        expect(prefs.getString(UpdatePrefsKeys.latestVersion), equals('1.0.8'));
+        expect(
+          prefs.getString(UpdatePrefsKeys.downloadUrl),
+          equals(DownloadUrls.playStore),
+        );
+      });
+
       test('restores a cached available update within the 24h TTL', () async {
         SharedPreferences.setMockInitialValues({
           UpdatePrefsKeys.lastChecked: DateTime.now()
