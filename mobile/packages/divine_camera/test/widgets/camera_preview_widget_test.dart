@@ -190,17 +190,22 @@ void main() {
   });
 
   tearDown(() async {
-    // Dispose while the mock is still installed: disposeCamera() must not hit
-    // the real MethodChannel implementation.
-    await DivineCamera.instance.dispose();
-    // Pin the dispose above. Without it, every test that initialized the
-    // camera leaves isInitialized true behind, and the next file in the
-    // package's merged isolate inherits a facade whose own dispose() would
-    // reach the restored real MethodChannel.
-    expect(DivineCamera.instance.state.isInitialized, isFalse);
-    // Restore the process-global platform singleton so the mock does not
-    // leak into later files in the package's merged isolate.
-    DivineCameraPlatform.instance = initialPlatform;
+    try {
+      // Dispose while the mock is still installed: disposeCamera() must not
+      // hit the real MethodChannel implementation.
+      await DivineCamera.instance.dispose();
+      // Pin the dispose above. Without it, every test that initialized the
+      // camera leaves isInitialized true behind, and the next file in the
+      // package's merged isolate inherits a facade whose own dispose() would
+      // reach the restored real MethodChannel.
+      expect(DivineCamera.instance.state.isInitialized, isFalse);
+    } finally {
+      // Restore the process-global platform singleton so the mock does not
+      // leak into later files in the package's merged isolate. This runs even
+      // when the dispose throws or the pin above fails — otherwise the one
+      // case that proves the facade is dirty would also strand the mock.
+      DivineCameraPlatform.instance = initialPlatform;
+    }
   });
 
   final camera = DivineCamera.instance;
