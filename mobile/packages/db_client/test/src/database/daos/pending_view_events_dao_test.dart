@@ -275,29 +275,34 @@ void main() {
       });
     });
 
-    group('deleteForUser', () {
-      test('removes only the named account rows', () async {
-        // makeEvent defaults userPubkey to userA.
+    group('deleteAllForUser', () {
+      test('removes every row belonging to the user', () async {
+        // Withdrawal of analytics consent has to clear rows in any state:
+        // a row left mid-publish is republished after the next reset.
         await dao.enqueue(makeEvent(id: 'view-a'));
-        await dao.enqueue(makeEvent(id: 'view-a2'));
-        await dao.enqueue(makeEvent(id: 'view-b', userPubkey: userB));
-
-        final deleted = await dao.deleteForUser(userA);
-
-        expect(deleted, 2);
-        expect(await dao.getById('view-a'), isNull);
-        expect(await dao.getById('view-a2'), isNull);
-        expect(
-          await dao.getById('view-b'),
-          isNotNull,
-          reason: 'another account queue must survive',
+        await dao.enqueue(
+          makeEvent(id: 'view-b', status: PendingViewEventStatus.failed),
         );
+        await dao.enqueue(
+          makeEvent(id: 'view-c', status: PendingViewEventStatus.publishing),
+        );
+
+        final deleted = await dao.deleteAllForUser(userA);
+
+        expect(deleted, 3);
+        expect(await dao.getById('view-a'), isNull);
+        expect(await dao.getById('view-b'), isNull);
+        expect(await dao.getById('view-c'), isNull);
       });
 
-      test('deletes nothing when the account has no queued rows', () async {
+      test('leaves other accounts untouched', () async {
+        // One account's consent decision is not another's.
+        await dao.enqueue(makeEvent(id: 'view-a'));
         await dao.enqueue(makeEvent(id: 'view-b', userPubkey: userB));
 
-        expect(await dao.deleteForUser(userA), 0);
+        final deleted = await dao.deleteAllForUser(userA);
+
+        expect(deleted, 1);
         expect(await dao.getById('view-b'), isNotNull);
       });
     });

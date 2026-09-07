@@ -499,11 +499,7 @@ class SeenVideosService {
       await _prefs!.remove(seenVideosMigratedStorageKey);
     }
     if (_effectiveDb != null) {
-      try {
-        await _effectiveDb!.seenVideosDao.clearAll();
-      } catch (_) {
-        // best-effort cleanup: DB clear failure is non-fatal
-      }
+      await _effectiveDb!.seenVideosDao.clearAll();
     }
   }
 

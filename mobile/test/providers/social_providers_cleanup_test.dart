@@ -17,9 +17,11 @@ import 'package:models/models.dart' as model;
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -286,6 +288,109 @@ void main() {
         expect(incomingService.showDivineHostedOnly, isTrue);
       },
     );
+
+    test('account switch resets the live content language', () async {
+      final language = container.read(languagePreferenceServiceProvider);
+      await language.initialize();
+      await language.setContentLanguage('es');
+      expect(language.declaredContentLanguage, 'es');
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await subscription.read().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _pubkeyA,
+      );
+
+      final incoming = container.read(languagePreferenceServiceProvider);
+      await incoming.initialize();
+      expect(incoming.declaredContentLanguage, isNull);
+    });
+
+    test(
+      'account switch stops when shared event-cache cleanup fails',
+      () async {
+        final failure = StateError('cache cleanup failed');
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            dmRepositoryProvider.overrideWithValue(dmRepository),
+            openVineImageCacheClearProvider.overrideWithValue(() async {}),
+            uploadManagerProvider.overrideWithValue(uploadManager),
+            personalEventCacheClearProvider.overrideWithValue(() async {
+              throw failure;
+            }),
+          ],
+        );
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await expectLater(
+          subscription.read().clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: _pubkeyA,
+          ),
+          throwsA(same(failure)),
+        );
+      },
+    );
+
+    test('account switch resets the live audio-sharing consent', () async {
+      final audio = container.read(audioSharingPreferenceServiceProvider);
+      await audio.setAudioSharingEnabled(true);
+      expect(audio.isAudioSharingEnabled, isTrue);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await subscription.read().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _pubkeyA,
+      );
+
+      expect(
+        container
+            .read(audioSharingPreferenceServiceProvider)
+            .isAudioSharingEnabled,
+        isFalse,
+      );
+    });
+
+    test('account switch resets the live custom sound library', () async {
+      final sounds = await container.read(soundLibraryServiceProvider.future);
+      await sounds.addCustomSound(
+        model.VineSound(
+          id: 'departing-sound',
+          title: 'Custom sound',
+          assetPath: '/local/sound.mp3',
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      expect(sounds.customSounds, hasLength(1));
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await subscription.read().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _pubkeyA,
+      );
+
+      final incoming = await container.read(soundLibraryServiceProvider.future);
+      expect(incoming.customSounds, isEmpty);
+    });
 
     test("deleting an account drops only that account's queued work", () async {
       // These rows carry an owner and are filtered by it at flush, so they

@@ -107,6 +107,7 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
         name: 'NotificationPreferencesService',
         category: LogCategory.system,
       );
+      rethrow;
     }
   }
 

@@ -14,6 +14,17 @@ void main() {
     registerFallbackValue(<String, dynamic>{});
   });
 
+  group('clearPreferences', () {
+    test('propagates a failed deletion to account cleanup', () async {
+      final box = _MockHiveBox();
+      final failure = StateError('preference deletion failed');
+      final store = HiveNotificationPreferencesStore(openBox: () async => box);
+      when(() => box.delete('push_preferences')).thenThrow(failure);
+
+      await expectLater(store.clearPreferences(), throwsA(same(failure)));
+    });
+  });
+
   test('dirty preferences survive notification box cleanup', () async {
     const pubkey =
         '1111111111111111111111111111111111111111111111111111111111111111';

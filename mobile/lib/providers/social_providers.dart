@@ -3,6 +3,7 @@
 // ABOUTME: userDataCleanup, social, contentReporting, contentDeletion, collaborator-3
 
 import 'dart:async';
+
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -21,10 +22,12 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/analytics_ingest_client.dart';
@@ -148,7 +151,10 @@ final accountScopedPreferenceServicesResetProvider = Provider<void Function()>(
         ..invalidate(videoProvenanceFilterServiceProvider)
         ..invalidate(contentFilterServiceProvider)
         ..invalidate(accountLabelServiceProvider)
-        ..invalidate(moderationLabelServiceProvider);
+        ..invalidate(moderationLabelServiceProvider)
+        ..invalidate(languagePreferenceServiceProvider)
+        ..invalidate(audioSharingPreferenceServiceProvider)
+        ..invalidate(soundLibraryServiceProvider);
     };
   },
 );
@@ -936,19 +942,19 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           //
           // Watch history is feed *dedup* state, so inheriting it also hides
           // videos the incoming account has never seen.
-          await safeCleanup(
+          await requiredCleanup(
             'seenVideos',
             ref.read(seenVideosClearProvider),
           );
-          await safeCleanup(
+          await requiredCleanup(
             'personalEvents',
             ref.read(personalEventCacheClearProvider),
           );
-          await safeCleanup(
+          await requiredCleanup(
             'pushPreferences',
             ref.read(notificationPreferencesStoreProvider).clearPreferences,
           );
-          await safeCleanup('accountScopedPreferenceServices', () async {
+          await requiredCleanup('accountScopedPreferenceServices', () async {
             ref.read(accountScopedPreferenceServicesResetProvider)();
           });
         }
@@ -1038,7 +1044,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
           await requiredDelete(
             'pendingViewEvents',
-            () => db.pendingViewEventsDao.deleteForUser(userPubkey),
+            () => db.pendingViewEventsDao.deleteAllForUser(userPubkey),
           );
           await requiredDelete(
             'pendingProductEvents',
