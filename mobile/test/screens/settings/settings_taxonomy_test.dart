@@ -83,7 +83,6 @@ void main() {
   late SharedPreferences sharedPreferences;
   late _MockAuthService authService;
   late _MockLocaleCubit localeCubit;
-  late _MockAppUpdateBloc appUpdateBloc;
   late _MockAudioSharingPreferenceService audioSharingService;
   late _MockLanguagePreferenceService languageService;
   late _MockAccountLabelService accountLabelService;
@@ -100,7 +99,6 @@ void main() {
     sharedPreferences = await SharedPreferences.getInstance();
     authService = _MockAuthService();
     localeCubit = _MockLocaleCubit();
-    appUpdateBloc = _MockAppUpdateBloc();
     audioSharingService = _MockAudioSharingPreferenceService();
     languageService = _MockLanguagePreferenceService();
     accountLabelService = _MockAccountLabelService();
@@ -113,13 +111,6 @@ void main() {
     divineHostFilterService = DivineHostFilterService(sharedPreferences);
 
     when(() => localeCubit.state).thenReturn(const LocaleState());
-    when(() => appUpdateBloc.state).thenReturn(
-      const AppUpdateState(
-        status: AppUpdateStatus.resolved,
-        latestVersion: '1.0.22',
-        downloadUrl: DownloadUrls.appStore,
-      ),
-    );
     when(() => authService.isAuthenticated).thenReturn(false);
     when(() => authService.isRegistered).thenReturn(false);
     when(() => authService.isAnonymous).thenReturn(false);
@@ -194,6 +185,7 @@ void main() {
     Widget child, {
     Locale? locale,
     List<dynamic> overrides = const [],
+    AppUpdateBloc? appUpdateBloc,
   }) {
     return ProviderScope(
       overrides: [...baseOverrides(), ...overrides],
@@ -202,12 +194,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<LocaleCubit>.value(value: localeCubit),
-            BlocProvider<AppUpdateBloc>.value(value: appUpdateBloc),
-          ],
-          child: child,
+        home: BlocProvider<LocaleCubit>.value(
+          value: localeCubit,
+          child: appUpdateBloc == null
+              ? child
+              : BlocProvider<AppUpdateBloc>.value(
+                  value: appUpdateBloc,
+                  child: child,
+                ),
         ),
       ),
     );
@@ -222,10 +216,19 @@ void main() {
     testWidgets('Settings hub uses General Settings and Content & Safety', (
       tester,
     ) async {
+      final appUpdateBloc = _MockAppUpdateBloc();
+      when(() => appUpdateBloc.state).thenReturn(
+        const AppUpdateState(
+          status: AppUpdateStatus.resolved,
+          latestVersion: '1.0.22',
+          downloadUrl: DownloadUrls.appStore,
+        ),
+      );
       await setStandardSurface(tester);
       await tester.pumpWidget(
         wrap(
           const SettingsScreen(),
+          appUpdateBloc: appUpdateBloc,
           overrides: [
             isFeatureEnabledProvider(
               FeatureFlag.blueskyPublishing,
