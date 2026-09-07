@@ -1212,7 +1212,7 @@ void main() {
         }
       });
 
-      testWidgets('times a video whose first frame arrives after reactivation', (
+      testWidgets('times a first frame that arrives after reactivation', (
         tester,
       ) async {
         DivineVideoPlayerController.resetIdCounterForTesting();
