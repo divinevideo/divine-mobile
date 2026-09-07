@@ -36,6 +36,16 @@ without the need to fork it. That way, spin-offs can easily stay up to date.
 
   s.default_subspec = :none
 
+  # Divine-local addition (#8803): LibProofMode reads
+  # URLResourceKey.contentModificationDateKey / .creationDateKey in
+  # MediaItem.withData, which is one of Apple's required-reason APIs. The pod is
+  # vendored here, so no upstream release will ship this manifest into Divine's
+  # archive -- it has to be declared locally or the archive ships the API
+  # undeclared. Reason C617.1: every path Divine feeds to MediaItem(mediaUrl:)
+  # is a file the app itself wrote inside its own container.
+  s.resource_bundles = {'LibProofMode_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
+
+
   s.subspec 'PrivacyProtected' do |ss|
     ss.source_files = 'Classes/**/*'
 
