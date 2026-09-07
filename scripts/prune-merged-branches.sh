@@ -24,6 +24,10 @@
 #    whose name is the head ref of no PR at all, so the name lookup scores it
 #    KEEP forever. For those, ask GitHub which PRs contain the worktree's tip
 #    COMMIT — an exact SHA, so it needs no name inference. That is MERGED-TIP.
+#    A tip already contained in main is excluded: it belongs to a worktree that
+#    has no commits of its own, not to a squashed-away PR head. Ask GitHub that
+#    too. `git merge-base --is-ancestor` looks like the obvious way to decide
+#    it and is not — see tip_contained_in_base.
 #
 # 5. Vetoing on any ignored file makes the script report nothing, ever. Every
 #    Flutter worktree carries build/, .dart_tool/ and a pile of generated
@@ -58,6 +62,7 @@ done
 
 GH="${GH:-gh}"
 BASE="${BASE:-origin/main}"
+BASE_BRANCH="${BASE##*/}"
 REPO="${REPO:-${GITHUB_REPOSITORY:-divinevideo/divine-mobile}}"
 MERGED_PR_LIMIT="${MERGED_PR_LIMIT:-100000}"
 
@@ -70,8 +75,9 @@ git rev-parse --verify --quiet "$BASE" >/dev/null || {
   echo "$BASE not found" >&2; exit 2
 }
 
-# Shallow is fine for the signals used here: the GitHub lookups need no local
-# history, and the worktree checks inspect only the current checkout state.
+# Shallow is fine for the signals used here, and stays fine only because every
+# merged-ness question below is answered by GitHub: nothing walks local history.
+# See tip_contained_in_base for why that is load-bearing rather than incidental.
 if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
   echo "Note: shallow repository. Classification is unaffected."
 fi
@@ -107,6 +113,26 @@ merged_pr_contains_commit() {
   "$GH" api -X GET "repos/$REPO/commits/$1/pulls" \
     --jq '[.[] | select(.merged_at != null) | select(.base.ref == "main")] | length' \
     2>/dev/null | grep -qxE '[1-9][0-9]*'
+}
+
+# Is this commit already contained in $BASE? GitHub answers, not local git.
+# `git merge-base --is-ancestor` walks local history, and in a shallow clone
+# that walk stops at the graft boundary and reports "not an ancestor" for a
+# commit that is one — exit 1, silently, with no error to catch, since the ref
+# still resolves. A worktree holding no commits of its own would then be scored
+# MERGED-TIP and recommended for deletion. Any unclear answer reports contained,
+# which lands on KEEP.
+tip_contained_in_base() {
+  # shellcheck disable=SC2016  # $o/$n/$r/$h are GraphQL variables, bound by -F
+  case "$("$GH" api graphql -f query='
+    query($o:String!,$n:String!,$r:String!,$h:String!){repository(owner:$o,name:$n){
+      ref(qualifiedName:$r){compare(headRef:$h){status}}}}' \
+    -F o="${REPO%%/*}" -F n="${REPO##*/}" -F r="refs/heads/$BASE_BRANCH" \
+    -F h="$1" --jq '.data.repository.ref.compare.status' 2>/dev/null)" in
+    IDENTICAL|BEHIND) return 0 ;;
+    AHEAD|DIVERGED)   return 1 ;;
+    *)                return 0 ;;
+  esac
 }
 
 # Ignored paths any Flutter toolchain step recreates from tracked sources.
@@ -150,11 +176,13 @@ while IFS= read -r branch; do
   if grep -qxF -- "$branch" "$MERGED_REFS"; then
     verdict="MERGED-PR"
   elif [ -n "$wt" ] && [ -d "$wt" ] \
-    && ! git merge-base --is-ancestor "$tip" "$BASE" \
-    && merged_pr_contains_commit "$tip"; then
+    && merged_pr_contains_commit "$tip" \
+    && ! tip_contained_in_base "$tip"; then
     # Only worktree branches get this lookup: it is one API call per branch,
     # and a branch with no worktree costs a ref, not 4GB of build output. Tips
     # already on main belong to fresh worktrees, not squashed-away PR heads.
+    # The containment check runs second so it costs a call only for the few
+    # branches a merged PR already claims, rather than for every worktree.
     verdict="MERGED-TIP"
   else
     verdict="KEEP"
