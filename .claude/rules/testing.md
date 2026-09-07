@@ -810,3 +810,43 @@ rather than being healed into someone else's suite; a bare
 `flutter test <file>` leaves it off and heals silently. A static
 `check_shared_channel_overrides.sh` ratchet additionally freezes the set of
 files that raw-install a shared channel, so new ones must use the helper.
+Package suites have no equivalent runtime harness; see the package-specific
+guard below.
+
+### Package suites have no harness
+
+Each package under `mobile/packages/` runs its own fully merged
+`very_good test --optimization` bundle, but no package has a
+`flutter_test_config.dart` heal-and-blame harness. A mock `MethodChannel` or
+`EventChannel` handler left installed by one package test can therefore leak
+into every later file in that package's bundle and produce an order-dependent
+flake without a runtime check identifying the test responsible.
+
+`mobile/scripts/check_package_channel_isolation.sh` is the package-side
+analogue of `check_shared_channel_overrides.sh`. It freezes package
+`*_test.dart` entries that call `setMockMethodCallHandler` or
+`setMockStreamHandler` without ever nulling a handler back down in the
+shrink-only baseline
+`mobile/scripts/baseline/package_channel_raw_installs.txt`. The detector is a
+newline-flattened grep proxy, so it proves only that the file contains a null
+teardown, not that the teardown is reachable or targets the same channel.
+
+Install handlers in `setUp` and clear the exact channel in `tearDown`:
+
+```dart
+tearDown(() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(channel, null);
+});
+```
+
+If a test genuinely cannot restore its process-global state, tag the file
+`@Tags(['skip_very_good_optimization'])` so it runs in its own isolate. After
+fixing a baselined entry, regenerate the baseline to lock the reduction:
+
+```bash
+UPDATE_BASELINE=1 bash mobile/scripts/check_package_channel_isolation.sh
+```
+
+The guard runs in Mobile CI's `generated-files` job; the pre-push hook does not
+run it.
