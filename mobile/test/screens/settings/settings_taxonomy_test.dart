@@ -244,12 +244,15 @@ void main() {
       expect(find.text('Moderation Controls'), findsNothing);
       expect(find.text('Bluesky Publishing'), findsNothing);
 
+      final updateAvailable = find.text(
+        lookupAppLocalizations(const Locale('en')).settingsUpdateAvailable,
+      );
       await tester.scrollUntilVisible(
-        find.text('Update available'),
+        updateAvailable,
         300,
         scrollable: find.byType(Scrollable),
       );
-      expect(find.text('Update available'), findsOneWidget);
+      expect(updateAvailable, findsOneWidget);
     });
   });
 
