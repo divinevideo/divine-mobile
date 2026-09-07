@@ -4334,7 +4334,6 @@ void main() {
             // attempt.
             final landedList = buildEvent(
               kind: 10000,
-              tags: const [],
               createdAt: 2000,
             )..id = 'unblock-already-landed';
             when(
@@ -4443,6 +4442,7 @@ void main() {
             stubHealthy();
             stubReadSettled();
             final service = ContentBlocklistRepository(prefs: prefs);
+            addTearDown(service.dispose);
             await service.syncBlockListsInBackground(
               mockClient,
               mockSigner,
@@ -4514,6 +4514,7 @@ void main() {
             stubHealthy();
             stubReadSettled();
             final service = ContentBlocklistRepository(prefs: prefs);
+            addTearDown(service.dispose);
             await service.syncBlockListsInBackground(
               mockClient,
               mockSigner,
@@ -4608,6 +4609,7 @@ void main() {
           stubHealthy();
           stubReadSettled();
           final service = ContentBlocklistRepository(prefs: prefs);
+          addTearDown(service.dispose);
           await service.syncBlockListsInBackground(
             mockClient,
             mockSigner,
