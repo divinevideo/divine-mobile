@@ -3,6 +3,7 @@
 // ABOUTME: implementation details, so they get named tests.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_fixtures.dart';
 
@@ -182,8 +183,89 @@ void main() {
         expect(all.map((c) => c.id).toSet(), hasLength(all.length));
       });
     });
+
+    group('group invite weight', () {
+      test('a 1:1 does not earn the group weight when isGroup has drifted', () {
+        // `DmConversation.isGroup` is written from `participants.length > 2`
+        // and rewritten on every upsert, so it can disagree with the row's
+        // real participants (#5374). The weight must follow the participants.
+        DmVerdict verdictFor({required bool isGroup}) {
+          final conversation = DmConversation(
+            id: 'drifted',
+            participantPubkeys: [_me, _stranger]..sort(),
+            isGroup: isGroup,
+            createdAt: 0,
+          );
+          return const DmInboxClassifier(officialIdentities: {})
+              .classify(
+                [conversation],
+                userPubkey: _me,
+                isFollowing: (_) => false,
+                signalsFor: (_) => const DmSenderSignals(
+                  daysSinceFirstObserved: 200,
+                  divineVideoCount: 4,
+                  hasProfileMetadata: true,
+                  mutualConnectionCount: 1,
+                ),
+              )
+              .verdicts['drifted']!;
+        }
+
+        final honest = verdictFor(isGroup: false);
+        final drifted = verdictFor(isGroup: true);
+
+        expect(honest.score, equals(-40), reason: 'baseline is pinned');
+        expect(drifted.score, equals(honest.score));
+        expect(
+          drifted.reasons.map((r) => r.label),
+          isNot(contains('Added you to a group')),
+        );
+      });
+
+      test('a real group with two unknown participants still earns it', () {
+        final conversation = DmConversation(
+          id: 'group',
+          participantPubkeys: [_me, _stranger, _other]..sort(),
+          // Deliberately false: the verdict must not depend on this column.
+          isGroup: false,
+          createdAt: 0,
+        );
+
+        final verdict = const DmInboxClassifier(officialIdentities: {})
+            .classify(
+              [conversation],
+              userPubkey: _me,
+              isFollowing: (_) => false,
+              signalsFor: (_) => const DmSenderSignals(
+                daysSinceFirstObserved: 200,
+                divineVideoCount: 4,
+                hasProfileMetadata: true,
+                mutualConnectionCount: 1,
+              ),
+            )
+            .verdicts['group']!;
+
+        expect(
+          verdict.reasons.map((r) => r.label),
+          contains('Added you to a group'),
+        );
+      });
+    });
   });
 }
+
+/// Synthetic 64-character participant keys for hand-built conversations.
+String _key(String seed) {
+  final buffer = StringBuffer();
+  while (buffer.length < 64) {
+    buffer.write(seed);
+  }
+  return buffer.toString().substring(0, 64);
+}
+
+final _me = _key('9a');
+final _stranger = _key('7f');
+final _other = _key('8e');
 
 bool _allFollowed(DmInboxFixtures fixtures, conversation) {
   final others = (conversation.participantPubkeys as List<String>)

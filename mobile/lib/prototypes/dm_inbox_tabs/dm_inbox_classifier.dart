@@ -400,7 +400,6 @@ class DmInboxClassifier {
     }
 
     final reasons = _score(
-      conversation,
       others: others,
       isFollowing: isFollowing,
       signalsFor: signalsFor,
@@ -417,8 +416,7 @@ class DmInboxClassifier {
     );
   }
 
-  List<DmRiskReason> _score(
-    DmConversation conversation, {
+  List<DmRiskReason> _score({
     required Set<String> others,
     required bool Function(String) isFollowing,
     required DmSenderSignals Function(String) signalsFor,
@@ -489,7 +487,14 @@ class DmInboxClassifier {
     if (messageSignals.containsMedia) {
       add('First message contains media', h.weightContainsMedia);
     }
-    if (unknown.length > 1 || (conversation.isGroup && unknown.isNotEmpty)) {
+    // Derived from the deduplicated participants, never from
+    // `DmConversation.isGroup`. That column is written from
+    // `participants.length > 2` and rewritten on every upsert, so it drifts
+    // from the row's real participants — #5374 is why
+    // `DmRepository.classifyPotentialRequests` stopped reading it. A drifted
+    // 1:1 was picking up the group weight and a reason line saying it had
+    // been added to a group.
+    if (unknown.length > 1) {
       add('Added you to a group', h.weightUnknownGroupInvite);
     }
 
