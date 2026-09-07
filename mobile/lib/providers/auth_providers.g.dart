@@ -391,7 +391,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'3b874e27fd3c2d60e3a5b63ce923dcfa06fe3808';
+String _$authServiceHash() => r'040363ef2aa7f763b519f11e70bb77eb28a2abe7';
 
 /// Provider that returns current auth state and rebuilds when it changes.
 /// Widgets should watch this instead of authService.authState directly

@@ -6,14 +6,17 @@ import 'dart:async';
 import 'package:analytics/analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/nip07_types.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -50,6 +53,62 @@ class _RecordingAnalytics implements AnalyticsEventSink {
 }
 
 void main() {
+  group('persistFollowingPrefetchForAuthRedirect', () {
+    test('marks a successful empty result without fabricating data', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingPrefetchForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const [],
+      );
+
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey('account-pubkey'),
+      );
+      expect(encoded, isNull);
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
+    });
+
+    test('preserves a successful non-empty result', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingPrefetchForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const ['followed-pubkey'],
+      );
+
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey('account-pubkey'),
+      );
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, [
+        'followed-pubkey',
+      ]);
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
+    });
+
+    test('records nothing when the index contradicts its own page', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingPrefetchForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const [],
+        reportedTotal: 12,
+      );
+
+      expect(
+        prefs.getString(FollowingCacheRecord.storageKey('account-pubkey')),
+        isNull,
+      );
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isFalse);
+    });
+  });
+
   group('flutterSecureStorageProvider', () {
     test('keeps Android secure storage encrypted without reset-on-error', () {
       final container = ProviderContainer();

@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/cawg_verifier_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
@@ -36,6 +38,7 @@ import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -112,9 +115,7 @@ KeycastOAuth oauthClient(Ref ref) {
 /// process singleton, which hid that this provider was autoDispose.
 @Riverpod(keepAlive: true)
 WebAuthService webAuthService(Ref ref) {
-  final service = WebAuthService(
-    nip07Service: ref.watch(nip07ServiceProvider),
-  );
+  final service = WebAuthService(nip07Service: ref.watch(nip07ServiceProvider));
   ref.onDispose(service.dispose);
   return service;
 }
@@ -171,19 +172,18 @@ AuthService authService(Ref ref) {
           pubkey: pubkeyHex,
           limit: 5000,
         );
-        if (result.pubkeys.isNotEmpty) {
-          final key = FollowingCacheRecord.storageKey(pubkeyHex);
-          await prefs.setString(
-            key,
-            FollowingCacheRecord(pubkeys: result.pubkeys).encode(),
-          );
-          Log.info(
-            'Pre-fetched ${result.pubkeys.length} following for '
-            'router redirect cache',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        }
+        await persistFollowingPrefetchForAuthRedirect(
+          prefs: prefs,
+          pubkeyHex: pubkeyHex,
+          pubkeys: result.pubkeys,
+          reportedTotal: result.total,
+        );
+        Log.info(
+          'Pre-fetched ${result.pubkeys.length} following for '
+          'router redirect cache',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
       } finally {
         httpClient.close();
       }
@@ -191,6 +191,41 @@ AuthService authService(Ref ref) {
   );
   ref.onDispose(() => unawaited(authService.dispose()));
   return authService;
+}
+
+/// Persists a successful following response for synchronous route decisions.
+///
+/// An empty list is meaningful: it distinguishes "fetched and follows nobody"
+/// from "not fetched yet", preventing every later login from repeating the
+/// same blocking request.
+///
+/// [reportedTotal] is the count the index says the account has. An empty page
+/// beside a non-zero count is the index contradicting itself — it has not
+/// caught up with the account's published follows — so nothing is recorded and
+/// the next login asks again rather than treating the gap as an answer.
+@visibleForTesting
+Future<void> persistFollowingPrefetchForAuthRedirect({
+  required SharedPreferences prefs,
+  required String pubkeyHex,
+  required List<String> pubkeys,
+  int reportedTotal = 0,
+}) async {
+  if (pubkeys.isEmpty && reportedTotal > 0) {
+    Log.warning(
+      'Following index returned no pubkeys but reports $reportedTotal — '
+      'not recording the prefetch as complete',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
+    return;
+  }
+  if (pubkeys.isNotEmpty) {
+    await prefs.setString(
+      FollowingCacheRecord.storageKey(pubkeyHex),
+      FollowingCacheRecord(pubkeys: pubkeys).encode(),
+    );
+  }
+  await markFollowingPrefetchComplete(prefs, pubkeyHex);
 }
 
 /// Provider that returns current auth state and rebuilds when it changes.

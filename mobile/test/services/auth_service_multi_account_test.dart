@@ -2259,9 +2259,29 @@ void main() {
       expect(prefs.getString('last_used_npub'), equals(testKeyContainer.npub));
     });
 
-    test(
-      'skips following prefetch when cache already exists for the account',
-      () async {
+    // Two different things now say the question has been answered: a cached
+    // following list, and the marker recorded for an account that follows
+    // nobody. An empty cached list is deliberately not among them — nothing
+    // writes one any more, which is the point of keeping fetch state out of
+    // the contact-list record.
+    for (final (label, storedFor) in <(String, Map<String, Object> Function())>[
+      (
+        'a cached following list',
+        () => {
+          'following_list_${testKeyContainer.publicKeyHex}': jsonEncode([
+            'abc123',
+          ]),
+        },
+      ),
+      (
+        'the prefetch marker',
+        () => {
+          'following_prefetch_complete_${testKeyContainer.publicKeyHex}': true,
+        },
+      ),
+    ]) {
+      test('skips following prefetch when $label exists for the '
+          'account', () async {
         var prefetchCalls = 0;
         authService = AuthService(
           backgroundActivityManager: BackgroundActivityManager(),
@@ -2275,9 +2295,7 @@ void main() {
 
         SharedPreferences.setMockInitialValues({
           'authentication_source': 'automatic',
-          'following_list_${testKeyContainer.publicKeyHex}': jsonEncode([
-            'abc123',
-          ]),
+          ...storedFor(),
           kKnownAccountsKey: '[]',
         });
 
@@ -2290,8 +2308,8 @@ void main() {
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(prefetchCalls, 0);
-      },
-    );
+      });
+    }
 
     test('prefetches following before auth when cache is missing', () async {
       final prefetchedPubkeys = <String>[];
