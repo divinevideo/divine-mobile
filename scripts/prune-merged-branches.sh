@@ -72,8 +72,10 @@ git rev-parse --verify --quiet "$BASE" >/dev/null || {
 
 # Shallow is fine for the signals used here: the GitHub lookups need no local
 # history, and the worktree checks inspect only the current checkout state.
+# commit_on_base() falls back to a log scan when merge-base --is-ancestor is
+# unreliable at the graft boundary.
 if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-  echo "Note: shallow repository. Classification is unaffected."
+  echo "Note: shallow repository. Classification uses log fallback at the graft boundary."
 fi
 
 echo "Loading merged PR head refs from GitHub..."
@@ -107,6 +109,16 @@ merged_pr_contains_commit() {
   "$GH" api -X GET "repos/$REPO/commits/$1/pulls" \
     --jq '[.[] | select(.merged_at != null) | select(.base.ref == "main")] | length' \
     2>/dev/null | grep -qxE '[1-9][0-9]*'
+}
+
+# Check if a commit is reachable from BASE (shallow-safe).
+# merge-base --is-ancestor fails in shallow repos for commits at or above
+# the graft boundary, so we fall back to checking BASE's log directly.
+commit_on_base() {
+  if git merge-base --is-ancestor "$1" "$BASE" 2>/dev/null; then
+    return 0
+  fi
+  git log --format=%H "$BASE" 2>/dev/null | grep -qxF "$(git rev-parse "$1" 2>/dev/null)"
 }
 
 # Ignored paths any Flutter toolchain step recreates from tracked sources.
@@ -150,7 +162,7 @@ while IFS= read -r branch; do
   if grep -qxF -- "$branch" "$MERGED_REFS"; then
     verdict="MERGED-PR"
   elif [ -n "$wt" ] && [ -d "$wt" ] \
-    && ! git merge-base --is-ancestor "$tip" "$BASE" \
+    && ! commit_on_base "$tip" \
     && merged_pr_contains_commit "$tip"; then
     # Only worktree branches get this lookup: it is one API call per branch,
     # and a branch with no worktree costs a ref, not 4GB of build output. Tips
