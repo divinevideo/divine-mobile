@@ -72,6 +72,13 @@ while IFS= read -r path; do
     *.md|docs/*|brand-guidelines/*|mobile/docs/*)
       # Docs-only changes do not need the full app test matrix.
       ;;
+    scripts/*)
+      # Repo-root scripts are covered by tests under mobile/test/tools/, so a
+      # change here must run the matrix that owns those tests. Without this,
+      # a scripts-only PR skips the tests job and the script ships untested:
+      # nothing else covers them, as there is no shellcheck or bash -n job.
+      app=true
+      ;;
     mobile/lib/*|mobile/test/*|mobile/integration_test/*|mobile/scripts/*)
       app=true
       ;;
