@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// Maps the editor's zoom [editorMatrix] (expressed in the editor's
@@ -33,16 +34,20 @@ Matrix4 scrimZoomTransform({
   required Size targetSize,
   required double originalAspectRatio,
 }) {
-  final renderHeight = boxSize.shortestSide;
-  final renderWidth = renderHeight * originalAspectRatio;
-  if (renderWidth <= 0 || renderHeight <= 0) return Matrix4.identity();
+  final renderSize = VideoEditorCanvasGeometry.renderSizeFor(
+    boxSize,
+    originalAspectRatio,
+  );
+  if (renderSize.width <= 0 || renderSize.height <= 0) {
+    return Matrix4.identity();
+  }
 
   final coverScale = max(
-    targetSize.width / renderWidth,
-    targetSize.height / renderHeight,
+    targetSize.width / renderSize.width,
+    targetSize.height / renderSize.height,
   );
-  final dx = (boxSize.width - coverScale * renderWidth) / 2;
-  final dy = (boxSize.height - coverScale * renderHeight) / 2;
+  final dx = (boxSize.width - coverScale * renderSize.width) / 2;
+  final dy = (boxSize.height - coverScale * renderSize.height) / 2;
 
   final k = editorMatrix.getMaxScaleOnAxis();
   final t = editorMatrix.getTranslation();
@@ -84,19 +89,12 @@ class VideoEditorCutAreaOverlay extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final boxSize = constraints.biggest;
-        // Compute the visible child size: largest rect with
-        // targetAspectRatio that fits inside boxSize (BoxFit.contain).
-        final double childWidth;
-        final double childHeight;
-        if (boxSize.width / boxSize.height > targetAspectRatio.value) {
-          childHeight = boxSize.height;
-          childWidth = boxSize.height * targetAspectRatio.value;
-        } else {
-          childWidth = boxSize.width;
-          childHeight = boxSize.width / targetAspectRatio.value;
-        }
-        final verticalGap = (boxSize.height - childHeight) / 2;
-        final horizontalGap = (boxSize.width - childWidth) / 2;
+        final targetSize = VideoEditorCanvasGeometry.targetSizeFor(
+          boxSize,
+          targetAspectRatio.value,
+        );
+        final verticalGap = (boxSize.height - targetSize.height) / 2;
+        final horizontalGap = (boxSize.width - targetSize.width) / 2;
 
         final scrimBars = _ScrimBars(
           overlayColor: overlayColor,
@@ -117,7 +115,7 @@ class VideoEditorCutAreaOverlay extends ConsumerWidget {
                 transform: scrimZoomTransform(
                   editorMatrix: matrix,
                   boxSize: boxSize,
-                  targetSize: Size(childWidth, childHeight),
+                  targetSize: targetSize,
                   originalAspectRatio: scope.originalClipAspectRatio,
                 ),
                 child: child,

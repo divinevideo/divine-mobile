@@ -1,9 +1,8 @@
 // ABOUTME: InheritedWidget providing access to the ProImageEditor instance.
 // ABOUTME: Allows child widgets to call editor methods directly without callbacks.
 
-import 'dart:math';
-
 import 'package:flutter/widgets.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Provides access to the [ProImageEditorState] for descendant widgets.
@@ -111,31 +110,24 @@ class VideoEditorScope extends InheritedWidget {
   );
 
   /// Calculates the visible target area fitted inside [bodySize].
-  static Size calculateTargetSize(Size bodySize, double targetAspectRatio) {
-    if (bodySize == Size.zero) return Size.zero;
-    if (bodySize.aspectRatio > targetAspectRatio) {
-      return Size(bodySize.height * targetAspectRatio, bodySize.height);
-    }
-    return Size(bodySize.width, bodySize.width / targetAspectRatio);
-  }
+  static Size calculateTargetSize(Size bodySize, double targetAspectRatio) =>
+      VideoEditorCanvasGeometry.targetSizeFor(bodySize, targetAspectRatio);
 
-  /// Calculates the FittedBox scale factor for a given body size and aspect ratio.
+  /// Calculates the FittedBox scale factor for a given body size and aspect
+  /// ratio.
+  ///
+  /// Reads the same [VideoEditorCanvasGeometry] the canvas lays itself out
+  /// with, so a layer compensating for the transform can never disagree with
+  /// the transform the canvas applies.
   static double calculateFittedBoxScale(
     Size bodySize,
     double aspectRatio, {
     double? targetAspectRatio,
-  }) {
-    if (bodySize == Size.zero) return 1.0;
-    final targetRatio = targetAspectRatio ?? aspectRatio;
-    final height = bodySize.shortestSide;
-    final renderSize = Size(height * aspectRatio, height);
-    final targetSize = calculateTargetSize(bodySize, targetRatio);
-
-    return max(
-      targetSize.width / renderSize.width,
-      targetSize.height / renderSize.height,
-    );
-  }
+  }) => VideoEditorCanvasGeometry(
+    bodySize: bodySize,
+    originalAspectRatio: aspectRatio,
+    targetAspectRatio: targetAspectRatio,
+  ).fittedBoxScale;
 
   /// Returns the [ProImageEditorState] if available.
   ProImageEditorState? get editor => editorOverride ?? editorKey.currentState;
