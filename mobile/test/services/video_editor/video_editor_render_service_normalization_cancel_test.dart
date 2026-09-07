@@ -16,9 +16,10 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class _MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
-  _MockPathProviderPlatform({required this.root});
+  _MockPathProviderPlatform({required this.root, required this.documentsRoot});
 
   final String root;
+  final String documentsRoot;
 
   @override
   Future<String?> getTemporaryPath() async => root;
@@ -27,11 +28,15 @@ class _MockPathProviderPlatform extends Fake
   Future<String?> getApplicationCachePath() async => root;
 
   @override
-  Future<String?> getApplicationDocumentsPath() async => root;
+  Future<String?> getApplicationDocumentsPath() async => documentsRoot;
 }
 
 class _MockProVideoEditor extends ProVideoEditor {
-  _MockProVideoEditor({required this.resolutions, this.onRender});
+  _MockProVideoEditor({
+    required this.resolutions,
+    this.onRender,
+    this.failEncoderTaskIds = const {},
+  });
 
   /// Reported resolution per source file path. Anything else reports a
   /// already-vertical resolution, which needs no crop.
@@ -40,8 +45,16 @@ class _MockProVideoEditor extends ProVideoEditor {
   /// Runs inside `renderVideoToFile`, so a test can cancel mid-render.
   final void Function(VideoRenderData task)? onRender;
 
+  /// Task ids whose render writes its partial output file and then throws a
+  /// [RenderEncoderException], modelling an encoder that fails after starting
+  /// to write. The file is created first so the failure leaves a real partial.
+  final Set<String> failEncoderTaskIds;
+
   /// Every render the service asked the plugin for, in order.
   final List<String> renderedTaskIds = [];
+
+  /// Every output path the service asked the plugin to write, in order.
+  final List<String> renderedFilePaths = [];
 
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -67,8 +80,12 @@ class _MockProVideoEditor extends ProVideoEditor {
     NativeLogLevel? nativeLogLevel,
   }) async {
     renderedTaskIds.add(value.id);
+    renderedFilePaths.add(filePath);
     onRender?.call(value);
     File(filePath).createSync(recursive: true);
+    if (failEncoderTaskIds.contains(value.id)) {
+      throw const RenderEncoderException('mock encoder failure');
+    }
     return filePath;
   }
 
@@ -80,6 +97,7 @@ void main() {
   const exportTaskId = 'export-task';
 
   late Directory tempDir;
+  late Directory documentsDir;
   late PathProviderPlatform originalPathProvider;
   late ProVideoEditor originalProVideoEditor;
 
@@ -101,10 +119,14 @@ void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     tempDir = Directory.systemTemp.createTempSync('openvine_render_cancel_');
+    documentsDir = Directory.systemTemp.createTempSync(
+      'openvine_render_documents_',
+    );
     originalPathProvider = PathProviderPlatform.instance;
     originalProVideoEditor = ProVideoEditor.instance;
     PathProviderPlatform.instance = _MockPathProviderPlatform(
       root: tempDir.path,
+      documentsRoot: documentsDir.path,
     );
     clips = [clipFor('clip-a'), clipFor('clip-b')];
     resolutions = {
@@ -119,6 +141,7 @@ void main() {
     RenderCancellationRegistry.reset();
     VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    if (documentsDir.existsSync()) documentsDir.deleteSync(recursive: true);
   });
 
   group('clip normalization cancellation (#7833/#7834)', () {
@@ -199,6 +222,131 @@ void main() {
             (file) => file.path.endsWith('.mp4'),
           ),
           isEmpty,
+        );
+      },
+    );
+
+    test(
+      'deletes the partial final output when the export is cancelled during '
+      'concatenation (#8818)',
+      () async {
+        // Cancel while the FINAL concatenation render runs, after normalization
+        // has completed — so the partial `divine_*.mp4` has been written to the
+        // output directory and must not be left orphaned.
+        RenderCancellationRegistry.start(exportTaskId);
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          onRender: (task) {
+            if (task.id == exportTaskId) {
+              RenderCancellationRegistry.cancel(exportTaskId);
+            }
+          },
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+        );
+
+        // Normalization ran for both clips, then the concat render was reached
+        // and cancelled.
+        expect(plugin.renderedTaskIds, [
+          'clip-a_normalized',
+          'clip-b_normalized',
+          exportTaskId,
+        ]);
+        expect(outputPath, isNull);
+        expect(
+          tempDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason: 'the partial divine_*.mp4 must not be left behind on cancel',
+        );
+      },
+    );
+
+    test(
+      'a persistent export leaves no partial file in the documents directory '
+      'on cancel (#8818)',
+      () async {
+        // The AC names the documents directory specifically. A distinct mock
+        // root proves usePersistentStorage routes the final output there rather
+        // than to the cache path.
+        RenderCancellationRegistry.start(exportTaskId);
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          onRender: (task) {
+            if (task.id == exportTaskId) {
+              RenderCancellationRegistry.cancel(exportTaskId);
+            }
+          },
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+          usePersistentStorage: true,
+        );
+
+        expect(outputPath, isNull);
+        expect(
+          plugin.renderedFilePaths.last,
+          startsWith(
+            '${documentsDir.path}${Platform.pathSeparator}divine_',
+          ),
+        );
+        expect(
+          documentsDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason:
+              'a cancelled persistent export must not orphan a divine_*.mp4 '
+              'in the documents directory',
+        );
+      },
+    );
+
+    test(
+      'deletes the partial final output when the final encoder attempt fails '
+      'during concatenation (#8818)',
+      () async {
+        // Not a cancel: the concat render itself fails. The encoder writes a
+        // partial `divine_*.mp4` and then throws on every attempt, so the
+        // retry chain is exhausted and the failure propagates. The partial
+        // must be cleaned up, exactly as on cancel.
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          failEncoderTaskIds: {exportTaskId},
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+          usePersistentStorage: true,
+        );
+
+        // Normalization succeeded for both clips, then the concat render was
+        // attempted and failed.
+        expect(plugin.renderedTaskIds.take(2), [
+          'clip-a_normalized',
+          'clip-b_normalized',
+        ]);
+        expect(plugin.renderedTaskIds, contains(exportTaskId));
+        expect(outputPath, isNull);
+        expect(
+          documentsDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason: 'a failed export must not orphan a partial divine_*.mp4',
         );
       },
     );
