@@ -20,6 +20,7 @@ import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
+import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../helpers/go_router.dart';
@@ -98,7 +99,11 @@ void main() {
       originalAspectRatio: 9 / 16,
     );
 
-    Widget buildTestWidget({DivineVideoClip? clip, VoidCallback? onDelete}) {
+    Widget buildTestWidget({
+      DivineVideoClip? clip,
+      VoidCallback? onDelete,
+      Widget? home,
+    }) {
       return ProviderScope(
         overrides: [
           gallerySaveServiceProvider.overrideWithValue(mockGallerySaveService),
@@ -108,12 +113,14 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: VideoClipPreview(
-                clip: clip ?? testClip,
-                onDelete: onDelete,
-              ),
-            ),
+            home:
+                home ??
+                Scaffold(
+                  body: VideoClipPreview(
+                    clip: clip ?? testClip,
+                    onDelete: onDelete,
+                  ),
+                ),
           ),
         ),
       );
@@ -148,10 +155,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       final semantics = tester.getSemantics(find.byType(VideoClipPreview));
 
-      expect(
-        semantics.label,
-        l10n.videoMetadataClosePreviewSemanticLabel,
-      );
+      expect(semantics.label, l10n.videoMetadataClosePreviewSemanticLabel);
       expect(
         semantics.getSemanticsData().hasAction(SemanticsAction.tap),
         isTrue,
@@ -328,20 +332,10 @@ void main() {
       final frameFile = File('${tempDir.path}/frame.png')
         ..writeAsBytesSync(_transparentPngBytes);
 
-      final clip = DivineVideoClip(
+      final clip = _stopMotionClip(
         id: 'stop-motion-clip-1',
-        stopMotionFrames: [
-          StopMotionClipFrame(
-            path: frameFile.path,
-            duration: const Duration(milliseconds: 83),
-          ),
-        ],
+        framePath: frameFile.path,
         thumbnailPath: frameFile.path,
-        libraryTitle: 'Tiny jump',
-        duration: const Duration(milliseconds: 83),
-        recordedAt: DateTime(2026),
-        targetAspectRatio: .vertical,
-        originalAspectRatio: 9 / 16,
       );
 
       await tester.pumpWidget(buildTestWidget(clip: clip));
@@ -360,12 +354,202 @@ void main() {
         tester.element(heroFinder),
       );
 
-      final thumbnail = shuttle as ClipThumbnailImage;
+      // Nothing in a flight is worth announcing, and the exclusion has to sit
+      // outside the image: `Image` returns its `errorBuilder` before applying
+      // `excludeFromSemantics`, so the fallback icon would announce itself.
+      final excluded = shuttle as ExcludeSemantics;
+      final thumbnail = excluded.child! as ClipThumbnailImage;
       expect(thumbnail.path, frameFile.path);
       expect(thumbnail.fit, BoxFit.cover);
-      expect(thumbnail.cacheHeight, tester.view.physicalSize.height.round());
       expect(thumbnail.excludeFromSemantics, isTrue);
-      expect(thumbnail.placeholder, isA<VideoClipThumbnailPlaceholder>());
+      expect(thumbnail.placeholder, isA<VideoClipThumbnailTile>());
+
+      // The shuttle and the player resolve to one cache entry, so their decode
+      // bounds have to stay in step — pinned to the real value as well, or a
+      // pair that both collapsed to null would still match.
+      final player = tester.widget<StopMotionPlayer>(
+        find.byType(StopMotionPlayer),
+      );
+      expect(player.cacheHeight, tester.view.physicalSize.height.round());
+      expect(thumbnail.cacheHeight, player.cacheHeight);
+    });
+
+    group('hero flight', () {
+      /// The grid bounds its decode to the cell rather than the screen, so the
+      /// two ends of the flight carry different values and a test can tell
+      /// which one is flying.
+      const gridCardKey = Key('hero-flight-grid-card');
+
+      int gridCacheHeight(WidgetTester tester) =>
+          (tester.view.physicalSize.width / 2).round();
+
+      Widget buildFlightApp(DivineVideoClip clip) {
+        return buildTestWidget(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 80,
+                height: 140,
+                child: Builder(
+                  builder: (context) => VideoClipThumbnailCard(
+                    key: gridCardKey,
+                    clip: clip,
+                    showSelectionIndicator: false,
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(videoClipPreviewRoute(clip: clip)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      /// A failed resolution stays live in the process-global image cache, so
+      /// each test evicts the two keys it created rather than clearing the
+      /// cache other suites in the merged isolate share.
+      void evictAfterTest(WidgetTester tester, String path) {
+        addTearDown(() {
+          for (final height in <int?>[
+            gridCacheHeight(tester),
+            tester.view.physicalSize.height.round(),
+          ]) {
+            PaintingBinding.instance.imageCache.evict(
+              ResizeImage.resizeIfNeeded(null, height, FileImage(File(path))),
+            );
+          }
+        });
+      }
+
+      /// Taps the grid card and stops halfway through the push flight.
+      Future<void> flyToPreview(WidgetTester tester) async {
+        await tester.tap(find.byKey(gridCardKey));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      /// Waits for the shuttle's decode to actually fail, then renders it.
+      ///
+      /// Resolving the file is real I/O, so the failure needs a real
+      /// event-loop turn — taken here by performing the same read the decode
+      /// performs, rather than by guessing at a wall-clock delay. The pump
+      /// after it is load-bearing twice over: it drains the fake-async
+      /// microtask queue the widget's error continuation is parked in (so
+      /// blocking inside `runAsync` instead would deadlock), and it carries no
+      /// duration, so the flight stays where [flyToPreview] left it.
+      Future<void> settleDecodeFailure(WidgetTester tester, String path) async {
+        for (var attempt = 0; attempt < 50; attempt++) {
+          if (find.byType(VideoClipThumbnailTile).evaluate().isNotEmpty) return;
+          await tester.runAsync(
+            () =>
+                File(path).readAsBytes().then<void>((_) {}, onError: (_, _) {}),
+          );
+          await tester.pump();
+        }
+      }
+
+      /// The one thumbnail on screen mid-flight: a [Hero] hides both endpoints
+      /// while the shuttle is up.
+      ClipThumbnailImage flyingThumbnail(WidgetTester tester) =>
+          tester.widget<ClipThumbnailImage>(find.byType(ClipThumbnailImage));
+
+      testWidgets('flies the preview still out and back without errors', (
+        tester,
+      ) async {
+        final tempDir = Directory.systemTemp.createTempSync('clip_hero_flight');
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final frameFile = File('${tempDir.path}/frame.png')
+          ..writeAsBytesSync(_transparentPngBytes);
+        evictAfterTest(tester, frameFile.path);
+
+        final clip = _stopMotionClip(
+          id: 'flight-clip-1',
+          framePath: frameFile.path,
+          thumbnailPath: frameFile.path,
+        );
+
+        await tester.pumpWidget(buildFlightApp(clip));
+        await flyToPreview(tester);
+
+        // A flight at all proves both ends resolved the same tag from the clip
+        // id; the decode bound proves it is the preview's shuttle flying and
+        // not Flutter's default (the grid card's own child).
+        expect(
+          flyingThumbnail(tester).cacheHeight,
+          tester.view.physicalSize.height.round(),
+        );
+        expect(
+          flyingThumbnail(tester).cacheHeight,
+          isNot(gridCacheHeight(tester)),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.byType(StopMotionPlayer), findsOneWidget);
+
+        // The grid card declares no shuttle of its own, so the return flight
+        // falls back to the preview's — which is why the hero has to outlive
+        // the placeholder it used to live in.
+        Navigator.of(tester.element(find.byType(VideoClipPreview))).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(
+          flyingThumbnail(tester).cacheHeight,
+          tester.view.physicalSize.height.round(),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.byType(VideoClipPreview), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('falls back to the grid tile when the still is missing', (
+        tester,
+      ) async {
+        final tempDir = Directory.systemTemp.createTempSync('clip_hero_gone');
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        // The frame is real so the player still renders; only the thumbnail
+        // the shuttle decodes is gone, which is the iOS container-UUID case
+        // #5796 covers for the grid.
+        final frameFile = File('${tempDir.path}/frame.png')
+          ..writeAsBytesSync(_transparentPngBytes);
+        final missingThumbnail = '${tempDir.path}/evicted_thumbnail.jpg';
+        evictAfterTest(tester, missingThumbnail);
+
+        final clip = _stopMotionClip(
+          id: 'flight-clip-2',
+          framePath: frameFile.path,
+          thumbnailPath: missingThumbnail,
+        );
+
+        await tester.pumpWidget(buildFlightApp(clip));
+        await flyToPreview(tester);
+        await settleDecodeFailure(tester, missingThumbnail);
+
+        // Without a ground of its own the shuttle would fly the bare icon over
+        // whatever is beneath it; the grid paints its card outside the hero.
+        expect(find.byType(VideoClipThumbnailTile), findsOneWidget);
+        final tile = tester.element(find.byType(VideoClipThumbnailTile));
+        final ground = tester.widget<ColoredBox>(
+          find.descendant(
+            of: find.byType(VideoClipThumbnailTile),
+            matching: find.byType(ColoredBox),
+          ),
+        );
+        expect(ground.color, tile.vineColors.card);
+
+        // The fallback bypasses `Image.excludeFromSemantics`, so the shuttle
+        // keeps it out of the tree itself.
+        expect(
+          find.ancestor(
+            of: find.byType(VideoClipThumbnailTile),
+            matching: find.byType(ExcludeSemantics),
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('save result snackbar', () {
@@ -434,6 +618,31 @@ void main() {
       });
     });
   });
+}
+
+/// A one-frame stop-motion clip: the frames path drives [StopMotionPlayer] and
+/// [thumbnailPath] drives the hero shuttle, so the two can be pointed at
+/// different files. One frame means no ticker, so the tree settles.
+DivineVideoClip _stopMotionClip({
+  required String id,
+  required String framePath,
+  required String thumbnailPath,
+}) {
+  return DivineVideoClip(
+    id: id,
+    stopMotionFrames: [
+      StopMotionClipFrame(
+        path: framePath,
+        duration: const Duration(milliseconds: 83),
+      ),
+    ],
+    thumbnailPath: thumbnailPath,
+    libraryTitle: 'Tiny jump',
+    duration: const Duration(milliseconds: 83),
+    recordedAt: DateTime(2026),
+    targetAspectRatio: .vertical,
+    originalAspectRatio: 9 / 16,
+  );
 }
 
 const _transparentPngBytes = <int>[

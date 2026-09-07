@@ -301,17 +301,9 @@ class _FilterContent extends StatelessWidget {
   ) async {
     await Navigator.push(
       context,
-      PageRouteBuilder(
-        opaque: false,
-        pageBuilder: (_, _, _) => VideoClipPreview(
-          clip: clip,
-          onDelete: () => _confirmDeleteClip(context, clip),
-        ),
-        transitionsBuilder: (_, animation, _, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 200),
-        reverseTransitionDuration: const Duration(milliseconds: 200),
+      videoClipPreviewRoute(
+        clip: clip,
+        onDelete: () => _confirmDeleteClip(context, clip),
       ),
     );
   }

@@ -22,6 +22,22 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
 
+/// Creates the transparent route used to fly a library thumbnail into preview.
+Route<void> videoClipPreviewRoute({
+  required DivineVideoClip clip,
+  VoidCallback? onDelete,
+}) {
+  return PageRouteBuilder<void>(
+    opaque: false,
+    pageBuilder: (_, _, _) => VideoClipPreview(clip: clip, onDelete: onDelete),
+    transitionsBuilder: (_, animation, _, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+    transitionDuration: const Duration(milliseconds: 200),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+  );
+}
+
 class VideoClipPreview extends ConsumerStatefulWidget {
   const VideoClipPreview({required this.clip, this.onDelete, super.key});
 
@@ -299,12 +315,18 @@ class _ClipHero extends StatelessWidget {
     final cacheHeight = _stillCacheHeight(context);
     return Hero(
       tag: videoClipPreviewHeroTag(clip.id),
-      flightShuttleBuilder: (_, _, _, _, _) => ClipThumbnailImage(
-        path: thumbnailPath,
-        fit: BoxFit.cover,
-        cacheHeight: cacheHeight,
-        excludeFromSemantics: true,
-        placeholder: const VideoClipThumbnailPlaceholder(),
+      // `excludeFromSemantics` covers the decoded still but not the fallback:
+      // `Image` returns its `errorBuilder` before applying the flag, and the
+      // fallback icon is an SVG that announces itself as an image. Nothing in
+      // a flight is worth announcing, so the whole shuttle is excluded.
+      flightShuttleBuilder: (_, _, _, _, _) => ExcludeSemantics(
+        child: ClipThumbnailImage(
+          path: thumbnailPath,
+          fit: BoxFit.cover,
+          cacheHeight: cacheHeight,
+          excludeFromSemantics: true,
+          placeholder: const VideoClipThumbnailTile(),
+        ),
       ),
       child: child,
     );
