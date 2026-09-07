@@ -638,6 +638,7 @@ class ZendeskSupportService {
     int? ticketFormId,
     List<Map<String, dynamic>>? customFields,
     List<String>? attachmentPaths,
+    String? externalId,
   }) async {
     if (!_initialized) {
       Log.warning(
@@ -703,6 +704,7 @@ class ZendeskSupportService {
         requesterName: _userName,
         requesterEmail: _userEmail,
         tags: tags,
+        externalId: externalId,
       );
     } on PlatformException catch (e) {
       if (e.code == 'UPLOAD_FAILED') {
@@ -822,6 +824,7 @@ class ZendeskSupportService {
     String? requesterEmail,
     String? requesterName,
     List<String>? tags,
+    String? externalId,
   }) async {
     if (!ZendeskConfig.isRestApiConfigured) {
       Log.error(
@@ -848,6 +851,11 @@ class ZendeskSupportService {
             email: requesterEmail,
           ),
           if (tags != null && tags.isNotEmpty) 'tags': tags,
+          // Best-effort idempotency handle for retried report tickets (#8053).
+          // Zendesk does not upsert on external_id, so this does not prevent a
+          // duplicate on a lost-ACK retry; it lets moderation tooling merge the
+          // rare duplicate by report id.
+          'external_id': ?externalId,
         },
       };
 

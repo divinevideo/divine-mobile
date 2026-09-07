@@ -708,7 +708,63 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'5f32ae82aae7471e3e3dd008a011607def6bc149';
+    r'410db866b010e1a74ed80a1b6fe86ffed30d5cd9';
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
+/// the inline first attempt share one delivery path. #8053.
+
+@ProviderFor(reportRetryService)
+final reportRetryServiceProvider = ReportRetryServiceProvider._();
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
+/// the inline first attempt share one delivery path. #8053.
+
+final class ReportRetryServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ReportRetryService?>,
+          ReportRetryService?,
+          FutureOr<ReportRetryService?>
+        >
+    with
+        $FutureModifier<ReportRetryService?>,
+        $FutureProvider<ReportRetryService?> {
+  /// Auto-sweep service for the durable `pending_reports` queue.
+  ///
+  /// Uses [ContentReportingService] as its channel driver, so the retry sweep and
+  /// the inline first attempt share one delivery path. #8053.
+  ReportRetryServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'reportRetryServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$reportRetryServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ReportRetryService?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ReportRetryService?> create(Ref ref) {
+    return reportRetryService(ref);
+  }
+}
+
+String _$reportRetryServiceHash() =>
+    r'0bdb7f455ce80d394fec306e36b01d80e5fec33b';
 
 /// Content deletion service for NIP-09 delete events
 

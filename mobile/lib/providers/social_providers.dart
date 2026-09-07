@@ -42,6 +42,7 @@ import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/profile_save_retry_service.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -995,11 +996,64 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     authService: authService,
     prefs: prefs,
     moderationRelayUrl: env.relayUrl,
+    // Durable outbox for the relay + Zendesk channels; ReportRetryService
+    // sweeps it. #8053.
+    pendingReportsDao: ref.watch(databaseProvider).pendingReportsDao,
   );
 
   // Initialize the service to enable reporting
   await service.initialize();
 
+  return service;
+}
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
+/// the inline first attempt share one delivery path. #8053.
+@Riverpod(keepAlive: true)
+Future<ReportRetryService?> reportRetryService(Ref ref) async {
+  final authService = ref.watch(authServiceProvider);
+
+  ref.watch(currentAuthStateProvider);
+
+  final userPubkey = authService.currentPublicKeyHex;
+  if (userPubkey == null) return null;
+
+  final readiness = ref.watch(nostrSessionProvider);
+  if (!readiness.isReadyForActiveClient || readiness.pubkey != userPubkey) {
+    return null;
+  }
+
+  final db = ref.watch(databaseProvider);
+  final driver = await ref.watch(contentReportingServiceProvider.future);
+  final foregroundController = StreamController<bool>();
+  ref.onDispose(foregroundController.close);
+
+  final service = ReportRetryService(
+    driver: driver,
+    pendingReportsDao: db.pendingReportsDao,
+    userPubkey: userPubkey,
+    appForegroundStream: foregroundController.stream,
+  );
+
+  unawaited(
+    service.initialize().catchError((Object e) {
+      Log.error(
+        'Failed to initialize ReportRetryService',
+        name: 'AppProviders',
+        error: e,
+      );
+    }),
+  );
+
+  ref.listen<bool>(appForegroundProvider, (_, next) {
+    if (!foregroundController.isClosed) {
+      foregroundController.add(next);
+    }
+  }, fireImmediately: true);
+
+  ref.onDispose(service.dispose);
   return service;
 }
 
