@@ -68,6 +68,27 @@ PublishOutcome _rejected(Event event) => PublishOutcome(
   noResponseFrom: const [],
 );
 
+/// The two never-published lists a backfill finds stranded. [pubkey] stamps
+/// both, or stays null for lists written before the owner was recorded.
+String _strandedListsSeed({String? pubkey}) => jsonEncode([
+  CuratedList(
+    id: 'first-stranded',
+    name: 'First Stranded',
+    videoEventIds: const ['first_video'],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    pubkey: pubkey,
+  ).toJson(),
+  CuratedList(
+    id: 'second-stranded',
+    name: 'Second Stranded',
+    videoEventIds: const ['second_video'],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    pubkey: pubkey,
+  ).toJson(),
+]);
+
 PublishOutcome _partiallyAccepted(Event event) => PublishOutcome(
   eventId: event.id,
   acceptedBy: const ['wss://accepted.test'],
@@ -844,24 +865,9 @@ void main() {
 
       test('does not double-publish a list resolved during backfill', () async {
         SharedPreferences.setMockInitialValues({
-          CuratedListService.listsStorageKey: jsonEncode([
-            CuratedList(
-              id: 'first-stranded',
-              name: 'First Stranded',
-              videoEventIds: const ['first_video'],
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-              pubkey: _ownerPubkey,
-            ).toJson(),
-            CuratedList(
-              id: 'second-stranded',
-              name: 'Second Stranded',
-              videoEventIds: const ['second_video'],
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-              pubkey: _ownerPubkey,
-            ).toJson(),
-          ]),
+          CuratedListService.listsStorageKey: _strandedListsSeed(
+            pubkey: _ownerPubkey,
+          ),
         });
         var publishCount = 0;
         late CuratedListService upgraded;
@@ -923,22 +929,7 @@ void main() {
         test('stops backfill when the ${scenario.description}', () async {
           await LogCaptureService().clearAllLogs();
           SharedPreferences.setMockInitialValues({
-            CuratedListService.listsStorageKey: jsonEncode([
-              CuratedList(
-                id: 'first-stranded',
-                name: 'First Stranded',
-                videoEventIds: const ['first_video'],
-                createdAt: DateTime(2026),
-                updatedAt: DateTime(2026),
-              ).toJson(),
-              CuratedList(
-                id: 'second-stranded',
-                name: 'Second Stranded',
-                videoEventIds: const ['second_video'],
-                createdAt: DateTime(2026),
-                updatedAt: DateTime(2026),
-              ).toJson(),
-            ]),
+            CuratedListService.listsStorageKey: _strandedListsSeed(),
           });
           var publishCount = 0;
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer((
