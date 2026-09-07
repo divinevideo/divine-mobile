@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for RequestBulkActionsSheet.
-// ABOUTME: Verifies that both action tiles render and return the correct
-// ABOUTME: RequestBulkAction when tapped.
+// ABOUTME: Verifies both tiles render, that tapping one closes the sheet and
+// ABOUTME: completes with the matching RequestBulkAction, and that dismissing
+// ABOUTME: it completes with null.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,14 @@ void main() {
     setUp(() => VineThemeColors.debugFallbackCount = 0);
     tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
+    // A real GoRouter, not the MockGoRouter the rest of the inbox tests use.
+    // The sheet dismisses through go_router's `context.pop(result)`, and a mock
+    // no-ops it, so `VineBottomSheet.show` never completes its future and every
+    // assertion about the result or the sheet closing is unreachable — with no
+    // error and no missed tap to explain why. The old `verify(pop(...))` passed
+    // anyway, which is what made this suite a false positive (#8409). Swapping
+    // back to `testMaterialApp(home: ...)` would read as a simplification and
+    // would silently restore that.
     Widget buildSubject({required ValueChanged<RequestBulkAction?> onResult}) {
       final router = GoRouter(
         routes: [
