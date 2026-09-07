@@ -141,6 +141,17 @@ jobs:
       - name: 🍏 Verify iOS shipping target versions
         if: ${{ needs.changes.outputs.native == 'true' }}
         run: bash scripts/check_ios_shipping_versions.sh
+      - name: 🔒 Verify iOS required-reason APIs are declared
+        # Deliberately NOT gated on `needs.changes.outputs.native`. That filter
+        # covers mobile/ios/*, mobile/android/* and mobile/macos/* but NOT
+        # mobile/packages/*/ios/*, and a first-party plugin is exactly where
+        # this drift happened: divine_camera's manifest was authored in #890
+        # with an empty NSPrivacyAccessedAPITypes, then #1783 added
+        # ProcessInfo.systemUptime six weeks later under a path the native
+        # filter does not watch. Gating here would reproduce the bug the guard
+        # exists to catch. The check is pure python3 with no package installs,
+        # so running it every time costs well under a second.
+        run: bash scripts/check_privacy_manifest_coverage.sh
       - name: 🐘 Verify the tracked Gradle wrapper is the pinned artifact
         # The wrapper is tracked (#7201) so a fresh clone or worktree can run
         # gradle tooling without a prior `flutter build`. That makes
