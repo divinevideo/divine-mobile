@@ -488,7 +488,7 @@ The enforced bar differs by architectural layer. There is deliberately no repo-w
 
 | Layer | Bar |
 |-------|-----|
-| Client / Repository (`mobile/packages/*`) | Hard percentage gate. The VeryGood package workflow defaults to **100%** unless a package lowers `min_coverage` in its own `.github/workflows/<pkg>.yaml`. Keep it green; the value only ratchets down deliberately. |
+| Client / Repository (`mobile/packages/*`) | Hard percentage gate. The VeryGood package workflow defaults to **100%** unless a package lowers `min_coverage` in its own `.github/workflows/` entry. Keep it green; the locked floor may only ratchet up deliberately. |
 | BLoC / Cubit | Held high. `blocTest` is cheap and the logic is pure — treat it close to package-grade, not UI-grade. |
 | Widgets / UI (`mobile/lib`) | **Behavior + golden, not a line-percentage chase.** No absolute threshold; the floor is a meaningful test alongside every change, plus the untested-services ratchet below. |
 
@@ -502,9 +502,51 @@ target, a gate. The PR fails with a very specific message:
 > `Expected coverage >= 100.00% but actual is 99.xx%.`
 > `Lines not covered: lib/…: N, M, …`
 
-Current strict-coverage packages in this repo:
+Current strict-coverage packages in this repo (snapshot; the coverage-floor
+baseline described below is authoritative):
 
-- `mobile/packages/divine_ui`
+- `badge_repository`
+- `blossom_upload_service`
+- `blurhash_service`
+- `bookmarks_repository`
+- `cache_sync`
+- `caption_generator`
+- `categories_repository`
+- `content_blocklist_repository`
+- `content_policy`
+- `count_formatter`
+- `creator_sync`
+- `curated_list_repository`
+- `curation_repository`
+- `divine_blurhash`
+- `divine_camera`
+- `divine_status_client`
+- `divine_ui`
+- `divine_video_player`
+- `feed_tuning_repository`
+- `follow_repository`
+- `image_metadata_stripper`
+- `infinite_video_feed`
+- `profile_repository`
+- `reposts_repository`
+- `sound_service`
+- `sounds_repository`
+- `text_sanitizer`
+- `time_formatter`
+- `tv_static_effect`
+- `videos_repository`
+
+A package is strict when its workflow omits `min_coverage` (the shared
+VeryGood workflow defaults it to 100) or declares `min_coverage: 100`
+explicitly. Generate the current list instead of auditing those two forms by
+hand:
+
+```bash
+awk '$2 == 100 { print $1 }' mobile/scripts/baseline/package_coverage_floors.txt
+```
+
+`cache_sync` excludes generated `*.g.dart` files in its workflow, so its gate
+means 100% of the included, hand-written code.
 
 When adding a new public method / getter / constructor on a strict
 package (e.g. a new `VineTheme.xxxFont()` helper, a new enum case
@@ -515,6 +557,35 @@ typically an assertion on the returned style / computed size.
 If a line is genuinely unreachable, exclude it from coverage with a
 justified `// coverage:ignore-line` (or block) comment rather than
 leaving the gate red.
+
+### Package coverage floor ratchet
+
+Every package workflow's effective coverage floor is locked in
+`mobile/scripts/baseline/package_coverage_floors.txt` by
+`check_package_coverage_floor.sh`. An omitted `min_coverage` is recorded as
+100 because that is the shared VeryGood workflow's default; adding a lower
+explicit value later therefore fails as a regression instead of appearing as
+a new floor.
+
+The guard checks that workflow values match the baseline and that no baseline
+value decreased from `origin/main`. It does not raise a floor automatically to
+the package's measured coverage. Raising a floor remains a deliberate,
+reviewed change:
+
+1. Update `min_coverage` in the package's workflow. The guard accepts
+   `.github/workflows/<pkg>.yaml`, `<pkg>.yml`, `<pkg>_ci.yaml` and
+   `<pkg>_ci.yml` — `cache_sync` and `divine_ui`, both named above, use
+   the `.yml` form.
+2. Regenerate and commit the baseline:
+
+   ```bash
+   UPDATE_BASELINE=1 bash mobile/scripts/check_package_coverage_floor.sh
+   ```
+
+The guard runs in CI in the `generated-files` job. The pre-push hook
+installed by `scripts/install-hooks.sh` runs it too, but only when a
+`.github/workflows/*.yaml` / `*.yml` file or the coverage baseline itself
+changed — CI stays the authority.
 
 ### Untested-services floor
 
