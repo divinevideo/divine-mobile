@@ -1150,10 +1150,10 @@ class VideoEditorRenderService {
   // Video Concatenation
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Concatenates all video segments into a final output file.
+  /// Concatenates all segments; [globalTransform] applies in one pass.
   ///
-  /// If [globalTransform] is provided, applies it to all segments in a single
-  /// pass.
+  /// `trimToCommonTrackEnd` stays off because it would shift authored anchors;
+  /// see `docs/VIDEO_TRACK_END_MISMATCH.md` for the export/playback distinction.
   static Future<String> _concatenateSegments({
     required List<DivineVideoClip> clips,
     required List<VideoSegment> segments,
