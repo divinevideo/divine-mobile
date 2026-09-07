@@ -21,27 +21,29 @@ void main() {
     );
   }
 
-  testWidgets('uses a static skeleton effect when animations are disabled', (
-    tester,
-  ) async {
-    await tester.pumpWidget(subject(disableAnimations: true));
+  group('vineSkeletonEffectOf', () {
+    testWidgets('uses a static effect when animations are disabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(subject(disableAnimations: true));
 
-    final skeletonizer = tester.widget<Skeletonizer>(
-      find.byWidgetPredicate((widget) => widget is Skeletonizer),
-    );
-    expect(skeletonizer.effect, isA<SolidColorEffect>());
-    expect(skeletonizer.effect!.duration, Duration.zero);
-    expect(tester.binding.transientCallbackCount, 0);
-  });
+      final skeletonizer = tester.widget<Skeletonizer>(
+        find.byWidgetPredicate((widget) => widget is Skeletonizer),
+      );
+      expect(skeletonizer.effect, isA<SolidColorEffect>());
+      expect(skeletonizer.effect!.duration, Duration.zero);
+      expect(tester.binding.transientCallbackCount, 0);
+    });
 
-  testWidgets('keeps the shimmer effect when animations are enabled', (
-    tester,
-  ) async {
-    await tester.pumpWidget(subject(disableAnimations: false));
+    testWidgets('keeps the shimmer effect when animations are enabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(subject(disableAnimations: false));
 
-    final skeletonizer = tester.widget<Skeletonizer>(
-      find.byWidgetPredicate((widget) => widget is Skeletonizer),
-    );
-    expect(skeletonizer.effect, isA<ShimmerEffect>());
+      final skeletonizer = tester.widget<Skeletonizer>(
+        find.byWidgetPredicate((widget) => widget is Skeletonizer),
+      );
+      expect(skeletonizer.effect, isA<ShimmerEffect>());
+    });
   });
 }
