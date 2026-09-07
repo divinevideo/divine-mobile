@@ -4136,6 +4136,7 @@ void main() {
         Future<ContentBlocklistRepository> serviceWithOwnMute({
           required SharedPreferences prefs,
           required Event ownMute,
+          void Function()? onChanged,
         }) async {
           await prefs.setBool(
             'block_list_migrated_to_mute_list.$ourPubkey',
@@ -4150,7 +4151,10 @@ void main() {
           stubHealthy();
           stubReadSettled();
 
-          final service = ContentBlocklistRepository(prefs: prefs);
+          final service = ContentBlocklistRepository(
+            prefs: prefs,
+            onChanged: onChanged,
+          );
           addTearDown(service.dispose);
           await service.syncBlockListsInBackground(
             mockClient,
@@ -4163,6 +4167,47 @@ void main() {
           clearInteractions(mockSigner);
           return service;
         }
+
+        test(
+          'records the unblock intent before it persists the mute removal',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            // Sampled synchronously, the moment the removal is announced.
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+              onChanged: () {
+                if (!sampling) return;
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
+            );
+            sampling = true;
+
+            await service.unblockUser(target);
+
+            // A kill in the window between the removal write and the intent
+            // write leaves the mute gone locally with nothing to defend that
+            // against the relay's surviving `p` tag, so the next launch
+            // re-adopts it -- the exact revert the intent prevents (#8263).
+            expect(pendingWhenAnnounced, isNotEmpty);
+            expect(pendingWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
+          },
+        );
 
         test(
           'removes and publishes a mute that is not a runtime block',

@@ -1323,6 +1323,20 @@ class ContentBlocklistRepository {
         hadPendingUnblock ||
         publishedListCarries;
 
+    if (!hasExplicitUnblock) {
+      await retryPendingMuteListPublish();
+      return;
+    }
+
+    // Recorded BEFORE the local removals are persisted, and so before the
+    // publish. A kill anywhere after this leaves an account that is still
+    // hidden plus the intent to unhide it, which the next launch acts on. In
+    // the other order a kill between the two writes left it unhidden locally
+    // with nothing to stop the relay's surviving `p` tag from being
+    // re-adopted as a mute on the next launch (#8263).
+    _pendingUnblocks[pubkey] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await _savePendingUnblocks();
+
     if (removedBlock) {
       await _saveBlockedUsers();
       _emitChange(BlocklistChange(pubkey: pubkey, op: BlocklistOp.unblocked));
@@ -1337,15 +1351,6 @@ class ContentBlocklistRepository {
       _notifyChanged();
     }
 
-    if (!hasExplicitUnblock) {
-      await retryPendingMuteListPublish();
-      return;
-    }
-
-    // Recorded BEFORE the publish, so a withheld or failed publish still
-    // leaves the intent behind for the next launch to act on (#8263).
-    _pendingUnblocks[pubkey] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    await _savePendingUnblocks();
     // Protect this explicit action from a clock-skewed source event fetched
     // during the mandatory pre-publish refresh. Ordinary later reconciliation
     // still honours a genuinely newer mute authored by another client.
