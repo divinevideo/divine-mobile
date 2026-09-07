@@ -1740,11 +1740,6 @@ void main() {
     // compares them as raw strings, so a base that Uri.parse would normalize
     // makes them disagree and the pre-auth call 401s — which downgrades the
     // Zendesk identity to the raw npub path this token exists to replace.
-    //
-    // The service posts through the top-level `http.post`, so the request URI
-    // is not capturable here. Asserting the signed string is already in
-    // canonical form is equivalent: the request is `Uri.parse` of that same
-    // string, and Uri.parse is identity on a canonical one.
     for (final base in const [
       'https://RELAY.example',
       'HTTPS://relay.example',
@@ -1753,13 +1748,17 @@ void main() {
     ]) {
       test('is canonical for a base of $base', () async {
         final nip98 = _RecordingUrlNip98AuthService();
+        http.Request? captured;
 
         await expectLater(
           ZendeskSupportService.fetchPreAuthToken(
             nip98Service: nip98,
             relayManagerUrl: base,
             httpClient: MockClient(
-              (_) async => http.Response('{"success":true,"token":"t"}', 200),
+              (request) async {
+                captured = request;
+                return http.Response('{"success":true,"token":"t"}', 200);
+              },
             ),
           ),
           completion(equals('t')),
@@ -1770,7 +1769,7 @@ void main() {
           nip98.signedUrl,
           equals('https://relay.example/api/zendesk/pre-auth'),
         );
-        expect(nip98.signedUrl, equals(Uri.parse(nip98.signedUrl!).toString()));
+        expect(nip98.signedUrl, equals(captured!.url.toString()));
       });
     }
   });
