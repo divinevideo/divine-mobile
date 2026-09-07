@@ -205,15 +205,19 @@ run_numeric_ratchet() {
           fail=1
           continue
         fi
+        if awk -F "$TAB" -v key="$rename_new" '$1 == key { found=1 } END { exit !found }' "$MAIN_F" &&
+          ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
+          continue
+        fi
         if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
           fail=1
         fi
-        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit found }' "$BASE_F"; then
+        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$BASE_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key remains in the branch baseline: $rename_old"
           fail=1
         fi
-        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit found }' "$CUR_F"; then
+        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$CUR_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
           fail=1
         fi
