@@ -944,6 +944,63 @@ void main() {
         });
       });
 
+      test('a failed user reload after the cap clears the timeout', () {
+        var loadStatusCalls = 0;
+        when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer((
+          _,
+        ) async {
+          loadStatusCalls += 1;
+          if (loadStatusCalls > 1) {
+            throw const CrosspostApiException(
+              'unavailable',
+              statusCode: 503,
+              kind: CrosspostApiErrorKind.unavailable,
+            );
+          }
+          return const BlueskyCrosspostAccountStatus(
+            crosspostEnabled: true,
+            username: 'testuser',
+            handle: 'testuser.divine.video',
+            provisioningState: AtprotoProvisioningState.pending,
+            usernameClaimStatus: UsernameClaimStatus.claimed,
+          );
+        });
+        when(() => repository.loadKeycastStatus()).thenAnswer(
+          (_) async => const CrosspostStatus(
+            crosspostEnabled: true,
+            provisioningState: AtprotoProvisioningState.pending,
+          ),
+        );
+
+        fakeAsync((fake) {
+          final cubit = buildCubit(
+            pollInterval: const Duration(milliseconds: 1),
+            maxProvisioningPollAttempts: 1,
+          );
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 1));
+          fake.flushMicrotasks();
+
+          expect(cubit.state.provisioningPollAttempts, 1);
+          expect(cubit.state.provisioningPollingTimedOut, isTrue);
+
+          unawaited(cubit.loadStatus());
+          fake.flushMicrotasks();
+
+          // The reload threw, so the loaded path never ran and only the
+          // user-load reset can clear the timeout. Without it the settings
+          // screen keeps showing the timed-out copy for a pending account.
+          expect(cubit.state.status, CrosspostSettingsStatus.failure);
+          expect(
+            cubit.state.provisioningState,
+            AtprotoProvisioningState.pending,
+          );
+          expect(cubit.state.provisioningPollAttempts, 0);
+          expect(cubit.state.provisioningPollingTimedOut, isFalse);
+          cubit.close();
+        });
+      });
+
       test(
         'retryProvisioning re-enables crossposting from failed state',
         () async {
