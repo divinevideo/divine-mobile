@@ -209,6 +209,16 @@ void main() {
       expect(imetaText, isNot(contains('stream.divine.video')));
     });
 
+    test('publishVideoEvent writes an explicit false reuse marker', () async {
+      stubSignAndPublish();
+
+      expect(await publisher.publishVideoEvent(upload: createUpload()), isTrue);
+      expect(
+        _containsTag(capturedTags, const ['allow_audio_reuse', 'false']),
+        isTrue,
+      );
+    });
+
     test(
       'publishVideoEvent attaches text-track tags to the initial event',
       () async {
@@ -312,7 +322,7 @@ void main() {
         hasExplicitReuseConsent: true,
       );
 
-      test('publishes with an unmarked classic Vine original sound', () async {
+      test('publishes with an enabled verified archive sound', () async {
         stubSignAndPublish();
         final classicVideo = VideoEvent(
           id: sourceVideoId,
@@ -322,20 +332,56 @@ void main() {
           timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
           videoUrl: 'https://example.com/classic.mp4',
           addressableDTag: 'classic-vine',
-          rawTags: const {'platform': 'vine'},
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
         );
         final classicSound = AudioEvent.fromVideoOriginalSound(classicVideo);
 
-        final result = await publisher.publishVideoEvent(
-          upload: createUpload(),
-          selectedAudio: classicSound,
-          selectedAudioEventId: classicSound.id,
-        );
+        final result = await publisherWithConsent(consent: true)
+            .publishVideoEvent(
+              upload: createUpload(),
+              selectedAudio: classicSound,
+              selectedAudioEventId: classicSound.id,
+            );
 
         expect(result, isTrue);
         expect(classicSound.allowsReuse, isTrue);
-        expect(classicSound.hasExplicitReuseConsent, isTrue);
+        expect(classicSound.hasExplicitReuseConsent, isFalse);
+        expect(classicSound.requiresCurrentReuseVerification, isTrue);
       });
+
+      test(
+        'revalidates an archive grant after the saved-sound handoff',
+        () async {
+          stubSignAndPublish();
+          final persistedSound = AudioEvent.fromJson(
+            AudioEvent.fromVideoOriginalSound(
+              VideoEvent(
+                id: sourceVideoId,
+                pubkey: sourceCreator,
+                createdAt: 1700000000,
+                content: '',
+                timestamp: DateTime.fromMillisecondsSinceEpoch(
+                  1700000000 * 1000,
+                ),
+                videoUrl: 'https://example.com/classic.mp4',
+                isVerifiedArchive: true,
+                archiveAudioReuseEnabled: true,
+              ),
+            ).toJson(),
+          );
+
+          expect(persistedSound.requiresCurrentReuseVerification, isTrue);
+          expect(
+            await publisherWithConsent(consent: true).publishVideoEvent(
+              upload: createUpload(),
+              selectedAudio: persistedSound,
+              selectedAudioEventId: persistedSound.id,
+            ),
+            isTrue,
+          );
+        },
+      );
 
       test(
         'blocks selected audio when the source explicitly forbids reuse',
@@ -368,17 +414,58 @@ void main() {
         },
       );
 
-      test('an explicit decline blocks the sound owner', () async {
+      test('an explicit decline still permits the sound owner', () async {
         stubSignAndPublish();
         final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
 
-        await expectLater(
-          publisher.publishVideoEvent(
-            upload: createUpload(),
-            selectedAudio: ownDeclinedSound,
-            selectedAudioEventId: ownDeclinedSound.id,
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: ownDeclinedSound,
+          selectedAudioEventId: ownDeclinedSound.id,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('an unmarked legacy sound still permits the sound owner', () async {
+        stubSignAndPublish();
+        final ownLegacySound = AudioEvent(
+          id: 'e' * 64,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          allowsReuse: false,
+        );
+
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: ownLegacySound,
+          selectedAudioEventId: ownLegacySound.id,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('a malformed reuse marker still permits the sound owner', () async {
+        stubSignAndPublish();
+        final ownedSound = AudioEvent.fromVideoOriginalSound(
+          VideoEvent(
+            id: sourceVideoId,
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            content: '',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+            videoUrl: 'https://example.com/owned.mp4',
+            rawTags: const {'allow_audio_reuse': 'TRUE'},
           ),
-          throwsA(isA<AudioReuseNotPermittedException>()),
+        );
+
+        expect(
+          await publisher.publishVideoEvent(
+            upload: createUpload(),
+            selectedAudio: ownedSound,
+            selectedAudioEventId: ownedSound.id,
+          ),
+          isTrue,
         );
       });
 
