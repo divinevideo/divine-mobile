@@ -469,13 +469,15 @@ class RelayManager {
   // Reconnection
   // ---------------------------------------------------------------------------
 
-  /// Aggregate bound on one reconnect sweep.
+  /// Aggregate bound on how long a caller waits for one reconnect sweep.
   ///
   /// Parallelising already bounds a healthy sweep at roughly one connect
-  /// (a 10s handshake timeout plus a 2s orphan close). The socket layer also
-  /// bounds each send-path reconnect, while this shorter aggregate stop keeps
-  /// a sweep across multiple hosts from holding a DM send's inbox lookup open
-  /// indefinitely (#7091).
+  /// (a 10s handshake timeout plus a 2s orphan close), but nothing below here
+  /// bounds an unhealthy one: this sweep dials through `relay.connect()`,
+  /// which passes no deadline and so never reaches the send-path reconnect
+  /// budget. This is the outer stop, so a wedged host cannot hold a DM send's
+  /// inbox lookup open indefinitely (#7091) — it releases the waiter only,
+  /// and late dials keep running.
   @visibleForTesting
   static Duration reconnectSweepBudget = const Duration(seconds: 15);
 
