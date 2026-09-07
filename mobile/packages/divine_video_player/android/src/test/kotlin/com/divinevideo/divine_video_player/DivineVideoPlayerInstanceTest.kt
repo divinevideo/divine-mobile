@@ -547,6 +547,60 @@ class DivineVideoPlayerInstanceTest {
         verify(exactly = 0) { result.success(any()) }
     }
 
+    @Test
+    fun `onPlayerError maps pending HTTP 403 setClips failure to forbidden`() {
+        val listener = capturePlayerListener()
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(setClipsCall("https://example.com/protected.mp4"), result)
+
+        listener.onPlayerError(httpStatusError(403))
+
+        verify(exactly = 1) {
+            result.error(
+                "PLAYER_ERROR",
+                "HTTP 403",
+                mapOf("errorCode" to "forbidden"),
+            )
+        }
+        verify(exactly = 0) { result.success(any()) }
+    }
+
+    @Test
+    fun `onPlayerError maps pending HTTP 404 setClips failure to not_found`() {
+        val listener = capturePlayerListener()
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(setClipsCall("https://example.com/protected.mp4"), result)
+
+        listener.onPlayerError(httpStatusError(404))
+
+        verify(exactly = 1) {
+            result.error(
+                "PLAYER_ERROR",
+                "HTTP 404",
+                mapOf("errorCode" to "not_found"),
+            )
+        }
+        verify(exactly = 0) { result.success(any()) }
+    }
+
+    @Test
+    fun `onPlayerError keeps other 4xx failures on http_client_error`() {
+        val listener = capturePlayerListener()
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(setClipsCall("https://example.com/protected.mp4"), result)
+
+        listener.onPlayerError(httpStatusError(410))
+
+        verify(exactly = 1) {
+            result.error(
+                "PLAYER_ERROR",
+                "HTTP 410",
+                mapOf("errorCode" to "http_client_error"),
+            )
+        }
+        verify(exactly = 0) { result.success(any()) }
+    }
+
     /**
      * Builds a real [PlaybackException] carrying [ERROR_CODE_DECODER_INIT_FAILED]
      * — the `errorCode` is a public field mockk can't stub, so a genuine

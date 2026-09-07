@@ -196,6 +196,40 @@ void main() {
       );
     });
 
+    // The message scan below cannot see a status the platform did not spell
+    // out in English. These two prove the typed code alone is enough.
+    test('returns forbidden for typed forbidden without 403 text', () {
+      expect(
+        classifyVideoError(
+          errorCode: NativePlayerErrorCode.forbidden,
+          errorMessage: 'Der Server hat die Anfrage abgelehnt',
+        ),
+        equals(VideoErrorType.forbidden),
+      );
+    });
+
+    test('returns notFound for typed notFound without 404 text', () {
+      expect(
+        classifyVideoError(
+          errorCode: NativePlayerErrorCode.notFound,
+          errorMessage: 'Die Datei wurde nicht gefunden',
+        ),
+        equals(VideoErrorType.notFound),
+      );
+    });
+
+    // httpClientError still means "some other 4xx", so it must not be
+    // upgraded to a specific category on the typed path.
+    test('leaves typed httpClientError on the message-scan path', () {
+      expect(
+        classifyVideoError(
+          errorCode: NativePlayerErrorCode.httpClientError,
+          errorMessage: 'HTTP 410 Gone',
+        ),
+        equals(VideoErrorType.generic),
+      );
+    });
+
     test('keeps null typed code on the existing generic path', () {
       expect(
         classifyVideoError(errorMessage: 'NSURLErrorDomain error -1013'),

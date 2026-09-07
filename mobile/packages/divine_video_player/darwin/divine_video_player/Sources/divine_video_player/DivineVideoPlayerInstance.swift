@@ -1382,6 +1382,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             if httpResponse.statusCode == 401 {
                 return "auth_required"
             }
+            if httpResponse.statusCode == 403 {
+                return "forbidden"
+            }
+            if httpResponse.statusCode == 404 {
+                return "not_found"
+            }
             return httpResponse.statusCode >= 500 ? "http_server_error" : "http_client_error"
         }
 

@@ -3152,23 +3152,27 @@ void main() {
           <
             ({
               String name,
+              String errorCode,
               String message,
               String typeName,
             })
           >[
             (
               name: '403 forbidden',
-              message: 'HTTP 403 Forbidden',
+              errorCode: 'forbidden',
+              message: 'Der Server hat die Anfrage abgelehnt',
               typeName: 'forbidden',
             ),
             (
               name: '404 not found',
-              message: 'HTTP 404 Not Found',
+              errorCode: 'not_found',
+              message: 'Die Datei wurde nicht gefunden',
               typeName: 'notFound',
             ),
             (
               name: '401 age gate',
-              message: 'HTTP 401 Unauthorized',
+              errorCode: 'auth_required',
+              message: 'Anmeldung erforderlich',
               typeName: 'ageRestricted',
             ),
           ];
@@ -3200,7 +3204,7 @@ void main() {
 
               await harness.sendEvent(0, <Object?, Object?>{
                 'status': 'error',
-                'errorCode': 'network_error',
+                'errorCode': scenario.errorCode,
                 'errorMessage': scenario.message,
               });
               await tester.pump();
