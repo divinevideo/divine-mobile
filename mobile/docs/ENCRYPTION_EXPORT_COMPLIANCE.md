@@ -146,7 +146,7 @@ Relevant current app-level dependencies include:
 - `flutter_secure_storage`
 - `bech32`
 - `c2pa_flutter`
-- `app_device_integrity`
+- `divine_device_attestation`
 
 If the crypto dependency set changes, re-validate this document before submission.
 

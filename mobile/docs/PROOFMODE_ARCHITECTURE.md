@@ -13,7 +13,8 @@ ProofMode provides cryptographic verification for video authenticity in OpenVine
 
 1. **Non-intrusive**: ProofMode operates transparently during normal video recording
 2. **Progressive Rollout**: Feature flags control gradual activation of ProofMode phases
-3. **Hardware-backed**: Leverages iOS App Attest and Android Play Integrity for device attestation
+3. **Hardware-backed**: Uses iOS App Attest and Android Keystore hardware
+   attestation
 4. **Cryptographic Signing**: PGP signatures ensure manifest authenticity
 5. **Frame-level Verification**: SHA256 hashes of video frames prove recording continuity
 
@@ -90,7 +91,8 @@ final isValid = await keyService.verifySignature(
 **Platform-specific Implementation**:
 
 **iOS (App Attest)**:
-- Uses `app_device_integrity` plugin via `IosDeviceAttestationService`
+- Uses the first-party `divine_device_attestation` workspace package via
+  `IosDeviceAttestationService`
 - Generates hardware-backed attestation tokens
 - Runs at publish time, not during proof generation: the account the proof is
   published under is not fixed until the event is signed
@@ -99,11 +101,11 @@ final isValid = await keyService.verifySignature(
   [NOSTR_VIDEO_EVENTS.md](NOSTR_VIDEO_EVENTS.md#device_attestation-payload-ios)
 - Always hardware-backed on iOS 14+
 
-**Android (Play Integrity)**:
-- Uses `app_device_integrity` plugin with GCP Project ID
-- Generates Play Integrity attestation tokens
-- Requires GCP Project ID from `ProofModeConfig.gcpProjectId`
-- Hardware-backed on physical devices
+**Android (hardware key attestation)**:
+- Uses the app's native `HardwareAttestationNotarizationProvider`
+- Generates an Android Keystore key with the proof nonce as its attestation
+  challenge
+- Returns the hardware-backed certificate chain on supported physical devices
 
 **Fallback**:
 - Generates software-based attestation for unsupported platforms
@@ -133,9 +135,6 @@ final isHardwareBacked = await attestationService.isHardwareAttestationAvailable
 - `isVerifyEnabled`: Verification services
 - `isUIEnabled`: UI badges and verification displays
 - `isProductionEnabled`: Full production rollout
-
-**Platform Configuration**:
-- `gcpProjectId`: GCP Project ID for Android Play Integrity (returns 0 if not configured)
 
 **Example Usage**:
 ```dart
@@ -542,7 +541,7 @@ See `docs/MANUAL_TEST_VIDEO_UPLOAD.md` for manual upload verification procedures
   retries `attestKey` on it instead of spending a second rate-limited
   generation. A wedged Apple callback is abandoned after 30s so it cannot stall
   later publishes.
-- Android Play Integrity: ~200-500ms
+- Android Keystore hardware attestation runs as part of native proof generation
 - A failed attestation degrades the proof to no `device_attestation` field; it
   never discards the PGP signature or C2PA manifest.
 - The published payload shape and the verifier rule that follows from the cache
@@ -578,7 +577,7 @@ See `docs/MANUAL_TEST_VIDEO_UPLOAD.md` for manual upload verification procedures
 ### Specifications
 
 - **iOS App Attest**: https://developer.apple.com/documentation/devicecheck/attestation
-- **Android Play Integrity**: https://developer.android.com/google/play/integrity
+- **Android Key Attestation**: https://developer.android.com/privacy-and-security/security-key-attestation
 - **Blossom Protocol**: https://github.com/hzrd149/blossom
 
 ### Related Documentation
