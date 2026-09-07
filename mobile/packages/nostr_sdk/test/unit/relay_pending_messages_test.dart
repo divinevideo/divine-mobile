@@ -192,6 +192,55 @@ void main() {
     });
   });
 
+  group('Relay queued-REQ discard', () {
+    Subscription subscriptionWith(String id) => Subscription(
+      [
+        {
+          'kinds': [34236],
+        },
+      ],
+      (_) {},
+      id: id,
+    );
+
+    test('discardSubscription purges its queued REQ only', () {
+      final discarded = subscriptionWith('feed');
+      final deliberatelyUnsaved = subscriptionWith('discovery');
+      final relay = _RequeueingRelay('wss://relay.example', failedMessage: [])
+        ..saveSubscription(discarded)
+        ..pendingMessages.addAll([
+          discarded.toJson(),
+          deliberatelyUnsaved.toJson(),
+        ]);
+
+      expect(relay.discardSubscription(discarded.id), isTrue);
+
+      expect(relay.pendingMessages, [deliberatelyUnsaved.toJson()]);
+    });
+
+    test('discardQuery purges its queued REQ', () {
+      final discarded = subscriptionWith('author-page');
+      final relay = _RequeueingRelay('wss://relay.example', failedMessage: [])
+        ..saveQuery(discarded)
+        ..pendingMessages.add(discarded.toJson());
+
+      expect(relay.discardQuery(discarded.id), isTrue);
+
+      expect(relay.pendingMessages, isEmpty);
+    });
+
+    test('an unsaved queued REQ remains eligible for replay', () async {
+      final deliberatelyUnsaved = subscriptionWith('discovery');
+      final relay = _RequeueingRelay('wss://relay.example', failedMessage: [])
+        ..pendingMessages.add(deliberatelyUnsaved.toJson());
+
+      expect(relay.discardSubscription(deliberatelyUnsaved.id), isFalse);
+      await relay.onConnected(source: 'stateStream-reconnect');
+
+      expect(relay.sentMessages, [deliberatelyUnsaved.toJson()]);
+    });
+  });
+
   group('Relay queued-CLOSE replay', () {
     test('drops a queued CLOSE on a fresh socket — the subscription it names '
         'died with the previous connection', () async {

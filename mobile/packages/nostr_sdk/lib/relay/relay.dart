@@ -330,7 +330,11 @@ abstract class Relay {
   /// Used when the relay itself ended the subscription (a `CLOSED` frame), so
   /// echoing a `CLOSE` back would name a subscription the relay has already
   /// forgotten. Returns whether [id] named a pending query.
-  bool discardQuery(String id) => _queries.remove(id) != null;
+  bool discardQuery(String id) {
+    final discarded = _queries.remove(id) != null;
+    if (discarded) _discardQueuedReq(id);
+    return discarded;
+  }
 
   /// Drops a live subscription without sending `CLOSE`.
   ///
@@ -338,7 +342,24 @@ abstract class Relay {
   /// `CLOSE` naming it would reach nothing: either the relay ended it itself
   /// (a `CLOSED` frame), or the socket it lived on is gone. Returns whether
   /// [id] named a live subscription.
-  bool discardSubscription(String id) => _subscriptions.remove(id) != null;
+  bool discardSubscription(String id) {
+    final discarded = _subscriptions.remove(id) != null;
+    if (discarded) _discardQueuedReq(id);
+    return discarded;
+  }
+
+  /// Drops a `REQ` that failed before its saved subscription was discarded.
+  ///
+  /// A fresh socket would otherwise replay the abandoned request without any
+  /// local subscription left to receive its events or send its eventual
+  /// `CLOSE`. Only callers that actually removed a saved request invoke this,
+  /// so deliberately queued, unsaved requests remain eligible for replay.
+  void _discardQueuedReq(String id) {
+    pendingMessages.removeWhere(
+      (message) =>
+          message.length > 1 && message[0] == 'REQ' && message[1] == id,
+    );
+  }
 
   bool checkQuery(String id) {
     return _queries[id] != null;

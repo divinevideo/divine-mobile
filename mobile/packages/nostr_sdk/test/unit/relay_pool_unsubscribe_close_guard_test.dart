@@ -30,6 +30,8 @@ class _StateControlledRelay extends Relay {
   /// status alone; the saved subscription stays behind for the reconnect.
   void dropSocket() => relayStatus.connected = ClientConnected.disconnect;
 
+  void beginConnecting() => relayStatus.connected = ClientConnected.connecting;
+
   @override
   Future<bool> send(
     List<dynamic> message, {
@@ -37,8 +39,13 @@ class _StateControlledRelay extends Relay {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
-    sentMessages.add(List<dynamic>.from(message));
-    return relayStatus.connected == ClientConnected.connected;
+    final copiedMessage = List<dynamic>.from(message);
+    sentMessages.add(copiedMessage);
+    final sent = relayStatus.connected == ClientConnected.connected;
+    if (!sent && queueIfFailed) {
+      pendingMessages.add(copiedMessage);
+    }
+    return sent;
   }
 }
 
@@ -115,6 +122,45 @@ void main() {
             'skipping the CLOSE must not leave the subscription saved — '
             'the reconnect would re-issue a REQ nobody is listening to',
       );
+    });
+
+    test(
+      'does not replay a REQ queued before a disconnected unsubscribe',
+      () async {
+        relay.dropSocket();
+        final subId = await subscribeToFeed();
+        expect(
+          relay.pendingMessages.where(
+            (message) =>
+                message.length > 1 &&
+                message[0] == 'REQ' &&
+                message[1] == subId,
+          ),
+          hasLength(1),
+        );
+
+        nostr.unsubscribe(subId);
+        relay.sentMessages.clear();
+        await relay.onConnected(source: 'stateStream-reconnect');
+
+        expect(
+          relay.sentMessages.where(
+            (message) => message.length > 1 && message[1] == subId,
+          ),
+          isEmpty,
+        );
+        expect(relay.pendingMessages, isEmpty);
+      },
+    );
+
+    test('discards locally while a replacement socket is connecting', () async {
+      final subId = await subscribeToFeed();
+      relay.beginConnecting();
+
+      nostr.unsubscribe(subId);
+
+      expect(relay.closeFrames, isEmpty);
+      expect(relay.hasSubscriptionById(subId), isFalse);
     });
 
     test('applies the same guard to temp relays', () async {
