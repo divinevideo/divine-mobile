@@ -145,7 +145,20 @@ SubscriptionManager subscriptionManager(Ref ref) {
   return SubscriptionManager(nostrService);
 }
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
+/// Video event service: the keystone that owns relay subscriptions and the
+/// in-memory video-event set every feed reads from.
+///
+/// Composes the blocklist, moderation labels, the content/NSFW filter, and
+/// the hosting and provenance filters; reattaches [brokenVideoTrackerProvider]
+/// through a `ref.listen` rather than capturing one at build time.
+///
+/// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
+/// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 @Riverpod(keepAlive: true)
 VideoEventService videoEventService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
@@ -184,9 +197,6 @@ VideoEventService videoEventService(Ref ref) {
     videoFilterBuilder: videoFilterBuilder,
     performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
   );
-  // Without this, every NostrService client swap (auth cold start, account
-  // switch) orphans a service whose periodic timers and auth subscription
-  // keep running against the disposed EventRouter above (#6174).
   ref.onDispose(service.dispose);
   var persistedDeletions = const <ContentDeletion>[];
   try {
@@ -403,15 +413,21 @@ SubscribedListVideoCache? subscribedListVideoCache(Ref ref) {
 
 /// Video sharing service
 ///
+/// Returns `null` until an identity is known, because it is built from
+/// [profileReadRepositoryProvider], which stays null below
+/// `NostrSessionPhase.identityKnown` — so a caller during cold start must
+/// null-check rather than assume Share is available.
+///
+/// It takes the read-only profile handle deliberately: gating on the
+/// relay-ready client instead made Share a dead tap for that whole window
+/// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
+///
 /// When a [DmRepository] is available the service sends videos via NIP-17
 /// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
 @riverpod
 VideoSharingService? videoSharingService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
   final authService = ref.watch(authServiceProvider);
-  // Read-only handle: the service only reads profiles, and gating it on the
-  // relay-ready client made Share a dead tap during cold start (#6423). The
-  // send path gates itself on `canPublishNostrWritesNow`.
   final profileRepository = ref.watch(profileReadRepositoryProvider);
   final dmRepository = ref.watch(dmRepositoryProvider);
 
@@ -631,8 +647,37 @@ VideosRepository videosRepository(Ref ref) {
 
 /// Provider for LikesRepository instance
 ///
-/// Creates a LikesRepository. Local storage is attached when the user is
-/// authenticated; signed-out relay queries are guarded by the repository.
+/// Always returns an instance, signed in or out. "Authenticated" is three
+/// different questions here, and this provider answers them with three
+/// different signals — compare [NostrSessionPhase] for the app-wide readiness
+/// vocabulary.
+///
+/// - **Auth identity cached** — `AuthService.currentPublicKeyHex`. This is wider
+///   than `NostrSessionPhase.identityKnown` because it can fall back to the key
+///   container or profile. It decides *only* whether `DbLikesLocalStorage` is
+///   attached. Without it likes still publish and stream, but nothing persists
+///   across a restart.
+/// - **Key resolved** — `NostrClient.resolvePublicKey()`, a *different* cache
+///   that retries the signer at call time. Decides whether an author-scoped
+///   relay query runs at all. When it yields null the repository logs and
+///   keeps local state rather than filtering on an empty author (#6813).
+/// - **Signer capable** — `AuthService.canPublishNostrWritesNow`, sampled per
+///   call in `isOnline` below because no stream carries it. Decides whether a
+///   write publishes now or queues through `PendingActionService`. This is a
+///   *relay-bound* use of that predicate; `state_management.md` documents only
+///   the relay-free NIP-98 one.
+///
+/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
+/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
+/// when a Keycast signer finishes warming up, because that moves
+/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
+/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+///
+/// So an empty result from `syncUserReactions()` is not proof of emptiness.
+/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
+/// The guards themselves are pinned by `likes_repository_test.dart`'s
+/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
+/// this provider's rebuild wiring.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -738,8 +783,16 @@ LikesRepository likesRepository(Ref ref) {
 
 /// Provider for RepostsRepository instance
 ///
-/// Creates a RepostsRepository for managing user reposts (Kind 16 generic
-/// reposts).
+/// Manages user reposts (Kind 16 generic reposts). Same auth shape as
+/// [likesRepositoryProvider] — see its doc for which signal gates what, and
+/// for the cold-start race that leaves a session unsynced (#6838, #7933).
+///
+/// One asymmetry worth knowing: `RepostsRepository.initialize()` loads local
+/// storage and subscribes, but calls no reconciliation sync. `syncUserReposts()`
+/// is a separate entry point this provider never invokes, so reposts are
+/// reconciled only where a caller asks for it.
+///
+/// `PersonalRepostsDao` below is attached only when an identity is known.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)

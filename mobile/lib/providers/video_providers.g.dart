@@ -231,12 +231,38 @@ final class SubscriptionManagerProvider
 String _$subscriptionManagerHash() =>
     r'b65a6978927d3004c6f841e0b80075f9db9645d2';
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
+/// Video event service: the keystone that owns relay subscriptions and the
+/// in-memory video-event set every feed reads from.
+///
+/// Composes the blocklist, moderation labels, the content/NSFW filter, and
+/// the hosting and provenance filters; reattaches [brokenVideoTrackerProvider]
+/// through a `ref.listen` rather than capturing one at build time.
+///
+/// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
+/// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 
 @ProviderFor(videoEventService)
 final videoEventServiceProvider = VideoEventServiceProvider._();
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
+/// Video event service: the keystone that owns relay subscriptions and the
+/// in-memory video-event set every feed reads from.
+///
+/// Composes the blocklist, moderation labels, the content/NSFW filter, and
+/// the hosting and provenance filters; reattaches [brokenVideoTrackerProvider]
+/// through a `ref.listen` rather than capturing one at build time.
+///
+/// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
+/// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 
 final class VideoEventServiceProvider
     extends
@@ -246,7 +272,20 @@ final class VideoEventServiceProvider
           VideoEventService
         >
     with $Provider<VideoEventService> {
-  /// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
+  /// Video event service: the keystone that owns relay subscriptions and the
+  /// in-memory video-event set every feed reads from.
+  ///
+  /// Composes the blocklist, moderation labels, the content/NSFW filter, and
+  /// the hosting and provenance filters; reattaches [brokenVideoTrackerProvider]
+  /// through a `ref.listen` rather than capturing one at build time.
+  ///
+  /// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
+  /// its relay subscriptions alive while no consumer is listening.
+  ///
+  /// Tearing the old one down is a separate guard — `ref.onDispose` below.
+  /// Without it a NostrService client swap (auth cold start, account switch)
+  /// orphans a service whose periodic timers and auth subscription keep
+  /// running against the disposed EventRouter (#6174).
   VideoEventServiceProvider._()
     : super(
         from: null,
@@ -456,6 +495,15 @@ String _$subscribedListVideoCacheHash() =>
 
 /// Video sharing service
 ///
+/// Returns `null` until an identity is known, because it is built from
+/// [profileReadRepositoryProvider], which stays null below
+/// `NostrSessionPhase.identityKnown` — so a caller during cold start must
+/// null-check rather than assume Share is available.
+///
+/// It takes the read-only profile handle deliberately: gating on the
+/// relay-ready client instead made Share a dead tap for that whole window
+/// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
+///
 /// When a [DmRepository] is available the service sends videos via NIP-17
 /// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
 
@@ -463,6 +511,15 @@ String _$subscribedListVideoCacheHash() =>
 final videoSharingServiceProvider = VideoSharingServiceProvider._();
 
 /// Video sharing service
+///
+/// Returns `null` until an identity is known, because it is built from
+/// [profileReadRepositoryProvider], which stays null below
+/// `NostrSessionPhase.identityKnown` — so a caller during cold start must
+/// null-check rather than assume Share is available.
+///
+/// It takes the read-only profile handle deliberately: gating on the
+/// relay-ready client instead made Share a dead tap for that whole window
+/// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
 ///
 /// When a [DmRepository] is available the service sends videos via NIP-17
 /// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
@@ -476,6 +533,15 @@ final class VideoSharingServiceProvider
         >
     with $Provider<VideoSharingService?> {
   /// Video sharing service
+  ///
+  /// Returns `null` until an identity is known, because it is built from
+  /// [profileReadRepositoryProvider], which stays null below
+  /// `NostrSessionPhase.identityKnown` — so a caller during cold start must
+  /// null-check rather than assume Share is available.
+  ///
+  /// It takes the read-only profile handle deliberately: gating on the
+  /// relay-ready client instead made Share a dead tap for that whole window
+  /// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
   ///
   /// When a [DmRepository] is available the service sends videos via NIP-17
   /// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
@@ -957,8 +1023,37 @@ String _$videosRepositoryHash() => r'ed76873b99e97dac7980173e4b0cefdc79a03aae';
 
 /// Provider for LikesRepository instance
 ///
-/// Creates a LikesRepository. Local storage is attached when the user is
-/// authenticated; signed-out relay queries are guarded by the repository.
+/// Always returns an instance, signed in or out. "Authenticated" is three
+/// different questions here, and this provider answers them with three
+/// different signals — compare [NostrSessionPhase] for the app-wide readiness
+/// vocabulary.
+///
+/// - **Auth identity cached** — `AuthService.currentPublicKeyHex`. This is wider
+///   than `NostrSessionPhase.identityKnown` because it can fall back to the key
+///   container or profile. It decides *only* whether `DbLikesLocalStorage` is
+///   attached. Without it likes still publish and stream, but nothing persists
+///   across a restart.
+/// - **Key resolved** — `NostrClient.resolvePublicKey()`, a *different* cache
+///   that retries the signer at call time. Decides whether an author-scoped
+///   relay query runs at all. When it yields null the repository logs and
+///   keeps local state rather than filtering on an empty author (#6813).
+/// - **Signer capable** — `AuthService.canPublishNostrWritesNow`, sampled per
+///   call in `isOnline` below because no stream carries it. Decides whether a
+///   write publishes now or queues through `PendingActionService`. This is a
+///   *relay-bound* use of that predicate; `state_management.md` documents only
+///   the relay-free NIP-98 one.
+///
+/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
+/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
+/// when a Keycast signer finishes warming up, because that moves
+/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
+/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+///
+/// So an empty result from `syncUserReactions()` is not proof of emptiness.
+/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
+/// The guards themselves are pinned by `likes_repository_test.dart`'s
+/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
+/// this provider's rebuild wiring.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -971,8 +1066,37 @@ final likesRepositoryProvider = LikesRepositoryProvider._();
 
 /// Provider for LikesRepository instance
 ///
-/// Creates a LikesRepository. Local storage is attached when the user is
-/// authenticated; signed-out relay queries are guarded by the repository.
+/// Always returns an instance, signed in or out. "Authenticated" is three
+/// different questions here, and this provider answers them with three
+/// different signals — compare [NostrSessionPhase] for the app-wide readiness
+/// vocabulary.
+///
+/// - **Auth identity cached** — `AuthService.currentPublicKeyHex`. This is wider
+///   than `NostrSessionPhase.identityKnown` because it can fall back to the key
+///   container or profile. It decides *only* whether `DbLikesLocalStorage` is
+///   attached. Without it likes still publish and stream, but nothing persists
+///   across a restart.
+/// - **Key resolved** — `NostrClient.resolvePublicKey()`, a *different* cache
+///   that retries the signer at call time. Decides whether an author-scoped
+///   relay query runs at all. When it yields null the repository logs and
+///   keeps local state rather than filtering on an empty author (#6813).
+/// - **Signer capable** — `AuthService.canPublishNostrWritesNow`, sampled per
+///   call in `isOnline` below because no stream carries it. Decides whether a
+///   write publishes now or queues through `PendingActionService`. This is a
+///   *relay-bound* use of that predicate; `state_management.md` documents only
+///   the relay-free NIP-98 one.
+///
+/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
+/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
+/// when a Keycast signer finishes warming up, because that moves
+/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
+/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+///
+/// So an empty result from `syncUserReactions()` is not proof of emptiness.
+/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
+/// The guards themselves are pinned by `likes_repository_test.dart`'s
+/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
+/// this provider's rebuild wiring.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -986,8 +1110,37 @@ final class LikesRepositoryProvider
     with $Provider<LikesRepository> {
   /// Provider for LikesRepository instance
   ///
-  /// Creates a LikesRepository. Local storage is attached when the user is
-  /// authenticated; signed-out relay queries are guarded by the repository.
+  /// Always returns an instance, signed in or out. "Authenticated" is three
+  /// different questions here, and this provider answers them with three
+  /// different signals — compare [NostrSessionPhase] for the app-wide readiness
+  /// vocabulary.
+  ///
+  /// - **Auth identity cached** — `AuthService.currentPublicKeyHex`. This is wider
+  ///   than `NostrSessionPhase.identityKnown` because it can fall back to the key
+  ///   container or profile. It decides *only* whether `DbLikesLocalStorage` is
+  ///   attached. Without it likes still publish and stream, but nothing persists
+  ///   across a restart.
+  /// - **Key resolved** — `NostrClient.resolvePublicKey()`, a *different* cache
+  ///   that retries the signer at call time. Decides whether an author-scoped
+  ///   relay query runs at all. When it yields null the repository logs and
+  ///   keeps local state rather than filtering on an empty author (#6813).
+  /// - **Signer capable** — `AuthService.canPublishNostrWritesNow`, sampled per
+  ///   call in `isOnline` below because no stream carries it. Decides whether a
+  ///   write publishes now or queues through `PendingActionService`. This is a
+  ///   *relay-bound* use of that predicate; `state_management.md` documents only
+  ///   the relay-free NIP-98 one.
+  ///
+  /// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
+  /// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
+  /// when a Keycast signer finishes warming up, because that moves
+  /// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
+  /// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+  ///
+  /// So an empty result from `syncUserReactions()` is not proof of emptiness.
+  /// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
+  /// The guards themselves are pinned by `likes_repository_test.dart`'s
+  /// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
+  /// this provider's rebuild wiring.
   ///
   /// Uses:
   /// - NostrClient from nostrServiceProvider (for relay communication)
