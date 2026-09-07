@@ -789,9 +789,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   Future<bool> autosaveChanges() {
     final operation = _performAutosave();
     late final Future<void> completion;
-    completion = operation.then<void>((_) {}).whenComplete(() {
-      _activeAutosaves.remove(completion);
-    });
+    // Session-end cleanup Future.waits on these to learn only that the autosave
+    // finished, not whether it succeeded. Swallow errors so a rejected autosave
+    // future can't reject that wait and skip cleanup; the error is already
+    // logged and surfaced to callers through [operation].
+    completion = operation
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          _activeAutosaves.remove(completion);
+        });
     _activeAutosaves.add(completion);
     return operation;
   }
