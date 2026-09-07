@@ -1264,6 +1264,8 @@ internal class DivineVideoPlayerInstance(
                 when {
                     status == 202 -> "media_processing"
                     status == 401 -> "auth_required"
+                    status == 403 -> "forbidden"
+                    status == 404 -> "not_found"
                     status in 400..499 -> "http_client_error"
                     else -> "http_server_error"
                 }

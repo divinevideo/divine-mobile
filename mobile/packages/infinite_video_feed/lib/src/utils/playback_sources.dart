@@ -74,8 +74,13 @@ VideoErrorType classifyVideoError({
   String? errorMessage,
   String? source,
 }) {
+  // The typed native code is authoritative when the platform supplied one:
+  // it survives localisation and platform wording, unlike the message scan
+  // below, which stays as the fallback for paths that carry no typed code.
   final typedErrorType = switch (errorCode) {
     NativePlayerErrorCode.authRequired => VideoErrorType.ageRestricted,
+    NativePlayerErrorCode.forbidden => VideoErrorType.forbidden,
+    NativePlayerErrorCode.notFound => VideoErrorType.notFound,
     _ => null,
   };
   if (typedErrorType != null) return typedErrorType;

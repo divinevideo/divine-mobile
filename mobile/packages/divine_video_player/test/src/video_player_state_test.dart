@@ -12,6 +12,17 @@ void main() {
         expect(NativePlayerErrorCode.authRequired.shouldFailover, isFalse);
       });
 
+      test('returns true for forbidden', () {
+        expect(NativePlayerErrorCode.forbidden.shouldFailover, isTrue);
+      });
+
+      // A 404 is one mirror's answer about one URL. Divine media is mirrored
+      // across Blossom servers, so the feed must try the next source rather
+      // than treating the media as deleted.
+      test('returns true for notFound', () {
+        expect(NativePlayerErrorCode.notFound.shouldFailover, isTrue);
+      });
+
       test('returns true for httpClientError', () {
         expect(NativePlayerErrorCode.httpClientError.shouldFailover, isTrue);
       });
@@ -66,6 +77,14 @@ void main() {
         expect(NativePlayerErrorCode.authRequired.isTransient, isFalse);
       });
 
+      test('returns false for forbidden', () {
+        expect(NativePlayerErrorCode.forbidden.isTransient, isFalse);
+      });
+
+      test('returns false for notFound', () {
+        expect(NativePlayerErrorCode.notFound.isTransient, isFalse);
+      });
+
       test('returns false for httpServerError', () {
         expect(NativePlayerErrorCode.httpServerError.isTransient, isFalse);
       });
@@ -99,6 +118,20 @@ void main() {
         expect(
           NativePlayerErrorCode.fromString('auth_required'),
           equals(NativePlayerErrorCode.authRequired),
+        );
+      });
+
+      test('parses forbidden', () {
+        expect(
+          NativePlayerErrorCode.fromString('forbidden'),
+          equals(NativePlayerErrorCode.forbidden),
+        );
+      });
+
+      test('parses not_found', () {
+        expect(
+          NativePlayerErrorCode.fromString('not_found'),
+          equals(NativePlayerErrorCode.notFound),
         );
       });
 
