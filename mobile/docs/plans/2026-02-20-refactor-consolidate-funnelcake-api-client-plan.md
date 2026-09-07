@@ -210,7 +210,7 @@ Migrate hashtag-related providers in `curation_providers.dart` to use `HashtagRe
 
 #### Phase 4: Migrate profile and social consumers
 
-Migrate `social_service.dart` and `user_profile_service.dart` to use `profile_repository`. Migrate follower/following data to `FollowRepository`.
+Migrate `user_profile_service.dart` to use `profile_repository`. Migrate follower/following data to `FollowRepository`. (`social_service.dart` was deleted in #8760, so it needs no migration.)
 
 **Methods to migrate:**
 - `getSocialCounts`, `getUserProfile`, `getBulkProfiles` → `profile_repository`
@@ -398,7 +398,6 @@ erDiagram
 ### Consumer Files (for Phases 2-6 reference)
 
 - `lib/providers/app_providers.dart` -- Phase 6
-- `lib/services/social_service.dart` -- Phase 4
 - `lib/services/user_profile_service.dart` -- Phase 4
 - `lib/screens/creator_analytics_screen.dart` -- Phase 5
 - `lib/providers/popular_videos_feed_provider.dart` -- Phase 2

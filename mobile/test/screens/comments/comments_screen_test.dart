@@ -26,12 +26,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/social_service.dart';
 
 import '../../builders/comment_builder.dart';
 import '../../helpers/test_helpers.dart';
-
-class _MockSocialService extends Mock implements SocialService {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -154,7 +151,6 @@ void main() {
   });
 
   group('CommentsScreen', () {
-    late _MockSocialService mockSocialService;
     late _MockAuthService mockAuthService;
     late _MockNostrClient mockNostrClient;
     late _MockCommentsListBloc mockListBloc;
@@ -198,7 +194,6 @@ void main() {
       addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
       addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
 
-      mockSocialService = _MockSocialService();
       mockAuthService = _MockAuthService();
       mockNostrClient = _MockNostrClient();
       mockListBloc = _MockCommentsListBloc();
@@ -278,7 +273,6 @@ void main() {
 
       return ProviderScope(
         overrides: [
-          socialServiceProvider.overrideWithValue(mockSocialService),
           authServiceProvider.overrideWithValue(mockAuthService),
           nostrServiceProvider.overrideWithValue(mockNostrClient),
           isFeatureEnabledProvider(

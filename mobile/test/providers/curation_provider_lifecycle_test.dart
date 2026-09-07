@@ -15,14 +15,11 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
-
-class _MockSocialService extends Mock implements SocialService {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
@@ -43,7 +40,6 @@ void main() {
   group('CurationProvider Lifecycle', () {
     late _MockNostrClient mockNostrService;
     late _MockVideoEventService mockVideoEventService;
-    late _MockSocialService mockSocialService;
     late _MockLikesRepository mockLikesRepository;
     late _MockAuthService mockAuthService;
     late _MockFunnelcakeApiClient mockFunnelcakeApiClient;
@@ -52,7 +48,6 @@ void main() {
     setUp(() {
       mockNostrService = _MockNostrClient();
       mockVideoEventService = _MockVideoEventService();
-      mockSocialService = _MockSocialService();
       mockLikesRepository = _MockLikesRepository();
       mockAuthService = _MockAuthService();
       mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
@@ -93,7 +88,6 @@ void main() {
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          socialServiceProvider.overrideWithValue(mockSocialService),
           authServiceProvider.overrideWithValue(mockAuthService),
           funnelcakeApiClientProvider.overrideWithValue(
             mockFunnelcakeApiClient,
@@ -136,7 +130,6 @@ void main() {
           overrides: [
             nostrServiceProvider.overrideWithValue(mockNostrService),
             videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            socialServiceProvider.overrideWithValue(mockSocialService),
             authServiceProvider.overrideWithValue(mockAuthService),
             funnelcakeApiClientProvider.overrideWithValue(
               mockFunnelcakeApiClient,

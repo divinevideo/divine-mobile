@@ -2489,8 +2489,8 @@ class FollowRepository {
 
   /// Query relays for the user's kind 3 contact list.
   ///
-  /// Uses [_queryContactList] callback (same proven approach as
-  /// SocialService) to do a one-shot query with proper EOSE handling.
+  /// Uses [_queryContactList] to do a one-shot query with proper EOSE
+  /// handling.
   /// Called on every authenticated initialization so the relay's
   /// authoritative event can supersede stale derived caches.
   Future<void> _loadFromRelay() async {

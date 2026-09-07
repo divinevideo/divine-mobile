@@ -61,9 +61,9 @@ void main() {
         // Assert: Import should succeed
         expect(result.success, isTrue);
 
-        // Note: The actual contact fetching logic should be implemented
-        // in AuthService.importFromNsec() to call SocialService.fetchCurrentUserFollowList()
-        // after successful import. This test documents the expected behavior.
+        // Note: kind 3 contact loading lives in FollowRepository
+        // (_queryContactList), not in AuthService.importFromNsec. This test
+        // asserts only that the import succeeded.
       },
       skip:
           'AuthService._setupUserSession calls discovery services '

@@ -580,7 +580,7 @@ Add the chosen kind constant in an existing constants location, or create `mobil
 
 - [ ] **Step 3: Implement service**
 
-Use existing app signing/publishing patterns from `mobile/lib/services/view_event_publisher.dart` and `mobile/lib/services/social_event_service_base.dart`. Return a typed success/failure object containing the event ID or error.
+Use existing app signing/publishing patterns from `mobile/lib/services/view_event_publisher.dart`. Return a typed success/failure object containing the event ID or error.
 
 - [ ] **Step 4: Wire provider**
 

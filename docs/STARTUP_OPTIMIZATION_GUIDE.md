@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> This proposal predates the current application startup architecture and is not an implementation plan. It references removed services, including `SocialService`; trust the current startup code and `docs/ARCHITECTURE.md`.
+
 # Startup Optimization Migration Guide
 
 ## Overview

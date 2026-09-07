@@ -9,7 +9,7 @@ Automatic test runner that watches for file changes and runs tests immediately.
 ./watch_tests.sh
 
 # Watch specific test file
-./watch_tests.sh test/unit/services/video_cache_service_tdd_test.dart
+./watch_tests.sh test/unit/services/subscription_manager_filter_test.dart
 
 # Watch specific test directory
 ./watch_tests.sh test/unit/

@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> This guide describes an obsolete dual-video-system experiment and is not current testing guidance. `VideoCacheService` has been removed; trust the current implementation and testing documentation under `mobile/docs/`.
+
 # Video System Testing Guide
 
 ## Current Status

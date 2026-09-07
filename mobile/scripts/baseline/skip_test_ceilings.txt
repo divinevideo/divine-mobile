@@ -67,7 +67,6 @@ test/services/video_event_service_replaceable_test.dart	1 # delete: kind 22 reje
 test/services/video_event_service_repost_test.dart	1 # rewrite: uses kind 6 reposts and kind 22 originals; both dropped (#4836)
 test/tools/naming_convention_test.dart	2 # delete: 147 of 238 lib/screens files break the asserted rule (#4836)
 test/unit/services/classic_vines_priority_test.dart	2 # delete: priority gone; both discovery branches insert(0) (#4836)
-test/unit/services/video_cache_service_basic_test.dart	1 # rewrite: getcachestats has no 'defaultvideos' key any more (#4836)
 test/unit/services/video_event_service_infinite_scroll_test.dart	4 # recover: 3 of 4 pass under --run-skipped; drop the hasmore one (#4836)
 test/unit/services/video_event_service_subscription_test.dart	1 # rewrite: kind 22 fixture never ingested; needs a 34236 event (#4836)
 test/widget/screens/hashtag_feed_screen_test.dart	1 # rewrite: container lacks sharedpreferencesprovider override (#4836)
