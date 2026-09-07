@@ -212,10 +212,13 @@ final class FullscreenFeedState extends Equatable {
     );
   }
 
+  /// [videos] is deliberately absent: every [videoUpdateSignature] entry
+  /// starts with `video.id` and `VideoEvent ==` is id-only, so equal
+  /// signatures already imply equal length, ids and order. Listing both made
+  /// every `==` and `hashCode` walk the videos twice to answer one question.
   @override
   List<Object?> get props => [
     status,
-    videos,
     videoUpdateSignature,
     currentIndex,
     isLoadingMore,

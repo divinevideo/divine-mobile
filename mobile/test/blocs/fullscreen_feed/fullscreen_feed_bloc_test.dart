@@ -245,9 +245,10 @@ void main() {
           isLoadingMore: true,
         );
 
+        // `videos` is intentionally not a prop: the signature below already
+        // encodes each id, and VideoEvent equality is id-only.
         expect(state.props, [
           FullscreenFeedStatus.ready,
-          [video],
           [
             '${video.id}|${video.stableId}|${video.videoUrl ?? ''}|${video.thumbnailUrl ?? ''}|${video.originalLoops ?? ''}|${video.rawTags['views'] ?? ''}',
           ],
