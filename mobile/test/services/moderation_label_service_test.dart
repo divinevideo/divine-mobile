@@ -986,6 +986,55 @@ void main() {
         expect(service.getContentWarnings('coalesced_event'), hasLength(1));
       });
 
+      test('refollow during a cancelled load starts a fresh load', () async {
+        const labeler =
+            'abababababababababababababababababababababababababababababababab';
+        final firstPage =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        var queryCount = 0;
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          queryCount++;
+          if (queryCount == 1) return firstPage.future;
+          return Future.value((
+            events: <Event>[
+              _FakeLabelEvent(
+                pubkey: labeler,
+                tags: [
+                  ['L', 'content-warning'],
+                  ['l', 'nudity', 'content-warning'],
+                  ['e', 'refollowed_event'],
+                ],
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ));
+        });
+
+        final initialFollow = service.setFollowingModerationEnabled(
+          true,
+          followedPubkeys: [labeler],
+        );
+        await pumpEventQueue();
+
+        await service.syncFollowedLabelers(const []);
+        final refollow = service.syncFollowedLabelers([labeler]);
+        firstPage.complete((
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+        ));
+        await Future.wait([initialFollow, refollow]);
+
+        expect(queryCount, 2, reason: 'the refollow needs a new generation');
+        expect(service.getContentWarnings('refollowed_event'), hasLength(1));
+      });
+
       test('disabling followed labelers removes their cached labels', () async {
         const followedLabeler =
             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -1673,12 +1722,16 @@ void main() {
 
           expect(paged.getContentWarnings('target_a'), hasLength(1));
           expect(paged.getContentWarnings('target_b'), hasLength(1));
+
+          // The relay, not the protocol, stopped this walk by ignoring until.
+          // It must remain retryable instead of latching truncated history.
+          await paged.subscribeToLabeler(labeler);
           verify(
             () => mockNostrClient.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
-          ).called(2);
+          ).called(4);
         },
       );
 

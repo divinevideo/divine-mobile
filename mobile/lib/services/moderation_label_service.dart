@@ -85,6 +85,8 @@ enum _LabelerHistoryStop {
   cancelled,
 }
 
+typedef _LabelerLoad = ({int generation, Future<void> future});
+
 /// Service for subscribing to Kind 1985 label events from labeler pubkeys.
 ///
 /// Maintains an in-memory cache of labels keyed by target (event ID or pubkey).
@@ -215,7 +217,7 @@ class ModerationLabelService {
   final Set<String> _loadedLabelers = {};
 
   /// Labelers currently being loaded from relays.
-  final Map<String, Future<void>> _loadingLabelers = {};
+  final Map<String, _LabelerLoad> _loadingLabelers = {};
 
   /// Labelers whose load was abandoned because no relay answered.
   ///
@@ -338,19 +340,31 @@ class ModerationLabelService {
 
   /// Subscribe to Kind 1985 events from a labeler pubkey.
   Future<void> subscribeToLabeler(String pubkey) async {
-    if (_loadedLabelers.contains(pubkey)) return;
-    final inFlight = _loadingLabelers[pubkey];
-    if (inFlight != null) {
-      await inFlight;
-      return;
-    }
+    while (!_loadedLabelers.contains(pubkey)) {
+      final generation = _labelerLoadGeneration(pubkey);
+      final inFlight = _loadingLabelers[pubkey];
+      if (inFlight != null) {
+        await inFlight.future;
+        final generationChanged =
+            inFlight.generation != _labelerLoadGeneration(pubkey);
+        final isStillWanted =
+            _subscribedLabelers.contains(pubkey) ||
+            _followedLabelers.contains(pubkey);
+        if (generationChanged && isStillWanted) continue;
+        return;
+      }
 
-    final future = _subscribeToLabelerInternal(pubkey);
-    _loadingLabelers[pubkey] = future;
-    try {
-      await future;
-    } finally {
-      _loadingLabelers.remove(pubkey);
+      final future = _subscribeToLabelerInternal(pubkey, generation);
+      final load = (generation: generation, future: future);
+      _loadingLabelers[pubkey] = load;
+      try {
+        await future;
+      } finally {
+        if (_loadingLabelers[pubkey] == load) {
+          _loadingLabelers.remove(pubkey);
+        }
+      }
+      return;
     }
   }
 
@@ -520,7 +534,20 @@ class ModerationLabelService {
           until = until - 1;
           continue;
         }
-        break;
+        Log.warning(
+          'Labeler history paging stopped because a relay ignored the until '
+          'cursor for ${pubkeyForLogs(pubkey)}; applying '
+          '${collected.length} event(s) and leaving it unloaded so a later '
+          'attempt retries',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.incomplete,
+        );
       }
 
       until = oldest;
@@ -534,7 +561,10 @@ class ModerationLabelService {
     );
   }
 
-  Future<void> _subscribeToLabelerInternal(String pubkey) async {
+  Future<void> _subscribeToLabelerInternal(
+    String pubkey,
+    int generation,
+  ) async {
     if (!_canQueryRelays()) {
       Log.debug(
         'Deferring labeler subscription until Nostr session is ready: ${pubkeyForLogs(pubkey)}',
@@ -545,7 +575,6 @@ class ModerationLabelService {
     }
 
     try {
-      final generation = _labelerLoadGeneration(pubkey);
       final result = await _loadLabelerHistory(pubkey, generation);
 
       // The final page's await is its own window: dispose() or an unfollow can
@@ -590,7 +619,8 @@ class ModerationLabelService {
         // rather than on an unanswered page; that stop logs its own warning.
         final reason = result.noRelays || result.timedOut
             ? 'noRelays: ${result.noRelays}, timedOut: ${result.timedOut}'
-            : 'walk budget exhausted, see the warning above';
+            : 'history walk stopped before the relay reported completion, '
+                  'see the warning above';
         Log.warning(
           'Labeler load incomplete for ${pubkeyForLogs(pubkey)} '
           '($reason, applied ${events.length} label event(s)); '
