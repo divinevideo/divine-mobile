@@ -1488,6 +1488,7 @@ workflows:
             docker compose -f ../local_stack/docker-compose.yml down -v || true
           }
           trap cleanup EXIT
+          bash ../local_stack/setup.sh
           bash ../local_stack/up.sh --pull=missing
           set +e
           bash ../local_stack/profile.sh \

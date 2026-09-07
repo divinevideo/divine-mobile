@@ -146,7 +146,12 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             if step["name"] == "Run feed TTFF budget twice on failure"
         )
         self.assertIn("GHCR_PULL_TOKEN", runner)
+        self.assertIn("local_stack/setup.sh", runner)
         self.assertIn("local_stack/up.sh --pull=missing", runner)
+        self.assertLess(
+            runner.index("local_stack/setup.sh"),
+            runner.index("local_stack/up.sh --pull=missing"),
+        )
         self.assertEqual(2, runner.count("feed_ttff_test.dart"))
         self.assertIn("test_reports/*.jsonl", workflow["artifacts"])
 
