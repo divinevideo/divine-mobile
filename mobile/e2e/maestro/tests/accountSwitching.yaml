@@ -22,7 +22,7 @@ appId: co.openvine.app.staging
 - tapOn:
     id: back_button
 
-# 2. Leave the current session without removing its remembered account.
+# 2. Open the account switcher.
 - scrollUntilVisible:
     element:
       id: account_switch_action
@@ -31,7 +31,20 @@ appId: co.openvine.app.staging
 - tapOn:
     id: account_switch_action
 
-# 3. The returning-user welcome screen proves that the account was retained.
+# 3. Leave the current session without removing its remembered account.
+#
+# The header button above only opens the switcher sheet -- with a single
+# known account, that account's own row is a deliberate no-op. "Add another
+# account" is the only control in the sheet that signs out, and so the only
+# route from here to the welcome screen.
+- extendedWaitUntil:
+    visible:
+      id: add_account_action
+    timeout: 30000
+- tapOn:
+    id: add_account_action
+
+# 4. The returning-user welcome screen proves that the account was retained.
 - extendedWaitUntil:
     visible:
       id: continue_as_button
@@ -39,7 +52,7 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: use_another_account_button
 
-# 4. Continue with the remembered account so the regression suite can proceed.
+# 5. Continue with the remembered account so the regression suite can proceed.
 - tapOn:
     id: continue_as_button
 - extendedWaitUntil:
