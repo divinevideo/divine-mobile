@@ -3,7 +3,6 @@
 
 import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hex/hex.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
@@ -37,7 +36,7 @@ void main() {
     });
 
     test('rejects a foreign HRP that starts with nsec', () {
-      final words = Nip19.convertBits(HEX.decode(privateKey), 8, 5, true);
+      final words = Nip19.convertBits(List<int>.filled(32, 0x67), 8, 5, true);
       final foreignHrpKey = Bech32Encoder().convert(Bech32('nsecx', words));
 
       expect(NostrKeyUtils.isValidNsec(foreignHrpKey), isFalse);
