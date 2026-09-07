@@ -17,7 +17,8 @@
 # file runs inside the shared isolate.
 #
 # Reads (HttpOverrides.current) do not match — only assignment to `.global` is
-# flagged. lib/ is out of scope.
+# flagged. The app test tree and every package test tree are covered; lib/ is
+# out of scope.
 #
 # Usage:
 #   bash mobile/scripts/check_http_overrides_isolation.sh
@@ -28,11 +29,19 @@ export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Test roots are separate merged-isolate bundles. A mutation cannot cross a
+# package boundary, but it can still poison later files within that package.
+scan_roots=("$MOBILE_DIR/test")
+for package_test_root in "$MOBILE_DIR"/packages/*/test; do
+  [[ -d "$package_test_root" ]] && scan_roots+=("$package_test_root")
+done
+
 # Files under test/ that ASSIGN HttpOverrides.global (the `= ` token stays on the
 # LHS line under dart format, so a file-level match also covers multi-line RHS
 # forms; the `io.`-prefixed form matches too). `.current` reads and comment
 # mentions do not match.
-assigning=$(grep -rlE "HttpOverrides\.global[[:space:]]*=" "$MOBILE_DIR/test" || true)
+assigning=$(grep -rlE \
+  "HttpOverrides\.global[[:space:]]*=" "${scan_roots[@]}" || true)
 
 # A file counts as "tagged out of the merge" only if it has a real
 # @Tags([... 'skip_very_good_optimization' ...]) LIBRARY annotation — anchored
@@ -55,13 +64,28 @@ if [[ -n "$violations" ]]; then
   echo "very_good --optimization isolate, causing order-dependent network /"
   echo "pending-timer flakes (PR #5163)."
   echo ""
-  echo "Remediation — pick one:"
+  echo "Remediation depends on which test tree the file is in."
+  echo ""
+  echo "mobile/test — pick one:"
   echo "  (a) Real-network / integration test: tag it so it stays out of the"
   echo "      merge (place the annotation BEFORE the first import):"
   echo "        @Tags(['skip_very_good_optimization', 'integration'])"
   echo "      then bump mobile/test/vgv_tag_baseline.txt if the tag count rises."
   echo "  (b) Otherwise drop the HttpOverrides.global assignment — a true unit"
   echo "      test should rely on the default 400-mock, not real network."
+  echo ""
+  echo "mobile/packages/*/test — pick one:"
+  echo "  (b) is the same and is preferred here."
+  echo "  (c) Mock-installing tests that genuinely cannot drop the override:"
+  echo "      tag the file @Tags(['skip_very_good_optimization']) ALONE, which"
+  echo "      is what clears this guard and what check_package_channel_isolation.sh"
+  echo "      already prescribes for the channel analogue."
+  echo "      Do NOT add 'integration' as well: only mobile_ci.yaml passes"
+  echo "      --exclude-tags integration; the shared VeryGood package workflow"
+  echo "      (flutter_package.yml@v1) exposes no such input and no package has"
+  echo "      a dart_test.yaml, so the tag excludes nothing and the file still"
+  echo "      RUNS. If the file does REAL network I/O, tagging it merely moves"
+  echo "      that I/O to its own isolate -- use (b) or move it out of test/."
   exit 1
 fi
 

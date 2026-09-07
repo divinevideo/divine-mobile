@@ -777,6 +777,18 @@ run.) So a test that mutates a process-global without restoring it strands
 every later suite in a seed-dependent way (#5713→#5725, #5159/#5163, #5340,
 #5738).
 
+Each `mobile/packages/*` test suite is likewise bundled into its own merged
+isolate. Package state cannot leak into another package or the app bundle, but
+it can leak between files in the same package. Packages do not have a
+`flutter_test_config.dart` heal-and-blame harness, so package channel and
+process-global isolation is enforced by two static guards:
+`check_package_channel_isolation.sh` for channel handlers (baseline
+`mobile/scripts/baseline/package_channel_raw_installs.txt`, shrink-only) and
+`check_process_global_mutations.sh` for singletons and irreversible
+initializers. Both run in CI in the `Generated Files` job. A package test that
+trips the channel ratchet should null its handler in `tearDown`; regenerate the
+baseline only when an entry is genuinely removed.
+
 `--exclude-tags integration` does **not** exclude a bundled file: package:test
 reads suite-level `@Tags` only from the bundle entry point, which has none.
 The only tag that changes bundling is `skip_very_good_optimization` (the
@@ -790,7 +802,8 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 |---|---|
 | One of the 5 shared MethodChannels (`flutter_secure_storage`, `openvine.secure_storage`, `device_info`, `path_provider`, `image_picker`) | `overrideSharedChannel(channel, handler)` from `test/helpers/shared_channel_override.dart` — installs a sanctioned override and auto-restores the canonical handler on teardown. For a full reset in a hand-rolled `remove()`, call `restoreSharedChannelDefaults()`. |
 | A test-local MethodChannel (not one of the 5) | Install in `setUp`, clear (`setMockMethodCallHandler(ch, null)`) in `tearDown`. |
-| A `<Platform>.instance` singleton (`PathProviderPlatform`, `WebViewPlatform`, …) | Snapshot in `setUp`/`setUpAll`, restore in the matching `tearDown`/`tearDownAll` (`check_process_global_mutations.sh` enforces). |
+| A `<Platform>.instance` singleton (`PathProviderPlatform`, `WebViewPlatform`, …) | Snapshot in `setUp`/`setUpAll`, restore in the matching `tearDown`/`tearDownAll` (`check_process_global_mutations.sh` enforces in the app and package test trees). |
+| A stateful facade singleton (`DivineCamera.instance`) | Dispose it in `tearDown` before restoring the platform singleton it delegates to. This pattern is required but not statically enforced. |
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
