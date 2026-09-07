@@ -64,6 +64,7 @@ void main() {
       required List<String> mergedHeadRefs,
       required List<String> githubCommitShas,
       List<String> mergedTipShas = const [],
+      List<String> containedShas = const [],
       List<String> args = const [],
     }) {
       return Process.runSync(
@@ -79,6 +80,7 @@ void main() {
           'FAKE_MERGED_HEAD_REFS': mergedHeadRefs.join('\n'),
           'FAKE_GITHUB_COMMIT_SHAS': githubCommitShas.join('\n'),
           'FAKE_MERGED_TIP_SHAS': mergedTipShas.join('\n'),
+          'FAKE_CONTAINED_SHAS': containedShas.join('\n'),
           'FAKE_GH_ARGS': ghArgs.path,
         },
       );
@@ -109,6 +111,19 @@ printf '%s\n' "$*" >> "${FAKE_GH_ARGS:?}"
 if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
   if [ -n "${FAKE_MERGED_HEAD_REFS:-}" ]; then
     printf '%s\n' "$FAKE_MERGED_HEAD_REFS"
+  fi
+  exit 0
+fi
+
+if [ "$1" = "api" ] && [ "${2:-}" = "graphql" ]; then
+  head=""
+  for arg in "$@"; do
+    case "$arg" in h=*) head="${arg#h=}" ;; esac
+  done
+  if printf '%s\n' "${FAKE_CONTAINED_SHAS:-}" | grep -qxF -- "$head"; then
+    printf 'BEHIND\n'
+  else
+    printf 'DIVERGED\n'
   fi
   exit 0
 fi
@@ -307,10 +322,51 @@ exit 2
         mergedHeadRefs: const [],
         githubCommitShas: [tip],
         mergedTipShas: [tip],
+        containedShas: [tip],
       );
 
       expect(result.exitCode, 0, reason: result.stderr.toString());
       expect(result.stdout, contains('KEEP           fresh-worktree'));
+      expect(result.stdout, contains('0 likely prunable'));
+    });
+
+    test('keeps a worktree already on main when the clone is shallow', () {
+      // The containment question is asked of GitHub rather than answered from
+      // local history, because this repository is cloned shallow. A shallow
+      // clone's ancestry walk stops at the graft boundary and reports "not an
+      // ancestor" for a commit that is one -- silently, exit 1, with the ref
+      // still resolving, so there is no error for the script to notice. That
+      // wrong negative used to score a live worktree MERGED-TIP.
+      write('second.txt', 'advance main\n');
+      commit('advance main');
+      git(['push', 'origin', 'main']);
+
+      final tip = branchTip('main~1');
+      git(['branch', 'stale-worktree', 'main~1']);
+      final worktree = Directory(p.join(sandbox.path, 'stale-worktree'));
+      git(['worktree', 'add', worktree.path, 'stale-worktree']);
+
+      // Severs the local path from the tip back to origin/main without
+      // removing the object, which is what makes the walk answer wrongly.
+      git(['fetch', '--depth=1', 'origin', 'main']);
+      expect(
+        Process.runSync('git', [
+          'rev-parse',
+          '--is-shallow-repository',
+        ], workingDirectory: repo.path).stdout.toString().trim(),
+        'true',
+        reason: 'the fixture must be shallow for this to exercise anything',
+      );
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+        containedShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           stale-worktree'));
       expect(result.stdout, contains('0 likely prunable'));
     });
 
