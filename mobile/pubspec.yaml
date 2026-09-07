@@ -165,6 +165,7 @@ dependencies:
   divine_camera:
     path: packages/divine_camera
   divine_device_attestation:
+    path: packages/divine_device_attestation
   divine_quick_actions:
     path: packages/divine_quick_actions
   divine_video_player:
