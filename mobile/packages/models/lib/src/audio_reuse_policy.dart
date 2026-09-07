@@ -1,5 +1,6 @@
 // ABOUTME: Defines viewer-independent reuse terms for original video audio.
-// ABOUTME: Preserves classic Vine compatibility while honoring creator terms.
+// ABOUTME: Applies Divine's classic Vine reuse policy.
+// ABOUTME: Preserves explicit creator terms and the owner exception.
 
 import 'package:models/src/video_event.dart';
 
@@ -7,6 +8,9 @@ import 'package:models/src/video_event.dart';
 ///
 /// A `null` result means the marker is genuinely absent and a viewer-aware
 /// policy may still grant the video's creator access to their own sound.
+/// For an authoritatively verified classic Vine, the server may instead apply
+/// Divine's legacy compatibility presumption. That is a product-policy grant,
+/// not affirmative creator consent.
 bool? originalSoundReuseTerms(VideoEvent video) {
   return switch (video.audioReuseConsent) {
     AudioReuseConsent.granted => true,

@@ -1006,7 +1006,7 @@ void main() {
         expect(find.text('Use Sound'), findsOneWidget);
       });
 
-      testWidgets('shows Use Sound for an enabled verified archive sound', (
+      testWidgets('shows Use Sound for a legacy-policy verified archive', (
         tester,
       ) async {
         await tester.pumpWidget(

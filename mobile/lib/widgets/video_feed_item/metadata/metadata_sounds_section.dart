@@ -138,7 +138,8 @@ class _OriginalSoundSection extends ConsumerWidget {
   /// the sound isn't offered for reuse (an owner-saved private sound must not
   /// leak this way). Otherwise this is the video's own original sound, reusable
   /// when its creator enabled audio reuse, when an exact verified archive
-  /// record uses the compatibility policy, or when the viewer is that creator.
+  /// record receives Divine's legacy reuse presumption, or when the viewer is
+  /// that creator. The archive presumption is not affirmative creator consent.
   bool _canReuseSound(WidgetRef ref) {
     if (video.hasAudioReference) return false;
     final knownTerms = originalSoundReuseTerms(video);

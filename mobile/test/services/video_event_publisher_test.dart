@@ -723,7 +723,7 @@ void main() {
         hasExplicitReuseConsent: true,
       );
 
-      test('publishes with an enabled verified archive sound', () async {
+      test('publishes with a legacy-policy verified archive sound', () async {
         stubSignAndPublish();
         final classicVideo = VideoEvent(
           id: sourceVideoId,

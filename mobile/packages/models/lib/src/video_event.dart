@@ -1004,11 +1004,14 @@ class VideoEvent {
 
   /// Whether Funnelcake matched this exact event to its verified archive.
   ///
-  /// This server-derived state is never read from Nostr tags.
+  /// This server-derived state is never read from Nostr tags and does not by
+  /// itself express creator consent.
   final bool isVerifiedArchive;
 
-  /// Whether Funnelcake currently enables archive audio compatibility.
+  /// Whether Funnelcake currently enables Divine's legacy archive audio policy.
   ///
+  /// Combined with [isVerifiedArchive], this permits presumed reuse when no
+  /// creator preference is recorded. Explicit opt-outs remain authoritative.
   /// The server controls this kill switch; absent values fail closed.
   final bool archiveAudioReuseEnabled;
 

@@ -102,11 +102,14 @@ void main() {
       expect(await resolver.verify(_sound()), isFalse);
     });
 
-    test('grants reuse for an enabled verified archive source', () async {
-      stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
+    test(
+      'applies legacy reuse policy to an enabled verified archive',
+      () async {
+        stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
 
-      expect(await resolver.verify(_sound()), isTrue);
-    });
+        expect(await resolver.verify(_sound()), isTrue);
+      },
+    );
 
     test('fails closed for an unmarked ordinary source', () async {
       stubSource([_video(reuseMarker: null)]);

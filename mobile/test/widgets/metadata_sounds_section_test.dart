@@ -373,7 +373,7 @@ void main() {
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
       });
 
-      testWidgets('shows chevron for an enabled verified archive', (
+      testWidgets('shows chevron for a legacy-policy verified archive', (
         tester,
       ) async {
         final video = createVideoWithoutAudio(isVerifiedArchive: true);

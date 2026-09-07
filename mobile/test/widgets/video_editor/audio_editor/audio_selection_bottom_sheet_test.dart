@@ -267,7 +267,7 @@ void main() {
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
       });
 
-      testWidgets('selects an enabled verified archive original sound', (
+      testWidgets('selects a legacy-policy verified archive original sound', (
         tester,
       ) async {
         final classicVideo = VideoEvent(
