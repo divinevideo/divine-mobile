@@ -131,6 +131,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// run from `onDispose` without reading providers after disposal.
   DraftsDao? _deferredCleanupDraftsDao;
   ClipsDao? _deferredCleanupClipsDao;
+  final Set<Future<void>> _pendingDeferredCleanup = {};
 
   /// Get clip manager notifier.
   ClipManagerNotifier get _clipManager =>
@@ -167,7 +168,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       // session end). Best-effort and fire-and-forget: the container is tearing
       // down. On mobile this often never fires (OS kill), which is why [reset]
       // is the primary reaper.
-      unawaited(_flushDeferredFileCleanup());
+      _startDeferredFileCleanup();
       Log.debug(
         '🧹 VideoEditorNotifier disposed',
         name: 'VideoEditorNotifier',
@@ -277,7 +278,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
-    unawaited(_flushDeferredFileCleanup());
+    _startDeferredFileCleanup();
     draftId = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
@@ -841,6 +842,24 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
   }
 
+  /// Starts a best-effort cleanup without blocking the editor lifecycle.
+  ///
+  /// Every active operation remains tracked independently so a cleanup
+  /// started by [reset] cannot be hidden by a later no-op cleanup from
+  /// [build]'s `onDispose` callback.
+  void _startDeferredFileCleanup() {
+    late final Future<void> operation;
+    operation = () async {
+      try {
+        await _flushDeferredFileCleanup();
+      } finally {
+        _pendingDeferredCleanup.remove(operation);
+      }
+    }();
+    _pendingDeferredCleanup.add(operation);
+    unawaited(operation);
+  }
+
   /// Queue clip-owned files that became unreachable in the live editor state.
   ///
   /// The actual delete waits for [_flushDeferredFileCleanup] so undo/redo and
@@ -858,6 +877,12 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Test hook: the set of files awaiting cleanup.
   @visibleForTesting
   Set<String> get deferredFileCleanupForTest => _deferredFileCleanup;
+
+  /// Completes when every deferred cleanup currently in flight completes.
+  @visibleForTesting
+  Future<void> get pendingDeferredCleanupForTest async {
+    await Future.wait(_pendingDeferredCleanup.toList());
+  }
 
   /// Save the current video project as a draft.
   ///

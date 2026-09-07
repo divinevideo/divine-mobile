@@ -3546,10 +3546,11 @@ void main() {
     });
 
     tearDown(() async {
-      disposeContainer();
-      // Let any fire-and-forget onDispose flush finish querying the DB before
-      // we close it, so a still-deferred file doesn't race a closed database.
-      await pumpEventQueue();
+      if (!containerDisposed) {
+        final notifier = container.read(videoEditorProvider.notifier);
+        disposeContainer();
+        await notifier.pendingDeferredCleanupForTest;
+      }
       await database.close();
       if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
     });
@@ -3588,21 +3589,12 @@ void main() {
           );
     }
 
-    Future<void> expectFileReaped(File file, {required String reason}) async {
-      for (var attempt = 0; attempt < 20; attempt++) {
-        await pumpEventQueue();
-        if (!file.existsSync()) return;
-      }
-
-      expect(file.existsSync(), isFalse, reason: reason);
-    }
-
     test('an autosave keeps its orphaned files alive', () async {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
 
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
 
       expect(
         orphan.existsSync(),
@@ -3618,31 +3610,52 @@ void main() {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
       final notifier = container.read(videoEditorProvider.notifier);
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
-      // reset() is the real session-end hook (publish / discard / start-over),
-      // not the @visibleForTesting flush — this exercises the wiring an app
-      // actually hits when the editor closes.
       await notifier.reset(keepAutosavedDraft: true);
+      await notifier.pendingDeferredCleanupForTest;
 
-      await expectFileReaped(
-        orphan,
+      expect(
+        orphan.existsSync(),
+        isFalse,
         reason: 'session end reaps a deferred file once nothing references it',
       );
       expect(notifier.deferredFileCleanupForTest, isEmpty);
     });
 
+    test('reset cleanup remains awaitable during container teardown', () async {
+      final orphan = stubDeferringAutosave();
+      addTimelineClip();
+      final notifier = container.read(videoEditorProvider.notifier);
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+
+      await notifier.reset(keepAutosavedDraft: true);
+      disposeContainer();
+      await notifier.pendingDeferredCleanupForTest;
+
+      expect(
+        orphan.existsSync(),
+        isFalse,
+        reason: 'onDispose must not hide cleanup that reset already started',
+      );
+    });
+
     test('container teardown reaps deferred files as a safety net', () async {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
-      await container.read(videoEditorProvider.notifier).autosaveChanges();
+      final notifier = container.read(videoEditorProvider.notifier);
+      expect(await notifier.autosaveChanges(), isTrue);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
       expect(orphan.existsSync(), isTrue);
 
-      // Drives the real ref.onDispose wiring, not the @visibleForTesting flush.
       disposeContainer();
+      await notifier.pendingDeferredCleanupForTest;
 
-      await expectFileReaped(
-        orphan,
+      expect(
+        orphan.existsSync(),
+        isFalse,
         reason: 'onDispose reaps deferred files left when reset never ran',
       );
     });
@@ -3729,14 +3742,16 @@ void main() {
         finalRenderedClip: renderedClip('new-rendered', newRendered),
       );
 
-      await notifier.autosaveChanges();
+      expect(await notifier.autosaveChanges(), isTrue);
       expect(oldRendered.existsSync(), isTrue);
       expect(notifier.deferredFileCleanupForTest, contains(oldRendered.path));
 
       disposeContainer();
+      await notifier.pendingDeferredCleanupForTest;
 
-      await expectFileReaped(
-        oldRendered,
+      expect(
+        oldRendered.existsSync(),
+        isFalse,
         reason:
             'onDispose must reap a replaced rendered export once the new '
             'draft row no longer references it',
