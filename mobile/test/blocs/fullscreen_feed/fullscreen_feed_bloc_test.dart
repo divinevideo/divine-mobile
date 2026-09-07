@@ -468,7 +468,7 @@ void main() {
           'video1',
           rawTags: const {'views': '42'},
         );
-        final after = FullscreenFeedState(videos: shared);
+        final after = before.copyWith(videos: shared);
 
         expect(after.videoUpdateSignature, isNot(equals(signature)));
         expect(before, isNot(equals(after)));

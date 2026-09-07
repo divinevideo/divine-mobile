@@ -85,9 +85,9 @@ final class FullscreenFeedState extends Equatable {
          lastTuningAction: lastTuningAction,
        );
 
-  /// Carries an already-materialized [videoUpdateSignature] into a copy whose
-  /// [videos] is the identical list instance, so the signature is built once
-  /// per list rather than once per state. See [copyWith].
+  /// Carries an already-materialized [videoUpdateSignature] into a copy when
+  /// [copyWith] leaves [videos] untouched, so the signature is built once per
+  /// list rather than once per state.
   FullscreenFeedState._({
     required this.status,
     required this.videos,
@@ -102,7 +102,7 @@ final class FullscreenFeedState extends Equatable {
     List<String>? signature,
   }) : _inheritedSignature = signature;
 
-  /// Non-null only when [copyWith] proved [videos] unchanged by identity.
+  /// Non-null only when [copyWith] was called without a [videos] argument.
   final List<String>? _inheritedSignature;
 
   /// The current status.
@@ -213,9 +213,7 @@ final class FullscreenFeedState extends Equatable {
           initialTargetResolved ?? this.initialTargetResolved,
       userChangedIndex: userChangedIndex ?? this.userChangedIndex,
       lastTuningAction: lastTuningAction ?? this.lastTuningAction,
-      signature: identical(nextVideos, this.videos)
-          ? videoUpdateSignature
-          : null,
+      signature: videos == null ? videoUpdateSignature : null,
     );
   }
 
