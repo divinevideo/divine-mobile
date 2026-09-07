@@ -675,13 +675,16 @@ void main() {
             maxReconnectDelay: Duration(milliseconds: 1),
             connectionTimeout: Duration(seconds: 1),
             closeTimeout: Duration(milliseconds: 5),
-            reconnectBudget: Duration(milliseconds: 20),
+            // Must outlast the 1ms backoff before the only dial: an overshoot
+            // there exits the loop without dialling at all.
+            reconnectBudget: Duration(milliseconds: 200),
           ),
         );
         addTearDown(boundedManager.dispose);
 
         expect(await boundedManager.send('test'), isFalse);
         expect(boundedManager.state, ConnectionState.disconnected);
+        expect(mockFactory.createdChannels, isNotEmpty);
 
         readyGate.complete();
         await Future<void>.delayed(Duration.zero);
