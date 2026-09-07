@@ -86,18 +86,20 @@ void main() {
         ),
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
     });
 
     tearDown(() async {
       uploadManager.dispose();
       // dispose() nulls the store's reference without closing the box, so
       // close and delete it before the directory underneath it goes away.
-      await TestHelpers.cleanupHiveBox('pending_uploads');
-      Hive.init(null);
-      PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        Hive.init(null);
+        PathProviderPlatform.instance = originalPathProviderInstance;
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 
@@ -812,18 +814,20 @@ void main() {
         blossomService: mockBlossomService,
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
     });
 
     tearDown(() async {
       uploadManager.dispose();
       // dispose() nulls the store's reference without closing the box, so
       // close and delete it before the directory underneath it goes away.
-      await TestHelpers.cleanupHiveBox('pending_uploads');
-      Hive.init(null);
-      PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        Hive.init(null);
+        PathProviderPlatform.instance = originalPathProviderInstance;
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 

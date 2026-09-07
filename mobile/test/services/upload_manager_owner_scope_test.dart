@@ -55,10 +55,13 @@ void main() {
     });
 
     tearDown(() async {
-      await TestHelpers.cleanupHiveBox('pending_uploads');
       PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 
@@ -73,7 +76,6 @@ void main() {
         scopeUploadsToCurrentUser: scopeUploadsToCurrentUser,
       );
       await manager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
       return manager;
     }
 

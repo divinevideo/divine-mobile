@@ -93,18 +93,20 @@ void main() {
         ),
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
     });
 
     tearDown(() async {
       uploadManager.dispose();
       // dispose() nulls the store's reference without closing the box, so
       // close and delete it before the directory underneath it goes away.
-      await TestHelpers.cleanupHiveBox('pending_uploads');
-      Hive.init(null);
-      PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        Hive.init(null);
+        PathProviderPlatform.instance = originalPathProviderInstance;
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 
@@ -167,7 +169,6 @@ void main() {
         ),
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
 
       var uploadAttempts = 0;
       final firstAttemptFailed = Completer<void>();
@@ -428,11 +429,14 @@ void main() {
 
       addTearDown(() async {
         manager.dispose();
-        await TestHelpers.cleanupHiveBox('pending_uploads');
-        Hive.init(null);
-        PathProviderPlatform.instance = originalPathProvider;
-        if (tempDir.existsSync()) {
-          await tempDir.delete(recursive: true);
+        try {
+          await TestHelpers.cleanupHiveBox('pending_uploads');
+        } finally {
+          Hive.init(null);
+          PathProviderPlatform.instance = originalPathProvider;
+          if (tempDir.existsSync()) {
+            await tempDir.delete(recursive: true);
+          }
         }
       });
 

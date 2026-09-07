@@ -43,13 +43,16 @@ void main() {
       });
 
       tearDown(() async {
-        await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
-        await TestHelpers.cleanupHiveBox(
-          HiveBoxNames.pushNotificationPreferencesDirty,
-        );
-        await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
-        await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
-        if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+        try {
+          await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
+          await TestHelpers.cleanupHiveBox(
+            HiveBoxNames.pushNotificationPreferencesDirty,
+          );
+          await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+          await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
+        } finally {
+          if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+        }
       });
 
       test('classifies every known Hive box exactly once', () {

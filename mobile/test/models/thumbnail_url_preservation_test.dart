@@ -7,6 +7,7 @@ import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/providers/app_providers.dart';
 
 import '../helpers/real_integration_test_helper.dart';
+import '../helpers/test_helpers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -26,16 +27,10 @@ void main() {
     tearDown(() async {
       container.dispose();
 
-      // Clean up Hive boxes
-      try {
-        if (Hive.isBoxOpen('pending_uploads')) {
-          final box = Hive.box('pending_uploads');
-          await box.clear();
-          await box.close();
-        }
-      } catch (e) {
-        // Ignore errors - box might not exist
-      }
+      // Hive.box(name) is Hive.box<dynamic> and throws on a box opened as
+      // Box<PendingUpload>; swallowed by the bare catch this replaces, that
+      // throw made the whole block a silent no-op and leaked the box (#6748).
+      await TestHelpers.cleanupHiveBox('pending_uploads');
     });
 
     test('thumbnail URL should be preserved after upload success', () async {

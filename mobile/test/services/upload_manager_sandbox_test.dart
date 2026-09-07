@@ -14,6 +14,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../helpers/test_helpers.dart';
+
 // Mock PathProviderPlatform for testing
 class MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -64,28 +66,33 @@ void main() {
     ).create(recursive: true);
     Hive.init(p.join(testDir.path, 'app_support'));
 
-    // Reset helper state
-    UploadInitializationHelper.reset();
+    // Reset helper state. cleanupHiveBox resets UploadInitializationHelper's
+    // cache too, and additionally clears any box an earlier suite registered
+    // under this name -- the setUp half of the documented contract.
+    await TestHelpers.cleanupHiveBox('pending_uploads');
   });
 
   tearDown(() async {
-    // Clean up
+    PathProviderPlatform.instance = originalPathProviderInstance;
+    // `Hive.box('pending_uploads')` is `Hive.box<dynamic>` and throws on this
+    // box, which is opened as Box<PendingUpload> — swallowed, that throw left
+    // the box open for every later test (#6748). cleanupHiveBox resolves the
+    // box by name instead, and resets UploadInitializationHelper's cache.
     try {
-      PathProviderPlatform.instance = originalPathProviderInstance;
-      // Close all boxes
-      if (Hive.isBoxOpen('pending_uploads')) {
-        await Hive.box('pending_uploads').close();
+      await TestHelpers.cleanupHiveBox('pending_uploads');
+      try {
+        await Hive.close();
+      } on PathNotFoundException catch (_) {
+        // close() ends in a lock-file delete that races a temp directory
+        // already gone. Three sibling suites catch this for the same reason.
       }
-      await Hive.close();
-
-      // Reset helper state
-      UploadInitializationHelper.reset();
-
+    } finally {
+      // close() leaves Hive's process-global home path pointing at the
+      // directory deleted below.
+      Hive.init(null);
       if (testDir.existsSync()) {
         await testDir.delete(recursive: true);
       }
-    } catch (e) {
-      // Ignore cleanup errors
     }
   });
 

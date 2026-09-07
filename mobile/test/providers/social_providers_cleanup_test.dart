@@ -93,6 +93,11 @@ void main() {
         ..setApplicationCachePath('${tempDir.path}/cache');
       PathProviderPlatform.instance = mockPathProvider;
       await TestHelpers.initHiveHome();
+      // Without this, UploadInitializationHelper's static _cachedBox short-
+      // circuits initialize() past Hive.openBox entirely, so this suite can
+      // inherit a previous suite's box -- and the non-destructive test below
+      // then asserts on rows it never wrote.
+      await TestHelpers.cleanupHiveBox('pending_uploads');
 
       uploadManager = UploadManager(
         backgroundActivityManager: BackgroundActivityManager(),
@@ -101,8 +106,10 @@ void main() {
         scopeUploadsToCurrentUser: true,
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<hive_model.PendingUpload>(
-        'pending_uploads',
+      expect(
+        uploadManager.pendingUploads,
+        isEmpty,
+        reason: 'setUp must hand each test an empty pending_uploads box',
       );
 
       container = ProviderContainer(
@@ -120,10 +127,13 @@ void main() {
       container.dispose();
       uploadManager.dispose();
       await db.close();
-      await TestHelpers.cleanupHiveBox('pending_uploads');
       PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 

@@ -794,6 +794,7 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
+| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` heals any box left **open** and blames under `DIVINE_STRICT_HIVE_BOXES`; the rest of the row is convention, not a check. |
 | A service you registered with `BackgroundActivityManager` (`AuthService`, `UploadManager`, `AnalyticsService`) | Dispose the service. All three unregister in `dispose()`. If a test drives a manager directly, keep that exact instance and call `addTearDown(manager.resetForTesting)`. Each provider container owns a separate manager, so constructing a new manager cannot reset the instance under test. |
 
 ### Heal-and-blame harness (the 5 shared channels)
@@ -810,3 +811,51 @@ rather than being healed into someone else's suite; a bare
 `flutter test <file>` leaves it off and heals silently. A static
 `check_shared_channel_overrides.sh` ratchet additionally freezes the set of
 files that raw-install a shared channel, so new ones must use the helper.
+
+### Heal-and-blame harness (shared Hive boxes)
+
+Hive registers a box **process-globally by name**, so the box one suite leaves
+open is the box the next suite gets back from `openBox` — rows and backing
+directory included, regardless of the path it asked for. More than a dozen
+suites open `pending_uploads`, which is why a curated-lists PR that touches no
+upload code could fail on `upload_manager_get_by_path` seeing a row it never
+wrote (#6748).
+
+`flutter_test_config.dart` registers a root `tearDown` that closes and deletes
+every box in `sharedHiveBoxNames` (`test/helpers/shared_hive_box_guard.dart`,
+which is `HiveBoxNames.all`) that a test left open. Under
+`DIVINE_STRICT_HIVE_BOXES=true`, it then `fail()`s that test.
+The hazard is a property of the name being process-global, not of which box it
+is, so the guard covers every box the app owns rather than only the one that
+surfaced it. Blame is gated while the harness soaks because Hive does not
+expose an `openBox` still pending in its private `_openingBoxes` registry. Such
+an open can become visible during the following test, so unconditional blame
+could identify the wrong owner.
+
+**Clean up with `TestHelpers.cleanupHiveBox(name)`, never `Hive.box(name)`.**
+`Hive.box(name)` is `Hive.box<dynamic>`, and hive_ce throws
+``HiveError: The box "pending_uploads" is already open and of type
+Box<PendingUpload>`` for any box opened with a concrete value type. Swallowed
+by a bare `catch`, that throw made the shared cleanup helper a silent no-op on
+every open typed box — both the close and the `deleteBoxFromDisk` after it were
+skipped. Measured over the seventeen suites that touch `pending_uploads`, seven
+of them were handing 64 rows forward to whichever suite ran next.
+`cleanupHiveBox` routes through `deleteBoxFromDisk`, which resolves the box by
+name with no type check, and asserts its own postcondition rather than
+swallowing a failure.
+
+**Scope: `mobile/test` only.** `flutter_test_config.dart` is a per-directory
+hook and the repo has exactly one, under `mobile/test/`. `mobile/integration_test/`
+and `mobile/packages/*/test` get no guard, no heal and no signal — nothing there
+opens a shared box today, so this is a gap to know about rather than a live one.
+
+**What the guard can and cannot see.** It observes one thing: whether a box in
+`HiveBoxNames.all` is still open when a test ends. So `await Hive.close()`
+satisfies it too — twelve suites clean up that way — and an `openBox` still
+in flight is invisible to `Hive.isBoxOpen`, which reads `HiveImpl._boxes` while
+a pending open sits in `_openingBoxes`. Neither is enforcement of the row above:
+"clean up with `cleanupHiveBox`, in both `setUp` and `tearDown`" is the
+convention, and only the open-box half is mechanically checked. The
+MethodChannel harness pairs its runtime guard with a static
+`check_shared_channel_overrides.sh` ratchet for exactly this reason; there is
+no Hive equivalent yet.
