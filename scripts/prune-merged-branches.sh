@@ -32,6 +32,14 @@
 #    recreates from tracked sources are not work; ignored paths it does not
 #    (a .env, a scratch note, a patch) still are. Only the latter veto.
 #
+# 6. `git merge-base --is-ancestor` cannot answer "is this tip already on main"
+#    here. The main checkout is a shallow clone, and the ancestry walk stops at
+#    the graft boundary: it returns exit 1 — "not an ancestor" — for a commit
+#    that is one, indistinguishable from a true negative. That wrong negative
+#    put fresh worktrees on the prunable side (#8761). Ask GitHub for
+#    containment instead, which is what points 1-4 already do for every other
+#    signal. Any unclear answer reports contained, landing on KEEP.
+#
 # The bias is deliberate. A false KEEP costs disk. A false DELETE costs work
 # that exists nowhere else — an unpushed branch has no backup. Both additions
 # above keep that asymmetry: MERGED-TIP still needs Veto 1 to pass, and an
@@ -58,6 +66,8 @@ done
 
 GH="${GH:-gh}"
 BASE="${BASE:-origin/main}"
+# GitHub names the branch without the remote: origin/main -> main.
+BASE_BRANCH="${BASE#*/}"
 REPO="${REPO:-${GITHUB_REPOSITORY:-divinevideo/divine-mobile}}"
 MERGED_PR_LIMIT="${MERGED_PR_LIMIT:-100000}"
 
@@ -70,10 +80,11 @@ git rev-parse --verify --quiet "$BASE" >/dev/null || {
   echo "$BASE not found" >&2; exit 2
 }
 
-# Shallow is fine for the signals used here: the GitHub lookups need no local
-# history, and the worktree checks inspect only the current checkout state.
+# Shallow is fine for the signals used here: every containment question goes to
+# GitHub (see point 6 above), and the worktree checks inspect only the current
+# checkout state. No classification walks local history.
 if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-  echo "Note: shallow repository. Classification is unaffected."
+  echo "Note: shallow repository. Containment is resolved by GitHub, not locally."
 fi
 
 echo "Loading merged PR head refs from GitHub..."
@@ -107,6 +118,40 @@ merged_pr_contains_commit() {
   "$GH" api -X GET "repos/$REPO/commits/$1/pulls" \
     --jq '[.[] | select(.merged_at != null) | select(.base.ref == "main")] | length' \
     2>/dev/null | grep -qxE '[1-9][0-9]*'
+}
+
+# Is this tip already contained in the base branch on GitHub? IDENTICAL and
+# BEHIND mean yes; AHEAD and DIVERGED mean the tip carries its own commits.
+#
+# GraphQL rather than REST compare: the REST endpoint ships a `files` array and
+# returns 130-256 KB per call on this repo, against ~90 bytes here.
+#
+# `-f` rather than `-F` for every variable: `-F` type-infers, and an all-digit
+# SHA is coerced to a number, which the API rejects as a String! violation.
+#
+# Fails toward contained, which lands on KEEP. A network failure, a rate limit,
+# an unpushed tip, or any unrecognized status must not become a delete
+# recommendation.
+tip_contained_in_base() {
+  local compare_status
+  if ! compare_status="$(
+    "$GH" api graphql \
+      -f query='query($owner:String!,$name:String!,$base:String!,$head:String!){repository(owner:$owner,name:$name){ref(qualifiedName:$base){compare(headRef:$head){status}}}}' \
+      -f owner="${REPO%%/*}" -f name="${REPO#*/}" \
+      -f base="$BASE_BRANCH" -f head="$1" \
+      --jq '.data.repository.ref.compare.status' 2>/dev/null
+  )"; then
+    echo "Warning: could not verify whether $1 is contained in $BASE_BRANCH; keeping it." >&2
+    return 0
+  fi
+  case "$compare_status" in
+    IDENTICAL|BEHIND) return 0 ;;
+    AHEAD|DIVERGED) return 1 ;;
+    *)
+      echo "Warning: GitHub returned no recognized containment status for $1; keeping it." >&2
+      return 0
+      ;;
+  esac
 }
 
 # Ignored paths any Flutter toolchain step recreates from tracked sources.
@@ -150,11 +195,13 @@ while IFS= read -r branch; do
   if grep -qxF -- "$branch" "$MERGED_REFS"; then
     verdict="MERGED-PR"
   elif [ -n "$wt" ] && [ -d "$wt" ] \
-    && ! git merge-base --is-ancestor "$tip" "$BASE" \
-    && merged_pr_contains_commit "$tip"; then
-    # Only worktree branches get this lookup: it is one API call per branch,
-    # and a branch with no worktree costs a ref, not 4GB of build output. Tips
-    # already on main belong to fresh worktrees, not squashed-away PR heads.
+    && merged_pr_contains_commit "$tip" \
+    && ! tip_contained_in_base "$tip"; then
+    # Only worktree branches get these lookups: every candidate checks for a
+    # merged PR, then candidates with one check containment. A branch with no
+    # worktree costs a ref, not 4GB of build output. Tips already on main belong
+    # to fresh worktrees, not squashed-away PR heads, so containment runs last —
+    # only for branches this would otherwise call MERGED-TIP.
     verdict="MERGED-TIP"
   else
     verdict="KEEP"
