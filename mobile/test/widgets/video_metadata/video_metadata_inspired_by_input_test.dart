@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -73,6 +74,78 @@ _MockContentBlocklistRepository _createMockContentBlocklistRepository({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('computeEffectiveInspiredByNpubs', () {
+    final npubA = NostrKeyUtils.encodePubKey('a' * 64);
+    final npubB = NostrKeyUtils.encodePubKey('b' * 64);
+    final npubC = NostrKeyUtils.encodePubKey('c' * 64);
+
+    test('preserves a credited creator the picker never showed', () {
+      // A creator whose profile has not resolved is not passed to the picker,
+      // so the picker cannot return them — and cannot have deselected them.
+      final effective = computeEffectiveInspiredByNpubs(
+        confirmedNpubs: [npubA, npubB],
+        preselectedNpubs: [npubB],
+        pickerResultNpubs: [npubB, npubC],
+      );
+
+      expect(effective, equals([npubA, npubB, npubC]));
+    });
+
+    test('drops a creator the picker showed and the author deselected', () {
+      final effective = computeEffectiveInspiredByNpubs(
+        confirmedNpubs: [npubA, npubB],
+        preselectedNpubs: [npubA, npubB],
+        pickerResultNpubs: [npubB],
+      );
+
+      expect(effective, equals([npubB]));
+    });
+
+    test('keeps the author order, so the content line names the same '
+        'creator', () {
+      final effective = computeEffectiveInspiredByNpubs(
+        confirmedNpubs: [npubA, npubB],
+        preselectedNpubs: [npubB],
+        pickerResultNpubs: [npubB, npubC],
+      );
+
+      // Position 0 is what reaches the NIP-27 content line; adding a creator
+      // must not silently promote someone else past the author's first pick.
+      expect(effective.first, equals(npubA));
+    });
+
+    test('names a creator once when the picker returns an existing one', () {
+      final effective = computeEffectiveInspiredByNpubs(
+        confirmedNpubs: [npubA],
+        preselectedNpubs: [npubA],
+        pickerResultNpubs: [npubA, npubA],
+      );
+
+      expect(effective, equals([npubA]));
+    });
+
+    test('caps the reconciled set at the picker limit', () {
+      // The picker enforces the cap over what it was seeded with; it cannot
+      // count a creator it never showed, so reconciling can overshoot.
+      const limit = VideoEditorConstants.maxInspiredByCreators;
+      final unresolved = [
+        for (var i = 0; i < limit; i++)
+          NostrKeyUtils.encodePubKey(
+            '${'0' * 62}${i.toString().padLeft(2, '0')}',
+          ),
+      ];
+
+      final effective = computeEffectiveInspiredByNpubs(
+        confirmedNpubs: unresolved,
+        preselectedNpubs: const [],
+        pickerResultNpubs: [npubA, npubB, npubC],
+      );
+
+      expect(effective, hasLength(limit));
+      expect(effective, equals(unresolved));
+    });
+  });
 
   group(VideoMetadataInspiredByInput, () {
     late SharedPreferences prefs;

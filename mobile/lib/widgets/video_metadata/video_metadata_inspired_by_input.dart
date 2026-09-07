@@ -16,6 +16,48 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
 
+/// Preserves credited creators whose profiles were unavailable when the
+/// picker opened, so they are not silently dropped on Done.
+///
+/// The picker is seeded only with profiles that resolved, and Done returns
+/// exactly what it was seeded with plus the author's toggles. A creator it
+/// never showed cannot have been deselected there, so dropping them would
+/// remove a credit the tile still lists and the author never touched.
+///
+/// The author's order leads: position 0 is the creator the NIP-27 content
+/// line names, so crediting someone new must not promote them past the first
+/// pick. New picks are appended, and the result is capped at [maxCount]
+/// because reconciling can otherwise exceed what the picker itself allows.
+@visibleForTesting
+List<String> computeEffectiveInspiredByNpubs({
+  required List<String> confirmedNpubs,
+  required List<String> preselectedNpubs,
+  required List<String> pickerResultNpubs,
+  int maxCount = VideoEditorConstants.maxInspiredByCreators,
+}) {
+  String keyOf(String npub) =>
+      npubToHexOrNull(npub) ?? npub.trim().toLowerCase();
+
+  final preselected = preselectedNpubs.map(keyOf).toSet();
+  final picked = pickerResultNpubs.map(keyOf).toSet();
+
+  final effective = <String>[];
+  final seen = <String>{};
+  void add(String npub) {
+    if (seen.add(keyOf(npub))) effective.add(npub);
+  }
+
+  for (final npub in confirmedNpubs) {
+    final key = keyOf(npub);
+    if (picked.contains(key) || !preselected.contains(key)) add(npub);
+  }
+  pickerResultNpubs.forEach(add);
+
+  return effective.length <= maxCount
+      ? effective
+      : effective.sublist(0, maxCount);
+}
+
 /// Input widget for setting "Inspired By" attribution.
 ///
 /// Two modes:
@@ -111,9 +153,20 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
     if (creditable.isEmpty) return;
 
     // Convert hex pubkeys to npubs for the NIP-27 content reference.
-    ref.read(videoEditorProvider.notifier).setInspiredByPeople([
-      for (final profile in creditable)
-        NostrKeyUtils.encodePubKey(profile.pubkey),
-    ]);
+    ref
+        .read(videoEditorProvider.notifier)
+        .setInspiredByPeople(
+          computeEffectiveInspiredByNpubs(
+            confirmedNpubs: ref.read(videoEditorProvider).inspiredByNpubs,
+            preselectedNpubs: [
+              for (final profile in currentProfiles)
+                NostrKeyUtils.encodePubKey(profile.pubkey),
+            ],
+            pickerResultNpubs: [
+              for (final profile in creditable)
+                NostrKeyUtils.encodePubKey(profile.pubkey),
+            ],
+          ),
+        );
   }
 }
