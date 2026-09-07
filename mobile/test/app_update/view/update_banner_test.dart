@@ -65,6 +65,26 @@ void main() {
       );
     });
 
+    testWidgets('dismiss button carries a localized label', (tester) async {
+      when(() => bloc.state).thenReturn(
+        const AppUpdateState(
+          status: AppUpdateStatus.resolved,
+          urgency: UpdateUrgency.gentle,
+          downloadUrl: DownloadUrls.github,
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+
+      expect(
+        find.descendant(
+          of: find.byTooltip(l10n.commonClose),
+          matching: _divineIcon(DivineIconName.x),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('dismiss button dispatches AppUpdateDismissed', (tester) async {
       when(() => bloc.state).thenReturn(
         const AppUpdateState(

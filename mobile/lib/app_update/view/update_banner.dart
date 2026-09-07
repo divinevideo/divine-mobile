@@ -58,6 +58,7 @@ class _BannerContent extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: context.l10n.commonClose,
             icon: DivineIcon(
               icon: DivineIconName.x,
               size: 18,
