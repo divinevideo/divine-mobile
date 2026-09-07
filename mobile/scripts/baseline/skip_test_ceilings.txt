@@ -43,7 +43,6 @@ test/screens/explore_screen_router_test.dart	2 # delete: ExploreScreenRouter is 
 test/screens/explore_screen_video_display_test.dart	1 # rewrite: tabs now l10n featured/new, not 'Popular Now' (#4836)
 test/screens/feature_flag_screen_test.dart	2 # rewrite: screen hides internal flags, renders 7 of 18 (#4836)
 test/screens/feed_screen_scroll_test.dart	5 # delete: tests its own local helper, no lib/ code touched (#4836)
-test/screens/hashtag_feed_embedded_callback_test.dart	1 # delete: smoke only, callback never asserted; nav test covers (#4836)
 test/screens/hashtag_feed_embedded_navigation_test.dart	1 # rewrite: mock lacks filterVideoList, returns null to screen (#4836)
 test/screens/hashtag_feed_loading_test.dart	1 # rewrite: setUp any() needs registerFallbackValue SubscriptionType (#4836)
 test/screens/hashtag_feed_screen_tdd_test.dart	1 # delete: dupe of test/widget sibling; 'fetching' copy gone (#4836)
