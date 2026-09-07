@@ -317,7 +317,7 @@ void main() {
         await pumpEventQueue();
 
         // Assert - Check the progression of until filters
-        expect(capturedFilters.length, greaterThanOrEqualTo(3));
+        expect(capturedFilters.length, equals(3));
         expect(capturedFilters[0].until, isNull); // First load has no until
         expect(
           capturedFilters[1].until,
