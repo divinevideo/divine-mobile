@@ -45,6 +45,14 @@ import '../mocks/mock_path_provider_platform.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
+class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _MockDraftsDao extends Mock implements DraftsDao {}
+
+class _MockClipsDao extends Mock implements ClipsDao {}
+
+class _MockStringSet extends Mock implements Set<String> {}
+
 /// An operation-scoped trace handle that records its attributes and stop count
 /// so tests can assert the `video_generation` per-render trace behaviour —
 /// which the real (uninitialised) service would silently no-op.
@@ -3504,6 +3512,9 @@ void main() {
   group('VideoEditorProvider deferred file cleanup', () {
     late _MockDraftStorageService mockDraftStorage;
     late AppDatabase database;
+    late _MockDraftsDao draftsDao;
+    late _MockClipsDao clipsDao;
+    late SharedPreferences prefs;
     late ProviderContainer container;
     late Directory tempDir;
     late EditorBackgroundWork backgroundWork;
@@ -3528,6 +3539,31 @@ void main() {
       onTimeout: () => fail('editor background work did not settle'),
     );
 
+    void useMockCleanupDatabase() {
+      disposeContainer();
+      final mockDatabase = _MockAppDatabase();
+      draftsDao = _MockDraftsDao();
+      clipsDao = _MockClipsDao();
+      when(() => mockDatabase.draftsDao).thenReturn(draftsDao);
+      when(() => mockDatabase.clipsDao).thenReturn(clipsDao);
+      when(
+        () => clipsDao.referencedFilenames(any()),
+      ).thenAnswer((_) async => const {});
+      when(
+        () => draftsDao.isDraftFileReferenced(any()),
+      ).thenAnswer((_) async => false);
+      container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
+          databaseProvider.overrideWithValue(mockDatabase),
+        ],
+      );
+      containerDisposed = false;
+      backgroundWork = container.read(editorBackgroundWorkProvider);
+      container.read(videoEditorProvider.notifier);
+    }
+
     setUpAll(() {
       registerFallbackValue(
         DivineVideoDraft.create(
@@ -3543,7 +3579,7 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
+      prefs = await SharedPreferences.getInstance();
       mockDraftStorage = _MockDraftStorageService();
       database = AppDatabase.test(NativeDatabase.memory());
       tempDir = Directory.systemTemp.createTempSync('editor_defer_test');
@@ -3746,6 +3782,90 @@ void main() {
         async.flushMicrotasks();
         expect(cleanupSettled, isTrue);
       });
+    });
+
+    test('failed cleanup stays queued without escaping the drain', () async {
+      useMockCleanupDatabase();
+      final orphan = File(p.join(tempDir.path, 'failed.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final notifier = container.read(videoEditorProvider.notifier);
+      notifier.deferFileCleanup([orphan.path]);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+      when(
+        () => clipsDao.referencedFilenames(any()),
+      ).thenThrow(StateError('database closed'));
+
+      await notifier.reset(keepAutosavedDraft: true);
+      await settleBackgroundWork();
+
+      expect(notifier.deferredFileCleanupForTest, {orphan.path});
+      expect(orphan.existsSync(), isTrue);
+    });
+
+    test('partial failure retains only the unprocessed path', () async {
+      useMockCleanupDatabase();
+      final failing = File(p.join(tempDir.path, 'failing.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final deletable = File(p.join(tempDir.path, 'deletable.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final notifier = container.read(videoEditorProvider.notifier);
+      notifier.deferFileCleanup([failing.path, deletable.path]);
+      expect(notifier.deferredFileCleanupForTest, isNotEmpty);
+      when(
+        () => draftsDao.isDraftFileReferenced('failing.mp4'),
+      ).thenThrow(StateError('database closed'));
+
+      await notifier.reset(keepAutosavedDraft: true);
+      await settleBackgroundWork();
+
+      expect(notifier.deferredFileCleanupForTest, {failing.path});
+      expect(failing.existsSync(), isTrue);
+      expect(deletable.existsSync(), isFalse);
+    });
+
+    test('a retained cleanup path is retried successfully', () async {
+      useMockCleanupDatabase();
+      final orphan = File(p.join(tempDir.path, 'retry.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final notifier = container.read(videoEditorProvider.notifier);
+      notifier.deferFileCleanup([orphan.path]);
+      expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+      when(
+        () => clipsDao.referencedFilenames(any()),
+      ).thenThrow(StateError('database closed'));
+      await notifier.reset(keepAutosavedDraft: true);
+      await settleBackgroundWork();
+      expect(notifier.deferredFileCleanupForTest, {orphan.path});
+
+      when(
+        () => clipsDao.referencedFilenames(any()),
+      ).thenAnswer((_) async => const {});
+      await notifier.reset(keepAutosavedDraft: true);
+      await settleBackgroundWork();
+
+      expect(notifier.deferredFileCleanupForTest, isEmpty);
+      expect(orphan.existsSync(), isFalse);
+    });
+
+    test('unexpected cleanup failure retains the batch and settles', () async {
+      useMockCleanupDatabase();
+      final orphan = File(p.join(tempDir.path, 'unexpected.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final notifier = container.read(videoEditorProvider.notifier);
+      notifier.deferFileCleanup([orphan.path]);
+      final referencedFilenames = _MockStringSet();
+      when(
+        () => clipsDao.referencedFilenames(any()),
+      ).thenAnswer((_) async => referencedFilenames);
+      when(
+        () => referencedFilenames.contains(any()),
+      ).thenThrow(StateError('unexpected set failure'));
+
+      await notifier.reset(keepAutosavedDraft: true);
+      await settleBackgroundWork();
+
+      expect(notifier.deferredFileCleanupForTest, {orphan.path});
+      expect(orphan.existsSync(), isTrue);
     });
 
     test('reset cleanup remains awaitable during container teardown', () async {

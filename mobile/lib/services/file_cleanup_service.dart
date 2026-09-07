@@ -37,7 +37,9 @@ class FileCleanupService {
   ///
   /// Throws:
   ///
-  /// * No exceptions – errors are logged and silently handled.
+  /// * Exceptions from filesystem existence checks or either reference query
+  ///   are propagated to the caller. File deletion failures are logged and
+  ///   otherwise ignored.
   static Future<void> deleteFileIfUnreferenced(
     String? filePath, {
     required DraftsDao draftsDao,
@@ -63,7 +65,13 @@ class FileCleanupService {
   }
 
   /// Deletes multiple files, only those not referenced elsewhere.
-  static Future<void> deleteFilesIfUnreferenced(
+  ///
+  /// A file is kept when its reference state cannot be established or its
+  /// deletion fails. The returned paths were not safely processed and may be
+  /// retried by callers that own a cleanup queue. Reference and filesystem
+  /// failures are logged rather than thrown so one failure does not abandon
+  /// the rest of the batch.
+  static Future<Set<String>> deleteFilesIfUnreferenced(
     List<String?> filePaths, {
     required DraftsDao draftsDao,
     required ClipsDao clipsDao,
@@ -72,21 +80,43 @@ class FileCleanupService {
         .where((path) => path != null && path.isNotEmpty)
         .cast<String>()
         .toList();
-    if (validPaths.isEmpty) return;
+    if (validPaths.isEmpty) return {};
 
     // Resolved as one set: a stop-motion clip hands every one of its stills to
     // this call, and the clip references that hold them are in an unindexed
     // JSON blob — asking per file would scan the table once per still.
-    final referencedByClips = await clipsDao.referencedFilenames(
-      validPaths.map(p.basename).toSet(),
-    );
+    late final Set<String> referencedByClips;
+    try {
+      referencedByClips = await clipsDao.referencedFilenames(
+        validPaths.map(p.basename).toSet(),
+      );
+    } catch (error) {
+      Log.warning(
+        '⚠️ Failed to check clip references for cleanup batch: $error',
+        name: 'FileCleanupService',
+        category: LogCategory.video,
+      );
+      return validPaths.toSet();
+    }
+
+    final unprocessed = <String>{};
 
     for (final path in validPaths) {
-      if (!File(path).existsSync()) continue;
+      try {
+        if (!File(path).existsSync()) continue;
+      } catch (error) {
+        Log.warning(
+          '⚠️ Failed to check file existence during cleanup: '
+          '$path - $error',
+          name: 'FileCleanupService',
+          category: LogCategory.video,
+        );
+        unprocessed.add(path);
+        continue;
+      }
 
       final filename = p.basename(path);
-      if (referencedByClips.contains(filename) ||
-          await draftsDao.isDraftFileReferenced(filename)) {
+      if (referencedByClips.contains(filename)) {
         Log.info(
           '🔗 File still referenced, skipping delete: $path',
           name: 'FileCleanupService',
@@ -95,8 +125,32 @@ class FileCleanupService {
         continue;
       }
 
-      await _deleteFile(path);
+      late final bool referencedByDraft;
+      try {
+        referencedByDraft = await draftsDao.isDraftFileReferenced(filename);
+      } catch (error) {
+        Log.warning(
+          '⚠️ Failed to check draft references during cleanup: '
+          '$path - $error',
+          name: 'FileCleanupService',
+          category: LogCategory.video,
+        );
+        unprocessed.add(path);
+        continue;
+      }
+      if (referencedByDraft) {
+        Log.info(
+          '🔗 File still referenced, skipping delete: $path',
+          name: 'FileCleanupService',
+          category: LogCategory.video,
+        );
+        continue;
+      }
+
+      if (!await _deleteFile(path)) unprocessed.add(path);
     }
+
+    return unprocessed;
   }
 
   /// [DivineVideoClip.ownedFilePaths] minus the ghost frame, which the callers
@@ -135,7 +189,9 @@ class FileCleanupService {
   ///
   /// Throws:
   ///
-  /// * No exceptions – errors are logged and silently handled.
+  /// * Exceptions from filesystem existence checks or either reference query
+  ///   are propagated to the caller. File deletion failures are logged and
+  ///   otherwise ignored.
   static Future<void> deleteDraftAudioFiles(
     Iterable<String> audioFilePaths, {
     required DraftsDao draftsDao,
@@ -174,7 +230,9 @@ class FileCleanupService {
   ///
   /// Throws:
   ///
-  /// * No exceptions – errors are logged and silently handled.
+  /// * Exceptions from filesystem existence checks or either reference query
+  ///   are propagated to the caller. File deletion failures are logged and
+  ///   otherwise ignored.
   static Future<void> deleteGhostFrameFiles(
     Iterable<String?> ghostFramePaths, {
     required DraftsDao draftsDao,
@@ -268,7 +326,7 @@ class FileCleanupService {
   }
 
   /// Internal helper to delete a single file
-  static Future<void> _deleteFile(String filePath) async {
+  static Future<bool> _deleteFile(String filePath) async {
     try {
       await File(filePath).delete();
       Log.info(
@@ -276,18 +334,21 @@ class FileCleanupService {
         name: 'FileCleanupService',
         category: LogCategory.video,
       );
+      return true;
     } on PathNotFoundException {
       Log.info(
         '🗑️ File already deleted: $filePath',
         name: 'FileCleanupService',
         category: LogCategory.video,
       );
+      return true;
     } catch (e) {
       Log.warning(
         '⚠️ Failed to delete file: $filePath - $e',
         name: 'FileCleanupService',
         category: LogCategory.video,
       );
+      return false;
     }
   }
 }

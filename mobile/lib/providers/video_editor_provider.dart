@@ -860,10 +860,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// [_deferredFileCleanup]). Reached through [_startDeferredFileCleanup] at
   /// editor-session end ([reset]) and as a teardown safety net ([build]'s
   /// `onDispose`). The entry point waits for autosaves already in flight before
-  /// this method snapshots and clears the set, so their deferred paths join the
-  /// same reap. Each path still goes through the draft/library reference check,
-  /// so anything a surviving draft (or the library) references is kept — only
-  /// genuinely-orphaned files are removed.
+  /// this method takes and clears the current set, so their deferred paths join
+  /// the same reap and a concurrent second call does not process the same batch.
+  /// Each path still goes through the draft/library reference check, so anything
+  /// a surviving draft (or the library) references is kept. Paths that could not
+  /// be safely processed are restored to the set for a later cleanup attempt.
   ///
   /// Reach it through [_startDeferredFileCleanup] rather than calling it
   /// directly so test teardown can observe the operation.
@@ -875,11 +876,23 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
     final paths = _deferredFileCleanup.toList();
     _deferredFileCleanup.clear();
-    await FileCleanupService.deleteFilesIfUnreferenced(
-      paths,
-      draftsDao: draftsDao,
-      clipsDao: clipsDao,
-    );
+    try {
+      final unprocessed = await FileCleanupService.deleteFilesIfUnreferenced(
+        paths,
+        draftsDao: draftsDao,
+        clipsDao: clipsDao,
+      );
+      _deferredFileCleanup.addAll(unprocessed);
+    } catch (error) {
+      // Backstop for unexpected service failures: retaining already-deleted
+      // paths is safe because the next pass skips files that no longer exist.
+      _deferredFileCleanup.addAll(paths);
+      Log.warning(
+        '⚠️ Deferred file cleanup failed; paths retained: $error',
+        name: 'VideoEditorNotifier',
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Starts a best-effort cleanup without blocking the editor lifecycle.
@@ -909,7 +922,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     _deferredFileCleanup.addAll(validPaths);
   }
 
-  /// Test hook: the set of files awaiting cleanup.
+  /// Test hook: the set of files awaiting cleanup or retry.
   @visibleForTesting
   Set<String> get deferredFileCleanupForTest => _deferredFileCleanup;
 
