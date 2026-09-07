@@ -96,6 +96,33 @@ void main() {
       expect(indicator.trackGap, 1);
       expect(indicator.padding, padding);
     });
+
+    testWidgets('defers stroke geometry to the SDK and theme defaults', (
+      tester,
+    ) async {
+      // Hardcoding these short-circuits the SDK's
+      // `widget.x ?? indicatorTheme.x ?? defaults.x!` chain. `strokeAlign` is
+      // the one that bites: with `year2023` defaulting to true the effective
+      // default is `strokeAlignCenter` (0.0), so substituting
+      // `strokeAlignInside` (-1.0) insets the arc by `strokeWidth / 2` and
+      // shrinks every wrapped spinner by a full stroke width.
+      await tester.pumpWidget(
+        subject(
+          disableAnimations: false,
+          child: const DivineCircularProgressIndicator(),
+        ),
+      );
+
+      final wrapped = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      const raw = CircularProgressIndicator();
+
+      expect(wrapped.strokeAlign, isNull);
+      expect(wrapped.strokeWidth, isNull);
+      expect(wrapped.strokeAlign, raw.strokeAlign);
+      expect(wrapped.strokeWidth, raw.strokeWidth);
+    });
   });
 
   group('DivineLinearProgressIndicator', () {
