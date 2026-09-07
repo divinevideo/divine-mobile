@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -59,32 +60,37 @@ class FeatureFlagScreen extends ConsumerWidget {
               final flag = visibleFlags[index];
               final isEnabled = state[flag] ?? false;
 
-              return Card(
-                clipBehavior: .hardEdge,
-                margin: const .only(bottom: 12.0),
-                child: ListTile(
-                  contentPadding: const .fromLTRB(16, 0, 12, 0),
-                  title: Text(
-                    flag.displayName,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
+              return Semantics(
+                identifier: flag == FeatureFlag.accountSwitching
+                    ? SemanticIds.featureFlagAccountSwitching
+                    : null,
+                child: Card(
+                  clipBehavior: .hardEdge,
+                  margin: const .only(bottom: 12.0),
+                  child: ListTile(
+                    contentPadding: const .fromLTRB(16, 0, 12, 0),
+                    title: Text(
+                      flag.displayName,
+                      style: VineTheme.titleMediumFont(
+                        color: context.vineColors.primaryText,
+                      ),
                     ),
-                  ),
-                  subtitle: Text(
-                    flag.description,
-                    style: VineTheme.bodySmallFont(
-                      color: context.vineColors.onSurfaceVariant,
+                    subtitle: Text(
+                      flag.description,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                  trailing: DivineSwitch(
-                    value: isEnabled,
-                    onChanged: (value) async {
-                      await service.setFlag(flag, value);
+                    trailing: DivineSwitch(
+                      value: isEnabled,
+                      onChanged: (value) async {
+                        await service.setFlag(flag, value);
+                      },
+                    ),
+                    onTap: () async {
+                      await service.setFlag(flag, !isEnabled);
                     },
                   ),
-                  onTap: () async {
-                    await service.setFlag(flag, !isEnabled);
-                  },
                 ),
               );
             },

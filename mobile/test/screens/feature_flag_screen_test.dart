@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
@@ -93,6 +94,12 @@ void main() {
         findsNothing,
       );
       expect(find.text(FeatureFlag.feedTuning.displayName), findsNothing);
+      expect(
+        find.bySemanticsIdentifier(
+          SemanticIds.featureFlagAccountSwitching,
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows internal flags when developer mode is on', (

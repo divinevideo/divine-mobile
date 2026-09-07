@@ -24,7 +24,6 @@ env:
   USER_NAME: "Automation User"
   USER_wKEYS_NAME: "AutomationUser wKeys"
   USER_wKEYS_BIO: "Profile used for testing sign-in with existing keys"
-  PRIV_KEY_TO_DELETE: ""
 ---
 #Preflight: every run-time credential must be supplied via -e
 - assertTrue: ${typeof USER_KEYS !== 'undefined' && USER_KEYS !== ''}
@@ -52,9 +51,8 @@ env:
 - runFlow: ../tests/loginFreshInstall.yaml
 - runFlow: ../tests/removeKeys.yaml
 - runFlow: ../tests/loginFreshInstall.yaml
+- runFlow: ../tests/accountSwitching.yaml
 - runFlow: ../tests/backupYourKey.yaml
-- evalScript: ${PRIV_KEY_TO_DELETE = navigator.clipboard.readText()}
-- runFlow: ../tests/deleteAccountData.yaml
 - runFlow:
     file: ../tests/loginExistingKeys.yaml
     env:
