@@ -10,9 +10,12 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -100,6 +103,60 @@ void main() {
       final state = container.read(clipManagerProvider);
       expect(state.clips.length, equals(1));
       expect(state.totalDuration, equals(const Duration(seconds: 2)));
+    });
+
+    group('trim completion lifecycle', () {
+      late void Function(bool success) completeTrim;
+
+      setUp(() {
+        VideoEditorRenderService.limitClipDurationOverride =
+            ({required clip, required duration, required onComplete}) async {
+              completeTrim = onComplete;
+            };
+        NativeProofModeService.proofFileOverride =
+            (
+              _, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+            }) async => null;
+      });
+
+      tearDown(() {
+        VideoEditorRenderService.limitClipDurationOverride = null;
+        NativeProofModeService.proofFileOverride = null;
+      });
+
+      test('settles background work when disposed during trim', () async {
+        final backgroundWork = container.read(editorBackgroundWorkProvider);
+        final notifier = container.read(clipManagerProvider.notifier);
+        final clip = notifier.addClip(
+          limitClipDuration: true,
+          video: EditorVideo.file('/path/to/video.mp4'),
+          duration:
+              VideoEditorConstants.maxDuration +
+              const Duration(milliseconds: 1),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        expect(clip.processingCompleter, isNotNull);
+        expect(clip.processingCompleter!.isCompleted, isFalse);
+        expect(backgroundWork.isNotEmptyForTest, isTrue);
+
+        container.dispose();
+        completeTrim(true);
+
+        expect(clip.processingCompleter!.isCompleted, isTrue);
+        await backgroundWork.settle().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('editor background work did not settle'),
+        );
+        expect(backgroundWork.isNotEmptyForTest, isFalse);
+      });
     });
 
     group('provider lifecycle', () {

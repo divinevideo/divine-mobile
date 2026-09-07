@@ -241,8 +241,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
           clip: clip,
           duration: remainingDuration,
           onComplete: (success) async {
-            if (!ref.mounted) return;
+            // The render outlives this notifier, and this is the only signal
+            // that releases proof generation waiting on the trimmed file.
             processingCompleter!.complete(success);
+            if (!ref.mounted) return;
 
             /// If the clip exists already we use the newest thumbnail
             /// from that clip.
