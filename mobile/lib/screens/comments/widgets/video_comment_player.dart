@@ -96,7 +96,9 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
     );
     try {
       await controller.initialize();
-      await controller.setSource(VideoClip.network(widget.videoUrl));
+      await controller.setSource(
+        VideoClip.network(widget.videoUrl, trimToCommonTrackEnd: true),
+      );
       await controller.setLooping(looping: true);
       await controller.setVolume(_isMuted ? 0 : 1);
       // Backgrounding does not unmount an inline comment player, and the

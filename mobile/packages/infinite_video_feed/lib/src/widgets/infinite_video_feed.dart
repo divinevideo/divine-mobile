@@ -1223,6 +1223,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             httpHeadersForSource: httpHeadersForSource,
             isLoadCurrent: ownsInit,
             maxPlaybackDuration: widget.maxPlaybackDuration,
+            trimToCommonTrackEnd: true,
             onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
             onSourceLoadFailure: rememberFailedSource,
           );
@@ -1247,6 +1248,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           httpHeadersForSource: httpHeadersForSource,
           isLoadCurrent: ownsInit,
           maxPlaybackDuration: widget.maxPlaybackDuration,
+          trimToCommonTrackEnd: true,
           onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
           onSourceLoadFailure: rememberFailedSource,
         );

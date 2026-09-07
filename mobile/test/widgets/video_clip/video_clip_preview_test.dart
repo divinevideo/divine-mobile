@@ -195,6 +195,46 @@ void main() {
       );
     });
 
+    testWidgets('trims the looping clip to the common track end', (
+      tester,
+    ) async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'clip_preview_track_end',
+      );
+      addTearDown(() => tempDir.deleteSync(recursive: true));
+      final videoFile = File('${tempDir.path}/video.mp4')
+        ..writeAsBytesSync(const [0]);
+      Map<Object?, Object?>? setClipsArguments;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('divine_video_player/player_0'),
+            (call) async {
+              if (call.method == 'setClips') {
+                setClipsArguments = call.arguments! as Map<Object?, Object?>;
+              }
+              return null;
+            },
+          );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player/player_0'),
+              null,
+            );
+      });
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          clip: testClip.copyWith(video: EditorVideo.file(videoFile.path)),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final clips = setClipsArguments!['clips']! as List<Object?>;
+      final clip = clips.single! as Map<Object?, Object?>;
+      expect(clip['trimToCommonTrackEnd'], isTrue);
+    });
+
     testWidgets('renders delete button when onDelete is provided', (
       tester,
     ) async {

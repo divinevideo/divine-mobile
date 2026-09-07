@@ -127,7 +127,13 @@ class _VideoMetadataPreviewScreenState
         await controller.dispose();
         return;
       }
-      await controller.setSource(VideoClip.file(await video.safeFilePath()));
+      await controller.setSource(
+        VideoClip.file(
+          await video.safeFilePath(),
+          // Match the loop boundary used when the same file reaches the feed.
+          trimToCommonTrackEnd: true,
+        ),
+      );
       if (!mounted) {
         await controller.dispose();
         return;
