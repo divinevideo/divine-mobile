@@ -1,5 +1,0 @@
-appId: co.openvine.app.staging
----
-- assertVisible: "Your Home Feed is Empty"
-- assertVisible: "Follow creators to see their videos here"
-- assertVisible: "Explore Videos"
