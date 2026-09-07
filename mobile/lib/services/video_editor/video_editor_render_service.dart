@@ -216,6 +216,18 @@ class VideoEditorRenderService {
   })?
   renderVideoOverride;
 
+  /// Test-only override for [limitClipDuration].
+  ///
+  /// When set, [limitClipDuration] delegates to this callback instead of
+  /// running the real render pipeline. Reset to `null` in `tearDown`.
+  @visibleForTesting
+  static Future<void> Function({
+    required DivineVideoClip clip,
+    required Duration duration,
+    required ValueChanged<bool> onComplete,
+  })?
+  limitClipDurationOverride;
+
   @visibleForTesting
   static void Function(Object error, StackTrace stackTrace)?
   get crashReporterOverride => VideoRenderWatchdog.crashReporterOverride;
@@ -697,6 +709,11 @@ class VideoEditorRenderService {
     required Duration duration,
     required ValueChanged<bool> onComplete,
   }) async {
+    final override = limitClipDurationOverride;
+    if (override != null) {
+      return override(clip: clip, duration: duration, onComplete: onComplete);
+    }
+
     try {
       final inputPath = await clip.requireVideo.safeFilePath();
 

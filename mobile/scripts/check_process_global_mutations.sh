@@ -116,6 +116,7 @@ RESET_TO_DEFAULT_GLOBALS=(
   'VideoEditorRenderService\.renderVideoOverride:null'
   'VideoEditorRenderService\.renderVideoToClipOverride:null'
   'VideoEditorRenderService\.crashReporterOverride:null'
+  'VideoEditorRenderService\.limitClipDurationOverride:null'
   'NativeProofModeService\.proofFileOverride:null'
   'NativeProofModeService\.c2paSigningServiceFactoryOverride:null'
   'InfiniteVideoFeed\.debugIsSupportedOverride:null'
