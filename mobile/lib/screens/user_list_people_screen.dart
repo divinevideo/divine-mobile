@@ -200,7 +200,60 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
         ),
         body: const Center(child: BrandedLoadingIndicator(size: 60)),
       ),
-      error: (error, stackTrace) => const _ListNotFoundView(),
+      // A relay failure is not "this list does not exist": keep the two
+      // apart and let the viewer try again without leaving the screen.
+      error: (error, stackTrace) => _ListLoadFailedView(
+        onRetry: () => ref.invalidate(
+          publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when a discovered list could not be read from the relays.
+class _ListLoadFailedView extends StatelessWidget {
+  const _ListLoadFailedView({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.vineColors.background,
+      appBar: DiVineAppBar(
+        title: context.l10n.peopleListsRouteTitle,
+        showBackButton: true,
+        onBackPressed: context.safePop,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 16,
+            children: [
+              DivineIcon(
+                icon: DivineIconName.warningCircle,
+                size: 48,
+                color: context.vineColors.secondaryText,
+              ),
+              Text(
+                context.l10n.peopleListsLoadFailed,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.secondaryText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              DivineButton(
+                label: context.l10n.commonRetry,
+                type: DivineButtonType.secondary,
+                onPressed: onRetry,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

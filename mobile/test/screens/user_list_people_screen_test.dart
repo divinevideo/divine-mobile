@@ -5,19 +5,19 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
-import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
-import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -53,7 +53,7 @@ Future<void> _pumpPeopleListScreen(
   await tester.pumpWidget(
     testProviderScope(
       child: MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider<PeopleListsBloc>.value(
           value: bloc,
@@ -106,7 +106,7 @@ Future<void> _pumpPushedListRoute(
       child: BlocProvider<PeopleListsBloc>.value(
         value: bloc,
         child: MaterialApp.router(
-          localizationsDelegates: appLocalizationsDelegates,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
         ),
@@ -143,7 +143,7 @@ List<String> _captureAnnouncements(WidgetTester tester) {
 
 /// Opens the delete confirmation from the overflow menu and confirms it.
 Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
-  await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+  await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
   await tester.pumpAndSettle();
   await tester.tap(find.text(l10n.listDeleteAction));
   await tester.pumpAndSettle();
@@ -178,7 +178,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -193,6 +193,65 @@ void main() {
         expect(find.text('Selected List'), findsOneWidget);
       },
     );
+
+    testWidgets('a discovered list that fails to load offers a retry', (
+      tester,
+    ) async {
+      // A relay failure must not read as "this list was deleted": the
+      // viewer gets the failure copy and a retry that re-runs the read.
+      const otherOwner =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      final list = _buildList(id: 'crew', name: 'Crew', isEditable: false);
+      var attempts = 0;
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+        ),
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            publicPeopleListProvider(
+              ownerPubkey: otherOwner,
+              listId: 'crew',
+            ).overrideWith((ref) async {
+              attempts++;
+              if (attempts == 1) throw Exception('relay timed out');
+              return list;
+            }),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: const UserListPeopleScreen(
+                listId: 'crew',
+                ownerPubkey: otherOwner,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.peopleListsLoadFailed), findsOneWidget);
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      await tester.pump();
+
+      expect(attempts, 2);
+      expect(find.text('Crew'), findsOneWidget);
+      expect(find.text(l10n.peopleListsLoadFailed), findsNothing);
+    });
 
     testWidgets(
       'reacts to bloc emitting updated list without rebuilding the route',
@@ -219,7 +278,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -263,7 +322,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -297,7 +356,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -340,7 +399,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -376,9 +435,9 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
+      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
 
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.listDeleteAction), findsOneWidget);
@@ -405,7 +464,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
@@ -427,7 +486,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -622,7 +681,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -677,7 +736,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -717,7 +776,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -765,7 +824,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -840,7 +899,7 @@ void main() {
             child: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: MaterialApp.router(
-                localizationsDelegates: appLocalizationsDelegates,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -900,7 +959,7 @@ void main() {
             child: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: MaterialApp.router(
-                localizationsDelegates: appLocalizationsDelegates,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -962,7 +1021,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp.router(
-            localizationsDelegates: appLocalizationsDelegates,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),
