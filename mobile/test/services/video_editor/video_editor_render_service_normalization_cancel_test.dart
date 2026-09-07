@@ -161,6 +161,46 @@ void main() {
       // never normalized and the full video is never concatenated.
       expect(plugin.renderedTaskIds, ['clip-a_normalized']);
       expect(outputPath, isNull);
+      expect(
+        tempDir.listSync().whereType<File>().where(
+          (file) => file.path.endsWith('.mp4'),
+        ),
+        isEmpty,
+      );
     });
+
+    test(
+      'deletes earlier normalized clips when a later clip is cancelled',
+      () async {
+        RenderCancellationRegistry.start(exportTaskId);
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          onRender: (task) {
+            if (task.id == 'clip-b_normalized') {
+              RenderCancellationRegistry.cancel(exportTaskId);
+            }
+          },
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+        );
+
+        expect(plugin.renderedTaskIds, [
+          'clip-a_normalized',
+          'clip-b_normalized',
+        ]);
+        expect(outputPath, isNull);
+        expect(
+          tempDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+        );
+      },
+    );
   });
 }

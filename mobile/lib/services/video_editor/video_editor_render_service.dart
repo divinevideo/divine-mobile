@@ -590,7 +590,7 @@ class VideoEditorRenderService {
     Duration? maxOutputDuration = VideoEditorConstants.maxDuration,
     bool reportEveryFailure = false,
   }) async {
-    var tempFilePaths = <String>[];
+    final tempFilePaths = <String>[];
 
     try {
       final override = renderVideoOverride;
@@ -636,8 +636,8 @@ class VideoEditorRenderService {
         cacheDir: cacheDir,
         parameters: parameters,
         taskId: effectiveTaskId,
+        tempFilePaths: tempFilePaths,
       );
-      tempFilePaths = result.tempFilePaths;
 
       final outputPath = await _concatenateSegments(
         clips: clips,
@@ -671,14 +671,14 @@ class VideoEditorRenderService {
         name: _logName,
         category: .video,
       );
-      unawaited(_cleanupTempFiles(tempFilePaths));
+      await _cleanupTempFiles(tempFilePaths);
       throw VideoRenderFailedException(
         VideoRenderFailureReason.canceled,
         cause: e,
       );
     } catch (e, stack) {
       Log.error('❌ Video render failed: $e', name: _logName, category: .video);
-      unawaited(_cleanupTempFiles(tempFilePaths));
+      await _cleanupTempFiles(tempFilePaths);
       VideoRenderWatchdog.reportFailure(
         e,
         stack,
@@ -825,12 +825,15 @@ class VideoEditorRenderService {
   ///
   /// [taskId] is the export's own id — the one a user cancel targets — so this
   /// pass can stop between clips instead of rendering the whole set (#7833).
+  /// [tempFilePaths] is owned by the caller so partial output remains visible
+  /// to its cleanup handlers when this pass throws.
   static Future<NormalizationResult> _normalizeClipsToAspectRatio({
     required List<DivineVideoClip> clips,
     required model.AspectRatio aspectRatio,
     required Directory cacheDir,
     required CompleteParameters? parameters,
     required String taskId,
+    required List<String> tempFilePaths,
   }) async {
     // Analyze all clips first to determine the optimal rendering strategy
     final clipAnalysis = await _analyzeClips(clips, aspectRatio);
@@ -879,8 +882,6 @@ class VideoEditorRenderService {
     );
 
     final segments = <VideoSegment>[];
-    final tempFilePaths = <String>[];
-
     for (int i = 0; i < clips.length; i++) {
       _throwIfCancellationRequested(taskId);
       final entry = clipAnalysis.entries[i];
@@ -907,15 +908,18 @@ class VideoEditorRenderService {
           ),
         );
       } else {
-        final normalizedPath = await _renderNormalizedClip(
+        final normalizedPath = path.join(
+          cacheDir.path,
+          'normalized_${i}_${DateTime.now().microsecondsSinceEpoch}.mp4',
+        );
+        tempFilePaths.add(normalizedPath);
+        await _renderNormalizedClip(
           clip: entry.clip,
-          index: i,
           cropParams: entry.cropParams,
-          tempDir: cacheDir,
+          outputPath: normalizedPath,
           parameters: parameters,
           ownerTaskId: taskId,
         );
-        tempFilePaths.add(normalizedPath);
         segments.add(
           VideoSegment(
             video: EditorVideo.file(File(normalizedPath)),
@@ -962,17 +966,11 @@ class VideoEditorRenderService {
   /// Renders a single clip with crop transform to normalize its aspect ratio.
   static Future<String> _renderNormalizedClip({
     required DivineVideoClip clip,
-    required int index,
     required CropParameters cropParams,
-    required Directory tempDir,
+    required String outputPath,
     required CompleteParameters? parameters,
     required String ownerTaskId,
   }) async {
-    final outputPath = path.join(
-      tempDir.path,
-      'normalized_${index}_${DateTime.now().microsecondsSinceEpoch}.mp4',
-    );
-
     final task = VideoRenderData(
       id: '${clip.id}_normalized',
       videoSegments: [

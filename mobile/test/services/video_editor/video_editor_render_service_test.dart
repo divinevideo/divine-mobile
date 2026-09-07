@@ -598,8 +598,7 @@ void main() {
 
     // The reduced-resolution attempt is rebuilt with copyWith. Rebuilding it
     // with the constructor instead would silently reset every field the
-    // rebuild does not name — trimToCommonTrackEnd among them, which is what
-    // keeps the audio/video seam closed (#7788).
+    // rebuild does not name, including trimToCommonTrackEnd (#7788).
     test('carries non-quality task fields into the reduced-resolution '
         'attempt', () async {
       final harness = flakyEncoder(failuresBeforeSuccess: 2);
