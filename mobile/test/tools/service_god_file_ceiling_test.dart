@@ -112,7 +112,8 @@ void main() {
       expect(res.exitCode, 1);
       expect(res.stdout, contains('no longer emitted'));
       expect(res.stdout, contains('removed, renamed, or dropped below'));
-      expect(res.stdout, contains('Lock the win by regenerating the baseline'));
+      expect(res.stdout, contains('UPDATE_BASELINE=1 bash'));
+      expect(res.stdout, contains('check_service_god_file_ceiling.sh'));
     });
 
     test('passes when a service shrinks but remains oversized', () {
