@@ -8,10 +8,8 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -22,6 +20,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -92,34 +91,6 @@ final pendingUploadOwnerCleanupProvider = Provider<PendingUploadOwnerCleanup>((
 ) {
   return (ownerPubkey) =>
       ref.read(uploadManagerProvider).deleteAllForOwner(ownerPubkey);
-});
-
-/// Clears the device-wide personal-event cache during account cleanup.
-///
-/// The indirection is load-bearing twice over. Reading
-/// `personalEventCacheServiceProvider` from [userDataCleanupServiceProvider]'s
-/// own callback closes a provider cycle back through auth (#7389). And the
-/// service's own `clearCache()` returns early when it has not been
-/// initialised, which would leave the on-disk boxes holding the departing
-/// account's events — the boxes outlive the service, so cleanup clears them
-/// directly (#8314).
-final personalEventCacheClearProvider = Provider<Future<void> Function()>((
-  ref,
-) {
-  return () async {
-    // Both boxes are named inline rather than looped over: the Hive wipe
-    // policy is tied to literal `HiveBoxNames.` call sites, so a box opened
-    // through a loop variable would drop out of that guard's view.
-    final events = Hive.isBoxOpen(HiveBoxNames.personalEvents)
-        ? Hive.box<dynamic>(HiveBoxNames.personalEvents)
-        : await Hive.openBox<dynamic>(HiveBoxNames.personalEvents);
-    await events.clear();
-
-    final metadata = Hive.isBoxOpen(HiveBoxNames.personalEventsMetadata)
-        ? Hive.box<dynamic>(HiveBoxNames.personalEventsMetadata)
-        : await Hive.openBox<dynamic>(HiveBoxNames.personalEventsMetadata);
-    await metadata.clear();
-  };
 });
 
 /// Clears the live watch-history service as well as its device-wide stores.

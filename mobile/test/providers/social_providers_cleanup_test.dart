@@ -18,6 +18,7 @@ import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
