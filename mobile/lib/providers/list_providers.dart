@@ -195,12 +195,18 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
   return repository.resolveListThumbnails(lists);
 }
 
+/// Riverpod's default retries a failed provider ten times with backoff, and
+/// every attempt here is a relay query with its own timeout — the viewer
+/// would sit on a spinner for minutes. A failed read surfaces at once
+/// instead, with a retry the viewer drives.
+Duration? _noAutomaticRetry(int retryCount, Object error) => null;
+
 /// Resolves a discovered public people list by author + d-tag from relays.
 ///
 /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
 /// discovery cards and deep links to someone else's list resolve through
 /// this instead.
-@riverpod
+@Riverpod(retry: _noAutomaticRetry)
 Future<UserList?> publicPeopleList(
   Ref ref, {
   required String ownerPubkey,
