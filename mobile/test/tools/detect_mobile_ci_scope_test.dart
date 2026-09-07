@@ -163,6 +163,34 @@ esac
           );
         });
 
+        test('runs app CI for a repo-root scripts change', () {
+          // mobile/test/tools/ owns the tests for these scripts, and there is
+          // no shellcheck or bash -n job, so skipping the matrix would ship
+          // them with no coverage at all.
+          expectScope(
+            runDetector(
+              event: event,
+              changedFiles: ['scripts/prune-merged-branches.sh'],
+              changedTotal: 1,
+            ),
+            app: true,
+            native: false,
+          );
+        });
+
+        test('still skips app CI for docs under scripts/', () {
+          // The docs arm is matched first on purpose; pins that ordering.
+          expectScope(
+            runDetector(
+              event: event,
+              changedFiles: ['scripts/lnav/README.md'],
+              changedTotal: 1,
+            ),
+            app: false,
+            native: false,
+          );
+        });
+
         test('runs app and native checks for native configuration', () {
           expectScope(
             runDetector(

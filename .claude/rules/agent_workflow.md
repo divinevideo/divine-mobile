@@ -61,7 +61,7 @@ report-only classifier for likely stale local branches and worktrees. It
 does not delete anything; prune the reported rows manually after reviewing
 the output.
 
-Do **not** improvise the classification. Three things that look like they
+Do **not** improvise the classification. Four things that look like they
 work do not:
 
 - `git branch --merged main` reports 5 of 1185 branches here. This repo
@@ -73,16 +73,26 @@ work do not:
 - Matching branch names against an issue number deletes live work.
   `fix/7606-semantic-tokens` was destroyed exactly this way: unpushed
   local work on a parallel attempt at the same task.
+- `git merge-base --is-ancestor` cannot tell you a tip is already on
+  `main`. This checkout is **shallow**, and a shallow clone's ancestry
+  walk stops at the graft boundary, so it answers "not an ancestor" for a
+  commit that is one — exit 1, silently, with the ref still resolving and
+  no error to catch. A worktree you are still working in reads as
+  prunable.
 
-The useful signals are GitHub reporting a same-repo merged PR to `main` with
-that head ref, or a worktree tip that belongs to a merged PR but is not already
-an ancestor of `main`. The latter identifies review worktrees whose scratch
-branch name never matched the reviewed PR while excluding fresh worktrees
-created at `origin/main`. Two vetoes apply on top: the local branch tip must
-exist in GitHub's repository object database, and the worktree must have no
-uncommitted, untracked, or non-regenerable ignored files. Ignored toolchain
-output such as `build/`, `.dart_tool/`, and generated plugin registrants does
-not veto because tracked inputs can recreate it. This keeps branch-name reuse,
+The useful signals are GitHub reporting a same-repo merged PR to `main`
+with that head ref, or a worktree tip that belongs to a merged PR and is
+not already contained in `main`. The second identifies review worktrees
+whose scratch branch name never matched the reviewed PR, while excluding
+worktrees that hold no commits of their own. **Containment is asked of
+GitHub, for the reason above** — nothing in the classifier walks local
+history.
+
+Two vetoes apply on top: the local branch tip must exist in GitHub's
+repository object database, and the worktree must have no uncommitted,
+untracked, or non-regenerable ignored files. Ignored toolchain output such
+as `build/`, `.dart_tool/`, and generated plugin registrants does not veto
+because tracked inputs can recreate it. This keeps branch-name reuse,
 unpushed commits, and local-only worktree files out of the prunable set.
 
 ### Optional: warn on concurrent sessions in one worktree
