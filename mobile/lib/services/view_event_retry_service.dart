@@ -123,6 +123,12 @@ class ViewEventRetryService {
         final marked = await _dao.markPublishing(row.id);
         if (!marked) continue;
 
+        // Consent may be withdrawn while the database awaits above are in
+        // flight. Check again after the final await before publication; the
+        // publisher call begins synchronously, so no other event-loop turn can
+        // change consent between this check and that irreversible operation.
+        if (_isAnalyticsEnabled?.call() == false) return;
+
         try {
           final video = _toVideoEvent(row);
           // Pre-phase rows (phase IS NULL) are legacy end-of-session events

@@ -17,6 +17,22 @@ class _MockViewEventPublisher extends Mock implements ViewEventPublisher {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
+class _ConsentWithdrawingPendingViewEventsDao extends PendingViewEventsDao {
+  _ConsentWithdrawingPendingViewEventsDao(
+    super.attachedDatabase, {
+    required this.onMarkedPublishing,
+  });
+
+  final void Function() onMarkedPublishing;
+
+  @override
+  Future<bool> markPublishing(String id) async {
+    final marked = await super.markPublishing(id);
+    onMarkedPublishing();
+    return marked;
+  }
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
@@ -192,6 +208,33 @@ void main() {
             ),
           );
           expect(await dao.getById('view-a'), isNotNull);
+        },
+      );
+
+      test(
+        'does not publish when consent is withdrawn during a sweep',
+        () async {
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          var consented = true;
+          dao = _ConsentWithdrawingPendingViewEventsDao(
+            database,
+            onMarkedPublishing: () => consented = false,
+          );
+          final service = makeService(isAnalyticsEnabled: () => consented);
+
+          await service.sweep();
+
+          verifyNever(
+            () => publisher.publishViewEvent(
+              video: any(named: 'video'),
+              startSeconds: any(named: 'startSeconds'),
+              endSeconds: any(named: 'endSeconds'),
+              source: any(named: 'source'),
+              sourceDetail: any(named: 'sourceDetail'),
+              loopCount: any(named: 'loopCount'),
+              phase: any(named: 'phase'),
+            ),
+          );
         },
       );
     });

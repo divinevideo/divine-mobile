@@ -59,6 +59,16 @@ class _FailingWriteSharedPreferencesStore
   }
 }
 
+class _FailingReadSharedPreferencesStore
+    extends InMemorySharedPreferencesStore {
+  _FailingReadSharedPreferencesStore() : super.empty();
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    throw Exception('storage unavailable');
+  }
+}
+
 enum _WriteFailure { rejected, throws }
 
 void main() {
@@ -1239,6 +1249,44 @@ void main() {
 
         expect(collectionControl.collectionEnabled, equals([true]));
       });
+
+      test(
+        'a preference read failure applies the full withdrawal path',
+        () async {
+          final originalStore = SharedPreferencesStorePlatform.instance;
+          final queue = _MockProductEventQueue();
+          final dao = _MockPendingViewEventsDao();
+          when(queue.clear).thenAnswer((_) async {});
+          when(() => queue.setSendingEnabled(any())).thenReturn(null);
+          when(
+            () => dao.deleteAllForUser(viewerPubkey),
+          ).thenAnswer((_) async => 1);
+          SharedPreferencesStorePlatform.instance =
+              _FailingReadSharedPreferencesStore();
+          SharedPreferences.resetStatic();
+          analyticsService.dispose();
+          analyticsService = AnalyticsService(
+            backgroundActivityManager: BackgroundActivityManager(),
+            productEventQueue: queue,
+            pendingViewEventsDao: dao,
+            analyticsCollectionControl: collectionControl,
+            currentUserPubkey: () => viewerPubkey,
+          );
+
+          try {
+            await analyticsService.initialize();
+
+            expect(analyticsService.analyticsEnabled, isFalse);
+            expect(collectionControl.collectionEnabled, equals([false]));
+            expect(collectionControl.resetCount, 1);
+            verify(queue.clear).called(1);
+            verify(() => dao.deleteAllForUser(viewerPubkey)).called(1);
+          } finally {
+            SharedPreferencesStorePlatform.instance = originalStore;
+            SharedPreferences.resetStatic();
+          }
+        },
+      );
 
       group('persistence failures', () {
         late SharedPreferencesStorePlatform originalStore;

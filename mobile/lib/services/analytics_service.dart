@@ -198,8 +198,7 @@ class AnalyticsService implements BackgroundAwareService {
       // consent nobody gave. The switch then reads off, and turning it on
       // writes and applies a real decision.
       _isInitialized = true;
-      _analyticsEnabled = false;
-      _productEventQueue?.setSendingEnabled(false);
+      await _applyAnalyticsConsent(false);
     }
   }
 
