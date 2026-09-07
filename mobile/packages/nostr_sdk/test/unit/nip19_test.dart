@@ -157,11 +157,13 @@ void main() {
       expect(diagnostics.single, isNot(contains(mixedCaseNsec)));
       expect(diagnostics.single, isNot(contains('nsec1')));
       expect(diagnostics.single, isNot(contains(testHexPrivateKey)));
-      expect(mixedCaseCharacters.length, greaterThanOrEqualTo(20));
+      var comparedFragments = 0;
       for (var start = 0; start <= mixedCaseCharacters.length - 20; start++) {
         final inputFragment = mixedCaseCharacters.skip(start).take(20).join();
         expect(diagnostics.single, isNot(contains(inputFragment)));
+        comparedFragments++;
       }
+      expect(comparedFragments, greaterThan(0));
       expect(diagnostics.single, contains('MixedCase'));
     });
 
