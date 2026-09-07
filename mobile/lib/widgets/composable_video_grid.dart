@@ -551,39 +551,14 @@ class _SelectionBadge extends StatelessWidget {
             ),
           ],
         ),
+        // The design's selected checkbox, exported as one two-tone asset
+        // (brand fill, dark ink), so it is rendered untinted.
         child: isSelected
-            ? const CustomPaint(painter: _SelectedCheckPainter())
+            ? const DivineIcon(icon: DivineIconName.checkboxSelected)
             : null,
       ),
     );
   }
-}
-
-/// The selected badge's check: the design's 2px round-capped stroke from
-/// (7,13) to (10,16) to (17,9) on the 24-unit grid, inked in
-/// [VineTheme.onPrimaryButton] — the same dark ink the filled brand button
-/// uses on [VineTheme.vineGreen].
-class _SelectedCheckPainter extends CustomPainter {
-  const _SelectedCheckPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scale = size.width / 24;
-    final paint = Paint()
-      ..color = VineTheme.onPrimaryButton
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 * scale
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final path = Path()
-      ..moveTo(7 * scale, 13 * scale)
-      ..lineTo(10 * scale, 16 * scale)
-      ..lineTo(17 * scale, 9 * scale);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_SelectedCheckPainter oldDelegate) => false;
 }
 
 class _VideoInfoSection extends StatelessWidget {
