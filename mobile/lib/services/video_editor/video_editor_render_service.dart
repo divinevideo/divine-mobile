@@ -603,6 +603,11 @@ class VideoEditorRenderService {
     bool reportEveryFailure = false,
   }) async {
     final tempFilePaths = <String>[];
+    // Tracked so a cancel or a failed final encoder attempt mid-concatenation
+    // can delete the partial output. _concatenateSegments only returns the path
+    // on success, so without this the file it wrote (in the documents directory
+    // for a persistent export) is orphaned. #8818.
+    String? finalOutputPath;
 
     try {
       final override = renderVideoOverride;
@@ -627,6 +632,15 @@ class VideoEditorRenderService {
       final outputDir = usePersistentStorage
           ? await getApplicationDocumentsDirectory()
           : cacheDir;
+
+      // Resolve the final output path up front so it can be cleaned up on a
+      // cancel/failure that throws out of _concatenateSegments before it
+      // returns the path. #8818.
+      final resolvedOutputPath = path.join(
+        outputDir.path,
+        'divine_${DateTime.now().microsecondsSinceEpoch}.mp4',
+      );
+      finalOutputPath = resolvedOutputPath;
 
       Log.debug(
         '🎞️ Rendering ${clips.length} clip(s) to final video',
@@ -655,7 +669,7 @@ class VideoEditorRenderService {
         clips: clips,
         segments: result.segments,
         taskId: effectiveTaskId,
-        outputDir: outputDir,
+        outputPath: resolvedOutputPath,
         globalTransform: result.globalTransform,
         aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
         parameters: parameters,
@@ -683,14 +697,17 @@ class VideoEditorRenderService {
         name: _logName,
         category: .video,
       );
-      await _cleanupTempFiles(tempFilePaths);
+      // Also remove the partial final output the cancelled concatenation may
+      // have written; on success this path is the returned result, so it is
+      // only cleaned on the failure/cancel exits. #8818.
+      await _cleanupTempFiles([...tempFilePaths, ?finalOutputPath]);
       throw VideoRenderFailedException(
         VideoRenderFailureReason.canceled,
         cause: e,
       );
     } catch (e, stack) {
       Log.error('❌ Video render failed: $e', name: _logName, category: .video);
-      await _cleanupTempFiles(tempFilePaths);
+      await _cleanupTempFiles([...tempFilePaths, ?finalOutputPath]);
       VideoRenderWatchdog.reportFailure(
         e,
         stack,
@@ -881,7 +898,6 @@ class VideoEditorRenderService {
               ),
             )
             .toList(),
-        tempFilePaths: [],
         globalTransform:
             clipAnalysis.entries.first.cropParams.needsCropping(
               clipAnalysis.entries.first.resolution,
@@ -948,7 +964,6 @@ class VideoEditorRenderService {
 
     return NormalizationResult(
       segments: segments,
-      tempFilePaths: tempFilePaths,
     );
   }
 
@@ -1039,17 +1054,12 @@ class VideoEditorRenderService {
     required List<DivineVideoClip> clips,
     required List<VideoSegment> segments,
     required String taskId,
-    required Directory outputDir,
+    required String outputPath,
     required CompleteParameters? parameters,
     required model.AspectRatio aspectRatio,
     required Duration? maxOutputDuration,
     CropParameters? globalTransform,
   }) async {
-    final outputPath = path.join(
-      outputDir.path,
-      'divine_${DateTime.now().microsecondsSinceEpoch}.mp4',
-    );
-
     // Overlap transitions shorten the rendered output, so the true video
     // length is the transition-mapped output duration, capped by
     // [maxOutputDuration]. Audio windows are clamped to it below so a short

@@ -202,5 +202,47 @@ void main() {
         );
       },
     );
+
+    test(
+      'deletes the partial final output when the export is cancelled during '
+      'concatenation (#8818)',
+      () async {
+        // Cancel while the FINAL concatenation render runs, after normalization
+        // has completed — so the partial `divine_*.mp4` has been written to the
+        // output directory and must not be left orphaned.
+        RenderCancellationRegistry.start(exportTaskId);
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          onRender: (task) {
+            if (task.id == exportTaskId) {
+              RenderCancellationRegistry.cancel(exportTaskId);
+            }
+          },
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+        );
+
+        // Normalization ran for both clips, then the concat render was reached
+        // and cancelled.
+        expect(plugin.renderedTaskIds, [
+          'clip-a_normalized',
+          'clip-b_normalized',
+          exportTaskId,
+        ]);
+        expect(outputPath, isNull);
+        expect(
+          tempDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason: 'the partial divine_*.mp4 must not be left behind on cancel',
+        );
+      },
+    );
   });
 }
