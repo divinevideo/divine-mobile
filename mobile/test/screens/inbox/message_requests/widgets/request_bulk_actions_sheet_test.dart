@@ -28,7 +28,10 @@ void main() {
     // anyway, which is what made this suite a false positive (#8409). Swapping
     // back to `testMaterialApp(home: ...)` would read as a simplification and
     // would silently restore that.
-    Widget buildSubject({required ValueChanged<RequestBulkAction?> onResult}) {
+    Widget buildSubject({
+      required ValueChanged<RequestBulkAction?> onResult,
+      Locale? locale,
+    }) {
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -56,6 +59,7 @@ void main() {
 
       return MaterialApp.router(
         routerConfig: router,
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
@@ -82,6 +86,23 @@ void main() {
             'missing, and _ActionTile reads context.vineColors for its label '
             'and divider colours.',
       );
+    });
+
+    // `find.text(l10n.inboxRequestsMarkAllRead)` resolves to the English
+    // literal, so on its own it passes whether the tile reads `context.l10n`
+    // or hardcodes the string. Pumping a non-English locale is what tells the
+    // two apart, which is the claim the assertions above are making.
+    testWidgets('renders both tiles in the active locale', (tester) async {
+      final filipino = lookupAppLocalizations(const Locale('fil'));
+      await tester.pumpWidget(
+        buildSubject(onResult: (_) {}, locale: const Locale('fil')),
+      );
+
+      await showSheet(tester);
+
+      expect(find.text(filipino.inboxRequestsMarkAllRead), findsOneWidget);
+      expect(find.text(filipino.inboxRequestsRemoveAll), findsOneWidget);
+      expect(find.text(l10n.inboxRequestsMarkAllRead), findsNothing);
     });
 
     testWidgets('returns markAllRead when first tile tapped', (tester) async {
