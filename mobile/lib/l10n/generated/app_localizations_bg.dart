@@ -307,6 +307,23 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Съдържание и безопасност';
 
   @override
+  String get settingsPrivacyTitle => 'Поверителност';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Избери какви данни за ползване споделяш';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'АНАЛИТИКА';
+
+  @override
+  String get privacySettingsShareUsage => 'Споделяй данни за ползване';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ИНТЕГРАЦИИ';
 
   @override

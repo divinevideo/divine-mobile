@@ -309,6 +309,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Content & Safety';
 
   @override
+  String get settingsPrivacyTitle => 'Privacy';
+
+  @override
+  String get settingsPrivacySubtitle => 'Choose what usage data you share';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALYTICS';
+
+  @override
+  String get privacySettingsShareUsage => 'Share usage data';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Helps us see what people actually use. Switch it off and queued data is deleted.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIONS';
 
   @override

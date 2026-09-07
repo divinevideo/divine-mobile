@@ -274,6 +274,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Nội dung & An toàn';
 
   @override
+  String get settingsPrivacyTitle => 'Quyền riêng tư';
+
+  @override
+  String get settingsPrivacySubtitle => 'Chọn dữ liệu sử dụng mà bạn chia sẻ';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'PHÂN TÍCH';
+
+  @override
+  String get privacySettingsShareUsage => 'Chia sẻ dữ liệu sử dụng';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'TÍCH HỢP';
 
   @override

@@ -88,6 +88,7 @@ class AnalyticsService implements BackgroundAwareService {
 
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
+  Future<void>? _initialization;
   // Not final: rotated at every identity or consent boundary so activity from
   // separate privacy contexts cannot be joined.
   late String _anonymousId = _uuid.v4();
@@ -117,7 +118,17 @@ class AnalyticsService implements BackgroundAwareService {
   }
 
   /// Initialize the analytics service.
-  Future<void> initialize() async {
+  ///
+  /// Idempotent under concurrency, not only after completion. The
+  /// `_isInitialized` flag is only set past the first `await`, so two callers
+  /// that start in the same turn both run the body — a second cleanup timer,
+  /// a second registration, a second queue recovery. `analyticsServiceProvider`
+  /// kicks this off on a microtask, so anything that needs the stored consent
+  /// preference before reading it (the Settings privacy toggle) is exactly
+  /// that second caller. Everyone awaits the same run instead.
+  Future<void> initialize() => _initialization ??= _initialize();
+
+  Future<void> _initialize() async {
     // A disposed instance must not come back. `analyticsServiceProvider`
     // defers this call onto a microtask, so a container torn down before that
     // microtask lands calls dispose() first (#8398).

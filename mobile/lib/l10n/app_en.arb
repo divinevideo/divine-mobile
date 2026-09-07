@@ -235,6 +235,26 @@
   "settingsAppLanguageUseDeviceLanguage": "Use device language",
   "settingsGeneralTitle": "General Settings",
   "settingsContentSafetyTitle": "Content & Safety",
+  "settingsPrivacyTitle": "Privacy",
+  "@settingsPrivacyTitle": {
+    "description": "Settings hub row and app bar title for the Privacy screen, which holds the analytics consent control."
+  },
+  "settingsPrivacySubtitle": "Choose what usage data you share",
+  "@settingsPrivacySubtitle": {
+    "description": "Supporting copy on the Settings hub row that opens the Privacy screen."
+  },
+  "privacySettingsAnalyticsSection": "ANALYTICS",
+  "@privacySettingsAnalyticsSection": {
+    "description": "Section header above the analytics consent toggle on the Privacy screen. Uppercase to match the other settings section headers."
+  },
+  "privacySettingsShareUsage": "Share usage data",
+  "@privacySettingsShareUsage": {
+    "description": "Label of the switch that turns analytics collection on or off. Consent copy: keep it plain and literal, never playful."
+  },
+  "privacySettingsShareUsageSubtitle": "Helps us see what people actually use. Switch it off and queued data is deleted.",
+  "@privacySettingsShareUsageSubtitle": {
+    "description": "Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device."
+  },
   "generalSettingsSectionIntegrations": "INTEGRATIONS",
   "generalSettingsSectionViewing": "VIEWING",
   "generalSettingsSectionCreating": "CREATING",

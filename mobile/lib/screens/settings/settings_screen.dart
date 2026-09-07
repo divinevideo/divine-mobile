@@ -45,6 +45,7 @@ import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
+import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
@@ -437,6 +438,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: context.l10n.settingsContentSafetyTitle,
                   icon: DivineIconName.faders,
                   onTap: () => context.push(SafetySettingsScreen.path),
+                ),
+                DivineListTile(
+                  title: context.l10n.settingsPrivacyTitle,
+                  icon: DivineIconName.shieldCheck,
+                  subtitle: context.l10n.settingsPrivacySubtitle,
+                  onTap: () => context.push(PrivacySettingsScreen.path),
                 ),
                 DivineListTile(
                   title: context.l10n.settingsNostrSettings,

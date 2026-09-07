@@ -234,6 +234,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsContentSafetyTitle => 'コンテンツと安全';
 
   @override
+  String get settingsPrivacyTitle => 'プライバシー';
+
+  @override
+  String get settingsPrivacySubtitle => '共有する利用データを選択できます';
+
+  @override
+  String get privacySettingsAnalyticsSection => '分析';
+
+  @override
+  String get privacySettingsShareUsage => '利用データを共有';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      '何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。';
+
+  @override
   String get generalSettingsSectionIntegrations => '連携';
 
   @override

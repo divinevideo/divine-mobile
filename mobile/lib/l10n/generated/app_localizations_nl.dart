@@ -303,6 +303,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Inhoud & veiligheid';
 
   @override
+  String get settingsPrivacyTitle => 'Privacy';
+
+  @override
+  String get settingsPrivacySubtitle => 'Kies welke gebruiksgegevens je deelt';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATISTIEKEN';
+
+  @override
+  String get privacySettingsShareUsage => 'Gebruiksgegevens delen';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Helpt ons te zien wat mensen echt gebruiken. Zet je het uit, dan worden wachtende gegevens op dit apparaat verwijderd.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIES';
 
   @override

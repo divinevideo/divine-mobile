@@ -313,6 +313,23 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Contenu et sécurité';
 
   @override
+  String get settingsPrivacyTitle => 'Confidentialité';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Choisis les données d\'usage que tu partages';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATISTIQUES';
+
+  @override
+  String get privacySettingsShareUsage => 'Partager les données d\'usage';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Ça nous aide à voir ce qui sert vraiment. Si tu désactives, les données en attente sur cet appareil sont supprimées.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTÉGRATIONS';
 
   @override

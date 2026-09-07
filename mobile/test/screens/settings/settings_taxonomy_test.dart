@@ -254,6 +254,23 @@ void main() {
       );
       expect(updateAvailable, findsOneWidget);
     });
+
+    testWidgets('Settings hub offers a Privacy row', (tester) async {
+      await setStandardSurface(tester);
+      await tester.pumpWidget(wrap(const SettingsScreen()));
+      await tester.pumpAndSettle();
+
+      // The analytics consent preference has no other affordance (#7982), so
+      // losing this row hides consent from the user entirely.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.scrollUntilVisible(
+        find.text(l10n.settingsPrivacyTitle),
+        120,
+        scrollable: find.byType(Scrollable),
+      );
+      expect(find.text(l10n.settingsPrivacyTitle), findsOneWidget);
+      expect(find.text(l10n.settingsPrivacySubtitle), findsOneWidget);
+    });
   });
 
   group('localization', () {

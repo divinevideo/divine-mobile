@@ -291,6 +291,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Innehåll och säkerhet';
 
   @override
+  String get settingsPrivacyTitle => 'Integritet';
+
+  @override
+  String get settingsPrivacySubtitle => 'Välj vilken användningsdata du delar';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATISTIK';
+
+  @override
+  String get privacySettingsShareUsage => 'Dela användningsdata';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIONER';
 
   @override

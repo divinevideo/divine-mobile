@@ -273,6 +273,23 @@ class AppLocalizationsFil extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Content at Safety';
 
   @override
+  String get settingsPrivacyTitle => 'Privacy';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Piliin kung anong usage data ang ibinabahagi mo';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALYTICS';
+
+  @override
+  String get privacySettingsShareUsage => 'I-share ang usage data';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'MGA INTEGRATION';
 
   @override

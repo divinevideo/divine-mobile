@@ -108,6 +108,34 @@ void main() {
       );
     });
 
+    group('initialize', () {
+      test('runs its body once when two callers race', () async {
+        final queue = _MockProductEventQueue();
+        when(queue.clear).thenAnswer((_) async {});
+        when(queue.recoverPublishingAndFlush).thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: backgroundActivityManager,
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          disableNostrPublishing: true,
+        );
+
+        // `_isInitialized` is only set past the first await, so two callers
+        // that start in the same turn both used to run the whole body — a
+        // second cleanup timer, a second queue recovery.
+        // `analyticsServiceProvider` starts one on a microtask and the
+        // Settings consent toggle awaits another to read the stored answer.
+        await Future.wait([
+          analyticsService.initialize(),
+          analyticsService.initialize(),
+        ]);
+
+        verify(() => queue.setSendingEnabled(true)).called(1);
+        verify(queue.recoverPublishingAndFlush).called(1);
+      });
+    });
+
     tearDown(() async {
       analyticsService.dispose();
       await database?.close();

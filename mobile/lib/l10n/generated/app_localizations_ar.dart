@@ -290,6 +290,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'المحتوى والأمان';
 
   @override
+  String get settingsPrivacyTitle => 'الخصوصية';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'التحكم في بيانات الاستخدام التي تتم مشاركتها';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'التحليلات';
+
+  @override
+  String get privacySettingsShareUsage => 'مشاركة بيانات الاستخدام';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'التكاملات';
 
   @override

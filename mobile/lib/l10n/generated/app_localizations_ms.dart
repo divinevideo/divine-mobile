@@ -273,6 +273,23 @@ class AppLocalizationsMs extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Kandungan & Keselamatan';
 
   @override
+  String get settingsPrivacyTitle => 'Privasi';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Pilih data penggunaan yang anda kongsi';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALITIK';
+
+  @override
+  String get privacySettingsShareUsage => 'Kongsi data penggunaan';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRASI';
 
   @override

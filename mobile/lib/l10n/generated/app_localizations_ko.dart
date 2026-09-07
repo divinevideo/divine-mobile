@@ -235,6 +235,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsContentSafetyTitle => '콘텐츠 및 안전';
 
   @override
+  String get settingsPrivacyTitle => '개인정보';
+
+  @override
+  String get settingsPrivacySubtitle => '공유할 사용 데이터를 선택해요';
+
+  @override
+  String get privacySettingsAnalyticsSection => '분석';
+
+  @override
+  String get privacySettingsShareUsage => '사용 데이터 공유';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요.';
+
+  @override
   String get generalSettingsSectionIntegrations => '연동';
 
   @override

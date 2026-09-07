@@ -307,6 +307,22 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Contenuti e sicurezza';
 
   @override
+  String get settingsPrivacyTitle => 'Privacy';
+
+  @override
+  String get settingsPrivacySubtitle => 'Scegli quali dati d\'uso condividi';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATISTICHE';
+
+  @override
+  String get privacySettingsShareUsage => 'Condividi i dati d\'uso';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRAZIONI';
 
   @override

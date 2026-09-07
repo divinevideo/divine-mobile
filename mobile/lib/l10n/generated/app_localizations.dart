@@ -542,6 +542,36 @@ abstract class AppLocalizations {
   /// **'Content & Safety'**
   String get settingsContentSafetyTitle;
 
+  /// Settings hub row and app bar title for the Privacy screen, which holds the analytics consent control.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get settingsPrivacyTitle;
+
+  /// Supporting copy on the Settings hub row that opens the Privacy screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what usage data you share'**
+  String get settingsPrivacySubtitle;
+
+  /// Section header above the analytics consent toggle on the Privacy screen. Uppercase to match the other settings section headers.
+  ///
+  /// In en, this message translates to:
+  /// **'ANALYTICS'**
+  String get privacySettingsAnalyticsSection;
+
+  /// Label of the switch that turns analytics collection on or off. Consent copy: keep it plain and literal, never playful.
+  ///
+  /// In en, this message translates to:
+  /// **'Share usage data'**
+  String get privacySettingsShareUsage;
+
+  /// Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device.
+  ///
+  /// In en, this message translates to:
+  /// **'Helps us see what people actually use. Switch it off and queued data is deleted.'**
+  String get privacySettingsShareUsageSubtitle;
+
   /// No description provided for @generalSettingsSectionIntegrations.
   ///
   /// In en, this message translates to:

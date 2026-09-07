@@ -264,6 +264,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsContentSafetyTitle => '内容与安全';
 
   @override
+  String get settingsPrivacyTitle => '隐私';
+
+  @override
+  String get settingsPrivacySubtitle => '选择你分享哪些使用数据';
+
+  @override
+  String get privacySettingsAnalyticsSection => '数据分析';
+
+  @override
+  String get privacySettingsShareUsage => '分享使用数据';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      '帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。';
+
+  @override
   String get generalSettingsSectionIntegrations => '集成';
 
   @override
