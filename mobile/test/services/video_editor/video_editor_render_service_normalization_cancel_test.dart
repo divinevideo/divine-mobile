@@ -16,9 +16,10 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class _MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
-  _MockPathProviderPlatform({required this.root});
+  _MockPathProviderPlatform({required this.root, required this.documentsRoot});
 
   final String root;
+  final String documentsRoot;
 
   @override
   Future<String?> getTemporaryPath() async => root;
@@ -27,7 +28,7 @@ class _MockPathProviderPlatform extends Fake
   Future<String?> getApplicationCachePath() async => root;
 
   @override
-  Future<String?> getApplicationDocumentsPath() async => root;
+  Future<String?> getApplicationDocumentsPath() async => documentsRoot;
 }
 
 class _MockProVideoEditor extends ProVideoEditor {
@@ -51,6 +52,9 @@ class _MockProVideoEditor extends ProVideoEditor {
 
   /// Every render the service asked the plugin for, in order.
   final List<String> renderedTaskIds = [];
+
+  /// Every output path the service asked the plugin to write, in order.
+  final List<String> renderedFilePaths = [];
 
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -76,6 +80,7 @@ class _MockProVideoEditor extends ProVideoEditor {
     NativeLogLevel? nativeLogLevel,
   }) async {
     renderedTaskIds.add(value.id);
+    renderedFilePaths.add(filePath);
     onRender?.call(value);
     File(filePath).createSync(recursive: true);
     if (failEncoderTaskIds.contains(value.id)) {
@@ -92,6 +97,7 @@ void main() {
   const exportTaskId = 'export-task';
 
   late Directory tempDir;
+  late Directory documentsDir;
   late PathProviderPlatform originalPathProvider;
   late ProVideoEditor originalProVideoEditor;
 
@@ -113,10 +119,14 @@ void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     tempDir = Directory.systemTemp.createTempSync('openvine_render_cancel_');
+    documentsDir = Directory.systemTemp.createTempSync(
+      'openvine_render_documents_',
+    );
     originalPathProvider = PathProviderPlatform.instance;
     originalProVideoEditor = ProVideoEditor.instance;
     PathProviderPlatform.instance = _MockPathProviderPlatform(
       root: tempDir.path,
+      documentsRoot: documentsDir.path,
     );
     clips = [clipFor('clip-a'), clipFor('clip-b')];
     resolutions = {
@@ -131,6 +141,7 @@ void main() {
     RenderCancellationRegistry.reset();
     VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    if (documentsDir.existsSync()) documentsDir.deleteSync(recursive: true);
   });
 
   group('clip normalization cancellation (#7833/#7834)', () {
@@ -261,9 +272,9 @@ void main() {
       'a persistent export leaves no partial file in the documents directory '
       'on cancel (#8818)',
       () async {
-        // The AC names the documents directory specifically. usePersistentStorage
-        // routes the final output there (mocked to tempDir), exercising the
-        // getApplicationDocumentsDirectory() branch rather than the cache path.
+        // The AC names the documents directory specifically. A distinct mock
+        // root proves usePersistentStorage routes the final output there rather
+        // than to the cache path.
         RenderCancellationRegistry.start(exportTaskId);
         final plugin = _MockProVideoEditor(
           resolutions: resolutions,
@@ -284,7 +295,13 @@ void main() {
 
         expect(outputPath, isNull);
         expect(
-          tempDir.listSync().whereType<File>().where(
+          plugin.renderedFilePaths.last,
+          startsWith(
+            '${documentsDir.path}${Platform.pathSeparator}divine_',
+          ),
+        );
+        expect(
+          documentsDir.listSync().whereType<File>().where(
             (file) => file.path.endsWith('.mp4'),
           ),
           isEmpty,
@@ -325,7 +342,7 @@ void main() {
         expect(plugin.renderedTaskIds, contains(exportTaskId));
         expect(outputPath, isNull);
         expect(
-          tempDir.listSync().whereType<File>().where(
+          documentsDir.listSync().whereType<File>().where(
             (file) => file.path.endsWith('.mp4'),
           ),
           isEmpty,

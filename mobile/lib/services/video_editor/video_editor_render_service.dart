@@ -855,7 +855,8 @@ class VideoEditorRenderService {
   /// - Using a single global transform if all clips have the same resolution
   /// - Only pre-rendering clips that differ from the majority
   ///
-  /// Returns video segments ready for concatenation and temp file paths for cleanup.
+  /// Returns video segments ready for concatenation and an optional global
+  /// transform when all clips share the same crop parameters.
   ///
   /// [taskId] is the export's own id — the one a user cancel targets — so this
   /// pass can stop between clips instead of rendering the whole set (#7833).
