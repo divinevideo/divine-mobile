@@ -573,10 +573,12 @@ cd <patch-worktree>/mobile && ruby <main-checkout>/mobile/scripts/shorebird_patc
 
 It reads `refs/remotes/origin/main`, so fetch `main` first.
 
-**`shorebird init` invents a `divineuitests` flavor.** Its iOS detection treats
-every shared Xcode scheme that is not `Runner` as a product flavor, and picks up
-the `DivineUITests` test target. The app has no product flavors — if a re-init
-ever writes a `flavors:` block into `shorebird.yaml`, delete it.
+**`shorebird init` invents a `divineuitests` release flavor.** Its iOS detection
+treats every shared Xcode scheme that is not `Runner` as a product flavor, and
+picks up the `DivineUITests` test target. That scheme now intentionally has a
+matching `Debug-DivineUITests` configuration solely to include screenshot asset
+fixtures. It is not a shipping flavor. If a re-init ever writes a `flavors:`
+block into `shorebird.yaml`, delete it.
 
 ## Reference
 
