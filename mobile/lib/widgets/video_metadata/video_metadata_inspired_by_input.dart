@@ -37,10 +37,20 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
       videoEditorProvider.select((s) => s.inspiredByVideo),
     );
 
-    final resolvedPubkeys = <String>[
+    // Deduplicated: editing a published video seeds the a-tag creator into
+    // both [inspiredByVideo] and [inspiredByNpubs], because that creator is
+    // carried by an inspired-by p-tag too. Naming them twice would also cost
+    // them a second slot in the picker.
+    final resolvedPubkeys = <String>[];
+    for (final candidate in <String>[
       ?inspiredByVideo?.creatorPubkey,
       for (final npub in inspiredByNpubs) ?npubToHexOrNull(npub),
-    ];
+    ]) {
+      final normalized = candidate.trim().toLowerCase();
+      if (normalized.isNotEmpty && !resolvedPubkeys.contains(normalized)) {
+        resolvedPubkeys.add(normalized);
+      }
+    }
     final profiles = <UserProfile>[];
     final names = <String>[];
     for (final pubkey in resolvedPubkeys) {

@@ -5,11 +5,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
 import 'package:rxdart/rxdart.dart';
@@ -32,8 +34,8 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
   VideoEditorProviderState build() => _state;
 
   @override
-  void setInspiredByPerson(String npub) {
-    state = state.copyWith(inspiredByNpub: npub);
+  void setInspiredByPeople(List<String> npubs) {
+    state = state.copyWith(inspiredByNpubs: npubs);
   }
 
   @override
@@ -228,7 +230,9 @@ void main() {
       tester,
     ) async {
       final state = VideoEditorProviderState(
-        inspiredByNpub: 'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        inspiredByNpubs: const [
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        ],
       );
 
       await tester.pumpWidget(
@@ -256,11 +260,128 @@ void main() {
       expect(find.text('None'), findsNothing);
     });
 
+    testWidgets('lists every credited creator on the tile', (tester) async {
+      // The tile is the only place the author can see who they credited, so
+      // showing just the first would make the extra picks invisible.
+      final first = NostrKeyUtils.encodePubKey('a' * 64);
+      final second = NostrKeyUtils.encodePubKey('b' * 64);
+      final state = VideoEditorProviderState(
+        inspiredByNpubs: [first, second],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            followRepositoryProvider.overrideWithValue(
+              _createMockFollowRepository(),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              _createMockContentBlocklistRepository(),
+            ),
+            videoEditorProvider.overrideWith(
+              () => _MockVideoEditorNotifier(state),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoMetadataInspiredByInput()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('None'), findsNothing);
+      expect(find.byType(VideoMetadataSelectionTile), findsOneWidget);
+      final tile = tester.widget<VideoMetadataSelectionTile>(
+        find.byType(VideoMetadataSelectionTile),
+      );
+      // Neither profile is cached here, which is the point: an uncredited
+      // name must still appear, so the author can see both picks.
+      expect(tile.value.split(', ').length, equals(2));
+    });
+
+    testWidgets("names the inspiring video's creator once", (tester) async {
+      // Editing a published video seeds inspiredByVideo from its a-tag and
+      // inspiredByNpubs from its inspired-by p-tags — and the a-tag creator
+      // is carried by both, so the tile would name them twice.
+      const creatorHex =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      final state = VideoEditorProviderState(
+        inspiredByVideo: const InspiredByInfo(
+          addressableId: '34236:$creatorHex:vine123',
+        ),
+        inspiredByNpubs: [NostrKeyUtils.encodePubKey(creatorHex)],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            followRepositoryProvider.overrideWithValue(
+              _createMockFollowRepository(),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              _createMockContentBlocklistRepository(),
+            ),
+            videoEditorProvider.overrideWith(
+              () => _MockVideoEditorNotifier(state),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoMetadataInspiredByInput()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final tile = tester.widget<VideoMetadataSelectionTile>(
+        find.byType(VideoMetadataSelectionTile),
+      );
+      expect(tile.value, isNotEmpty);
+      expect(tile.value.split(', '), hasLength(1));
+    });
+
+    testWidgets('setInspiredByPeople replaces the whole credited set', (
+      tester,
+    ) async {
+      final notifier = _MockVideoEditorNotifier(
+        VideoEditorProviderState(inspiredByNpubs: const ['npub1old']),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            followRepositoryProvider.overrideWithValue(
+              _createMockFollowRepository(),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              _createMockContentBlocklistRepository(),
+            ),
+            videoEditorProvider.overrideWith(() => notifier),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoMetadataInspiredByInput()),
+          ),
+        ),
+      );
+
+      notifier.setInspiredByPeople(['npub1a', 'npub1b']);
+
+      expect(notifier.state.inspiredByNpubs, equals(['npub1a', 'npub1b']));
+      expect(notifier.state.inspiredByNpub, equals('npub1a'));
+    });
+
     testWidgets('selection tile still renders when inspired by is set', (
       tester,
     ) async {
       final state = VideoEditorProviderState(
-        inspiredByNpub: 'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        inspiredByNpubs: const [
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        ],
       );
 
       await tester.pumpWidget(
