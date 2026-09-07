@@ -94,11 +94,12 @@ void main() {
     })?
     extractLastFrame,
     Future<VideoMetadata> Function(EditorVideo video)? readVideoMetadata,
+    DocumentsPathProvider? getDocumentsPath,
     DateTime? now,
   }) {
     return VideoClipImportService(
       clipLibraryService: clipLibraryService,
-      getDocumentsPath: () async => docsDir.path,
+      getDocumentsPath: getDocumentsPath ?? () async => docsDir.path,
       downloadVideo:
           downloadVideo ??
           ({required url, required cacheKey}) async => sourceVideo,
@@ -575,6 +576,99 @@ void main() {
             VideoClipImportFailureReason.downloadFailed,
           ),
         );
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+
+    test('returns copyFailed when the video cannot be copied', () async {
+      final importedAt = DateTime.utc(2026, 4, 27, 12);
+      // Deliberately couple this collision to the generated clip ID: if the ID
+      // scheme changes, this regression test must choose a new failing target.
+      final target = Directory(
+        '${docsDir.path}/classic_vine_vine-123_'
+        '${importedAt.microsecondsSinceEpoch}.mp4',
+      )..createSync();
+      final service = buildService(now: importedAt);
+
+      final result = await service.importToLibrary(_video());
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.copyFailed,
+        ),
+      );
+      verifyNever(() => clipLibraryService.saveClip(any()));
+      expect(target.existsSync(), isTrue);
+      expect(docsDir.listSync().whereType<File>(), isEmpty);
+    });
+
+    test(
+      'returns copyFailed when the documents directory cannot be created',
+      () async {
+        final service = buildService(
+          getDocumentsPath: () async => '${sourceVideo.path}/documents',
+        );
+
+        final result = await service.importToLibrary(_video());
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.copyFailed,
+          ),
+        );
+        verifyNever(() => clipLibraryService.saveClip(any()));
+        expect(docsDir.listSync().whereType<File>(), isEmpty);
+      },
+    );
+
+    test('returns saveFailed when the clip cannot be saved', () async {
+      when(
+        () => clipLibraryService.saveClip(any()),
+      ).thenThrow(Exception('save failed'));
+      final service = buildService();
+
+      final result = await service.importToLibrary(_video());
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.saveFailed,
+        ),
+      );
+      verify(() => clipLibraryService.saveClip(any())).called(1);
+    });
+
+    test(
+      'returns unsupportedPlatform without downloading the video',
+      () async {
+        var downloadAttempts = 0;
+        final service = buildService(
+          getDocumentsPath: () async => '',
+          downloadVideo: ({required url, required cacheKey}) async {
+            downloadAttempts++;
+            return sourceVideo;
+          },
+        );
+
+        final result = await service.importToLibrary(_video());
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.unsupportedPlatform,
+          ),
+        );
+        expect(downloadAttempts, isZero);
         verifyNever(() => clipLibraryService.saveClip(any()));
       },
     );
