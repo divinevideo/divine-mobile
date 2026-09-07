@@ -88,6 +88,13 @@ worktrees that hold no commits of their own. **Containment is asked of
 GitHub, for the reason above** — nothing in the classifier walks local
 history.
 
+Because that answer comes over the network, it can fail to arrive. An
+unanswerable containment lookup — auth expired, rate limit, a tip GitHub
+does not have — reports the tip as contained, which lands on `KEEP`, and
+prints a warning to stderr naming the commit. Read those warnings before
+trusting a run: a degraded run and a genuinely clean one both end
+"0 likely prunable".
+
 Two vetoes apply on top: the local branch tip must exist in GitHub's
 repository object database, and the worktree must have no uncommitted,
 untracked, or non-regenerable ignored files. Ignored toolchain output such
