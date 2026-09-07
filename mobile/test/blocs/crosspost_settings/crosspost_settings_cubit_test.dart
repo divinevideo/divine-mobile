@@ -694,6 +694,58 @@ void main() {
         },
       );
 
+      test('stops polling after the max failed poll attempts is reached', () {
+        var loadCount = 0;
+        when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer((
+          _,
+        ) async {
+          loadCount += 1;
+          return const BlueskyCrosspostAccountStatus(
+            crosspostEnabled: true,
+            username: 'testuser',
+            handle: 'testuser.divine.video',
+            provisioningState: AtprotoProvisioningState.pending,
+            usernameClaimStatus: UsernameClaimStatus.claimed,
+          );
+        });
+        when(() => repository.loadKeycastStatus()).thenAnswer((_) async {
+          loadCount += 1;
+          throw const CrosspostApiException(
+            'unavailable',
+            statusCode: 503,
+            kind: CrosspostApiErrorKind.unavailable,
+          );
+        });
+
+        fakeAsync((fake) {
+          final cubit = buildCubit(
+            pollInterval: const Duration(milliseconds: 1),
+            maxProvisioningPollAttempts: 2,
+          );
+          fake.flushMicrotasks();
+
+          expect(fake.pendingTimers, isNotEmpty);
+          fake.elapse(const Duration(milliseconds: 2));
+          fake.flushMicrotasks();
+
+          expect(cubit.state.provisioningPollAttempts, 2);
+          expect(cubit.state.provisioningPollingTimedOut, isTrue);
+          // The quiet-failure cap owns its own cancel, separate from the
+          // success-path cap in _syncProvisioningPoller.
+          expect(fake.pendingTimers, isEmpty);
+          expect(cubit.state.error, isNull);
+          final cappedCount = loadCount;
+          // One initial load plus the capped failing polls; without this pin a
+          // cubit that never polled would pass on 1 == 1 (#8617).
+          expect(cappedCount, greaterThan(1));
+
+          fake.elapse(const Duration(milliseconds: 5));
+          fake.flushMicrotasks();
+          expect(loadCount, cappedCount);
+          cubit.close();
+        });
+      });
+
       test('stale poll result does not overwrite toggle result', () async {
         final pollCompleter = Completer<CrosspostStatus>();
         when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer(
