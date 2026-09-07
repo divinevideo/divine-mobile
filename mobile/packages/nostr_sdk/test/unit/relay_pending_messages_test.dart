@@ -191,4 +191,59 @@ void main() {
       expect(relay.sentMessages.map((m) => m.first), ['REQ']);
     });
   });
+
+  group('Relay queued-CLOSE replay', () {
+    test('drops a queued CLOSE on a fresh socket — the subscription it names '
+        'died with the previous connection', () async {
+      final relay = _RequeueingRelay('wss://relay.example', failedMessage: [])
+        ..pendingMessages.addAll([
+          ['CLOSE', 'feed'],
+          [
+            'EVENT',
+            {'id': 'queued-while-down'},
+          ],
+        ]);
+
+      await relay.onConnected(source: 'stateStream-reconnect');
+
+      expect(relay.sentMessages.map((m) => m.first), ['EVENT']);
+      expect(relay.pendingMessages, isEmpty);
+    });
+
+    test('drops it even when the same id is re-issued — the replayed REQ can '
+        'land first and the stale CLOSE would tear it down', () async {
+      final relay = _RequeueingRelay('wss://relay.example', failedMessage: [])
+        ..saveSubscription(
+          Subscription(
+            [
+              {
+                'kinds': [34236],
+              },
+            ],
+            (_) {},
+            id: 'feed',
+          ),
+        )
+        ..pendingMessages.add(['CLOSE', 'feed']);
+
+      await relay.onConnected(source: 'stateStream-reconnect');
+
+      expect(relay.sentMessages.map((m) => m.first), ['REQ']);
+    });
+
+    test('replays a queued CLOSE when the connection was only reused — that '
+        'socket may still be holding the subscription', () async {
+      final relay = _RequeueingRelay(
+        'wss://relay.example',
+        failedMessage: [],
+        connectionIsFresh: false,
+      )..pendingMessages.add(['CLOSE', 'feed']);
+
+      await relay.onConnected(source: 'connect()');
+
+      expect(relay.sentMessages, [
+        ['CLOSE', 'feed'],
+      ]);
+    });
+  });
 }
