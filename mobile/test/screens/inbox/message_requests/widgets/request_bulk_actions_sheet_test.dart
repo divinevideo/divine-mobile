@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_bulk_actions_sheet.dart';
-
-import '../../../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(RequestBulkActionsSheet, () {
@@ -49,14 +46,11 @@ void main() {
       );
       addTearDown(router.dispose);
 
-      return testProviderScope(
-        additionalOverrides: [goRouterProvider.overrideWithValue(router)],
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: ThemeData.dark(),
-        ),
+      return MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData.dark(),
       );
     }
 
