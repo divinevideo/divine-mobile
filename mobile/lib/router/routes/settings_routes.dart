@@ -41,6 +41,7 @@ import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
+import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/signature_verification_policy_screen.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
@@ -246,6 +247,11 @@ List<RouteBase> settingsRoutes(Ref ref) {
       path: SafetySettingsScreen.path,
       name: SafetySettingsScreen.routeName,
       builder: (_, _) => const SafetySettingsScreen(),
+    ),
+    GoRoute(
+      path: PrivacySettingsScreen.path,
+      name: PrivacySettingsScreen.routeName,
+      builder: (_, _) => const PrivacySettingsScreen(),
     ),
     GoRoute(
       path: ContentFiltersScreen.path,

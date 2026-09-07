@@ -233,6 +233,17 @@ class PendingViewEventsDao extends DatabaseAccessor<AppDatabase>
     return (delete(pendingViewEvents)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Deletes every queued view event belonging to [userPubkey].
+  ///
+  /// Used when analytics consent is withdrawn: these rows are identity-bearing
+  /// Kind 22236 events that would otherwise stay on disk and be published by
+  /// the next foreground sweep.
+  Future<int> deleteAllForUser(String userPubkey) {
+    return (delete(
+      pendingViewEvents,
+    )..where((t) => t.userPubkey.equals(userPubkey))).go();
+  }
+
   Future<PendingViewEvent?> getById(String id) async {
     final row = await (select(
       pendingViewEvents,

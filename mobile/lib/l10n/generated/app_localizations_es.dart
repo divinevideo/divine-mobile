@@ -305,6 +305,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Contenido y seguridad';
 
   @override
+  String get settingsPrivacyTitle => 'Privacidad';
+
+  @override
+  String get settingsPrivacySubtitle => 'Elegí qué datos de uso compartís';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALÍTICAS';
+
+  @override
+  String get privacySettingsShareUsage => 'Compartir datos de uso';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Nos ayuda a ver qué usa la gente de verdad. Si lo apagás, se borran los datos en espera de este dispositivo.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'No pudimos guardar eso. Los datos de uso quedan desactivados por ahora.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRACIONES';
 
   @override

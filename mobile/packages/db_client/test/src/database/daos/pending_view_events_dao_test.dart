@@ -274,5 +274,37 @@ void main() {
         expect(await dao.getById('view-a'), isNull);
       });
     });
+
+    group('deleteAllForUser', () {
+      test('removes every row belonging to the user', () async {
+        // Withdrawal of analytics consent has to clear rows in any state:
+        // a row left mid-publish is republished after the next reset.
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        await dao.enqueue(
+          makeEvent(id: 'view-b', status: PendingViewEventStatus.failed),
+        );
+        await dao.enqueue(
+          makeEvent(id: 'view-c', status: PendingViewEventStatus.publishing),
+        );
+
+        final deleted = await dao.deleteAllForUser(userA);
+
+        expect(deleted, 3);
+        expect(await dao.getById('view-a'), isNull);
+        expect(await dao.getById('view-b'), isNull);
+        expect(await dao.getById('view-c'), isNull);
+      });
+
+      test('leaves other accounts untouched', () async {
+        // One account's consent decision is not another's.
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        await dao.enqueue(makeEvent(id: 'view-b', userPubkey: userB));
+
+        final deleted = await dao.deleteAllForUser(userA);
+
+        expect(deleted, 1);
+        expect(await dao.getById('view-b'), isNotNull);
+      });
+    });
   });
 }

@@ -1,5 +1,6 @@
 // ABOUTME: Firebase-backed implementation of the analytics event sink.
 
+import 'package:analytics/src/analytics_collection_control.dart';
 import 'package:analytics/src/analytics_event_sink.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 
@@ -13,7 +14,8 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 /// throw `[core/no-app]` and crash those call sites; deferring — and
 /// failing closed when Firebase is unavailable — keeps analytics a no-op
 /// instead of a crash.
-class FirebaseAnalyticsEventSink implements AnalyticsEventSink {
+class FirebaseAnalyticsEventSink
+    implements AnalyticsEventSink, AnalyticsCollectionControl {
   /// Creates the sink. Pass [analytics] in tests to assert on calls; otherwise
   /// the instance is resolved lazily from [FirebaseAnalytics.instance].
   FirebaseAnalyticsEventSink({FirebaseAnalytics? analytics})
@@ -36,6 +38,16 @@ class FirebaseAnalyticsEventSink implements AnalyticsEventSink {
   @override
   Future<void> setUserId(String? userId) async {
     await _analytics?.setUserId(id: userId);
+  }
+
+  @override
+  Future<void> setCollectionEnabled({required bool enabled}) async {
+    await _analytics?.setAnalyticsCollectionEnabled(enabled);
+  }
+
+  @override
+  Future<void> resetAnalyticsData() async {
+    await _analytics?.resetAnalyticsData();
   }
 
   @override

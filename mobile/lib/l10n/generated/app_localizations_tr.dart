@@ -242,6 +242,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'İçerik ve Güvenlik';
 
   @override
+  String get settingsPrivacyTitle => 'Gizlilik';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Hangi kullanım verilerini paylaştığını seç';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALİTİK';
+
+  @override
+  String get privacySettingsShareUsage => 'Kullanım verilerini paylaş';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'Bunu kaydedemedik. Kullanım verileri şimdilik kapalı kalıyor.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ENTEGRASYONLAR';
 
   @override

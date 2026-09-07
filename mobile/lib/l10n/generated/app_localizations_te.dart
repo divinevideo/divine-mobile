@@ -310,6 +310,27 @@ class AppLocalizationsTe extends AppLocalizations {
   String get settingsContentSafetyTitle => 'కంటెంట్ & భద్రత';
 
   @override
+  String get settingsPrivacyTitle => 'గోప్యత';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'మీరు పంచుకునే వినియోగ డేటాను ఎంచుకోండి';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'అనలిటిక్స్';
+
+  @override
+  String get privacySettingsShareUsage => 'వినియోగ డేటాను పంచుకోండి';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'దీన్ని సేవ్ చేయలేకపోయాం. వినియోగ డేటా ప్రస్తుతానికి ఆఫ్‌లోనే ఉంటుంది.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ఇంటిగ్రేషన్‌లు';
 
   @override

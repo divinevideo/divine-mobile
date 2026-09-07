@@ -56,6 +56,7 @@ abstract final class RoutePaths {
   static const originalSoundDetailBase = '/original-sound';
   static const otherProfile = '/profile-view';
   static const pooledFullscreenVideoFeed = '/pooled-video-feed';
+  static const privacySettings = '/settings/privacy';
   static const profile = '/profile';
   static const profileSetupEdit = '/edit-profile';
   static const relayDiagnostic = '/relay-diagnostic';

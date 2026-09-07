@@ -313,6 +313,27 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Treści i bezpieczeństwo';
 
   @override
+  String get settingsPrivacyTitle => 'Prywatność';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Wybierz, jakie dane o użyciu udostępniasz';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATYSTYKI';
+
+  @override
+  String get privacySettingsShareUsage => 'Udostępniaj dane o użyciu';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'Nie udało się tego zapisać. Dane o użytkowaniu na razie pozostają wyłączone.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRACJE';
 
   @override

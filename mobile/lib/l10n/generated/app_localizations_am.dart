@@ -304,6 +304,26 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsContentSafetyTitle => 'ይዘት እና ደህንነት';
 
   @override
+  String get settingsPrivacyTitle => 'ግላዊነት';
+
+  @override
+  String get settingsPrivacySubtitle => 'የትኞቹን የአጠቃቀም ውሂብ እንደሚያጋሩ ይምረጡ';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ትንታኔ';
+
+  @override
+  String get privacySettingsShareUsage => 'የአጠቃቀም ውሂብ ያጋሩ';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል።';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'ይህን ማስቀመጥ አልቻልንም። የአጠቃቀም መረጃ ለጊዜው ጠፍቶ ይቆያል።';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ውህደቶች';
 
   @override

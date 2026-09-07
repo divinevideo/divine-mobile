@@ -324,6 +324,26 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Conținut și siguranță';
 
   @override
+  String get settingsPrivacyTitle => 'Confidențialitate';
+
+  @override
+  String get settingsPrivacySubtitle => 'Alege ce date de utilizare partajezi';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'STATISTICI';
+
+  @override
+  String get privacySettingsShareUsage => 'Partajează datele de utilizare';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'Nu am putut salva. Datele de utilizare rămân dezactivate deocamdată.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRĂRI';
 
   @override

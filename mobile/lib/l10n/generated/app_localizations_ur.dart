@@ -304,6 +304,27 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'مواد اور حفاظت';
 
   @override
+  String get settingsPrivacyTitle => 'رازداری';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'منتخب کریں کہ آپ استعمال کا کون سا ڈیٹا شیئر کرتے ہیں';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'تجزیات';
+
+  @override
+  String get privacySettingsShareUsage => 'استعمال کا ڈیٹا شیئر کریں';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'ہم اسے محفوظ نہیں کر سکے۔ استعمال کا ڈیٹا فی الحال بند رہے گا۔';
+
+  @override
   String get generalSettingsSectionIntegrations => 'انضمام';
 
   @override

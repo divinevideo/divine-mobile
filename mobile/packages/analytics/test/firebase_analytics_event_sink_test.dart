@@ -36,6 +36,36 @@ void main() {
       verify(() => analytics.setUserId()).called(1);
     });
 
+    test('turns Firebase collection off at the SDK level', () async {
+      // The consent gate has to sit at the SDK, not at each call site: the
+      // trackers hold their own sinks and know nothing about consent.
+      when(
+        () => analytics.setAnalyticsCollectionEnabled(false),
+      ).thenAnswer((_) async {});
+
+      await sink.setCollectionEnabled(enabled: false);
+
+      verify(() => analytics.setAnalyticsCollectionEnabled(false)).called(1);
+    });
+
+    test('turns Firebase collection back on', () async {
+      when(
+        () => analytics.setAnalyticsCollectionEnabled(true),
+      ).thenAnswer((_) async {});
+
+      await sink.setCollectionEnabled(enabled: true);
+
+      verify(() => analytics.setAnalyticsCollectionEnabled(true)).called(1);
+    });
+
+    test('clears the accumulated Firebase analytics identity', () async {
+      when(analytics.resetAnalyticsData).thenAnswer((_) async {});
+
+      await sink.resetAnalyticsData();
+
+      verify(analytics.resetAnalyticsData).called(1);
+    });
+
     test('forwards user properties to Firebase Analytics', () async {
       when(
         () =>

@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:analytics/analytics.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 class _MockViewEventPublisher extends Mock implements ViewEventPublisher {}
 
@@ -23,6 +25,51 @@ class _MockPendingViewEventsDao extends Mock implements PendingViewEventsDao {}
 class _MockProductEventQueue extends Mock implements ProductEventQueue {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
+
+/// Records what the consent switch asked of the Firebase backend.
+class _RecordingCollectionControl implements AnalyticsCollectionControl {
+  final List<bool> collectionEnabled = [];
+  int resetCount = 0;
+
+  @override
+  Future<void> setCollectionEnabled({required bool enabled}) async {
+    collectionEnabled.add(enabled);
+  }
+
+  @override
+  Future<void> resetAnalyticsData() async {
+    resetCount++;
+  }
+}
+
+/// A store whose writes fail the way a real device's can.
+class _FailingWriteSharedPreferencesStore
+    extends InMemorySharedPreferencesStore {
+  _FailingWriteSharedPreferencesStore.withData(super.data, {required this.mode})
+    : super.withData();
+
+  final _WriteFailure mode;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    return switch (mode) {
+      _WriteFailure.rejected => false,
+      _WriteFailure.throws => throw Exception('storage unavailable'),
+    };
+  }
+}
+
+class _FailingReadSharedPreferencesStore
+    extends InMemorySharedPreferencesStore {
+  _FailingReadSharedPreferencesStore() : super.empty();
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    throw Exception('storage unavailable');
+  }
+}
+
+enum _WriteFailure { rejected, throws }
 
 void main() {
   setUpAll(() {
@@ -106,6 +153,34 @@ void main() {
           expect(registeredServiceNames(), isNot(contains('AnalyticsService')));
         },
       );
+    });
+
+    group('initialize', () {
+      test('runs its body once when two callers race', () async {
+        final queue = _MockProductEventQueue();
+        when(queue.clear).thenAnswer((_) async {});
+        when(queue.recoverPublishingAndFlush).thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: backgroundActivityManager,
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          disableNostrPublishing: true,
+        );
+
+        // `_isInitialized` is only set past the first await, so two callers
+        // that start in the same turn both used to run the whole body — a
+        // second cleanup timer, a second queue recovery.
+        // `analyticsServiceProvider` starts one on a microtask and the
+        // Settings consent toggle awaits another to read the stored answer.
+        await Future.wait([
+          analyticsService.initialize(),
+          analyticsService.initialize(),
+        ]);
+
+        verify(() => queue.setSendingEnabled(true)).called(1);
+        verify(queue.recoverPublishingAndFlush).called(1);
+      });
     });
 
     tearDown(() async {
@@ -1020,6 +1095,270 @@ void main() {
     test('should handle batch tracking of empty list', () async {
       await analyticsService.initialize();
       await expectLater(analyticsService.trackVideoViews([]), completes);
+    });
+
+    group('consent boundary', () {
+      const viewerPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+      late _RecordingCollectionControl collectionControl;
+
+      PendingViewEventsDao openDao() {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'analytics_consent_boundary_test_',
+        );
+        tempDbPath = '${tempDir.path}/test.db';
+        database = AppDatabase.test(NativeDatabase(File(tempDbPath!)));
+        return database!.pendingViewEventsDao;
+      }
+
+      AnalyticsService buildService({PendingViewEventsDao? dao}) {
+        analyticsService.dispose();
+        return analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          pendingViewEventsDao: dao,
+          analyticsCollectionControl: collectionControl,
+          currentUserPubkey: () => viewerPubkey,
+        );
+      }
+
+      Future<void> trackView(AnalyticsService service) {
+        return service.trackDetailedVideoViewWithUser(
+          VideoEvent(
+            id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+            pubkey:
+                'ae73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            content: 'Test video',
+            timestamp: DateTime.now(),
+            vineId: 'vine-id',
+            addressableDTag: 'the-d-tag',
+            eventKind: NIP71VideoKinds.addressableShortVideo,
+          ),
+          userId: viewerPubkey,
+          source: 'mobile',
+          eventType: 'view_end',
+          watchDuration: const Duration(milliseconds: 2500),
+          totalDuration: const Duration(seconds: 6),
+        );
+      }
+
+      Future<List<PendingViewEvent>> queuedViews(PendingViewEventsDao dao) {
+        return dao.getRetryableForUser(userPubkey: viewerPubkey);
+      }
+
+      setUp(() {
+        collectionControl = _RecordingCollectionControl();
+      });
+
+      test(
+        'does not queue a view before the stored preference has been read',
+        () async {
+          // The startup window is the whole problem: `analyticsEnabled` holds
+          // its pre-load default of `true`, and a view queued here lands in a
+          // durable outbox that survives the moment initialize() corrects it.
+          SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+          final dao = openDao();
+          final service = buildService(dao: dao);
+
+          await trackView(service);
+
+          expect(await queuedViews(dao), isEmpty);
+
+          // Positive control: the gate is initialization, not a permanent off
+          // switch, so a consenting session must still queue.
+          SharedPreferences.setMockInitialValues({'analytics_enabled': true});
+          final consenting = buildService(dao: dao);
+          await consenting.initialize();
+          await trackView(consenting);
+
+          expect(await queuedViews(dao), hasLength(1));
+        },
+      );
+
+      test(
+        'a stored opt-out keeps the view outbox empty after startup',
+        () async {
+          SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+          final dao = openDao();
+          final service = buildService(dao: dao);
+          await service.initialize();
+
+          await trackView(service);
+
+          expect(await queuedViews(dao), isEmpty);
+        },
+      );
+
+      test('withdrawal deletes the durable view outbox', () async {
+        // The switch's own copy promises queued data is deleted. That has to
+        // hold for `pending_view_events` too, not only the product queue —
+        // these are identity-bearing Kind 22236 events that the next
+        // foreground sweep would otherwise publish.
+        SharedPreferences.setMockInitialValues({'analytics_enabled': true});
+        final dao = openDao();
+        final service = buildService(dao: dao);
+        await service.initialize();
+        await trackView(service);
+        expect(await queuedViews(dao), hasLength(1));
+
+        await service.setAnalyticsEnabled(false);
+
+        expect(await queuedViews(dao), isEmpty);
+      });
+
+      test('a stored opt-out reaches Firebase collection at startup', () async {
+        SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+        final service = buildService();
+
+        await service.initialize();
+
+        expect(collectionControl.collectionEnabled, equals([false]));
+        expect(collectionControl.resetCount, 1);
+      });
+
+      test('a stored opt-in leaves Firebase collection on', () async {
+        SharedPreferences.setMockInitialValues({'analytics_enabled': true});
+        final service = buildService();
+
+        await service.initialize();
+
+        expect(collectionControl.collectionEnabled, equals([true]));
+        expect(collectionControl.resetCount, isZero);
+      });
+
+      test('withdrawal turns Firebase off and clears its identity', () async {
+        SharedPreferences.setMockInitialValues({'analytics_enabled': true});
+        final service = buildService();
+        await service.initialize();
+        collectionControl.collectionEnabled.clear();
+
+        await service.setAnalyticsEnabled(false);
+
+        expect(collectionControl.collectionEnabled, equals([false]));
+        expect(collectionControl.resetCount, 1);
+      });
+
+      test('opting back in turns Firebase collection on again', () async {
+        SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+        final service = buildService();
+        await service.initialize();
+        collectionControl.collectionEnabled.clear();
+
+        await service.setAnalyticsEnabled(true);
+
+        expect(collectionControl.collectionEnabled, equals([true]));
+      });
+
+      test(
+        'a preference read failure applies the full withdrawal path',
+        () async {
+          final originalStore = SharedPreferencesStorePlatform.instance;
+          final queue = _MockProductEventQueue();
+          final dao = _MockPendingViewEventsDao();
+          when(queue.clear).thenAnswer((_) async {});
+          when(() => queue.setSendingEnabled(any())).thenReturn(null);
+          when(
+            () => dao.deleteAllForUser(viewerPubkey),
+          ).thenAnswer((_) async => 1);
+          SharedPreferencesStorePlatform.instance =
+              _FailingReadSharedPreferencesStore();
+          SharedPreferences.resetStatic();
+          analyticsService.dispose();
+          analyticsService = AnalyticsService(
+            backgroundActivityManager: BackgroundActivityManager(),
+            productEventQueue: queue,
+            pendingViewEventsDao: dao,
+            analyticsCollectionControl: collectionControl,
+            currentUserPubkey: () => viewerPubkey,
+          );
+
+          try {
+            await analyticsService.initialize();
+
+            expect(analyticsService.analyticsEnabled, isFalse);
+            expect(collectionControl.collectionEnabled, equals([false]));
+            expect(collectionControl.resetCount, 1);
+            verify(queue.clear).called(1);
+            verify(() => dao.deleteAllForUser(viewerPubkey)).called(1);
+          } finally {
+            SharedPreferencesStorePlatform.instance = originalStore;
+            SharedPreferences.resetStatic();
+          }
+        },
+      );
+
+      group('persistence failures', () {
+        late SharedPreferencesStorePlatform originalStore;
+
+        setUp(() {
+          originalStore = SharedPreferencesStorePlatform.instance;
+        });
+
+        tearDown(() {
+          SharedPreferencesStorePlatform.instance = originalStore;
+          SharedPreferences.resetStatic();
+        });
+
+        Future<AnalyticsService> serviceWithFailingWrites(
+          _WriteFailure mode, {
+          required bool storedConsent,
+        }) async {
+          SharedPreferences.setMockInitialValues({
+            'analytics_enabled': storedConsent,
+          });
+          final service = buildService();
+          await service.initialize();
+          SharedPreferencesStorePlatform.instance =
+              _FailingWriteSharedPreferencesStore.withData({
+                'flutter.analytics_enabled': storedConsent,
+              }, mode: mode);
+          SharedPreferences.resetStatic();
+          return service;
+        }
+
+        test('a rejected write is reported as a failure', () async {
+          final service = await serviceWithFailingWrites(
+            _WriteFailure.rejected,
+            storedConsent: true,
+          );
+
+          expect(await service.setAnalyticsEnabled(false), isFalse);
+        });
+
+        test('a throwing write is reported as a failure', () async {
+          final service = await serviceWithFailingWrites(
+            _WriteFailure.throws,
+            storedConsent: true,
+          );
+
+          expect(await service.setAnalyticsEnabled(false), isFalse);
+        });
+
+        test('a failed opt-in does not start collecting', () async {
+          // Consent that did not reach storage is gone at the next launch, so
+          // honouring it in memory would collect under an answer the person
+          // will never see again.
+          final service = await serviceWithFailingWrites(
+            _WriteFailure.rejected,
+            storedConsent: false,
+          );
+
+          expect(await service.setAnalyticsEnabled(true), isFalse);
+          expect(service.analyticsEnabled, isFalse);
+        });
+
+        test('a failed opt-out still stops collecting', () async {
+          final service = await serviceWithFailingWrites(
+            _WriteFailure.rejected,
+            storedConsent: true,
+          );
+          expect(service.analyticsEnabled, isTrue);
+
+          expect(await service.setAnalyticsEnabled(false), isFalse);
+          expect(service.analyticsEnabled, isFalse);
+        });
+      });
     });
 
     test('should not batch track when analytics disabled', () async {

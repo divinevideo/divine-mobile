@@ -17,6 +17,22 @@ class _MockViewEventPublisher extends Mock implements ViewEventPublisher {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
+class _ConsentWithdrawingPendingViewEventsDao extends PendingViewEventsDao {
+  _ConsentWithdrawingPendingViewEventsDao(
+    super.attachedDatabase, {
+    required this.onMarkedPublishing,
+  });
+
+  final void Function() onMarkedPublishing;
+
+  @override
+  Future<bool> markPublishing(String id) async {
+    final marked = await super.markPublishing(id);
+    onMarkedPublishing();
+    return marked;
+  }
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
@@ -74,12 +90,14 @@ void main() {
     ViewEventRetryService makeService({
       Stream<bool>? foregroundStream,
       ViewEventRetryConfig retryConfig = const ViewEventRetryConfig(),
+      bool Function()? isAnalyticsEnabled,
     }) {
       return ViewEventRetryService(
         viewEventPublisher: publisher,
         pendingViewEventsDao: dao,
         userPubkey: userPubkey,
         appForegroundStream: foregroundStream ?? const Stream<bool>.empty(),
+        isAnalyticsEnabled: isAnalyticsEnabled,
         retryConfig: retryConfig,
         now: () => now,
       );
@@ -118,6 +136,107 @@ void main() {
       if (dir.existsSync()) {
         dir.deleteSync(recursive: true);
       }
+    });
+
+    group('analytics consent', () {
+      test('does not publish while consent is withdrawn', () async {
+        // This queue outlives the switch: rows survive a restart, and rows
+        // written by a build that predates the switch were never offered a
+        // consent decision at all. Publishing them is irreversible, so the
+        // sweep asks before it publishes rather than trusting the queue.
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        final service = makeService(isAnalyticsEnabled: () => false);
+
+        await service.sweep();
+
+        verifyNever(
+          () => publisher.publishViewEvent(
+            video: any(named: 'video'),
+            startSeconds: any(named: 'startSeconds'),
+            endSeconds: any(named: 'endSeconds'),
+            source: any(named: 'source'),
+            sourceDetail: any(named: 'sourceDetail'),
+            loopCount: any(named: 'loopCount'),
+            phase: any(named: 'phase'),
+          ),
+        );
+        expect(await dao.getById('view-a'), isNotNull);
+      });
+
+      test('publishes again once consent is granted', () async {
+        // Consent is sampled per sweep, so the gate tracks a mid-session
+        // change instead of freezing whatever was true at construction.
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        var consented = false;
+        final service = makeService(isAnalyticsEnabled: () => consented);
+        await service.sweep();
+        expect(await dao.getById('view-a'), isNotNull);
+
+        consented = true;
+        await service.sweep();
+
+        expect(await dao.getById('view-a'), isNull);
+      });
+
+      test(
+        'a foreground wake cannot publish while consent is withdrawn',
+        () async {
+          // The foreground listener is the path that runs unattended, so the
+          // gate has to hold there and not only on a direct sweep() call.
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          final foreground = StreamController<bool>();
+          addTearDown(foreground.close);
+          final service = makeService(
+            foregroundStream: foreground.stream,
+            isAnalyticsEnabled: () => false,
+          );
+          await service.initialize();
+          addTearDown(service.dispose);
+
+          foreground.add(true);
+          await pumpEventQueue();
+
+          verifyNever(
+            () => publisher.publishViewEvent(
+              video: any(named: 'video'),
+              startSeconds: any(named: 'startSeconds'),
+              endSeconds: any(named: 'endSeconds'),
+              source: any(named: 'source'),
+              sourceDetail: any(named: 'sourceDetail'),
+              loopCount: any(named: 'loopCount'),
+              phase: any(named: 'phase'),
+            ),
+          );
+          expect(await dao.getById('view-a'), isNotNull);
+        },
+      );
+
+      test(
+        'does not publish when consent is withdrawn during a sweep',
+        () async {
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          var consented = true;
+          dao = _ConsentWithdrawingPendingViewEventsDao(
+            database,
+            onMarkedPublishing: () => consented = false,
+          );
+          final service = makeService(isAnalyticsEnabled: () => consented);
+
+          await service.sweep();
+
+          verifyNever(
+            () => publisher.publishViewEvent(
+              video: any(named: 'video'),
+              startSeconds: any(named: 'startSeconds'),
+              endSeconds: any(named: 'endSeconds'),
+              source: any(named: 'source'),
+              sourceDetail: any(named: 'sourceDetail'),
+              loopCount: any(named: 'loopCount'),
+              phase: any(named: 'phase'),
+            ),
+          );
+        },
+      );
     });
 
     test('publishes retryable view and deletes it after success', () async {

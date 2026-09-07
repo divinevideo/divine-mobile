@@ -60,6 +60,7 @@ void main() {
         RoutePaths.pooledFullscreenVideoFeed,
         equals('/pooled-video-feed'),
       );
+      expect(RoutePaths.privacySettings, equals('/settings/privacy'));
       expect(RoutePaths.profile, equals('/profile'));
       expect(RoutePaths.profileSetupEdit, equals('/edit-profile'));
       expect(RoutePaths.relayDiagnostic, equals('/relay-diagnostic'));

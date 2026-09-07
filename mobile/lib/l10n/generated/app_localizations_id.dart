@@ -243,6 +243,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Konten & Keamanan';
 
   @override
+  String get settingsPrivacyTitle => 'Privasi';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Pilih data penggunaan yang kamu bagikan';
+
+  @override
+  String get privacySettingsAnalyticsSection => 'ANALITIK';
+
+  @override
+  String get privacySettingsShareUsage => 'Bagikan data penggunaan';
+
+  @override
+  String get privacySettingsShareUsageSubtitle =>
+      'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.';
+
+  @override
+  String get privacySettingsSaveFailed =>
+      'Kami tidak bisa menyimpannya. Data penggunaan tetap nonaktif untuk saat ini.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRASI';
 
   @override
