@@ -95,6 +95,14 @@ void main() {
     ).thenAnswer(
       (_) => const Stream<Map<String, RelayConnectionStatus>>.empty(),
     );
+    // Default: the live tail (#8255) opens after a labeler latches loaded.
+    // Tests that exercise the tail override this with a controllable stream.
+    when(
+      () => mockNostrClient.subscribe(
+        any(),
+        subscriptionId: any(named: 'subscriptionId'),
+      ),
+    ).thenAnswer((_) => const Stream<Event>.empty());
     service = ModerationLabelService(
       nostrClient: mockNostrClient,
       authService: mockAuthService,
@@ -2063,5 +2071,58 @@ void main() {
         },
       );
     });
+  });
+
+  group('live tail subscription (#8255)', () {
+    Event liveLabel(String id, String targetEventId) => _FakeLabelEvent(
+      pubkey: service.divineModerationPubkeyHex,
+      id: id,
+      createdAt: 1000,
+      tags: [
+        ['L', 'content-warning'],
+        ['l', 'nudity', 'content-warning'],
+        ['e', targetEventId],
+      ],
+    );
+
+    void stubCompletedBackfill() {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+    }
+
+    test(
+      'a label published after the initial load reaches the maps without a '
+      'restart',
+      () async {
+        // Backfill returns nothing and completes, so the labeler latches loaded
+        // and the service opens its live tail.
+        stubCompletedBackfill();
+        final tail = StreamController<Event>.broadcast();
+        addTearDown(tail.close);
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => tail.stream);
+
+        await service.subscribeToLabeler(service.divineModerationPubkeyHex);
+        expect(service.getContentWarnings('live_target'), isEmpty);
+
+        // A moderator labels a video mid-session.
+        tail.add(liveLabel('live_evt_1', 'live_target'));
+        await pumpEventQueue();
+
+        final warnings = service.getContentWarnings('live_target');
+        expect(warnings, hasLength(1));
+        expect(warnings.first.labelValue, 'nudity');
+      },
+    );
   });
 }

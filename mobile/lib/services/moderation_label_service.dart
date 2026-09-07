@@ -634,6 +634,11 @@ class ModerationLabelService {
 
       _loadedLabelers.add(pubkey);
 
+      // The paged history above is a snapshot; open a live tail so labels
+      // published after this load reach a running client without a restart.
+      // #8255.
+      _openLiveTail(pubkey, events);
+
       Log.debug(
         'Subscribed to labeler ${pubkeyForLogs(pubkey)}, '
         'loaded ${events.length} label events',
@@ -647,6 +652,44 @@ class ModerationLabelService {
         category: LogCategory.system,
       );
     }
+  }
+
+  /// Stable subscription id for a labeler's live tail, so a reconnect reuses
+  /// the same REQ id rather than leaking anonymous subscriptions.
+  String _labelerTailSubscriptionId(String pubkey) =>
+      'moderation_labeler_tail_$pubkey';
+
+  /// Open the live tail for [pubkey], carrying only labels published after the
+  /// paged backfill. History comes from [_loadLabelerHistory] (paged to avoid
+  /// re-scanning the whole history, #8817); this covers everything after load.
+  /// One subscription per labeler, keyed in [_subscriptions] like the rest of
+  /// the service's per-pubkey state. #8255.
+  void _openLiveTail(String pubkey, List<Event> backfilled) {
+    if (_disposed) return;
+    final stream = _nostrClient.subscribe(
+      [
+        Filter(
+          authors: [pubkey],
+          kinds: [NostrEventKinds.label],
+          since: _tailSince(backfilled),
+        ),
+      ],
+      subscriptionId: _labelerTailSubscriptionId(pubkey),
+    );
+    unawaited(_subscriptions[pubkey]?.cancel());
+    _subscriptions[pubkey] = stream.listen(_processLabelEvent);
+  }
+
+  /// Where the live tail starts: the newest backfilled label's timestamp, or
+  /// now when there is no history. Overlapping the backfill by that one second
+  /// is deliberate — a `since` past it could drop a label written in the same
+  /// second as the walk's newest, and per-event dedup absorbs the overlap.
+  int _tailSince(List<Event> backfilled) {
+    var newest = 0;
+    for (final event in backfilled) {
+      if (event.createdAt > newest) newest = event.createdAt;
+    }
+    return newest > 0 ? newest : DateTime.now().millisecondsSinceEpoch ~/ 1000;
   }
 
   /// Retry [pubkey] the next time a relay connects.
