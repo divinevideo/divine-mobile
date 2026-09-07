@@ -9,7 +9,7 @@ tags:
 - doubleTapOn:
     id: explore_tab
     delay: 100
-- runFlow: ../asserts/assertExplore.yaml
+- runFlow: ../asserts/assertExploreNew.yaml
 - waitForAnimationToEnd
 - assertVisible:
     text: ${VIDEO_DATA}
