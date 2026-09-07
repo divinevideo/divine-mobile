@@ -4,6 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences keys for caching and dismissal tracking.
 abstract class UpdatePrefsKeys {
+  /// Update availability and prompts belong to the installation,
+  /// not an account.
+  static const List<String> deviceScopedPrefsKeys = [
+    dismissedVersion,
+    dismissedAt,
+    lastChecked,
+    latestVersion,
+    downloadUrl,
+  ];
+
   /// Key for the dismissed version string.
   static const dismissedVersion = 'update_dismissed_version';
 
@@ -12,6 +22,12 @@ abstract class UpdatePrefsKeys {
 
   /// Key for the last-checked timestamp.
   static const lastChecked = 'update_last_checked';
+
+  /// Key for the latest version found during the last successful check.
+  static const latestVersion = 'update_latest_version';
+
+  /// Key for the store URL resolved during the last successful check.
+  static const downloadUrl = 'update_download_url';
 }
 
 /// Cooldown before showing the moderate dialog again after dismissal.

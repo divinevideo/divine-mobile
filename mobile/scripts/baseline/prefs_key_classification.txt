@@ -61,16 +61,13 @@ pending_unblocks
 popular_hashtags
 preferred_audio_device_id
 protected_minor_override
-push_preferences
+push_preferences # swept by NotificationPreferencesStore.clearPreferences; method-based cleanup is outside this detector
 screenshot_initial_route
 screenshot_seed_clips
 selected_feed_mode
 session_recovery_anchor_npub # session recovery marker; cleared by auth_service directly on sign-out
 shorebird_subscribed_track
 subtitle_visibility_enabled
-update_dismissed_at
-update_dismissed_version
-update_last_checked
 use_blossom_upload
 user_removed_relays
 video_cache_max_bytes
