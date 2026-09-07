@@ -507,6 +507,16 @@ class ModerationLabelService {
         // means the relay is ignoring `until` (the page carries events newer
         // than the cursor), so stop rather than spin.
         if (until != null && page.every((event) => event.createdAt == until)) {
+          // Losing labels is a moderation-safety event, so say so rather than
+          // let it be invisible in a bug report.
+          Log.warning(
+            'Labeler ${pubkeyForLogs(pubkey)} has a full page of labels at '
+            'created_at $until; a NIP filter has no sub-second cursor, so '
+            'paging past that second drops any label beyond the first '
+            '$_labelerHistoryPageSize sharing it',
+            name: 'ModerationLabelService',
+            category: LogCategory.system,
+          );
           until = until - 1;
           continue;
         }
