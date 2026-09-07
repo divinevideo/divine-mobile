@@ -7620,12 +7620,10 @@ class DmRepository {
   /// Report, Block and Mute all addressing the viewer's own account.
   ///
   /// [classifyPotentialRequests] already drops the same shape, but it only
-  /// ever sees conversations the user has NOT sent to. A row the user HAS
-  /// sent to arrives here instead, which is exactly what a group send
-  /// addressed only to the sender produced before #8699 refused it. Refusing
-  /// the send stops new ones; this stops the ones already on disk from
-  /// rendering. Filtered here rather than in each consumer so the Messages
-  /// list and the unread badge cannot disagree about what exists (#4976).
+  /// ever sees conversations the user has NOT sent to. Legacy self-wrap bugs
+  /// and malformed data can leave an already-sent row on this stream instead.
+  /// Startup maintenance removes known rows; this filter remains as defense in
+  /// depth so the Messages list and unread badge cannot disagree (#4976).
   Stream<List<DmConversation>> watchAcceptedConversations({int? limit}) {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
