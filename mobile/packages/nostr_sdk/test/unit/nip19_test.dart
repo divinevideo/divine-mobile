@@ -154,6 +154,9 @@ void main() {
 
       expect(Nip19.decode(mixedCaseNsec), isEmpty);
       expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, isNot(contains(mixedCaseNsec)));
+      expect(diagnostics.single, isNot(contains('nsec1')));
+      expect(diagnostics.single, isNot(contains(testHexPrivateKey)));
       expect(mixedCaseCharacters.length, greaterThanOrEqualTo(20));
       for (var start = 0; start <= mixedCaseCharacters.length - 20; start++) {
         final inputFragment = mixedCaseCharacters.skip(start).take(20).join();
