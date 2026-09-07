@@ -13,6 +13,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -29,6 +30,7 @@ void main() {
     String? imageUrl,
     List<String> videoEventIds = const [],
     List<String> thumbnailUrls = const [],
+    bool isPublic = true,
   }) {
     return CuratedList(
       id: id,
@@ -37,10 +39,13 @@ void main() {
       imageUrl: imageUrl,
       videoEventIds: videoEventIds,
       thumbnailUrls: thumbnailUrls,
+      isPublic: isPublic,
       createdAt: now,
       updatedAt: now,
     );
   }
+
+  final l10n = lookupAppLocalizations(const Locale('en'));
 
   UserList createUserList({
     List<String> pubkeys = const [],
@@ -362,16 +367,66 @@ void main() {
         expect(tapped, isTrue);
       });
 
-      testWidgets('has semantic label from list name', (tester) async {
+      testWidgets('speaks the name and video count as one label', (
+        tester,
+      ) async {
+        // The subtree is excluded, so the title is not read twice with a
+        // bare badge count in between.
         await tester.pumpWidget(
-          buildSubject(curatedList: createList(name: 'My Playlist')),
+          buildSubject(
+            curatedList: createList(
+              name: 'My Playlist',
+              videoEventIds: ['v1', 'v2', 'v3'],
+            ),
+          ),
         );
 
-        final semantics = tester.widgetList<Semantics>(find.byType(Semantics));
-        final cardSemantics = semantics.where(
-          (s) => s.properties.label == 'My Playlist',
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(card.label, 'My Playlist, ${l10n.listVideoCount(3)}');
+      });
+
+      testWidgets('marks a private list with a lock and says so', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(name: 'Just Mine', isPublic: false),
+          ),
         );
-        expect(cardSemantics, hasLength(1));
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.lockSimple,
+          ),
+          findsOneWidget,
+        );
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.label,
+          'Just Mine, ${l10n.listVisibilityPrivate}, '
+          '${l10n.listVideoCount(0)}',
+        );
+      });
+
+      testWidgets('shows no lock on a public list', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(name: 'Shared')),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.lockSimple,
+          ),
+          findsNothing,
+        );
       });
     });
 
@@ -426,6 +481,10 @@ void main() {
         expect(find.text('Curated by the team.'), findsOneWidget);
         // The badge shows the full member count, not the tile count.
         expect(find.text('4'), findsOneWidget);
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(card.label, 'Divine Team, ${l10n.listMemberCount(4)}');
         expect(
           find.byWidgetPredicate(
             (widget) =>
@@ -454,6 +513,39 @@ void main() {
         // collage tiles fall back to the glyph placeholder.
         expect(glyphTiles(), findsNWidgets(3));
         expect(find.byType(VineCachedImage), findsNothing);
+      });
+
+      testWidgets('inks placeholder glyphs from the avatar palette', (
+        tester,
+      ) async {
+        // The member keeps the accent UserAvatar gives that pubkey, and the
+        // glyph takes that accent's figure ink — never white, which reads
+        // at 1.16:1 on the lime fill.
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: ['a' * 64]),
+            profileOverrides: [
+              fetchUserProfileProvider(
+                'a' * 64,
+              ).overrideWith((ref) async => profileFor('a' * 64)),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final expected = userAvatarPlaceholderColors(
+          userAvatarToneForSeed('a' * 64),
+        );
+        final glyphColors = tester
+            .widgetList<DivineIcon>(glyphTiles())
+            .map((icon) => icon.color)
+            .toList();
+        expect(glyphColors, contains(expected.figure));
+        expect(glyphColors, isNot(contains(VineTheme.whiteText)));
+        final tileFills = tester
+            .widgetList<ColoredBox>(find.byType(ColoredBox))
+            .map((box) => box.color);
+        expect(tileFills, contains(expected.base));
       });
 
       testWidgets('renders the profile picture when one resolves', (
