@@ -713,7 +713,18 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (_isActive == isActive) return;
     _isActive = isActive;
     if (_isActive) {
-      _beginFirstFrameMeasurement(_currentIndex);
+      final currentController = _controllers[_currentIndex];
+      // A player that kept its painted frame while the feed was hidden has no
+      // first frame left to wait for, so timing it would publish a ~0 ms
+      // sample for a video the viewer never waited on.
+      final alreadyPainted =
+          currentController != null &&
+          currentController.state.isFirstFrameRendered;
+      if (alreadyPainted) {
+        _activeFirstFrameTimer = null;
+      } else {
+        _beginFirstFrameMeasurement(_currentIndex);
+      }
       if (_needsReinitOnActivate) {
         // A full drain dropped the current player while inactive. Re-build the
         // live window from scratch instead of resuming a disposed controller.
@@ -721,8 +732,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         unawaited(_onIndexChanged(_currentIndex));
         return;
       }
-      final currentController = _controllers[_currentIndex];
-      if (currentController != null && currentController.isInitialized) {
+      if (!alreadyPainted &&
+          currentController != null &&
+          currentController.isInitialized) {
         unawaited(_recordFirstFrame(_currentIndex, currentController));
       }
       _resumeCurrentPlaybackIfReady();
