@@ -22,6 +22,7 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -3505,7 +3506,11 @@ void main() {
     late AppDatabase database;
     late ProviderContainer container;
     late Directory tempDir;
-    late VideoEditorNotifier editorNotifier;
+    late EditorBackgroundWork backgroundWork;
+    // Restored by tearDown rather than addTearDown: addTearDown callbacks run
+    // *before* the group tearDown, so restoring there would pull the stub out
+    // from under the settle boundary that exists to drain proof generation.
+    late void Function() restoreProofFileOverride;
     var containerDisposed = false;
 
     void disposeContainer() {
@@ -3514,15 +3519,14 @@ void main() {
       container.dispose();
     }
 
-    // Bounds every drain. The 20x pumpEventQueue poll this replaced bounded
+    // Bounds every settle. The 20x pumpEventQueue poll this replaced bounded
     // itself and failed with its own reason string; a bare await on a wedged
-    // cleanup instead hangs to the suite timeout with nothing naming deferred
-    // cleanup as the stuck party.
-    Future<void> drainDeferredCleanup(VideoEditorNotifier notifier) =>
-        notifier.pendingDeferredCleanupForTest.timeout(
-          const Duration(seconds: 10),
-          onTimeout: () => fail('deferred file cleanup did not settle'),
-        );
+    // operation instead hangs to the suite timeout with nothing naming editor
+    // background work as the stuck party.
+    Future<void> settleBackgroundWork() => backgroundWork.settle().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => fail('editor background work did not settle'),
+    );
 
     setUpAll(() {
       registerFallbackValue(
@@ -3544,6 +3548,20 @@ void main() {
       database = AppDatabase.test(NativeDatabase.memory());
       tempDir = Directory.systemTemp.createTempSync('editor_defer_test');
       containerDisposed = false;
+      final originalProofFileOverride =
+          NativeProofModeService.proofFileOverride;
+      restoreProofFileOverride = () =>
+          NativeProofModeService.proofFileOverride = originalProofFileOverride;
+      NativeProofModeService.proofFileOverride =
+          (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) async => null;
       when(
         () => mockDraftStorage.draftExists(any()),
       ).thenAnswer((_) async => false);
@@ -3555,19 +3573,21 @@ void main() {
         ],
       );
       // Captured here, not in tearDown: a test that disposes the container
-      // itself must still get the drain, and `container.read` throws once the
-      // container is gone.
-      editorNotifier = container.read(videoEditorProvider.notifier);
+      // itself must still get the settle boundary, and `container.read` throws
+      // once the container is gone. Reading the notifier also installs its
+      // onDispose cleanup before any test action.
+      backgroundWork = container.read(editorBackgroundWorkProvider);
+      container.read(videoEditorProvider.notifier);
     });
 
     tearDown(() async {
       try {
-        // Unconditional: every test needs the deferred cleanup to stop
-        // querying the DAOs before the database closes under it. The old
-        // `if (!containerDisposed)` guard skipped the drain entirely for the
-        // three tests that dispose the container themselves.
+        // Unconditional: every test needs editor background work to stop
+        // reading media and querying the DAOs before those resources are
+        // destroyed. The old `if (!containerDisposed)` guard skipped the drain
+        // entirely for the tests that dispose the container themselves.
         disposeContainer();
-        await drainDeferredCleanup(editorNotifier);
+        await settleBackgroundWork();
       } finally {
         // The drain can throw — the reference check inside
         // `deleteFilesIfUnreferenced` is unguarded — and an open database or
@@ -3575,6 +3595,7 @@ void main() {
         // test isolate.
         await database.close();
         if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        restoreProofFileOverride();
       }
     });
 
@@ -3637,7 +3658,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
       await notifier.reset(keepAutosavedDraft: true);
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3672,7 +3693,7 @@ void main() {
       await notifier.reset(keepAutosavedDraft: true);
       saveMayFinish.complete();
       expect(await autosave, isTrue);
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3692,10 +3713,11 @@ void main() {
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
         ),
       ).thenAnswer((_) => saveMayFinish.future);
-      addTimelineClip();
-
       fakeAsync((async) {
         saveMayFinish = Completer<void>();
+        // Create every tracked operation inside this fake-async zone so the
+        // zone can drive the shared settle boundary to completion.
+        addTimelineClip();
         final notifier = container.read(videoEditorProvider.notifier);
         notifier.triggerAutosave();
 
@@ -3710,9 +3732,7 @@ void main() {
 
         unawaited(notifier.reset(keepAutosavedDraft: true));
         var cleanupSettled = false;
-        notifier.pendingDeferredCleanupForTest.then(
-          (_) => cleanupSettled = true,
-        );
+        backgroundWork.settle().then((_) => cleanupSettled = true);
         async.flushMicrotasks();
         expect(
           cleanupSettled,
@@ -3742,7 +3762,7 @@ void main() {
       // it starts the flush, so it cannot have finished.
       expect(orphan.existsSync(), isTrue);
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3760,7 +3780,7 @@ void main() {
       expect(orphan.existsSync(), isTrue);
 
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3856,7 +3876,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(oldRendered.path));
 
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         oldRendered.existsSync(),
@@ -3867,5 +3887,62 @@ void main() {
       );
       expect(newRendered.existsSync(), isTrue);
     });
+
+    test(
+      'teardown waits for clip proof to finish reading its source',
+      () async {
+        final proofStarted = Completer<void>();
+        final allowProofRead = Completer<void>();
+        final proofFinished = Completer<void>();
+        bool? sourcePresentDuringProof;
+        final originalProofFileOverride =
+            NativeProofModeService.proofFileOverride;
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+            }) async {
+              proofStarted.complete();
+              await allowProofRead.future;
+              sourcePresentDuringProof = file.existsSync();
+              proofFinished.complete();
+              return null;
+            };
+        addTearDown(
+          () => NativeProofModeService.proofFileOverride =
+              originalProofFileOverride,
+        );
+
+        addTimelineClip();
+        await proofStarted.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('clip proof generation did not start'),
+        );
+        expect(backgroundWork.isNotEmptyForTest, isTrue);
+        disposeContainer();
+
+        final teardown = () async {
+          await settleBackgroundWork();
+          tempDir.deleteSync(recursive: true);
+        }();
+        allowProofRead.complete();
+        await teardown;
+        await proofFinished.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('clip proof generation did not finish'),
+        );
+
+        expect(
+          sourcePresentDuringProof,
+          isTrue,
+          reason: 'teardown deleted the media while proof generation read it',
+        );
+      },
+    );
   });
 }

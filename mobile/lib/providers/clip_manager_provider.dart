@@ -13,6 +13,7 @@ import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -41,6 +42,23 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
 
+  /// Nullable rather than `late`, which would throw a
+  /// `LateInitializationError` in two ways. Riverpod reuses this notifier
+  /// instance when the provider is invalidated and calls [build] again, so the
+  /// field is assigned twice — which rules out `late final`. And a test
+  /// subclass that replaces [build] without calling `super.build()` never
+  /// assigns it at all, which rules out bare `late`; that stub shape is
+  /// already in the suite, so [_editorBackgroundWork] resolves lazily too.
+  EditorBackgroundWork? _backgroundWork;
+
+  EditorBackgroundWork get _editorBackgroundWork {
+    final existing = _backgroundWork;
+    if (existing != null) return existing;
+    final backgroundWork = ref.read(editorBackgroundWorkProvider);
+    _backgroundWork = backgroundWork;
+    return backgroundWork;
+  }
+
   /// Undo window before a scheduled deletion is committed to library
   /// trash for good. The snackbar must outlast this so the user can
   /// always tap Undo while the option is shown.
@@ -67,6 +85,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   @override
   ClipManagerState build() {
+    _backgroundWork = ref.read(editorBackgroundWorkProvider);
     ref.onDispose(() {
       _recordingDurationTimer?.cancel();
       _pendingDeletionTimer?.cancel();
@@ -260,7 +279,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
-    unawaited(_generateClipProof(clip));
+    _editorBackgroundWork.track(_generateClipProof(clip));
 
     return clip;
   }

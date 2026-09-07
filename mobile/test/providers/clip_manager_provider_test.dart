@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -18,6 +19,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
+
+/// Mirrors the stub shape used by the widget suites (for example
+/// `library_screen_test.dart`): seed a clip list from `build` without calling
+/// `super.build()`.
+class _BuildOverrideClipManagerNotifier extends ClipManagerNotifier {
+  @override
+  ClipManagerState build() => ClipManagerState();
+}
 
 void main() {
   group('ClipManagerProvider', () {
@@ -91,6 +100,51 @@ void main() {
       final state = container.read(clipManagerProvider);
       expect(state.clips.length, equals(1));
       expect(state.totalDuration, equals(const Duration(seconds: 2)));
+    });
+
+    group('provider lifecycle', () {
+      test('rebuilds after the provider is invalidated', () {
+        final first = container.read(clipManagerProvider.notifier);
+
+        container.invalidate(clipManagerProvider);
+        final second = container.read(clipManagerProvider.notifier);
+
+        // Riverpod reuses the notifier and re-runs build, so anything build
+        // assigns has to tolerate being assigned twice.
+        expect(identical(first, second), isTrue);
+        expect(container.read(clipManagerProvider).clips, isEmpty);
+      });
+
+      test('addClip works when a subclass replaces build', () async {
+        final overridden = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await SharedPreferences.getInstance(),
+            ),
+            draftStorageServiceProvider.overrideWithValue(
+              mockDraftStorageService,
+            ),
+            clipLibraryServiceProvider.overrideWithValue(
+              mockClipLibraryService,
+            ),
+            clipManagerProvider.overrideWith(
+              _BuildOverrideClipManagerNotifier.new,
+            ),
+          ],
+        );
+        addTearDown(overridden.dispose);
+        final notifier = overridden.read(clipManagerProvider.notifier);
+
+        notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/path/to/video.mp4'),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        expect(overridden.read(clipManagerProvider).clips, hasLength(1));
+      });
     });
 
     group('muteAllClips', () {
