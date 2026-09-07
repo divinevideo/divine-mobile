@@ -81,6 +81,18 @@ void main() {
       expect(result.stdout, contains('new_test.dart'));
     });
 
+    test('rejects an unaccounted suite in a nested directory', () {
+      final nestedDirectory = Directory(p.join(e2eDirectory.path, 'dm'))
+        ..createSync();
+      _writeSuite(nestedDirectory, 'nested_test.dart');
+
+      final result = runGuard();
+
+      expect(result.exitCode, 1);
+      expect(result.stdout, contains('missing from the workflow'));
+      expect(result.stdout, contains('dm/nested_test.dart'));
+    });
+
     test('rejects a suite included more than once', () {
       _writeWorkflow(
         workflow,

@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+# sort/comm/uniq must agree regardless of the runner's locale.
+export LC_ALL=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$MOBILE_DIR/.." && pwd)"
@@ -69,7 +72,7 @@ parse_workflow_suites() {
   ' "$1"
 }
 
-find "$E2E_DIR" -maxdepth 1 -type f -name '*_test.dart' -print \
+find "$E2E_DIR" -type f -name '*_test.dart' -print \
   | sed "s|^$SUITE_PATH_ROOT/||" \
   | sort > "$scratch/all"
 
