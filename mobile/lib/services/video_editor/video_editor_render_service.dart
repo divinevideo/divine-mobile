@@ -1154,6 +1154,10 @@ class VideoEditorRenderService {
   ///
   /// If [globalTransform] is provided, applies it to all segments in a single
   /// pass.
+  ///
+  /// The native renderer's `trimToCommonTrackEnd` stays disabled here because
+  /// it would shorten clips after editor time anchors were authored. See
+  /// `docs/VIDEO_TRACK_END_MISMATCH.md` for the export/playback distinction.
   static Future<String> _concatenateSegments({
     required List<DivineVideoClip> clips,
     required List<VideoSegment> segments,
