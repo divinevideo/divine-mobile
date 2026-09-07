@@ -1479,6 +1479,56 @@ class PendingViewEvents extends Table {
   ];
 }
 
+/// Durable queue of content reports awaiting off-device delivery.
+///
+/// One row per report. The kind-1984 relay publish and the Zendesk ticket each
+/// retire independently (`relay_status` / `zendesk_status`), so a report whose
+/// relay leg succeeded but whose Zendesk leg is still failing keeps only the
+/// Zendesk leg queued. The moderation DM is NOT tracked here; it keeps its own
+/// `outgoing_dms` outbox. See #8053.
+@DataClassName('PendingReportRow')
+class PendingReports extends Table {
+  @override
+  String get tableName => 'pending_reports';
+
+  /// Matches `ContentReport.reportId`; also the Zendesk `external_id` so a
+  /// retry updates the ticket rather than filing a duplicate.
+  TextColumn get reportId => text().named('report_id')();
+
+  TextColumn get userPubkey => text().named('user_pubkey')();
+
+  /// The signed kind-1984 (NIP-56) event, serialized. Republished as-is on
+  /// retry: the id is stable, so the relay dedupes rather than double-storing.
+  TextColumn get eventJson => text().named('event_json')();
+
+  /// JSON list of target relays for the report, or null for the default set.
+  TextColumn get targetRelays => text().nullable().named('target_relays')();
+
+  /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  TextColumn get zendeskPayload => text().named('zendesk_payload')();
+
+  /// `pending` | `done` | `deadLetter` (parsed throw-on-unknown).
+  TextColumn get relayStatus => text().named('relay_status')();
+
+  TextColumn get zendeskStatus => text().named('zendesk_status')();
+
+  IntColumn get relayAttempts =>
+      integer().withDefault(const Constant(0)).named('relay_attempts')();
+
+  IntColumn get zendeskAttempts =>
+      integer().withDefault(const Constant(0)).named('zendesk_attempts')();
+
+  TextColumn get lastError => text().nullable().named('last_error')();
+
+  DateTimeColumn get lastAttemptAt =>
+      dateTime().nullable().named('last_attempt_at')();
+
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  @override
+  Set<Column> get primaryKey => {reportId};
+}
+
 /// Durable queue of product analytics events awaiting ingest publish.
 @DataClassName('PendingProductEventRow')
 class PendingProductEvents extends Table {

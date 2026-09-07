@@ -11,6 +11,7 @@ import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v11.dart' as v11;
 import 'generated/schema_v12.dart' as v12;
+import 'generated/schema_v13.dart' as v13;
 import 'generated/schema_v9.dart' as v9;
 
 void main() {
@@ -22,15 +23,38 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 12', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 12);
+    test('current schema version is 13', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 13);
     });
 
-    test('v12 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(12);
+    test('v13 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(13);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
+    });
+
+    test('v12 -> v13 creates pending_reports and it is writable', () async {
+      await verifier.testWithDataIntegrity(
+        oldVersion: 12,
+        newVersion: 13,
+        createOld: v12.DatabaseAtV12.new,
+        createNew: v13.DatabaseAtV13.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {},
+        validateItems: (newDb) async {
+          // The new table exists and accepts a row after the migration.
+          await newDb.customStatement(
+            "INSERT INTO pending_reports (report_id, user_pubkey, event_json, "
+            "zendesk_payload, relay_status, zendesk_status, created_at) "
+            "VALUES ('r1', 'a', '{}', '{}', 'pending', 'pending', 1700000000)",
+          );
+          final rows = await newDb
+              .customSelect('SELECT COUNT(*) AS c FROM pending_reports')
+              .getSingle();
+          expect(rows.data['c'], 1);
+        },
+      );
     });
 
     test(
