@@ -78,6 +78,13 @@ while IFS= read -r path; do
     mobile/lib/*|mobile/test/*|mobile/integration_test/*|mobile/scripts/*)
       app=true
       ;;
+    scripts/*)
+      # Repo-root tooling is covered by mobile/test/tools/, which only runs in
+      # the app matrix. Without this arm a scripts/-only PR skips the one job
+      # that tests it, and there is no shellcheck or `bash -n` step to catch it
+      # instead (#8761).
+      app=true
+      ;;
     mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/web/*|mobile/assets/*|mobile/fonts/*|mobile/overrides/*|mobile/l10n/*)
       app=true
       ;;

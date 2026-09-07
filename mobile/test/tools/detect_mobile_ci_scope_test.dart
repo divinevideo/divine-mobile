@@ -229,6 +229,20 @@ esac
       );
     });
 
+    test('repo-root script changes run app CI', () {
+      // mobile/test/tools/ only runs in the app matrix, so a scripts/-only PR
+      // must not skip the one job that tests it (#8761).
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['scripts/prune-merged-branches.sh'],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: false,
+      );
+    });
+
     test('detector changes run native checks', () {
       expectScope(
         runDetector(
