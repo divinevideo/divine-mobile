@@ -395,7 +395,7 @@ run_numeric_ratchet
         expect(res.exitCode, 0, reason: res.stdout.toString());
       });
 
-      test('lets a later rename reuse a settled claim\'s old key', () {
+      test("lets a later rename reuse a settled claim's old key", () {
         // The rename landed long ago and the annotation was kept (AGENTS.md
         // says it may be removed, not must). A settled claim grants nothing,
         // but it was still counted by the duplicate checks, so it reserved the
