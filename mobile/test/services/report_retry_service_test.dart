@@ -97,118 +97,123 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  test('deletes a report once both channels are delivered', () async {
-    await dao.enqueue(makeReport(reportId: 'r1'));
-    driver
-      ..succeed('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
+  group('ReportRetryService', () {
+    test('deletes a report once both channels are delivered', () async {
+      await dao.enqueue(makeReport(reportId: 'r1'));
+      driver
+        ..succeed('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
 
-    await buildService().sweep();
+      await buildService().sweep();
 
-    expect(await dao.getById('r1'), isNull);
-  });
+      expect(await dao.getById('r1'), isNull);
+    });
 
-  test('retires only the delivered channel and keeps the row', () async {
-    await dao.enqueue(makeReport(reportId: 'r1'));
-    driver
-      ..fail('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
+    test('retires only the delivered channel and keeps the row', () async {
+      await dao.enqueue(makeReport(reportId: 'r1'));
+      driver
+        ..fail('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
 
-    await buildService().sweep();
+      await buildService().sweep();
 
-    final r = await dao.getById('r1');
-    expect(r, isNotNull);
-    expect(r!.zendeskStatus, PendingReportChannelStatus.done);
-    expect(r.relayStatus, PendingReportChannelStatus.pending);
-    expect(r.relayAttempts, 1);
-  });
+      final r = await dao.getById('r1');
+      expect(r, isNotNull);
+      expect(r!.zendeskStatus, PendingReportChannelStatus.done);
+      expect(r.relayStatus, PendingReportChannelStatus.pending);
+      expect(r.relayAttempts, 1);
+    });
 
-  test('a thrown driver error counts as a failed attempt', () async {
-    await dao.enqueue(makeReport(reportId: 'r1'));
-    driver
-      ..throwOn('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
+    test('a thrown driver error counts as a failed attempt', () async {
+      await dao.enqueue(makeReport(reportId: 'r1'));
+      driver
+        ..throwOn('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
 
-    await buildService().sweep();
+      await buildService().sweep();
 
-    final r = await dao.getById('r1');
-    expect(r!.relayStatus, PendingReportChannelStatus.pending);
-    expect(r.relayAttempts, 1);
-  });
+      final r = await dao.getById('r1');
+      expect(r!.relayStatus, PendingReportChannelStatus.pending);
+      expect(r.relayAttempts, 1);
+    });
 
-  test('skips a row still inside its backoff window', () async {
-    final now = DateTime.utc(2026, 6, 1, 12);
-    await dao.enqueue(
-      makeReport(
-        reportId: 'r1',
-        relayAttempts: 1,
-        zendeskAttempts: 1,
-        // attempted 1s ago; backoff after 1 attempt is > 1s
-        lastAttemptAt: now.subtract(const Duration(seconds: 1)),
-      ),
+    test('skips a row still inside its backoff window', () async {
+      final now = DateTime.utc(2026, 6, 1, 12);
+      await dao.enqueue(
+        makeReport(
+          reportId: 'r1',
+          relayAttempts: 1,
+          zendeskAttempts: 1,
+          // attempted 1s ago; backoff after 1 attempt is > 1s
+          lastAttemptAt: now.subtract(const Duration(seconds: 1)),
+        ),
+      );
+      driver
+        ..succeed('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
+
+      await buildService(now: () => now).sweep();
+
+      expect(driver.calls, isEmpty, reason: 'backoff must gate the drive');
+      expect(await dao.getById('r1'), isNotNull);
+    });
+
+    test('drives a row once its backoff window has elapsed', () async {
+      final now = DateTime.utc(2026, 6, 1, 12);
+      await dao.enqueue(
+        makeReport(
+          reportId: 'r1',
+          relayAttempts: 1,
+          zendeskAttempts: 1,
+          lastAttemptAt: now.subtract(const Duration(minutes: 10)),
+        ),
+      );
+      driver
+        ..succeed('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
+
+      await buildService(now: () => now).sweep();
+
+      expect(await dao.getById('r1'), isNull);
+    });
+
+    test(
+      'dead-letters a channel at the attempt cap and keeps the row',
+      () async {
+        // zendesk already delivered; relay on its final attempt.
+        await dao.enqueue(
+          makeReport(
+            reportId: 'r1',
+            zendeskStatus: PendingReportChannelStatus.done,
+            relayAttempts: 9,
+          ),
+        );
+        driver.fail('r1', ReportChannel.relay);
+
+        // Default config caps at 10 attempts per channel.
+        await buildService().sweep();
+
+        final r = await dao.getById('r1');
+        expect(r, isNotNull);
+        expect(r!.relayStatus, PendingReportChannelStatus.deadLetter);
+        expect(r.relayAttempts, 10);
+      },
     );
-    driver
-      ..succeed('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
 
-    await buildService(now: () => now).sweep();
+    test('foreground true triggers a sweep', () async {
+      await dao.enqueue(makeReport(reportId: 'r1'));
+      driver
+        ..succeed('r1', ReportChannel.relay)
+        ..succeed('r1', ReportChannel.zendesk);
+      final service = buildService();
+      await service.initialize();
 
-    expect(driver.calls, isEmpty, reason: 'backoff must gate the drive');
-    expect(await dao.getById('r1'), isNotNull);
-  });
+      foreground.add(true);
+      // Drain the unawaited sweep deterministically rather than racing a timer.
+      await pumpEventQueue();
 
-  test('drives a row once its backoff window has elapsed', () async {
-    final now = DateTime.utc(2026, 6, 1, 12);
-    await dao.enqueue(
-      makeReport(
-        reportId: 'r1',
-        relayAttempts: 1,
-        zendeskAttempts: 1,
-        lastAttemptAt: now.subtract(const Duration(minutes: 10)),
-      ),
-    );
-    driver
-      ..succeed('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
-
-    await buildService(now: () => now).sweep();
-
-    expect(await dao.getById('r1'), isNull);
-  });
-
-  test('dead-letters a channel at the attempt cap and keeps the row', () async {
-    // zendesk already delivered; relay on its final attempt.
-    await dao.enqueue(
-      makeReport(
-        reportId: 'r1',
-        zendeskStatus: PendingReportChannelStatus.done,
-        relayAttempts: 9,
-      ),
-    );
-    driver.fail('r1', ReportChannel.relay);
-
-    // Default config caps at 10 attempts per channel.
-    await buildService().sweep();
-
-    final r = await dao.getById('r1');
-    expect(r, isNotNull);
-    expect(r!.relayStatus, PendingReportChannelStatus.deadLetter);
-    expect(r.relayAttempts, 10);
-  });
-
-  test('foreground true triggers a sweep', () async {
-    await dao.enqueue(makeReport(reportId: 'r1'));
-    driver
-      ..succeed('r1', ReportChannel.relay)
-      ..succeed('r1', ReportChannel.zendesk);
-    final service = buildService();
-    await service.initialize();
-
-    foreground.add(true);
-    // Drain the unawaited sweep deterministically rather than racing a timer.
-    await pumpEventQueue();
-
-    expect(await dao.getById('r1'), isNull);
-    await service.dispose();
+      expect(await dao.getById('r1'), isNull);
+      await service.dispose();
+    });
   });
 }
