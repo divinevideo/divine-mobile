@@ -35,11 +35,17 @@ void main() {
       expect(NostrKeyUtils.isValidNsec(characters.join()), isFalse);
     });
 
-    test('rejects a foreign HRP that starts with nsec', () {
+    test('rejects a foreign HRP whose text starts with nsec1', () {
       final words = Nip19.convertBits(List<int>.filled(32, 0x67), 8, 5, true);
-      final foreignHrpKey = Bech32Encoder().convert(Bech32('nsecx', words));
+      final foreignHrpKey = Bech32Encoder().convert(Bech32('nsec1abc', words));
 
       expect(NostrKeyUtils.isValidNsec(foreignHrpKey), isFalse);
+    });
+
+    test('accepts a uniformly uppercase nsec', () {
+      final uppercaseNsec = Nip19.encodePrivateKey(privateKey).toUpperCase();
+
+      expect(NostrKeyUtils.isValidNsec(uppercaseNsec), isTrue);
     });
   });
 }

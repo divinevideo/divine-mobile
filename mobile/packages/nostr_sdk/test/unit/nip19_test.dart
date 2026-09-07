@@ -1,6 +1,7 @@
 // ABOUTME: Tests for NIP-19 bech32 encoding and decoding functionality
 // ABOUTME: Validates npub, nsec, and note encoding/decoding works correctly
 
+import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -38,6 +39,21 @@ void main() {
       expect(nsec, startsWith('nsec1'));
       expect(nsec.length, greaterThan(50));
       expect(Nip19.isPrivateKey(nsec), isTrue);
+    });
+
+    test('accepts a uniformly uppercase nsec', () {
+      final uppercaseNsec = Nip19.encodePrivateKey(
+        testHexPrivateKey,
+      ).toUpperCase();
+
+      expect(Nip19.isPrivateKey(uppercaseNsec), isTrue);
+    });
+
+    test('rejects a valid payload encoded under a forged nsec HRP', () {
+      final words = Nip19.convertBits(List<int>.filled(32, 0x67), 8, 5, true);
+      final forgedNsec = Bech32Encoder().convert(Bech32('nsec1abc', words));
+
+      expect(Nip19.isPrivateKey(forgedNsec), isFalse);
     });
 
     test('Decode nsec back to hex', () {
@@ -83,6 +99,7 @@ void main() {
 
       expect(Nip19.isPubkey('nsec1...'), isFalse); // Wrong prefix
       expect(Nip19.isPrivateKey('npub1...'), isFalse); // Wrong prefix
+      expect(Nip19.isPrivateKey('nsec1...'), isFalse); // Invalid bech32
     });
 
     test('Encoding different hex strings produces different results', () {

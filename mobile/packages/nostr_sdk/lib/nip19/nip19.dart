@@ -112,7 +112,14 @@ class Nip19 {
   }
 
   static bool isPrivateKey(String str) {
-    return isKey(Hrps.privateKey, str);
+    try {
+      final bech32Result = Bech32Decoder().convert(str);
+      if (bech32Result.hrp != Hrps.privateKey) return false;
+
+      return convertBits(bech32Result.data, 5, 8, false).length == 32;
+    } catch (_) {
+      return false;
+    }
   }
 
   static String encodePrivateKey(String privateKey) {
