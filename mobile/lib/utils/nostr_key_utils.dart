@@ -3,6 +3,7 @@
 // ABOUTME: shortening them for UI display (never for logs — see AGENTS.md)
 
 import 'package:nostr_sdk/client_utils/keys.dart';
+import 'package:nostr_sdk/nip19/hrps.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 
 /// Utility class for Nostr key operations.
@@ -34,11 +35,13 @@ class NostrKeyUtils {
     return keyIsValid(key);
   }
 
-  /// Check if nsec has the private-key prefix and decodes to a 32-byte key
+  /// Whether [nsec] is a bech32 `nsec1…` string carrying a 32-byte key.
   ///
-  /// Returns true if the nsec can be successfully decoded, false otherwise
+  /// False when the prefix is absent or belongs to another HRP that merely
+  /// starts with `nsec`, when the bech32 is malformed, or when the decoded
+  /// payload is not a 32-byte hex key.
   static bool isValidNsec(String nsec) =>
-      Nip19.isPrivateKey(nsec) && Nip19.decode(nsec).length == 64;
+      nsec.startsWith('${Hrps.privateKey}1') && isValidKey(Nip19.decode(nsec));
 
   /// The full npub for [hexPubkey], or the hex itself when it cannot be
   /// encoded.

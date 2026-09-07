@@ -140,10 +140,12 @@ void main() {
     test('does not include mixed-case secret input in decode diagnostics', () {
       final nsec = Nip19.encodePrivateKey(testHexPrivateKey);
       final mixedCaseCharacters = nsec.split('');
+      final lowercaseLetter = RegExp('[a-z]');
       final lowercasePayloadIndex = mixedCaseCharacters.indexWhere(
-        (character) => RegExp('[a-z]').hasMatch(character),
+        lowercaseLetter.hasMatch,
         5,
       );
+      expect(lowercasePayloadIndex, isNonNegative);
       mixedCaseCharacters[lowercasePayloadIndex] =
           mixedCaseCharacters[lowercasePayloadIndex].toUpperCase();
       final mixedCaseNsec = mixedCaseCharacters.join();
@@ -152,6 +154,7 @@ void main() {
 
       expect(Nip19.decode(mixedCaseNsec), isEmpty);
       expect(diagnostics, hasLength(1));
+      expect(mixedCaseCharacters.length, greaterThanOrEqualTo(20));
       for (var start = 0; start <= mixedCaseCharacters.length - 20; start++) {
         final inputFragment = mixedCaseCharacters.skip(start).take(20).join();
         expect(diagnostics.single, isNot(contains(inputFragment)));

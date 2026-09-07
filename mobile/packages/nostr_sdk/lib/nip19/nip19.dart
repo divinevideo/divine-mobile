@@ -91,7 +91,13 @@ class Nip19 {
       return HEX.encode(data);
     } catch (e) {
       // Exception messages may contain sensitive input.
-      (debugLogSink ?? log)('Nip19 decode error: ${e.runtimeType}');
+      final message = 'Nip19 decode error: ${e.runtimeType}';
+      final sink = debugLogSink;
+      if (sink != null) {
+        sink(message);
+      } else {
+        log(message);
+      }
       return "";
     }
   }

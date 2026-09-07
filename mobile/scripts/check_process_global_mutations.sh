@@ -119,6 +119,7 @@ RESET_TO_DEFAULT_GLOBALS=(
   'NativeProofModeService\.proofFileOverride:null'
   'NativeProofModeService\.c2paSigningServiceFactoryOverride:null'
   'InfiniteVideoFeed\.debugIsSupportedOverride:null'
+  'Nip19\.debugLogSink:null'
 )
 
 # SCAN_DIR remains a single-root override for the synthetic self-tests.
