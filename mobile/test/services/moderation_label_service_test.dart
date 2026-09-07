@@ -1821,6 +1821,62 @@ void main() {
       );
 
       test(
+        'a walk that spends its time budget stops paging and stays retryable',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            // The page cap stays at its default, far beyond what this walk
+            // reaches: the budget, not the cap, has to stop a relay that
+            // answers endlessly.
+            labelerHistoryBudget: Duration.zero,
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+          // One page, then the budget stops it — and the first page's labels
+          // are applied rather than discarded.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(1);
+          expect(paged.getContentWarnings('target_dup_1'), hasLength(1));
+
+          // Not latched: an incomplete walk must stay retryable.
+          await paged.subscribeToLabeler(labeler);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
         'a labeler unfollowed mid-walk does not get its labels reapplied',
         () async {
           final paged = pagedService(2);

@@ -97,12 +97,14 @@ class ModerationLabelService {
     bool Function()? canQueryRelays,
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
     int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
+    Duration labelerHistoryBudget = defaultLabelerHistoryBudget,
   }) : _nostrClient = nostrClient,
        _authService = authService,
        _prefs = sharedPreferences,
        _canQueryRelays = canQueryRelays ?? (() => true),
        _labelerHistoryPageSize = labelerHistoryPageSize,
-       _maxLabelerHistoryPages = maxLabelerHistoryPages;
+       _maxLabelerHistoryPages = maxLabelerHistoryPages,
+       _labelerHistoryBudget = labelerHistoryBudget;
 
   final NostrClient _nostrClient;
   // ignore: unused_field
@@ -130,12 +132,27 @@ class ModerationLabelService {
   /// stop against an untrusted relay that never signals the end — e.g. one that
   /// fabricates events at the requested `until` on every response, which would
   /// otherwise step the cursor backward forever. At the default page size this
-  /// still allows a very large history (500 * 500k events) before capping. If
-  /// it is ever hit for a real labeler, that is the signal to move to persisted
-  /// labels or per-target queries rather than a cold-start full scan. #8252.
+  /// still allows a very large history (1000 pages of 500 = 500k events) before
+  /// capping. If it is ever hit for a real labeler, that is the signal to move
+  /// to persisted labels or per-target queries rather than a cold-start full
+  /// scan. #8252.
   static const int defaultMaxLabelerHistoryPages = 1000;
 
   final int _maxLabelerHistoryPages;
+
+  /// Wall-clock ceiling on one labeler-history walk.
+  ///
+  /// The page cap bounds pages, not time. Each page carries
+  /// `queryEventsDetailed`'s own five-second timeout and the sync loops await
+  /// labelers one at a time, so against a connected-but-silent relay a
+  /// cap-length walk would hold the shared query path for over an hour while
+  /// every later labeler waits behind it. This stops the walk while the app is
+  /// still starting up; what arrived is applied and the labeler stays
+  /// retryable. It is the stop that fires first in practice — the page cap is
+  /// the backstop for a relay that answers quickly and endlessly. #8252.
+  static const Duration defaultLabelerHistoryBudget = Duration(seconds: 30);
+
+  final Duration _labelerHistoryBudget;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
   static const String _subscribedLabelersKey = 'subscribed_labeler_pubkeys';
@@ -358,6 +375,7 @@ class ModerationLabelService {
     final seenIds = <String>{};
     int? until;
     var pages = 0;
+    final elapsed = Stopwatch()..start();
 
     while (true) {
       // dispose() and _unloadLabeler() cannot cancel a page already awaited,
@@ -369,6 +387,26 @@ class ModerationLabelService {
           timedOut: false,
           noRelays: false,
           stop: _LabelerHistoryStop.cancelled,
+        );
+      }
+
+      // Checked only once a page has been attempted, so the budget bounds how
+      // long the walk may keep the shared query path rather than whether it
+      // runs at all.
+      if (pages > 0 && elapsed.elapsed >= _labelerHistoryBudget) {
+        Log.warning(
+          'Labeler history paging spent its $_labelerHistoryBudget budget '
+          'after $pages page(s) for ${pubkeyForLogs(pubkey)}; applying '
+          '${collected.length} event(s) and leaving it unloaded so a later '
+          'attempt retries',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.incomplete,
         );
       }
 
