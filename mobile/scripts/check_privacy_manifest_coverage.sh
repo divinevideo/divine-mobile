@@ -25,10 +25,9 @@
 #   bash scripts/check_privacy_manifest_coverage.sh --detail
 #   bash scripts/check_privacy_manifest_coverage.sh --archive <path/to/Runner.app>
 #
-# The --archive mode proves the manifests a source scan trusts actually reach
-# the build product. A podspec that loses its resource_bundles line still passes
-# a source-only scan while shipping nothing, which is the one gap source
-# analysis cannot close.
+# The --archive mode proves the source scan's project and podspec wiring reaches
+# the build product. Source analysis validates that wiring, but only inspecting
+# the built app closes the final packaging gap.
 #
 # Docs: mobile/docs/IOS_PRIVACY_MANIFESTS.md
 set -euo pipefail

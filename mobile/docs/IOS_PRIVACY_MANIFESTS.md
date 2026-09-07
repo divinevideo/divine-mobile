@@ -96,12 +96,13 @@ Reason codes:
 
 ## The guard
 
-`mobile/scripts/check_privacy_manifest_coverage.sh` runs in CI's
-**Generated Files** job on every push, ungated. It scans `mobile/ios/Runner`,
-both iOS extension targets, `mobile/ios/LocalPods/*` and
-`mobile/packages/*/ios`, and fails when a detected required-reason API is not
-declared in that bundle's own manifest. There is no baseline and no exemption
-list.
+`mobile/scripts/check_privacy_manifest_coverage.sh` runs whenever CI's
+**Generated Files** job runs. The step is not gated on the narrower native-file
+filter, so package-owned iOS sources are covered whenever Mobile CI is in app
+scope. It scans `mobile/ios/Runner`, both iOS extension targets,
+`mobile/ios/LocalPods/*` and `mobile/packages/*/ios`, and fails when a detected
+required-reason API is not declared in that bundle's own manifest. There is no
+baseline and no exemption list.
 
 ```bash
 cd mobile

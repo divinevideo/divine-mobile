@@ -162,6 +162,21 @@ void main() {
         expect(result.exitCode, equals(0), reason: result.output);
       });
 
+      test('does not let a URL string hide an API later on the line', () {
+        final root = makeTree(
+          swift:
+              'log("https://example.com"); '
+              'let t = ProcessInfo.processInfo.systemUptime\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(
+          result.output,
+          contains('NSPrivacyAccessedAPICategorySystemBootTime'),
+        );
+      });
+
       test('ignores a call that only compiles into DEBUG builds', () {
         final root = makeTree(
           swift:
@@ -241,6 +256,30 @@ void main() {
         expect(result.output, contains('Copy Bundle Resources'));
       });
 
+      test('rejects an app manifest that is only an Xcode file reference', () {
+        final root = Directory.systemTemp.createTempSync('privacy_app_test');
+        addTearDown(() => root.deleteSync(recursive: true));
+        Directory('${root.path}/ios/Runner').createSync(recursive: true);
+        Directory(
+          '${root.path}/ios/Runner.xcodeproj',
+        ).createSync(recursive: true);
+        File('${root.path}/ios/Runner/PrivacyInfo.xcprivacy').writeAsStringSync(
+          manifestFor('NSPrivacyAccessedAPICategoryUserDefaults', 'CA92.1'),
+        );
+        File(
+          '${root.path}/ios/Runner.xcodeproj/project.pbxproj',
+        ).writeAsStringSync('''
+/* Begin PBXFileReference section */
+ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+''');
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(result.output, contains('Copy Bundle Resources'));
+      });
+
       test('rejects a manifest the podspec never bundles', () {
         final root = makeTree(
           swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
@@ -255,6 +294,47 @@ void main() {
         expect(result.exitCode, equals(1));
         expect(result.output, contains('never reaches the archive'));
       });
+
+      test('rejects a manifest mentioned only in a podspec comment', () {
+        final root = makeTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          podspec:
+              '# TODO: add Resources/PrivacyInfo.xcprivacy to resource_bundles\n'
+              "s.source_files = 'Classes/**/*'",
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(result.output, contains('never reaches the archive'));
+      });
+    });
+
+    test('archive mode requires the quick-actions privacy bundle', () {
+      final root = Directory.systemTemp.createTempSync('privacy_archive_test');
+      addTearDown(() => root.deleteSync(recursive: true));
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      final plist = manifestFor(
+        'NSPrivacyAccessedAPICategorySystemBootTime',
+        '35F9.1',
+      );
+      for (final path in [
+        'PrivacyInfo.xcprivacy',
+        'divine_camera_privacy.bundle/PrivacyInfo.xcprivacy',
+        'LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy',
+      ]) {
+        final file = File('${app.path}/$path');
+        file.parent.createSync(recursive: true);
+        file.writeAsStringSync(plist);
+      }
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(result.output, contains('divine_quick_actions'));
     });
   });
 }

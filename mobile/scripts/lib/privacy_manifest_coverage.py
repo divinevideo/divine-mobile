@@ -98,13 +98,6 @@ AMBIGUOUS = [
 
 SOURCE_SUFFIXES = (".swift", ".m", ".mm", ".h", ".c")
 
-_BLOCK = re.compile(r"/\*.*?\*/", re.S)
-_LINE = re.compile(r"//[^\n]*")
-_MULTI_STR = re.compile(r'"""(?:.|\n)*?"""')
-_RAW_STR = re.compile(r'#"(?:[^"\\]|\\.)*"#')
-_STR = re.compile(r'"(?:[^"\\\n]|\\.)*"')
-
-
 def strip_noise(text: str) -> str:
     """Blank out comments and string literals, preserving line numbers.
 
@@ -115,12 +108,61 @@ def strip_noise(text: str) -> str:
     it protects.
     """
 
-    def blank(match: re.Match[str]) -> str:
-        return re.sub(r"[^\n]", " ", match.group(0))
+    chars = list(text)
 
-    for pattern in (_BLOCK, _MULTI_STR, _RAW_STR, _LINE, _STR):
-        text = pattern.sub(blank, text)
-    return text
+    def blank(start: int, end: int) -> None:
+        for index in range(start, end):
+            if chars[index] != "\n":
+                chars[index] = " "
+
+    def quoted_end(start: int, delimiter: str, *, escaped: bool) -> int:
+        index = start + len(delimiter)
+        while index < len(text):
+            if escaped and text[index] == "\\":
+                index += 2
+                continue
+            if text.startswith(delimiter, index):
+                return index + len(delimiter)
+            index += 1
+        return len(text)
+
+    index = 0
+    while index < len(text):
+        if text.startswith("//", index):
+            end = text.find("\n", index)
+            end = len(text) if end == -1 else end
+            blank(index, end)
+            index = end
+            continue
+        if text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            end = len(text) if end == -1 else end + 2
+            blank(index, end)
+            index = end
+            continue
+
+        raw = re.match(r'(#+)("""|")', text[index:])
+        if raw:
+            hashes, quote = raw.groups()
+            delimiter = quote + hashes
+            close = text.find(delimiter, index + len(hashes) + len(quote))
+            end = len(text) if close == -1 else close + len(delimiter)
+            blank(index, end)
+            index = end
+            continue
+        if text.startswith('"""', index):
+            end = quoted_end(index, '"""', escaped=False)
+            blank(index, end)
+            index = end
+            continue
+        if text[index] == '"':
+            end = quoted_end(index, '"', escaped=True)
+            blank(index, end)
+            index = end
+            continue
+        index += 1
+
+    return "".join(chars)
 
 
 _IF_DEBUG = re.compile(r"^\s*#if\s+DEBUG\s*$")
@@ -295,6 +337,67 @@ def read_manifest(path: str) -> tuple[dict[str, set[str]] | None, list[str]]:
     return declared, problems
 
 
+def xcode_manifest_is_runner_resource(project: str) -> bool:
+    """Return whether Runner's Resources phase contains its privacy manifest."""
+    file_refs = set(
+        re.findall(
+            r"^\s*([A-F0-9]+) /\* PrivacyInfo\.xcprivacy \*/ = "
+            r"\{isa = PBXFileReference;[^\n]*\bpath = PrivacyInfo\.xcprivacy;",
+            project,
+            re.M,
+        )
+    )
+    build_files = set()
+    for build_id, file_ref in re.findall(
+        r"^\s*([A-F0-9]+) /\* PrivacyInfo\.xcprivacy in Resources \*/ = "
+        r"\{isa = PBXBuildFile; fileRef = ([A-F0-9]+)",
+        project,
+        re.M,
+    ):
+        if file_ref in file_refs:
+            build_files.add(build_id)
+
+    runner = re.search(
+        r"^\s*[A-F0-9]+ /\* Runner \*/ = \{\s*\n"
+        r"\s*isa = PBXNativeTarget;(?P<body>.*?)^\s*\};",
+        project,
+        re.M | re.S,
+    )
+    if not runner:
+        return False
+    phases = re.search(r"buildPhases = \((?P<ids>.*?)\);", runner.group("body"), re.S)
+    if not phases:
+        return False
+    resource_ids = re.findall(r"([A-F0-9]+) /\* Resources \*/", phases.group("ids"))
+    for resource_id in resource_ids:
+        phase = re.search(
+            rf"^\s*{re.escape(resource_id)} /\* Resources \*/ = \{{\s*\n"
+            r"\s*isa = PBXResourcesBuildPhase;(?P<body>.*?)^\s*\};",
+            project,
+            re.M | re.S,
+        )
+        if not phase:
+            continue
+        files = re.search(r"files = \((?P<ids>.*?)\);", phase.group("body"), re.S)
+        if files and any(build_id in files.group("ids") for build_id in build_files):
+            return True
+    return False
+
+
+def podspec_bundles_manifest(spec: str) -> bool:
+    """Return whether a real resource_bundles assignment includes the manifest."""
+    uncommented = "\n".join(
+        line for line in spec.splitlines() if not line.lstrip().startswith("#")
+    )
+    return bool(
+        re.search(
+            r"\b\w+\.resource_bundles\s*=\s*\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
+            uncommented,
+            re.S,
+        )
+    )
+
+
 def check_sources(mobile: str) -> int:
     failures: list[str] = []
     warnings: list[str] = []
@@ -335,7 +438,7 @@ def check_sources(mobile: str) -> int:
                         project = handle.read()
                 except OSError:
                     project = ""
-                if "PrivacyInfo.xcprivacy" not in project:
+                if not xcode_manifest_is_runner_resource(project):
                     failures.append(
                         f"{unit.name}: {unit.manifest} exists but "
                         f"{unit.xcodeproj} never references it, so it is not in "
@@ -347,7 +450,7 @@ def check_sources(mobile: str) -> int:
                         spec = handle.read()
                 except OSError:
                     spec = ""
-                if "PrivacyInfo.xcprivacy" not in spec:
+                if not podspec_bundles_manifest(spec):
                     failures.append(
                         f"{unit.name}: {unit.manifest} exists but "
                         f"{unit.podspec} has no resource_bundles entry for it, "
@@ -396,6 +499,7 @@ def check_archive(app: str, mobile: str) -> int:
     expected = {
         "app manifest": "PrivacyInfo.xcprivacy",
         "divine_camera": "divine_camera_privacy.bundle/PrivacyInfo.xcprivacy",
+        "divine_quick_actions": "divine_quick_actions_privacy.bundle/PrivacyInfo.xcprivacy",
         "LibProofMode": "LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy",
     }
     failures = []

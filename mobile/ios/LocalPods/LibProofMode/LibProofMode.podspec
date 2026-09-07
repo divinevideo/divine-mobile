@@ -45,7 +45,6 @@ without the need to fork it. That way, spin-offs can easily stay up to date.
   # is a file the app itself wrote inside its own container.
   s.resource_bundles = {'LibProofMode_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
 
-
   s.subspec 'PrivacyProtected' do |ss|
     ss.source_files = 'Classes/**/*'
 
