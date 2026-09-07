@@ -144,11 +144,14 @@ is_skip_vgv_tagged() {
 run_scan() {
   local violations="" core files f body def
 
-  # All classification depends on this filter. Validate it before scanning so
-  # a missing or invalid filter cannot turn every source body into an empty,
-  # apparently compliant file.
-  if ! awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" /dev/null >/dev/null; then
-    echo "FAIL [process_global_mutations]: Dart code-only filter is unavailable" >&2
+  # All classification depends on this filter. Validate it against a known code
+  # line before scanning, so a missing, invalid, or silently empty filter cannot
+  # turn every source body into an empty, apparently compliant file. Testing on
+  # empty input would miss a filter that loads but emits nothing.
+  local probe
+  probe=$(printf 'code_only_probe = 0;\n' | awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" 2>/dev/null || true)
+  if [[ "$probe" != *code_only_probe* ]]; then
+    echo "FAIL [process_global_mutations]: Dart code-only filter is unavailable or produced no output" >&2
     return 1
   fi
 

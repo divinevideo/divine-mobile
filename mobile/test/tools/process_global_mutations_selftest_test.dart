@@ -120,6 +120,22 @@ void main() {
       );
     });
 
+    test('fails closed when the filter loads but emits nothing', () {
+      final sandbox = copyGuard();
+      addTearDown(() => sandbox.root.deleteSync(recursive: true));
+      Directory('${sandbox.root.path}/mobile/test').createSync(recursive: true);
+      // A filter that parses and runs but discards every line would pass a
+      // check against empty input while erasing every real detector match.
+      File(
+        '${sandbox.root.path}/mobile/scripts/lib/dart_code_only.awk',
+      ).writeAsStringSync('{ next }\n');
+
+      final emptyOutputResult = Process.runSync('bash', [sandbox.scriptPath]);
+
+      expect(emptyOutputResult.exitCode, equals(1));
+      expect(emptyOutputResult.stderr, contains('produced no output'));
+    });
+
     test('production scan includes package test trees', () {
       final sandbox = copyGuard();
       addTearDown(() => sandbox.root.deleteSync(recursive: true));
