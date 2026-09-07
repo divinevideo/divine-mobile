@@ -363,7 +363,7 @@ comment gives: a number below the floor tells a viewer not to bother, and a
 wall of small counts on *other people's* videos discourages a visitor from
 posting. On the real distribution the floor does exactly that — a count on
 ~52% of videos, every one of them at or above 1000, and a date on the rest
-instead of a discouraging two-digit count.
+instead of a discouraging sub-1000 count.
 
 Creator retention is untouched by any of this and was never gated by the
 floor. `_resolveLoopCount` returns `video.totalLoops` unconditionally when

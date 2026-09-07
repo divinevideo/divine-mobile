@@ -218,13 +218,14 @@ Caveats, stated so the number is not over-read:
 ## 5. The display floor, restated on current numbers
 
 **This section is the measurement record behind the design doc's corrected
-display-floor section.** `mobile/lib/widgets/video_feed_item/video_card_meta.dart:70`
-defines the gated quantity as `video.isOriginalVine ? video.originalLoops ?? 0 :
-video.totalLoops` — i.e. the archival `loops` tag for classic Vines (about 98%
-of the `nostr.videos` catalogue; derived by the appendix query), and
-`originalLoops + views` for native ones. The design doc's table originally
+display-floor section.** The gated quantity is defined at
+`mobile/lib/widgets/video_feed_item/video_card_meta.dart:70` as
+`video.isOriginalVine ? video.originalLoops ?? 0 : video.totalLoops` — i.e. the
+archival `loops` tag for classic Vines (about 98% of the `nostr.videos`
+catalogue; derived by the appendix query), and `originalLoops + views` for
+native ones. The design doc's table originally
 measured `video_total_views_data.total_views`, which the floor is never applied
-to, and landed three orders of magnitude off; #7471 replaced it with the figures
+to, and landed three orders of magnitude off; #7218 replaced it with the figures
 below.
 
 `publicLoopCountFloor` = 1000, measured against the quantity the code
@@ -262,17 +263,16 @@ itself (`mobile/lib/widgets/video_feed_item/video_card_meta.dart:9`): a number
 below the floor "tells a viewer not to bother", and a wall of small counts on
 *other people's* videos discourages posting. On the real distribution, the
 floor shows visitors a count on ~52% of videos, every one of them ≥1000, and a
-date on the rest instead of a discouraging two-digit count. Creators are never
-gated:
-`_resolveLoopCount` returns
-`video.totalLoops` unconditionally when `isOwnVideo`, and `totalLoops` is
-additive (`mobile/packages/models/lib/src/video_event.dart:1187-1188`), so a
-creator sees the larger number.
+date on the rest instead of a discouraging sub-1000 count. Creators are never
+gated: `_resolveLoopCount` returns `video.totalLoops` unconditionally when
+`isOwnVideo`, and `totalLoops` is additive
+(`mobile/packages/models/lib/src/video_event.dart:1187-1188`), so a creator sees
+the larger number.
 
 One unreconciled discrepancy, stated rather than smoothed over: the
 constant's own doc comment reports "roughly 64% of the archive" hidden
 with "p50 is 298 loops", measured against a 1,000-Vine sample. The
-full-catalogue measurement above gives 47.7% hidden at p50 1,417. Both are
+full-catalogue measurement above gives 47.70% hidden at p50 1,417. Both are
 the same order of magnitude and both contradict the withdrawn 0.044%,
 but the sample and the census disagree by enough that the sample was
 probably not representative. Re-tuning the floor should use the census.
