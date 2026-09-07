@@ -62,17 +62,48 @@ final class FullscreenFeedTuningAction extends Equatable {
 /// State for the FullscreenFeedBloc.
 final class FullscreenFeedState extends Equatable {
   FullscreenFeedState({
-    this.status = FullscreenFeedStatus.initial,
-    this.videos = const [],
-    this.currentIndex = 0,
-    this.isLoadingMore = false,
-    this.canLoadMore = false,
-    this.removedVideoIds = const <String>{},
-    this.pendingSkipTarget,
-    this.initialTargetResolved = false,
-    this.userChangedIndex = false,
-    this.lastTuningAction,
-  });
+    FullscreenFeedStatus status = FullscreenFeedStatus.initial,
+    List<VideoEvent> videos = const [],
+    int currentIndex = 0,
+    bool isLoadingMore = false,
+    bool canLoadMore = false,
+    Set<String> removedVideoIds = const <String>{},
+    int? pendingSkipTarget,
+    bool initialTargetResolved = false,
+    bool userChangedIndex = false,
+    FullscreenFeedTuningAction? lastTuningAction,
+  }) : this._(
+         status: status,
+         videos: videos,
+         currentIndex: currentIndex,
+         isLoadingMore: isLoadingMore,
+         canLoadMore: canLoadMore,
+         removedVideoIds: removedVideoIds,
+         pendingSkipTarget: pendingSkipTarget,
+         initialTargetResolved: initialTargetResolved,
+         userChangedIndex: userChangedIndex,
+         lastTuningAction: lastTuningAction,
+       );
+
+  /// Carries an already-materialized [videoUpdateSignature] into a copy whose
+  /// [videos] is the identical list instance, so the signature is built once
+  /// per list rather than once per state. See [copyWith].
+  FullscreenFeedState._({
+    required this.status,
+    required this.videos,
+    required this.currentIndex,
+    required this.isLoadingMore,
+    required this.canLoadMore,
+    required this.removedVideoIds,
+    required this.pendingSkipTarget,
+    required this.initialTargetResolved,
+    required this.userChangedIndex,
+    required this.lastTuningAction,
+    List<String>? signature,
+  }) : _inheritedSignature = signature;
+
+  /// Non-null only when [copyWith] proved [videos] unchanged by identity.
+  final List<String>? _inheritedSignature;
 
   /// The current status.
   final FullscreenFeedStatus status;
@@ -129,18 +160,20 @@ final class FullscreenFeedState extends Equatable {
   ///
   /// This is initialized lazily because computing it requires runtime video
   /// data. Consequently, this state cannot have a const constructor.
-  late final List<String> videoUpdateSignature = List.unmodifiable(
-    videos.map(
-      (video) => [
-        video.id,
-        video.stableId,
-        video.videoUrl ?? '',
-        video.thumbnailUrl ?? '',
-        '${video.originalLoops ?? ''}',
-        video.rawTags['views'] ?? '',
-      ].join('|'),
-    ),
-  );
+  late final List<String> videoUpdateSignature =
+      _inheritedSignature ??
+      List.unmodifiable(
+        videos.map(
+          (video) => [
+            video.id,
+            video.stableId,
+            video.videoUrl ?? '',
+            video.thumbnailUrl ?? '',
+            '${video.originalLoops ?? ''}',
+            video.rawTags['views'] ?? '',
+          ].join('|'),
+        ),
+      );
 
   /// Create a copy with updated values. [pendingSkipTarget] accepts
   /// `null` explicitly via [clearPendingSkipTarget] — the default
@@ -158,9 +191,10 @@ final class FullscreenFeedState extends Equatable {
     FullscreenFeedTuningAction? lastTuningAction,
     bool clearPendingSkipTarget = false,
   }) {
-    return FullscreenFeedState(
+    final nextVideos = videos ?? this.videos;
+    return FullscreenFeedState._(
       status: status ?? this.status,
-      videos: videos ?? this.videos,
+      videos: nextVideos,
       currentIndex: currentIndex ?? this.currentIndex,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       canLoadMore: canLoadMore ?? this.canLoadMore,
@@ -172,6 +206,9 @@ final class FullscreenFeedState extends Equatable {
           initialTargetResolved ?? this.initialTargetResolved,
       userChangedIndex: userChangedIndex ?? this.userChangedIndex,
       lastTuningAction: lastTuningAction ?? this.lastTuningAction,
+      signature: identical(nextVideos, this.videos)
+          ? videoUpdateSignature
+          : null,
     );
   }
 
