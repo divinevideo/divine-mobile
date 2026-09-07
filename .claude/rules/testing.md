@@ -781,7 +781,13 @@ Each `mobile/packages/*` test suite is likewise bundled into its own merged
 isolate. Package state cannot leak into another package or the app bundle, but
 it can leak between files in the same package. Packages do not have a
 `flutter_test_config.dart` heal-and-blame harness, so package channel and
-process-global isolation is enforced by static guards.
+process-global isolation is enforced by two static guards:
+`check_package_channel_isolation.sh` for channel handlers (baseline
+`mobile/scripts/baseline/package_channel_raw_installs.txt`, shrink-only) and
+`check_process_global_mutations.sh` for singletons and irreversible
+initializers. Both run in CI in the `Generated Files` job. A package test that
+trips the channel ratchet should null its handler in `tearDown`; regenerate the
+baseline only when an entry is genuinely removed.
 
 `--exclude-tags integration` does **not** exclude a bundled file: package:test
 reads suite-level `@Tags` only from the bundle entry point, which has none.
