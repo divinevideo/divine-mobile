@@ -1502,6 +1502,45 @@ void main() {
         );
       });
 
+      test('uses the lowest event id when duplicate revisions tie', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+
+        final higherId =
+            peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                title: 'Crew Higher id',
+                pubkeys: const [_memberA],
+                createdAt: 1710000000,
+              )
+              ..id =
+                  'ffffffffffffffffffffffffffffffff'
+                  'ffffffffffffffffffffffffffffffff';
+        final lowerId =
+            peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                title: 'Crew Lower id',
+                pubkeys: const [_memberB],
+                createdAt: 1710000000,
+              )
+              ..id =
+                  '00000000000000000000000000000000'
+                  '00000000000000000000000000000000';
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => [lowerId, higherId]);
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, hasLength(1));
+        expect(emissions.single, hasLength(1));
+        expect(emissions.single.single.list.name, equals('Crew Lower id'));
+      });
+
       test('does not yield when no events match the query', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);

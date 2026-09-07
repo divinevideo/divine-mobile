@@ -324,7 +324,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         list: list,
       );
       final existing = seen[result.addressableId];
-      if (existing != null && existing.list.updatedAt.isAfter(list.updatedAt)) {
+      if (existing != null && !_supersedes(list, existing.list)) {
         continue;
       }
       seen[result.addressableId] = result;
@@ -424,6 +424,20 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return false;
     }
     return true;
+  }
+
+  /// Whether revision [candidate] supersedes [selected] under NIP-01
+  /// replaceable-event ordering: the later `updatedAt` wins, and a tie is
+  /// broken on the lowest event id. An absent id on either side leaves the tie
+  /// unbroken, so the already-selected revision is kept.
+  static bool _supersedes(UserList candidate, UserList selected) {
+    if (candidate.updatedAt != selected.updatedAt) {
+      return candidate.updatedAt.isAfter(selected.updatedAt);
+    }
+    final candidateId = candidate.nostrEventId;
+    final selectedId = selected.nostrEventId;
+    if (candidateId == null || selectedId == null) return false;
+    return candidateId.compareTo(selectedId) < 0;
   }
 
   static bool _isNewerRevision(
