@@ -212,7 +212,9 @@ run_numeric_ratchet
       test('reports a rename annotation written without the hash', () {
         // Dropping the '#' leaves a bare word in the count column. Under
         // `set -u` that used to abort the script mid-run: empty stdout, no
-        // FAIL banner, no footer, and the temp claim file left behind.
+        // FAIL banner, no footer, and the temp claim file left behind. It is
+        // not a claim at all now, so the row is reported as what it is — an
+        // unapproved baseline addition.
         baseline.writeAsStringSync(
           '# probe baseline\nb\t3\nc\t4 renamed-from: a\n',
         );
@@ -222,8 +224,41 @@ run_numeric_ratchet
 
         expect(res.exitCode, 1);
         expect(res.stdout, contains('FAIL [probe]'));
-        expect(res.stdout, contains('non-numeric ceiling'));
+        expect(res.stdout, contains('+added'));
         expect(res.stdout, contains('footer'));
+      });
+
+      test('does not parse a reason that merely mentions the phrase', () {
+        // "# recover: ..." is the documented shape for a skip-ceiling reason,
+        // and #4836 reasons are prose. Matching the phrase anywhere on the row
+        // turned one into a claim against a key nobody renamed.
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          'a\t5\n'
+          'b\t3\n'
+          'c\t4 # recover: renamed-from: the legacy harness\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('+added'));
+        expect(res.stdout, isNot(contains('renamed-from old key')));
+      });
+
+      test('keeps an annotation written without a space before the hash', () {
+        // Both readers accept "4# renamed-from: a"; the baseline writer
+        // required whitespace, so regeneration silently dropped the claim and
+        // the next run failed with a bare "+added" nothing in the diff explains.
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4# renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        run(update: true);
+
+        expect(baseline.readAsStringSync(), contains('renamed-from: a'));
       });
 
       test('rejects a claim whose old key is absent from the base', () {

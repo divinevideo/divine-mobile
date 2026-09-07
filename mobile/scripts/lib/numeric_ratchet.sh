@@ -72,7 +72,7 @@ _nr_write_baseline() {
       {
         line = $0
         comment = ""
-        if (match(line, /[[:space:]]+#.*/)) {
+        if (match(line, /[[:space:]]*#.*/)) {
           comment = substr(line, RSTART)
           sub(/^[[:space:]]+/, "", comment)
         }
@@ -181,8 +181,11 @@ run_numeric_ratchet() {
       if [[ -f "$BASELINE_FILE" ]]; then
         awk -F "$TAB" '
           /^[[:space:]]*#/ { next }
-          /renamed-from:/ {
-            old=$0; sub(/^.*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
+          # The claim must open a comment clause. Unanchored, an ordinary
+          # "# recover: renamed-from: the legacy harness" reason parsed as a
+          # claim and failed the guard on a key nobody renamed.
+          /[#;][[:space:]]*renamed-from:/ {
+            old=$0; sub(/^.*[#;][[:space:]]*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
             if (old == "" || old == $0) print "!MALFORMED!\t" $1
             else print $1 "\t" old
           }
