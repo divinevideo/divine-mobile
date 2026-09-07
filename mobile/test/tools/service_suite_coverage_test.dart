@@ -22,6 +22,7 @@ void main() {
     void writeWorkflow({
       List<String> suites = const ['included'],
       bool includeAnchor = true,
+      String beforeSuites = '',
       String afterLoop = '',
       String on = 'on:\n  pull_request:\n    branches: [main]\n',
       String stepCondition = '',
@@ -45,6 +46,7 @@ jobs:
       ${includeAnchor ? '- name: 🚀 Run service integration tests' : '- name: Different step'}
 $stepCondition        run: |
           for suite in \\
+$beforeSuites
 $suiteLines            flutter test "\$suite"
           done
 $afterLoop
@@ -269,6 +271,19 @@ $afterLoop
 
       expect(result.exitCode, equals(1));
       expect(result.stdout, contains('mentioned_only_test.dart'));
+    });
+
+    test('does not count a commented path inside the suite loop', () {
+      writeSuite('commented_only');
+      writeWorkflow(
+        beforeSuites:
+            '            # integration_test/e2e/commented_only_test.dart \\\n',
+      );
+
+      final result = run();
+
+      expect(result.exitCode, equals(1));
+      expect(result.stdout, contains('commented_only_test.dart'));
     });
 
     test('ignores a shell loop in a later, unrelated workflow step', () {

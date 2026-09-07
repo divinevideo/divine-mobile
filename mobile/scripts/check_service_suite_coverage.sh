@@ -77,7 +77,11 @@ printf '%s\n' "$triggers" | grep -q 'pull_request' \
   || fail "the service workflow no longer runs on pull_request, so the suites this guard accounts for would not run on a pull request"
 
 loop_body="$(printf '%s\n' "$step_body" | sed -n '/^[[:space:]]*for suite in \\$/,/; do[[:space:]]*$/p')"
-run_list_raw="$(printf '%s\n' "$loop_body" | grep -oE 'integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart' || true)"
+# Only standalone shell words in the for-list count as executed suites. A path
+# in a comment, echo, or other text inside the loop slice is not an argument to
+# the loop and must remain unaccounted for.
+suite_word_lines="$(printf '%s\n' "$loop_body" | grep -E '^[[:space:]]*integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart([[:space:]]+\\|; do)[[:space:]]*$' || true)"
+run_list_raw="$(printf '%s\n' "$suite_word_lines" | grep -oE 'integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart' || true)"
 [ -n "$run_list_raw" ] || fail "service-suite loop contains no E2E suite paths"
 
 duplicate_runs="$(printf '%s\n' "$run_list_raw" | sort | uniq -d)"
