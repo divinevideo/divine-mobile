@@ -2881,9 +2881,8 @@ void main() {
         await container
             .read(notificationPreferencesServiceProvider)
             .updatePreferences(publishedPrefs);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+        await preferenceStore.waitForClear(pubkeyA);
 
         verify(() => pushService.updatePreferences(publishedPrefs)).called(1);
         verify(() => pushService.updatePreferences(newerPrefs)).called(1);
@@ -2922,9 +2921,8 @@ void main() {
       await container
           .read(notificationPreferencesServiceProvider)
           .updatePreferences(prefs);
-      await pumpEventQueue(times: 1);
-      await pumpEventQueue(times: 1);
-      await pumpEventQueue(times: 1);
+      expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+      await preferenceStore.waitForClear(pubkeyA);
 
       expect(attempts, equals(2));
       expect(
@@ -2958,9 +2956,8 @@ void main() {
           ),
         );
         container.read(pushNotificationSyncProvider);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+        await preferenceStore.waitForClear(pubkeyA);
 
         expect(attempts, equals(2));
         expect(
