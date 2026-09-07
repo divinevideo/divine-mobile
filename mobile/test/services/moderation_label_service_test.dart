@@ -2251,5 +2251,54 @@ void main() {
       await pumpEventQueue();
       expect(service.getContentWarnings('disposed_tgt'), isEmpty);
     });
+
+    test(
+      'a reload reapplies a labelers rows instead of dropping them as '
+      'duplicates (guards the dedup clear on reprocess)',
+      () async {
+        const custom =
+            'd4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4';
+        // The same real-id event on two loads: an incomplete load applies it
+        // (so the dedup set holds its id) without latching, then a complete
+        // load reprocesses. _removeLabelsForLabeler must clear the dedup set so
+        // the reprocess reapplies rather than skipping every event as a dup.
+        var complete = false;
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: <Event>[
+              _FakeLabelEvent(
+                pubkey: custom,
+                id: 'reload_evt_1',
+                createdAt: 100,
+                tags: [
+                  ['L', 'content-warning'],
+                  ['l', 'nudity', 'content-warning'],
+                  ['e', 'reload_tgt'],
+                ],
+              ),
+            ],
+            timedOut: !complete,
+            noRelays: false,
+          ),
+        );
+
+        await service.addLabeler(custom);
+        expect(service.getContentWarnings('reload_tgt'), hasLength(1));
+
+        complete = true;
+        await service.subscribeToLabeler(custom);
+
+        expect(
+          service.getContentWarnings('reload_tgt'),
+          hasLength(1),
+          reason: 'a reload must reapply the labeler rows, not drop them',
+        );
+      },
+    );
   });
 }
