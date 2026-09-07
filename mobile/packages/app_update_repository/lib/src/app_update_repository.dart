@@ -47,12 +47,14 @@ class AppUpdateRepository {
 
   /// Checks for updates, respecting the 24h cache TTL.
   ///
-  /// Returns `null` if the check should be skipped:
-  /// - First install (no prior check recorded)
-  /// - Within the 24h TTL window
+  /// Returns `null` when the check is skipped and no update is known:
+  /// first install, or inside the 24h TTL window with nothing cached.
+  ///
+  /// Inside the TTL window, and when the network fetch fails, a previously
+  /// found update comes back with [UpdateUrgency.none] so Settings keeps
+  /// offering it without replaying a transient banner or dialog.
   ///
   /// Returns [UpdateCheckResult] with the appropriate urgency otherwise.
-  /// Returns [UpdateCheckResult.none] on network failures (silent skip).
   Future<UpdateCheckResult?> checkForUpdate() async {
     // Skip on first install.
     final lastChecked = _prefs.getString(UpdatePrefsKeys.lastChecked);
@@ -76,7 +78,9 @@ class AppUpdateRepository {
     try {
       info = await _client.fetchLatestRelease();
     } on AppVersionFetchException {
-      return const UpdateCheckResult.none();
+      // An offline launch must not retract an update the app already found.
+      final cached = await _restoreCachedUpdate();
+      return cached ?? const UpdateCheckResult.none();
     }
 
     await _prefs.setString(

@@ -175,6 +175,32 @@ void main() {
         expect(result!.urgency, equals(UpdateUrgency.none));
       });
 
+      test('keeps a cached available update when the fetch fails', () async {
+        SharedPreferences.setMockInitialValues({
+          UpdatePrefsKeys.lastChecked: DateTime.now()
+              .subtract(const Duration(hours: 25))
+              .toIso8601String(),
+          UpdatePrefsKeys.latestVersion: '1.0.8',
+          UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+        });
+        prefs = await SharedPreferences.getInstance();
+        when(
+          () => client.fetchLatestRelease(),
+        ).thenThrow(const AppVersionFetchException('no network'));
+
+        final repo = buildRepo(installSource: InstallSource.playStore);
+        final result = await repo.checkForUpdate();
+
+        expect(
+          result,
+          const UpdateCheckResult(
+            urgency: UpdateUrgency.none,
+            downloadUrl: DownloadUrls.playStore,
+            latestVersion: '1.0.8',
+          ),
+        );
+      });
+
       test('returns null on first install', () async {
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
