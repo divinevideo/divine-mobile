@@ -35,16 +35,14 @@ AudioEvent _sound({
   );
 }
 
-AudioEvent _importedSound({
-  required String id,
-  required String filePath,
-}) => AudioEvent.fromLocalImport(
-  id: id,
-  filePath: filePath,
-  createdAt: 1700000000,
-  title: 'Imported sound',
-  mimeType: 'audio/mp4',
-);
+AudioEvent _importedSound({required String id, required String filePath}) =>
+    AudioEvent.fromLocalImport(
+      id: id,
+      filePath: filePath,
+      createdAt: 1700000000,
+      title: 'Imported sound',
+      mimeType: 'audio/mp4',
+    );
 
 void main() {
   group(SavedSoundsService, () {
@@ -66,6 +64,24 @@ void main() {
 
       expect(result, SavedSoundSaveResult.saved);
       expect(service.loadSounds(), [sound]);
+    });
+
+    test('keeps archive compatibility provisional after a reload', () async {
+      final service = SavedSoundsService(sharedPreferences);
+      final sound = _sound(id: 'archive').copyWith(
+        allowsReuse: true,
+        hasExplicitReuseConsent: false,
+        requiresCurrentReuseVerification: true,
+      );
+
+      await service.saveSound(sound);
+      final reloaded = SavedSoundsService(
+        sharedPreferences,
+      ).loadSounds().single;
+
+      expect(reloaded.allowsReuse, isTrue);
+      expect(reloaded.hasExplicitReuseConsent, isFalse);
+      expect(reloaded.requiresCurrentReuseVerification, isTrue);
     });
 
     test('clears local editor anchors before persisting sounds', () async {
@@ -175,9 +191,7 @@ void main() {
         await service.saveSavedSound(record);
 
         final raw =
-            jsonDecode(
-                  sharedPreferences.getString(service.storageKey)!,
-                )
+            jsonDecode(sharedPreferences.getString(service.storageKey)!)
                 as Map<String, dynamic>;
         expect(
           raw['schemaVersion'],
@@ -266,9 +280,7 @@ void main() {
         ).thenAnswer((_) async => false);
 
         await expectLater(
-          service.saveSavedSound(
-            SavedSound.fromLegacy(_sound(id: 'sound1')),
-          ),
+          service.saveSavedSound(SavedSound.fromLegacy(_sound(id: 'sound1'))),
           throwsA(isA<StateError>()),
         );
       });
@@ -685,9 +697,9 @@ void main() {
       });
 
       test('ignores published sounds and unrelated keys', () async {
-        await SavedSoundsService(sharedPreferences).saveSound(
-          _sound(id: 'published'),
-        );
+        await SavedSoundsService(
+          sharedPreferences,
+        ).saveSound(_sound(id: 'published'));
         await sharedPreferences.setString('vine_drafts', 'not a sound bucket');
 
         expect(

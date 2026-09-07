@@ -137,18 +137,18 @@ class _OriginalSoundSection extends ConsumerWidget {
   /// can't be confirmed offline, so fail closed — attribution still shows but
   /// the sound isn't offered for reuse (an owner-saved private sound must not
   /// leak this way). Otherwise this is the video's own original sound, reusable
-  /// when its creator enabled audio reuse, when an unmarked classic Vine uses
-  /// the compatibility policy, or when consent is absent and the viewer is
-  /// that creator. An explicit decline overrides the owner exception.
+  /// when its creator enabled audio reuse, when an exact verified archive
+  /// record uses the compatibility policy, or when the viewer is that creator.
   bool _canReuseSound(WidgetRef ref) {
     if (video.hasAudioReference) return false;
     final knownTerms = originalSoundReuseTerms(video);
-    if (knownTerms != null) return knownTerms;
+    if (knownTerms == true) return true;
     // Re-evaluate on auth restore/logout/account-switch so the owner exception
     // can't go stale (authServiceProvider alone is a stable instance).
     ref.watch(currentAuthStateProvider);
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
-    return viewerPubkey != null && viewerPubkey == video.pubkey;
+    if (viewerPubkey != null && viewerPubkey == video.pubkey) return true;
+    return knownTerms ?? false;
   }
 
   void _navigateToSoundDetail(BuildContext context, String creatorName) {

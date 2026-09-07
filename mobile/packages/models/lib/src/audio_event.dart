@@ -84,6 +84,7 @@ class AudioEvent {
     this.anchorClipId,
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
+    this.requiresCurrentReuseVerification = false,
   }) : title = sanitizeUtf16OrNull(title),
        source = sanitizeUtf16OrNull(source),
        creatorName = sanitizeUtf16OrNull(creatorName),
@@ -263,7 +264,12 @@ class AudioEvent {
       source: 'Original Sound',
       sourceVideoReference: video.addressableId,
       allowsReuse: reuseTerms ?? false,
-      hasExplicitReuseConsent: reuseTerms != null,
+      hasExplicitReuseConsent:
+          video.audioReuseConsent == AudioReuseConsent.granted ||
+          video.audioReuseConsent == AudioReuseConsent.declined,
+      requiresCurrentReuseVerification:
+          reuseTerms == true &&
+          video.audioReuseConsent == AudioReuseConsent.unspecified,
     );
   }
 
@@ -329,6 +335,8 @@ class AudioEvent {
       allowsReuse: json['allowsReuse'] as bool? ?? false,
       hasExplicitReuseConsent:
           json['hasExplicitReuseConsent'] as bool? ?? false,
+      requiresCurrentReuseVerification:
+          json['requiresCurrentReuseVerification'] as bool? ?? false,
     );
   }
 
@@ -583,10 +591,14 @@ class AudioEvent {
   /// Whether this event carries definitive audio-reuse terms.
   ///
   /// Parsed Kind 1063 events set this only for an explicit consent tag.
-  /// Synthetic original sounds also set it when their source video policy is
-  /// definitive, including the classic Vine compatibility verdict. This
-  /// distinguishes those results from legacy events that still need lookup.
+  /// Synthetic original sounds set it only for an explicit source marker.
   final bool hasExplicitReuseConsent;
+
+  /// Whether reuse must be checked against the current source video.
+  ///
+  /// Archive compatibility is controlled by server state and cannot become a
+  /// durable grant when this sound is saved or carried through the editor.
+  final bool requiresCurrentReuseVerification;
 
   /// Whether this audio is currently anchored to a source video clip.
   bool get isAnchored => anchorClipId != null;
@@ -736,6 +748,7 @@ class AudioEvent {
     bool clearAnchorClipId = false,
     bool? allowsReuse,
     bool? hasExplicitReuseConsent,
+    bool? requiresCurrentReuseVerification,
   }) {
     return AudioEvent(
       id: id ?? this.id,
@@ -769,6 +782,9 @@ class AudioEvent {
       allowsReuse: allowsReuse ?? this.allowsReuse,
       hasExplicitReuseConsent:
           hasExplicitReuseConsent ?? this.hasExplicitReuseConsent,
+      requiresCurrentReuseVerification:
+          requiresCurrentReuseVerification ??
+          this.requiresCurrentReuseVerification,
     );
   }
 
@@ -820,6 +836,7 @@ class AudioEvent {
     'proxyProtocol': ?proxyProtocol,
     'allowsReuse': allowsReuse,
     'hasExplicitReuseConsent': hasExplicitReuseConsent,
+    'requiresCurrentReuseVerification': requiresCurrentReuseVerification,
     // Always serialize volume so history and draft snapshots preserve
     // explicit user edits instead of relying on an implicit default.
     'volume': volume,

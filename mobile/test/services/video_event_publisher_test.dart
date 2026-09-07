@@ -607,6 +607,19 @@ void main() {
       expect(imetaText, isNot(contains('stream.divine.video')));
     });
 
+    test('publishVideoEvent writes an explicit false reuse marker', () async {
+      stubSignAndPublish();
+
+      expect(
+        await publisher.publishVideoEvent(upload: createUpload()),
+        isTrue,
+      );
+      expect(
+        _containsTag(capturedTags, const ['allow_audio_reuse', 'false']),
+        isTrue,
+      );
+    });
+
     test(
       'publishVideoEvent attaches text-track tags to the initial event',
       () async {
@@ -710,7 +723,7 @@ void main() {
         hasExplicitReuseConsent: true,
       );
 
-      test('publishes with an unmarked classic Vine original sound', () async {
+      test('publishes with an enabled verified archive sound', () async {
         stubSignAndPublish();
         final classicVideo = VideoEvent(
           id: sourceVideoId,
@@ -720,20 +733,56 @@ void main() {
           timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
           videoUrl: 'https://example.com/classic.mp4',
           addressableDTag: 'classic-vine',
-          rawTags: const {'platform': 'vine'},
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
         );
         final classicSound = AudioEvent.fromVideoOriginalSound(classicVideo);
 
-        final result = await publisher.publishVideoEvent(
-          upload: createUpload(),
-          selectedAudio: classicSound,
-          selectedAudioEventId: classicSound.id,
-        );
+        final result = await publisherWithConsent(consent: true)
+            .publishVideoEvent(
+              upload: createUpload(),
+              selectedAudio: classicSound,
+              selectedAudioEventId: classicSound.id,
+            );
 
         expect(result, isTrue);
         expect(classicSound.allowsReuse, isTrue);
-        expect(classicSound.hasExplicitReuseConsent, isTrue);
+        expect(classicSound.hasExplicitReuseConsent, isFalse);
+        expect(classicSound.requiresCurrentReuseVerification, isTrue);
       });
+
+      test(
+        'revalidates an archive grant after the saved-sound handoff',
+        () async {
+          stubSignAndPublish();
+          final persistedSound = AudioEvent.fromJson(
+            AudioEvent.fromVideoOriginalSound(
+              VideoEvent(
+                id: sourceVideoId,
+                pubkey: sourceCreator,
+                createdAt: 1700000000,
+                content: '',
+                timestamp: DateTime.fromMillisecondsSinceEpoch(
+                  1700000000 * 1000,
+                ),
+                videoUrl: 'https://example.com/classic.mp4',
+                isVerifiedArchive: true,
+                archiveAudioReuseEnabled: true,
+              ),
+            ).toJson(),
+          );
+
+          expect(persistedSound.requiresCurrentReuseVerification, isTrue);
+          expect(
+            await publisherWithConsent(consent: true).publishVideoEvent(
+              upload: createUpload(),
+              selectedAudio: persistedSound,
+              selectedAudioEventId: persistedSound.id,
+            ),
+            isTrue,
+          );
+        },
+      );
 
       test(
         'blocks selected audio when the source explicitly forbids reuse',
@@ -766,17 +815,58 @@ void main() {
         },
       );
 
-      test('an explicit decline blocks the sound owner', () async {
+      test('an explicit decline still permits the sound owner', () async {
         stubSignAndPublish();
         final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
 
-        await expectLater(
-          publisher.publishVideoEvent(
-            upload: createUpload(),
-            selectedAudio: ownDeclinedSound,
-            selectedAudioEventId: ownDeclinedSound.id,
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: ownDeclinedSound,
+          selectedAudioEventId: ownDeclinedSound.id,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('an unmarked legacy sound still permits the sound owner', () async {
+        stubSignAndPublish();
+        final ownLegacySound = AudioEvent(
+          id: 'e' * 64,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          allowsReuse: false,
+        );
+
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: ownLegacySound,
+          selectedAudioEventId: ownLegacySound.id,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('a malformed reuse marker still permits the sound owner', () async {
+        stubSignAndPublish();
+        final ownedSound = AudioEvent.fromVideoOriginalSound(
+          VideoEvent(
+            id: sourceVideoId,
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            content: '',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+            videoUrl: 'https://example.com/owned.mp4',
+            rawTags: const {'allow_audio_reuse': 'TRUE'},
           ),
-          throwsA(isA<AudioReuseNotPermittedException>()),
+        );
+
+        expect(
+          await publisher.publishVideoEvent(
+            upload: createUpload(),
+            selectedAudio: ownedSound,
+            selectedAudioEventId: ownedSound.id,
+          ),
+          isTrue,
         );
       });
 
@@ -1029,42 +1119,36 @@ void main() {
       // audioExtractionService, so the audio step returns at its first guard —
       // nothing is extracted or uploaded here. The real extraction-failure
       // path is covered in video_event_publisher_audio_degrade_test.dart.
-      test(
-        'an unavailable audio pipeline still publishes the video, without '
-        'claiming reuse',
-        () async {
-          stubSignAndPublish();
+      test('an unavailable audio pipeline still publishes the video, without '
+          'claiming reuse', () async {
+        stubSignAndPublish();
 
-          final result = await publisher.publishVideoEvent(
-            upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
-            allowAudioReuse: true,
-          );
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
+          allowAudioReuse: true,
+        );
 
-          // A video-only publish beats discarding an already-uploaded video.
-          expect(result, isTrue);
+        // A video-only publish beats discarding an already-uploaded video.
+        expect(result, isTrue);
 
-          final tags =
-              verify(
-                    () => authService.createAndSignEvent(
-                      kind: NIP71VideoKinds.getPreferredAddressableKind(),
-                      content: any(named: 'content'),
-                      tags: captureAny(named: 'tags'),
-                    ),
-                  ).captured.single
-                  as List<List<String>>;
+        final tags =
+            verify(
+                  () => authService.createAndSignEvent(
+                    kind: NIP71VideoKinds.getPreferredAddressableKind(),
+                    content: any(named: 'content'),
+                    tags: captureAny(named: 'tags'),
+                  ),
+                ).captured.single
+                as List<List<String>>;
 
-          // The event must never advertise reusable audio that was never
-          // published — no allow_audio_reuse, and no audio `e` reference.
-          expect(
-            tags.where((tag) => tag.first == 'allow_audio_reuse'),
-            isEmpty,
-          );
-          expect(
-            tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
-            isEmpty,
-          );
-        },
-      );
+        // The event must never advertise reusable audio that was never
+        // published — no allow_audio_reuse, and no audio `e` reference.
+        expect(tags.where((tag) => tag.first == 'allow_audio_reuse'), isEmpty);
+        expect(
+          tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
+          isEmpty,
+        );
+      });
 
       test(
         'publishes durable provider credit without claiming ownership',
@@ -1517,70 +1601,65 @@ void main() {
         },
       );
 
-      test(
-        'a sync failure does not fail the video publish',
-        () async {
-          when(
-            () => syncRepository.publishLocalChange(any()),
-          ).thenThrow(SyncIndexException('relay down'));
+      test('a sync failure does not fail the video publish', () async {
+        when(
+          () => syncRepository.publishLocalChange(any()),
+        ).thenThrow(SyncIndexException('relay down'));
 
-          final audioFile = File(
-            '${Directory.systemTemp.path}/imported_audio_sync_failure.mp3',
-          );
-          await audioFile.writeAsBytes([1, 2, 3]);
-          addTearDown(() {
-            if (audioFile.existsSync()) audioFile.deleteSync();
-          });
+        final audioFile = File(
+          '${Directory.systemTemp.path}/imported_audio_sync_failure.mp3',
+        );
+        await audioFile.writeAsBytes([1, 2, 3]);
+        addTearDown(() {
+          if (audioFile.existsSync()) audioFile.deleteSync();
+        });
 
-          when(
-            () => blossomUploadService.uploadAudio(
-              audioFile: any(named: 'audioFile'),
-              mimeType: 'audio/mpeg',
-              onProgress: any(named: 'onProgress'),
-            ),
-          ).thenAnswer(
-            (_) async => const BlossomUploadResult(
-              success: true,
-              url: 'https://cdn.example/audiohash',
-              fallbackUrl: 'https://cdn.example/audiohash',
-              videoId:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-            ),
-          );
+        when(
+          () => blossomUploadService.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: 'audio/mpeg',
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            url: 'https://cdn.example/audiohash',
+            fallbackUrl: 'https://cdn.example/audiohash',
+            videoId:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+        );
 
-          final result = await publisher.publishVideoEvent(
-            upload: createUpload(),
-            allowAudioReuse: true,
-            selectedAudio: AudioEvent.fromLocalImport(
-              id: 'local_import_1700000000001',
-              filePath: audioFile.path,
-              createdAt: 1700000000,
-              title: 'imported_audio_sync_failure',
-              mimeType: 'audio/mpeg',
-              duration: 3,
-            ),
-            audioShareAttribution: const AudioShareAttribution(
-              title: 'Rain on a roof',
-              creatorName: 'Field Recordist',
-              creatorUrl: 'https://creator.example/profile',
-              sourceUrl: 'https://creator.example/rain',
-              licenseName: 'CC BY 4.0',
-              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-              publicTags: ['rain', 'field-recording'],
-              confirmedOwnWork: false,
-            ),
-          );
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          allowAudioReuse: true,
+          selectedAudio: AudioEvent.fromLocalImport(
+            id: 'local_import_1700000000001',
+            filePath: audioFile.path,
+            createdAt: 1700000000,
+            title: 'imported_audio_sync_failure',
+            mimeType: 'audio/mpeg',
+            duration: 3,
+          ),
+          audioShareAttribution: const AudioShareAttribution(
+            title: 'Rain on a roof',
+            creatorName: 'Field Recordist',
+            creatorUrl: 'https://creator.example/profile',
+            sourceUrl: 'https://creator.example/rain',
+            licenseName: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            publicTags: ['rain', 'field-recording'],
+            confirmedOwnWork: false,
+          ),
+        );
 
-          expect(result, isTrue);
-          verify(() => savedSoundsService.saveSound(any())).called(1);
-          // The mirror sits inside an enclosing catch-and-log, so without
-          // this the test would pass unchanged even if _mirrorSavedSound's
-          // own try/catch — or the mirror call entirely — were deleted.
-          verify(
-            () => syncRepository.publishLocalChange(any()),
-          ).called(1);
-        },
-      );
+        expect(result, isTrue);
+        verify(() => savedSoundsService.saveSound(any())).called(1);
+        // The mirror sits inside an enclosing catch-and-log, so without
+        // this the test would pass unchanged even if _mirrorSavedSound's
+        // own try/catch — or the mirror call entirely — were deleted.
+        verify(() => syncRepository.publishLocalChange(any())).called(1);
+      });
 
       test(
         'publishes video privately without uploading a local import',

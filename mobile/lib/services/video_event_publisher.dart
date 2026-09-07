@@ -206,8 +206,7 @@ class VideoEventPublisher {
   /// Verifies that a selected sound is permitted to be reused.
   ///
   /// Bundled and local sounds do not represent another creator's Nostr
-  /// event. A creator may also reuse their own sound when no explicit terms
-  /// exist; an explicit decline remains authoritative. Every other sound must
+  /// event. A creator may also reuse their own sound. Every other sound must
   /// have explicit consent or pass the legacy source-video resolver; anything
   /// short of a granted answer blocks the publish so a private sound cannot
   /// be remixed by accident.
@@ -220,16 +219,16 @@ class VideoEventPublisher {
     if (sound.isBundled ||
         sound.isLocalImport ||
         sound.isExternalProviderSound ||
-        sound.allowsReuse) {
+        (sound.allowsReuse && !sound.requiresCurrentReuseVerification)) {
       return true;
     }
-
-    if (sound.hasExplicitReuseConsent) return false;
 
     final currentPubkey = _authService?.currentPublicKeyHex;
     if (currentPubkey != null && currentPubkey == sound.pubkey) {
       return true;
     }
+
+    if (sound.hasExplicitReuseConsent) return false;
 
     final checker = _audioReuseConsentChecker;
     if (checker == null) return false;
@@ -1587,6 +1586,9 @@ class VideoEventPublisher {
       // and the caller is told so it can say so rather than reporting a
       // clean success.
       var audioReuseDegraded = false;
+      if (!allowAudioReuse) {
+        tags.add(['allow_audio_reuse', 'false']);
+      }
       if (allowAudioReuse &&
           reusableSelectedAudioEventId == null &&
           selectedAudio?.isExternalProviderSound != true &&

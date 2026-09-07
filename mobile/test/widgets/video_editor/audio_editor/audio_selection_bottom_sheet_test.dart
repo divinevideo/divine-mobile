@@ -73,6 +73,8 @@ void main() {
       List<VineSound> bundledSounds = const [],
       AudioPlaybackService? audioService,
       String? viewerPubkey,
+      AudioEvent? consentSound,
+      bool? consentResult,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -102,6 +104,10 @@ void main() {
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
             ),
+            if (consentSound != null && consentResult != null)
+              audioReuseConsentProvider(
+                consentSound,
+              ).overrideWith((ref) => Future.value(consentResult)),
             if (trendingSoundsAsync != null)
               trendingSoundsProvider.overrideWith(
                 () => _FakeTrendingSounds(trendingSoundsAsync),
@@ -261,7 +267,7 @@ void main() {
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
       });
 
-      testWidgets('selects an unmarked classic Vine original sound', (
+      testWidgets('selects an enabled verified archive original sound', (
         tester,
       ) async {
         final classicVideo = VideoEvent(
@@ -271,7 +277,8 @@ void main() {
           content: '',
           timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
           videoUrl: 'https://example.com/classic.mp4',
-          rawTags: const {'platform': 'vine'},
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
         );
         final classicSound = AudioEvent.fromVideoOriginalSound(
           classicVideo,
@@ -279,7 +286,11 @@ void main() {
         );
 
         await tester.pumpWidget(
-          buildWidget(trendingSoundsAsync: AsyncValue.data([classicSound])),
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([classicSound]),
+            consentSound: classicSound,
+            consentResult: true,
+          ),
         );
         await tester.pumpAndSettle();
 

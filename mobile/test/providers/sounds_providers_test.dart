@@ -576,7 +576,7 @@ void _ownerExceptionTests() {
       );
     });
 
-    test('an explicit decline overrides the owner exception', () async {
+    test('an explicit decline still permits the sound owner', () async {
       final sound = createTestAudioEvent(
         id: 'own',
         pubkey: ownerPubkey,
@@ -584,8 +584,30 @@ void _ownerExceptionTests() {
       final container = buildContainer(ownerPubkey);
       await expectLater(
         container.read(audioReuseConsentProvider(sound).future),
-        completion(isFalse),
+        completion(isTrue),
       );
+    });
+
+    test('a malformed marker still permits the sound owner', () async {
+      final sound = createTestAudioEvent(
+        id: 'own',
+        pubkey: ownerPubkey,
+      ).copyWith(allowsReuse: false, hasExplicitReuseConsent: false);
+      final container = buildContainer(ownerPubkey);
+
+      await expectLater(
+        container.read(audioReuseConsentProvider(sound).future),
+        completion(isTrue),
+      );
+    });
+
+    test('a provisional grant still requires current verification', () async {
+      final sound = createTestAudioEvent(
+        id: 'theirs',
+        pubkey: ownerPubkey,
+      ).copyWith(allowsReuse: true, requiresCurrentReuseVerification: true);
+
+      expect(audioReuseTermsFromEvent(sound), isNull);
     });
 
     test("another creator's sound does not get the owner exception", () async {

@@ -11,8 +11,7 @@ bool? originalSoundReuseTerms(VideoEvent video) {
   return switch (video.audioReuseConsent) {
     AudioReuseConsent.granted => true,
     AudioReuseConsent.declined || AudioReuseConsent.invalid => false,
-    // TODO(NotThatKindOfDrLiz): Replace this compatibility signal with
-    // verified archive provenance after #8466 ships.
-    AudioReuseConsent.unspecified => video.isOriginalVine ? true : null,
+    AudioReuseConsent.unspecified =>
+      video.isVerifiedArchive && video.archiveAudioReuseEnabled ? true : null,
   };
 }

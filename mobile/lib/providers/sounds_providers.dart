@@ -150,6 +150,7 @@ bool? audioReuseTermsFromEvent(AudioEvent sound) {
   if (sound.externalSource case final external?) {
     return external.license.allowsDerivatives;
   }
+  if (sound.requiresCurrentReuseVerification) return null;
   if (sound.allowsReuse) return true;
   if (sound.hasExplicitReuseConsent) return false;
   return null;
@@ -167,15 +168,13 @@ Future<bool> audioReuseTerms(Ref ref, AudioEvent sound) {
 
 /// Fail-closed reuse consent for explicit and legacy audio events.
 ///
-/// A creator may reuse their own sound when no explicit terms exist. Explicit
-/// declines remain authoritative. The shared permission provider owns that
-/// rule so call sites agree; UI may still short-circuit synchronously knowable
-/// cases to avoid one-frame action flicker.
+/// A creator may always reuse their own sound. The shared permission provider
+/// owns that rule so call sites agree; UI may still short-circuit synchronously
+/// knowable cases to avoid one-frame action flicker.
 @riverpod
 Future<bool> audioReuseConsent(Ref ref, AudioEvent sound) {
   final knownTerms = audioReuseTermsFromEvent(sound);
   if (knownTerms == true) return Future.value(true);
-  if (knownTerms == false) return Future.value(false);
   // Re-read on auth transitions so an account switch cannot leave the previous
   // identity's ownership answer cached against this sound.
   ref.watch(currentAuthStateProvider);
@@ -183,6 +182,7 @@ Future<bool> audioReuseConsent(Ref ref, AudioEvent sound) {
   if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
     return Future.value(true);
   }
+  if (knownTerms == false) return Future.value(false);
   return AudioReuseConsentResolver(
     videosRepository: ref.watch(videosRepositoryProvider),
   ).verify(sound);
