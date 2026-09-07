@@ -512,13 +512,19 @@ class _Section extends StatelessWidget {
                 color: colors.onSurfaceMuted,
               ).copyWith(height: 1.45),
             ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainer.withValues(alpha: 0.55),
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
+          // Material, not a decorated Container: DivineSwitchTile renders a
+          // ListTile, which paints its background and ink splash on the
+          // nearest Material ancestor. A coloured DecoratedBox in between
+          // hides both, and Flutter asserts on it — opening this panel threw
+          // 'ListTile background color or ink splashes may be invisible'.
+          Material(
+            color: colors.surfaceContainer.withValues(alpha: 0.55),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Column(children: children),
             ),
-            child: Column(children: children),
           ),
         ],
       ),
