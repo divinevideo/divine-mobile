@@ -983,9 +983,9 @@ void main() {
           StateError('initial A initialize failed'),
         );
         factory.initializeCompleters.remove(pubkeyA);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        // Load-bearing count: the retry runs on a real zero-delay Timer, and
+        // three turns is the measured minimum -- two leaves callCount behind.
+        await pumpEventQueue(times: 3);
 
         expect(
           factory.callCount,
@@ -1038,9 +1038,9 @@ void main() {
 
         final timedOutClient = container.read(nostrServiceProvider);
         factory.addRelaysCompleters.remove(pubkeyA);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        // Load-bearing count: the retry runs on a real zero-delay Timer, and
+        // three turns is the measured minimum -- two leaves callCount behind.
+        await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(2));
         expect(factory.addRelaysPubkeys, equals([pubkeyA, pubkeyA]));
@@ -1106,9 +1106,9 @@ void main() {
         expect(factory.callCount, equals(1));
 
         firstFailure.completeError(StateError('first initialize failed'));
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        // Load-bearing count: the retry runs on a real zero-delay Timer, and
+        // three turns is the measured minimum -- two leaves callCount behind.
+        await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(2));
         expect(
@@ -1119,9 +1119,9 @@ void main() {
         );
 
         secondFailure.completeError(StateError('second initialize failed'));
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        // Load-bearing count: the retry runs on a real zero-delay Timer, and
+        // three turns is the measured minimum -- two leaves callCount behind.
+        await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(3));
         expect(retryAttempts, equals([1, 2]));
