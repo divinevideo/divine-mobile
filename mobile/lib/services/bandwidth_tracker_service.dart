@@ -105,39 +105,6 @@ class BandwidthTrackerService {
     );
   }
 
-  /// Record time-to-first-frame as a proxy for connection quality
-  ///
-  /// [ttffMs] - Time from play request to first frame displayed
-  void recordTimeToFirstFrame(int ttffMs) {
-    // Estimate bandwidth from TTFF
-    // Assume ~500KB needed for first frame, adjust based on TTFF
-    // This is a rough heuristic but helps when we don't have file sizes
-    if (ttffMs <= 0) return;
-
-    // Fast TTFF (<500ms) = good connection (~4+ Mbps)
-    // Medium TTFF (500-1500ms) = decent connection (~2-4 Mbps)
-    // Slow TTFF (>1500ms) = slow connection (<2 Mbps)
-    double estimatedMbps;
-    if (ttffMs < 500) {
-      estimatedMbps = 4.0;
-    } else if (ttffMs < 1500) {
-      estimatedMbps = 2.5;
-    } else if (ttffMs < 3000) {
-      estimatedMbps = 1.5;
-    } else {
-      estimatedMbps = 0.8;
-    }
-
-    _bandwidthSamples.addLast(estimatedMbps);
-    while (_bandwidthSamples.length > _maxSamples) {
-      _bandwidthSamples.removeFirst();
-    }
-
-    _log(
-      'Recorded TTFF sample: ${ttffMs}ms -> ~${estimatedMbps.toStringAsFixed(1)} Mbps estimate',
-    );
-  }
-
   /// Get current average bandwidth estimate (Mbps)
   double get averageBandwidth {
     if (_bandwidthSamples.isEmpty) return 3.0; // Assume decent connection
