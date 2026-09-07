@@ -302,7 +302,14 @@ Treat every figure here as the least the number should move, not the most.
 
 ### The display floor
 
-`publicLoopCountFloor` is 1000. It gates `_publicCount` in `mobile/lib/widgets/video_feed_item/video_card_meta.dart` — the archival `loops` tag for classic Vines (about 98% of the catalogue), and `originalLoops + views` for everything else. It is never applied to `video_total_views_data.total_views`, which is the column an earlier revision of this section measured; that mistake put the section three orders of magnitude off.
+`publicLoopCountFloor` is 1000. It gates `_publicCount` in
+`mobile/lib/widgets/video_feed_item/video_card_meta.dart` — the archival
+`loops` tag for classic Vines (about 98% of the catalogue), and
+`originalLoops + views` for everything else. It is never applied to
+`video_total_views_data.total_views`, which is the column an earlier revision
+of this section measured; that mistake put the section three orders of
+magnitude off, and #7218 corrected it in the baseline before this section
+caught up.
 
 Measured against the quantity the code actually gates:
 
@@ -312,26 +319,73 @@ Measured against the quantity the code actually gates:
 | 333 (floor reached at ×3) | 1,375,711 | 62.42% |
 | 100 (floor reached at ×10) | 1,621,923 | 73.60% |
 
-Median public count: 1,417. A public count renders on about half the catalogue, not on 0.044% of it.
+Median public count: 1,417. A public count renders on about half the
+catalogue, not on 0.044% of it.
 
-Every figure above comes from one query over `nostr.videos` that reproduces `_publicCount`'s branch in SQL: [the pre-change baseline](2026-08-13-view-and-loop-metrics-baseline.md#appendix-exact-queries), appendix block **§5 — display floor distribution**. The column mapping the whole correction rests on was checked rather than assumed: `nostr.videos.loops` is the client's `loops` tag, verified over a 200,000-row Vine sample in which 198,061 rows carry the tag and the column equals it in all 198,061, with zero mismatches. §5 of that document is the measurement record; this section states what it means for the design.
+Every figure above comes from one query over `nostr.videos` that reproduces
+`_publicCount`'s branch in SQL:
+[the pre-change baseline](2026-08-13-view-and-loop-metrics-baseline.md#appendix-exact-queries),
+appendix block **§5 — display floor distribution**. The column mapping the
+whole correction rests on was checked rather than assumed:
+`nostr.videos.loops` is the client's `loops` tag, verified over a 200,000-row
+Vine sample in which 198,061 rows carry the tag and the column equals it in
+all 198,061, with zero mismatches. §5 of that document is the measurement
+record; this section states what it means for the design.
 
-**This is live for everyone.** `FeatureFlag.videoCardPostDate` originally gated the rule as a kill switch, but it defaulted off and nothing ever set `FF_VIDEO_CARD_POST_DATE`, so it never reached a normal build. #7452 (merged 2026-08-15) deleted the dead flag, and `_resolveLoopCount` now applies the floor unconditionally for anyone who is not the video's owner. Earlier drafts of this section — including the one this replaces — describe the floor as feature-gated; that stopped being true before those words merged.
+**This is live for everyone.** `FeatureFlag.videoCardPostDate` originally
+gated the rule as a kill switch, but it defaulted off and nothing ever set
+`FF_VIDEO_CARD_POST_DATE`, so it never reached a normal build. #7452 (merged
+2026-08-15) deleted the dead flag, and `_resolveLoopCount` now applies the
+floor unconditionally for anyone who is not the video's owner. Earlier drafts
+of this section — including the one this replaces — describe the floor as
+feature-gated; that stopped being true before those words merged.
 
-This is Flutter-client behavior. Divine Web currently diverges: its card renders any positive playback count and `formatLoopCount` applies only K/M abbreviation, not a display floor.
+This is Flutter-client behavior. Divine Web currently diverges: its card
+renders any positive playback count and `formatLoopCount` applies only K/M
+abbreviation, not a display floor.
 
-**The floor decision survives the correction. Two of the arguments this document made for it do not, and are withdrawn.** Both were artifacts of the wrong column:
+**The floor decision survives the correction. Two of the arguments this
+document made for it do not, and are withdrawn.** Both were artifacts of the
+wrong column:
 
-- "The public count is effectively never shown — 9,996 videos in 10,000 render a date instead." It is shown on roughly half of them.
-- "A date is the better default for this catalogue." The archival-artifact reading — that "Apr 22, 2014" reframes a clip as an artifact — assumed a date is what almost every card renders. It is not, so the argument no longer reaches the conclusion it was offered for. Whether a date reads better than a count on a given card is untested in either direction; nothing here settles it, and no decision in this document should be read as resting on it.
+- "The public count is effectively never shown — 9,996 videos in 10,000
+  render a date instead." It is shown on roughly half of them.
+- "A date is the better default for this catalogue." The archival-artifact
+  reading — that "Apr 22, 2014" reframes a clip as an artifact — assumed a
+  date is what almost every card renders. It is not, so the argument no
+  longer reaches the conclusion it was offered for. Whether a date reads
+  better than a count on a given card is untested in either direction;
+  nothing here settles it, and no decision in this document should be read as
+  resting on it.
 
-What holds the floor up instead is the argument the constant's own doc comment gives: a number below the floor tells a viewer not to bother, and a wall of small counts on *other people's* videos discourages a visitor from posting. On the real distribution the floor does exactly that — a count on ~52% of videos, every one of them at or above 1000, and a date on the rest instead of a discouraging two-digit count.
+What holds the floor up instead is the argument the constant's own doc
+comment gives: a number below the floor tells a viewer not to bother, and a
+wall of small counts on *other people's* videos discourages a visitor from
+posting. On the real distribution the floor does exactly that — a count on
+~52% of videos, every one of them at or above 1000, and a date on the rest
+instead of a discouraging two-digit count.
 
-Creator retention is untouched by any of this and was never gated by the floor. `_resolveLoopCount` returns `video.totalLoops` unconditionally when `isOwnVideo`, and `totalLoops` is additive, so a creator who claimed a Vine account sees archival loops plus live views. The retention effect the video-card spec cites — crossing ~100 views roughly doubling the chance a new creator keeps posting — operates on the creator's own number, which has no floor.
+Creator retention is untouched by any of this and was never gated by the
+floor. `_resolveLoopCount` returns `video.totalLoops` unconditionally when
+`isOwnVideo`, and `totalLoops` is additive, so a creator who claimed a Vine
+account sees archival loops plus live views. The retention effect the
+video-card spec cites — crossing ~100 views roughly doubling the chance a new
+creator keeps posting — operates on the creator's own number, which has no
+floor.
 
-**Open, not resolved: the constant's doc comment disagrees with the census.** The doc comment on `publicLoopCountFloor` reports "roughly 64% of the archive" hidden at "p50 is 298 loops", measured against a 1,000-Vine sample; the full-catalogue census above gives 47.70% hidden at p50 1,417. Both are the same order of magnitude and both contradict the withdrawn 0.044%, but they disagree with each other by more than sampling noise allows, and the sample's provenance is unexplained. The census is the better basis and this section uses it; the comment is deliberately left standing rather than overwritten by assertion. Reconciling the two is open work.
+**Open, not resolved: the constant's doc comment disagrees with the census.**
+The doc comment on `publicLoopCountFloor` reports "roughly 64% of the archive"
+hidden at "p50 is 298 loops", measured against a 1,000-Vine sample; the
+full-catalogue census above gives 47.70% hidden at p50 1,417. Both are the
+same order of magnitude and both contradict the withdrawn 0.044%, but they
+disagree with each other by more than sampling noise allows, and the sample's
+provenance is unexplained. The census is the better basis and this section
+uses it; the comment is deliberately left standing rather than overwritten by
+assertion. Reconciling the two is open work.
 
-Re-tuning the floor value stays out of scope here. The constant is deliberately one line and the number is a product call, to be made on the census rather than as a side effect of correcting the evidence behind it.
+Re-tuning the floor value stays out of scope here. The constant is
+deliberately one line and the number is a product call, to be made on the
+census rather than as a side effect of correcting the evidence behind it.
 
 ## Testing
 
