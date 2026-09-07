@@ -172,6 +172,12 @@ class VineBottomSheet extends StatelessWidget {
   /// tap-catcher). Has no effect in fixed mode — the standard modal
   /// barrier already dismisses on tap there.
   ///
+  /// [enableDrag], when false, blocks both the modal route's drag gesture
+  /// and content-driven dismissal when a scrollable sheet reaches its minimum
+  /// extent. The sheet can still resize between [minChildSize] and
+  /// [maxChildSize]. Barrier dismissal remains governed by [isDismissible]
+  /// and [tapOutsideToDismiss].
+  ///
   /// [headerLeadingAction] and [headerTrailingAction] are forwarded to
   /// [VineBottomSheetHeader] to place icon buttons on the left/right side of
   /// the header. When only one is set, the other side receives an invisible
@@ -295,6 +301,7 @@ class VineBottomSheet extends StatelessWidget {
           if (!tapOutsideToDismiss) {
             return DraggableScrollableSheet(
               controller: draggableController,
+              shouldCloseOnMinExtent: enableDrag,
               initialChildSize: initialChildSize,
               minChildSize: minChildSize,
               maxChildSize: maxChildSize,
@@ -335,6 +342,7 @@ class VineBottomSheet extends StatelessWidget {
             child: DraggableScrollableSheet(
               controller: draggableController,
               expand: false,
+              shouldCloseOnMinExtent: enableDrag,
               initialChildSize: initialChildSize,
               minChildSize: minChildSize,
               maxChildSize: maxChildSize,

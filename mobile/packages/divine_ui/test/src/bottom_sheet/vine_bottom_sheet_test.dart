@@ -946,6 +946,73 @@ void main() {
       });
     });
 
+    group('enableDrag', () {
+      Future<void> showDraggable(
+        WidgetTester tester, {
+        required bool enableDrag,
+        required bool tapOutsideToDismiss,
+      }) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => VineBottomSheet.show<void>(
+                    context: context,
+                    enableDrag: enableDrag,
+                    tapOutsideToDismiss: tapOutsideToDismiss,
+                    title: const Text('Draggable Sheet'),
+                    children: const [Text('Sheet Body')],
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+      }
+
+      for (final tapOutsideToDismiss in [true, false]) {
+        for (final enableDrag in [true, false]) {
+          testWidgets(
+            'min-extent dismissal is $enableDrag when enableDrag is '
+            '$enableDrag and tapOutsideToDismiss is $tapOutsideToDismiss',
+            (tester) async {
+              await showDraggable(
+                tester,
+                enableDrag: enableDrag,
+                tapOutsideToDismiss: tapOutsideToDismiss,
+              );
+
+              expect(
+                tester
+                    .widget<DraggableScrollableSheet>(
+                      find.byType(DraggableScrollableSheet),
+                    )
+                    .shouldCloseOnMinExtent,
+                enableDrag,
+              );
+
+              await tester.fling(
+                find.text('Sheet Body'),
+                const Offset(0, 600),
+                2000,
+              );
+              await tester.pumpAndSettle();
+
+              expect(
+                find.text('Sheet Body'),
+                enableDrag ? findsNothing : findsOneWidget,
+              );
+            },
+          );
+        }
+      }
+    });
+
     group('new parameters', () {
       test('snap without scrollable fails an assertion', () {
         expect(
