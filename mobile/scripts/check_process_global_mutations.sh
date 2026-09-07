@@ -88,6 +88,7 @@ GLOBALS=(
   'UrlLauncherPlatform\.instance'
   'VideoPlayerPlatform\.instance'
   'FirebasePlatform\.instance'
+  'SharedPreferencesStorePlatform\.instance'
   'DivineCameraPlatform\.instance'
   'DivineQuickActionsPlatform\.instance'
   'BackgroundUploaderPlatform\.instance'
@@ -348,6 +349,12 @@ void main() {
   _case "package-owned singleton install without restore → FAIL" 1 \
 'import "x";
 void main() { DivineCameraPlatform.instance = FakeCameraPlatform(); }
+'
+  _case "shared-preferences store install without restore → FAIL" 1 \
+'import "x";
+void main() {
+  SharedPreferencesStorePlatform.instance = FakePreferencesStore();
+}
 '
   _case "bare-id install masquerading as restore (snapshot + install, no real restore) → FAIL" 1 \
 'import "x";

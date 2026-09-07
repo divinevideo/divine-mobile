@@ -938,6 +938,11 @@ void main() {
           delayedRemoveKey:
               'flutter.${DivineLoginBannerDismissalStore.keyFor(pubkey)}',
         );
+        final initialPreferencesStore = SharedPreferencesStorePlatform.instance;
+        addTearDown(() {
+          SharedPreferencesStorePlatform.instance = initialPreferencesStore;
+          SharedPreferences.resetStatic();
+        });
         SharedPreferencesStorePlatform.instance = delayedPrefs;
         SharedPreferences.resetStatic();
 

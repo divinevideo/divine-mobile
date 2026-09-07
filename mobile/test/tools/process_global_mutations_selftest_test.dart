@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The guard ships 26 fixture cases behind `--selftest`, and until this test
+/// The guard ships 27 fixture cases behind `--selftest`, and until this test
 /// existed nothing in the repository ran them: the flag appears in no workflow,
 /// no mise task, no git hook, and no Codex config, so CI invoked the scanner
 /// bare. A later edit to GLOBALS, to the snapshot/restore regexes, or to the
@@ -52,7 +52,7 @@ void main() {
       // Shrink guard: deleting cases would make the assertion above pass
       // vacuously. Raise this number when cases are added; lower it only
       // deliberately, in the same change that removes one.
-      expect(passingCases, greaterThanOrEqualTo(26));
+      expect(passingCases, greaterThanOrEqualTo(27));
     });
   });
 }
