@@ -579,7 +579,10 @@ reviewed change:
    UPDATE_BASELINE=1 bash mobile/scripts/check_package_coverage_floor.sh
    ```
 
-The guard runs in CI in the `generated-files` job.
+The guard runs in CI in the `generated-files` job. The pre-push hook
+installed by `scripts/install-hooks.sh` runs it too, but only when a
+`.github/workflows/*.yaml` / `*.yml` file or the coverage baseline itself
+changed — CI stays the authority.
 
 ### Untested-services floor
 
