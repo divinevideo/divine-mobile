@@ -4315,6 +4315,67 @@ void main() {
         );
 
         test(
+          'ignores a self `p` tag on our own malformed mute list',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', ourPubkey],
+                ],
+                createdAt: 1000,
+              ),
+            );
+
+            await service.unblockUser(ourPubkey);
+
+            // Our own pubkey can never be in a hide bucket, so there is
+            // nothing to unblock and nothing to record. A pending entry
+            // keyed on self would also re-arm the publish on every launch.
+            verifyNever(
+              () => mockSigner.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            );
+            expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+          },
+        );
+
+        test('ignores an empty pubkey', () async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final prefs = await SharedPreferences.getInstance();
+          final service = await serviceWithOwnMute(
+            prefs: prefs,
+            ownMute: buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', ''],
+              ],
+              createdAt: 1000,
+            ),
+          );
+
+          // DM surfaces derive the counterparty as
+          // `participants.isNotEmpty ? participants.first : ''`, so an empty
+          // string reaches this method. `blockUsers` already skips it.
+          await service.unblockUser('');
+
+          verifyNever(
+            () => mockSigner.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          );
+          expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+        });
+
+        test(
           'is a true no-op when no local or published state carries it',
           () async {
             SharedPreferences.setMockInitialValues(<String, Object>{});

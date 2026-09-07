@@ -945,7 +945,11 @@ class ContentBlocklistRepository {
 
   bool _latestOwnMuteListCarries(String pubkey) {
     final source = _latestOwnMuteListEvent;
-    if (source == null) return false;
+    // A self `p` tag is malformed and is filtered out of the mute set in
+    // [_applyOwnMuteListEvent], so it must not make us look muted here
+    // either -- an intent keyed on our own pubkey could never be satisfied
+    // and would re-arm the publish on every launch (#2192).
+    if (source == null || pubkey == _ourPubkey) return false;
     return source.tags.any(
       (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == pubkey,
     );
@@ -1299,6 +1303,9 @@ class ContentBlocklistRepository {
   /// Awaits the local write so the change survives an immediate app kill.
   /// Note: Cannot remove users from internal blocklist.
   Future<void> unblockUser(String pubkey) async {
+    // DM surfaces fall back to an empty counterparty when a conversation
+    // carries no participants; [blockUsers] already skips it.
+    if (pubkey.isEmpty) return;
     // coverage:ignore-start
     if (_internalBlocklist.contains(pubkey)) {
       // Internal blocklist is intentionally empty; this branch is
