@@ -985,6 +985,21 @@ void main() {
                 'the owner guard must be what stopped the second publish; a '
                 'swallowed backfill exception would satisfy the counts above',
           );
+
+          // Deferred, not abandoned. Without this, a regression that dropped
+          // the list out of the stranded filter for good -- adopting the
+          // wrong pubkey, or marking it handled -- would still satisfy every
+          // assertion above.
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownerPubkey);
+          when(mockSigner.getPublicKey).thenAnswer((_) async => _ownerPubkey);
+
+          await upgraded.fetchUserListsFromRelays(force: true);
+
+          verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          expect(
+            upgraded.getListById('second-stranded')!.nostrEventId,
+            isNotNull,
+          );
         });
       }
 
