@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "Îngrijorări generale privind siguranța minorilor",
     "reportReasonUnderageUser": "Utilizatorul pare să aibă sub 16 ani",
     "reportReasonUnderageUserSubtitle": "Titularul contului pare să fie minor",
-    "reportModerationDmDelayed": "Nu am putut contacta direct echipa de moderare chiar acum, dar raportul tău a fost primit și va fi analizat.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "Scrie echipei de moderare",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "Videoclip publicat, dar {count, plural, =1{1 invitație de colaborator nu a fost trimisă.} few{{count} invitații de colaborator nu au fost trimise.} other{{count} de invitații de colaborator nu au fost trimise.}}",

@@ -4741,10 +4741,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đội ngũ của bọn mình sẽ xem xét báo cáo của bạn và có hành động phù hợp. Bạn có thể nhận được cập nhật qua tin nhắn trực tiếp.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Bọn mình chưa liên hệ trực tiếp được với đội kiểm duyệt lúc này, nhưng báo cáo của bạn đã được nhận và sẽ được xem xét.';
-
-  @override
   String get reportContactModeration => 'Nhắn tin cho đội kiểm duyệt';
 
   @override

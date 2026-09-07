@@ -4776,10 +4776,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pasukan kami akan menyemak laporan anda dan mengambil tindakan yang sewajarnya. Anda mungkin menerima kemas kini melalui mesej langsung.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Kami tidak dapat menghubungi pasukan kesederhanaan secara langsung sekarang, tetapi laporan anda telah diterima dan akan disemak.';
-
-  @override
   String get reportContactModeration =>
       'Hantar mesej kepada pasukan kesederhanaan';
 

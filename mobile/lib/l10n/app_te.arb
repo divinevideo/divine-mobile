@@ -2921,10 +2921,6 @@
   "reportReceivedTitle": "నివేదిక స్వీకరించబడింది",
   "reportReceivedThankYou": "Divineని సురక్షితంగా ఉంచడంలో సహాయం చేసినందుకు ధన్యవాదాలు.",
   "reportReceivedReviewNotice": "మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.",
-  "reportModerationDmDelayed": "మేము ఇప్పుడే మోడరేషన్ బృందాన్ని నేరుగా చేరుకోలేకపోయాము, కానీ మీ నివేదిక స్వీకరించబడింది మరియు సమీక్షించబడుతుంది.",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
   "reportContactModeration": "మోడరేషన్ బృందానికి సందేశం పంపండి",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

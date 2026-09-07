@@ -4808,10 +4808,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Susuriin ng team namin ang report mo at gagawa ng naaangkop na aksyon. Maaari kang makatanggap ng updates via direct message.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Hindi namin naabot nang direkta ang moderation team ngayon, pero natanggap ang iyong report at ire-review ito.';
-
-  @override
   String get reportContactModeration => 'I-message ang moderation team';
 
   @override

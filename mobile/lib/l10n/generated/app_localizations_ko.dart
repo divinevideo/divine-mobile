@@ -4499,10 +4499,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.';
 
   @override
-  String get reportModerationDmDelayed =>
-      '지금은 조절 팀에 바로 연결하지 못했지만, 신고는 접수됐고 검토될 거예요.';
-
-  @override
   String get reportContactModeration => '조절 팀에 메시지 보내기';
 
   @override

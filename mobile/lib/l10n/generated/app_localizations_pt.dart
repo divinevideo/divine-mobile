@@ -4807,10 +4807,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Não conseguimos falar com a equipe de moderação diretamente agora, mas sua denúncia foi recebida e será revisada.';
-
-  @override
   String get reportContactModeration =>
       'Mandar mensagem para a equipe de moderação';
 

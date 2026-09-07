@@ -4946,10 +4946,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'మేము ఇప్పుడే మోడరేషన్ బృందాన్ని నేరుగా చేరుకోలేకపోయాము, కానీ మీ నివేదిక స్వీకరించబడింది మరియు సమీక్షించబడుతుంది.';
-
-  @override
   String get reportContactModeration => 'మోడరేషన్ బృందానికి సందేశం పంపండి';
 
   @override

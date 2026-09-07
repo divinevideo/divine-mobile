@@ -4463,9 +4463,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '我们的团队会审核你的举报并采取适当措施。你可能会通过私信收到进展通知。';
 
   @override
-  String get reportModerationDmDelayed => '暂时没能直接联系上管理团队，但你的举报已收到，我们会审核的。';
-
-  @override
   String get reportContactModeration => '给管理团队发消息';
 
   @override

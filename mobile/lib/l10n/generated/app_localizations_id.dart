@@ -4707,10 +4707,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Kami tidak bisa menjangkau tim moderasi secara langsung saat ini, tapi laporanmu sudah kami terima dan akan ditinjau.';
-
-  @override
   String get reportContactModeration => 'Kirim pesan ke tim moderasi';
 
   @override

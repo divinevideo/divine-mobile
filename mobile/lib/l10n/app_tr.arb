@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "Reşit olmayanların güvenliğiyle ilgili genel endişeler",
     "reportReasonUnderageUser": "Kullanıcı 16 Yaşından Küçük Görünüyor",
     "reportReasonUnderageUserSubtitle": "Hesap sahibi reşit değil gibi görünüyor",
-    "reportModerationDmDelayed": "Moderasyon ekibine şu an doğrudan ulaşamadık ama bildirimin alındı ve incelenecek.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "Moderasyon ekibine mesaj gönder",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "Video paylaşıldı ama {count, plural, =1{1 iş birlikçi daveti gönderilemedi.} other{{count} iş birlikçi daveti gönderilemedi.}}",

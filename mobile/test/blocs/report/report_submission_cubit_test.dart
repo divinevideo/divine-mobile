@@ -1,7 +1,6 @@
 // ABOUTME: Unit tests for ReportSubmissionCubit, the report sheet's
 // ABOUTME: submission state machine across the kind-1984 and DM channels.
 
-import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -62,12 +61,14 @@ void main() {
     late _MockContentReportingService reportingService;
     late _MockDmRepository dmRepository;
 
-    setUp(() {
-      reportingService = _MockContentReportingService();
-      dmRepository = _MockDmRepository();
-
+    void stubReportContent(
+      _MockContentReportingService service, {
+      ReportDelivery delivery = ReportDelivery.reached,
+      bool success = true,
+      String error = 'rejected',
+    }) {
       when(
-        () => reportingService.reportContent(
+        () => service.reportContent(
           eventId: any(named: 'eventId'),
           authorPubkey: any(named: 'authorPubkey'),
           reason: any(named: 'reason'),
@@ -77,25 +78,46 @@ void main() {
           hashtags: any(named: 'hashtags'),
         ),
       ).thenAnswer(
-        (_) async =>
-            ReportResult.createSuccess('id', delivery: ReportDelivery.reached),
+        (_) async => success
+            ? ReportResult.createSuccess('id', delivery: delivery)
+            : ReportResult.failure(error),
       );
+    }
 
+    void stubEnqueueSend(EnqueueSendResult result) {
       when(
-        () => dmRepository.sendMessage(
+        () => dmRepository.enqueueSend(
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
           additionalTags: any(named: 'additionalTags'),
         ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'rumor_id',
-          messageEventId: 'dm_event_id',
-          recipientPubkey: _moderationPubkey,
+      ).thenAnswer((_) async => result);
+    }
+
+    void stubRecoverFullSend(NIP17SendResult result) {
+      when(
+        () => dmRepository.recoverFullSend(
+          rumorId: any(named: 'rumorId'),
+          resetRetryBudget: any(named: 'resetRetryBudget'),
         ),
-      );
+      ).thenAnswer((_) async => result);
+    }
+
+    NIP17SendResult dmSuccess() => NIP17SendResult.success(
+      rumorEventId: 'rumor_id',
+      messageEventId: 'dm_event_id',
+      recipientPubkey: _moderationPubkey,
+    );
+
+    setUp(() {
+      reportingService = _MockContentReportingService();
+      dmRepository = _MockDmRepository();
+
+      stubReportContent(reportingService);
+      // Default: the DM enqueues durably and its background drive delivers.
+      stubEnqueueSend(const EnqueueSendResult.enqueued('rumor_id'));
+      stubRecoverFullSend(dmSuccess());
     });
 
     ReportSubmissionCubit buildCubit({
@@ -121,148 +143,112 @@ void main() {
       details: 'Spam',
     );
 
-    blocTest<ReportSubmissionCubit, ReportSubmissionState>(
-      'reaches submitted with no caveat when both channels land',
-      build: buildCubit,
-      act: submit,
-      verify: (cubit) {
+    void verifyEnqueueSendCalled(int times) {
+      verify(
+        () => dmRepository.enqueueSend(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          content: any(named: 'content'),
+          replyToId: any(named: 'replyToId'),
+          additionalTags: any(named: 'additionalTags'),
+        ),
+      ).called(times);
+    }
+
+    test('confirms as submitted and records the DM delivered once its '
+        'background drive lands', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+      // The confirmation is unconditional and shown as soon as the report is
+      // durably enqueued — before the DM publishes.
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+
+      // The DM publish is driven in the background; let it settle.
+      await pumpEventQueue();
+      expect(cubit.state.moderationDm.outcome, ModerationDmOutcome.delivered);
+      verifyEnqueueSendCalled(1);
+    });
+
+    test(
+      'confirms unconditionally even if a channel could not be reached',
+      () async {
+        // A legacy no-queue report can still return localOnly; the confirmation
+        // no longer gates on delivery, so it is shown regardless.
+        stubReportContent(reportingService, delivery: ReportDelivery.localOnly);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await submit(cubit);
+
         expect(cubit.state.status, ReportSubmissionStatus.submitted);
-        expect(cubit.state.moderationDmFailed, isFalse);
-        expect(cubit.state.moderationDm.outcome, ModerationDmOutcome.delivered);
       },
     );
 
-    blocTest<ReportSubmissionCubit, ReportSubmissionState>(
-      'stays resubmittable when the report reached no channel',
-      build: () {
-        when(
-          () => reportingService.reportContent(
-            eventId: any(named: 'eventId'),
-            authorPubkey: any(named: 'authorPubkey'),
-            reason: any(named: 'reason'),
-            details: any(named: 'details'),
-            sourceRelay: any(named: 'sourceRelay'),
-            additionalContext: any(named: 'additionalContext'),
-            hashtags: any(named: 'hashtags'),
-          ),
-        ).thenAnswer(
-          (_) async => ReportResult.createSuccess(
-            'id',
-            delivery: ReportDelivery.localOnly,
-          ),
-        );
-        return buildCubit();
-      },
-      act: submit,
-      verify: (cubit) {
-        // Not `submitted`: the confirmation screen would be false in four
-        // places at once, so the form stays live for a one-tap retry.
-        expect(cubit.state.status, ReportSubmissionStatus.notSent);
-      },
-    );
+    test('a refused self-report is silent — confirmation shown, nothing '
+        'enqueued (#8352)', () async {
+      stubReportContent(reportingService, delivery: ReportDelivery.refused);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
 
-    blocTest<ReportSubmissionCubit, ReportSubmissionState>(
-      'a refused self-report is silent — confirmation shown, nothing sent (#8352)',
-      build: () {
-        when(
-          () => reportingService.reportContent(
-            eventId: any(named: 'eventId'),
-            authorPubkey: any(named: 'authorPubkey'),
-            reason: any(named: 'reason'),
-            details: any(named: 'details'),
-            sourceRelay: any(named: 'sourceRelay'),
-            additionalContext: any(named: 'additionalContext'),
-            hashtags: any(named: 'hashtags'),
-          ),
-        ).thenAnswer(
-          (_) async => ReportResult.createSuccess(
-            'id',
-            delivery: ReportDelivery.refused,
-          ),
+      await submit(cubit);
+      await pumpEventQueue();
+
+      // Silent success — a refusal must NOT hand off to the moderation DM, or
+      // a self-naming report would still leave the device privately (#8352).
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+      verifyNever(
+        () => dmRepository.enqueueSend(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          content: any(named: 'content'),
+          replyToId: any(named: 'replyToId'),
+          additionalTags: any(named: 'additionalTags'),
+        ),
+      );
+    });
+
+    test('reports failure status when the report itself is rejected', () async {
+      stubReportContent(reportingService, success: false);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+
+      // #3589: the service's prose is logged, never emitted. The status is the
+      // whole contract the UI reads.
+      expect(cubit.state.status, ReportSubmissionStatus.failure);
+    });
+
+    test(
+      'a moderation-side preflight failure does not sink the report',
+      () async {
+        // The transport is resolved inside the dispatch precisely so this stays
+        // a DM-only failure. Resolving it when the sheet opened would let the
+        // moderation label service take down a report the kind-1984 channel
+        // carried fine.
+        final cubit = buildCubit(
+          resolveTransport: () => throw StateError('moderation unavailable'),
         );
-        return buildCubit();
-      },
-      act: submit,
-      verify: (cubit) {
-        // Silent success — unlike the `localOnly` offline path, a refusal must
-        // NOT hand off to the moderation DM, or a self-naming report would
-        // still leave the device privately (the exact bug #8352 fixes).
+        addTearDown(cubit.close);
+
+        await submit(cubit);
+        await pumpEventQueue();
+
         expect(cubit.state.status, ReportSubmissionStatus.submitted);
         verifyNever(
-          () => dmRepository.sendMessage(
+          () => dmRepository.enqueueSend(
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
             additionalTags: any(named: 'additionalTags'),
           ),
         );
       },
     );
 
-    test('hands back the rejection detail for the inline error', () async {
-      when(
-        () => reportingService.reportContent(
-          eventId: any(named: 'eventId'),
-          authorPubkey: any(named: 'authorPubkey'),
-          reason: any(named: 'reason'),
-          details: any(named: 'details'),
-          sourceRelay: any(named: 'sourceRelay'),
-          additionalContext: any(named: 'additionalContext'),
-          hashtags: any(named: 'hashtags'),
-        ),
-      ).thenAnswer((_) async => ReportResult.failure('Not authenticated'));
-      final cubit = buildCubit();
-      addTearDown(cubit.close);
-
-      await submit(cubit);
-
-      // #3589: the service's prose is logged, never returned and never
-      // emitted. The status is the whole contract the UI reads.
-      expect(cubit.state.status, ReportSubmissionStatus.failure);
-    });
-
-    test('a moderation-side failure does not sink the report', () async {
-      // The transport is resolved inside the dispatch precisely so this stays
-      // a DM-only failure. Resolving it when the sheet opened would let the
-      // moderation label service take down a report the kind-1984 channel
-      // carried fine.
-      final cubit = buildCubit(
-        resolveTransport: () => throw StateError('moderation unavailable'),
-      );
-      addTearDown(cubit.close);
-
-      await submit(cubit);
-
-      expect(cubit.state.status, ReportSubmissionStatus.submitted);
-      expect(cubit.state.moderationDmFailed, isTrue);
-      verifyNever(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      );
-    });
-
     test('resolves the reporting service for each submit', () async {
       final nextReportingService = _MockContentReportingService();
-      when(
-        () => nextReportingService.reportContent(
-          eventId: any(named: 'eventId'),
-          authorPubkey: any(named: 'authorPubkey'),
-          reason: any(named: 'reason'),
-          details: any(named: 'details'),
-          sourceRelay: any(named: 'sourceRelay'),
-          additionalContext: any(named: 'additionalContext'),
-          hashtags: any(named: 'hashtags'),
-        ),
-      ).thenAnswer(
-        (_) async =>
-            ReportResult.createSuccess('id', delivery: ReportDelivery.reached),
-      );
+      stubReportContent(nextReportingService);
 
       final services = <ContentReportingService>[
         reportingService,
@@ -274,7 +260,9 @@ void main() {
       addTearDown(cubit.close);
 
       await submit(cubit);
+      await pumpEventQueue();
       await submit(cubit);
+      await pumpEventQueue();
 
       verify(
         () => reportingService.reportContent(
@@ -300,37 +288,18 @@ void main() {
       ).called(1);
     });
 
-    test('does not retry a blocked moderation DM on resubmit', () async {
-      when(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async => const NIP17SendResult.blocked(
-          'blocked: recipient not permitted by send policy',
-        ),
-      );
+    test('does not re-enqueue a blocked moderation DM on resubmit', () async {
+      stubEnqueueSend(const EnqueueSendResult.blocked('policy blocked'));
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
       await submit(cubit);
+      await pumpEventQueue();
       await submit(cubit);
+      await pumpEventQueue();
 
-      expect(cubit.state.moderationDmFailed, isTrue);
       expect(cubit.state.moderationDm.outcome, ModerationDmOutcome.blocked);
-      verify(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).called(1);
+      verifyEnqueueSendCalled(1);
       verifyNever(
         () => dmRepository.recoverFullSend(
           rumorId: any(named: 'rumorId'),
@@ -339,111 +308,72 @@ void main() {
       );
     });
 
-    test('does not retry an oversized moderation DM on resubmit', () async {
-      when(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async =>
-            const NIP17SendResult.tooLong('moderation DM is too large'),
-      );
-      final cubit = buildCubit();
-      addTearDown(cubit.close);
+    test(
+      'does not re-enqueue an oversized moderation DM on resubmit',
+      () async {
+        stubEnqueueSend(const EnqueueSendResult.tooLong('too large'));
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
 
-      await submit(cubit);
-      await submit(cubit);
+        await submit(cubit);
+        await pumpEventQueue();
+        await submit(cubit);
+        await pumpEventQueue();
 
-      expect(cubit.state.moderationDmFailed, isTrue);
-      expect(cubit.state.moderationDm.outcome, ModerationDmOutcome.tooLong);
-      verify(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).called(1);
-      verifyNever(
-        () => dmRepository.recoverFullSend(
-          rumorId: any(named: 'rumorId'),
-          resetRetryBudget: any(named: 'resetRetryBudget'),
-        ),
-      );
-    });
+        expect(cubit.state.moderationDm.outcome, ModerationDmOutcome.tooLong);
+        verifyEnqueueSendCalled(1);
+        verifyNever(
+          () => dmRepository.recoverFullSend(
+            rumorId: any(named: 'rumorId'),
+            resetRetryBudget: any(named: 'resetRetryBudget'),
+          ),
+        );
+      },
+    );
 
-    test('re-drives the parked row rather than minting a second DM', () async {
-      when(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async => const NIP17SendResult.failure(
-          'no relays',
-          queuedRumorId: 'parked_rumor_id',
-        ),
-      );
-      when(
-        () => dmRepository.recoverFullSend(
-          rumorId: any(named: 'rumorId'),
-          resetRetryBudget: any(named: 'resetRetryBudget'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'parked_rumor_id',
-          messageEventId: 'dm_event_id',
-          recipientPubkey: _moderationPubkey,
-        ),
-      );
-      final cubit = buildCubit();
-      addTearDown(cubit.close);
+    test(
+      're-drives the parked row rather than enqueuing a second DM (#6610)',
+      () async {
+        stubEnqueueSend(const EnqueueSendResult.enqueued('parked_rumor_id'));
+        // The background drive does not land, so the row stays parked.
+        stubRecoverFullSend(
+          const NIP17SendResult.failure(
+            'no relays',
+            retryablePending: true,
+            queuedRumorId: 'parked_rumor_id',
+          ),
+        );
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
 
-      await submit(cubit);
-      expect(cubit.state.moderationDm.queuedRumorId, equals('parked_rumor_id'));
+        await submit(cubit);
+        await pumpEventQueue();
+        expect(
+          cubit.state.moderationDm.queuedRumorId,
+          equals('parked_rumor_id'),
+        );
 
-      // The same reason again: coalesce onto the row rather than stack a
-      // second one for the sweep to deliver (#6610).
-      await submit(cubit);
+        // The same reason again coalesces onto the parked row rather than
+        // stacking a second one for the sweep to deliver (#6610).
+        await submit(cubit);
+        await pumpEventQueue();
 
-      verify(
-        () => dmRepository.recoverFullSend(
-          rumorId: 'parked_rumor_id',
-          resetRetryBudget: true,
-        ),
-      ).called(1);
-      verify(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).called(1);
-      expect(cubit.state.moderationDm.queuedRumorId, isNull);
-    });
+        verifyEnqueueSendCalled(1);
+        verify(
+          () => dmRepository.recoverFullSend(
+            rumorId: 'parked_rumor_id',
+            resetRetryBudget: true,
+          ),
+        ).called(2);
+      },
+    );
 
     test('replaces the parked row when the reason moved', () async {
-      when(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async => const NIP17SendResult.failure(
+      stubEnqueueSend(const EnqueueSendResult.enqueued('parked_rumor_id'));
+      stubRecoverFullSend(
+        const NIP17SendResult.failure(
           'no relays',
+          retryablePending: true,
           queuedRumorId: 'parked_rumor_id',
         ),
       );
@@ -454,83 +384,65 @@ void main() {
       addTearDown(cubit.close);
 
       await submit(cubit);
+      await pumpEventQueue();
 
       // A parked rumor's tags are frozen at build time and replayed verbatim,
       // so re-driving after the user changed their mind would ship the
       // superseded NIP-32 label while the kind-1984 republish carries the new
-      // one. Cancel and mint a correct one instead.
+      // one. Cancel and enqueue a correct one instead.
       await cubit.submit(
         reason: ContentFilterReason.harassment,
         reasonTitle: 'Harassment',
         details: 'Harassment',
       );
+      await pumpEventQueue();
 
       verify(
         () => dmRepository.cancelOutgoingSend(rumorId: 'parked_rumor_id'),
       ).called(1);
-      verifyNever(
-        () => dmRepository.recoverFullSend(
-          rumorId: any(named: 'rumorId'),
-          resetRetryBudget: any(named: 'resetRetryBudget'),
-        ),
-      );
+      // Two enqueues: the original, then a fresh one after the stale row was
+      // cancelled — never a re-drive of the stale row.
+      verifyEnqueueSendCalled(2);
     });
 
-    test('stops sending once a parked row becomes unreachable', () async {
-      when(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async => const NIP17SendResult.failure(
-          'no relays',
-          queuedRumorId: 'parked_rumor_id',
-        ),
-      );
+    test('stops sending once a parked row becomes unreachable (#6610)', () async {
+      stubEnqueueSend(const EnqueueSendResult.enqueued('parked_rumor_id'));
+      // The background drive cannot resolve the row. recoverFullSend is async,
+      // so an ArgumentError arrives as a rejected future, not a sync throw.
       when(
         () => dmRepository.recoverFullSend(
           rumorId: any(named: 'rumorId'),
           resetRetryBudget: any(named: 'resetRetryBudget'),
         ),
-      ).thenThrow(ArgumentError('no such outgoing send'));
+      ).thenAnswer((_) async => throw ArgumentError('no such outgoing send'));
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
       await submit(cubit);
-      await submit(cubit);
-      // Delivery can be neither confirmed nor retried, so a third submit must
-      // not mint the #6610 duplicate — and must keep the caveat.
-      await submit(cubit);
-
+      await pumpEventQueue();
       expect(
         cubit.state.moderationDm.outcome,
         ModerationDmOutcome.unverifiable,
       );
-      expect(cubit.state.moderationDmFailed, isTrue);
-      verify(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).called(1);
+
+      // Unverifiable is terminal: a resubmit must not mint the #6610 duplicate.
+      await submit(cubit);
+      await pumpEventQueue();
+      verifyEnqueueSendCalled(1);
     });
 
-    test('does not DM the team twice for an unchanged resubmit', () async {
+    test('does not enqueue the DM twice for an unchanged resubmit', () async {
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
       await submit(cubit);
+      await pumpEventQueue();
       await submit(cubit);
+      await pumpEventQueue();
 
       // The kind-1984 republishes deliberately; the DM is the report itself,
-      // so a second copy is a second ticket to triage.
+      // so a second copy is a second ticket to triage (#6610). Once the first
+      // DM is delivered, a plain resubmit sends no second copy.
       verify(
         () => reportingService.reportContent(
           eventId: any(named: 'eventId'),
@@ -542,15 +454,7 @@ void main() {
           hashtags: any(named: 'hashtags'),
         ),
       ).called(2);
-      verify(
-        () => dmRepository.sendMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          replyToId: any(named: 'replyToId'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).called(1);
+      verifyEnqueueSendCalled(1);
     });
   });
 }

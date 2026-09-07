@@ -3606,8 +3606,6 @@
     "reportReasonChildSafetySubtitle": "미성년자 안전에 대한 전반적인 우려",
     "reportReasonUnderageUser": "사용자가 16세 미만으로 보임",
     "reportReasonUnderageUserSubtitle": "계정 소유자가 미성년자로 보여요",
-    "reportModerationDmDelayed": "지금은 조절 팀에 바로 연결하지 못했지만, 신고는 접수됐고 검토될 거예요.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "조절 팀에 메시지 보내기",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "영상을 올렸지만, {count, plural, =1{콜라보 초대 1건이 전송되지 않았어요.} other{콜라보 초대 {count}건이 전송되지 않았어요.}}",

@@ -4200,8 +4200,6 @@
     "reportReasonChildSafetySubtitle": "ስለ ታዳጊዎች ደህንነት አጠቃላይ ስጋቶች",
     "reportReasonUnderageUser": "ተጠቃሚው ከ16 ዓመት በታች ይመስላል",
     "reportReasonUnderageUserSubtitle": "የመለያው ባለቤት ዕድሜው ያልደረሰ ይመስላል",
-    "reportModerationDmDelayed": "አሁን የልከኝነት ቡድኑን በቀጥታ ማግኘት አልቻልንም፣ ነገር ግን ሪፖርትዎ ተቀብሏል እና ይገመገማል።",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "የልከኝነት ቡድኑን መልእክት ላክ",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "ቪዲዮ ተለጠፈ፣ ግን {count, plural, =1{{count} የተባባሪ ግብዣ አልተላከም።} other{{count} የተባባሪ ግብዣዎች አልተላኩም።}}",

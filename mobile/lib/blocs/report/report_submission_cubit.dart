@@ -218,13 +218,9 @@ enum ReportSubmissionStatus {
   /// A submit is in flight.
   submitting,
 
-  /// The report reached a channel off this device — show the confirmation.
+  /// The report was durably submitted — show the confirmation. Delivery of the
+  /// three channels is owned by their durable queues, so this is unconditional.
   submitted,
-
-  /// The report was recorded but nothing left the device, so the confirmation
-  /// would be false in four places at once. Keeps the form live so retrying is
-  /// one tap.
-  notSent,
 
   /// The report was rejected or the submit threw.
   failure,
@@ -233,15 +229,10 @@ enum ReportSubmissionStatus {
 class ReportSubmissionState extends Equatable {
   const ReportSubmissionState({
     this.status = ReportSubmissionStatus.editing,
-    this.moderationDmFailed = false,
     this.moderationDm = const ModerationDmProgress(),
   });
 
   final ReportSubmissionStatus status;
-
-  /// Whether the moderation team could not be reached directly, which drives
-  /// the `reportModerationDmDelayed` caveat on the confirmation screen.
-  final bool moderationDmFailed;
 
   final ModerationDmProgress moderationDm;
 
@@ -249,16 +240,14 @@ class ReportSubmissionState extends Equatable {
 
   ReportSubmissionState copyWith({
     ReportSubmissionStatus? status,
-    bool? moderationDmFailed,
     ModerationDmProgress? moderationDm,
   }) => ReportSubmissionState(
     status: status ?? this.status,
-    moderationDmFailed: moderationDmFailed ?? this.moderationDmFailed,
     moderationDm: moderationDm ?? this.moderationDm,
   );
 
   @override
-  List<Object?> get props => [status, moderationDmFailed, moderationDm];
+  List<Object?> get props => [status, moderationDm];
 }
 
 /// Owns one report sheet's submission: the kind-1984 / Zendesk report and the
@@ -290,7 +279,7 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
   ///
   /// A coordination primitive rather than data — it is never rendered and
   /// never asserted on, so it stays off [ReportSubmissionState].
-  Future<bool>? _moderationDmInFlight;
+  Future<void>? _moderationDmInFlight;
 
   /// Submits one report through both channels.
   ///
@@ -337,52 +326,23 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
       if (result.isSilentSuccess && result.delivery == ReportDelivery.refused) {
         // A deliberate refusal — a self-report (#8352). Nothing was built,
         // published, or recorded, and nothing should be sent: not the
-        // kind-1984 event, and NOT the moderation DM. Unlike `localOnly`
-        // below (a real report that couldn't reach a channel and is handed to
-        // the retrying DM), `refused` must never touch the DM path, or a
-        // self-naming report leaves the device privately. Silent success —
-        // show the normal confirmation.
+        // kind-1984 event, and NOT the moderation DM, or a self-naming report
+        // would leave the device privately. Silent success — show the normal
+        // confirmation without touching the DM path.
         _update(status: ReportSubmissionStatus.submitted);
         return;
       }
 
-      if (result.success && result.delivery == ReportDelivery.localOnly) {
-        // Nothing left the device — every channel refused, which usually
-        // means no connectivity. The confirmation screen would be false in
-        // four places at once (its title, the review promise, the green
-        // check, and any DM caveat), so don't show it: surface the failure
-        // and leave Submit live so retrying is one tap.
-        //
-        // Still hand the report to the moderation DM. `sendMessage` writes
-        // a durable `outgoing_dms` row before any I/O and marks it failed
-        // when the publish can't go out, which is precisely what
-        // `OutgoingDmRetryService`'s second sweep arm replays once
-        // connectivity returns. It is the only report channel with a
-        // retry — the kind-1984 publish and the Zendesk ticket are both
-        // fire-and-forget — so skipping it here would make an offline
-        // report deliver less often than before this fix.
-        //
-        // Not awaited: the user already knows the submit failed, and must
-        // not sit through a doomed relay round-trip to be told.
-        // `_sendModerationDm` coalesces onto whatever this sheet already
-        // has outstanding, so a repeat tap re-drives the parked row
-        // instead of stacking a second one for the sweep (#6610).
-        unawaited(_sendModerationDm(reason, reasonTitle, details));
-        _update(status: ReportSubmissionStatus.notSent);
-        return;
-      }
-
       if (result.success) {
-        final moderationDmFailed = await _sendModerationDm(
-          reason,
-          reasonTitle,
-          details,
-        );
+        // Optimistic: the report is durable the moment reportContent returns
+        // (PR 1 queues its relay + Zendesk channels), so confirm now. Enqueue
+        // the moderation DM durably too — awaiting only the fast local write —
+        // and let it publish in the background, so the confirmation never waits
+        // on a relay. Delivery of all three channels is owned by their durable
+        // queues, so the confirmation is unconditional. #8053.
+        await _sendModerationDm(reason, reasonTitle, details);
         if (isClosed) return;
-        _update(
-          status: ReportSubmissionStatus.submitted,
-          moderationDmFailed: moderationDmFailed,
-        );
+        _update(status: ReportSubmissionStatus.submitted);
         return;
       }
 
@@ -432,7 +392,7 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
   /// returning its result to a submit the user has since re-aimed would report
   /// the superseded snapshot. Waiting lets the re-aimed submit see the row the
   /// first one parked and replace it.
-  Future<bool> _sendModerationDm(
+  Future<void> _sendModerationDm(
     ContentFilterReason reason,
     String reasonTitle,
     String details,
@@ -442,7 +402,7 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
         ? _runModerationDm(reason, reasonTitle, details)
         // _dispatchModerationDm absorbs its own errors, but handle the error
         // arm anyway so a hypothetical one cannot cancel the queued submit.
-        : outstanding.then<bool>(
+        : outstanding.then<void>(
             (_) => _runModerationDm(reason, reasonTitle, details),
             onError: (_) => _runModerationDm(reason, reasonTitle, details),
           );
@@ -459,18 +419,20 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
 
   /// One link in the [_sendModerationDm] queue: re-checks the terminal
   /// outcomes, which an earlier link may have reached while this one waited.
-  Future<bool> _runModerationDm(
+  Future<void> _runModerationDm(
     ContentFilterReason reason,
     String reasonTitle,
     String details,
   ) {
     final progress = state.moderationDm;
-    if (progress.matchesDelivered(reason, details)) return Future.value(false);
+    // Already delivered with this exact reason/details, or terminal
+    // (unverifiable / blocked / tooLong): do not send another copy (#6610).
+    if (progress.matchesDelivered(reason, details)) return Future.value();
     if (progress.outcome
         case ModerationDmOutcome.unverifiable ||
             ModerationDmOutcome.blocked ||
             ModerationDmOutcome.tooLong) {
-      return Future.value(true);
+      return Future.value();
     }
     return _dispatchModerationDm(reason, reasonTitle, details);
   }
@@ -489,7 +451,7 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
   /// reason cards live, so the selection can move while a send is in flight,
   /// and the row parked below must be recorded under the reason its rumor
   /// actually carries or the staleness check above it goes blind.
-  Future<bool> _dispatchModerationDm(
+  Future<void> _dispatchModerationDm(
     ContentFilterReason dispatchReason,
     String dispatchReasonTitle,
     String dispatchDetails,
@@ -525,129 +487,161 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
             // account changed. Do not mint a fresh report DM when we cannot
             // prove the stale one was cancelled.
             _markUnverifiable();
-            return true;
+            return;
           }
         }
         _update(moderationDm: state.moderationDm.withoutQueuedRow());
       }
 
       final parked = state.moderationDm.queuedRumorId;
-
-      final NIP17SendResult dmResult;
-      if (parked == null) {
-        dmResult = await transport.repository.sendMessage(
-          recipientPubkey: transport.pubkey,
-          content: content,
-          // Moderation reports carry user identity + reported content;
-          // never let them degrade to a metadata-leaking NIP-04
-          // plaintext duplicate. NIP-17 gift wrap only.
-          skipNip04Fallback: true,
-          additionalTags: ContentReportingService.moderationDmTags(
-            reason: dispatchReason,
-            sha256: _target.moderationSha256,
-            videoUrl: _target.moderationVideoUrl,
-          ),
-        );
-      } else {
-        try {
-          // Re-drive the parked row instead of minting a second one. This
-          // joins an in-flight sweep replay for the same rumor rather than
-          // publishing alongside it, and `resetRetryBudget` re-arms a row
-          // the sweep may have already spent — an explicit resubmit is the
-          // signal to hand it back a fresh budget, so coalescing here can
-          // never turn a duplicated report into a dropped one.
-          dmResult = await transport.repository.recoverFullSend(
-            rumorId: parked,
-            resetRetryBudget: true,
-          );
-          // ignore: avoid_catching_errors
-        } on ArgumentError {
-          // Ambiguous. `recoverFullSend` throws the same type when the row is
-          // gone (possibly delivered by the sweep, possibly deleted by the
-          // user) and when the row belongs to another account. Coalescing still
-          // must not mint a second report DM, but it also must not claim the
-          // team has this copy when the repository could not prove that — so
-          // this sheet stops sending and keeps the caveat.
-          _markUnverifiable();
-          return true;
-        }
+      if (parked != null) {
+        // Coalesce (#6610): re-drive the row an earlier submit parked rather
+        // than minting a second rumor. The drive runs in the background so the
+        // confirmation is never blocked on a relay.
+        _driveModerationDm(transport, parked, dispatchReason, dispatchDetails);
+        return;
       }
 
-      // sendMessage signals non-delivery by RETURNING a failure, not
-      // by throwing, so the catch below cannot see it. Switch over the
-      // sealed type rather than reading `.success` so a new variant
-      // becomes a compile error here instead of a silent success.
-      final failed = switch (dmResult) {
-        // Includes selfWrapPublished: false — the team received the
-        // report; only the sender's own cross-device copy is missing.
-        NIP17SendSuccess() => false,
-        // blocked, retryablePending, and hard failures alike.
-        NIP17SendFailure() => true,
-      };
-      final queuedRumorId = switch (dmResult) {
-        // The row was consumed by the delivery.
-        NIP17SendSuccess() => null,
-        // A block is terminal: the send gate drops the row and re-driving
-        // would only re-hit the same policy.
-        NIP17SendFailure(blocked: true) => null,
-        // The size guard also refuses before enqueue. A retry has no row and
-        // unchanged content necessarily hits the same ceiling.
-        NIP17SendFailure(tooLong: true) => null,
-        // A hard failure and a soft-unconfirmed both leave the row for the
-        // sweep. `sendMessage` reports the row it just parked; a re-drive
-        // reports nothing new and keeps the row it was given.
-        NIP17SendFailure(:final queuedRumorId) => queuedRumorId ?? parked,
-      };
-      final outcome = switch (dmResult) {
-        NIP17SendSuccess() => ModerationDmOutcome.delivered,
-        NIP17SendFailure(blocked: true) => ModerationDmOutcome.blocked,
-        NIP17SendFailure(tooLong: true) => ModerationDmOutcome.tooLong,
-        NIP17SendFailure() => ModerationDmOutcome.pending,
-      };
-      _update(
-        moderationDm: ModerationDmProgress(
-          outcome: outcome,
-          delivered: failed
-              ? state.moderationDm.delivered
-              : (reason: dispatchReason, details: dispatchDetails),
-          queuedRumorId: queuedRumorId,
-          // Track the row's reason alongside it, so the staleness check above
-          // can tell a plain resubmit (coalesce, #6610) from a changed mind
-          // (replace). The snapshot, not live selection: this runs after an
-          // await, and the rumor now parked was built with the snapshot.
-          queuedReason: queuedRumorId == null ? null : dispatchReason,
-          queuedDetails: queuedRumorId == null ? null : dispatchDetails,
+      // Fresh send: enqueue the DM durably, awaiting only the fast local write.
+      // The enqueue-then-recoverFullSend path is NIP-17 gift wrap only and
+      // never fires the metadata-leaking NIP-04 fallback (that lives in
+      // sendMessage's publish path alone), so identity-bearing report content
+      // cannot leak as plaintext even though we no longer pass
+      // skipNip04Fallback. #8053.
+      final enqueued = await transport.repository.enqueueSend(
+        recipientPubkey: transport.pubkey,
+        content: content,
+        additionalTags: ContentReportingService.moderationDmTags(
+          reason: dispatchReason,
+          sha256: _target.moderationSha256,
+          videoUrl: _target.moderationVideoUrl,
         ),
       );
 
-      if (dmResult case final NIP17SendFailure failure) {
+      if (enqueued.blocked || enqueued.tooLong) {
+        // Terminal before a row was parked: the policy gate (#176) or the size
+        // ceiling (#7331) refused it. Record it so a resubmit does not
+        // re-attempt (#6610); the report reached its other channels regardless.
+        _update(
+          moderationDm: ModerationDmProgress(
+            outcome: enqueued.blocked
+                ? ModerationDmOutcome.blocked
+                : ModerationDmOutcome.tooLong,
+            delivered: state.moderationDm.delivered,
+          ),
+        );
         Log.warning(
-          'Moderation DM not delivered '
+          'Moderation DM refused before enqueue '
           '(recipient=${pubkeyForLogs(transport.pubkey)}, '
-          'blocked=${failure.blocked}, '
-          'retryablePending=${failure.retryablePending}): '
-          '${failure.error}',
+          'blocked=${enqueued.blocked}, tooLong=${enqueued.tooLong}): '
+          '${enqueued.error}',
           name: 'ReportSubmissionCubit',
           category: LogCategory.system,
         );
+        return;
       }
-      return failed;
+
+      final rumorId = enqueued.queuedRumorId;
+      if (rumorId == null) {
+        // A refusal with no row (a self-addressed send) — unreachable for the
+        // moderation pubkey, handled defensively: nothing parked, nothing to
+        // drive.
+        return;
+      }
+
+      // The row is durable now; record it for coalescing, then drive its
+      // publish in the background.
+      _update(
+        moderationDm: ModerationDmProgress(
+          delivered: state.moderationDm.delivered,
+          queuedRumorId: rumorId,
+          // The snapshot, not live selection: the parked rumor was built with
+          // it, and the staleness check compares against it on a later submit.
+          queuedReason: dispatchReason,
+          queuedDetails: dispatchDetails,
+        ),
+      );
+      _driveModerationDm(transport, rumorId, dispatchReason, dispatchDetails);
     } catch (e, stackTrace) {
-      // On the delivered path the report already reached the team through
-      // another channel; the moderation DM is a secondary notification.
-      // Don't fail the flow, but surface the outcome instead of swallowing
-      // it so the user isn't told the team was reached when it wasn't.
-      // Reachable for pre-flight throws only (uninitialized repository,
-      // invalid recipient) — never for a delivery outcome, which arrives
-      // as a returned value above.
+      // Pre-flight throws only (uninitialized repository, invalid recipient) —
+      // never a delivery outcome. The report already reached its other
+      // channels; a moderation-DM preflight failure must not take it down.
       Log.warning(
-        'Failed to send moderation DM: $e',
+        'Failed to enqueue moderation DM: $e',
         name: 'ReportSubmissionCubit',
         category: LogCategory.system,
       );
       // Unwrapped, for the same reason as the submit path above.
       addError(e, stackTrace);
-      return true;
+    }
+  }
+
+  /// Drives a parked moderation-DM row's publish in the background, recording
+  /// the outcome for #6610 coalescing when it settles. Never blocks the
+  /// confirmation. A row that is gone (delivered by the sweep, or cancelled)
+  /// surfaces as an `ArgumentError` and is left to the sweep — never re-sent.
+  void _driveModerationDm(
+    ModerationDmTransport transport,
+    String rumorId,
+    ContentFilterReason reason,
+    String details,
+  ) {
+    unawaited(
+      transport.repository
+          .recoverFullSend(rumorId: rumorId, resetRetryBudget: true)
+          .then(
+            (result) {
+              if (!isClosed) _recordDmDriveResult(result, reason, details);
+            },
+            onError: (Object e) {
+              Log.warning(
+                'Moderation DM background drive could not resolve $rumorId: $e',
+                name: 'ReportSubmissionCubit',
+                category: LogCategory.system,
+              );
+              // `recoverFullSend` raises ArgumentError when the row is gone
+              // (delivered by the sweep, cancelled, or a foreign account):
+              // delivery can be neither confirmed nor retried. Mark it
+              // unverifiable so a resubmit does not mint the #6610 duplicate.
+              if (e is ArgumentError && !isClosed) _markUnverifiable();
+            },
+          ),
+    );
+  }
+
+  void _recordDmDriveResult(
+    NIP17SendResult result,
+    ContentFilterReason reason,
+    String details,
+  ) {
+    switch (result) {
+      case NIP17SendSuccess():
+        // Delivered: the team has it. Clear the parked row so a plain resubmit
+        // does not send a second copy (#6610).
+        _update(
+          moderationDm: ModerationDmProgress(
+            outcome: ModerationDmOutcome.delivered,
+            delivered: (reason: reason, details: details),
+          ),
+        );
+      case NIP17SendFailure(blocked: true):
+        _update(
+          moderationDm: ModerationDmProgress(
+            outcome: ModerationDmOutcome.blocked,
+            delivered: state.moderationDm.delivered,
+          ),
+        );
+      case NIP17SendFailure(tooLong: true):
+        _update(
+          moderationDm: ModerationDmProgress(
+            outcome: ModerationDmOutcome.tooLong,
+            delivered: state.moderationDm.delivered,
+          ),
+        );
+      case NIP17SendFailure():
+        // Soft/hard failure: the row stays parked (already recorded) for the
+        // sweep; leave the pending state untouched.
+        break;
     }
   }
 
@@ -679,14 +673,12 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
   /// to record an outcome after `close()`.
   void _update({
     ReportSubmissionStatus? status,
-    bool? moderationDmFailed,
     ModerationDmProgress? moderationDm,
   }) {
     if (isClosed) return;
     emit(
       state.copyWith(
         status: status,
-        moderationDmFailed: moderationDmFailed,
         moderationDm: moderationDm,
       ),
     );

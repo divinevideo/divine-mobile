@@ -4778,10 +4778,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'ہماری ٹیم آپ کی رپورٹ کا جائزہ لے گی اور مناسب کارروائی کرے گی۔ آپ کو براہ راست پیغام کے ذریعے اپڈیٹس مل سکتی ہیں۔';
 
   @override
-  String get reportModerationDmDelayed =>
-      'ہم ابھی موڈریشن ٹیم تک براہ راست نہیں پہنچ سکے، لیکن آپ کی رپورٹ موصول ہو گئی ہے اور اس کا جائزہ لیا جائے گا۔';
-
-  @override
   String get reportContactModeration => 'موڈریشن ٹیم کو پیغام بھیجیں';
 
   @override

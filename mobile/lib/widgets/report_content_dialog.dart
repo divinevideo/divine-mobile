@@ -447,9 +447,6 @@ class _ReportContentViewState extends State<_ReportContentView> {
     final status = cubit.state.status;
     setState(() {
       _errorMessage = switch (status) {
-        // Nothing left the device, so the confirmation would be false in four
-        // places at once. Surface the failure and leave Submit live.
-        ReportSubmissionStatus.notSent => l10n.reportNotSent,
         ReportSubmissionStatus.failure => l10n.reportFailed,
         _ => null,
       };
@@ -476,18 +473,13 @@ class _ReportContentViewState extends State<_ReportContentView> {
   }
 }
 
-/// The post-submit confirmation, carrying the caveat when the moderation team
-/// could not be reached directly.
+/// The post-submit confirmation. Delivery is owned by the durable queues, so
+/// the confirmation is unconditional. #8053.
 class _ConfirmationBody extends StatelessWidget {
   const _ConfirmationBody();
 
   @override
-  Widget build(BuildContext context) {
-    final moderationDmFailed = context.select(
-      (ReportSubmissionCubit cubit) => cubit.state.moderationDmFailed,
-    );
-    return ReportConfirmationBody(moderationDmFailed: moderationDmFailed);
-  }
+  Widget build(BuildContext context) => const ReportConfirmationBody();
 }
 
 // =============================================================================

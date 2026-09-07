@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "未成年の安全に関する一般的な懸念",
     "reportReasonUnderageUser": "ユーザーが16歳未満に見える",
     "reportReasonUnderageUserSubtitle": "アカウント所有者が未成年に見える",
-    "reportModerationDmDelayed": "今はモデレーションチームに直接連絡できなかったけど、あなたの報告は受け取ったから、あとで確認するね。",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "モデレーションチームにメッセージを送る",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "動画を投稿したよ。でも{count, plural, =1{コラボの招待が1件送信されなかったよ。} other{コラボの招待が{count}件送信されなかったよ。}}",

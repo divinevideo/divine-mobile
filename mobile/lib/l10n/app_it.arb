@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "Preoccupazioni generali sulla sicurezza dei minori",
     "reportReasonUnderageUser": "L'utente sembra avere meno di 16 anni",
     "reportReasonUnderageUserSubtitle": "Il titolare dell'account sembra essere minorenne",
-    "reportModerationDmDelayed": "Non siamo riusciti a contattare direttamente il team di moderazione in questo momento, ma la tua segnalazione è stata ricevuta e sarà esaminata.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "Scrivi al team di moderazione",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "Video pubblicato, ma {count, plural, =1{1 invito a collaborare non è stato inviato.} other{{count} inviti a collaborare non sono stati inviati.}}",

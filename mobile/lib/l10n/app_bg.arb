@@ -4206,8 +4206,6 @@
     "reportReasonChildSafetySubtitle": "Общи притеснения за безопасността на непълнолетни",
     "reportReasonUnderageUser": "Потребителят изглежда под 16 г.",
     "reportReasonUnderageUserSubtitle": "Собственикът на акаунта изглежда непълнолетен",
-    "reportModerationDmDelayed": "Точно сега не успяхме да се свържем директно с екипа по модерация, но докладът ти е получен и ще бъде прегледан.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "Пиши на екипа по модерация",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "Видеото е публикувано, но {count, plural, =1{1 покана за сътрудник не се изпрати.} other{{count} покани за сътрудници не се изпратиха.}}",

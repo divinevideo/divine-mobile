@@ -4653,10 +4653,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።';
 
   @override
-  String get reportModerationDmDelayed =>
-      'አሁን የልከኝነት ቡድኑን በቀጥታ ማግኘት አልቻልንም፣ ነገር ግን ሪፖርትዎ ተቀብሏል እና ይገመገማል።';
-
-  @override
   String get reportContactModeration => 'የልከኝነት ቡድኑን መልእክት ላክ';
 
   @override

@@ -2398,10 +2398,6 @@
   "reportReceivedTitle": "Laporan Diterima",
   "reportReceivedThankYou": "Terima kasih kerana membantu memastikan Divine selamat.",
   "reportReceivedReviewNotice": "Pasukan kami akan menyemak laporan anda dan mengambil tindakan yang sewajarnya. Anda mungkin menerima kemas kini melalui mesej langsung.",
-  "reportModerationDmDelayed": "Kami tidak dapat menghubungi pasukan kesederhanaan secara langsung sekarang, tetapi laporan anda telah diterima dan akan disemak.",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
   "reportContactModeration": "Hantar mesej kepada pasukan kesederhanaan",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

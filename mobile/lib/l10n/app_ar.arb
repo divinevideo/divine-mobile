@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "مخاوف عامة بشأن سلامة القُصَّر",
     "reportReasonUnderageUser": "يبدو أن المستخدم دون 16 عامًا",
     "reportReasonUnderageUserSubtitle": "يبدو أن صاحب الحساب دون السن القانونية",
-    "reportModerationDmDelayed": "تعذّر علينا الوصول إلى فريق الإشراف مباشرةً الآن، لكن تم استلام بلاغك وسيُراجَع.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "راسل فريق الإشراف",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "تم نشر الفيديو، لكن {count, plural, zero{لم تُرسَل أي دعوة تعاون.} one{لم تُرسَل دعوة تعاون واحدة.} two{لم تُرسَل دعوتا تعاون.} few{لم تُرسَل {count} دعوات تعاون.} many{لم تُرسَل {count} دعوة تعاون.} other{لم تُرسَل {count} دعوة تعاون.}}",

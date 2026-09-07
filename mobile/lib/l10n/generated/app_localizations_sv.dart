@@ -4771,10 +4771,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Vi kunde inte nå modereringsteamet direkt just nu, men din anmälan togs emot och kommer att granskas.';
-
-  @override
   String get reportContactModeration => 'Meddela modereringsteamet';
 
   @override

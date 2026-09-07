@@ -4912,10 +4912,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Nu am putut contacta direct echipa de moderare chiar acum, dar raportul tău a fost primit și va fi analizat.';
-
-  @override
   String get reportContactModeration => 'Scrie echipei de moderare';
 
   @override

@@ -4714,10 +4714,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'Moderasyon ekibine şu an doğrudan ulaşamadık ama bildirimin alındı ve incelenecek.';
-
-  @override
   String get reportContactModeration => 'Moderasyon ekibine mesaj gönder';
 
   @override

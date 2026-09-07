@@ -10,12 +10,10 @@ import 'package:openvine/widgets/report_content_confirmation.dart';
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
-  Widget buildSubject({bool moderationDmFailed = false}) => MaterialApp(
+  Widget buildSubject() => const MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(
-      body: ReportConfirmationBody(moderationDmFailed: moderationDmFailed),
-    ),
+    home: Scaffold(body: ReportConfirmationBody()),
   );
 
   group(ReportConfirmationBody, () {
@@ -25,16 +23,7 @@ void main() {
 
       expect(find.text(l10n.reportReceivedTitle), findsOneWidget);
       expect(find.text(l10n.reportReceivedThankYou), findsOneWidget);
-      expect(find.text(l10n.reportModerationDmDelayed), findsNothing);
-    });
-
-    testWidgets('surfaces the delayed-DM notice when the DM failed', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject(moderationDmFailed: true));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.reportModerationDmDelayed), findsOneWidget);
+      expect(find.text(l10n.reportReceivedReviewNotice), findsOneWidget);
     });
 
     testWidgets('safety link is a button that announces its label once', (

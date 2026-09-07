@@ -2398,10 +2398,6 @@
   "reportReceivedTitle": "Đã nhận báo cáo",
   "reportReceivedThankYou": "Cảm ơn bạn đã giúp giữ Divine an toàn.",
   "reportReceivedReviewNotice": "Đội ngũ của bọn mình sẽ xem xét báo cáo của bạn và có hành động phù hợp. Bạn có thể nhận được cập nhật qua tin nhắn trực tiếp.",
-  "reportModerationDmDelayed": "Bọn mình chưa liên hệ trực tiếp được với đội kiểm duyệt lúc này, nhưng báo cáo của bạn đã được nhận và sẽ được xem xét.",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
   "reportContactModeration": "Nhắn tin cho đội kiểm duyệt",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

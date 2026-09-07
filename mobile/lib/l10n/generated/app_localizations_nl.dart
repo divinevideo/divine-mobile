@@ -4794,10 +4794,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.';
 
   @override
-  String get reportModerationDmDelayed =>
-      'We konden het moderatieteam zojuist niet rechtstreeks bereiken, maar je melding is ontvangen en wordt bekeken.';
-
-  @override
   String get reportContactModeration => 'Stuur het moderatieteam een bericht';
 
   @override

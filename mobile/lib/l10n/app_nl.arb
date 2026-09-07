@@ -4068,8 +4068,6 @@
     "reportReasonChildSafetySubtitle": "Algemene zorgen over de veiligheid van minderjarigen",
     "reportReasonUnderageUser": "Gebruiker lijkt jonger dan 16",
     "reportReasonUnderageUserSubtitle": "Accounthouder lijkt minderjarig",
-    "reportModerationDmDelayed": "We konden het moderatieteam zojuist niet rechtstreeks bereiken, maar je melding is ontvangen en wordt bekeken.",
-    "@reportModerationDmDelayed": {"description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."},
     "reportContactModeration": "Stuur het moderatieteam een bericht",
     "@reportContactModeration": {"description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."},
     "videoPublishCollaboratorInviteWarning": "Video geplaatst, maar {count, plural, =1{1 samenwerkingsuitnodiging is niet verzonden.} other{{count} samenwerkingsuitnodigingen zijn niet verzonden.}}",
