@@ -22,6 +22,7 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -1404,70 +1405,67 @@ void main() {
             );
       }
 
-      test(
-        'overlapping renders each own a trace, stopped once, with their own '
-        'attributes',
-        () async {
-          final notifier = container.read(videoEditorProvider.notifier);
-          addOneClip();
+      test('overlapping renders each own a trace, stopped once, with their own '
+          'attributes', () async {
+        final notifier = container.read(videoEditorProvider.notifier);
+        addOneClip();
 
-          final slowCompleter = Completer<(DivineVideoClip, String?)>();
-          final fastCompleter = Completer<(DivineVideoClip, String?)>();
-          var callCount = 0;
-          VideoEditorRenderService.renderVideoToClipOverride =
-              ({
-                required clips,
-                required editorStateHistory,
-                parameters,
-                taskId,
-              }) {
-                callCount++;
-                return callCount == 1
-                    ? slowCompleter.future
-                    : fastCompleter.future;
-              };
+        final slowCompleter = Completer<(DivineVideoClip, String?)>();
+        final fastCompleter = Completer<(DivineVideoClip, String?)>();
+        var callCount = 0;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) {
+              callCount++;
+              return callCount == 1
+                  ? slowCompleter.future
+                  : fastCompleter.future;
+            };
 
-          final freshClip = DivineVideoClip(
-            id: 'fresh',
-            video: EditorVideo.file('/docs/fresh.mp4'),
-            duration: const Duration(seconds: 3),
-            recordedAt: DateTime.now(),
-            targetAspectRatio: .vertical,
-            originalAspectRatio: 9 / 16,
-          );
+        final freshClip = DivineVideoClip(
+          id: 'fresh',
+          video: EditorVideo.file('/docs/fresh.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
 
-          // render1 = generation 1 (slow, superseded); render2 = generation 2
-          // (fast, winner). Each captures its own operation-scoped trace.
-          final render1 = notifier.startRenderVideo();
-          final render2 = notifier.startRenderVideo();
-          expect(callCount, equals(2));
-          expect(
-            performanceMonitor.traces.length,
-            2,
-            reason: 'each render must start its own trace, not share one',
-          );
+        // render1 = generation 1 (slow, superseded); render2 = generation 2
+        // (fast, winner). Each captures its own operation-scoped trace.
+        final render1 = notifier.startRenderVideo();
+        final render2 = notifier.startRenderVideo();
+        expect(callCount, equals(2));
+        expect(
+          performanceMonitor.traces.length,
+          2,
+          reason: 'each render must start its own trace, not share one',
+        );
 
-          fastCompleter.complete((freshClip, null));
-          await render2;
-          slowCompleter.complete((freshClip, null));
-          await render1;
+        fastCompleter.complete((freshClip, null));
+        await render2;
+        slowCompleter.complete((freshClip, null));
+        await render1;
 
-          final trace1 = performanceMonitor.traces[0];
-          final trace2 = performanceMonitor.traces[1];
+        final trace1 = performanceMonitor.traces[0];
+        final trace2 = performanceMonitor.traces[1];
 
-          // Each trace is stopped exactly once — neither render stops the
-          // other's trace.
-          expect(trace1.stopCount, 1);
-          expect(trace2.stopCount, 1);
+        // Each trace is stopped exactly once — neither render stops the
+        // other's trace.
+        expect(trace1.stopCount, 1);
+        expect(trace2.stopCount, 1);
 
-          // Each trace keeps its own outcome: the winner is success, the
-          // superseded render is incomplete (not overwritten onto the winner).
-          expect(trace2.attributes['outcome'], 'success');
-          expect(trace1.attributes['outcome'], 'incomplete');
-          expect(trace1.attributes['clip_count'], '1');
-          expect(trace2.attributes['clip_count'], '1');
-        },
-      );
+        // Each trace keeps its own outcome: the winner is success, the
+        // superseded render is incomplete (not overwritten onto the winner).
+        expect(trace2.attributes['outcome'], 'success');
+        expect(trace1.attributes['outcome'], 'incomplete');
+        expect(trace1.attributes['clip_count'], '1');
+        expect(trace2.attributes['clip_count'], '1');
+      });
 
       void failRenderWith(VideoRenderFailedException failure) {
         VideoEditorRenderService.renderVideoToClipOverride =
@@ -1672,9 +1670,7 @@ void main() {
           );
 
           renderCompleter.completeError(
-            const VideoRenderFailedException(
-              VideoRenderFailureReason.canceled,
-            ),
+            const VideoRenderFailedException(VideoRenderFailureReason.canceled),
           );
           await cancel;
           await render;
@@ -2192,10 +2188,9 @@ void main() {
               .restoreDraft('draft-1');
 
           expect(result, isTrue);
-          expect(
-            container.read(videoEditorProvider).collaboratorPubkeys,
-            {collaboratorPubkey},
-          );
+          expect(container.read(videoEditorProvider).collaboratorPubkeys, {
+            collaboratorPubkey,
+          });
         },
       );
 
@@ -2618,121 +2613,115 @@ void main() {
         },
       );
 
-      test(
-        'viewing a draft is read-only: restore keeps the finalRenderedClip '
-        'instead of invalidating it (#5956)',
-        () async {
-          final renderedPath = '${tempDir.path}/rendered.mp4';
-          await File(renderedPath).writeAsBytes(const [0]);
+      test('viewing a draft is read-only: restore keeps the finalRenderedClip '
+          'instead of invalidating it (#5956)', () async {
+        final renderedPath = '${tempDir.path}/rendered.mp4';
+        await File(renderedPath).writeAsBytes(const [0]);
 
-          final draft = DivineVideoDraft.create(
-            id: 'draft-1',
-            clips: [
-              DivineVideoClip(
-                id: 'c1',
-                video: EditorVideo.file(clipVideoPath),
-                thumbnailPath: clipThumbnailPath,
-                duration: const Duration(seconds: 3),
-                recordedAt: DateTime.now(),
-                targetAspectRatio: .vertical,
-                originalAspectRatio: 9 / 16,
-              ),
-            ],
-            title: 'Title',
-            description: '',
-            hashtags: const {},
-            selectedApproach: 'video',
-            finalRenderedClip: DivineVideoClip(
-              id: 'rendered',
-              video: EditorVideo.file(renderedPath),
+        final draft = DivineVideoDraft.create(
+          id: 'draft-1',
+          clips: [
+            DivineVideoClip(
+              id: 'c1',
+              video: EditorVideo.file(clipVideoPath),
               thumbnailPath: clipThumbnailPath,
               duration: const Duration(seconds: 3),
               recordedAt: DateTime.now(),
               targetAspectRatio: .vertical,
               originalAspectRatio: 9 / 16,
             ),
-          );
-          when(
-            () => mockDraftStorage.getDraftById('draft-1'),
-          ).thenAnswer((_) async => draft);
+          ],
+          title: 'Title',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+          finalRenderedClip: DivineVideoClip(
+            id: 'rendered',
+            video: EditorVideo.file(renderedPath),
+            thumbnailPath: clipThumbnailPath,
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        );
+        when(
+          () => mockDraftStorage.getDraftById('draft-1'),
+        ).thenAnswer((_) async => draft);
 
-          final result = await container
+        final result = await container
+            .read(videoEditorProvider.notifier)
+            .restoreDraft('draft-1');
+
+        expect(result, isTrue);
+        expect(
+          container.read(videoEditorProvider).finalRenderedClip?.id,
+          'rendered',
+          reason:
+              'restoring a draft to view it must not autosave: an autosave '
+              'invalidates (and deletes) the restored finalRenderedClip and '
+              'bumps lastModified, making the draft look freshly saved',
+        );
+      });
+
+      test('viewing a draft is read-only: no re-save fires once the autosave '
+          'debounce elapses (#5956)', () {
+        final renderedPath = '${tempDir.path}/rendered.mp4';
+        File(renderedPath).writeAsBytesSync(const [0]);
+
+        final draft = DivineVideoDraft.create(
+          id: 'draft-1',
+          clips: [
+            DivineVideoClip(
+              id: 'c1',
+              video: EditorVideo.file(clipVideoPath),
+              thumbnailPath: clipThumbnailPath,
+              duration: const Duration(seconds: 3),
+              recordedAt: DateTime.now(),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+          title: 'Title',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+          finalRenderedClip: DivineVideoClip(
+            id: 'rendered',
+            video: EditorVideo.file(renderedPath),
+            thumbnailPath: clipThumbnailPath,
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        );
+        when(
+          () => mockDraftStorage.getDraftById('draft-1'),
+        ).thenAnswer((_) async => draft);
+
+        fakeAsync((async) {
+          bool? result;
+          container
               .read(videoEditorProvider.notifier)
-              .restoreDraft('draft-1');
-
+              .restoreDraft('draft-1')
+              .then((value) => result = value);
+          async.flushMicrotasks();
           expect(result, isTrue);
-          expect(
-            container.read(videoEditorProvider).finalRenderedClip?.id,
-            'rendered',
-            reason:
-                'restoring a draft to view it must not autosave: an autosave '
-                'invalidates (and deletes) the restored finalRenderedClip and '
-                'bumps lastModified, making the draft look freshly saved',
-          );
-        },
-      );
 
-      test(
-        'viewing a draft is read-only: no re-save fires once the autosave '
-        'debounce elapses (#5956)',
-        () {
-          final renderedPath = '${tempDir.path}/rendered.mp4';
-          File(renderedPath).writeAsBytesSync(const [0]);
+          // Elapse well past the autosave debounce; a restore that
+          // re-triggers autosave would re-save the draft here, bumping
+          // lastModified and reordering it to the top of the drafts list.
+          async.elapse(const Duration(seconds: 10));
 
-          final draft = DivineVideoDraft.create(
-            id: 'draft-1',
-            clips: [
-              DivineVideoClip(
-                id: 'c1',
-                video: EditorVideo.file(clipVideoPath),
-                thumbnailPath: clipThumbnailPath,
-                duration: const Duration(seconds: 3),
-                recordedAt: DateTime.now(),
-                targetAspectRatio: .vertical,
-                originalAspectRatio: 9 / 16,
-              ),
-            ],
-            title: 'Title',
-            description: '',
-            hashtags: const {},
-            selectedApproach: 'video',
-            finalRenderedClip: DivineVideoClip(
-              id: 'rendered',
-              video: EditorVideo.file(renderedPath),
-              thumbnailPath: clipThumbnailPath,
-              duration: const Duration(seconds: 3),
-              recordedAt: DateTime.now(),
-              targetAspectRatio: .vertical,
-              originalAspectRatio: 9 / 16,
+          verifyNever(
+            () => mockDraftStorage.saveDraft(
+              any(),
+              deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
             ),
           );
-          when(
-            () => mockDraftStorage.getDraftById('draft-1'),
-          ).thenAnswer((_) async => draft);
-
-          fakeAsync((async) {
-            bool? result;
-            container
-                .read(videoEditorProvider.notifier)
-                .restoreDraft('draft-1')
-                .then((value) => result = value);
-            async.flushMicrotasks();
-            expect(result, isTrue);
-
-            // Elapse well past the autosave debounce; a restore that
-            // re-triggers autosave would re-save the draft here, bumping
-            // lastModified and reordering it to the top of the drafts list.
-            async.elapse(const Duration(seconds: 10));
-
-            verifyNever(
-              () => mockDraftStorage.saveDraft(
-                any(),
-                deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
-              ),
-            );
-          });
-        },
-      );
+        });
+      });
     });
   });
 
@@ -3017,10 +3006,7 @@ void main() {
       expect(draft.inspiredByVideo, isNull);
       expect(
         draft.clipSourceCredits.map((credit) => credit.addressableId),
-        equals([
-          '34236:${'d' * 64}:source-a',
-          '34236:${'e' * 64}:source-b',
-        ]),
+        equals(['34236:${'d' * 64}:source-a', '34236:${'e' * 64}:source-b']),
       );
     });
 
@@ -3077,35 +3063,30 @@ void main() {
       createdAt: 1700000000,
     );
 
-    test(
-      'refreshes the snapshot when only the audio meta changes so the reuse '
-      "toggle tracks add/remove of another creator's sound",
-      () {
-        final notifier = container.read(videoEditorProvider.notifier);
+    test('refreshes the snapshot when only the audio meta changes so the reuse '
+        "toggle tracks add/remove of another creator's sound", () {
+      final notifier = container.read(videoEditorProvider.notifier);
 
-        notifier.updateEditorEditingParameters(
-          paramsWithTracks([reusedSound()]),
-        );
-        expect(
-          container.read(videoEditorProvider).reusesExternalAudio,
-          isTrue,
-          reason: 'adding a reused sound must update the snapshot',
-        );
+      notifier.updateEditorEditingParameters(paramsWithTracks([reusedSound()]));
+      expect(
+        container.read(videoEditorProvider).reusesExternalAudio,
+        isTrue,
+        reason: 'adding a reused sound must update the snapshot',
+      );
 
-        // Remove the sound. The only change is the audio meta — every render
-        // field CompleteParameters.diff compares (empty audioTracks field
-        // included) is identical, so without the audio-meta check the update
-        // is skipped and the snapshot stays stale.
-        notifier.updateEditorEditingParameters(paramsWithTracks(const []));
-        expect(
-          container.read(videoEditorProvider).reusesExternalAudio,
-          isFalse,
-          reason:
-              'removing the reused sound must refresh the snapshot even though '
-              'diff() sees no change in the render-time audioTracks field',
-        );
-      },
-    );
+      // Remove the sound. The only change is the audio meta — every render
+      // field CompleteParameters.diff compares (empty audioTracks field
+      // included) is identical, so without the audio-meta check the update
+      // is skipped and the snapshot stays stale.
+      notifier.updateEditorEditingParameters(paramsWithTracks(const []));
+      expect(
+        container.read(videoEditorProvider).reusesExternalAudio,
+        isFalse,
+        reason:
+            'removing the reused sound must refresh the snapshot even though '
+            'diff() sees no change in the render-time audioTracks field',
+      );
+    });
   });
 
   group('cover thumbnail persistence', () {
@@ -3505,7 +3486,7 @@ void main() {
     late AppDatabase database;
     late ProviderContainer container;
     late Directory tempDir;
-    late VideoEditorNotifier editorNotifier;
+    late EditorBackgroundWork backgroundWork;
     var containerDisposed = false;
 
     void disposeContainer() {
@@ -3514,15 +3495,14 @@ void main() {
       container.dispose();
     }
 
-    // Bounds every drain. The 20x pumpEventQueue poll this replaced bounded
+    // Bounds every settle. The 20x pumpEventQueue poll this replaced bounded
     // itself and failed with its own reason string; a bare await on a wedged
-    // cleanup instead hangs to the suite timeout with nothing naming deferred
-    // cleanup as the stuck party.
-    Future<void> drainDeferredCleanup(VideoEditorNotifier notifier) =>
-        notifier.pendingDeferredCleanupForTest.timeout(
-          const Duration(seconds: 10),
-          onTimeout: () => fail('deferred file cleanup did not settle'),
-        );
+    // operation instead hangs to the suite timeout with nothing naming editor
+    // background work as the stuck party.
+    Future<void> settleBackgroundWork() => backgroundWork.settle().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => fail('editor background work did not settle'),
+    );
 
     setUpAll(() {
       registerFallbackValue(
@@ -3544,6 +3524,22 @@ void main() {
       database = AppDatabase.test(NativeDatabase.memory());
       tempDir = Directory.systemTemp.createTempSync('editor_defer_test');
       containerDisposed = false;
+      final originalProofFileOverride =
+          NativeProofModeService.proofFileOverride;
+      NativeProofModeService.proofFileOverride =
+          (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) async => null;
+      addTearDown(
+        () => NativeProofModeService.proofFileOverride =
+            originalProofFileOverride,
+      );
       when(
         () => mockDraftStorage.draftExists(any()),
       ).thenAnswer((_) async => false);
@@ -3555,19 +3551,21 @@ void main() {
         ],
       );
       // Captured here, not in tearDown: a test that disposes the container
-      // itself must still get the drain, and `container.read` throws once the
-      // container is gone.
-      editorNotifier = container.read(videoEditorProvider.notifier);
+      // itself must still get the settle boundary, and `container.read` throws
+      // once the container is gone. Reading the notifier also installs its
+      // onDispose cleanup before any test action.
+      backgroundWork = container.read(editorBackgroundWorkProvider);
+      container.read(videoEditorProvider.notifier);
     });
 
     tearDown(() async {
       try {
-        // Unconditional: every test needs the deferred cleanup to stop
-        // querying the DAOs before the database closes under it. The old
-        // `if (!containerDisposed)` guard skipped the drain entirely for the
-        // three tests that dispose the container themselves.
+        // Unconditional: every test needs editor background work to stop
+        // reading media and querying the DAOs before those resources are
+        // destroyed. The old `if (!containerDisposed)` guard skipped the drain
+        // entirely for the tests that dispose the container themselves.
         disposeContainer();
-        await drainDeferredCleanup(editorNotifier);
+        await settleBackgroundWork();
       } finally {
         // The drain can throw — the reference check inside
         // `deleteFilesIfUnreferenced` is unguarded — and an open database or
@@ -3637,7 +3635,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
       await notifier.reset(keepAutosavedDraft: true);
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3672,7 +3670,7 @@ void main() {
       await notifier.reset(keepAutosavedDraft: true);
       saveMayFinish.complete();
       expect(await autosave, isTrue);
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3710,9 +3708,7 @@ void main() {
 
         unawaited(notifier.reset(keepAutosavedDraft: true));
         var cleanupSettled = false;
-        notifier.pendingDeferredCleanupForTest.then(
-          (_) => cleanupSettled = true,
-        );
+        backgroundWork.settle().then((_) => cleanupSettled = true);
         async.flushMicrotasks();
         expect(
           cleanupSettled,
@@ -3742,7 +3738,7 @@ void main() {
       // it starts the flush, so it cannot have finished.
       expect(orphan.existsSync(), isTrue);
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3760,7 +3756,7 @@ void main() {
       expect(orphan.existsSync(), isTrue);
 
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         orphan.existsSync(),
@@ -3782,12 +3778,10 @@ void main() {
 
       final source = File(p.join(documentsDir.path, 'source.mp4'))
         ..writeAsBytesSync(const [1, 2, 3]);
-      final oldRendered = File(
-        p.join(documentsDir.path, 'old-rendered.mp4'),
-      )..writeAsBytesSync(const [4, 5, 6]);
-      final newRendered = File(
-        p.join(documentsDir.path, 'new-rendered.mp4'),
-      )..writeAsBytesSync(const [7, 8, 9]);
+      final oldRendered = File(p.join(documentsDir.path, 'old-rendered.mp4'))
+        ..writeAsBytesSync(const [4, 5, 6]);
+      final newRendered = File(p.join(documentsDir.path, 'new-rendered.mp4'))
+        ..writeAsBytesSync(const [7, 8, 9]);
       final realDraftStorage = DraftStorageService(
         draftsDao: database.draftsDao,
         clipsDao: database.clipsDao,
@@ -3856,7 +3850,7 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(oldRendered.path));
 
       disposeContainer();
-      await drainDeferredCleanup(notifier);
+      await settleBackgroundWork();
 
       expect(
         oldRendered.existsSync(),
@@ -3867,5 +3861,56 @@ void main() {
       );
       expect(newRendered.existsSync(), isTrue);
     });
+
+    test(
+      'teardown waits for clip proof to finish reading its source',
+      () async {
+        final proofStarted = Completer<void>();
+        final allowProofRead = Completer<void>();
+        final proofFinished = Completer<void>();
+        bool? sourcePresentDuringProof;
+        final originalProofFileOverride =
+            NativeProofModeService.proofFileOverride;
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+            }) async {
+              proofStarted.complete();
+              await allowProofRead.future;
+              sourcePresentDuringProof = file.existsSync();
+              proofFinished.complete();
+              return null;
+            };
+        addTearDown(
+          () => NativeProofModeService.proofFileOverride =
+              originalProofFileOverride,
+        );
+
+        addTimelineClip();
+        await proofStarted.future;
+        expect(backgroundWork.isNotEmptyForTest, isTrue);
+        disposeContainer();
+
+        final teardown = () async {
+          await settleBackgroundWork();
+          tempDir.deleteSync(recursive: true);
+        }();
+        allowProofRead.complete();
+        await teardown;
+        await proofFinished.future;
+
+        expect(
+          sourcePresentDuringProof,
+          isTrue,
+          reason: 'teardown deleted the media while proof generation read it',
+        );
+      },
+    );
   });
 }

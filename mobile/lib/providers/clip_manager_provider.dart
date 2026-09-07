@@ -13,6 +13,7 @@ import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -40,6 +41,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final _recordStopwatch = Stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
+  late final EditorBackgroundWork _backgroundWork;
 
   /// Undo window before a scheduled deletion is committed to library
   /// trash for good. The snackbar must outlast this so the user can
@@ -67,6 +69,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   @override
   ClipManagerState build() {
+    _backgroundWork = ref.read(editorBackgroundWorkProvider);
     ref.onDispose(() {
       _recordingDurationTimer?.cancel();
       _pendingDeletionTimer?.cancel();
@@ -260,7 +263,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
     // Fire-and-forget: generate proof attestation without blocking the UI.
     // This runs after trimming (if any) completes via the processingCompleter.
-    unawaited(_generateClipProof(clip));
+    _backgroundWork.track(_generateClipProof(clip));
 
     return clip;
   }

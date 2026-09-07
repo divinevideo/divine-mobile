@@ -29,6 +29,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -133,11 +134,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// run from `onDispose` without reading providers after disposal.
   DraftsDao? _deferredCleanupDraftsDao;
   ClipsDao? _deferredCleanupClipsDao;
-
-  /// In-flight [_startDeferredFileCleanup] operations, held only so
-  /// [pendingDeferredCleanupForTest] can await them. Production never reads
-  /// this back; the cleanup calls stay fire-and-forget.
-  final Set<Future<void>> _pendingDeferredCleanup = {};
+  late final EditorBackgroundWork _backgroundWork;
 
   /// Autosaves currently writing deferred orphan paths.
   ///
@@ -174,6 +171,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   @override
   VideoEditorProviderState build() {
+    _backgroundWork = ref.read(editorBackgroundWorkProvider);
     ref.onDispose(() {
       _autosaveTimer?.cancel();
       // Safety net for files [reset] didn't already reap (e.g. a crash before
@@ -215,7 +213,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
     // Delete the old rendered file from disk to free up space
     final db = ref.read(databaseProvider);
-    unawaited(
+    _backgroundWork.track(
       FileCleanupService.deleteRecordingClipFiles(
         clip,
         draftsDao: db.draftsDao,
@@ -860,7 +858,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// genuinely-orphaned files are removed.
   ///
   /// Reach it through [_startDeferredFileCleanup] rather than calling it
-  /// directly: a direct call is invisible to [pendingDeferredCleanupForTest].
+  /// directly so test teardown can observe the operation.
   Future<void> _flushDeferredFileCleanup() async {
     if (_deferredFileCleanup.isEmpty) return;
     final draftsDao = _deferredCleanupDraftsDao;
@@ -878,22 +876,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// Starts a best-effort cleanup without blocking the editor lifecycle.
   ///
-  /// The handle goes into [_pendingDeferredCleanup] so tests can await it;
-  /// that set is the only reason this is not a bare `unawaited(...)`. It is a
-  /// set rather than one slot because [reset] and [build]'s `onDispose` can
-  /// each have an operation running, and a single slot would drop the first.
-  /// Each operation waits for the autosaves active when it starts before it
-  /// snapshots the deferred paths.
+  /// The shared registry keeps this fire-and-forget in production while giving
+  /// tests a completion boundary that also covers other editor background work.
+  /// Cleanup waits for the autosaves active when it starts before it snapshots
+  /// deferred paths, so those writes cannot miss the session-end reap.
   void _startDeferredFileCleanup() {
     final activeAutosaves = _activeAutosaves.toList();
-    late final Future<void> operation;
-    operation = Future.wait(activeAutosaves)
-        .then((_) => _flushDeferredFileCleanup())
-        .whenComplete(() {
-          _pendingDeferredCleanup.remove(operation);
-        });
-    _pendingDeferredCleanup.add(operation);
-    unawaited(operation);
+    _backgroundWork.track(
+      Future.wait(activeAutosaves).then((_) => _flushDeferredFileCleanup()),
+    );
   }
 
   /// Queue clip-owned files that became unreachable in the live editor state.
@@ -913,20 +904,6 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Test hook: the set of files awaiting cleanup.
   @visibleForTesting
   Set<String> get deferredFileCleanupForTest => _deferredFileCleanup;
-
-  /// Completes when the cleanups in flight *at the moment it is read*
-  /// complete.
-  ///
-  /// A snapshot, not a barrier: it ignores anything started afterwards and
-  /// resolves immediately when nothing is in flight, so read it after the
-  /// call whose cleanup you mean to await. Cleanup includes autosaves that were
-  /// active when it started, but this snapshot still ignores cleanup operations
-  /// started afterwards. Other fire-and-forget work on this notifier and on
-  /// [ClipManagerNotifier] settles on its own schedule.
-  @visibleForTesting
-  Future<void> get pendingDeferredCleanupForTest async {
-    await Future.wait(_pendingDeferredCleanup.toList());
-  }
 
   /// Save the current video project as a draft.
   ///
