@@ -762,22 +762,42 @@ void main() {
     });
 
     group('refresh', () {
-      test('selects the lowest event id when timestamps tie', () async {
-        final higherId = _notifyEvent([creatorA])
-          ..id =
-              'ffffffffffffffffffffffffffffffff'
-              'ffffffffffffffffffffffffffffffff';
-        final lowerId = _notifyEvent([creatorB])
-          ..id =
-              '00000000000000000000000000000000'
-              '00000000000000000000000000000000';
-        stubRead([higherId, lowerId]);
+      test(
+        'picks the same tied revision whichever order relays return',
+        () async {
+          final higherId = _notifyEvent([creatorA])
+            ..id =
+                'ffffffffffffffffffffffffffffffff'
+                'ffffffffffffffffffffffffffffffff';
+          final lowerId = _notifyEvent([creatorB])
+            ..id =
+                '00000000000000000000000000000000'
+                '00000000000000000000000000000000';
 
-        expect(
-          await repository.readSubscriptions(ownerPubkey: ownerPubkey),
-          equals({creatorB}),
-        );
-      });
+          // Both orders must agree, or the tie-break is still relay order in
+          // disguise: a "last one wins" rule also answers creatorB for the
+          // first order alone, so one ordering cannot tell the two apart.
+          stubRead([higherId, lowerId]);
+          final higherFirst = await repository.readSubscriptions(
+            ownerPubkey: ownerPubkey,
+          );
+
+          final reversedClient = _MockNostrClient();
+          when(() => reversedClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => _readResult([lowerId, higherId]),
+          );
+          final reversedRepository = NotifySubscriptionsRepositoryImpl(
+            nostrClient: reversedClient,
+          );
+          addTearDown(reversedRepository.dispose);
+          final lowerFirst = await reversedRepository.readSubscriptions(
+            ownerPubkey: ownerPubkey,
+          );
+
+          expect(higherFirst, equals({creatorB}));
+          expect(lowerFirst, equals(higherFirst));
+        },
+      );
 
       test('replaces a stale snapshot and emits the new set', () async {
         var events = [
