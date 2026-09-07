@@ -647,9 +647,16 @@ void main() {
     });
 
     test(
-      'returns unsupportedPlatform when documents are unavailable',
+      'returns unsupportedPlatform without downloading the video',
       () async {
-        final service = buildService(getDocumentsPath: () async => '');
+        var downloadAttempts = 0;
+        final service = buildService(
+          getDocumentsPath: () async => '',
+          downloadVideo: ({required url, required cacheKey}) async {
+            downloadAttempts++;
+            return sourceVideo;
+          },
+        );
 
         final result = await service.importToLibrary(_video());
 
@@ -661,6 +668,7 @@ void main() {
             VideoClipImportFailureReason.unsupportedPlatform,
           ),
         );
+        expect(downloadAttempts, isZero);
         verifyNever(() => clipLibraryService.saveClip(any()));
       },
     );
