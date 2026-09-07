@@ -564,7 +564,7 @@ final class PublicPeopleListProvider
     required PublicPeopleListFamily super.from,
     required ({String ownerPubkey, String listId}) super.argument,
   }) : super(
-         retry: null,
+         retry: _noAutomaticRetry,
          name: r'publicPeopleListProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -607,7 +607,7 @@ final class PublicPeopleListProvider
   }
 }
 
-String _$publicPeopleListHash() => r'986437af516d1010431e1fc765d9e51a035d8413';
+String _$publicPeopleListHash() => r'8c898936da06f932f82aa6714f85bd93b8ecc72c';
 
 /// Resolves a discovered public people list by author + d-tag from relays.
 ///
@@ -623,7 +623,7 @@ final class PublicPeopleListFamily extends $Family
         > {
   PublicPeopleListFamily._()
     : super(
-        retry: null,
+        retry: _noAutomaticRetry,
         name: r'publicPeopleListProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
