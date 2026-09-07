@@ -847,7 +847,10 @@ definitions:
         maestro "$@" test \
           --format junit \
           --output report.xml \
-          e2e/maestro/tests/loginFreshInstall.yaml \
+          -e QA_VIDEO_EVENT_ID="$QA_VIDEO_EVENT_ID" \
+          e2e/maestro/tests/prLaunchReady.yaml \
+          e2e/maestro/tests/prAuthenticateHome.yaml \
+          e2e/maestro/tests/prSeededVideoPlayback.yaml \
           e2e/maestro/tests/removeKeys.yaml
       # Script-level, not workflow-level: Codemagic rejects `test_report` as an
       # unknown workflow field ("extra fields not permitted").
@@ -1392,12 +1395,10 @@ workflows:
   e2e-smoke-ios:
     name: E2E Smoke Tests (iOS)
     working_directory: mobile
-    # Two green runs measured 12 min and 15m42s end to end (builds 6a7bb0d4
-    # and 6a7d30c1); the spread is cache warmth. 25 covers the slower one with
-    # room to spare while still stopping a hung Maestro driver from billing the
-    # hour the previous 60 allowed — a hang is what 60 actually cost us
-    # (build 6a7d2a83).
-    max_build_duration: 25
+    # This is a deliberately small PR signal, not the regression suite. Stop a
+    # stalled build at 18 minutes; promotion requires the p95 to remain below
+    # 15 minutes during the observation window.
+    max_build_duration: 18
     instance_type: mac_mini_m2
     environment:
       flutter: 3.44.9
@@ -1416,6 +1417,10 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Immutable public Nostr event used only to prove the detail route can
+        # resolve and render playback chrome. Never replace this with a private
+        # account credential or mutable search result.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1441,6 +1446,8 @@ workflows:
       changeset:
         includes:
           - mobile/
+        excludes:
+          - mobile/**/*.md
     scripts:
       - *check_signing_endpoint
       - *check_supporters_config

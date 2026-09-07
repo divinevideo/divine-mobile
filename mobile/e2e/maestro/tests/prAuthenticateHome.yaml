@@ -1,0 +1,13 @@
+appId: co.openvine.app.staging
+name: PR smoke - authenticated home
+tags:
+  - pr-smoke
+  - auth
+---
+- runFlow: loginFreshInstall.yaml
+- tapOn:
+    id: "home_tab"
+- assertVisible:
+    id: "home_tab"
+- assertVisible:
+    id: "profile_tab"

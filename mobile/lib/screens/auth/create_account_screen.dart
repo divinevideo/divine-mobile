@@ -15,6 +15,7 @@ import 'package:invite_api_client/invite_api_client.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_event.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -341,30 +342,33 @@ class _SkipButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: TextButton(
-        onPressed: isDisabled ? null : onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: context.vineColors.secondaryText,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      child: Semantics(
+        identifier: SemanticIds.authUseWithoutBackupButton,
+        child: TextButton(
+          onPressed: isDisabled ? null : onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: context.vineColors.secondaryText,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
+          child: isSkipping
+              ? SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: DivineCircularProgressIndicator(
+                    color: context.vineColors.secondaryText,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  context.l10n.authUseDivineNoBackup,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
         ),
-        child: isSkipping
-            ? SizedBox(
-                height: 18,
-                width: 18,
-                child: DivineCircularProgressIndicator(
-                  color: context.vineColors.secondaryText,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                context.l10n.authUseDivineNoBackup,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
       ),
     );
   }
@@ -461,19 +465,22 @@ class _SkipConfirmationSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 56,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(
-                foregroundColor: context.vineColors.secondaryText,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            child: Semantics(
+              identifier: SemanticIds.authUseDeviceOnlyButton,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.vineColors.secondaryText,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-              ),
-              child: Text(
-                context.l10n.authUseThisDeviceOnly,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                child: Text(
+                  context.l10n.authUseThisDeviceOnly,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

@@ -100,6 +100,8 @@ abstract class SemanticIds {
   static const String authContinueAsButton = 'continue_as_button';
   static const String authUseAnotherAccountButton =
       'use_another_account_button';
+  static const String authUseWithoutBackupButton = 'use_without_backup_button';
+  static const String authUseDeviceOnlyButton = 'use_device_only_button';
 
   /// Sign-in options screen. The info button opens the sheet explaining each
   /// sign-in method; the back control there reuses

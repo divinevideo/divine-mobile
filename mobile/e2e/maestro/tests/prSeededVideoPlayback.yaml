@@ -1,0 +1,13 @@
+appId: co.openvine.app.staging
+name: PR smoke - seeded video playback
+tags:
+  - pr-smoke
+  - video
+---
+- assertTrue: ${typeof QA_VIDEO_EVENT_ID !== 'undefined' && QA_VIDEO_EVENT_ID !== ''}
+- openLink: "divine:///video/${QA_VIDEO_EVENT_ID}"
+- extendedWaitUntil:
+    notVisible:
+      id: "video_detail_loading"
+    timeout: 30000
+- runFlow: ../asserts/assertVideoPlayback.yaml

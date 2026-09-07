@@ -6,18 +6,27 @@ End-to-end UI tests written with **Maestro**, driving a real build against
 They exist for fast, high-signal regression detection on critical user flows.
 They are not a replacement for unit or widget tests.
 
-## What the smoke suite covers today
+## Pull-request smoke versus regression
 
-`suites/smoke.yaml` runs the account-management paths — `loginFreshInstall`,
-its `removeKeys` cleanup, and `loginEmailPwd` — plus all three social flows:
-`likeFlow`, `commentFlow` (post a comment, delete it) and `searchUserFlow`
-(find an account, open its profile, come back).
+The automatic PR gate is intentionally limited to three deterministic signals:
 
-The full smoke suite is the manual target. The PR gate in Codemagic runs
-`tests/loginFreshInstall.yaml` and `tests/removeKeys.yaml` as individual files so the
-JUnit report keeps per-flow names and timings. `likeFlow` and `commentFlow` stay
-off the gate: after the reduced-motion fix they still fail on Codemagic with a
-blocked main thread, as documented in
+1. `prLaunchReady` proves a clean install reaches interactive onboarding.
+2. `prAuthenticateHome` creates a throwaway local identity and proves the
+   authenticated shell can open Home.
+3. `prSeededVideoPlayback` opens one immutable public Nostr event directly and
+   proves the video route resolves to playback chrome.
+
+`removeKeys` is a teardown case, not another journey. Codemagic passes every
+file separately so JUnit preserves its name and timing. The PR suite neither
+searches mutable content nor signs into a shared account, and it does not need
+credentials. A public `QA_VIDEO_EVENT_ID` variable identifies the immutable
+fixture; changing it is a reviewed CI configuration change.
+
+The broader `suites/smoke.yaml` remains a manual regression target. It includes
+account-management and social flows that depend on credentials or mutable
+staging state. `likeFlow` and `commentFlow` remain unsuitable for the PR gate:
+after the reduced-motion fix they still fail on Codemagic with a blocked main
+thread, as documented in
 [#7204](https://github.com/divinevideo/divine-mobile/issues/7204). Restoring
 those flows is tracked by
 [#7619](https://github.com/divinevideo/divine-mobile/issues/7619) and
@@ -49,11 +58,12 @@ The lesson generalises: **before filing a Maestro failure as flaky data,
 check whether the screen is stuck in a state the app has no exit from.**
 A permanent loading placeholder looks exactly like slow live content.
 
-The `e2e-smoke-ios` Codemagic workflow is configured to run on pull requests
-that touch `mobile/`, but the webhook integration must be restored under
-[#7504](https://github.com/divinevideo/divine-mobile/issues/7504) before those
-builds can fire. It remains non-blocking until a flake baseline exists. The
-`e2e-smoke-android` workflow is a manual dispatch.
+The `e2e-smoke-ios` Codemagic workflow runs on pull requests that touch mobile
+code, excluding Markdown-only changes. It remains non-blocking for an
+observation window of at least 30 runs. Promote it to a required check only if
+at least 95% of runs are infrastructure-clean and the p95 end-to-end duration
+stays below 15 minutes; reset the observation window after a flow, runner image,
+or Maestro version change. The `e2e-smoke-android` workflow is manual.
 
 ## The recorder flows
 
@@ -480,7 +490,10 @@ runner guard keeps CI failures from looking like unrelated selector breakage.
 maestro test \
   --format junit \
   --output report.xml \
-  e2e/maestro/tests/loginFreshInstall.yaml \
+  -e QA_VIDEO_EVENT_ID=<immutable-public-event-id> \
+  e2e/maestro/tests/prLaunchReady.yaml \
+  e2e/maestro/tests/prAuthenticateHome.yaml \
+  e2e/maestro/tests/prSeededVideoPlayback.yaml \
   e2e/maestro/tests/removeKeys.yaml
 
 # The full smoke suite

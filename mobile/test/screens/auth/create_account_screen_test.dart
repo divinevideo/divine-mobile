@@ -18,6 +18,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -141,10 +142,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          inviteAccessGrant: grant,
-          analyticsService: analytics,
-        ),
+        createTestWidget(inviteAccessGrant: grant, analyticsService: analytics),
       );
       await tester.pump();
 
@@ -242,6 +240,10 @@ void main() {
           find.widgetWithText(TextButton, 'Use Divine with no backup'),
           findsOneWidget,
         );
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.authUseWithoutBackupButton),
+          findsOneWidget,
+        );
       });
 
       testWidgets('displays dog sticker', (tester) async {
@@ -275,6 +277,10 @@ void main() {
         );
         expect(
           find.widgetWithText(TextButton, 'Use this device only'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.authUseDeviceOnlyButton),
           findsOneWidget,
         );
       });
@@ -431,10 +437,7 @@ void main() {
           );
           await tester.enterText(
             find.descendant(
-              of: find.widgetWithText(
-                DivineAuthTextField,
-                'Confirm password',
-              ),
+              of: find.widgetWithText(DivineAuthTextField, 'Confirm password'),
               matching: find.byType(TextField),
             ),
             'SecurePass123!',
@@ -534,10 +537,7 @@ void main() {
           );
           await tester.enterText(
             find.descendant(
-              of: find.widgetWithText(
-                DivineAuthTextField,
-                'Confirm password',
-              ),
+              of: find.widgetWithText(DivineAuthTextField, 'Confirm password'),
               matching: find.byType(TextField),
             ),
             'SecurePass123!',
