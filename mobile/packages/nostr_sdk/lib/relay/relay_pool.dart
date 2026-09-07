@@ -726,8 +726,9 @@ class RelayPool {
           !relay.relayStatus.authed) {
         log('🔐 Auth-required query - sending to trigger AUTH challenge');
         relay.saveQuery(subscription);
+        final deadline = DateTime.now().add(perRelaySendTimeout);
         final result = await relay
-            .send(message)
+            .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (!result) {
           log(
@@ -2034,8 +2035,9 @@ class RelayPool {
         log(
           '🔐 Auth-required subscription - sending to trigger AUTH challenge',
         );
+        final deadline = DateTime.now().add(perRelaySendTimeout);
         final result = await relay
-            .send(message)
+            .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (result) {
           return true;

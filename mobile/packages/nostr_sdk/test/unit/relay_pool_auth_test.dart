@@ -46,6 +46,8 @@ class _AuthFakeRelay extends Relay {
   /// When true, [send] records the frame but reports transport failure, so the
   /// failing post-auth resend path can be exercised.
   bool failSends = false;
+  bool? lastQueueIfFailed;
+  DateTime? lastDeadline;
 
   @override
   Future<bool> doConnect() async {
@@ -66,6 +68,8 @@ class _AuthFakeRelay extends Relay {
     DateTime? deadline,
   }) async {
     sentMessages.add(message);
+    lastQueueIfFailed = queueIfFailed;
+    lastDeadline = deadline;
     return !failSends;
   }
 
@@ -260,8 +264,29 @@ void main() {
         expect(result, isTrue);
         expect(relay.checkQuery(subscription.id), isTrue);
         expect(sentMessagesOfType(relay, 'REQ'), hasLength(1));
+        expect(relay.lastQueueIfFailed, isFalse);
+        expect(relay.lastDeadline, isNotNull);
       },
     );
+
+    test('bounds an auth-required subscription trigger at the send', () async {
+      relay.relayStatus.alwaysAuth = true;
+      relay.failSends = true;
+      final subscription = Subscription([
+        Filter(kinds: [EventKind.textNote]).toJson(),
+      ], (_) {});
+
+      final result = await nostr.relayPool.relayDoSubscribe(
+        relay,
+        subscription,
+        false,
+      );
+
+      expect(result, isFalse);
+      expect(relay.getSubscriptions(), contains(subscription));
+      expect(relay.lastQueueIfFailed, isFalse);
+      expect(relay.lastDeadline, isNotNull);
+    });
 
     test('republishes when AUTH OK arrives before EVENT rejection', () async {
       const eventId =
