@@ -12,10 +12,10 @@ import 'package:flutter/widgets.dart';
 /// are authored in render space, so they compensate for that transform with
 /// [fittedBoxScale].
 ///
-/// Both sides read this one object: [VideoEditorCanvasFit] applies the mapping
-/// and `VideoEditorScope.calculateFittedBoxScale` reports it. They used to
-/// model it separately, which is how #7534 changed only the reporting side and
-/// made layers compensate for a scale the canvas never applied.
+/// Canvas layout, layer compensation, and the cut-area overlay read this one
+/// model. The canvas and layer compensation used to model it separately, which
+/// is how #7534 changed only the reporting side and made layers compensate for
+/// a scale the canvas never applied.
 @immutable
 class VideoEditorCanvasGeometry {
   /// Derives the canvas geometry for [bodySize].
@@ -54,8 +54,9 @@ class VideoEditorCanvasGeometry {
 
   /// Unscaled canvas surface for [bodySize] at [aspectRatio].
   ///
-  /// The height is whichever body dimension runs out first, so the surface
-  /// always fits the body before the cover-fit into [targetSizeFor] scales it.
+  /// The height is the body's shorter dimension. For landscape clips in a
+  /// portrait body, the resulting width deliberately extends beyond the body
+  /// before the cover-fit into [targetSizeFor] scales it.
   static Size renderSizeFor(Size bodySize, double aspectRatio) {
     final height = bodySize.shortestSide;
     return Size(height * aspectRatio, height);
