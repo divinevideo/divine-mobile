@@ -921,6 +921,7 @@ void main() {
         (description: 'authenticated pubkey is lost', nextOwner: null),
       ]) {
         test('stops backfill when the ${scenario.description}', () async {
+          await LogCaptureService().clearAllLogs();
           SharedPreferences.setMockInitialValues({
             CuratedListService.listsStorageKey: jsonEncode([
               CuratedList(
@@ -967,6 +968,17 @@ void main() {
           final second = upgraded.getListById('second-stranded')!;
           expect(second.nostrEventId, isNull);
           expect(second.pubkey, isNull);
+          expect(
+            LogCaptureService().getRecentLogs().where(
+              (entry) =>
+                  entry.level == LogLevel.error &&
+                  entry.message.contains('Failed to fetch lists from relays'),
+            ),
+            isEmpty,
+            reason:
+                'the owner guard must be what stopped the second publish; a '
+                'swallowed backfill exception would satisfy the counts above',
+          );
         });
       }
 
