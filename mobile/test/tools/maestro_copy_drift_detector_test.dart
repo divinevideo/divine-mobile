@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the Maestro copy-drift guard.
-// ABOUTME: Verifies extraction, drift, regen refusal, base erosion, and rendered bindings.
+// ABOUTME: Verifies extraction, inverse coverage, waivers, drift, and base erosion.
 
 import 'dart:convert';
 import 'dart:io';
@@ -16,6 +16,7 @@ void main() {
     late File script;
     late File arb;
     late File manifest;
+    late File waivers;
 
     File flow(String relative) => File('${mobile.path}/e2e/maestro/$relative');
 
@@ -35,6 +36,12 @@ void main() {
 
     void writeManifest(String body) {
       manifest
+        ..createSync(recursive: true)
+        ..writeAsStringSync(body);
+    }
+
+    void writeWaivers(String body) {
+      waivers
         ..createSync(recursive: true)
         ..writeAsStringSync(body);
     }
@@ -77,6 +84,10 @@ void main() {
       manifest = File(
         '${mobile.path}/scripts/baseline/maestro_copy_manifest.txt',
       );
+      waivers = File(
+        '${mobile.path}/scripts/baseline/maestro_copy_waivers.txt',
+      );
+      writeWaivers('# literal\tcategory\treason\n');
     });
 
     tearDown(() {
@@ -191,6 +202,7 @@ void main() {
             '    Third line.\n',
       );
       writeManifest('# generated below\n');
+      writeWaivers('Heading\tlegacy\ttest-only surrounding block copy\n');
 
       final regen = run(update: true);
       final check = run();
@@ -211,6 +223,9 @@ void main() {
             '    Find people to follow now\n',
       );
       writeManifest('# generated below\n');
+      writeWaivers(
+        'Find people to follow now\tlegacy\ttest-only non-exact copy\n',
+      );
 
       final regen = run(update: true);
 
@@ -229,6 +244,7 @@ void main() {
             '    Privacy.*\n',
       );
       writeManifest('# generated below\n');
+      writeWaivers('Privacy.*\tregex\ttest selector\n');
 
       final regen = run(update: true);
       final check = run();
@@ -362,6 +378,7 @@ void main() {
       writeArb({'settingsTitle': 'Preferences'});
       writeFlow('asserts/menu.yaml', '- assertVisible: Settings\n');
       writeManifest('settingsTitle\te2e/maestro/asserts/menu.yaml\n');
+      writeWaivers('Settings\tlegacy\tintentional removed binding in test\n');
 
       final res = run(update: true, acceptRemovals: true);
 
@@ -647,6 +664,173 @@ void main() {
 
       expect(res.exitCode, 1);
       expect(res.stderr, contains('rendered string'));
+    });
+
+    test('fails for an unbound literal without a waiver', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Privacy policy\n');
+      writeManifest('# no bindings\n');
+
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('UNBOUND'));
+      expect(res.stderr, contains('Privacy policy'));
+      expect(res.stderr, contains('e2e/maestro/asserts/menu.yaml'));
+    });
+
+    test('accepts an explicitly categorized unbound literal', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Search.*\n');
+      writeManifest('# no bindings\n');
+      writeWaivers('Search.*\tregex\tMaestro regular-expression selector\n');
+
+      final res = run();
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+      expect(res.stdout, contains('1 waived'));
+    });
+
+    test('rejects malformed and unsupported waiver rows', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Search.*\n');
+      writeManifest('# no bindings\n');
+      writeWaivers('Search.* # regex without structured fields\n');
+
+      final malformed = run();
+      expect(malformed.exitCode, 1);
+      expect(malformed.stderr, contains('invalid waiver row'));
+
+      writeWaivers('Search.*\tunknown\tnot a supported category\n');
+      final unsupported = run();
+      expect(unsupported.exitCode, 1);
+      expect(unsupported.stderr, contains('unsupported waiver category'));
+    });
+
+    test('rejects duplicate waiver literals', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Search.*\n');
+      writeManifest('# no bindings\n');
+      writeWaivers(
+        'Search.*\tregex\tfirst reason\n'
+        'Search.*\tregex\tsecond reason\n',
+      );
+
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('duplicate waiver literal'));
+    });
+
+    test('regeneration never adds an unbound literal to the waiver file', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Privacy policy\n');
+      writeManifest('# no bindings\n');
+      final before = waivers.readAsStringSync();
+
+      final res = run(update: true);
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('UNBOUND'));
+      expect(waivers.readAsStringSync(), before);
+    });
+
+    test('an obsolete waiver is rejected after its literal binds', () {
+      writeArb({'privacyTitle': 'Privacy Policy'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Privacy Policy\n');
+      writeManifest(
+        'privacyTitle\te2e/maestro/asserts/menu.yaml\tbound:Privacy Policy\n',
+      );
+      writeWaivers('Privacy Policy\tplatform\tobsolete waiver\n');
+
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('STALE WAIVER'));
+      expect(res.stderr, contains('Privacy Policy'));
+    });
+
+    test('removing an obsolete waiver lets its newly bound literal pass', () {
+      writeArb({'privacyTitle': 'Privacy Policy'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Privacy Policy\n');
+      writeManifest(
+        'privacyTitle\te2e/maestro/asserts/menu.yaml\tbound:Privacy Policy\n',
+      );
+
+      final res = run();
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+    });
+
+    test('accepts a rendered ICU plural branch', () {
+      writeArb({
+        'profileFollowerCountUsers':
+            '{count, plural, =1{{count} user} other{{count} users}}',
+      });
+      writeFlow(
+        'asserts/following.yaml',
+        '- assertVisible: |-\n'
+            '    Following\n'
+            '    1 user\n',
+      );
+      writeManifest(
+        'profileFollowerCountUsers\te2e/maestro/asserts/following.yaml'
+        '\trendered:1 user\n',
+      );
+      writeWaivers('Following\tlegacy\ttest-only surrounding block copy\n');
+
+      final res = run();
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+    });
+
+    test('base-ref ratchet rejects a branch-added waiver', () {
+      writeArb({'settingsTitle': 'Settings'});
+      writeFlow('asserts/menu.yaml', '- assertVisible: Search.*\n');
+      writeManifest('# no bindings\n');
+
+      expect(
+        Process.runSync('git', [
+          'init',
+          '-b',
+          'main',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          'add',
+          '.',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          '-c',
+          'user.name=test',
+          '-c',
+          'user.email=test@example.com',
+          'commit',
+          '-m',
+          'base',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          'switch',
+          '-c',
+          'branch',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      writeWaivers('Search.*\tregex\tbranch-added escape hatch\n');
+
+      final res = run(baseRef: 'main', allowNoBase: false);
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('ADDED WAIVER'));
+      expect(res.stderr, contains('Search.*'));
     });
   });
 }

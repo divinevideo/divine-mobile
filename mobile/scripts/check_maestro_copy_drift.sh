@@ -8,7 +8,7 @@
 # files with nothing failing when they diverged; this is the failure that
 # should have fired.
 #
-# app_en.arb is the ONLY source of truth for English copy. Two failure modes:
+# app_en.arb is the ONLY source of truth for English copy. Three failure modes:
 #   DRIFT        — a bound ARB key's current value is no longer one of the
 #                  literals the bound flow file asserts (copy changed under the
 #                  suite, or the flow edited without regenerating). Literals
@@ -18,6 +18,8 @@
 #   UNREGISTERED — a flow literal exactly matches a non-parameterized ARB
 #                  value but has no manifest binding (new assertion added
 #                  without registering). Regenerate to register it.
+#   UNBOUND      — a flow literal matches neither current ARB copy nor a
+#                  reviewed rendered binding and has no explicit waiver.
 #
 # Manifest format (one binding per line, '#'-comments allowed):
 #   <arb_key><TAB><flow path relative to mobile/>[<TAB>bound:<literal>]
@@ -33,14 +35,12 @@
 # template must still appear in it, in order). Rendered entries survive
 # regeneration; everything else is auto-derived.
 #
-# Element ids (id: ...) are NOT copy and are out of scope by design; regex
-# selectors (e.g. "Search.*") never exactly equal an ARB value and so never
-# bind — that is conservative on purpose, not a gap to close with fuzzy
-# matching.
-#
-# Known v1 limit, tracked in #7213: this guard only binds literals that
-# already match app_en.arb, so already-drifted flow copy remains invisible
-# until the planned inverse literal check lands.
+# Element ids (id: ...) are NOT copy and are out of scope by design. Every
+# other extracted literal must bind or have a categorized, justified row in
+# scripts/baseline/maestro_copy_waivers.txt. Waivers use the tab-separated
+# format <literal><TAB><category><TAB><reason>, where category is regex,
+# platform, dynamic, rendered, or legacy. They are never generated, stale
+# rows fail, and a branch cannot add a row once the file exists on the base ref.
 #
 # Regenerate after an intentional copy change (review the printed diff of
 # added/removed bindings — regeneration re-blesses whatever ARB says today):
@@ -66,19 +66,20 @@ MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ARB_FILE="$MOBILE_DIR/lib/l10n/app_en.arb"
 E2E_DIR="$MOBILE_DIR/e2e/maestro"
 MANIFEST_FILE="$SCRIPT_DIR/baseline/maestro_copy_manifest.txt"
+WAIVER_FILE="$SCRIPT_DIR/baseline/maestro_copy_waivers.txt"
 
 MODE="check"
 if [[ "${UPDATE_BASELINE:-0}" == "1" ]]; then
   MODE="regen"
 fi
 
-python3 - "$MODE" "$ARB_FILE" "$E2E_DIR" "$MANIFEST_FILE" <<'PYEOF'
+python3 - "$MODE" "$ARB_FILE" "$E2E_DIR" "$MANIFEST_FILE" "$WAIVER_FILE" <<'PYEOF'
 import json
 import os
 import re
 import sys
 
-mode, arb_path, e2e_dir, manifest_path = sys.argv[1:5]
+mode, arb_path, e2e_dir, manifest_path, waiver_path = sys.argv[1:6]
 
 def norm(s):
     # YAML folding and source wrapping can split one logical string across
@@ -310,6 +311,38 @@ def parse_manifest(content):
         bindings[(key, rel)] = (rendered, bound)
     return bindings
 
+WAIVER_CATEGORIES = {"dynamic", "legacy", "platform", "regex", "rendered"}
+
+def parse_waivers(content, source):
+    waivers = {}
+    for number, raw in enumerate(content.splitlines(), 1):
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        parts = raw.split("\t")
+        if len(parts) != 3 or not all(part.strip() for part in parts):
+            print(f"❌ invalid waiver row {number} in {source}: expected "
+                  f"<literal><TAB><category><TAB><reason>", file=sys.stderr)
+            return None
+        literal, category, reason = (part.strip() for part in parts)
+        if category not in WAIVER_CATEGORIES:
+            print(f"❌ unsupported waiver category '{category}' on row "
+                  f"{number} in {source}; expected one of: "
+                  f"{', '.join(sorted(WAIVER_CATEGORIES))}", file=sys.stderr)
+            return None
+        if literal in waivers:
+            print(f"❌ duplicate waiver literal on row {number} in {source}: "
+                  f"{literal}", file=sys.stderr)
+            return None
+        waivers[literal] = (category, reason)
+    return waivers
+
+def load_waivers(path):
+    if not os.path.isfile(path):
+        print(f"❌ waiver file missing: {path}", file=sys.stderr)
+        return None
+    with open(path, encoding="utf-8") as fh:
+        return parse_waivers(fh.read(), path)
+
 # ---------- base-ref ratchet (B2) ----------
 # The branch manifest is compared against the base ref's manifest, the same
 # pattern as the sibling check_* ratchets (scripts/lib/list_ratchet.sh):
@@ -320,6 +353,7 @@ def parse_manifest(content):
 BASE_REF = os.environ.get("MAESTRO_COPY_DRIFT_BASE_REF", "origin/main")
 ALLOW_NO_BASE = os.environ.get("MAESTRO_COPY_DRIFT_ALLOW_NO_BASE", "0") == "1"
 MANIFEST_REPO_PATH = "mobile/scripts/baseline/maestro_copy_manifest.txt"
+WAIVER_REPO_PATH = "mobile/scripts/baseline/maestro_copy_waivers.txt"
 REPO_ROOT = os.path.abspath(os.path.join(e2e_dir, "..", "..", ".."))
 
 def load_base_manifest():
@@ -341,6 +375,26 @@ def load_base_manifest():
     if raw.returncode != 0:
         return "unavailable", {}
     return "ok", parse_manifest(raw.stdout)
+
+def load_base_waivers():
+    """(status, waivers): missing on base is the one-time bootstrap."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-C", REPO_ROOT, *args],
+                              capture_output=True, text=True)
+
+    if git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0:
+        git("fetch", "--quiet", "--depth=1", "origin", "main")
+    if git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0:
+        return "unavailable", {}
+    if git("cat-file", "-e", f"{BASE_REF}:{WAIVER_REPO_PATH}").returncode != 0:
+        return "bootstrap", {}
+    raw = git("show", f"{BASE_REF}:{WAIVER_REPO_PATH}")
+    if raw.returncode != 0:
+        return "unavailable", {}
+    parsed = parse_waivers(raw.stdout, f"{BASE_REF}:{WAIVER_REPO_PATH}")
+    return ("ok", parsed) if parsed is not None else ("invalid", {})
 
 def _flow_text(rel, _cache={}):
     if rel not in _cache:
@@ -399,8 +453,8 @@ HEADER = """# Binding baseline: each English literal the Maestro suite asserts, 
 # the printed diff — regeneration re-blesses whatever app_en.arb says today.
 # Duplicate values retain the manifest's reviewed key choice. To correct a
 # wrong choice, edit that row to another valid key before regenerating.
-# Known v1 limit, tracked in #7213: already-drifted flow literals do not bind
-# until the inverse literal check lands.
+# Every extracted literal must also bind or carry a reviewed waiver in
+# maestro_copy_waivers.txt; regeneration never creates waivers.
 """
 
 def save_manifest(path, bindings):
@@ -414,6 +468,85 @@ def save_manifest(path, bindings):
         lines.append(row)
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
+
+waivers = load_waivers(waiver_path)
+if waivers is None:
+    sys.exit(1)
+
+manifest_for_inverse = load_manifest(manifest_path)
+rendered_pairs = {
+    (rendered, rel)
+    for (_key, rel), (rendered, _bound) in manifest_for_inverse.items()
+    if rendered is not None
+}
+rendered_literals = {rendered for rendered, _rel in rendered_pairs}
+bound_multiline_parts = set()
+for multiline in multiline_values:
+    for rel in {rel for (lit, rel) in found if lit == multiline}:
+        bound_multiline_parts.update(
+            (lit, rel) for lit in literals_by_flow.get(rel, set())
+            if lit in multiline
+        )
+
+def validate_inverse_literals():
+    failures = 0
+    unbound = sorted(
+        (lit, rel) for lit, rel in total_literals
+        if (lit, rel) not in found
+        and (lit, rel) not in rendered_pairs
+        and (lit, rel) not in bound_multiline_parts
+    )
+    for lit, rel in unbound:
+        if lit in waivers:
+            continue
+        print(f"❌ UNBOUND: {rel} asserts copy that matches no current ARB "
+              f"value or rendered binding:\n       {lit}\n"
+              f"     Fix the flow to current app copy, add a rendered: "
+              f"binding for ICU output, or review and add a categorized row "
+              f"to mobile/scripts/baseline/maestro_copy_waivers.txt.",
+              file=sys.stderr)
+        failures += 1
+
+    live_unbound_literals = {lit for lit, _rel in unbound}
+    for lit in sorted(waivers):
+        if lit in exact_values or lit in rendered_literals:
+            reason = "now binds to current app copy"
+        elif lit not in live_unbound_literals:
+            reason = "is no longer extracted from any Maestro flow"
+        else:
+            continue
+        print(f"❌ STALE WAIVER: {lit}\n     This waiver {reason}; remove "
+              f"its row from mobile/scripts/baseline/maestro_copy_waivers.txt.",
+              file=sys.stderr)
+        failures += 1
+    return failures
+
+inverse_failures = validate_inverse_literals()
+
+base_waiver_status, base_waivers = load_base_waivers()
+if base_waiver_status == "ok":
+    for lit in sorted(set(waivers) - set(base_waivers)):
+        print(f"❌ ADDED WAIVER: '{lit}' is not waived on {BASE_REF}. "
+              f"A branch must fix or bind new copy instead of expanding the "
+              f"waiver worklist.", file=sys.stderr)
+        inverse_failures += 1
+elif base_waiver_status == "bootstrap":
+    print(f"NOTE: {WAIVER_REPO_PATH} is absent on {BASE_REF}; allowing the "
+          f"reviewed initial waiver bootstrap.")
+elif base_waiver_status == "unavailable":
+    if ALLOW_NO_BASE:
+        print(f"NOTE: {BASE_REF} unavailable; skipping waiver base-ref "
+              f"ratchet (MAESTRO_COPY_DRIFT_ALLOW_NO_BASE=1, local opt-out).")
+    else:
+        print(f"❌ could not load the waiver file from base ref '{BASE_REF}'; "
+              f"failing closed. Fetch the base ref, or use "
+              f"MAESTRO_COPY_DRIFT_ALLOW_NO_BASE=1 for an intentional local-only "
+              f"run.", file=sys.stderr)
+        inverse_failures += 1
+else:
+    print(f"❌ waiver file on base ref '{BASE_REF}' is invalid; failing closed.",
+          file=sys.stderr)
+    inverse_failures += 1
 
 # ---------- regenerate ----------
 
@@ -459,6 +592,10 @@ if mode == "regen":
               "flow intentionally stopped asserting that copy, re-run with "
               "ACCEPT_REMOVALS=1 and say so in the PR.", file=sys.stderr)
         sys.exit(1)
+    if inverse_failures:
+        print("Regeneration never creates or expands waivers; resolve the "
+              "inverse-literal failures first.", file=sys.stderr)
+        sys.exit(1)
     os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
     save_manifest(manifest_path, new)
     print(f"manifest regenerated: {len(new)} bindings "
@@ -485,7 +622,7 @@ if not os.path.isfile(manifest_path):
     sys.exit(1)
 
 bindings = load_manifest(manifest_path)
-failures = 0
+failures = inverse_failures
 
 for (key, rel), (rendered, bound) in sorted(bindings.items()):
     fpath = os.path.join(mobile_dir, rel)
@@ -515,20 +652,31 @@ for (key, rel), (rendered, bound) in sorted(bindings.items()):
             # The ARB side is the template: every literal segment of it must
             # still appear, in order, in the recorded rendered string —
             # otherwise the copy changed under a hand-maintained binding.
-            segs = [norm(s) for s in re.split(r"\{[^}]*\}", param_values[key])
-                    if norm(s)]
-            pos = 0
-            missing = None
-            for s in segs:
-                i = rendered.find(s, pos)
-                if i < 0:
-                    missing = s
-                    break
-                pos = i + len(s)
+            template = param_values[key]
+            if ", plural," in template or ", select," in template:
+                # ICU plural/select branches contain nested braces, so the
+                # simple placeholder splitter below cannot identify one
+                # selected branch. Require every word rendered by the flow to
+                # occur in the template; exact flow membership below still
+                # protects the complete rendered string.
+                rendered_words = re.findall(r"[A-Za-z]+", rendered)
+                segs = [word for word in rendered_words if word not in template]
+                missing = segs[0] if segs else None
+            else:
+                segs = [norm(s) for s in re.split(r"\{[^}]*\}", template)
+                        if norm(s)]
+                pos = 0
+                missing = None
+                for s in segs:
+                    i = rendered.find(s, pos)
+                    if i < 0:
+                        missing = s
+                        break
+                    pos = i + len(s)
             if missing is not None:
                 print(f"❌ DRIFT: ARB template for '{key}' changed from under "
                       f"the rendered binding in {rel}:\n"
-                      f"       template now: {param_values[key]}\n"
+                      f"       template now: {template}\n"
                       f"       rendered row: {rendered}\n"
                       f"       segment no longer produced: {missing}\n"
                       f"     Update the flow to the new rendered copy and fix "
@@ -639,10 +787,9 @@ if failures:
           f"manifest for an intentional copy change.", file=sys.stderr)
     sys.exit(1)
 
-# S2: print the denominator — bindings cover only the literals that exactly
-# match a non-parameterized ARB value today; the rest (regexes, ids, rendered
-# ICU forms, already-drifted copy) are extracted but invisible to the guard.
+# Print the denominator so reviewers can see how much asserted copy is bound
+# directly and how much needs an explicit waiver.
 print(f"✅ Maestro copy-drift guard: {len(bindings)} bindings verified "
       f"(of {len(total_literals)} asserted literals extracted), "
-      f"0 unregistered literals.")
+      f"{len(waivers)} waived, 0 unregistered literals.")
 PYEOF

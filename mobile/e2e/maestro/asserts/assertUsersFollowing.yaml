@@ -2,6 +2,6 @@ appId: co.openvine.app.staging
 ---
 - assertVisible: |-
     Following
-    1 users
+    1 user
 - assertVisible: Back
 - assertVisible: Unfollow user 0

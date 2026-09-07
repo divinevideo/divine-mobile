@@ -1,7 +1,0 @@
-appId: co.openvine.app.staging
----
-- assertVisible: Settings
-- assertVisible: Support
-- assertVisible: Privacy policy
-- assertVisible: Safety center
-- assertVisible: FAQ

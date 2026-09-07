@@ -2,7 +2,7 @@ appId: co.openvine.app.staging
 ---
 - assertVisible: Complete Your Profile
 - assertVisible: Add your name, bio, and picture to get started
-- assertVisible: Set Up
+- assertVisible: Set up
 
 - assertVisible: Secure Your Account
 - assertVisible: Add email & password to recover your account on any device
@@ -13,6 +13,6 @@ appId: co.openvine.app.staging
 - assertNotVisible:
     text: Loading...
     optional: true
-- assertVisible: No Videos Yet
+- assertVisible: No videos yet
 - scroll
 - assertVisible: Share your first video to see it here
