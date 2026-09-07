@@ -63,20 +63,10 @@ jobs:
       #
       # The list is explicit rather than a glob over integration_test/e2e/,
       # because `service` and "runnable on a Linux CI runner" are different
-      # axes. Every suite in that directory is tagged `service`; these eleven
-      # are the ones this runner can actually execute. The remaining five are
-      # excluded for reasons no workflow change can fix:
-      #
-      #   c2pa_init                         — c2pa_flutter ships android/ and
-      #                                       ios/ only, no desktop impl.
-      #   video_creation_flow               — needs the invite service.
-      #   deleted_video_visible_to_others   — needs the full stack.
-      #   dm_optimistic_survives_watch_race — needs the full stack.
-      #   contact_list_freshness_docker     — needs the full stack. It is the
-      #                                       real-relay twin of
-      #                                       contact_list_freshness, which is
-      #                                       in the list above; run it locally
-      #                                       against local_stack.
+      # axes. Every suite in that directory is tagged `service`; this list is
+      # the set this runner can actually execute. Suites that cannot run here
+      # are tracked with reasons in
+      # scripts/baseline/service_suite_exclusions.txt.
       #
       # local_stack cannot start on a GitHub runner at all:
       # divine-invite-darshan:e2e is a private GHCR package, compose resolves

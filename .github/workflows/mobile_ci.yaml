@@ -254,6 +254,11 @@ jobs:
           # Issues #3574 / #3575: optionless packages silently inherit the
           # app's relaxed analyzer config; workflow-less packages get no CI.
           bash scripts/check_package_ci_floor.sh
+      - name: 🧪 Verify every service E2E suite is accounted for in CI
+        run: |
+          # Issue #8755: new service suites must run on the Linux workflow or
+          # remain in the reason-bearing, shrink-only exclusion manifest.
+          bash scripts/check_service_suite_coverage.sh
       - name: 🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)
         run: |
           # Issue #3338. A package with no `flutter: sdk: flutter` entry has

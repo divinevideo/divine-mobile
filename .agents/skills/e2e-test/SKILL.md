@@ -38,9 +38,9 @@ Not every suite is a patrol suite. `profile.sh` recursively greps the
 target for `patrolTest` and dispatches: patrol suites go to
 `patrol test`, plain `integration_test` suites go to
 `flutter test --device-id`. Everything under `integration_test/e2e/`
-is now the plain kind — those four converted off patrol in #7005
-because none of them used the native automator for anything
-load-bearing. The plain path pre-grants `POST_NOTIFICATIONS`, since
+is now the plain kind. The original four converted off patrol in #7005 because
+none used the native automator for anything load-bearing, and new suites follow
+that pattern. The plain path pre-grants `POST_NOTIFICATIONS`, since
 without an automator nothing can dismiss that dialog.
 
 ## Version pair
