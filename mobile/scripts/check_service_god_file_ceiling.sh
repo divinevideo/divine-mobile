@@ -36,6 +36,7 @@ BASELINE_REPO_PATH="${SERVICE_GOD_FILE_BASELINE_REPO_PATH:-mobile/scripts/baseli
 BASE_REF="${SERVICE_GOD_FILE_BASELINE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE"
+ALLOW_RENAME_CLAIMS=1
 
 NEW_HINT="Do not grow service-layer god files under mobile/lib/services. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. For an in-tree move, annotate the new baseline row with '# renamed-from: <old-key>' after reviewing the provenance. See epic #4338."
 STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold."
@@ -58,6 +59,10 @@ emit_current() {
       fi
     done \
   | LC_ALL=C sort -t "$TAB" -k1,1
+}
+
+rename_key_to_repo_path() {
+  printf 'mobile/%s\n' "$1"
 }
 
 print_baseline_header() {

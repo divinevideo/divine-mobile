@@ -33,6 +33,11 @@
 #   REQUIRE_BASELINE_UPDATE_ON_DECREASE
 #                         optional "1" when every decrease must be committed to
 #                         the baseline immediately instead of remaining slack.
+#   ALLOW_RENAME_CLAIMS  optional "1" to enable renamed-from annotations.
+#                         Disabled by default so shared-engine consumers do not
+#                         silently inherit an exception to their debt policy.
+#   rename_key_to_repo_path()  required when ALLOW_RENAME_CLAIMS=1; maps a
+#                         baseline key to its repo-relative tracked file path.
 #   emit_current()       prints the current "key<TAB>count" lines (one per key)
 #   print_baseline_header()  prints the baseline file header comment block
 #
@@ -42,9 +47,9 @@
 # baselines have always been able to explain themselves; without it a reason
 # survives only until the next regeneration, which is why no numeric baseline
 # carried one before #3340.
-# A baseline line may also carry `renamed-from: <old-key>` in its trailing
-# comment. This is a reviewable assertion that the new key moved from the old
-# key; it may be removed once the new key is present on the base ref.
+# An opted-in path-keyed guard may also allow `renamed-from: <old-key>` in a
+# trailing comment. The engine verifies the exact Git rename and the inherited
+# ceiling; the annotation may be removed once the new key reaches the base ref.
 #
 # Honours UPDATE_BASELINE=1 to regenerate. Bash 3.2 compatible (sort/join only).
 
@@ -175,7 +180,16 @@ run_numeric_ratchet() {
   # documented local opt-out are exactly the runs where a malformed annotation
   # gets planted without anyone noticing.
   if [[ -f "$BASELINE_FILE" ]]; then
-    local malformed
+    local malformed rename_annotations
+    rename_annotations="$(awk '
+      /^[[:space:]]*#/ { next }
+      /[#;][[:space:]]*renamed-from:/ { print }
+    ' "$BASELINE_FILE")"
+    if [[ -n "$rename_annotations" && "${ALLOW_RENAME_CLAIMS:-0}" != "1" ]]; then
+      echo "FAIL [$RATCHET_LABEL]: this guard does not allow renamed-from annotations"
+      echo "  -> remove the annotation; this guard's baseline may only shrink"
+      fail=1
+    fi
     malformed="$(awk -F "$TAB" '
       /^[[:space:]]*#/ { next }
       /[#;][[:space:]]*renamed-from:/ {
@@ -198,7 +212,7 @@ run_numeric_ratchet() {
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
       local rename_claims rename_new rename_old old_count new_count claim_ok
       rename_claims="$RENAME_F"
-      if [[ -f "$BASELINE_FILE" ]]; then
+      if [[ -f "$BASELINE_FILE" && "${ALLOW_RENAME_CLAIMS:-0}" == "1" ]]; then
         awk -F "$TAB" '
           /^[[:space:]]*#/ { next }
           # The claim must open a comment clause. Unanchored, an ordinary
@@ -253,6 +267,20 @@ run_numeric_ratchet() {
         fi
         if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$CUR_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
+          echo "  -> $NEW_HINT"
+          fail=1
+          claim_ok=0
+        fi
+        local rename_old_path rename_new_path rename_status
+        rename_old_path="$(rename_key_to_repo_path "$rename_old")"
+        rename_new_path="$(rename_key_to_repo_path "$rename_new")"
+        rename_status="$(git -C "$REPO_ROOT" diff --find-renames --name-status "$BASE_REF" -- "$rename_old_path" "$rename_new_path" || true)"
+        if ! awk -F "$TAB" -v old="$rename_old_path" -v new="$rename_new_path" '
+          $1 ~ /^R[0-9]+$/ && $2 == old && $3 == new { found=1 }
+          END { exit !found }
+        ' <<< "$rename_status"; then
+          echo "FAIL [$RATCHET_LABEL]: rename claim $rename_new <- $rename_old is not a Git rename"
+          echo "  -> expected ${rename_old_path} to be renamed to ${rename_new_path} vs ${BASE_REF}"
           echo "  -> $NEW_HINT"
           fail=1
           claim_ok=0

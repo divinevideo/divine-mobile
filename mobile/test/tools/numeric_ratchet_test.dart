@@ -34,6 +34,7 @@ void main() {
     ProcessResult run({
       bool update = false,
       bool requireBaselineUpdateOnDecrease = false,
+      bool allowRenameClaims = true,
       String baseRef = 'HEAD',
     }) {
       return Process.runSync(
@@ -47,6 +48,7 @@ void main() {
           'PROBE_BASE_REF': baseRef,
           'PROBE_BASELINE_REPO_PATH':
               'mobile/scripts/baseline/__probe_nonexistent__.txt',
+          if (allowRenameClaims) 'PROBE_ALLOW_RENAME_CLAIMS': '1',
           if (requireBaselineUpdateOnDecrease)
             'PROBE_REQUIRE_BASELINE_UPDATE_ON_DECREASE': '1',
           if (update) 'UPDATE_BASELINE': '1',
@@ -63,6 +65,7 @@ void main() {
       File(
         '${tmp.path}/mobile/scripts/baseline/__probe_nonexistent__.txt',
       ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+      File('${tmp.path}/a').writeAsStringSync('same\n');
       for (final args in [
         ['init'],
         ['config', 'user.email', 'test@example.invalid'],
@@ -87,12 +90,14 @@ BASELINE_REPO_PATH="${PROBE_BASELINE_REPO_PATH:-mobile/scripts/baseline/__probe_
 BASE_REF="${PROBE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE=1
 ALLOW_NO_BASE_VAR="PROBE_ALLOW_NO_BASE"
+ALLOW_RENAME_CLAIMS="${PROBE_ALLOW_RENAME_CLAIMS:-0}"
 REQUIRE_BASELINE_UPDATE_ON_DECREASE="${PROBE_REQUIRE_BASELINE_UPDATE_ON_DECREASE:-0}"
 NEW_HINT="new-hint"
 STALE_HINT="stale-hint"
 FOOTER="footer"
 emit_current() { cat "$PROBE_CURRENT"; }
 print_baseline_header() { echo "# probe baseline"; }
+rename_key_to_repo_path() { printf '%s\n' "$1"; }
 source "$PROBE_LIB"
 run_numeric_ratchet
 ''');
@@ -170,7 +175,33 @@ run_numeric_ratchet
     });
 
     group('renamed-from provenance', () {
+      void moveTrackedKey(String oldKey, String newKey) {
+        File('${tmp.path}/$oldKey').renameSync('${tmp.path}/$newKey');
+        final intentToAdd = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'add',
+          '-N',
+          newKey,
+        ]);
+        expect(intentToAdd.exitCode, 0, reason: intentToAdd.stderr.toString());
+      }
+
+      test('rejects rename claims unless the guard opts in', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run(allowRenameClaims: false);
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('does not allow renamed-from annotations'));
+        expect(res.stdout, contains('+added'));
+      });
+
       test('allows a pending rename that preserves the old ceiling', () {
+        moveTrackedKey('a', 'c');
         baseline.writeAsStringSync(
           '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
         );
@@ -181,7 +212,21 @@ run_numeric_ratchet
         expect(res.exitCode, 0, reason: res.stdout.toString());
       });
 
+      test('rejects a quota transfer that is not a Git rename', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('is not a Git rename'));
+        expect(res.stdout, contains('+added'));
+      });
+
       test('rejects a renamed key above the old ceiling', () {
+        moveTrackedKey('a', 'c');
         baseline.writeAsStringSync(
           '# probe baseline\nb\t3\nc\t6 # renamed-from: a\n',
         );
@@ -194,6 +239,7 @@ run_numeric_ratchet
       });
 
       test('rejects a non-numeric count on an annotated row', () {
+        moveTrackedKey('a', 'c');
         // The feature asks humans to hand-edit this row, so a stray character
         // in the count column is the expected typo. Bash arithmetic on a
         // non-numeric operand makes `[[ -gt ]]` return 2, not 1, which `if`
@@ -403,6 +449,7 @@ run_numeric_ratchet
         commitBaseBaseline(
           '# probe baseline\na\t5\nb\t3\nc\t4 # renamed-from: a\n',
         );
+        moveTrackedKey('a', 'd');
         baseline.writeAsStringSync(
           '# probe baseline\n'
           'b\t3\n'
@@ -436,6 +483,7 @@ run_numeric_ratchet
       test('names an honoured claim in the output', () {
         // A run that exercised the bypass must not be byte-identical to one
         // that did not: review is the only enforcement this mechanism has.
+        moveTrackedKey('a', 'c');
         baseline.writeAsStringSync(
           '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
         );
