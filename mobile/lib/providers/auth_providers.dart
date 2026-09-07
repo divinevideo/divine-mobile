@@ -176,6 +176,7 @@ AuthService authService(Ref ref) {
           prefs: prefs,
           pubkeyHex: pubkeyHex,
           pubkeys: result.pubkeys,
+          reportedTotal: result.total,
         );
         Log.info(
           'Pre-fetched ${result.pubkeys.length} following for '
@@ -197,12 +198,27 @@ AuthService authService(Ref ref) {
 /// An empty list is meaningful: it distinguishes "fetched and follows nobody"
 /// from "not fetched yet", preventing every later login from repeating the
 /// same blocking request.
+///
+/// [reportedTotal] is the count the index says the account has. An empty page
+/// beside a non-zero count is the index contradicting itself — it has not
+/// caught up with the account's published follows — so nothing is recorded and
+/// the next login asks again rather than treating the gap as an answer.
 @visibleForTesting
 Future<void> persistFollowingPrefetchForAuthRedirect({
   required SharedPreferences prefs,
   required String pubkeyHex,
   required List<String> pubkeys,
+  int reportedTotal = 0,
 }) async {
+  if (pubkeys.isEmpty && reportedTotal > 0) {
+    Log.warning(
+      'Following index returned no pubkeys but reports $reportedTotal — '
+      'not recording the prefetch as complete',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
+    return;
+  }
   if (pubkeys.isNotEmpty) {
     await prefs.setString(
       FollowingCacheRecord.storageKey(pubkeyHex),

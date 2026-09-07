@@ -89,6 +89,24 @@ void main() {
       ]);
       expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
     });
+
+    test('records nothing when the index contradicts its own page', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingPrefetchForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const [],
+        reportedTotal: 12,
+      );
+
+      expect(
+        prefs.getString(FollowingCacheRecord.storageKey('account-pubkey')),
+        isNull,
+      );
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isFalse);
+    });
   });
 
   group('flutterSecureStorageProvider', () {
