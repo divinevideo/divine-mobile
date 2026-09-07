@@ -253,6 +253,12 @@ jobs:
           # Production (mobile/lib) counterpart of the test-scoped ratchet above.
           # Fails closed if the base baseline cannot be loaded. Epic: #4339 (PR-4).
           bash scripts/check_future_delayed_production_ceiling.sh
+      - name: ⏳ Verify async-safety findings do not increase (ratchet)
+        run: |
+          # #3342: analyzer-backed per-rule, per-file ceilings for the remaining
+          # unawaited_futures and discarded_futures debt. Every count may only
+          # shrink; new files and increased counts fail closed.
+          bash scripts/check_async_safety_ceiling.sh
       - name: 🧱 Verify untested-services count does not increase (floor ratchet)
         run: bash scripts/check_untested_services_floor.sh
       - name: 🧱 Verify singleton services do not regrow (DI ratchet)
