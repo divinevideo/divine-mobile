@@ -431,7 +431,7 @@ void main() {
     ) async {
       when(
         () => fullscreenBloc.state,
-      ).thenReturn(const FullscreenFeedState());
+      ).thenReturn(FullscreenFeedState());
 
       await tester.pumpWidget(buildBar());
       await tester.enterText(

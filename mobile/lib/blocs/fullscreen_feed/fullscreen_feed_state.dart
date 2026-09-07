@@ -61,18 +61,49 @@ final class FullscreenFeedTuningAction extends Equatable {
 
 /// State for the FullscreenFeedBloc.
 final class FullscreenFeedState extends Equatable {
-  const FullscreenFeedState({
-    this.status = FullscreenFeedStatus.initial,
-    this.videos = const [],
-    this.currentIndex = 0,
-    this.isLoadingMore = false,
-    this.canLoadMore = false,
-    this.removedVideoIds = const <String>{},
-    this.pendingSkipTarget,
-    this.initialTargetResolved = false,
-    this.userChangedIndex = false,
-    this.lastTuningAction,
-  });
+  FullscreenFeedState({
+    FullscreenFeedStatus status = FullscreenFeedStatus.initial,
+    List<VideoEvent> videos = const [],
+    int currentIndex = 0,
+    bool isLoadingMore = false,
+    bool canLoadMore = false,
+    Set<String> removedVideoIds = const <String>{},
+    int? pendingSkipTarget,
+    bool initialTargetResolved = false,
+    bool userChangedIndex = false,
+    FullscreenFeedTuningAction? lastTuningAction,
+  }) : this._(
+         status: status,
+         videos: videos,
+         currentIndex: currentIndex,
+         isLoadingMore: isLoadingMore,
+         canLoadMore: canLoadMore,
+         removedVideoIds: removedVideoIds,
+         pendingSkipTarget: pendingSkipTarget,
+         initialTargetResolved: initialTargetResolved,
+         userChangedIndex: userChangedIndex,
+         lastTuningAction: lastTuningAction,
+       );
+
+  /// Carries an already-materialized [videoUpdateSignature] into a copy when
+  /// [copyWith] leaves [videos] untouched, so the signature is built once per
+  /// list rather than once per state.
+  FullscreenFeedState._({
+    required this.status,
+    required this.videos,
+    required this.currentIndex,
+    required this.isLoadingMore,
+    required this.canLoadMore,
+    required this.removedVideoIds,
+    required this.pendingSkipTarget,
+    required this.initialTargetResolved,
+    required this.userChangedIndex,
+    required this.lastTuningAction,
+    List<String>? signature,
+  }) : _inheritedSignature = signature;
+
+  /// Non-null only when [copyWith] was called without a [videos] argument.
+  final List<String>? _inheritedSignature;
 
   /// The current status.
   final FullscreenFeedStatus status;
@@ -126,18 +157,30 @@ final class FullscreenFeedState extends Equatable {
 
   /// Metadata-sensitive signature for detecting updates to videos that keep
   /// the same IDs and order but change user-visible fields like loop counts.
-  List<String> get videoUpdateSignature => videos
-      .map(
-        (video) => [
-          video.id,
-          video.stableId,
-          video.videoUrl ?? '',
-          video.thumbnailUrl ?? '',
-          '${video.originalLoops ?? ''}',
-          video.rawTags['views'] ?? '',
-        ].join('|'),
-      )
-      .toList(growable: false);
+  ///
+  /// A per-instance snapshot rather than a live view: it materializes once
+  /// from whatever [videos] holds at first access, so a later in-place
+  /// mutation of that same list is reported as a change instead of being
+  /// silently absorbed. The bloc's filter helpers do return the source list
+  /// by reference when no filter applies, so that case is reachable.
+  ///
+  /// The trade is memory for CPU — each live state retains one
+  /// `List<String>` (~130 KiB at 200 videos). Being `late` is also why this
+  /// class has no `const` constructor.
+  late final List<String> videoUpdateSignature =
+      _inheritedSignature ??
+      List.unmodifiable(
+        videos.map(
+          (video) => [
+            video.id,
+            video.stableId,
+            video.videoUrl ?? '',
+            video.thumbnailUrl ?? '',
+            '${video.originalLoops ?? ''}',
+            video.rawTags['views'] ?? '',
+          ].join('|'),
+        ),
+      );
 
   /// Create a copy with updated values. [pendingSkipTarget] accepts
   /// `null` explicitly via [clearPendingSkipTarget] — the default
@@ -155,9 +198,10 @@ final class FullscreenFeedState extends Equatable {
     FullscreenFeedTuningAction? lastTuningAction,
     bool clearPendingSkipTarget = false,
   }) {
-    return FullscreenFeedState(
+    final nextVideos = videos ?? this.videos;
+    return FullscreenFeedState._(
       status: status ?? this.status,
-      videos: videos ?? this.videos,
+      videos: nextVideos,
       currentIndex: currentIndex ?? this.currentIndex,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       canLoadMore: canLoadMore ?? this.canLoadMore,
@@ -169,13 +213,17 @@ final class FullscreenFeedState extends Equatable {
           initialTargetResolved ?? this.initialTargetResolved,
       userChangedIndex: userChangedIndex ?? this.userChangedIndex,
       lastTuningAction: lastTuningAction ?? this.lastTuningAction,
+      signature: videos == null ? videoUpdateSignature : null,
     );
   }
 
+  /// [videos] is deliberately absent: every [videoUpdateSignature] entry
+  /// starts with `video.id` and `VideoEvent ==` is id-only, so equal
+  /// signatures already imply equal length, ids and order. Listing both made
+  /// every `==` and `hashCode` walk the videos twice to answer one question.
   @override
   List<Object?> get props => [
     status,
-    videos,
     videoUpdateSignature,
     currentIndex,
     isLoadingMore,
