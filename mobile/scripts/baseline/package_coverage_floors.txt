@@ -26,6 +26,7 @@ curation_repository 100
 db_client 40
 divine_blurhash 100
 divine_camera 100
+divine_device_attestation 85
 divine_quick_actions 76
 divine_status_client 100
 divine_ui 100

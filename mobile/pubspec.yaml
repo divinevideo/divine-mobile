@@ -46,6 +46,7 @@ workspace:
   - packages/divine_ui
   - packages/db_client
   - packages/divine_camera
+  - packages/divine_device_attestation
   - packages/divine_quick_actions
   - packages/divine_status_client
   - packages/dm_repository
@@ -155,6 +156,7 @@ dependencies:
       ref: 847d0c0183c9c09946ce321c107decd3fd9f56b2 # tag 0.0.3
   divine_camera:
     path: packages/divine_camera
+  divine_device_attestation:
   divine_quick_actions:
     path: packages/divine_quick_actions
   divine_video_player:
@@ -361,7 +363,6 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
   qr_flutter: ^4.1.0
   android_intent_plus: ^6.0.0
-  app_device_integrity: ^1.1.0
   pointer_interceptor: ^0.10.1+2
   volume_controller: ^3.4.4
   meta: ^1.18.0
@@ -370,10 +371,6 @@ dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the
   # transitive 11.x platform interface changes.
   device_info_plus: ^10.1.2
-  # TODO(#6918): Local fork documents its divergence and removal condition in
-  # overrides/app_device_integrity-1.1.0/OVERRIDE.md.
-  app_device_integrity:
-    path: overrides/app_device_integrity-1.1.0
 
 dev_dependencies:
   flutter_test:

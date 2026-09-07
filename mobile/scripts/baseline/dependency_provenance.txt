@@ -10,6 +10,4 @@
 # movable git ref unconditionally. Issues: #3655 / #3363.
 git:c2pa_flutter:https://github.com/guardianproject/c2pa-flutter.git:PINNED # defer: #6166 (pub.dev name taken by an unrelated package; needs a rename plus API migration)
 override:mobile/packages/nostr_sdk/pubspec.yaml:meta # noise: transitive pin to keep the analyzer stack resolvable
-override:mobile/pubspec.yaml:app_device_integrity # defer: #6918 (local fork; divergence and removal condition in overrides/app_device_integrity-1.1.0/OVERRIDE.md)
 override:mobile/pubspec.yaml:device_info_plus # defer: #3638 (held on 10.x until the app absorbs the 11.x platform-interface changes)
-path:app_device_integrity:overrides/app_device_integrity-1.1.0 # defer: #6918 (same local fork, seen from the lockfile)

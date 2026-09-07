@@ -11,3 +11,8 @@
 ## 1.0.4
 
 * Adjusting Dart Format
+## 0.0.1
+
+- Promote Divine's account-scoped App Attest implementation to a maintained
+  workspace package.
+- Remove the unused Android Play Integrity implementation.

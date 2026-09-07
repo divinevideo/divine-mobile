@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:app_device_integrity/app_device_integrity.dart';
+import 'package:divine_device_attestation/divine_device_attestation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -17,12 +17,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// the identity that ends up on the event.
 class IosDeviceAttestationService {
   IosDeviceAttestationService({
-    AppDeviceIntegrity? deviceIntegrity,
+    DivineDeviceAttestation? deviceAttestation,
     Duration attestationTimeout = _defaultAttestationTimeout,
-  }) : _deviceIntegrity = deviceIntegrity ?? AppDeviceIntegrity(),
+  }) : _deviceAttestation = deviceAttestation ?? DivineDeviceAttestation(),
        _attestationTimeout = attestationTimeout;
 
-  final AppDeviceIntegrity _deviceIntegrity;
+  final DivineDeviceAttestation _deviceAttestation;
   final Duration _attestationTimeout;
 
   static const _defaultAttestationTimeout = Duration(seconds: 10);
@@ -71,7 +71,7 @@ class IosDeviceAttestationService {
     }
 
     try {
-      return await _deviceIntegrity
+      return await _deviceAttestation
           .getAttestationServiceSupport(
             challengeString: challengeFor(
               proofHash: proofHash,
