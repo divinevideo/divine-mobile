@@ -6,42 +6,29 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 
 void main() {
   group('getPublicKey', () {
-    test('does not include a too-short private key in ArgumentError', () {
-      const tooShort =
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const invalidPrivateKeys = <String, String>{
+      'too-short':
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      'non-hex':
+          'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+    };
 
-      expect(
-        () => getPublicKey(tooShort),
-        throwsA(
-          isA<ArgumentError>()
-              .having((error) => error.name, 'name', 'privateKey')
-              .having((error) => error.invalidValue, 'invalidValue', isNull)
-              .having(
-                (error) => error.toString(),
-                'diagnostic',
-                isNot(contains(tooShort)),
-              ),
-        ),
-      );
-    });
-
-    test('does not include a non-hex private key in ArgumentError', () {
-      const nonHex =
-          'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz';
-
-      expect(
-        () => getPublicKey(nonHex),
-        throwsA(
-          isA<ArgumentError>()
-              .having((error) => error.name, 'name', 'privateKey')
-              .having((error) => error.invalidValue, 'invalidValue', isNull)
-              .having(
-                (error) => error.toString(),
-                'diagnostic',
-                isNot(contains(nonHex)),
-              ),
-        ),
-      );
+    invalidPrivateKeys.forEach((kind, invalidPrivateKey) {
+      test('does not include a $kind private key in ArgumentError', () {
+        expect(
+          () => getPublicKey(invalidPrivateKey),
+          throwsA(
+            isA<ArgumentError>()
+                .having((error) => error.name, 'name', 'privateKey')
+                .having((error) => error.invalidValue, 'invalidValue', isNull)
+                .having(
+                  (error) => error.toString(),
+                  'diagnostic',
+                  isNot(contains(invalidPrivateKey)),
+                ),
+          ),
+        );
+      });
     });
   });
 }
