@@ -64,6 +64,8 @@ void main() {
       required List<String> mergedHeadRefs,
       required List<String> githubCommitShas,
       List<String> mergedTipShas = const [],
+      List<String> containedShas = const [],
+      bool compareFails = false,
       List<String> args = const [],
     }) {
       return Process.runSync(
@@ -79,6 +81,8 @@ void main() {
           'FAKE_MERGED_HEAD_REFS': mergedHeadRefs.join('\n'),
           'FAKE_GITHUB_COMMIT_SHAS': githubCommitShas.join('\n'),
           'FAKE_MERGED_TIP_SHAS': mergedTipShas.join('\n'),
+          'FAKE_CONTAINED_SHAS': containedShas.join('\n'),
+          if (compareFails) 'FAKE_COMPARE_FAILS': '1',
           'FAKE_GH_ARGS': ghArgs.path,
         },
       );
@@ -109,6 +113,23 @@ printf '%s\n' "$*" >> "${FAKE_GH_ARGS:?}"
 if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
   if [ -n "${FAKE_MERGED_HEAD_REFS:-}" ]; then
     printf '%s\n' "$FAKE_MERGED_HEAD_REFS"
+  fi
+  exit 0
+fi
+
+if [ "$1" = "api" ] && [ "${2:-}" = "graphql" ]; then
+  if [ "${FAKE_COMPARE_FAILS:-}" = "1" ]; then
+    echo "simulated compare failure" >&2
+    exit 1
+  fi
+  head=""
+  for arg in "$@"; do
+    case "$arg" in head=*) head="${arg#head=}" ;; esac
+  done
+  if printf '%s\n' "${FAKE_CONTAINED_SHAS:-}" | grep -qxF -- "$head"; then
+    printf 'BEHIND\n'
+  else
+    printf 'DIVERGED\n'
   fi
   exit 0
 fi
@@ -307,6 +328,7 @@ exit 2
         mergedHeadRefs: const [],
         githubCommitShas: [tip],
         mergedTipShas: [tip],
+        containedShas: [tip],
       );
 
       expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -342,7 +364,114 @@ exit 2
 
       expect(result.exitCode, 0, reason: result.stderr.toString());
       expect(result.stdout, contains('KEEP           no-worktree-branch'));
-      expect(ghArgs.readAsStringSync(), isNot(contains('/pulls')));
+      final args = ghArgs.readAsStringSync();
+      expect(args, isNot(contains('/pulls')));
+      expect(args, isNot(contains('graphql')));
+    });
+
+    test('keeps a worktree tip GitHub reports as already on the base', () {
+      makeBranch('tip-on-base', 'no commits of its own');
+      final tip = branchTip('tip-on-base');
+      final worktree = Directory(p.join(sandbox.path, 'tip-on-base'));
+      git(['worktree', 'add', worktree.path, 'tip-on-base']);
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+        containedShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           tip-on-base'));
+      expect(result.stdout, contains('0 likely prunable'));
+    });
+
+    test('keeps a shallow-clone worktree whose tip is an ancestor of main', () {
+      // #8761: `git merge-base --is-ancestor` returns "not an ancestor" for a
+      // commit that is one once the walk hits the graft boundary, which put
+      // untouched worktrees on the prunable side.
+      for (var i = 0; i < 3; i++) {
+        write('main-$i.txt', 'advance $i');
+        commit('advance main $i');
+      }
+      git(['push', 'origin', 'main']);
+
+      final older = branchTip('main~3');
+      git(['branch', 'stale-worktree', older]);
+      final worktree = Directory(p.join(sandbox.path, 'stale-worktree'));
+      git(['worktree', 'add', worktree.path, 'stale-worktree']);
+
+      git(['fetch', '--depth', '1', 'origin', 'main']);
+      expect(
+        Process.runSync('git', [
+          'rev-parse',
+          '--is-shallow-repository',
+        ], workingDirectory: repo.path).stdout.toString().trim(),
+        'true',
+        reason: 'fixture must be shallow for this regression to apply',
+      );
+      // The local signal the old implementation trusted is wrong here.
+      expect(
+        Process.runSync('git', [
+          'merge-base',
+          '--is-ancestor',
+          older,
+          'origin/main',
+        ], workingDirectory: repo.path).exitCode,
+        isNot(0),
+        reason: 'precondition: local ancestry must be unanswerable',
+      );
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [older],
+        mergedTipShas: [older],
+        containedShas: [older],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           stale-worktree'));
+      expect(result.stdout, contains('0 likely prunable'));
+      expect(
+        result.stdout,
+        contains('Containment is resolved by GitHub, not locally'),
+      );
+    });
+
+    test('keeps a worktree when the containment check cannot be answered', () {
+      makeBranch('pr-8888', 'review checkout');
+      final tip = branchTip('pr-8888');
+      final worktree = Directory(p.join(sandbox.path, 'pr-8888'));
+      git(['worktree', 'add', worktree.path, 'pr-8888']);
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+        compareFails: true,
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           pr-8888'));
+      expect(result.stdout, contains('0 likely prunable'));
+    });
+
+    test('asks about containment only after a merged PR contains the tip', () {
+      makeBranch('pr-7777', 'review checkout');
+      final tip = branchTip('pr-7777');
+      final worktree = Directory(p.join(sandbox.path, 'pr-7777'));
+      git(['worktree', 'add', worktree.path, 'pr-7777']);
+
+      // No merged PR contains this tip, so the containment call must not fire.
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           pr-7777'));
+      expect(ghArgs.readAsStringSync(), isNot(contains('graphql')));
     });
 
     test('--execute is rejected while deletion lives outside this PR', () {
