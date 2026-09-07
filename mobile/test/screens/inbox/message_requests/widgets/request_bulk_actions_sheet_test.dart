@@ -15,32 +15,25 @@ void main() {
 
     Widget buildSubject({required ValueChanged<RequestBulkAction?> onResult}) {
       final router = GoRouter(
-        initialLocation: '/sheet',
         routes: [
           GoRoute(
             path: '/',
-            builder: (_, _) => const Scaffold(),
-            routes: [
-              GoRoute(
-                path: 'sheet',
-                builder: (_, _) => Scaffold(
-                  body: Builder(
-                    builder: (context) {
-                      return ElevatedButton(
-                        key: showSheetButtonKey,
-                        onPressed: () async {
-                          final result = await RequestBulkActionsSheet.show(
-                            context,
-                          );
-                          onResult(result);
-                        },
-                        child: const Text('Show sheet'),
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    key: showSheetButtonKey,
+                    onPressed: () async {
+                      final result = await RequestBulkActionsSheet.show(
+                        context,
                       );
+                      onResult(result);
                     },
-                  ),
-                ),
+                    child: const Text('Show sheet'),
+                  );
+                },
               ),
-            ],
+            ),
           ),
         ],
       );
