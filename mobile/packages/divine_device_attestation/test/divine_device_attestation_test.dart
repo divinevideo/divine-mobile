@@ -53,6 +53,16 @@ void main() {
         throwsA(isA<AssertionError>()),
       );
     });
+
+    test('the unoverridden platform default refuses to answer', () {
+      expect(
+        () => _UnimplementedPlatform().getAttestationServiceSupport(
+          challengeString: 'proof-hash:publishing-pubkey',
+          keyScope: 'publishing-pubkey',
+        ),
+        throwsUnimplementedError,
+      );
+    });
   });
 }
 
@@ -64,6 +74,10 @@ class _MockPlatform extends DivineDeviceAttestationPlatform
     required String keyScope,
   }) async => null;
 }
+
+/// A platform registration that forgot to implement the method, so it reaches
+/// the base class's deliberate `UnimplementedError`.
+class _UnimplementedPlatform extends DivineDeviceAttestationPlatform {}
 
 class _InvalidPlatform implements DivineDeviceAttestationPlatform {
   @override
