@@ -240,6 +240,11 @@ String _$subscriptionManagerHash() =>
 ///
 /// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
 /// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 
 @ProviderFor(videoEventService)
 final videoEventServiceProvider = VideoEventServiceProvider._();
@@ -253,6 +258,11 @@ final videoEventServiceProvider = VideoEventServiceProvider._();
 ///
 /// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
 /// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 
 final class VideoEventServiceProvider
     extends
@@ -271,6 +281,11 @@ final class VideoEventServiceProvider
   ///
   /// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
   /// its relay subscriptions alive while no consumer is listening.
+  ///
+  /// Tearing the old one down is a separate guard — `ref.onDispose` below.
+  /// Without it a NostrService client swap (auth cold start, account switch)
+  /// orphans a service whose periodic timers and auth subscription keep
+  /// running against the disposed EventRouter (#6174).
   VideoEventServiceProvider._()
     : super(
         from: null,

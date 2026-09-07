@@ -154,6 +154,11 @@ SubscriptionManager subscriptionManager(Ref ref) {
 ///
 /// `keepAlive` is load-bearing, not an optimisation: it keeps the service and
 /// its relay subscriptions alive while no consumer is listening.
+///
+/// Tearing the old one down is a separate guard — `ref.onDispose` below.
+/// Without it a NostrService client swap (auth cold start, account switch)
+/// orphans a service whose periodic timers and auth subscription keep
+/// running against the disposed EventRouter (#6174).
 @Riverpod(keepAlive: true)
 VideoEventService videoEventService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
