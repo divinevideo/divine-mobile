@@ -28,6 +28,7 @@ import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -123,7 +124,7 @@ void main() {
       bool isLoading = false,
       List<PendingCollaboratorInviteGroup> pendingInviteGroups = const [],
       Locale? locale,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
     }) {
       final profileFeedCubit = _stubbedProfileFeedCubit();
       return testProviderScope(

@@ -38,6 +38,7 @@ import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -126,7 +127,7 @@ void main() {
       Stream<int>? notificationStream,
       TextScaler? textScaler,
       ConversationActionsCubit? actionsCubit,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
       // InboxView has no Scaffold of its own, and a ScaffoldMessenger with
       // no registered Scaffold silently queues SnackBars instead of showing
       // them. Opt in when the test asserts on one.

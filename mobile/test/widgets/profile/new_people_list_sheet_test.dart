@@ -18,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:rxdart/rxdart.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -165,7 +166,7 @@ void main() {
 Widget _buildSubject({
   required bool curatedListsEnabled,
   required PeopleListsBloc Function() createBloc,
-  List<dynamic> extraOverrides = const [],
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderScope(
     overrides: [

@@ -23,6 +23,7 @@ import 'package:openvine/screens/minor_account_review_under13_support_screen.dar
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -266,7 +267,7 @@ void main() {
   group('Minor account review router gating', () {
     late MockAuthService mockAuthService;
 
-    List<dynamic> routerOverrides({
+    List<Override> routerOverrides({
       AccountDeletionAttempt? deletionAttempt,
     }) => [
       ...getStandardTestOverrides(mockAuthService: mockAuthService),

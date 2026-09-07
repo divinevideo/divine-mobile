@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 void main() {
   group(AudioAttributionRow, () {
@@ -69,7 +70,7 @@ void main() {
       AudioEvent? audioOverride,
       bool resolvesAudio = true,
       Object? audioError,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
     }) {
       return ProviderScope(
         overrides: [

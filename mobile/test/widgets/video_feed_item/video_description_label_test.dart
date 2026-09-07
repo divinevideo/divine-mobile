@@ -13,6 +13,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../builders/test_video_event_builder.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -55,7 +56,7 @@ void main() {
 
       await tester.pumpWidget(
         testProviderScope(
-          additionalOverrides: <dynamic>[
+          additionalOverrides: <Override>[
             repostsRepositoryProvider.overrideWithValue(reposts),
           ],
           mockFollowRepository: follow,

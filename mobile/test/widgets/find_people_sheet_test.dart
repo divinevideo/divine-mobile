@@ -16,6 +16,7 @@ import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -38,7 +39,7 @@ void main() {
     Widget createTestWidget({
       List<ShareableUser> contacts = const [],
       Duration? searchTimeout = const Duration(seconds: 20),
-      List<dynamic> extraOverrides = const [],
+      List<Override> extraOverrides = const [],
     }) {
       return testMaterialApp(
         home: Builder(

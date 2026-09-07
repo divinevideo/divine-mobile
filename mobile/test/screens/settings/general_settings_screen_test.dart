@@ -19,6 +19,7 @@ import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -60,7 +61,7 @@ void main() {
       ).thenAnswer((_) async {});
     });
 
-    List<dynamic> baseOverrides() => [
+    List<Override> baseOverrides() => [
       sharedPreferencesProvider.overrideWithValue(sharedPreferences),
       authServiceProvider.overrideWithValue(authService),
       currentAuthStateProvider.overrideWithValue(AuthState.unauthenticated),
@@ -74,7 +75,7 @@ void main() {
 
     Widget wrap(
       Widget child, {
-      List<dynamic> overrides = const [],
+      List<Override> overrides = const [],
     }) {
       return ProviderScope(
         overrides: [...baseOverrides(), ...overrides],
