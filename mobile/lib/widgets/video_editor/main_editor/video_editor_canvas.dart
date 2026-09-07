@@ -43,6 +43,7 @@ import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_cut_area_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
@@ -3010,47 +3011,38 @@ class _CanvasFitter extends ConsumerWidget {
       builder: (_, constraints) {
         final bodySize = constraints.biggest;
 
-        // Height is constrained by maxWidth or maxHeight,
-        // depending on which dimension is reached first
-        final height = min(bodySize.width, bodySize.height);
-        final renderSize = Size(height * clip.originalAspectRatio, height);
+        // The one model of the canvas mapping. Layer compensation reads the
+        // same geometry through VideoEditorScope.calculateFittedBoxScale.
+        final geometry = VideoEditorCanvasGeometry(
+          bodySize: bodySize,
+          originalAspectRatio: clip.originalAspectRatio,
+          targetAspectRatio: clip.targetAspectRatio.value,
+        );
 
         // Notify parent about body size
         scope.bodySizeNotifier.value = bodySize;
 
-        final targetSize = VideoEditorScope.calculateTargetSize(
-          bodySize,
-          clip.targetAspectRatio.value,
-        );
-
-        // The visual chain below (Center > SizedBox > FittedBox >
-        // SizedBox > Navigator) owns the aspect-ratio mapping: cover-fit
-        // [renderSize] into [targetSize], centered in [bodySize].
+        // [VideoEditorCanvasFit] owns the aspect-ratio mapping: cover-fit
+        // the render surface into the visible target area, centered in
+        // [bodySize].
         //
         // [HitTestExpander] wraps it so that taps in the scrim /
-        // letterbox zone (outside [targetSize]) are clamped to the
-        // nearest point inside [targetSize] and re-dispatched into the
-        // chain. Without this, `Center.hitTestChildren` drops every
-        // pointer event that falls outside its child rect, so the
-        // editor's top-level GestureDetector never opens an arena and
-        // [onScaleStart] / [onScaleUpdate] never fire.
+        // letterbox zone (outside the target area) are clamped to the
+        // nearest point inside it and re-dispatched into the chain.
+        // Without this, `Center.hitTestChildren` drops every pointer event
+        // that falls outside its child rect, so the editor's top-level
+        // GestureDetector never opens an arena and [onScaleStart] /
+        // [onScaleUpdate] never fire.
         return VideoEditorCutAreaOverlay(
           child: HitTestExpander(
-            visibleSize: targetSize,
-            child: Center(
-              child: SizedBox.fromSize(
-                size: targetSize,
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox.fromSize(
-                    size: renderSize,
-                    child: Navigator(
-                      clipBehavior: Clip.none,
-                      onGenerateRoute: (_) => PageRouteBuilder(
-                        pageBuilder: (_, _, _) => builder(bodySize, renderSize),
-                      ),
-                    ),
-                  ),
+            visibleSize: geometry.targetSize,
+            child: VideoEditorCanvasFit(
+              geometry: geometry,
+              child: Navigator(
+                clipBehavior: Clip.none,
+                onGenerateRoute: (_) => PageRouteBuilder(
+                  pageBuilder: (_, _, _) =>
+                      builder(bodySize, geometry.renderSize),
                 ),
               ),
             ),
