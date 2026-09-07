@@ -3649,6 +3649,85 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, isEmpty);
     });
 
+    test('reset waits for an active autosave before reaping files', () async {
+      final orphan = File(p.join(tempDir.path, 'in-flight-orphan.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      final saveMayFinish = Completer<void>();
+      when(
+        () => mockDraftStorage.saveDraft(
+          any(),
+          deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+        ),
+      ).thenAnswer((invocation) async {
+        await saveMayFinish.future;
+        final defer =
+            invocation.namedArguments[#deferOrphanCleanup]
+                as void Function(List<String?>)?;
+        defer?.call([orphan.path]);
+      });
+      addTimelineClip();
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      final autosave = notifier.autosaveChanges();
+      await notifier.reset(keepAutosavedDraft: true);
+      saveMayFinish.complete();
+      expect(await autosave, isTrue);
+      await drainDeferredCleanup(notifier);
+
+      expect(
+        orphan.existsSync(),
+        isFalse,
+        reason:
+            'session cleanup must include paths deferred by an autosave that '
+            'was already writing when reset began',
+      );
+      expect(notifier.deferredFileCleanupForTest, isEmpty);
+    });
+
+    test('debounce-fired autosave keeps reset cleanup pending', () {
+      late Completer<void> saveMayFinish;
+      when(
+        () => mockDraftStorage.saveDraft(
+          any(),
+          deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+        ),
+      ).thenAnswer((_) => saveMayFinish.future);
+      addTimelineClip();
+
+      fakeAsync((async) {
+        saveMayFinish = Completer<void>();
+        final notifier = container.read(videoEditorProvider.notifier);
+        notifier.triggerAutosave();
+
+        async.elapse(const Duration(milliseconds: 800));
+        async.flushMicrotasks();
+        verify(
+          () => mockDraftStorage.saveDraft(
+            any(),
+            deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ),
+        ).called(1);
+
+        unawaited(notifier.reset(keepAutosavedDraft: true));
+        var cleanupSettled = false;
+        notifier.pendingDeferredCleanupForTest.then(
+          (_) => cleanupSettled = true,
+        );
+        async.flushMicrotasks();
+        expect(
+          cleanupSettled,
+          isFalse,
+          reason:
+              'reset cleanup must remain pending while the debounce-fired '
+              'autosave is still writing',
+        );
+
+        saveMayFinish.complete();
+        async.flushMicrotasks();
+        expect(cleanupSettled, isTrue);
+      });
+    });
+
     test('reset cleanup remains awaitable during container teardown', () async {
       final orphan = stubDeferringAutosave();
       addTimelineClip();
