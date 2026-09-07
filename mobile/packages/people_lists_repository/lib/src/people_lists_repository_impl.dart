@@ -178,6 +178,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return const PeopleListPublishResult.noop();
     }
     if (!record.hasPublishSource) {
+      Log.warning(
+        'Cannot add a member of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
       return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
@@ -211,6 +218,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return const PeopleListPublishResult.noop();
     }
     if (!record.hasPublishSource) {
+      Log.warning(
+        'Cannot remove a member of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
       return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
