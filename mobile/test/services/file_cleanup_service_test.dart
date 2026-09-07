@@ -22,6 +22,8 @@ class _MockDraftsDao extends Mock implements DraftsDao {}
 
 class _MockClipsDao extends Mock implements ClipsDao {}
 
+class _MockFile extends Mock implements File {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(<String>{});
@@ -105,6 +107,121 @@ void main() {
         );
       },
     );
+
+    group('batch failure recovery', () {
+      late Directory tempDir;
+
+      setUp(() {
+        tempDir = Directory.systemTemp.createTempSync(
+          'divine_cleanup_failure',
+        );
+      });
+
+      tearDown(() {
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      });
+
+      File writeFile(String name) =>
+          File(p.join(tempDir.path, name))
+            ..writeAsBytesSync(const [0, 1, 2, 3]);
+
+      test('retains the whole batch when the clip lookup fails', () async {
+        final first = writeFile('first.mp4');
+        final second = writeFile('second.mp4');
+        when(
+          () => clipsDao.referencedFilenames(any()),
+        ).thenThrow(StateError('database closed'));
+
+        final unprocessed = await FileCleanupService.deleteFilesIfUnreferenced(
+          [first.path, second.path],
+          draftsDao: draftsDao,
+          clipsDao: clipsDao,
+        );
+
+        expect(unprocessed, {first.path, second.path});
+        expect(first.existsSync(), isTrue);
+        expect(second.existsSync(), isTrue);
+        verifyNever(() => draftsDao.isDraftFileReferenced(any()));
+      });
+
+      test('continues after one draft lookup fails', () async {
+        final failing = writeFile('failing.mp4');
+        final deletable = writeFile('deletable.mp4');
+        when(
+          () => clipsDao.referencedFilenames(any()),
+        ).thenAnswer((_) async => const {});
+        when(
+          () => draftsDao.isDraftFileReferenced('failing.mp4'),
+        ).thenThrow(StateError('database closed'));
+        when(
+          () => draftsDao.isDraftFileReferenced('deletable.mp4'),
+        ).thenAnswer((_) async => false);
+
+        final unprocessed = await FileCleanupService.deleteFilesIfUnreferenced(
+          [failing.path, deletable.path],
+          draftsDao: draftsDao,
+          clipsDao: clipsDao,
+        );
+
+        expect(unprocessed, {failing.path});
+        expect(failing.existsSync(), isTrue);
+        expect(deletable.existsSync(), isFalse);
+      });
+
+      test('continues after one existence check fails', () async {
+        final inaccessiblePath = p.join(tempDir.path, 'inaccessible.mp4');
+        final deletable = writeFile('deletable.mp4');
+        final inaccessibleFile = _MockFile();
+        when(inaccessibleFile.existsSync).thenThrow(
+          const FileSystemException('unavailable'),
+        );
+        when(
+          () => clipsDao.referencedFilenames(any()),
+        ).thenAnswer((_) async => const {});
+        when(
+          () => draftsDao.isDraftFileReferenced(any()),
+        ).thenAnswer((_) async => false);
+
+        final unprocessed = await IOOverrides.runZoned(
+          () => FileCleanupService.deleteFilesIfUnreferenced(
+            [inaccessiblePath, deletable.path],
+            draftsDao: draftsDao,
+            clipsDao: clipsDao,
+          ),
+          createFile: (path) =>
+              path == inaccessiblePath ? inaccessibleFile : deletable,
+        );
+
+        expect(unprocessed, {inaccessiblePath});
+        expect(deletable.existsSync(), isFalse);
+      });
+
+      test('retains a path when deletion fails', () async {
+        final failingPath = p.join(tempDir.path, 'undeletable.mp4');
+        final failingFile = _MockFile();
+        when(failingFile.existsSync).thenReturn(true);
+        when(failingFile.delete).thenThrow(
+          const FileSystemException('permission denied'),
+        );
+        when(
+          () => clipsDao.referencedFilenames(any()),
+        ).thenAnswer((_) async => const {});
+        when(
+          () => draftsDao.isDraftFileReferenced(any()),
+        ).thenAnswer((_) async => false);
+
+        final unprocessed = await IOOverrides.runZoned(
+          () => FileCleanupService.deleteFilesIfUnreferenced(
+            [failingPath],
+            draftsDao: draftsDao,
+            clipsDao: clipsDao,
+          ),
+          createFile: (_) => failingFile,
+        );
+
+        expect(unprocessed, {failingPath});
+      });
+    });
 
     group('deleteDraftAudioFiles', () {
       late Directory tempDir;
