@@ -68,6 +68,27 @@ PublishOutcome _rejected(Event event) => PublishOutcome(
   noResponseFrom: const [],
 );
 
+/// The two never-published lists a backfill finds stranded. [pubkey] stamps
+/// both, or stays null for lists written before the owner was recorded.
+String _strandedListsSeed({String? pubkey}) => jsonEncode([
+  CuratedList(
+    id: 'first-stranded',
+    name: 'First Stranded',
+    videoEventIds: const ['first_video'],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    pubkey: pubkey,
+  ).toJson(),
+  CuratedList(
+    id: 'second-stranded',
+    name: 'Second Stranded',
+    videoEventIds: const ['second_video'],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    pubkey: pubkey,
+  ).toJson(),
+]);
+
 PublishOutcome _partiallyAccepted(Event event) => PublishOutcome(
   eventId: event.id,
   acceptedBy: const ['wss://accepted.test'],
@@ -844,24 +865,9 @@ void main() {
 
       test('does not double-publish a list resolved during backfill', () async {
         SharedPreferences.setMockInitialValues({
-          CuratedListService.listsStorageKey: jsonEncode([
-            CuratedList(
-              id: 'first-stranded',
-              name: 'First Stranded',
-              videoEventIds: const ['first_video'],
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-              pubkey: _ownerPubkey,
-            ).toJson(),
-            CuratedList(
-              id: 'second-stranded',
-              name: 'Second Stranded',
-              videoEventIds: const ['second_video'],
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-              pubkey: _ownerPubkey,
-            ).toJson(),
-          ]),
+          CuratedListService.listsStorageKey: _strandedListsSeed(
+            pubkey: _ownerPubkey,
+          ),
         });
         var publishCount = 0;
         late CuratedListService upgraded;
@@ -915,6 +921,78 @@ void main() {
           );
         },
       );
+
+      for (final scenario in <({String description, String? nextOwner})>[
+        (description: 'authenticated owner changes', nextOwner: _otherPubkey),
+        (description: 'authenticated pubkey is lost', nextOwner: null),
+      ]) {
+        test('stops backfill when the ${scenario.description}', () async {
+          await LogCaptureService().clearAllLogs();
+          SharedPreferences.setMockInitialValues({
+            CuratedListService.listsStorageKey: _strandedListsSeed(),
+          });
+          var publishCount = 0;
+          when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            publishCount++;
+            if (publishCount == 1) {
+              // The signer follows the account. Re-stubbing only the auth
+              // pubkey models auth != signer, which sealItemTags rejects
+              // outright, so the fixture would not be a real switch.
+              when(
+                () => mockAuth.currentPublicKeyHex,
+              ).thenReturn(scenario.nextOwner);
+              when(
+                mockSigner.getPublicKey,
+              ).thenAnswer((_) async => scenario.nextOwner);
+            }
+            return _accepted(invocation.positionalArguments[0] as Event);
+          });
+          final upgraded = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: await SharedPreferences.getInstance(),
+          );
+
+          await upgraded.fetchUserListsFromRelays();
+
+          verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          expect(
+            upgraded.getListById('first-stranded')!.nostrEventId,
+            isNotNull,
+          );
+          final second = upgraded.getListById('second-stranded')!;
+          expect(second.nostrEventId, isNull);
+          expect(second.pubkey, isNull);
+          expect(
+            LogCaptureService().getRecentLogs().where(
+              (entry) =>
+                  entry.level == LogLevel.error &&
+                  entry.message.contains('Failed to fetch lists from relays'),
+            ),
+            isEmpty,
+            reason:
+                'the owner guard must be what stopped the second publish; a '
+                'swallowed backfill exception would satisfy the counts above',
+          );
+
+          // Deferred, not abandoned. Without this, a regression that dropped
+          // the list out of the stranded filter for good -- adopting the
+          // wrong pubkey, or marking it handled -- would still satisfy every
+          // assertion above.
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownerPubkey);
+          when(mockSigner.getPublicKey).thenAnswer((_) async => _ownerPubkey);
+
+          await upgraded.fetchUserListsFromRelays(force: true);
+
+          verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          expect(
+            upgraded.getListById('second-stranded')!.nostrEventId,
+            isNotNull,
+          );
+        });
+      }
 
       test('does not republish a list the relay already has', () async {
         final list = await service.createList(name: 'Already Published');
