@@ -99,7 +99,7 @@ void main() {
         'returns rows with at least one pending channel, oldest first',
         () async {
           await dao.enqueue(
-            makeReport(reportId: 'older', createdAt: DateTime.utc(2026, 1)),
+            makeReport(reportId: 'older', createdAt: DateTime.utc(2026)),
           );
           await dao.enqueue(
             makeReport(reportId: 'newer', createdAt: DateTime.utc(2026, 6)),
@@ -141,7 +141,7 @@ void main() {
       });
 
       test('scopes to the requested user', () async {
-        await dao.enqueue(makeReport(reportId: 'mine', userPubkey: userA));
+        await dao.enqueue(makeReport(reportId: 'mine'));
         await dao.enqueue(makeReport(reportId: 'theirs', userPubkey: userB));
 
         final rows = await dao.getRetryableForUser(userPubkey: userA);
@@ -228,7 +228,7 @@ void main() {
       });
 
       test('deleteAllForUser removes only that user rows', () async {
-        await dao.enqueue(makeReport(reportId: 'mine', userPubkey: userA));
+        await dao.enqueue(makeReport(reportId: 'mine'));
         await dao.enqueue(makeReport(reportId: 'theirs', userPubkey: userB));
 
         await dao.deleteAllForUser(userA);
