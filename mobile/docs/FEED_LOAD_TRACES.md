@@ -11,6 +11,22 @@ The implementation lives in
 [`FeedLoadTrace`](../lib/services/feed_load_trace.dart) owns the first-wins
 completion behavior.
 
+Only **release** builds report them. `PerformanceMonitoringService`
+gates on `kReleaseMode` in Dart and debug/profile builds are additionally
+deactivated natively, so a local run produces no samples at all and that is not
+a bug. Opting one run back in takes both halves of the recipe in
+[Network performance monitoring](NETWORK_PERFORMANCE_MONITORING.md#verifying-a-change) —
+either alone leaves collection off.
+
+One sampling gap is worth knowing about, because it is silent.
+`startOperationTrace` hands back a no-op handle until
+`PerformanceMonitoringService.initialize()` completes, and a load that starts
+before that reports nothing at all rather than reporting a failure. #7118
+closed the common case by registering the service in the **critical** startup
+phase, ahead of the loads that mount during later phases. It is registered
+`optional: true` though, so an initialization that fails or runs slowly still
+removes cold-start samples without leaving a trace of its own.
+
 ## Trace names
 
 `VideoEventService` starts one trace for each new subscription load that gets
