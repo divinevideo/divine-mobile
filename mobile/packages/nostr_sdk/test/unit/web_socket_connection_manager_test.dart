@@ -123,6 +123,7 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
   final List<MockWebSocketChannel> createdChannels = [];
   bool shouldFail = false;
   String? failureMessage;
+  Completer<void>? createdSignal;
 
   /// When set, the channel's `ready` future completes with this error
   /// instead of succeeding. Simulates DNS/TLS handshake failures.
@@ -143,6 +144,8 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
           : (readyGate?.future ?? Future.value()),
     );
     createdChannels.add(channel);
+    final signal = createdSignal;
+    if (signal != null && !signal.isCompleted) signal.complete();
     return channel;
   }
 
@@ -155,6 +158,7 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
     failureMessage = null;
     readyError = null;
     readyGate = null;
+    createdSignal = null;
   }
 }
 
@@ -636,6 +640,35 @@ void main() {
         expect(boundedManager.reconnectAttempts, lessThan(10));
       });
 
+      test(
+        'an unaffordable backoff neither waits nor consumes an attempt',
+        () async {
+          final boundedManager = WebSocketConnectionManager(
+            url: 'wss://test.relay.com',
+            channelFactory: mockFactory,
+            logger: logMessages.add,
+            config: const WebSocketConfig(
+              maxReconnectAttempts: 10,
+              baseReconnectDelay: Duration(seconds: 1),
+              reconnectBudget: Duration(milliseconds: 20),
+            ),
+          );
+          addTearDown(boundedManager.dispose);
+
+          expect(await boundedManager.send('test'), isFalse);
+
+          expect(boundedManager.reconnectAttempts, isZero);
+          expect(mockFactory.createdChannels, isEmpty);
+          expect(
+            logMessages,
+            contains(
+              'Reconnect budget cannot fit the next backoff for '
+              'wss://test.relay.com; stopping before attempt 1',
+            ),
+          );
+        },
+      );
+
       test('an explicit deadline overrides the reconnect budget', () async {
         mockFactory.shouldFail = true;
         final boundedManager = WebSocketConnectionManager(
@@ -764,6 +797,34 @@ void main() {
 
         expect(result, isTrue);
         expect(manager.state, equals(ConnectionState.connected));
+      });
+
+      test('concurrent sends do not start competing handshakes', () async {
+        final readyGate = Completer<void>();
+        final createdSignal = Completer<void>();
+        mockFactory.readyGate = readyGate;
+        mockFactory.createdSignal = createdSignal;
+        final reconnecting = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: mockFactory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            baseReconnectDelay: Duration(milliseconds: 1),
+            connectionTimeout: Duration(milliseconds: 100),
+            reconnectBudget: Duration(milliseconds: 200),
+          ),
+        );
+        addTearDown(reconnecting.dispose);
+
+        final first = reconnecting.send('first');
+        final second = reconnecting.send('second');
+        await createdSignal.future;
+        await Future<void>.delayed(Duration.zero);
+
+        expect(mockFactory.createdChannels, hasLength(1));
+        readyGate.complete();
+        expect(await first, isTrue);
+        expect(await second, isTrue);
       });
 
       test('resetReconnection clears attempt counter', () async {
@@ -934,6 +995,40 @@ void main() {
 
           expect(received, equals(['still listening to the live socket']));
           expect(supersededChannel.isClosed, isTrue);
+        },
+      );
+
+      test(
+        'a superseded handshake timeout does not disconnect its replacement',
+        () async {
+          final gate = Completer<void>();
+          mockFactory.readyGate = gate;
+          final racing = WebSocketConnectionManager(
+            url: 'wss://test.relay.com',
+            channelFactory: mockFactory,
+            logger: logMessages.add,
+            config: const WebSocketConfig(
+              connectionTimeout: Duration(milliseconds: 30),
+            ),
+          );
+          addTearDown(racing.dispose);
+          final errors = <String>[];
+          racing.errorStream.listen(errors.add);
+
+          final superseded = racing.connect();
+          await Future<void>.delayed(Duration.zero);
+          final oldChannel = mockFactory.lastChannel!;
+
+          mockFactory.readyGate = null;
+          expect(await racing.reconnect(), isTrue);
+          final replacement = mockFactory.lastChannel!;
+          expect(replacement, isNot(same(oldChannel)));
+
+          expect(await superseded, isFalse);
+          expect(racing.state, ConnectionState.connected);
+          expect(racing.isConnected, isTrue);
+          expect(replacement.isClosed, isFalse);
+          expect(errors, isEmpty);
         },
       );
 

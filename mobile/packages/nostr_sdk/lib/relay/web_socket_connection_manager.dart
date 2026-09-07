@@ -266,26 +266,29 @@ class WebSocketConnectionManager {
 
       return true;
     } on WebSocketChannelException catch (e) {
-      log('Connection failed (WebSocket): $e');
-      _emitError('Connection failed: $e');
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      if (_ownsChannel(channel)) {
+        log('Connection failed (WebSocket): $e');
+        _emitError('Connection failed: $e');
+      }
+      _markDisconnectedIfOwned(channel);
       return false;
     } on TimeoutException {
-      // Name the budget: it is now min(connectionTimeout, time left), so a
-      // stall and a spent deadline would otherwise log identically.
-      log('Connection timed out after $handshakeTimeout');
-      _emitError('Connection timed out');
+      if (_ownsChannel(channel)) {
+        // Name the budget: it is now min(connectionTimeout, time left), so a
+        // stall and a spent deadline would otherwise log identically.
+        log('Connection timed out after $handshakeTimeout');
+        _emitError('Connection timed out');
+      }
       // Clean up the channel that never finished connecting
       await _closeOrphanedChannel(channel);
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      _markDisconnectedIfOwned(channel);
       return false;
     } catch (e) {
-      log('Connection failed: $e');
-      _emitError('Connection failed: $e');
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      if (_ownsChannel(channel)) {
+        log('Connection failed: $e');
+        _emitError('Connection failed: $e');
+      }
+      _markDisconnectedIfOwned(channel);
       return false;
     }
   }
@@ -298,6 +301,20 @@ class WebSocketConnectionManager {
   void _detachChannel(WebSocketChannel? channel) {
     if (channel == null || identical(_channel, channel)) _channel = null;
   }
+
+  /// Marks a failed connect disconnected only while it still owns the socket.
+  ///
+  /// An explicit reconnect can replace [_channel] while an older handshake is
+  /// waiting or cleaning up. That older attempt must not disconnect the newer
+  /// owner when it eventually fails.
+  void _markDisconnectedIfOwned(WebSocketChannel? channel) {
+    if (!_ownsChannel(channel)) return;
+    _detachChannel(channel);
+    _setState(ConnectionState.disconnected);
+  }
+
+  bool _ownsChannel(WebSocketChannel? channel) =>
+      channel == null ? _channel == null : identical(_channel, channel);
 
   /// Closes a socket that no longer has an owner.
   Future<void> _closeOrphanedChannel(WebSocketChannel? channel) async {
@@ -494,19 +511,33 @@ class WebSocketConnectionManager {
               .clamp(0, config.maxReconnectDelay.inMilliseconds);
       final delay = Duration(milliseconds: delayMs);
 
-      _reconnectAttempts++;
-      log(
-        'Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts/${config.maxReconnectAttempts})',
-      );
-
+      final attempt = _reconnectAttempts + 1;
       final wait = _remainingOr(delay, effectiveDeadline);
-      if (wait == Duration.zero) return false;
+      if (wait < delay) {
+        log(
+          'Reconnect budget cannot fit the next backoff for $url; '
+          'stopping before attempt $attempt',
+        );
+        return false;
+      }
+      log(
+        'Reconnecting in ${delay.inSeconds}s '
+        '(attempt $attempt/${config.maxReconnectAttempts})',
+      );
       await Future<void>.delayed(wait);
 
       if (!_shouldReconnect || _deadlineExpired(effectiveDeadline)) {
         return false;
       }
 
+      // Another sender may have started or completed a handshake during the
+      // backoff. Join that connection instead of creating a competing socket.
+      if (_state == ConnectionState.connected) return true;
+      if (_state == ConnectionState.connecting) {
+        return _waitForConnection(deadline: effectiveDeadline);
+      }
+
+      _reconnectAttempts = attempt;
       final connected = await _doConnect(deadline: effectiveDeadline);
       if (connected) return true;
     }
@@ -546,6 +577,10 @@ class WebSocketConnectionManager {
     if (_state == ConnectionState.connected) {
       sub.cancel();
       return true;
+    }
+    if (_state == ConnectionState.disconnected) {
+      sub.cancel();
+      return false;
     }
 
     final result = await completer.future.timeout(
