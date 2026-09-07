@@ -102,5 +102,37 @@ void main() {
       expect(capturedResult, RequestBulkAction.removeAll);
       expect(find.text(l10n.inboxRequestsRemoveAll), findsNothing);
     });
+
+    // `show` promises "the chosen [RequestBulkAction] or `null` if dismissed",
+    // and the only caller leans on it: `message_requests_view.dart:60` returns
+    // early on null rather than sweeping the list. `VineBottomSheet.show` runs
+    // with the default `tapOutsideToDismiss: true`, so this is a live path —
+    // and it was unreachable under the old MockGoRouter, whose no-op `pop`
+    // meant the future never completed at all.
+    testWidgets('returns null when dismissed without choosing', (tester) async {
+      RequestBulkAction? capturedResult;
+      var didComplete = false;
+      await tester.pumpWidget(
+        buildSubject(
+          onResult: (result) {
+            capturedResult = result;
+            didComplete = true;
+          },
+        ),
+      );
+
+      await showSheet(tester);
+      expect(find.text(l10n.inboxRequestsMarkAllRead), findsOneWidget);
+
+      // Above the sheet, on the modal barrier.
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      // `didComplete` is the pin: without it a future that never resolved
+      // would leave `capturedResult` null and pass this test vacuously.
+      expect(didComplete, isTrue);
+      expect(capturedResult, isNull);
+      expect(find.text(l10n.inboxRequestsMarkAllRead), findsNothing);
+    });
   });
 }
