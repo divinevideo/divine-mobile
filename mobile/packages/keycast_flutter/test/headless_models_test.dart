@@ -213,6 +213,12 @@ void main() {
           KeycastLoginFailure.emailNotVerified,
         );
         expect(err('INVALID_EMAIL').failure, KeycastLoginFailure.invalidEmail);
+        expect(
+          err('TOO_MANY_ATTEMPTS').failure,
+          KeycastLoginFailure.rateLimited,
+        );
+        expect(err('RATE_LIMITED').failure, KeycastLoginFailure.rateLimited);
+        expect(err('rate_limited').failure, KeycastLoginFailure.rateLimited);
         expect(err('timeout').failure, KeycastLoginFailure.network);
         expect(err('connection_error').failure, KeycastLoginFailure.network);
         expect(err('INTERNAL_ERROR').failure, KeycastLoginFailure.unknown);

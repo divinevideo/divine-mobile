@@ -767,6 +767,27 @@ void main() {
         expect(result.failure, KeycastLoginFailure.invalidEmail);
       });
 
+      test('classifies TOO_MANY_ATTEMPTS 429', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'code': 'TOO_MANY_ATTEMPTS',
+              'error': 'Too many sign-in attempts',
+            }),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorCode, 'TOO_MANY_ATTEMPTS');
+        expect(result.failure, KeycastLoginFailure.rateLimited);
+      });
+
       test('returns error on SocketException', () async {
         final mockClient = MockClient((request) async {
           throw const SocketException('Connection refused');

@@ -64,6 +64,9 @@ enum KeycastLoginFailure {
   /// The submitted email was malformed (HTTP 400).
   invalidEmail,
 
+  /// Too many sign-in attempts have been made for now (HTTP 429).
+  rateLimited,
+
   /// Transport failure (timeout / no connection) before a server verdict.
   network,
 
@@ -130,6 +133,10 @@ class HeadlessLoginResult {
         return KeycastLoginFailure.emailNotVerified;
       case 'INVALID_EMAIL':
         return KeycastLoginFailure.invalidEmail;
+      case 'TOO_MANY_ATTEMPTS':
+      case 'RATE_LIMITED':
+      case 'rate_limited':
+        return KeycastLoginFailure.rateLimited;
       case 'timeout':
       case 'connection_error':
       case 'network_error':

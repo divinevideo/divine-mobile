@@ -272,6 +272,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         return SignInFailureReason.emailNotVerified;
       case KeycastLoginFailure.invalidEmail:
         return SignInFailureReason.invalidEmail;
+      case KeycastLoginFailure.rateLimited:
+        return SignInFailureReason.rateLimited;
       case KeycastLoginFailure.network:
         return SignInFailureReason.network;
       case KeycastLoginFailure.unknown:

@@ -544,6 +544,54 @@ void main() {
         },
       );
 
+      testWidgets('shows localized rate-limit copy on a 429 sign in', (
+        tester,
+      ) async {
+        when(
+          () => mockOAuth.headlessLogin(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+            scope: any(named: 'scope'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            HeadlessLoginResult(
+              success: false,
+              errorCode: 'TOO_MANY_ATTEMPTS',
+              errorDescription: 'Too many sign-in attempts',
+            ),
+            'test-verifier',
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.descendant(
+            of: find.widgetWithText(DivineAuthTextField, 'Email'),
+            matching: find.byType(TextField),
+          ),
+          'user@example.com',
+        );
+        await tester.enterText(
+          find.descendant(
+            of: find.widgetWithText(DivineAuthTextField, 'Password'),
+            matching: find.byType(TextField),
+          ),
+          'Password123!',
+        );
+
+        await tester.tap(find.widgetWithText(DivineButton, 'Sign in'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text(l10n.accountCredentialsRateLimited), findsOneWidget);
+        expect(find.text('Too many sign-in attempts'), findsNothing);
+        expect(find.text(l10n.authSignInErrorGeneric), findsNothing);
+      });
+
       testWidgets(
         'tapping the options hint opens the sign-in options sheet',
         (tester) async {

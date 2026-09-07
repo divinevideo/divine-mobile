@@ -807,6 +807,49 @@ void main() {
         );
 
         blocTest<DivineAuthCubit, DivineAuthState>(
+          'emits rateLimited reason on a keycast 429',
+          setUp: () {
+            when(
+              () => mockOAuth.headlessLogin(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessLoginResult(
+                  success: false,
+                  errorCode: 'TOO_MANY_ATTEMPTS',
+                  errorDescription: 'Too many sign-in attempts',
+                ),
+                testVerifier,
+              ),
+            );
+          },
+          build: buildCubit,
+          seed: () => const DivineAuthFormState(
+            email: testEmail,
+            password: testPassword,
+            isSignIn: true,
+          ),
+          act: (cubit) => cubit.submit(),
+          expect: () => [
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              isSubmitting: true,
+            ),
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              signInFailureReason: SignInFailureReason.rateLimited,
+            ),
+          ],
+        );
+
+        blocTest<DivineAuthCubit, DivineAuthState>(
           'emits network reason and logs description on transport failure',
           setUp: () {
             when(
