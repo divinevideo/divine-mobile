@@ -6,13 +6,15 @@ import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  test('records completion for only the requested account', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+  group('following prefetch marker', () {
+    test('records completion for only the requested account', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
 
-    await markFollowingPrefetchComplete(prefs, 'account-pubkey');
+      await markFollowingPrefetchComplete(prefs, 'account-pubkey');
 
-    expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
-    expect(hasFollowingPrefetchMarker(prefs, 'other-pubkey'), isFalse);
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
+      expect(hasFollowingPrefetchMarker(prefs, 'other-pubkey'), isFalse);
+    });
   });
 }
