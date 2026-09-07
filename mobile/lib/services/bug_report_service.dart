@@ -205,8 +205,8 @@ class BugReportService {
         };
       }
 
-      // Flag a missing-translation fallback only when neither Settings nor
-      // any device preference selects a shipped language. Best-effort: a
+      // Flag a missing device translation only when Settings follows the
+      // device and no device preference matches a shipped language. A
       // probe failure must not block the report.
       try {
         final resolvedLocale = _resolvedUiLocaleLoader();

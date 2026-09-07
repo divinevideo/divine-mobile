@@ -25,10 +25,9 @@ void main() {
       expect(appUiLocaleOverride(prefs)?.languageCode, 'de');
     });
 
-    test('ignores a saved language the app no longer ships', () async {
-      // Dropping a locale from the shipped set leaves the old preference on
-      // disk. Honouring it would hand `lookupAppLocalizations` a locale it has
-      // no translation for, so resolution has to fall back to the device.
+    test('resolves a stale Settings language like MaterialApp', () async {
+      // LocaleCubit still supplies the saved locale to MaterialApp. Resolve
+      // that preference, rather than selecting a different device language.
       SharedPreferences.setMockInitialValues({
         LocalePreferenceService.prefsKey: 'cs',
       });
@@ -36,8 +35,9 @@ void main() {
 
       final resolved = currentAppUiLocale(prefs);
 
-      expect(resolved.languageCode, isNot('cs'));
-      expect(appUiLocaleOverride(prefs), isNull);
+      expect(resolved.languageCode, 'en');
+      expect(currentAppL10n(prefs).localeName, 'en');
+      expect(appUiLocaleOverride(prefs)?.languageCode, 'cs');
       expect(
         AppLocalizations.supportedLocales.map((l) => l.languageCode),
         contains(resolved.languageCode),

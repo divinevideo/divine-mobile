@@ -23,24 +23,19 @@ AppLocalizations currentAppL10n(SharedPreferences prefs) =>
 /// [BuildContext].
 ///
 /// Mirrors what `MaterialApp.router` resolves at runtime: the user's saved
-/// preference (`LocaleCubit`) when set and supported, otherwise the device
-/// locales resolved through [resolveAppUiLocale] (which can fall back to
+/// preference (`LocaleCubit`) when set, otherwise the device locales,
+/// resolved through [resolveAppUiLocale] (which can fall back to
 /// English). This is the resolved value, not the raw device language.
 Locale currentAppUiLocale(SharedPreferences prefs) {
-  return appUiLocaleOverride(prefs) ??
-      resolveAppUiLocale(
-        PlatformDispatcher.instance.locales,
-        AppLocalizations.supportedLocales,
-      );
+  final override = appUiLocaleOverride(prefs);
+  return resolveAppUiLocale(
+    override == null ? PlatformDispatcher.instance.locales : [override],
+    AppLocalizations.supportedLocales,
+  );
 }
 
-/// The Settings language, or null when absent or no longer supported.
+/// The saved Settings language, or null when following the device.
 Locale? appUiLocaleOverride(SharedPreferences prefs) {
   final saved = prefs.getString(LocalePreferenceService.prefsKey);
-  final isSupported =
-      saved != null &&
-      AppLocalizations.supportedLocales.any(
-        (locale) => locale.languageCode == saved,
-      );
-  return isSupported ? Locale(saved) : null;
+  return saved == null ? null : Locale(saved);
 }

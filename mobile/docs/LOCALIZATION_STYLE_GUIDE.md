@@ -491,7 +491,7 @@ so a copy report already names the language to route it by
 (`bug_report_service.dart`, #7939).
 
 A second field, `deviceLocale`, appears only when no language in the phone's
-preference list is supported and no supported language was chosen in Settings.
+preference list is supported and Settings follows the device language.
 It records the phone's first preference. The reader was pushed onto
 the English fallback by a missing translation, which is a different bug from a
 bad string in a language we do ship. A language chosen in Settings is a choice
