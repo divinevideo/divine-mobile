@@ -263,6 +263,20 @@ run_numeric_ratchet
         expect(res.stdout, contains('malformed renamed-from annotation'));
       });
 
+      test('ignores a settled claim when the old key comes back', () {
+        // Base and branch are identical here: the rename landed long ago and a
+        // later key reused the old name. Nothing grew, so nothing may fail.
+        const settled =
+            '# probe baseline\na\t5\nb\t3\nc\t4 # renamed-from: a\n';
+        commitBaseBaseline(settled);
+        baseline.writeAsStringSync(settled);
+        writeCurrent('a\t5\nb\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+      });
+
       test('ignores a comment line that documents the annotation', () {
         // print_baseline_header output is part of the file the claim scan
         // reads, so a header explaining the annotation must not parse as one.

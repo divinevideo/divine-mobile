@@ -206,8 +206,11 @@ run_numeric_ratchet() {
           fail=1
           continue
         fi
-        if awk -F "$TAB" -v key="$rename_new" '$1 == key { found=1 } END { exit !found }' "$MAIN_F" &&
-          ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
+        # Settled: the new key is already on the base ref, so it cannot be in
+        # `added` and the claim grants nothing. Validating a settled claim only
+        # invents failures — a later key that reuses the old name would trip
+        # "old key remains" on a branch that changed neither file.
+        if awk -F "$TAB" -v key="$rename_new" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
           continue
         fi
         if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
