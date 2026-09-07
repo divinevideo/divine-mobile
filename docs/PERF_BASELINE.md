@@ -175,7 +175,7 @@ flag, so these are *not* available wins:
   shrink-only per-file numeric ceilings (epic #4337).
 - `scripts/baseline/skip_test_ceilings.txt` — skipped-test count, shrink-only.
 - `test/vgv_tag_baseline.txt` — 18 `skip_very_good_optimization` files,
-  count may not increase (18 at capture; ratcheted to 15 in #8354).
+  count may not increase.
 - `scripts/baseline/test_unit_files.txt` — `test/unit/` frozen per-file.
 
 Total explicit real-time sleep across `test/**` is **21.4s over 105
