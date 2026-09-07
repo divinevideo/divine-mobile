@@ -26,6 +26,7 @@ import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -3904,7 +3905,7 @@ void main() {
         notifier.deferFileCleanup([orphan.path]);
         expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
-        await notifier.reset();
+        await container.read(videoPublishProvider.notifier).clearAll();
         await settleBackgroundWork();
 
         expect(
