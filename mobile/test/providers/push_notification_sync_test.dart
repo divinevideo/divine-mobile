@@ -329,8 +329,7 @@ void main() {
     nostrSession.setReadiness(
       NostrSessionReadiness.nostrReady(pubkey: pubkey, client: nostrClient),
     );
-    await pumpEventQueue(times: 1);
-    await pumpEventQueue(times: 1);
+    await pumpEventQueue(times: 2);
   }
 
   void recordMockDeregistration(
@@ -477,8 +476,7 @@ void main() {
         await pumpEventQueue(times: 1);
 
         tokenCompleter.complete('fcm-token-for-stale-session');
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         verifyNever(
           () => nostrClient.publishEventAwaitOk(
@@ -504,8 +502,7 @@ void main() {
       when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
       when(() => authService.currentPublicKeyHex).thenReturn(pubkeyA);
       authStateController.add(AuthState.authenticated);
-      await pumpEventQueue(times: 1);
-      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -846,8 +843,7 @@ void main() {
       nostrSession.setReadiness(
         NostrSessionReadiness.nostrReady(pubkey: pubkeyA, client: nostrClient),
       );
-      await pumpEventQueue(times: 1);
-      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -888,8 +884,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         await beforeSessionTeardownCallback!();
 
@@ -926,8 +921,7 @@ void main() {
       nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
 
       settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-      await pumpEventQueue(times: 1);
-      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -961,8 +955,7 @@ void main() {
         final teardownFuture = beforeSessionTeardownCallback!().timeout(
           const Duration(milliseconds: 100),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         await teardownFuture;
         when(() => authService.currentIdentity).thenReturn(null);
@@ -970,8 +963,7 @@ void main() {
         expect(events, ['deregister $pubkeyA']);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         expect(events, ['deregister $pubkeyA']);
         verifyNever(
@@ -1022,8 +1014,7 @@ void main() {
         await pumpEventQueue(times: 1);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
         expect(registerCalls, equals(1));
 
         publishCompleter.complete();
@@ -1603,8 +1594,7 @@ void main() {
               client: nostrClient,
             ),
           );
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 2);
 
           // Then start sign-out teardown — publishing deregistration throws.
           await beforeSessionTeardownCallback!();
@@ -1783,8 +1773,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
@@ -1874,8 +1863,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         when(() => authService.currentIdentity).thenReturn(null);
         when(() => authService.currentPublicKeyHex).thenReturn(null);
@@ -1979,8 +1967,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         currentEnvironment = stagingEnvironment;
         container.invalidate(currentEnvironmentProvider);
@@ -1990,13 +1977,11 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         final teardownFuture = coordinator
             .deregisterLastReadyPubkeyAfterAccountSwitch();
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         verify(() => messaging.getToken()).called(1);
         verifyNever(cleanupClient.initialize);
@@ -2010,8 +1995,7 @@ void main() {
 
         container.dispose();
         tokenCompleter.complete('fcm-token');
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         verify(() => signer.signEvent(any())).called(1);
         verify(cleanupClient.initialize).called(1);
@@ -2125,13 +2109,11 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         await beforeSessionTeardownCallback!();
         tokenRefreshController.add('refreshed-token-during-teardown');
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         verifyNever(
           () => authService.createAndSignEvent(
@@ -2259,12 +2241,10 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         tokenRefreshController.add('refreshed-token-during-session');
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
         expect(events, ['registration publish started']);
 
         // The refresh delivered a token, so getToken() now returns it and the
@@ -2272,8 +2252,7 @@ void main() {
         sessionToken = 'refreshed-token-during-session';
 
         final teardownFuture = beforeSessionTeardownCallback!();
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
         expect(events, ['registration publish started']);
 
         registrationPublishCompleter.complete(
@@ -2806,9 +2785,7 @@ void main() {
               client: nostrClient,
             ),
           );
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
-          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 3);
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
@@ -2842,11 +2819,7 @@ void main() {
               .updatePreferences(prefs),
           completes,
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 5);
 
         verify(() => pushService.updatePreferences(prefs)).called(5);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
@@ -3102,13 +3075,10 @@ void main() {
             client: nostrClient,
           ),
         );
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 2);
 
         permissionCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 3);
 
         expect(requestCount, 1);
         expect(events, ['register $pubkeyB']);
