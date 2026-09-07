@@ -74,6 +74,7 @@ void main() {
     when(() => nostrClient.publicKey).thenReturn(viewerPubkey);
 
     when(() => blocklistRepository.isBlocked(any())).thenReturn(false);
+    when(() => blocklistRepository.canUnblock(any())).thenReturn(false);
     when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(false);
     when(
       () => blocklistRepository.currentState,

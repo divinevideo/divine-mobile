@@ -82,7 +82,7 @@ class ProfileActionButtons extends ConsumerWidget {
     // Watch blocklist version to trigger rebuilds when block/unblock occurs
     ref.watch(blocklistVersionProvider);
 
-    final isBlocked = contentBlocklistRepository.isBlocked(userIdHex);
+    final isBlocked = contentBlocklistRepository.canUnblock(userIdHex);
     final canTargetUser = ref.watch(canTargetUserProvider(userIdHex));
 
     // Create MyFollowingBloc at this level so both the follow button

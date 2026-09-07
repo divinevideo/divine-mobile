@@ -70,6 +70,8 @@ void main() {
       mockBlocklistRepository = _MockContentBlocklistRepository();
       mockFollowRepository = _MockFollowRepository();
 
+      when(() => mockBlocklistRepository.canUnblock(any())).thenReturn(false);
+
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
       when(
         () => mockFollowRepository.toggleFollow(any()),
@@ -95,7 +97,7 @@ void main() {
     test('reports a blocked account as not followed', () {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
-        () => mockBlocklistRepository.isBlocked(testPubkey),
+        () => mockBlocklistRepository.canUnblock(testPubkey),
       ).thenReturn(true);
 
       final bloc = createBloc();
@@ -107,11 +109,21 @@ void main() {
     test('reports an unblocked account as followed', () {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
-        () => mockBlocklistRepository.isBlocked(testPubkey),
+        () => mockBlocklistRepository.canUnblock(testPubkey),
       ).thenReturn(false);
 
       final bloc = createBloc();
       expect(bloc.isFollowing, isTrue);
+      bloc.close();
+    });
+
+    test('offers Unblock for an imported mute', () {
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+
+      final bloc = createBloc();
+      expect(bloc.isBlocked, isTrue);
       bloc.close();
     });
 
@@ -747,7 +759,7 @@ void main() {
             () => mockFollowRepository.isFollowing(testPubkey),
           ).thenReturn(true);
           when(
-            () => mockBlocklistRepository.isBlocked(testPubkey),
+            () => mockBlocklistRepository.canUnblock(testPubkey),
           ).thenReturn(true);
         },
         build: createBloc,

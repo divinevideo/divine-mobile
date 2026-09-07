@@ -72,8 +72,11 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   /// The pubkey of the profile being viewed.
   final String pubkey;
 
-  /// Current block status for the viewed profile.
-  bool get isBlocked => _blocklistRepository.isBlocked(pubkey);
+  /// Whether the viewer can stop hiding the viewed profile.
+  ///
+  /// Includes both Divine blocks and mutes imported from another Nostr
+  /// client, so either source reaches the existing Unblock action.
+  bool get isBlocked => _blocklistRepository.canUnblock(pubkey);
 
   /// Whether the current user is following the viewed profile.
   ///
