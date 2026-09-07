@@ -64,13 +64,22 @@ if [[ -n "$violations" ]]; then
   echo "very_good --optimization isolate, causing order-dependent network /"
   echo "pending-timer flakes (PR #5163)."
   echo ""
-  echo "Remediation — pick one:"
+  echo "Remediation depends on which test tree the file is in."
+  echo ""
+  echo "mobile/test — pick one:"
   echo "  (a) Real-network / integration test: tag it so it stays out of the"
   echo "      merge (place the annotation BEFORE the first import):"
   echo "        @Tags(['skip_very_good_optimization', 'integration'])"
   echo "      then bump mobile/test/vgv_tag_baseline.txt if the tag count rises."
   echo "  (b) Otherwise drop the HttpOverrides.global assignment — a true unit"
   echo "      test should rely on the default 400-mock, not real network."
+  echo ""
+  echo "mobile/packages/*/test — (a) does NOT apply. Only mobile_ci.yaml passes"
+  echo "  --exclude-tags integration; the shared VeryGood package workflow"
+  echo "  (flutter_package.yml@v1) exposes no such input and no package has a"
+  echo "  dart_test.yaml, so an 'integration'-tagged package test leaves the"
+  echo "  merged bundle but still RUNS -- turning a merge hazard into real"
+  echo "  network I/O on every PR. Use (b), or move the file out of test/."
   exit 1
 fi
 
