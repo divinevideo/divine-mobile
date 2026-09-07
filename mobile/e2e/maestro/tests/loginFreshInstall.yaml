@@ -25,14 +25,21 @@ tags:
 - tapOn: Use Divine with no backup
 - tapOn: Use this device only
 
-# 3. A zero-follow account deliberately lands on Explore. Wait for a
-# screen-specific anchor rather than `home_tab`, which is part of the shell on
-# every tab and therefore cannot prove where signup landed. Do not use
-# waitForAnimationToEnd here: feeds and loading affordances may animate while
-# the destination is already interactive.
+# 3. Wait for the authenticated shell without waiting for every loading
+# animation. The empty-following redirect normally lands on Explore, but it is
+# cache-derived and deliberately falls back to Home. Retrying the explicit tab
+# selection also absorbs taps swallowed while the shell is still warming up.
 - extendedWaitUntil:
     visible:
-      id: "explore_search_bar"
+      id: "home_tab"
     timeout: 30000
+
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "explore_tab"
+      - assertVisible:
+          id: "explore_search_bar"
 
 - runFlow: ../asserts/assertExploreNew.yaml

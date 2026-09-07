@@ -82,7 +82,16 @@ class _IndicatorVisitor extends RecursiveAstVisitor<void> {
         break;
       }
     }
-    if (hasValue && value is! NullLiteral) return;
+    // Without resolved types, an identifier or other expression may evaluate
+    // to null at runtime and silently become indeterminate. Only numeric
+    // literals prove determinacy syntactically; production code with a dynamic
+    // progress value must use the reduced-motion-aware Divine wrapper.
+    if (hasValue &&
+        (value is DoubleLiteral ||
+            value is IntegerLiteral ||
+            _isReducedMotionGuardedValue(value))) {
+      return;
+    }
 
     sites.add(
       IndeterminateProgressIndicatorSite(
@@ -100,6 +109,13 @@ bool shouldScanProgressIndicatorFile(String path) {
       .where((segment) => segment.isNotEmpty)
       .toSet();
   if (!normalized.endsWith('.dart')) return false;
+  // This is the one implementation allowed to wrap raw Material indicators;
+  // its behavior is pinned directly by divine_progress_indicator_test.dart.
+  if (normalized.endsWith(
+    '/divine_ui/lib/src/loading/divine_progress_indicator.dart',
+  )) {
+    return false;
+  }
   if (segments.contains('test') ||
       segments.contains('integration_test') ||
       normalized.contains('/.dart_tool/') ||
@@ -109,6 +125,28 @@ bool shouldScanProgressIndicatorFile(String path) {
   return !normalized.endsWith('.g.dart') &&
       !normalized.endsWith('.freezed.dart') &&
       !normalized.endsWith('.mocks.dart');
+}
+
+bool _isReducedMotionGuardedValue(Expression? value) {
+  if (value is! ConditionalExpression) return false;
+  final staticWhenReduced = value.thenExpression;
+  final animatedOtherwise = value.elseExpression;
+  return _isDisableAnimationsCheck(value.condition) &&
+      (staticWhenReduced is DoubleLiteral ||
+          staticWhenReduced is IntegerLiteral) &&
+      animatedOtherwise is NullLiteral;
+}
+
+bool _isDisableAnimationsCheck(Expression condition) {
+  return switch (condition) {
+    MethodInvocation(:final methodName) =>
+      methodName.name == 'disableAnimationsOf',
+    PropertyAccess(:final propertyName) =>
+      propertyName.name == 'disableAnimations',
+    PrefixedIdentifier(:final identifier) =>
+      identifier.name == 'disableAnimations',
+    _ => false,
+  };
 }
 
 String? _lastIdentifierName(Expression? expression) {

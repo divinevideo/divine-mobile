@@ -79,6 +79,19 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
+    testWidgets('keeps the caption preview visible with reduced motion', (
+      tester,
+    ) async {
+      await pumpSheet(tester, disableAnimations: true);
+
+      final visiblePreview = find.byWidgetPredicate(
+        (widget) => widget is Opacity && widget.opacity == 1,
+      );
+      expect(visiblePreview, findsWidgets);
+      await tester.pumpAndSettle();
+      expect(tester.binding.transientCallbackCount, 0);
+    });
+
     testWidgets('custom color swatch exposes RGB semantics', (tester) async {
       await pumpSheet(tester);
 

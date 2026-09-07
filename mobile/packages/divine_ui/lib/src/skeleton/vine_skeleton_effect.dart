@@ -7,8 +7,11 @@ import 'package:skeletonizer/skeletonizer.dart';
 ///
 /// Uses the placeholder surface of the active palette with a 60 % alpha
 /// highlight and a 1 500 ms sweep, matching the design-system skeleton spec.
-ShimmerEffect vineSkeletonEffectOf(BuildContext context) {
+PaintingEffect vineSkeletonEffectOf(BuildContext context) {
   final base = context.vineColors.skeleton;
+  if (MediaQuery.disableAnimationsOf(context)) {
+    return SolidColorEffect(color: base);
+  }
   return ShimmerEffect(
     baseColor: base,
     highlightColor: base.withValues(alpha: 0.6),

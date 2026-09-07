@@ -74,7 +74,9 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
   void _syncAnimation() {
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.stop();
-      _controller.value = 0;
+      // Midway through the first cue is its fully visible hold frame. At 0.5
+      // the second cue has only just started and fade-in styles are blank.
+      _controller.value = 0.25;
     } else if (!_controller.isAnimating) {
       _controller.repeat();
     }

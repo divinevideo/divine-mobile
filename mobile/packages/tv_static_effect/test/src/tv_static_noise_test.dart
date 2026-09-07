@@ -120,32 +120,52 @@ void main() {
       expect(receivedTimes.last, greaterThan(initialTime));
     });
 
-    testWidgets(
-      'does not call setState when disposed before shader loads',
-      (tester) async {
-        final completer = Completer<PainterFactory>();
+    testWidgets('renders a static frame when animations are disabled', (
+      tester,
+    ) async {
+      final receivedTimes = <double>[];
 
-        await tester.pumpWidget(
-          TvStaticNoise(shaderLoader: () => completer.future),
-        );
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: TvStaticNoise(
+            shaderLoader: createTestLoader(
+              onCreatePainter: (time, _) => receivedTimes.add(time),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final initialTime = receivedTimes.last;
+      await tester.pump(const Duration(seconds: 1));
 
-        // Remove the widget before the shader loads.
-        await tester.pumpWidget(const SizedBox());
+      expect(receivedTimes.last, initialTime);
+      expect(tester.binding.transientCallbackCount, 0);
+    });
 
-        // Complete the loader after disposal.
-        completer.complete(
-          ({required double time, required double opacity}) => mockPainter,
-        );
-        await tester.pump();
+    testWidgets('does not call setState when disposed before shader loads', (
+      tester,
+    ) async {
+      final completer = Completer<PainterFactory>();
 
-        expect(tester.takeException(), isNull);
-      },
-    );
+      await tester.pumpWidget(
+        TvStaticNoise(shaderLoader: () => completer.future),
+      );
+
+      // Remove the widget before the shader loads.
+      await tester.pumpWidget(const SizedBox());
+
+      // Complete the loader after disposal.
+      completer.complete(
+        ({required double time, required double opacity}) => mockPainter,
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('disposes ticker on widget removal', (tester) async {
-      await tester.pumpWidget(
-        TvStaticNoise(shaderLoader: createTestLoader()),
-      );
+      await tester.pumpWidget(TvStaticNoise(shaderLoader: createTestLoader()));
       await tester.pump();
 
       // Remove the widget — should dispose without errors.
@@ -177,17 +197,11 @@ void main() {
 
     group('asserts opacity', () {
       test('throws AssertionError when opacity is negative', () {
-        expect(
-          () => TvStaticNoise(opacity: -0.1),
-          throwsAssertionError,
-        );
+        expect(() => TvStaticNoise(opacity: -0.1), throwsAssertionError);
       });
 
       test('throws AssertionError when opacity is greater than 1', () {
-        expect(
-          () => TvStaticNoise(opacity: 1.1),
-          throwsAssertionError,
-        );
+        expect(() => TvStaticNoise(opacity: 1.1), throwsAssertionError);
       });
     });
   });

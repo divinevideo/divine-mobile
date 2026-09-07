@@ -247,7 +247,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   void _syncAnimation() {
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.stop();
-      _controller.value = 0;
+      _controller.value = 0.5;
     } else if (!_controller.isAnimating) {
       _controller.repeat();
     }

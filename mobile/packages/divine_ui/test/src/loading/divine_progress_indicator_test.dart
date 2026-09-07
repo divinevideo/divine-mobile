@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,13 +35,15 @@ void main() {
       );
     });
 
-    testWidgets('becomes determinate when animations are disabled', (
+    testWidgets('freezes indeterminate progress without complete semantics', (
       tester,
     ) async {
       await tester.pumpWidget(
         subject(
           disableAnimations: true,
-          child: const DivineCircularProgressIndicator(),
+          child: const DivineCircularProgressIndicator(
+            semanticsLabel: 'Loading',
+          ),
         ),
       );
 
@@ -49,8 +53,11 @@ void main() {
               find.byType(CircularProgressIndicator),
             )
             .value,
-        1,
+        0.75,
       );
+      final semantics = tester.getSemantics(find.bySemanticsLabel('Loading'));
+      expect(semantics.getSemanticsData().value, isEmpty);
+      expect(semantics.getSemanticsData().role, SemanticsRole.loadingSpinner);
       expect(tester.binding.transientCallbackCount, 0);
     });
 
@@ -146,13 +153,13 @@ void main() {
       );
     });
 
-    testWidgets('becomes determinate when animations are disabled', (
+    testWidgets('freezes indeterminate progress without complete semantics', (
       tester,
     ) async {
       await tester.pumpWidget(
         subject(
           disableAnimations: true,
-          child: const DivineLinearProgressIndicator(),
+          child: const DivineLinearProgressIndicator(semanticsLabel: 'Loading'),
         ),
       );
 
@@ -162,8 +169,12 @@ void main() {
               find.byType(LinearProgressIndicator),
             )
             .value,
-        1,
+        0.5,
       );
+      final semantics = tester.getSemantics(find.bySemanticsLabel('Loading'));
+      expect(semantics.getSemanticsData().value, isEmpty);
+      expect(semantics.getSemanticsData().role, SemanticsRole.loadingSpinner);
+      expect(find.byType(ClipRRect), findsOneWidget);
       expect(tester.binding.transientCallbackCount, 0);
     });
 

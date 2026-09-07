@@ -1,6 +1,8 @@
 // ABOUTME: Progress indicators that honor the platform reduced-motion setting.
 // ABOUTME: Prevents perpetual animations from blocking UI automation.
 
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/material.dart';
 
 /// A circular Material progress indicator that becomes static when motion is
@@ -10,7 +12,8 @@ import 'package:flutter/material.dart';
 /// does not consult [MediaQueryData.disableAnimations]. That is both an
 /// accessibility problem and enough to keep XCUITest hierarchy requests from
 /// reaching quiescence. A caller-supplied [value] remains unchanged; only an
-/// otherwise indeterminate indicator becomes a complete, static ring.
+/// otherwise indeterminate indicator becomes a static partial ring while
+/// retaining loading-spinner semantics.
 class DivineCircularProgressIndicator extends StatelessWidget {
   /// Creates a reduced-motion-aware circular progress indicator.
   const DivineCircularProgressIndicator({
@@ -67,8 +70,10 @@ class DivineCircularProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CircularProgressIndicator(
-      value: value ?? (MediaQuery.disableAnimationsOf(context) ? 1 : null),
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final freezeIndeterminate = value == null && reduceMotion;
+    final indicator = CircularProgressIndicator(
+      value: freezeIndeterminate ? 0.75 : value,
       backgroundColor: backgroundColor,
       color: color,
       valueColor: valueColor,
@@ -81,11 +86,19 @@ class DivineCircularProgressIndicator extends StatelessWidget {
       trackGap: trackGap,
       padding: padding,
     );
+    if (!freezeIndeterminate) return indicator;
+
+    return Semantics(
+      label: semanticsLabel,
+      value: semanticsValue,
+      role: SemanticsRole.loadingSpinner,
+      child: ExcludeSemantics(child: indicator),
+    );
   }
 }
 
 /// A linear Material progress indicator that becomes static when motion is
-/// disabled by the platform.
+/// disabled by the platform while retaining loading-spinner semantics.
 class DivineLinearProgressIndicator extends StatelessWidget {
   /// Creates a reduced-motion-aware linear progress indicator.
   const DivineLinearProgressIndicator({
@@ -138,8 +151,10 @@ class DivineLinearProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LinearProgressIndicator(
-      value: value ?? (MediaQuery.disableAnimationsOf(context) ? 1 : null),
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final freezeIndeterminate = value == null && reduceMotion;
+    final indicator = LinearProgressIndicator(
+      value: freezeIndeterminate ? 0.5 : value,
       backgroundColor: backgroundColor,
       color: color,
       valueColor: valueColor,
@@ -150,6 +165,26 @@ class DivineLinearProgressIndicator extends StatelessWidget {
       stopIndicatorColor: stopIndicatorColor,
       stopIndicatorRadius: stopIndicatorRadius,
       trackGap: trackGap,
+    );
+    if (!freezeIndeterminate) return indicator;
+
+    final theme = Theme.of(context);
+    final effectiveBorderRadius =
+        borderRadius ??
+        ProgressIndicatorTheme.of(context).borderRadius ??
+        (theme.useMaterial3
+            ? const BorderRadius.all(Radius.circular(2))
+            : BorderRadius.zero);
+    return Semantics(
+      label: semanticsLabel,
+      value: semanticsValue,
+      role: SemanticsRole.loadingSpinner,
+      child: ExcludeSemantics(
+        child: ClipRRect(
+          borderRadius: effectiveBorderRadius,
+          child: indicator,
+        ),
+      ),
     );
   }
 }

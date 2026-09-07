@@ -52,15 +52,43 @@ Widget d() => const material.CircularProgressIndicator.adaptive();
       expect(sites, hasLength(1));
     });
 
-    test('allows raw determinate indicators and Divine wrappers', () {
+    test('allows literal determinate indicators and Divine wrappers', () {
       final sites = findIndeterminateProgressIndicatorsInSource('''
-Widget a() => CircularProgressIndicator(value: progress);
+Widget a() => const CircularProgressIndicator(value: 1);
 Widget b() => const LinearProgressIndicator(value: 0.5);
 Widget c() => const DivineCircularProgressIndicator();
 Widget d() => const DivineLinearProgressIndicator();
 ''');
 
       expect(sites, isEmpty);
+    });
+
+    test('rejects a value expression that may evaluate to null', () {
+      final sites = findIndeterminateProgressIndicatorsInSource(
+        'Widget a(double? progress) => CircularProgressIndicator(value: progress);',
+      );
+
+      expect(sites, hasLength(1));
+    });
+
+    test('allows a value explicitly guarded by reduced motion', () {
+      final sites = findIndeterminateProgressIndicatorsInSource('''
+Widget a(BuildContext context) => CircularProgressIndicator(
+  value: MediaQuery.disableAnimationsOf(context) ? 0.75 : null,
+);
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('does not trust a similarly named arbitrary condition', () {
+      final sites = findIndeterminateProgressIndicatorsInSource('''
+Widget a(bool disableAnimationsLater) => CircularProgressIndicator(
+  value: disableAnimationsLater ? 0.75 : null,
+);
+''');
+
+      expect(sites, hasLength(1));
     });
 
     test('treats an explicit null value as indeterminate', () {
@@ -89,6 +117,12 @@ const example = 'LinearProgressIndicator()';
       );
       expect(shouldScanProgressIndicatorFile('test/a.dart'), isFalse);
       expect(shouldScanProgressIndicatorFile('lib/a.g.dart'), isFalse);
+      expect(
+        shouldScanProgressIndicatorFile(
+          'packages/divine_ui/lib/src/loading/divine_progress_indicator.dart',
+        ),
+        isFalse,
+      );
     });
   });
 }

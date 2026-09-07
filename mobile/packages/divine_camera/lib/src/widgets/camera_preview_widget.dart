@@ -2,6 +2,7 @@
 // ABOUTME: Provides a ready-to-use camera preview with gesture support
 
 import 'dart:io' show Platform;
+import 'dart:ui' show SemanticsRole;
 
 import 'package:divine_camera/divine_camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -252,9 +253,16 @@ class _CameraLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CircularProgressIndicator(
-      value: MediaQuery.disableAnimationsOf(context) ? 1 : null,
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final indicator = CircularProgressIndicator(
+      value: MediaQuery.disableAnimationsOf(context) ? 0.75 : null,
       color: const Color(0xFFFFFFFF),
+    );
+    if (!reduceMotion) return indicator;
+
+    return Semantics(
+      role: SemanticsRole.loadingSpinner,
+      child: ExcludeSemantics(child: indicator),
     );
   }
 }

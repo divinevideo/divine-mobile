@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:flutter/material.dart';
@@ -251,8 +253,16 @@ void main() {
         final indicator = tester.widget<CircularProgressIndicator>(
           find.byType(CircularProgressIndicator),
         );
-        expect(indicator.value, 1);
-        await tester.pumpAndSettle();
+        expect(indicator.value, 0.75);
+        final semantics = tester.getSemantics(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.role == SemanticsRole.loadingSpinner,
+          ),
+        );
+        expect(semantics.getSemanticsData().value, isEmpty);
+        expect(tester.binding.transientCallbackCount, 0);
       },
     );
 

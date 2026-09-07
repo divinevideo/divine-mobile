@@ -91,6 +91,22 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
+    testWidgets('keeps fade previews visible when animations are disabled', (
+      tester,
+    ) async {
+      await openPicker(tester, disableAnimations: true);
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));
+      await tester.pump();
+
+      final visibleFade = find.byWidgetPredicate(
+        (widget) =>
+            widget is Opacity && widget.opacity > 0 && widget.opacity < 1,
+      );
+      expect(visibleFade, findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(tester.binding.transientCallbackCount, 0);
+    });
+
     testWidgets('lists every animation type', (tester) async {
       await openPicker(tester);
 
@@ -121,10 +137,7 @@ void main() {
         l10n.videoEditorLayerAnimationEnter,
       );
       expect(enter.color, colors.controlSelectedFill);
-      expect(
-        (enter.border! as Border).top.color,
-        colors.accentBrand,
-      );
+      expect((enter.border! as Border).top.color, colors.accentBrand);
 
       final leave = _segmentDecoration(
         tester,

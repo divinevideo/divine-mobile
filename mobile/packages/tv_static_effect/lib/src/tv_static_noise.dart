@@ -12,10 +12,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// [opacity].
 @visibleForTesting
 typedef PainterFactory =
-    CustomPainter Function({
-      required double time,
-      required double opacity,
-    });
+    CustomPainter Function({required double time, required double opacity});
 
 /// A function that asynchronously loads a [PainterFactory].
 @visibleForTesting
@@ -65,8 +62,23 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick);
-    unawaited(_ticker.start());
     unawaited(_loadShader());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _ticker.stop();
+      _elapsed = 0;
+      _frame = -1;
+    } else if (!_ticker.isActive) {
+      unawaited(_ticker.start());
+    }
   }
 
   Future<void> _loadShader() async {

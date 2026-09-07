@@ -106,6 +106,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('maestro "$@" test', maestro)
         self.assertIn('process == "Runner"', maestro)
         self.assertIn('subsystem CONTAINS[c] "xctest"', maestro)
+        self.assertEqual(maestro.count("--timeout 20m"), 2)
+        self.assertIn('kill -0 "$APP_LOG_PID"', maestro)
+        self.assertIn('kill -0 "$XCTEST_LOG_PID"', maestro)
 
         workflow = self._resolved_config()["workflows"]["e2e-smoke-ios"]
         self.assertEqual(
