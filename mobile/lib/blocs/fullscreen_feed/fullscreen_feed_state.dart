@@ -158,8 +158,15 @@ final class FullscreenFeedState extends Equatable {
   /// Metadata-sensitive signature for detecting updates to videos that keep
   /// the same IDs and order but change user-visible fields like loop counts.
   ///
-  /// This is initialized lazily because computing it requires runtime video
-  /// data. Consequently, this state cannot have a const constructor.
+  /// A per-instance snapshot rather than a live view: it materializes once
+  /// from whatever [videos] holds at first access, so a later in-place
+  /// mutation of that same list is reported as a change instead of being
+  /// silently absorbed. The bloc's filter helpers do return the source list
+  /// by reference when no filter applies, so that case is reachable.
+  ///
+  /// The trade is memory for CPU — each live state retains one
+  /// `List<String>` (~130 KiB at 200 videos). Being `late` is also why this
+  /// class has no `const` constructor.
   late final List<String> videoUpdateSignature =
       _inheritedSignature ??
       List.unmodifiable(
