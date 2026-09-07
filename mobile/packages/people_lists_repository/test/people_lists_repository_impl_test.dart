@@ -749,6 +749,60 @@ void main() {
           verifyNever(() => client.publishEvent(any()));
         },
       );
+
+      test(
+        'a pre-source row adopts the source of the event it already holds',
+        () async {
+          final client = publishingClient();
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final publishedEvent = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'legacy-list'],
+              ['title', 'Legacy'],
+              ['alt', 'Written by another client'],
+              ['p', _memberA, 'wss://relay.example'],
+            ],
+            content: 'ciphertext',
+            createdAt: 1700000000,
+          );
+          // The row a publish left behind before source preservation: the
+          // same event, stamped with the millisecond `DateTime.now()` of the
+          // publish, which always reads as newer than that event's
+          // second-resolution created_at.
+          await cache.putList(
+            ownerPubkey: _ownerPubkey,
+            list: Nip51PeopleListCodec.decode(publishedEvent)!.copyWith(
+              updatedAt: DateTime.fromMillisecondsSinceEpoch(
+                1700000000 * 1000 + 250,
+                isUtc: true,
+              ),
+            ),
+            receivedAt: DateTime.now().toUtc(),
+          );
+          stubReconcile(client, events: [publishedEvent]);
+          final repository = buildRepository(nostrClient: client, cache: cache);
+
+          final result = await repository.addPubkey(
+            ownerPubkey: _ownerPubkey,
+            listId: 'legacy-list',
+            pubkey: _memberB,
+          );
+
+          expect(result.status, PeopleListPublishStatus.submitted);
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          expect(published.tags, const [
+            ['d', 'legacy-list'],
+            ['title', 'Legacy'],
+            ['alt', 'Written by another client'],
+            ['p', _memberA, 'wss://relay.example'],
+            ['p', _memberB],
+          ]);
+          expect(published.content, 'ciphertext');
+        },
+      );
     });
 
     group('deleteList', () {
