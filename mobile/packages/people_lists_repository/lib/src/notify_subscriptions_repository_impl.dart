@@ -219,6 +219,8 @@ class NotifySubscriptionsRepositoryImpl
       ownerPubkey: ownerPubkey,
       creators: desired,
       previousCreatedAt: snapshot.createdAt,
+      sourceTags: snapshot.sourceTags,
+      sourceContent: snapshot.sourceContent,
     );
 
     if (result.submitted) {
@@ -237,11 +239,15 @@ class NotifySubscriptionsRepositoryImpl
     required String ownerPubkey,
     required Set<String> creators,
     required int previousCreatedAt,
+    required List<List<String>>? sourceTags,
+    required String? sourceContent,
   }) async {
     final payload = Nip51PeopleListCodec.encodeReserved(
       dTag: Nip51PeopleListCodec.notifyDTag,
       title: _notifyListTitle,
       pubkeys: creators,
+      sourceTags: sourceTags,
+      sourceContent: sourceContent,
     );
 
     // NIP-33 replacement resolves by created_at, and relay behaviour for a
@@ -273,7 +279,12 @@ class NotifySubscriptionsRepositoryImpl
       }
       _publishSnapshot(
         ownerPubkey,
-        _NotifyListSnapshot(creators: creators, createdAt: createdAt),
+        _NotifyListSnapshot(
+          creators: creators,
+          createdAt: createdAt,
+          sourceTags: payload.tags,
+          sourceContent: payload.content,
+        ),
       );
       return PeopleListPublishResult.submitted(eventId: sent.event.id);
     } on Object catch (error, stackTrace) {
@@ -353,20 +364,29 @@ class NotifySubscriptionsRepositoryImpl
         return null;
       }
 
-      var newest = const _NotifyListSnapshot(creators: {}, createdAt: 0);
+      Event? newestEvent;
+      List<String>? newestMembers;
       for (final event in result.events) {
         final members = Nip51PeopleListCodec.decodeReservedMembers(
           event,
           dTag: Nip51PeopleListCodec.notifyDTag,
         );
         if (members == null) continue;
-        if (event.createdAt < newest.createdAt) continue;
-        newest = _NotifyListSnapshot(
-          creators: members.toSet(),
-          createdAt: event.createdAt,
-        );
+        if (newestEvent != null && !_isNewerRevision(event, newestEvent)) {
+          continue;
+        }
+        newestEvent = event;
+        newestMembers = members;
       }
-      return newest;
+      if (newestEvent == null) {
+        return _NotifyListSnapshot(creators: const {}, createdAt: 0);
+      }
+      return _NotifyListSnapshot(
+        creators: newestMembers!.toSet(),
+        createdAt: newestEvent.createdAt,
+        sourceTags: newestEvent.tags,
+        sourceContent: newestEvent.content,
+      );
     } on Object catch (error) {
       Log.warning(
         'Failed to read notify list for owner ${pubkeyForLogs(ownerPubkey)}: '
@@ -405,15 +425,42 @@ class NotifySubscriptionsRepositoryImpl
 
   static bool _sameMembers(Set<String> a, Set<String> b) =>
       a.length == b.length && a.containsAll(b);
+
+  static bool _isNewerRevision(Event candidate, Event selected) {
+    final createdAtComparison = candidate.createdAt.compareTo(
+      selected.createdAt,
+    );
+    if (createdAtComparison != 0) return createdAtComparison > 0;
+    // Match the user-facing people-list reconciliation rule so relay result
+    // order cannot change which complete event becomes the next publish base.
+    return candidate.id.compareTo(selected.id) < 0;
+  }
 }
 
-/// Immutable view of the notify list plus the `created_at` it was read at.
+/// Immutable view of the notify list and its complete replacement source.
 ///
 /// The timestamp is kept so the next publish can step past it — see
-/// `_publishReplacement`.
+/// `_publishReplacement`. Null source fields mean no relay event exists yet,
+/// which is distinct from an existing event with no members or empty content.
 class _NotifyListSnapshot {
-  const _NotifyListSnapshot({required this.creators, required this.createdAt});
+  _NotifyListSnapshot({
+    required Set<String> creators,
+    required this.createdAt,
+    List<List<String>>? sourceTags,
+    this.sourceContent,
+  }) : assert(
+         (sourceTags == null) == (sourceContent == null),
+         'sourceTags and sourceContent must both be present or both be absent',
+       ),
+       creators = Set<String>.unmodifiable(creators),
+       sourceTags = sourceTags == null
+           ? null
+           : List<List<String>>.unmodifiable(
+               sourceTags.map(List<String>.unmodifiable),
+             );
 
   final Set<String> creators;
   final int createdAt;
+  final List<List<String>>? sourceTags;
+  final String? sourceContent;
 }

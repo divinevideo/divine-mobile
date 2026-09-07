@@ -259,6 +259,106 @@ void main() {
     });
 
     group('subscribe', () {
+      test(
+        'preserves source metadata, member positions, and content',
+        () async {
+          final source = Event(
+            ownerPubkey,
+            Nip51PeopleListCodec.kind,
+            const [
+              ['d', 'notify'],
+              ['title', 'Renamed elsewhere'],
+              ['p', creatorA, 'wss://relay.example', 'friend'],
+              ['alt', 'Notification subscriptions'],
+            ],
+            'nip44-ciphertext-written-by-another-client',
+            createdAt: 1710000000,
+          );
+          stubRead([source]);
+          stubPublishSuccess();
+
+          await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorB,
+          );
+
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          expect(published.tags, const [
+            ['d', 'notify'],
+            ['title', 'Renamed elsewhere'],
+            ['p', creatorA, 'wss://relay.example', 'friend'],
+            ['alt', 'Notification subscriptions'],
+            ['p', creatorB],
+          ]);
+          expect(
+            published.content,
+            'nip44-ciphertext-written-by-another-client',
+          );
+        },
+      );
+
+      test(
+        'two sequential edits retain the complete published source',
+        () async {
+          final source = Event(
+            ownerPubkey,
+            Nip51PeopleListCodec.kind,
+            const [
+              ['d', 'notify'],
+              ['alt', 'Keep me'],
+              ['p', creatorA, 'wss://relay.example'],
+            ],
+            'ciphertext',
+            createdAt: 1710000000,
+          );
+          stubRead([source]);
+          stubPublishSuccess();
+
+          await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorB,
+          );
+          await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorC,
+          );
+
+          final published = verify(
+            () => client.publishEvent(captureAny()),
+          ).captured.cast<Event>();
+          expect(published.last.tags, const [
+            ['d', 'notify'],
+            ['alt', 'Keep me'],
+            ['p', creatorA, 'wss://relay.example'],
+            ['p', creatorB],
+            ['p', creatorC],
+          ]);
+          expect(published.last.content, 'ciphertext');
+        },
+      );
+
+      test('mints the canonical tags when no source event exists', () async {
+        stubRead(const []);
+        stubPublishSuccess();
+
+        await repository.subscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: creatorA,
+        );
+
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(published.tags, const [
+          ['d', 'notify'],
+          ['title', 'Notify'],
+          ['p', creatorA],
+        ]);
+        expect(published.content, isEmpty);
+      });
+
       test('publishes the full list including the new creator', () async {
         stubRead([
           _notifyEvent([creatorA]),
@@ -342,6 +442,39 @@ void main() {
     });
 
     group('unsubscribe', () {
+      test('removes every matching tag while preserving the source', () async {
+        final source = Event(
+          ownerPubkey,
+          Nip51PeopleListCodec.kind,
+          const [
+            ['d', 'notify'],
+            ['p', creatorA, 'wss://relay.example'],
+            ['alt', 'Keep me'],
+            ['p', creatorA, 'wss://backup.example'],
+            ['p', creatorB, 'wss://relay.example', 'friend'],
+          ],
+          'ciphertext',
+          createdAt: 1710000000,
+        );
+        stubRead([source]);
+        stubPublishSuccess();
+
+        await repository.unsubscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: creatorA,
+        );
+
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(published.tags, const [
+          ['d', 'notify'],
+          ['alt', 'Keep me'],
+          ['p', creatorB, 'wss://relay.example', 'friend'],
+        ]);
+        expect(published.content, 'ciphertext');
+      });
+
       test('publishes the list without the creator', () async {
         stubRead([
           _notifyEvent([creatorA, creatorB]),
@@ -629,6 +762,23 @@ void main() {
     });
 
     group('refresh', () {
+      test('selects the lowest event id when timestamps tie', () async {
+        final higherId = _notifyEvent([creatorA])
+          ..id =
+              'ffffffffffffffffffffffffffffffff'
+              'ffffffffffffffffffffffffffffffff';
+        final lowerId = _notifyEvent([creatorB])
+          ..id =
+              '00000000000000000000000000000000'
+              '00000000000000000000000000000000';
+        stubRead([higherId, lowerId]);
+
+        expect(
+          await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+          equals({creatorB}),
+        );
+      });
+
       test('replaces a stale snapshot and emits the new set', () async {
         var events = [
           _notifyEvent([creatorA]),
