@@ -127,8 +127,11 @@ extension FlutterError: @retroactive Error {}
 
           let mediaItem = MediaItem(mediaUrl: fileURL)
 
-          // Configure proof generation options
-          // Include device ID, location (if available), and network info
+          // Configure proof generation options.
+          // All three signals are deliberately off: Divine proves the media
+          // hash only, and collects no device ID, location, or carrier data.
+          // Keep them false unless the privacy manifest and the App Store
+          // privacy label are updated to match (#8803).
           let options = ProofGenerationOptions(
             showDeviceIds: false,
             showLocation: false,
