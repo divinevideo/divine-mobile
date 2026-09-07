@@ -2,6 +2,10 @@ name: Mobile Integration Tests (Services)
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * *'
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -15,7 +19,7 @@ on:
 # sync when suite dependencies change.
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -26,19 +30,36 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      focused: ${{ steps.scope.outputs.focused }}
-      app: ${{ steps.scope.outputs.app }}
+      focused: ${{ steps.scope.outputs.focused || steps.mobile-scope.outputs.service || steps.full-scope.outputs.focused }}
+      app: ${{ steps.scope.outputs.app || steps.mobile-scope.outputs.service || steps.full-scope.outputs.app }}
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: mobile/scripts/ci/detect_service_suite_scope.sh
+          sparse-checkout: |
+            mobile/scripts/ci/detect_mobile_ci_scope.sh
+            mobile/scripts/ci/detect_service_suite_scope.sh
           sparse-checkout-cone-mode: false
       - name: Detect affected service suites
         id: scope
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: bash mobile/scripts/ci/detect_service_suite_scope.sh
+      - name: Detect whether a main-branch merge affects services
+        id: mobile-scope
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
+        run: bash mobile/scripts/ci/detect_mobile_ci_scope.sh
+      - name: Run the full deterministic suite on schedules and dispatches
+        id: full-scope
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo "focused=true" >> "$GITHUB_OUTPUT"
+          echo "app=true" >> "$GITHUB_OUTPUT"
 
   service-tests:
     name: Integration Tests (services)
