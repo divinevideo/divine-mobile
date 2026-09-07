@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip05/nip05_validor.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -70,6 +71,22 @@ class AIDetectionResult {
   final bool isVerified;
 }
 
+/// Why a labeler-history walk stopped.
+enum _LabelerHistoryStop {
+  /// The relay reported the end of this labeler's history.
+  complete,
+
+  /// A page went unanswered, or the walk ran out of its per-load budget.
+  /// Whatever arrived is still applied and the labeler stays retryable.
+  incomplete,
+
+  /// The service was disposed, or the labeler was unloaded, mid-walk.
+  /// Nothing the walk collected may be applied.
+  cancelled,
+}
+
+typedef _LabelerLoad = ({int generation, Future<void> future});
+
 /// Service for subscribing to Kind 1985 label events from labeler pubkeys.
 ///
 /// Maintains an in-memory cache of labels keyed by target (event ID or pubkey).
@@ -80,16 +97,64 @@ class ModerationLabelService {
     required AuthService authService,
     required SharedPreferences sharedPreferences,
     bool Function()? canQueryRelays,
+    int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
+    int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
+    Duration labelerHistoryBudget = defaultLabelerHistoryBudget,
   }) : _nostrClient = nostrClient,
        _authService = authService,
        _prefs = sharedPreferences,
-       _canQueryRelays = canQueryRelays ?? (() => true);
+       _canQueryRelays = canQueryRelays ?? (() => true),
+       _labelerHistoryPageSize = labelerHistoryPageSize,
+       _maxLabelerHistoryPages = maxLabelerHistoryPages,
+       _labelerHistoryBudget = labelerHistoryBudget;
 
   final NostrClient _nostrClient;
   // ignore: unused_field
   final AuthService _authService;
   final SharedPreferences _prefs;
   final bool Function() _canQueryRelays;
+
+  /// Page size for the paged labeler-history query.
+  ///
+  /// The Divine relay advertises `max_limit: 5000`, so an unbounded labeler
+  /// query is a full scan that silently truncates past that cap and grows
+  /// without limit. Bounding each round-trip and paging backward keeps every
+  /// query small enough to settle inside the load timeout — a single query's
+  /// breadth is a contributing cause of #8214's timeouts — and removes the
+  /// silent truncation, save for the un-pageable remainder of a single second
+  /// that alone holds more than a page of labels. #8252.
+  static const int defaultLabelerHistoryPageSize = 500;
+
+  final int _labelerHistoryPageSize;
+
+  /// Hard ceiling on labeler-history pages per load.
+  ///
+  /// A well-behaved relay always ends the walk with a short page or an
+  /// unadvanceable cursor, so this never fires in practice. It is a defensive
+  /// stop against an untrusted relay that never signals the end — e.g. one that
+  /// fabricates events at the requested `until` on every response, which would
+  /// otherwise step the cursor backward forever. At the default page size this
+  /// still allows a very large history (1000 pages of 500 = 500k events) before
+  /// capping. If it is ever hit for a real labeler, that is the signal to move
+  /// to persisted labels or per-target queries rather than a cold-start full
+  /// scan. #8252.
+  static const int defaultMaxLabelerHistoryPages = 1000;
+
+  final int _maxLabelerHistoryPages;
+
+  /// Wall-clock ceiling on one labeler-history walk.
+  ///
+  /// The page cap bounds pages, not time. Each page carries
+  /// `queryEventsDetailed`'s own five-second timeout and the sync loops await
+  /// labelers one at a time, so against a connected-but-silent relay a
+  /// cap-length walk would hold the shared query path for over an hour while
+  /// every later labeler waits behind it. This stops the walk while the app is
+  /// still starting up; what arrived is applied and the labeler stays
+  /// retryable. It is the stop that fires first in practice — the page cap is
+  /// the backstop for a relay that answers quickly and endlessly. #8252.
+  static const Duration defaultLabelerHistoryBudget = Duration(seconds: 30);
+
+  final Duration _labelerHistoryBudget;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
   static const String _subscribedLabelersKey = 'subscribed_labeler_pubkeys';
@@ -152,7 +217,7 @@ class ModerationLabelService {
   final Set<String> _loadedLabelers = {};
 
   /// Labelers currently being loaded from relays.
-  final Map<String, Future<void>> _loadingLabelers = {};
+  final Map<String, _LabelerLoad> _loadingLabelers = {};
 
   /// Labelers whose load was abandoned because no relay answered.
   ///
@@ -172,6 +237,26 @@ class ModerationLabelService {
 
   /// Set by [dispose]; stops an in-flight load from arming a new retry.
   bool _disposed = false;
+
+  /// Bumped whenever a labeler's rows are dropped because the labeler itself
+  /// is going away.
+  ///
+  /// Nothing cancels an awaited page, so an unfollow or a pubkey rotation part
+  /// way through a multi-page walk would otherwise be undone by that walk
+  /// reapplying its rows and latching the labeler once it finished. A walk
+  /// carries the generation it started with and abandons itself when it no
+  /// longer matches.
+  final Map<String, int> _labelerLoadGenerations = {};
+
+  int _labelerLoadGeneration(String pubkey) =>
+      _labelerLoadGenerations[pubkey] ?? 0;
+
+  void _invalidateLabelerLoad(String pubkey) =>
+      _labelerLoadGenerations[pubkey] = _labelerLoadGeneration(pubkey) + 1;
+
+  /// Whether a walk started at [generation] may still act on its result.
+  bool _isLabelerLoadCurrent(String pubkey, int generation) =>
+      !_disposed && _labelerLoadGeneration(pubkey) == generation;
 
   /// Active subscriptions.
   final Map<String, StreamSubscription<dynamic>> _subscriptions = {};
@@ -255,23 +340,231 @@ class ModerationLabelService {
 
   /// Subscribe to Kind 1985 events from a labeler pubkey.
   Future<void> subscribeToLabeler(String pubkey) async {
-    if (_loadedLabelers.contains(pubkey)) return;
-    final inFlight = _loadingLabelers[pubkey];
-    if (inFlight != null) {
-      await inFlight;
-      return;
-    }
+    while (!_loadedLabelers.contains(pubkey)) {
+      final generation = _labelerLoadGeneration(pubkey);
+      final inFlight = _loadingLabelers[pubkey];
+      if (inFlight != null) {
+        await inFlight.future;
+        final generationChanged =
+            inFlight.generation != _labelerLoadGeneration(pubkey);
+        final isStillWanted =
+            _subscribedLabelers.contains(pubkey) ||
+            _followedLabelers.contains(pubkey);
+        if (generationChanged && isStillWanted) continue;
+        return;
+      }
 
-    final future = _subscribeToLabelerInternal(pubkey);
-    _loadingLabelers[pubkey] = future;
-    try {
-      await future;
-    } finally {
-      _loadingLabelers.remove(pubkey);
+      final future = _subscribeToLabelerInternal(pubkey, generation);
+      final load = (generation: generation, future: future);
+      _loadingLabelers[pubkey] = load;
+      try {
+        await future;
+      } finally {
+        if (_loadingLabelers[pubkey] == load) {
+          _loadingLabelers.remove(pubkey);
+        }
+      }
+      return;
     }
   }
 
-  Future<void> _subscribeToLabelerInternal(String pubkey) async {
+  /// Fetch a labeler's full label history in bounded pages, newest first.
+  ///
+  /// Returns the merged events plus why the walk stopped. Only
+  /// [_LabelerHistoryStop.complete] means the relay reported the end of the
+  /// history; every other stop leaves labels unfetched, so the caller applies
+  /// what arrived without latching the labeler as loaded. `timedOut` /
+  /// `noRelays` carry the *last* page's answer for the log line.
+  /// See [defaultLabelerHistoryPageSize] for why we page.
+  Future<
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelays,
+      _LabelerHistoryStop stop,
+    })
+  >
+  _loadLabelerHistory(String pubkey, int generation) async {
+    final collected = <Event>[];
+    final seenIds = <String>{};
+    int? until;
+    var pages = 0;
+    final elapsed = Stopwatch()..start();
+
+    while (true) {
+      // dispose() and _unloadLabeler() cannot cancel a page already awaited,
+      // so re-check between pages rather than keep querying the shared client
+      // on behalf of a labeler nothing wants any more.
+      if (!_isLabelerLoadCurrent(pubkey, generation)) {
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.cancelled,
+        );
+      }
+
+      // Checked only once a page has been attempted, so the budget bounds how
+      // long the walk may keep the shared query path rather than whether it
+      // runs at all.
+      if (pages > 0 && elapsed.elapsed >= _labelerHistoryBudget) {
+        Log.warning(
+          'Labeler history paging spent its $_labelerHistoryBudget budget '
+          'after $pages page(s) for ${pubkeyForLogs(pubkey)}; applying '
+          '${collected.length} event(s) and leaving it unloaded so a later '
+          'attempt retries',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.incomplete,
+        );
+      }
+
+      // Defensive stop: the loop below always terminates for a relay that
+      // reports the end of a labeler's history, so reaching this cap means the
+      // relay never does (see [defaultMaxLabelerHistoryPages]). Stop, apply
+      // what we have, and report incomplete — latching here would make the
+      // omitted history permanent for the rest of the session.
+      if (pages++ >= _maxLabelerHistoryPages) {
+        Log.warning(
+          'Labeler history paging hit the $_maxLabelerHistoryPages-page cap '
+          'for ${pubkeyForLogs(pubkey)}; applying ${collected.length} '
+          'event(s) and leaving it unloaded so a later attempt retries',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.incomplete,
+        );
+      }
+
+      // queryEventsDetailed, not queryEvents: the latter discards `timedOut`
+      // and `noRelays`, so a load nobody answered returns [] and is
+      // indistinguishable from "this labeler has no labels" — the caller would
+      // latch the labeler as loaded having contributed none.
+      // `requireAllRelaysSettled` is what makes a relay's `CLOSED` refusal and
+      // a partial fan-out surface as `timedOut` rather than completing on
+      // whichever relays answered first. Cache stays on: cached labels are
+      // still worth applying, and the fix is about not latching. #8214.
+      final result = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(
+            authors: [pubkey],
+            kinds: [NostrEventKinds.label], // NIP-32 label events
+            limit: _labelerHistoryPageSize,
+            until: until,
+          ),
+        ],
+        requireAllRelaysSettled: true,
+      );
+
+      final page = result.events;
+      final incomplete = result.noRelays || result.timedOut;
+      // An incomplete page cannot promise there is more history; treat it as
+      // terminal (below) rather than a full page to page past.
+      final morePossible =
+          !incomplete && page.length >= _labelerHistoryPageSize;
+
+      // Collect this page's events — even an incomplete one, whose events carry
+      // cached rows still worth applying (matching the pre-paging behaviour of
+      // applying `result.events` regardless of `timedOut` / `noRelays`). The
+      // single-page common case never inspects event ids: dedup only matters
+      // once a second page can re-return the inclusive `until` boundary event.
+      var newThisPage = 0;
+      for (final event in page) {
+        if (seenIds.isEmpty && !morePossible) {
+          collected.add(event);
+          continue;
+        }
+        if (seenIds.add(event.id)) {
+          collected.add(event);
+          newThisPage++;
+        }
+      }
+
+      // A page nobody fully answered ends the walk. Hand back what we have so
+      // the caller applies it (cached rows are still worth showing) and retries.
+      if (incomplete) {
+        return (
+          events: collected,
+          timedOut: result.timedOut,
+          noRelays: result.noRelays,
+          stop: _LabelerHistoryStop.incomplete,
+        );
+      }
+      // A short page means the relay has no older labels — history is complete.
+      if (!morePossible) break;
+
+      // `until` is inclusive, so the oldest event reappears on the next page and
+      // is dropped by `seenIds`. Paging past the boundary this way is lossless
+      // across created_at ties, where an `oldest - 1` cursor would skip events
+      // that share the boundary second.
+      final oldest = page.fold<int>(
+        page.first.createdAt,
+        (lowest, event) => event.createdAt < lowest ? event.createdAt : lowest,
+      );
+
+      if (newThisPage == 0) {
+        // Nothing new came back and the cursor is stuck. If the whole page sits
+        // on a single second equal to the cursor, that second alone holds a
+        // full page of labels — step one second past it to reach any older
+        // history, since a NIP filter has no sub-second cursor to page within
+        // it. Only the un-pageable remainder at that exact second (labels beyond
+        // a page sharing one created_at) is dropped. Any other empty result
+        // means the relay is ignoring `until` (the page carries events newer
+        // than the cursor), so stop rather than spin.
+        if (until != null && page.every((event) => event.createdAt == until)) {
+          // Losing labels is a moderation-safety event, so say so rather than
+          // let it be invisible in a bug report.
+          Log.warning(
+            'Labeler ${pubkeyForLogs(pubkey)} has a full page of labels at '
+            'created_at $until; a NIP filter has no sub-second cursor, so '
+            'paging past that second drops any label beyond the first '
+            '$_labelerHistoryPageSize sharing it',
+            name: 'ModerationLabelService',
+            category: LogCategory.system,
+          );
+          until = until - 1;
+          continue;
+        }
+        Log.warning(
+          'Labeler history paging stopped because a relay ignored the until '
+          'cursor for ${pubkeyForLogs(pubkey)}; applying '
+          '${collected.length} event(s) and leaving it unloaded so a later '
+          'attempt retries',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return (
+          events: collected,
+          timedOut: false,
+          noRelays: false,
+          stop: _LabelerHistoryStop.incomplete,
+        );
+      }
+
+      until = oldest;
+    }
+
+    return (
+      events: collected,
+      timedOut: false,
+      noRelays: false,
+      stop: _LabelerHistoryStop.complete,
+    );
+  }
+
+  Future<void> _subscribeToLabelerInternal(
+    String pubkey,
+    int generation,
+  ) async {
     if (!_canQueryRelays()) {
       Log.debug(
         'Deferring labeler subscription until Nostr session is ready: ${pubkeyForLogs(pubkey)}',
@@ -282,26 +575,25 @@ class ModerationLabelService {
     }
 
     try {
-      final filter = Filter(
-        authors: [pubkey],
-        kinds: [NostrEventKinds.label], // NIP-32 label events
-      );
+      final result = await _loadLabelerHistory(pubkey, generation);
 
-      // queryEventsDetailed, not queryEvents: the latter discards `timedOut`
-      // and `noRelays`, so a load nobody answered returns [] and is
-      // indistinguishable from "this labeler has no labels" — the forEach
-      // no-ops and the labeler is latched as loaded having contributed none.
-      // `requireAllRelaysSettled` is what makes a relay's `CLOSED` refusal and
-      // a partial fan-out surface as `timedOut` rather than completing on
-      // whichever relays answered first. Cache stays on, unlike #8213's scan:
-      // cached labels are still worth applying, and the fix is about not
-      // latching. #8214.
-      final result = await _nostrClient.queryEventsDetailed(
-        [filter],
-        requireAllRelaysSettled: true,
-      );
+      // The final page's await is its own window: dispose() or an unfollow can
+      // land after the walk's last check and before this one. Applying past
+      // that point would restore rows _unloadLabeler() just dropped, and
+      // latching would mark a labeler nobody subscribes to as loaded.
+      if (result.stop == _LabelerHistoryStop.cancelled ||
+          !_isLabelerLoadCurrent(pubkey, generation)) {
+        Log.debug(
+          'Discarding labeler load for ${pubkeyForLogs(pubkey)}: it was '
+          'unloaded or the service was disposed while loading',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
       final events = result.events;
-      final isIncomplete = result.noRelays || result.timedOut;
+      final isIncomplete = result.stop == _LabelerHistoryStop.incomplete;
 
       // Apply whatever came back before deciding whether to latch.
       // `queryEventsDetailed` merges cached rows into `events` regardless of
@@ -323,10 +615,15 @@ class ModerationLabelService {
       }
 
       if (isIncomplete) {
+        // Neither relay flag is set when the walk stopped on its own budget
+        // rather than on an unanswered page; that stop logs its own warning.
+        final reason = result.noRelays || result.timedOut
+            ? 'noRelays: ${result.noRelays}, timedOut: ${result.timedOut}'
+            : 'history walk stopped before the relay reported completion, '
+                  'see the warning above';
         Log.warning(
           'Labeler load incomplete for ${pubkeyForLogs(pubkey)} '
-          '(noRelays: ${result.noRelays}, timedOut: ${result.timedOut}, '
-          'applied ${events.length} cached label event(s)); '
+          '($reason, applied ${events.length} label event(s)); '
           'leaving it unloaded so a later attempt retries',
           name: 'ModerationLabelService',
           category: LogCategory.system,
@@ -712,6 +1009,9 @@ class ModerationLabelService {
   }
 
   Future<void> _unloadLabeler(String pubkey) async {
+    // Synchronously, before the first await: a walk in flight has to see this
+    // the moment the caller decides the labeler is going away.
+    _invalidateLabelerLoad(pubkey);
     await _subscriptions[pubkey]?.cancel();
     _subscriptions.remove(pubkey);
     _removePendingLabelerRetry(pubkey);
@@ -879,6 +1179,7 @@ class ModerationLabelService {
 
     for (final pubkey in retired) {
       // Clean up any labels fetched from the old key
+      _invalidateLabelerLoad(pubkey);
       _removePendingLabelerRetry(pubkey);
       _removeLabelsForLabeler(pubkey);
       _loadedLabelers.remove(pubkey);

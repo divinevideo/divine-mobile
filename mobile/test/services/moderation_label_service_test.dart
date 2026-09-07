@@ -11,6 +11,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip05/nip05_validor.dart';
+import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,8 +49,23 @@ class _FakeNip05Adapter implements HttpClientAdapter {
 }
 
 /// Fake event for testing label processing.
+///
+/// [id] and [createdAt] default to empty/zero because the single-page tests
+/// never read them; the paging tests (#8252) pass explicit values because the
+/// backward-`until` walk dedups on `id` and cursors on `createdAt`.
 class _FakeLabelEvent extends Fake implements Event {
-  _FakeLabelEvent({required this.pubkey, required this.tags});
+  _FakeLabelEvent({
+    required this.pubkey,
+    required this.tags,
+    this.id = '',
+    this.createdAt = 0,
+  });
+
+  @override
+  final String id;
+
+  @override
+  final int createdAt;
 
   @override
   final String pubkey;
@@ -970,6 +986,55 @@ void main() {
         expect(service.getContentWarnings('coalesced_event'), hasLength(1));
       });
 
+      test('refollow during a cancelled load starts a fresh load', () async {
+        const labeler =
+            'abababababababababababababababababababababababababababababababab';
+        final firstPage =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        var queryCount = 0;
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          queryCount++;
+          if (queryCount == 1) return firstPage.future;
+          return Future.value((
+            events: <Event>[
+              _FakeLabelEvent(
+                pubkey: labeler,
+                tags: [
+                  ['L', 'content-warning'],
+                  ['l', 'nudity', 'content-warning'],
+                  ['e', 'refollowed_event'],
+                ],
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ));
+        });
+
+        final initialFollow = service.setFollowingModerationEnabled(
+          true,
+          followedPubkeys: [labeler],
+        );
+        await pumpEventQueue();
+
+        await service.syncFollowedLabelers(const []);
+        final refollow = service.syncFollowedLabelers([labeler]);
+        firstPage.complete((
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+        ));
+        await Future.wait([initialFollow, refollow]);
+
+        expect(queryCount, 2, reason: 'the refollow needs a new generation');
+        expect(service.getContentWarnings('refollowed_event'), hasLength(1));
+      });
+
       test('disabling followed labelers removes their cached labels', () async {
         const followedLabeler =
             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -1516,6 +1581,487 @@ void main() {
           reason: 'an inconclusive empty read must not erase known warnings',
         );
       });
+    });
+
+    group('labeler history paging (#8252)', () {
+      const labeler =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+      _FakeLabelEvent labelEvent(
+        String id,
+        int createdAt,
+        String targetEventId,
+      ) => _FakeLabelEvent(
+        pubkey: labeler,
+        id: id,
+        createdAt: createdAt,
+        tags: [
+          ['L', 'content-warning'],
+          ['l', 'nudity', 'content-warning'],
+          ['e', targetEventId],
+        ],
+      );
+
+      ModerationLabelService pagedService(int pageSize) =>
+          ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: pageSize,
+          );
+
+      test(
+        'the first-page query carries an explicit limit and no until',
+        () async {
+          final capturedFilters = <List<Filter>>[];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            capturedFilters.add(
+              invocation.positionalArguments.first as List<Filter>,
+            );
+            return (events: <Event>[], timedOut: false, noRelays: false);
+          });
+
+          await service.subscribeToLabeler(labeler);
+
+          final filter = capturedFilters.single.single;
+          expect(
+            filter.limit,
+            ModerationLabelService.defaultLabelerHistoryPageSize,
+          );
+          expect(filter.until, isNull);
+          expect(filter.authors, [labeler]);
+          expect(filter.kinds, [NostrEventKinds.label]);
+        },
+      );
+
+      test(
+        'pages backward until a short page, applying every label once across '
+        'the inclusive boundary',
+        () async {
+          final paged = pagedService(2);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            if (until == null) {
+              return (
+                events: <Event>[
+                  labelEvent('id_a', 100, 'target_a'),
+                  labelEvent('id_b', 90, 'target_b'),
+                ],
+                timedOut: false,
+                noRelays: false,
+              );
+            }
+            if (until == 90) {
+              return (
+                events: <Event>[
+                  labelEvent('id_b', 90, 'target_b'), // inclusive boundary
+                  labelEvent('id_c', 80, 'target_c'),
+                ],
+                timedOut: false,
+                noRelays: false,
+              );
+            }
+            // until == 80: only the boundary repeats -> short page ends paging.
+            return (
+              events: <Event>[labelEvent('id_c', 80, 'target_c')],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(paged.getContentWarnings('target_a'), hasLength(1));
+          expect(paged.getContentWarnings('target_b'), hasLength(1));
+          expect(paged.getContentWarnings('target_c'), hasLength(1));
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(3);
+        },
+      );
+
+      test(
+        'stops when a full page is entirely duplicates so it cannot spin',
+        () async {
+          final paged = pagedService(2);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            // A misbehaving relay ignores `until` and returns the same full
+            // page every time; the cursor cannot advance, so paging must stop.
+            return (
+              events: <Event>[
+                labelEvent('id_a', 100, 'target_a'),
+                labelEvent('id_b', 90, 'target_b'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(paged.getContentWarnings('target_a'), hasLength(1));
+          expect(paged.getContentWarnings('target_b'), hasLength(1));
+
+          // The relay, not the protocol, stopped this walk by ignoring until.
+          // It must remain retryable instead of latching truncated history.
+          await paged.subscribeToLabeler(labeler);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(4);
+        },
+      );
+
+      test(
+        'a timed-out later page applies the collected labels but does not latch',
+        () async {
+          final paged = pagedService(2);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            if (until == null) {
+              return (
+                events: <Event>[
+                  labelEvent('id_a', 100, 'target_a'),
+                  labelEvent('id_b', 90, 'target_b'),
+                ],
+                timedOut: false,
+                noRelays: false,
+              );
+            }
+            // The second page never settles.
+            return (events: <Event>[], timedOut: true, noRelays: false);
+          });
+
+          await paged.subscribeToLabeler(labeler);
+          expect(paged.getContentWarnings('target_a'), hasLength(1));
+          expect(paged.getContentWarnings('target_b'), hasLength(1));
+
+          // Not latched: a later call re-walks rather than short-circuiting.
+          await paged.subscribeToLabeler(labeler);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(4);
+        },
+      );
+
+      test(
+        'pages past a second that fills a whole page so older history still '
+        'loads',
+        () async {
+          final paged = pagedService(2);
+          // Second 90 holds a full page (b, c) with older history (d@80)
+          // behind it. A relay that honours `until` + `limit` newest-first
+          // must not let that dense second wall off the older label.
+          final history = <_FakeLabelEvent>[
+            labelEvent('id_a', 100, 'target_a'),
+            labelEvent('id_b', 90, 'target_b'),
+            labelEvent('id_c', 90, 'target_c'),
+            labelEvent('id_d', 80, 'target_d'),
+          ];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final matching =
+                history
+                    .where((e) => until == null || e.createdAt <= until)
+                    .toList()
+                  ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+            return (
+              events: matching.take(2).toList(),
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(paged.getContentWarnings('target_a'), hasLength(1));
+          expect(paged.getContentWarnings('target_b'), hasLength(1));
+          expect(paged.getContentWarnings('target_c'), hasLength(1));
+          expect(
+            paged.getContentWarnings('target_d'),
+            hasLength(1),
+            reason: 'a full page at one second must not wall off older history',
+          );
+        },
+      );
+
+      test(
+        'stops at the page cap against a relay that never signals the end',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            maxLabelerHistoryPages: 3,
+          );
+          // A hostile relay fabricates a full page at exactly the requested
+          // `until` on every response, so the cursor steps backward forever.
+          // Without the cap this never terminates.
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          // Terminated at the cap rather than hanging, and applied what it had.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(3);
+          expect(paged.getContentWarnings('target_dup_1'), hasLength(1));
+          expect(paged.getContentWarnings('target_dup_2'), hasLength(1));
+        },
+      );
+
+      test(
+        'a walk that spends its time budget stops paging and stays retryable',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            // The page cap stays at its default, far beyond what this walk
+            // reaches: the budget, not the cap, has to stop a relay that
+            // answers endlessly.
+            labelerHistoryBudget: Duration.zero,
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+          // One page, then the budget stops it — and the first page's labels
+          // are applied rather than discarded.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(1);
+          expect(paged.getContentWarnings('target_dup_1'), hasLength(1));
+
+          // Not latched: an incomplete walk must stay retryable.
+          await paged.subscribeToLabeler(labeler);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'a labeler unfollowed mid-walk does not get its labels reapplied',
+        () async {
+          final paged = pagedService(2);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            if (until == null) {
+              return (
+                events: <Event>[
+                  labelEvent('id_a', 100, 'target_a'),
+                  labelEvent('id_b', 90, 'target_b'),
+                ],
+                timedOut: false,
+                noRelays: false,
+              );
+            }
+            // The user unfollows the labeler while the walk is mid-flight.
+            await paged.removeLabeler(labeler);
+            return (
+              events: <Event>[labelEvent('id_b', 90, 'target_b')],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(
+            paged.getContentWarnings('target_a'),
+            isEmpty,
+            reason: 'the walk must not restore rows the unload just dropped',
+          );
+          expect(paged.getContentWarnings('target_b'), isEmpty);
+        },
+      );
+
+      test(
+        'a disposed service stops walking instead of querying for more pages',
+        () async {
+          late final ModerationLabelService paged;
+          paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            maxLabelerHistoryPages: 5,
+          );
+          var queries = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            queries++;
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            // A relay that keeps handing back a full page would walk to the
+            // cap; dispose() during the second page must stop it sooner.
+            if (queries == 2) paged.dispose();
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(queries, 2, reason: 'the walk must stop at the next check');
+          expect(paged.getContentWarnings('target_dup_1'), isEmpty);
+        },
+      );
+
+      test(
+        'a walk stopped by the page cap stays retryable rather than latching '
+        'the omitted history',
+        () async {
+          final paged = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            canQueryRelays: () => true,
+            labelerHistoryPageSize: 2,
+            maxLabelerHistoryPages: 2,
+          );
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final ts = until ?? 100;
+            return (
+              events: <Event>[
+                labelEvent('dup_1', ts, 'target_dup_1'),
+                labelEvent('dup_2', ts, 'target_dup_2'),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+          await paged.subscribeToLabeler(labeler);
+
+          // 2 pages per walk. Latching the labeler after the cap fired would
+          // short-circuit the second call and leave the omitted history gone
+          // for the rest of the session.
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).called(4);
+        },
+      );
     });
   });
 }
