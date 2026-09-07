@@ -50,6 +50,27 @@ reports `total_videos`, the count its caller passes as the videos displayed,
 which is not the quantity [`event_count`](#what-event_count-counts) measures
 below.
 
+## Which loads produce a sample
+
+### The worst failures produce no sample at all
+
+The trace is created after `subscribeToVideoFeed` has already cleared several
+preconditions, and each of them returns or throws first:
+
+| Precondition | Outcome |
+| --- | --- |
+| `NostrService` not initialized | returns early, retries when it becomes ready |
+| Device offline | throws `VideoEventServiceException` |
+| No connected relays | throws `RelayNotReadyException` |
+| `NostrService` still not initialized at subscription time | throws |
+
+None of these reaches `startOperationTrace`, so they are absent from Firebase
+rather than counted as `error` or `setup_error`. A relay outage therefore shows
+up as **fewer** `feed_load_*` traces, not more failed ones — the chart looks
+healthier during the outage than outside it. Read a drop in sample volume as a
+failure signal, and do not read `error` + `done` + `setup_error` + `timeout` as
+the total count of feed loads that failed.
+
 ## Completion values
 
 Every trace records a `completion` attribute and an `event_count` metric. The
