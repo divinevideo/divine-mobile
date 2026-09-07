@@ -1405,67 +1405,70 @@ void main() {
             );
       }
 
-      test('overlapping renders each own a trace, stopped once, with their own '
-          'attributes', () async {
-        final notifier = container.read(videoEditorProvider.notifier);
-        addOneClip();
+      test(
+        'overlapping renders each own a trace, stopped once, with their own '
+        'attributes',
+        () async {
+          final notifier = container.read(videoEditorProvider.notifier);
+          addOneClip();
 
-        final slowCompleter = Completer<(DivineVideoClip, String?)>();
-        final fastCompleter = Completer<(DivineVideoClip, String?)>();
-        var callCount = 0;
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) {
-              callCount++;
-              return callCount == 1
-                  ? slowCompleter.future
-                  : fastCompleter.future;
-            };
+          final slowCompleter = Completer<(DivineVideoClip, String?)>();
+          final fastCompleter = Completer<(DivineVideoClip, String?)>();
+          var callCount = 0;
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) {
+                callCount++;
+                return callCount == 1
+                    ? slowCompleter.future
+                    : fastCompleter.future;
+              };
 
-        final freshClip = DivineVideoClip(
-          id: 'fresh',
-          video: EditorVideo.file('/docs/fresh.mp4'),
-          duration: const Duration(seconds: 3),
-          recordedAt: DateTime.now(),
-          targetAspectRatio: .vertical,
-          originalAspectRatio: 9 / 16,
-        );
+          final freshClip = DivineVideoClip(
+            id: 'fresh',
+            video: EditorVideo.file('/docs/fresh.mp4'),
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
 
-        // render1 = generation 1 (slow, superseded); render2 = generation 2
-        // (fast, winner). Each captures its own operation-scoped trace.
-        final render1 = notifier.startRenderVideo();
-        final render2 = notifier.startRenderVideo();
-        expect(callCount, equals(2));
-        expect(
-          performanceMonitor.traces.length,
-          2,
-          reason: 'each render must start its own trace, not share one',
-        );
+          // render1 = generation 1 (slow, superseded); render2 = generation 2
+          // (fast, winner). Each captures its own operation-scoped trace.
+          final render1 = notifier.startRenderVideo();
+          final render2 = notifier.startRenderVideo();
+          expect(callCount, equals(2));
+          expect(
+            performanceMonitor.traces.length,
+            2,
+            reason: 'each render must start its own trace, not share one',
+          );
 
-        fastCompleter.complete((freshClip, null));
-        await render2;
-        slowCompleter.complete((freshClip, null));
-        await render1;
+          fastCompleter.complete((freshClip, null));
+          await render2;
+          slowCompleter.complete((freshClip, null));
+          await render1;
 
-        final trace1 = performanceMonitor.traces[0];
-        final trace2 = performanceMonitor.traces[1];
+          final trace1 = performanceMonitor.traces[0];
+          final trace2 = performanceMonitor.traces[1];
 
-        // Each trace is stopped exactly once — neither render stops the
-        // other's trace.
-        expect(trace1.stopCount, 1);
-        expect(trace2.stopCount, 1);
+          // Each trace is stopped exactly once — neither render stops the
+          // other's trace.
+          expect(trace1.stopCount, 1);
+          expect(trace2.stopCount, 1);
 
-        // Each trace keeps its own outcome: the winner is success, the
-        // superseded render is incomplete (not overwritten onto the winner).
-        expect(trace2.attributes['outcome'], 'success');
-        expect(trace1.attributes['outcome'], 'incomplete');
-        expect(trace1.attributes['clip_count'], '1');
-        expect(trace2.attributes['clip_count'], '1');
-      });
+          // Each trace keeps its own outcome: the winner is success, the
+          // superseded render is incomplete (not overwritten onto the winner).
+          expect(trace2.attributes['outcome'], 'success');
+          expect(trace1.attributes['outcome'], 'incomplete');
+          expect(trace1.attributes['clip_count'], '1');
+          expect(trace2.attributes['clip_count'], '1');
+        },
+      );
 
       void failRenderWith(VideoRenderFailedException failure) {
         VideoEditorRenderService.renderVideoToClipOverride =
@@ -1670,7 +1673,9 @@ void main() {
           );
 
           renderCompleter.completeError(
-            const VideoRenderFailedException(VideoRenderFailureReason.canceled),
+            const VideoRenderFailedException(
+              VideoRenderFailureReason.canceled,
+            ),
           );
           await cancel;
           await render;
@@ -2188,9 +2193,10 @@ void main() {
               .restoreDraft('draft-1');
 
           expect(result, isTrue);
-          expect(container.read(videoEditorProvider).collaboratorPubkeys, {
-            collaboratorPubkey,
-          });
+          expect(
+            container.read(videoEditorProvider).collaboratorPubkeys,
+            {collaboratorPubkey},
+          );
         },
       );
 
@@ -2613,115 +2619,121 @@ void main() {
         },
       );
 
-      test('viewing a draft is read-only: restore keeps the finalRenderedClip '
-          'instead of invalidating it (#5956)', () async {
-        final renderedPath = '${tempDir.path}/rendered.mp4';
-        await File(renderedPath).writeAsBytes(const [0]);
+      test(
+        'viewing a draft is read-only: restore keeps the finalRenderedClip '
+        'instead of invalidating it (#5956)',
+        () async {
+          final renderedPath = '${tempDir.path}/rendered.mp4';
+          await File(renderedPath).writeAsBytes(const [0]);
 
-        final draft = DivineVideoDraft.create(
-          id: 'draft-1',
-          clips: [
-            DivineVideoClip(
-              id: 'c1',
-              video: EditorVideo.file(clipVideoPath),
+          final draft = DivineVideoDraft.create(
+            id: 'draft-1',
+            clips: [
+              DivineVideoClip(
+                id: 'c1',
+                video: EditorVideo.file(clipVideoPath),
+                thumbnailPath: clipThumbnailPath,
+                duration: const Duration(seconds: 3),
+                recordedAt: DateTime.now(),
+                targetAspectRatio: .vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+            title: 'Title',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            finalRenderedClip: DivineVideoClip(
+              id: 'rendered',
+              video: EditorVideo.file(renderedPath),
               thumbnailPath: clipThumbnailPath,
               duration: const Duration(seconds: 3),
               recordedAt: DateTime.now(),
               targetAspectRatio: .vertical,
               originalAspectRatio: 9 / 16,
-            ),
-          ],
-          title: 'Title',
-          description: '',
-          hashtags: const {},
-          selectedApproach: 'video',
-          finalRenderedClip: DivineVideoClip(
-            id: 'rendered',
-            video: EditorVideo.file(renderedPath),
-            thumbnailPath: clipThumbnailPath,
-            duration: const Duration(seconds: 3),
-            recordedAt: DateTime.now(),
-            targetAspectRatio: .vertical,
-            originalAspectRatio: 9 / 16,
-          ),
-        );
-        when(
-          () => mockDraftStorage.getDraftById('draft-1'),
-        ).thenAnswer((_) async => draft);
-
-        final result = await container
-            .read(videoEditorProvider.notifier)
-            .restoreDraft('draft-1');
-
-        expect(result, isTrue);
-        expect(
-          container.read(videoEditorProvider).finalRenderedClip?.id,
-          'rendered',
-          reason:
-              'restoring a draft to view it must not autosave: an autosave '
-              'invalidates (and deletes) the restored finalRenderedClip and '
-              'bumps lastModified, making the draft look freshly saved',
-        );
-      });
-
-      test('viewing a draft is read-only: no re-save fires once the autosave '
-          'debounce elapses (#5956)', () {
-        final renderedPath = '${tempDir.path}/rendered.mp4';
-        File(renderedPath).writeAsBytesSync(const [0]);
-
-        final draft = DivineVideoDraft.create(
-          id: 'draft-1',
-          clips: [
-            DivineVideoClip(
-              id: 'c1',
-              video: EditorVideo.file(clipVideoPath),
-              thumbnailPath: clipThumbnailPath,
-              duration: const Duration(seconds: 3),
-              recordedAt: DateTime.now(),
-              targetAspectRatio: .vertical,
-              originalAspectRatio: 9 / 16,
-            ),
-          ],
-          title: 'Title',
-          description: '',
-          hashtags: const {},
-          selectedApproach: 'video',
-          finalRenderedClip: DivineVideoClip(
-            id: 'rendered',
-            video: EditorVideo.file(renderedPath),
-            thumbnailPath: clipThumbnailPath,
-            duration: const Duration(seconds: 3),
-            recordedAt: DateTime.now(),
-            targetAspectRatio: .vertical,
-            originalAspectRatio: 9 / 16,
-          ),
-        );
-        when(
-          () => mockDraftStorage.getDraftById('draft-1'),
-        ).thenAnswer((_) async => draft);
-
-        fakeAsync((async) {
-          bool? result;
-          container
-              .read(videoEditorProvider.notifier)
-              .restoreDraft('draft-1')
-              .then((value) => result = value);
-          async.flushMicrotasks();
-          expect(result, isTrue);
-
-          // Elapse well past the autosave debounce; a restore that
-          // re-triggers autosave would re-save the draft here, bumping
-          // lastModified and reordering it to the top of the drafts list.
-          async.elapse(const Duration(seconds: 10));
-
-          verifyNever(
-            () => mockDraftStorage.saveDraft(
-              any(),
-              deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
             ),
           );
-        });
-      });
+          when(
+            () => mockDraftStorage.getDraftById('draft-1'),
+          ).thenAnswer((_) async => draft);
+
+          final result = await container
+              .read(videoEditorProvider.notifier)
+              .restoreDraft('draft-1');
+
+          expect(result, isTrue);
+          expect(
+            container.read(videoEditorProvider).finalRenderedClip?.id,
+            'rendered',
+            reason:
+                'restoring a draft to view it must not autosave: an autosave '
+                'invalidates (and deletes) the restored finalRenderedClip and '
+                'bumps lastModified, making the draft look freshly saved',
+          );
+        },
+      );
+
+      test(
+        'viewing a draft is read-only: no re-save fires once the autosave '
+        'debounce elapses (#5956)',
+        () {
+          final renderedPath = '${tempDir.path}/rendered.mp4';
+          File(renderedPath).writeAsBytesSync(const [0]);
+
+          final draft = DivineVideoDraft.create(
+            id: 'draft-1',
+            clips: [
+              DivineVideoClip(
+                id: 'c1',
+                video: EditorVideo.file(clipVideoPath),
+                thumbnailPath: clipThumbnailPath,
+                duration: const Duration(seconds: 3),
+                recordedAt: DateTime.now(),
+                targetAspectRatio: .vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+            title: 'Title',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+            finalRenderedClip: DivineVideoClip(
+              id: 'rendered',
+              video: EditorVideo.file(renderedPath),
+              thumbnailPath: clipThumbnailPath,
+              duration: const Duration(seconds: 3),
+              recordedAt: DateTime.now(),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => mockDraftStorage.getDraftById('draft-1'),
+          ).thenAnswer((_) async => draft);
+
+          fakeAsync((async) {
+            bool? result;
+            container
+                .read(videoEditorProvider.notifier)
+                .restoreDraft('draft-1')
+                .then((value) => result = value);
+            async.flushMicrotasks();
+            expect(result, isTrue);
+
+            // Elapse well past the autosave debounce; a restore that
+            // re-triggers autosave would re-save the draft here, bumping
+            // lastModified and reordering it to the top of the drafts list.
+            async.elapse(const Duration(seconds: 10));
+
+            verifyNever(
+              () => mockDraftStorage.saveDraft(
+                any(),
+                deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+              ),
+            );
+          });
+        },
+      );
     });
   });
 
@@ -3006,7 +3018,10 @@ void main() {
       expect(draft.inspiredByVideo, isNull);
       expect(
         draft.clipSourceCredits.map((credit) => credit.addressableId),
-        equals(['34236:${'d' * 64}:source-a', '34236:${'e' * 64}:source-b']),
+        equals([
+          '34236:${'d' * 64}:source-a',
+          '34236:${'e' * 64}:source-b',
+        ]),
       );
     });
 
@@ -3063,30 +3078,35 @@ void main() {
       createdAt: 1700000000,
     );
 
-    test('refreshes the snapshot when only the audio meta changes so the reuse '
-        "toggle tracks add/remove of another creator's sound", () {
-      final notifier = container.read(videoEditorProvider.notifier);
+    test(
+      'refreshes the snapshot when only the audio meta changes so the reuse '
+      "toggle tracks add/remove of another creator's sound",
+      () {
+        final notifier = container.read(videoEditorProvider.notifier);
 
-      notifier.updateEditorEditingParameters(paramsWithTracks([reusedSound()]));
-      expect(
-        container.read(videoEditorProvider).reusesExternalAudio,
-        isTrue,
-        reason: 'adding a reused sound must update the snapshot',
-      );
+        notifier.updateEditorEditingParameters(
+          paramsWithTracks([reusedSound()]),
+        );
+        expect(
+          container.read(videoEditorProvider).reusesExternalAudio,
+          isTrue,
+          reason: 'adding a reused sound must update the snapshot',
+        );
 
-      // Remove the sound. The only change is the audio meta — every render
-      // field CompleteParameters.diff compares (empty audioTracks field
-      // included) is identical, so without the audio-meta check the update
-      // is skipped and the snapshot stays stale.
-      notifier.updateEditorEditingParameters(paramsWithTracks(const []));
-      expect(
-        container.read(videoEditorProvider).reusesExternalAudio,
-        isFalse,
-        reason:
-            'removing the reused sound must refresh the snapshot even though '
-            'diff() sees no change in the render-time audioTracks field',
-      );
-    });
+        // Remove the sound. The only change is the audio meta — every render
+        // field CompleteParameters.diff compares (empty audioTracks field
+        // included) is identical, so without the audio-meta check the update
+        // is skipped and the snapshot stays stale.
+        notifier.updateEditorEditingParameters(paramsWithTracks(const []));
+        expect(
+          container.read(videoEditorProvider).reusesExternalAudio,
+          isFalse,
+          reason:
+              'removing the reused sound must refresh the snapshot even though '
+              'diff() sees no change in the render-time audioTracks field',
+        );
+      },
+    );
   });
 
   group('cover thumbnail persistence', () {
@@ -3693,10 +3713,11 @@ void main() {
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
         ),
       ).thenAnswer((_) => saveMayFinish.future);
-      addTimelineClip();
-
       fakeAsync((async) {
         saveMayFinish = Completer<void>();
+        // Create every tracked operation inside this fake-async zone so the
+        // zone can drive the shared settle boundary to completion.
+        addTimelineClip();
         final notifier = container.read(videoEditorProvider.notifier);
         notifier.triggerAutosave();
 
@@ -3781,10 +3802,12 @@ void main() {
 
       final source = File(p.join(documentsDir.path, 'source.mp4'))
         ..writeAsBytesSync(const [1, 2, 3]);
-      final oldRendered = File(p.join(documentsDir.path, 'old-rendered.mp4'))
-        ..writeAsBytesSync(const [4, 5, 6]);
-      final newRendered = File(p.join(documentsDir.path, 'new-rendered.mp4'))
-        ..writeAsBytesSync(const [7, 8, 9]);
+      final oldRendered = File(
+        p.join(documentsDir.path, 'old-rendered.mp4'),
+      )..writeAsBytesSync(const [4, 5, 6]);
+      final newRendered = File(
+        p.join(documentsDir.path, 'new-rendered.mp4'),
+      )..writeAsBytesSync(const [7, 8, 9]);
       final realDraftStorage = DraftStorageService(
         draftsDao: database.draftsDao,
         clipsDao: database.clipsDao,
@@ -3896,7 +3919,10 @@ void main() {
         );
 
         addTimelineClip();
-        await proofStarted.future;
+        await proofStarted.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('clip proof generation did not start'),
+        );
         expect(backgroundWork.isNotEmptyForTest, isTrue);
         disposeContainer();
 
@@ -3906,7 +3932,10 @@ void main() {
         }();
         allowProofRead.complete();
         await teardown;
-        await proofFinished.future;
+        await proofFinished.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => fail('clip proof generation did not finish'),
+        );
 
         expect(
           sourcePresentDuringProof,

@@ -27,8 +27,18 @@ class EditorBackgroundWork {
   /// Completes once all registered work, including work it starts, is done.
   @visibleForTesting
   Future<void> settle() async {
+    Object? firstError;
+    StackTrace? firstStackTrace;
     while (_operations.isNotEmpty) {
-      await Future.wait(_operations.toList());
+      try {
+        await Future.wait(_operations.toList());
+      } catch (error, stackTrace) {
+        firstError ??= error;
+        firstStackTrace ??= stackTrace;
+      }
+    }
+    if (firstError != null) {
+      Error.throwWithStackTrace(firstError, firstStackTrace!);
     }
   }
 

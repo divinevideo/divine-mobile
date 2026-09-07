@@ -30,5 +30,40 @@ void main() {
       expect(settled, isTrue);
       expect(backgroundWork.isNotEmptyForTest, isFalse);
     });
+
+    test('settle drains spawned work before rethrowing an error', () async {
+      final backgroundWork = EditorBackgroundWork();
+      final startFailingOperation = Completer<void>();
+      final finishSpawnedOperation = Completer<void>();
+
+      backgroundWork.track(() async {
+        await startFailingOperation.future;
+        backgroundWork.track(finishSpawnedOperation.future);
+        throw StateError('tracked operation failed');
+      }());
+
+      var settlingFinished = false;
+      final settling = backgroundWork.settle();
+      settling.then<void>(
+        (_) => settlingFinished = true,
+        onError: (Object _, StackTrace _) => settlingFinished = true,
+      );
+      final errorExpectation = expectLater(
+        settling,
+        throwsA(isA<StateError>()),
+      );
+
+      startFailingOperation.complete();
+      await pumpEventQueue();
+      expect(
+        settlingFinished,
+        isFalse,
+        reason: 'settle must keep draining work spawned by a failed batch',
+      );
+
+      finishSpawnedOperation.complete();
+      await errorExpectation;
+      expect(backgroundWork.isNotEmptyForTest, isFalse);
+    });
   });
 }
