@@ -12016,10 +12016,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get updateModerateTitle =>
-      'Ada pembaruan sejak terakhir kali Anda memeriksa';
+      'Ada pembaruan sejak terakhir kali kamu memeriksa';
 
   @override
-  String get updateUrgentTitle => 'Anda melewatkan perbaikan penting';
+  String get updateUrgentTitle => 'Kamu melewatkan perbaikan penting';
 
   @override
   String get updateNotNow => 'Nanti saja';

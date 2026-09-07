@@ -12277,14 +12277,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateGentleBanner =>
-      'Une nouvelle mise à jour vient de sortir. Découvrez-la →';
+      'Une nouvelle mise à jour vient de sortir. Découvre-la →';
 
   @override
   String get updateModerateTitle =>
-      'Une mise à jour est disponible depuis votre dernière visite';
+      'Une mise à jour est disponible depuis ta dernière visite';
 
   @override
-  String get updateUrgentTitle => 'Il vous manque des correctifs importants';
+  String get updateUrgentTitle => 'Il te manque des correctifs importants';
 
   @override
   String get updateNotNow => 'Pas maintenant';

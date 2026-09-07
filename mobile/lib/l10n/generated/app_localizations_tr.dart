@@ -12025,14 +12025,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accountStatusRetry => 'Try again';
 
   @override
-  String get updateGentleBanner => 'Yeni bir güncelleme çıktı. Göz atın →';
+  String get updateGentleBanner => 'Yeni bir güncelleme çıktı. Göz at →';
 
   @override
   String get updateModerateTitle =>
-      'Son kontrolünüzden bu yana bir güncelleme var';
+      'Son kontrolünden bu yana bir güncelleme var';
 
   @override
-  String get updateUrgentTitle => 'Önemli düzeltmeleri kaçırıyorsunuz';
+  String get updateUrgentTitle => 'Önemli düzeltmeleri kaçırıyorsun';
 
   @override
   String get updateNotNow => 'Şimdi değil';

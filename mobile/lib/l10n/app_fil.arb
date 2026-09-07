@@ -3646,5 +3646,11 @@
     "unfollowUserIndexedSemanticLabel": "I-unfollow ang user {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / buwan",
     "dmReactionAddBlockedByRemoval": "Tapusin munang alisin ang dati mong reaksyon bago magdagdag ng bago.",
-    "updateGentleBanner": "May bagong update. Tingnan ito →", "updateModerateTitle": "May update mula noong huli mong tingnan", "updateUrgentTitle": "May mahahalagang pag-aayos na wala ka pa", "updateNotNow": "Hindi ngayon", "updateAction": "I-update", "updateNewIn": "Bago sa {version}:", "settingsUpdateAvailable": "May update"
+    "updateGentleBanner": "May bagong update. Tingnan ito →",
+    "updateModerateTitle": "May update mula noong huli mong tingnan",
+    "updateUrgentTitle": "May mahahalagang pag-aayos na wala ka pa",
+    "updateNotNow": "Hindi ngayon",
+    "updateAction": "I-update",
+    "updateNewIn": "Bago sa {version}:",
+    "settingsUpdateAvailable": "May update"
 }

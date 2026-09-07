@@ -4690,5 +4690,11 @@
     "unfollowUserIndexedSemanticLabel": "Dejar de seguir al usuario {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / mes",
     "dmReactionAddBlockedByRemoval": "Termina de eliminar tu reacción anterior antes de añadir otra.",
-    "updateGentleBanner": "Acaba de salir una actualización. Échale un vistazo →", "updateModerateTitle": "Hay una actualización desde la última vez que miraste", "updateUrgentTitle": "Te faltan correcciones importantes", "updateNotNow": "Ahora no", "updateAction": "Actualizar", "updateNewIn": "Novedades de {version}:", "settingsUpdateAvailable": "Actualización disponible"
+    "updateGentleBanner": "Acaba de salir una actualización. Echale un vistazo →",
+    "updateModerateTitle": "Hay una actualización desde la última vez que miraste",
+    "updateUrgentTitle": "Te faltan correcciones importantes",
+    "updateNotNow": "Ahora no",
+    "updateAction": "Actualizar",
+    "updateNewIn": "Novedades de {version}:",
+    "settingsUpdateAvailable": "Actualización disponible"
 }

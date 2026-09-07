@@ -12219,14 +12219,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get accountStatusRetry => 'Try again';
 
   @override
-  String get updateGentleBanner => 'Излезе нова актуализация. Вижте я →';
+  String get updateGentleBanner => 'Излезе нова актуализация. Виж я →';
 
   @override
   String get updateModerateTitle =>
-      'Има актуализация от последната ви проверка';
+      'Има актуализация от последната ти проверка';
 
   @override
-  String get updateUrgentTitle => 'Пропускате важни поправки';
+  String get updateUrgentTitle => 'Пропускаш важни поправки';
 
   @override
   String get updateNotNow => 'Не сега';

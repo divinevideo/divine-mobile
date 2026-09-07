@@ -11515,10 +11515,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateGentleBanner => '새 업데이트가 나왔어요. 확인해 보세요 →';
 
   @override
-  String get updateModerateTitle => '마지막 확인 이후 업데이트가 나왔습니다';
+  String get updateModerateTitle => '마지막 확인 이후 업데이트가 나왔어요';
 
   @override
-  String get updateUrgentTitle => '중요한 수정 사항이 빠져 있습니다';
+  String get updateUrgentTitle => '중요한 수정 사항이 빠져 있어요';
 
   @override
   String get updateNotNow => '나중에';

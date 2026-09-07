@@ -11795,7 +11795,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateNotNow => 'አሁን አይደለም';
 
   @override
-  String get updateAction => 'አዘምን';
+  String get updateAction => 'ያዘምኑ';
 
   @override
   String updateNewIn(String version) {

@@ -4822,5 +4822,11 @@
     "unfollowUserIndexedSemanticLabel": "ተጠቃሚን መከታተል አቁም {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / በወር",
     "dmReactionAddBlockedByRemoval": "ሌላ ምላሽ ከማከልዎ በፊት የቀድሞውን ምላሽዎን ማስወገድ ያጠናቅቁ።",
-    "updateGentleBanner": "አዲስ ዝማኔ ወጥቷል። ይመልከቱት →", "updateModerateTitle": "ካለፈው ጊዜ ጀምሮ አዲስ ዝማኔ አለ", "updateUrgentTitle": "አስፈላጊ ማስተካከያዎች እያመለጡዎት ነው", "updateNotNow": "አሁን አይደለም", "updateAction": "አዘምን", "updateNewIn": "በ{version} አዲስ፦", "settingsUpdateAvailable": "ዝማኔ አለ"
+    "updateGentleBanner": "አዲስ ዝማኔ ወጥቷል። ይመልከቱት →",
+    "updateModerateTitle": "ካለፈው ጊዜ ጀምሮ አዲስ ዝማኔ አለ",
+    "updateUrgentTitle": "አስፈላጊ ማስተካከያዎች እያመለጡዎት ነው",
+    "updateNotNow": "አሁን አይደለም",
+    "updateAction": "ያዘምኑ",
+    "updateNewIn": "በ{version} አዲስ፦",
+    "settingsUpdateAvailable": "ዝማኔ አለ"
 }

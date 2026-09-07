@@ -12231,7 +12231,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get updateGentleBanner =>
-      'Acaba de salir una actualización. Échale un vistazo →';
+      'Acaba de salir una actualización. Echale un vistazo →';
 
   @override
   String get updateModerateTitle =>
