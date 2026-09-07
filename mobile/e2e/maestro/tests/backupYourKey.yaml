@@ -1,22 +1,33 @@
 appId: co.openvine.app.staging
 ---
-#TC to follow a user,
-# given the user is logged in in the app,
-# by opening the settings, nostr keys menu, and copying the private key
+# Verify that a signed-in user can reach key management and back up their
+# private key to the clipboard.
 #Steps:
-# 1. Given an already logged in user, Menu and Settings: Settings screen is presented
-# 2. Tap on a Key management. Expected: Nostr Keys screen is presented
-# 3. Backup Your Key by tapping on the button: VIDEO_USER videos are displayed validated thru username
+# 1. Open Settings, then Nostr Settings
+# 2. Open Key Management and verify the Nostr Keys screen
+# 3. Copy the private key and verify the confirmation
 
-# 1. Given an already logged in user, Menu and Settings: Settings screen is presented
+# 1. Settings -> Nostr Settings
 - runFlow: ../utils/openSettings.yaml
+- tapOn:
+    id: "nostr_settings_tile"
 
-# 2. Tap on a Key management. Expected: Nostr Keys screen is presented
-- scroll
-- tapOn: |-
-    Key Management
-    Export, backup, and restore your Nostr keys
+# 2. Targeted by id because this row moved off the Settings root and its copy
+# is localized and expected to evolve independently of the journey.
+- extendedWaitUntil:
+    visible:
+      id: "key_management_tile"
+    timeout: 30000
+- tapOn:
+    id: "key_management_tile"
 - runFlow: ../asserts/assertNostrKeys.yaml
-# 3. Backup Your Key by tapping on the button: VIDEO_USER videos are displayed validated thru username
-- tapOn: Copy My Private Key (nsec)
+
+# 3. Targeted by id so edits to the warning-sensitive button label do not
+# strand account recovery coverage.
+- extendedWaitUntil:
+    visible:
+      id: "copy_nsec_button"
+    timeout: 30000
+- tapOn:
+    id: "copy_nsec_button"
 - runFlow: ../asserts/assertPrivKeyCopied.yaml
