@@ -117,10 +117,10 @@ run_numeric_ratchet() {
     return 0
   fi
 
-  local CUR_F BASE_F MAIN_F
-  CUR_F="$(mktemp)"; BASE_F="$(mktemp)"; MAIN_F="$(mktemp)"
+  local CUR_F BASE_F MAIN_F RENAME_F
+  CUR_F="$(mktemp)"; BASE_F="$(mktemp)"; MAIN_F="$(mktemp)"; RENAME_F="$(mktemp)"
   # shellcheck disable=SC2064
-  trap "rm -f '$CUR_F' '$BASE_F' '$MAIN_F'" RETURN
+  trap "rm -f '$CUR_F' '$BASE_F' '$MAIN_F' '$RENAME_F'" RETURN
 
   printf '%s\n' "$CURRENT" | grep -v '^[[:space:]]*$' | LC_ALL=C sort -t "$TAB" -k1,1 > "$CUR_F" || true
   if [[ -f "$BASELINE_FILE" ]]; then _nr_strip < "$BASELINE_FILE" > "$BASE_F"; else : > "$BASE_F"; fi
@@ -171,13 +171,33 @@ run_numeric_ratchet() {
   elif ! git -C "$REPO_ROOT" show "$BASE_REF:$BASELINE_REPO_PATH" 2>/dev/null | _nr_strip > "$MAIN_F"; then
     base_status=3
   fi
+  # Syntax needs no base ref, so it is checked in every arm. Bootstrap and the
+  # documented local opt-out are exactly the runs where a malformed annotation
+  # gets planted without anyone noticing.
+  if [[ -f "$BASELINE_FILE" ]]; then
+    local malformed
+    malformed="$(awk -F "$TAB" '
+      /^[[:space:]]*#/ { next }
+      /[#;][[:space:]]*renamed-from:/ {
+        old=$0; sub(/^.*[#;][[:space:]]*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
+        if (old == "" || old == $0) print $1
+      }
+    ' "$BASELINE_FILE")"
+    if [[ -n "$malformed" ]]; then
+      echo "FAIL [$RATCHET_LABEL]: malformed renamed-from annotation on:"
+      echo "$malformed" | sed 's/^/  /'
+      echo "  -> use '# renamed-from: <old-key>' with a non-empty key"
+      fail=1
+    fi
+  fi
+
   case "$base_status" in
     0)
       local added raised
       added="$(join -t "$TAB" -v1 "$BASE_F" "$MAIN_F" || true)"
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
       local rename_claims rename_new rename_old old_count new_count claim_ok
-      rename_claims="$(mktemp)"
+      rename_claims="$RENAME_F"
       if [[ -f "$BASELINE_FILE" ]]; then
         awk -F "$TAB" '
           /^[[:space:]]*#/ { next }
@@ -186,8 +206,7 @@ run_numeric_ratchet() {
           # claim and failed the guard on a key nobody renamed.
           /[#;][[:space:]]*renamed-from:/ {
             old=$0; sub(/^.*[#;][[:space:]]*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
-            if (old == "" || old == $0) print "!MALFORMED!\t" $1
-            else print $1 "\t" old
+            if (old != "" && old != $0) print $1 "\t" old
           }
         ' "$BASELINE_FILE" \
           | awk -F "$TAB" -v main_f="$MAIN_F" '
@@ -201,18 +220,11 @@ run_numeric_ratchet() {
                   split(line, f, "\t"); settled[f[1]] = 1
                 }
               }
-              $1 == "!MALFORMED!" { print; next }
               !($1 in settled)
             ' > "$rename_claims"
       fi
       while IFS="$TAB" read -r rename_new rename_old; do
         [[ -z "$rename_new" ]] && continue
-        if [[ "$rename_new" == "!MALFORMED!" ]]; then
-          echo "FAIL [$RATCHET_LABEL]: malformed renamed-from annotation on $rename_old"
-          echo "  -> use '# renamed-from: <old-key>' with a non-empty key"
-          fail=1
-          continue
-        fi
         if [[ "$(cut -f1 "$rename_claims" | grep -Fxc "$rename_new")" -gt 1 ]]; then
           echo "FAIL [$RATCHET_LABEL]: duplicate rename claim for new key $rename_new"
           fail=1
@@ -280,10 +292,13 @@ run_numeric_ratchet() {
         # Subtracting unconditionally told the operator the annotation was
         # wrong while hiding which row was unapproved.
         if [[ "$claim_ok" -eq 1 ]]; then
+          # Name every consumed claim. The annotation is a reviewable
+          # assertion, so a run that exercised one must not be
+          # byte-identical to a run that did not.
+          echo "NOTE [$RATCHET_LABEL]: honoured rename claim $rename_new <- $rename_old"
           added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"
         fi
       done < "$rename_claims"
-      rm -f "$rename_claims"
       if [[ -n "$added" || -n "$raised" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline ADDED a key or RAISED a ceiling vs ${BASE_REF} (may only shrink):"
         [[ -n "$added" ]] && echo "$added" | sed 's/^/  +added /'

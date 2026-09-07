@@ -34,6 +34,7 @@ void main() {
     ProcessResult run({
       bool update = false,
       bool requireBaselineUpdateOnDecrease = false,
+      String baseRef = 'HEAD',
     }) {
       return Process.runSync(
         'bash',
@@ -43,7 +44,7 @@ void main() {
           'PROBE_BASELINE': baseline.path,
           'PROBE_CURRENT': current.path,
           'PROBE_LIB': libPath,
-          'PROBE_BASE_REF': 'HEAD',
+          'PROBE_BASE_REF': baseRef,
           'PROBE_BASELINE_REPO_PATH':
               'mobile/scripts/baseline/__probe_nonexistent__.txt',
           if (requireBaselineUpdateOnDecrease)
@@ -414,6 +415,36 @@ run_numeric_ratchet
 
         expect(res.exitCode, 0, reason: res.stdout.toString());
         expect(res.stdout, isNot(contains('claimed more than once')));
+      });
+
+      test('validates annotation syntax without a base ref', () {
+        // The whole claim block sat inside the base-available arm, so a
+        // malformed annotation was accepted silently on bootstrap and under
+        // the documented local opt-out -- the runs where one gets planted.
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nb\t3\nc\t2 # renamed-from:\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t2\n');
+
+        final res = run(baseRef: 'no-such-ref-for-the-probe');
+
+        expect(res.exitCode, 1, reason: res.stdout.toString());
+        expect(res.stdout, contains('malformed renamed-from annotation'));
+        expect(res.stdout, contains('local opt-out'));
+      });
+
+      test('names an honoured claim in the output', () {
+        // A run that exercised the bypass must not be byte-identical to one
+        // that did not: review is the only enforcement this mechanism has.
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+        expect(res.stdout, contains('honoured rename claim c <- a'));
       });
 
       test('ignores a comment line that documents the annotation', () {
