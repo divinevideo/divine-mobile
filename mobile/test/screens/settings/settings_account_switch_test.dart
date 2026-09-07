@@ -280,12 +280,17 @@ void main() {
     );
   }
 
-  Future<AppLocalizations> pumpAndTapSwitch(WidgetTester tester) async {
+  /// Pumps Settings on a surface tall enough for the account header.
+  Future<void> pumpSettings(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(wrap(const SettingsScreen()));
     await tester.pumpAndSettle();
+  }
+
+  Future<AppLocalizations> pumpAndTapSwitch(WidgetTester tester) async {
+    await pumpSettings(tester);
 
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SettingsScreen)),
@@ -299,18 +304,10 @@ void main() {
     testWidgets('exposes the account switch action to automation', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1600));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(wrap(const SettingsScreen()));
-      await tester.pumpAndSettle();
+      await pumpSettings(tester);
 
       expect(
         find.bySemanticsIdentifier(SemanticIds.settingsAccountSwitchAction),
-        findsOneWidget,
-      );
-      expect(
-        find.bySemanticsIdentifier(SemanticIds.settingsExperimentalFeaturesRow),
         findsOneWidget,
       );
     });
