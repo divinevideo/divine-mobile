@@ -73,7 +73,8 @@ class BugReportService {
     Future<PackageInfo> Function()? packageInfoLoader,
     Future<Map<String, dynamic>> Function()? supportDiagnosticsLoader,
     ui.Locale Function()? resolvedUiLocaleLoader,
-    ui.Locale Function()? deviceLocaleLoader,
+    List<ui.Locale> Function()? deviceLocalesLoader,
+    bool Function()? hasLocaleOverrideLoader,
   }) : _errorTracker = errorTracker ?? ErrorAnalyticsTracker(),
        _storageManagementService = storageManagementService,
        _supportDiagnosticsLoader = supportDiagnosticsLoader,
@@ -87,8 +88,10 @@ class BugReportService {
              ui.PlatformDispatcher.instance.locales,
              AppLocalizations.supportedLocales,
            )),
-       _deviceLocaleLoader =
-           deviceLocaleLoader ?? (() => ui.PlatformDispatcher.instance.locale);
+       _deviceLocalesLoader =
+           deviceLocalesLoader ??
+           (() => ui.PlatformDispatcher.instance.locales),
+       _hasLocaleOverrideLoader = hasLocaleOverrideLoader ?? (() => false);
 
   static const _uuid = Uuid();
 
@@ -106,10 +109,11 @@ class BugReportService {
   final Future<PackageInfo> Function() _packageInfoLoader;
   final Future<Map<String, dynamic>> Function()? _supportDiagnosticsLoader;
   final ui.Locale Function() _resolvedUiLocaleLoader;
-  final ui.Locale Function() _deviceLocaleLoader;
+  final List<ui.Locale> Function() _deviceLocalesLoader;
+  final bool Function() _hasLocaleOverrideLoader;
 
   /// Language codes the app ships a translation for. A device language outside
-  /// this set is what makes the rendered locale a fallback rather than a choice.
+  /// this set cannot be matched during device locale resolution.
   static final Set<String> _supportedLanguageCodes = {
     for (final locale in AppLocalizations.supportedLocales) locale.languageCode,
   };
@@ -201,24 +205,22 @@ class BugReportService {
         };
       }
 
-      // The locale the UI was rendering in is what routes a copy report: for
-      // most of the 21+ locales there is no native reviewer, so the report is
-      // the only signal (#7939). `deviceLocale` is added only when the app
-      // ships no translation for the device's language, because that is the
-      // fallback worth flagging — a language the user picked in Settings is a
-      // choice, not a fallback, and would otherwise read as a missing
-      // translation. Best-effort: a probe failure must not block the report.
+      // Flag a missing-translation fallback only when neither Settings nor
+      // any device preference selects a shipped language. Best-effort: a
+      // probe failure must not block the report.
       try {
         final resolvedLocale = _resolvedUiLocaleLoader();
-        final deviceLocale = _deviceLocaleLoader();
-        final deviceLanguageIsTranslated = _supportedLanguageCodes.contains(
-          deviceLocale.languageCode,
-        );
+        final deviceLocales = _deviceLocalesLoader();
+        final usesFallback =
+            !_hasLocaleOverrideLoader() &&
+            !deviceLocales.any(
+              (locale) => _supportedLanguageCodes.contains(locale.languageCode),
+            );
         deviceInfo = {
           ...deviceInfo,
           'locale': resolvedLocale.toLanguageTag(),
-          if (!deviceLanguageIsTranslated)
-            'deviceLocale': deviceLocale.toLanguageTag(),
+          if (usesFallback && deviceLocales.isNotEmpty)
+            'deviceLocale': deviceLocales.first.toLanguageTag(),
         };
       } on Object catch (e) {
         Log.warning(

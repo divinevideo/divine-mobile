@@ -454,17 +454,59 @@ void main() {
     );
 
     group('locale diagnostics', () {
-      // For most of the 21+ supported locales there is no native reviewer, so
-      // a copy report is the only signal - and it can only be routed if it says
-      // which language the app was rendering. The resolved UI locale is that
-      // language; the device locale is recorded only when the app ships no
-      // translation for it, because a phone set to a language we do not ship
-      // is reading a fallback - a different bug from a bad string in a
-      // language we do ship (#7939).
+      test('omits fallback metadata for an explicit English choice', () async {
+        final service = BugReportService(
+          resolvedUiLocaleLoader: () => const Locale('en'),
+          deviceLocalesLoader: () => const [Locale('cs', 'CZ')],
+          hasLocaleOverrideLoader: () => true,
+        );
+
+        final data = await service.collectDiagnostics(
+          userDescription: 'English was selected in Settings',
+        );
+
+        expect(data.deviceInfo['locale'], 'en');
+        expect(data.deviceInfo, isNot(contains('deviceLocale')));
+      });
+
+      test(
+        'omits fallback metadata for a supported secondary locale',
+        () async {
+          final service = BugReportService(
+            resolvedUiLocaleLoader: () => const Locale('de'),
+            deviceLocalesLoader: () => const [
+              Locale('cs', 'CZ'),
+              Locale('de', 'DE'),
+            ],
+          );
+
+          final data = await service.collectDiagnostics(
+            userDescription: 'Copy report',
+          );
+
+          expect(data.deviceInfo['locale'], 'de');
+          expect(data.deviceInfo, isNot(contains('deviceLocale')));
+        },
+      );
+
+      test('omits device locale when device preferences are empty', () async {
+        final service = BugReportService(
+          resolvedUiLocaleLoader: () => const Locale('en'),
+          deviceLocalesLoader: () => const [],
+        );
+
+        final data = await service.collectDiagnostics(
+          userDescription: 'Copy report',
+        );
+
+        expect(data.deviceInfo['locale'], 'en');
+        expect(data.deviceInfo, isNot(contains('deviceLocale')));
+      });
+
       test('records the resolved UI locale in deviceInfo', () async {
         final service = BugReportService(
           resolvedUiLocaleLoader: () => const Locale('am'),
-          deviceLocaleLoader: () => const Locale('am'),
+          deviceLocalesLoader: () => const [Locale('am')],
         );
 
         final data = await service.collectDiagnostics(
@@ -483,7 +525,7 @@ void main() {
           // is on the English fallback rather than reading a bad string.
           final service = BugReportService(
             resolvedUiLocaleLoader: () => const Locale('en'),
-            deviceLocaleLoader: () => const Locale('cs', 'CZ'),
+            deviceLocalesLoader: () => const [Locale('cs', 'CZ')],
           );
 
           final data = await service.collectDiagnostics(
@@ -504,7 +546,7 @@ void main() {
           // not exist (#7939).
           final service = BugReportService(
             resolvedUiLocaleLoader: () => const Locale('en'),
-            deviceLocaleLoader: () => const Locale('de', 'DE'),
+            deviceLocalesLoader: () => const [Locale('de', 'DE')],
           );
 
           final data = await service.collectDiagnostics(
@@ -523,7 +565,7 @@ void main() {
         // region-only difference must not emit a deviceLocale (#7939).
         final service = BugReportService(
           resolvedUiLocaleLoader: () => const Locale('en'),
-          deviceLocaleLoader: () => const Locale('en', 'US'),
+          deviceLocalesLoader: () => const [Locale('en', 'US')],
         );
 
         final data = await service.collectDiagnostics(
@@ -537,7 +579,7 @@ void main() {
       test('a locale probe failure does not block the report', () async {
         final service = BugReportService(
           resolvedUiLocaleLoader: () => throw StateError('locale unavailable'),
-          deviceLocaleLoader: () => const Locale('en'),
+          deviceLocalesLoader: () => const [Locale('en')],
         );
 
         final data = await service.collectDiagnostics(

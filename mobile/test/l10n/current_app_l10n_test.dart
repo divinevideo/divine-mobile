@@ -22,6 +22,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
 
       expect(currentAppUiLocale(prefs).languageCode, 'de');
+      expect(appUiLocaleOverride(prefs)?.languageCode, 'de');
     });
 
     test('ignores a saved language the app no longer ships', () async {
@@ -36,10 +37,18 @@ void main() {
       final resolved = currentAppUiLocale(prefs);
 
       expect(resolved.languageCode, isNot('cs'));
+      expect(appUiLocaleOverride(prefs), isNull);
       expect(
         AppLocalizations.supportedLocales.map((l) => l.languageCode),
         contains(resolved.languageCode),
       );
+    });
+
+    test('has no override when Settings follows the device', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(appUiLocaleOverride(prefs), isNull);
     });
   });
 }

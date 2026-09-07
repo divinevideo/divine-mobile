@@ -490,8 +490,9 @@ The report carries platform, device model, OS and app version, and the
 so a copy report already names the language to route it by
 (`bug_report_service.dart`, #7939).
 
-A second field, `deviceLocale`, appears only when the phone asks for a language
-this app does not ship. That one is its own finding: the reader was pushed onto
+A second field, `deviceLocale`, appears only when no language in the phone's
+preference list is supported and no supported language was chosen in Settings.
+It records the phone's first preference. The reader was pushed onto
 the English fallback by a missing translation, which is a different bug from a
 bad string in a language we do ship. A language chosen in Settings is a choice
 rather than a fallback, so it never adds that line.

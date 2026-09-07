@@ -29,6 +29,7 @@ BugReportService bugReportService(Ref ref) {
     // Preference-aware so a language chosen in Settings is reflected, not just
     // the device locales.
     resolvedUiLocaleLoader: () => currentAppUiLocale(preferences),
+    hasLocaleOverrideLoader: () => appUiLocaleOverride(preferences) != null,
     supportDiagnosticsLoader: () async {
       final recovery = DatabaseRecoveryStore(preferences: preferences).read();
       final localContent = await LocalContentDiagnosticsService(
