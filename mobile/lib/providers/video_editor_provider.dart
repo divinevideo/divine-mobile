@@ -134,7 +134,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// run from `onDispose` without reading providers after disposal.
   DraftsDao? _deferredCleanupDraftsDao;
   ClipsDao? _deferredCleanupClipsDao;
-  late final EditorBackgroundWork _backgroundWork;
+  EditorBackgroundWork? _backgroundWork;
+
+  EditorBackgroundWork get _editorBackgroundWork {
+    final existing = _backgroundWork;
+    if (existing != null) return existing;
+    final backgroundWork = ref.read(editorBackgroundWorkProvider);
+    _backgroundWork = backgroundWork;
+    return backgroundWork;
+  }
 
   /// Autosaves currently writing deferred orphan paths.
   ///
@@ -213,7 +221,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
     // Delete the old rendered file from disk to free up space
     final db = ref.read(databaseProvider);
-    _backgroundWork.track(
+    _editorBackgroundWork.track(
       FileCleanupService.deleteRecordingClipFiles(
         clip,
         draftsDao: db.draftsDao,
@@ -882,7 +890,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// deferred paths, so those writes cannot miss the session-end reap.
   void _startDeferredFileCleanup() {
     final activeAutosaves = _activeAutosaves.toList();
-    _backgroundWork.track(
+    _editorBackgroundWork.track(
       Future.wait(activeAutosaves).then((_) => _flushDeferredFileCleanup()),
     );
   }
