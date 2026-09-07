@@ -87,7 +87,6 @@ profileCompleteYourProfile	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Com
 profileCopyPublicKey	e2e/maestro/tests/profileNavigation.yaml	bound:Copy public key (npub)
 profileFollowLabel	e2e/maestro/asserts/assertSpecificUserProfile.yaml	bound:Follow
 profileFollowLabel	e2e/maestro/tests/follow.yaml	bound:Follow
-profileFollowLabel	e2e/maestro/tests/unfollow.yaml	bound:Follow
 profileFollowingStatLabel	e2e/maestro/tests/follow.yaml	bound:Following
 profileMoreTooltip	e2e/maestro/tests/profileNavigation.yaml	bound:More
 profilePublicKeyCopied	e2e/maestro/tests/profileNavigation.yaml	bound:Public key copied to clipboard

@@ -160,6 +160,14 @@ abstract class SemanticIds {
   static const String profileMoreButton = 'profile_more_button';
   static const String profileUnfollowAction = 'profile_unfollow_action';
 
+  /// The profile header's Follow button, in its not-following state.
+  ///
+  /// The unfollow journey proves it worked by watching this button come back,
+  /// and matching its label instead would bind the flow to translated copy on
+  /// any non-English device. The following state is icon-only and already
+  /// carries its own semantic label, so only this half needs an id.
+  static const String profileFollowAction = 'profile_follow_action';
+
   static const String settingsExperimentalFeaturesRow =
       'experimental_features_tile';
   static const String settingsAccountSwitchAction = 'account_switch_action';

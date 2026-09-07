@@ -41,6 +41,11 @@ tags:
     id: profile_unfollow_action
 
 # 3. Verify the direct outcome, independent of the viewer's total follow count.
+#
+# By id, not by the word "Follow": the button's label comes from
+# `profileFollowLabel`, so matching the string binds this flow to English and
+# to whatever product does to that copy next.
 - extendedWaitUntil:
-    visible: Follow
+    visible:
+      id: profile_follow_action
     timeout: 30000
