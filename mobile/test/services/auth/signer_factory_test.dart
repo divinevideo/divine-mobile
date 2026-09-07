@@ -402,6 +402,39 @@ void main() {
         },
       );
 
+      test('reports unexpected signer errors as invariant failures', () async {
+        final remoteSigner = _MockNostrSigner();
+        when(
+          () => remoteSigner.signEvent(any()),
+        ).thenThrow(StateError('broken signer invariant'));
+        final identity = BunkerNostrIdentity(
+          pubkey: testPublicKey,
+          remoteSigner: remoteSigner,
+        );
+
+        final event = await factory.createAndSignEvent(
+          identity: identity,
+          authSource: AuthenticationSource.bunker,
+          kind: 1,
+          content: 'not signed',
+        );
+
+        expect(event, isNull);
+        expect(reported, hasLength(1));
+        expect(
+          reported.single.error,
+          isA<Reportable<Object>>().having(
+            (reportable) => reportable.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+        expect(
+          reported.single.reason,
+          equals('Unexpected signer invariant failure'),
+        );
+      });
+
       test('returns null and reports when the signer answers for a '
           'different account', () async {
         final remoteSigner = _MockNostrSigner();

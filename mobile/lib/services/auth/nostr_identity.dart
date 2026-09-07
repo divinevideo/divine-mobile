@@ -244,13 +244,11 @@ class KeycastNostrIdentity extends NostrIdentity
   Future<Event?> signEvent(Event event) async {
     // Try local signing first when a matching local key is available.
     if (_localSigner case final local?) {
-      final signed = await local.signEvent(event);
-      if (signed != null) return signed;
-      Log.warning(
-        'Local signing failed for Keycast identity, falling back to RPC',
-        name: 'KeycastNostrIdentity',
-        category: LogCategory.auth,
+      final signed = await _tryLocal(
+        () => local.signEvent(event),
+        operation: .signEvent,
       );
+      if (signed != null) return signed;
       // signsWithLocalKey is true for this identity, so the caller skips its
       // post-sign verify. This fallback result came from the remote RPC — a
       // trust boundary — so verify it here to honor that contract; otherwise a
@@ -276,7 +274,10 @@ class KeycastNostrIdentity extends NostrIdentity
     // BYOK setup or signed in with a recovery phrase.
     final local = _localSigner;
     if (local != null) {
-      final result = await local.signCanonicalPayload(payload);
+      final result = await _tryLocal(
+        () => local.signCanonicalPayload(payload),
+        operation: .signCanonicalPayload,
+      );
       if (result != null && result.isNotEmpty) return result;
     }
 
@@ -349,7 +350,10 @@ class KeycastNostrIdentity extends NostrIdentity
   @override
   Future<String?> encrypt(String pubkey, String plaintext) async {
     if (_localSigner case final local?) {
-      final result = await local.encrypt(pubkey, plaintext);
+      final result = await _tryLocal(
+        () => local.encrypt(pubkey, plaintext),
+        operation: .nip04Encrypt,
+      );
       if (result != null) return result;
     }
     return _rpcSigner.encrypt(pubkey, plaintext);
@@ -358,7 +362,10 @@ class KeycastNostrIdentity extends NostrIdentity
   @override
   Future<String?> decrypt(String pubkey, String ciphertext) async {
     if (_localSigner case final local?) {
-      final result = await local.decrypt(pubkey, ciphertext);
+      final result = await _tryLocal(
+        () => local.decrypt(pubkey, ciphertext),
+        operation: .nip04Decrypt,
+      );
       if (result != null) return result;
     }
     return _rpcSigner.decrypt(pubkey, ciphertext);
@@ -367,7 +374,10 @@ class KeycastNostrIdentity extends NostrIdentity
   @override
   Future<String?> nip44Encrypt(String pubkey, String plaintext) async {
     if (_localSigner case final local?) {
-      final result = await local.nip44Encrypt(pubkey, plaintext);
+      final result = await _tryLocal(
+        () => local.nip44Encrypt(pubkey, plaintext),
+        operation: .nip44Encrypt,
+      );
       if (result != null) return result;
     }
     return _rpcSigner.nip44Encrypt(pubkey, plaintext);
@@ -376,7 +386,10 @@ class KeycastNostrIdentity extends NostrIdentity
   @override
   Future<String?> nip44Decrypt(String pubkey, String ciphertext) async {
     if (_localSigner case final local?) {
-      final result = await local.nip44Decrypt(pubkey, ciphertext);
+      final result = await _tryLocal(
+        () => local.nip44Decrypt(pubkey, ciphertext),
+        operation: .nip44Decrypt,
+      );
       if (result != null) return result;
     }
     return _rpcSigner.nip44Decrypt(pubkey, ciphertext);
@@ -385,6 +398,24 @@ class KeycastNostrIdentity extends NostrIdentity
   @override
   void close() {
     // RPC signer lifecycle is managed by AuthService.
+  }
+
+  Future<T?> _tryLocal<T>(
+    Future<T?> Function() localCall, {
+    required LocalSignerOperation operation,
+  }) async {
+    try {
+      return await localCall();
+    } on LocalSignerOperationException catch (error, stackTrace) {
+      Log.warning(
+        'Local ${operation.name} failed for Keycast identity; falling back to RPC',
+        name: 'KeycastNostrIdentity',
+        category: LogCategory.auth,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 }
 

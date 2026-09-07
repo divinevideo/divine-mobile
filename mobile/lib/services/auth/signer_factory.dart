@@ -307,20 +307,27 @@ class SignerFactory {
       return signedEvent;
     } catch (e, stackTrace) {
       Log.error(
-        'Failed to create or sign event: $e',
+        'Failed to create or sign event',
         name: 'SignerFactory',
         category: LogCategory.auth,
+        error: e,
+        stackTrace: stackTrace,
       );
       // An event signed for a different account is an invariant violation
       // (YES on the Reportable matrix), not an expected domain/network
       // failure — surface it to Crashlytics. Other errors keep the existing
       // log-only behavior to avoid flooding the dashboard.
-      if (e is EventSignerAccountMismatchException) {
+      if (e is EventSignerAccountMismatchException || e is Error) {
+        final isAccountMismatch = e is EventSignerAccountMismatchException;
         _reportError?.call(
           Reportable(e, context: 'createAndSignEvent'),
           stackTrace,
-          reason: 'Signer returned an event for a different account',
-          logMessage: 'Signer account mismatch during createAndSignEvent',
+          reason: isAccountMismatch
+              ? 'Signer returned an event for a different account'
+              : 'Unexpected signer invariant failure',
+          logMessage: isAccountMismatch
+              ? 'Signer account mismatch during createAndSignEvent'
+              : 'Unexpected signer invariant failure during createAndSignEvent',
         );
       }
       return null;
