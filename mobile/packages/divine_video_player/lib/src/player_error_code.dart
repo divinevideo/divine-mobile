@@ -27,7 +27,8 @@ enum NativePlayerErrorCode {
   /// so this code names the transport fact rather than the policy behind it.
   ///
   /// Android: `ERROR_CODE_IO_BAD_HTTP_STATUS` with response code 403.
-  /// iOS: HTTP 403 in `userInfo`.
+  /// iOS: HTTP 403 in
+  /// `userInfo[NSURLErrorFailingURLResponseErrorKey]`.
   forbidden,
 
   /// HTTP 404 from the media server.
@@ -37,7 +38,8 @@ enum NativePlayerErrorCode {
   /// is gone — see [shouldFailover].
   ///
   /// Android: `ERROR_CODE_IO_BAD_HTTP_STATUS` with response code 404.
-  /// iOS: HTTP 404 in `userInfo`.
+  /// iOS: HTTP 404 in
+  /// `userInfo[NSURLErrorFailingURLResponseErrorKey]`.
   notFound,
 
   /// HTTP 4xx response from the media server.

@@ -48,8 +48,8 @@ void main() {
     });
   });
 
-  group('Apple native HTTP status error contract', () {
-    test('classifies 403 and 404 before the generic 4xx return', () {
+  group('Apple native HTTP response error contract', () {
+    test('classifies exposed 403 and 404 responses before generic 4xx', () {
       final source = _appleSourceFile().readAsStringSync();
 
       final responseBranch = source.indexOf(
@@ -70,8 +70,8 @@ void main() {
           statusCheck,
           greaterThan(responseBranch),
           reason:
-              'HTTP ${entry.key} needs its own branch so iOS stays normalised '
-              'with Android.',
+              'An exposed HTTP ${entry.key} response needs its own branch so '
+              'Apple platforms stay normalised with Android.',
         );
 
         final statusMapping = source.indexOf(
