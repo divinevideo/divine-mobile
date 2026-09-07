@@ -13,6 +13,8 @@ import 'package:flutter/foundation.dart';
 import 'package:models/models.dart' show BugReportData, LogEntry;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/services/storage_management_service.dart';
 import 'package:openvine/utils/app_uptime.dart';
 import 'package:openvine/utils/browser_file_download.dart';
@@ -70,10 +72,26 @@ class BugReportService {
     StorageManagementService? storageManagementService,
     Future<PackageInfo> Function()? packageInfoLoader,
     Future<Map<String, dynamic>> Function()? supportDiagnosticsLoader,
+    ui.Locale Function()? resolvedUiLocaleLoader,
+    List<ui.Locale> Function()? deviceLocalesLoader,
+    bool Function()? hasLocaleOverrideLoader,
   }) : _errorTracker = errorTracker ?? ErrorAnalyticsTracker(),
        _storageManagementService = storageManagementService,
        _supportDiagnosticsLoader = supportDiagnosticsLoader,
-       _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform;
+       _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform,
+       // Default resolves from the device locales alone. The provider injects a
+       // preference-aware resolver (`currentAppUiLocale`) so a user who picked
+       // a language in Settings is reflected too.
+       _resolvedUiLocaleLoader =
+           resolvedUiLocaleLoader ??
+           (() => resolveAppUiLocale(
+             ui.PlatformDispatcher.instance.locales,
+             AppLocalizations.supportedLocales,
+           )),
+       _deviceLocalesLoader =
+           deviceLocalesLoader ??
+           (() => ui.PlatformDispatcher.instance.locales),
+       _hasLocaleOverrideLoader = hasLocaleOverrideLoader ?? (() => false);
 
   static const _uuid = Uuid();
 
@@ -90,6 +108,15 @@ class BugReportService {
   final StorageManagementService? _storageManagementService;
   final Future<PackageInfo> Function() _packageInfoLoader;
   final Future<Map<String, dynamic>> Function()? _supportDiagnosticsLoader;
+  final ui.Locale Function() _resolvedUiLocaleLoader;
+  final List<ui.Locale> Function() _deviceLocalesLoader;
+  final bool Function() _hasLocaleOverrideLoader;
+
+  /// Language codes the app ships a translation for. A device language outside
+  /// this set cannot be matched during device locale resolution.
+  static final Set<String> _supportedLanguageCodes = {
+    for (final locale in AppLocalizations.supportedLocales) locale.languageCode,
+  };
 
   /// Collect comprehensive diagnostics for bug report
   Future<BugReportData> collectDiagnostics({
@@ -176,6 +203,30 @@ class BugReportService {
           'version': 'unknown',
           'error': 'Failed to get device info',
         };
+      }
+
+      // Flag a missing device translation only when Settings follows the
+      // device and no device preference matches a shipped language. A
+      // probe failure must not block the report.
+      try {
+        final resolvedLocale = _resolvedUiLocaleLoader();
+        final deviceLocales = _deviceLocalesLoader();
+        final usesFallback =
+            !_hasLocaleOverrideLoader() &&
+            !deviceLocales.any(
+              (locale) => _supportedLanguageCodes.contains(locale.languageCode),
+            );
+        deviceInfo = {
+          ...deviceInfo,
+          'locale': resolvedLocale.toLanguageTag(),
+          if (usesFallback && deviceLocales.isNotEmpty)
+            'deviceLocale': deviceLocales.first.toLanguageTag(),
+        };
+      } on Object catch (e) {
+        Log.warning(
+          'Failed to resolve locale for bug report: $e',
+          category: LogCategory.system,
+        );
       }
 
       // Get recent logs from LogCaptureService

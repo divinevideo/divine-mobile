@@ -15,6 +15,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/storage_providers.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/storage_management_service.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,6 +98,23 @@ void main() {
           'missingSourceMediaFiles': 0,
         },
       });
+    });
+
+    test('reports the language chosen in Settings, not the device', () async {
+      // The whole point of #7939 is that a copy report names the language the
+      // user was reading. That is the Settings choice when there is one, and
+      // the provider is the only place that resolution is wired in — read
+      // lazily, so a language picked after the service was built still counts.
+      final service = container.read(bugReportServiceProvider);
+      await container
+          .read(sharedPreferencesProvider)
+          .setString(LocalePreferenceService.prefsKey, 'de');
+
+      final report = await service.collectDiagnostics(
+        userDescription: 'This screen is showing bad copy',
+      );
+
+      expect(report.deviceInfo['locale'], 'de');
     });
   });
 }
