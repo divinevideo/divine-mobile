@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Menu widget for the More sheet with copy, unfollow, report, and block
@@ -79,6 +80,7 @@ class MoreSheetMenu extends StatelessWidget {
             icon: DivineIconName.userMinus,
             label: l10n.profileUnfollowDisplayName(displayName),
             onTap: onUnfollow,
+            semanticIdentifier: SemanticIds.profileUnfollowAction,
           ),
         if (onReport != null)
           _MoreSheetMenuItem(
@@ -108,12 +110,14 @@ class _MoreSheetMenuItem extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.color,
+    this.semanticIdentifier,
   });
 
   final DivineIconName icon;
   final String label;
   final VoidCallback onTap;
   final Color? color;
+  final String? semanticIdentifier;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +125,7 @@ class _MoreSheetMenuItem extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
+      identifier: semanticIdentifier,
       child: InkWell(
         onTap: onTap,
         child: ExcludeSemantics(

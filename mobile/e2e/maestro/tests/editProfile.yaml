@@ -1,29 +1,26 @@
 appId: co.openvine.app.staging
 ---
-#TC to edit the user profile,
-# given the user is logged in in the app with existing keys,
-# by openning the settings menu and validating the changes
+# TC to open the current Edit Profile screen from the own-profile pencil.
 #Steps:
-# 1. Open the settings page: Validate the settings modal is displayed
-# 2. Tap on Edit profile: The Update your profile is displayed
-# 3. Tap on cancel button: Validate Cancel button works
-# 4. Reopen the Edit profile
-# 5.
-
-# 1. Open the settings page: Validate the settings modal is displayed
-- runFlow: "../utils/openSettings.yaml"
-
-# 2. Tap on Remove Keys from Device: The modal Remove Keys from Device is displayed
-- tapOn: |-
-    Edit Profile
-    Update your display name, bio, and avatar
+# 1. Open Edit Profile from its only current entry point.
+- tapOn:
+    id: profile_tab
+- extendedWaitUntil:
+    visible:
+      id: edit_profile_button
+    timeout: 30000
+- tapOn:
+    id: edit_profile_button
 - runFlow: ../asserts/assertEditYourProfile.yaml
-# 3. Tap on cancel button: Validate Cancel button works
+
+# 2. Cancel returns to the own profile.
 - tapOn: Cancel
+- extendedWaitUntil:
+    visible:
+      id: edit_profile_button
+    timeout: 30000
 
-# 4. Reopen the Remove modal and tap on Remove Keys: Final confirmation modal is displayed
-- tapOn: |-
-    Edit Profile
-    Update your display name, bio, and avatar
+# 3. The entry point remains usable after returning.
+- tapOn:
+    id: edit_profile_button
 - runFlow: ../asserts/assertEditYourProfile.yaml
-# 5. To do... receiving yellow box on the display

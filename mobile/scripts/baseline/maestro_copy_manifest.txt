@@ -40,16 +40,11 @@ commonBack	e2e/maestro/asserts/assertNostrKeys.yaml	bound:Back
 commonBack	e2e/maestro/asserts/assertUsersFollowing.yaml	bound:Back
 commonBack	e2e/maestro/tests/follow.yaml	bound:Back
 commonBack	e2e/maestro/tests/profileNavigation.yaml	bound:Back
-commonCancel	e2e/maestro/asserts/assertDeleteContentModal.yaml	bound:Cancel
 commonCancel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Cancel
 commonCancel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Cancel
-commonCancel	e2e/maestro/asserts/assertFinalConfirmationModal.yaml	bound:Cancel
 commonCancel	e2e/maestro/asserts/assertRemoveKeysModal.yaml	bound:Cancel
-commonCancel	e2e/maestro/tests/deleteAccountData.yaml	bound:Cancel
 commonCancel	e2e/maestro/tests/editProfile.yaml	bound:Cancel
 commonCancel	e2e/maestro/tests/removeKeys.yaml	bound:Cancel
-commonClose	e2e/maestro/asserts/assertAccountDeletedModal.yaml	bound:Close
-commonClose	e2e/maestro/tests/deleteAccountData.yaml	bound:Close
 deleteAccountRemoveKeysConfirm	e2e/maestro/tests/removeKeys.yaml	bound:Remove from device
 devOptionsMinorReviewStateLoading	e2e/maestro/asserts/assertProfile.yaml	bound:Loading...
 devOptionsMinorReviewStateLoading	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Loading...
@@ -82,18 +77,14 @@ libraryNoClipsYetSubtitle	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:You
 libraryNoClipsYetTitle	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:No Clips Yet
 libraryRecordVideo	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:Record a Video
 libraryTabClips	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:Clips
-listContinue	e2e/maestro/asserts/assertDeleteContentModal.yaml	bound:Continue
-listContinue	e2e/maestro/tests/deleteAccountData.yaml	bound:Continue
 listContinue	e2e/maestro/tests/loginExistingKeys.yaml	bound:Continue
 navHome	e2e/maestro/asserts/assertHome.yaml	bound:Home
 navMyProfile	e2e/maestro/tests/profileNavigation.yaml	bound:My Profile
 navOpenCamera	e2e/maestro/asserts/assertExplore.yaml	bound:Open camera
 navOpenCamera	e2e/maestro/asserts/assertHome.yaml	bound:Open camera
 nostrInfoGotIt	e2e/maestro/utils/openRecorder.yaml	bound:Got it!
-nostrSettingsDeleteAccount	e2e/maestro/tests/deleteAccountData.yaml	bound:Delete Account and Data
 nostrSettingsKeyManagement	e2e/maestro/tests/backupYourKey.yaml	bound:Key Management
 nostrSettingsKeyManagementSubtitle	e2e/maestro/tests/backupYourKey.yaml	bound:Export, backup, and restore your Nostr keys
-profileCompletePrimaryButton	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Update Your Profile
 profileCompleteSubtitle	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Add your name, bio, and picture to get started
 profileCompleteYourProfile	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Complete Your Profile
 profileCopyPublicKey	e2e/maestro/tests/profileNavigation.yaml	bound:Copy public key (npub)
@@ -101,7 +92,6 @@ profileFollowLabel	e2e/maestro/asserts/assertSpecificUserProfile.yaml	bound:Foll
 profileFollowLabel	e2e/maestro/tests/follow.yaml	bound:Follow
 profileFollowLabel	e2e/maestro/tests/unfollow.yaml	bound:Follow
 profileFollowingStatLabel	e2e/maestro/tests/follow.yaml	bound:Following
-profileFollowingStatLabel	e2e/maestro/tests/unfollow.yaml	bound:Following
 profileMoreTooltip	e2e/maestro/tests/profileNavigation.yaml	bound:More
 profilePublicKeyCopied	e2e/maestro/tests/profileNavigation.yaml	bound:Public key copied to clipboard
 profileSecureSubtitle	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Add email & password to recover your account on any device
@@ -111,7 +101,6 @@ profileSetupBioLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Bio (O
 profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Display Name
 profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Display Name
 profileSetupEditProfileTitle	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Edit Profile
-profileSetupEditProfileTitle	e2e/maestro/tests/editProfile.yaml	bound:Edit Profile
 profileSetupEditProfileTitle	e2e/maestro/tests/profileNavigation.yaml	bound:Edit Profile
 profileSetupPublicKeyLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Public key (npub)
 profileSetupUsernameLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Username (Optional)
@@ -125,7 +114,6 @@ saveOriginalNotNow	e2e/maestro/flows/loginEmailPwd.yaml	bound:Not Now
 settingsTitle	e2e/maestro/asserts/assertMenu.yaml	bound:Settings
 supportFaq	e2e/maestro/asserts/assertMenu.yaml	bound:FAQ
 videoActionUnlike	e2e/maestro/asserts/assertVideoLiked.yaml	bound:Unlike video
-videoEditorCameraLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Camera
 videoEditorFontUnknown	e2e/maestro/asserts/assertVideoUser&Description.yaml	bound:Unknown
 videoEditorLibraryLabel	e2e/maestro/tests/profileNavigation.yaml	bound:Library
 videoRecorderLipSyncAddAudioFirst	e2e/maestro/tests/lipSyncModeAudioGate.yaml	bound:Add audio before recording

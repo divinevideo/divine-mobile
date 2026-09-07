@@ -19,6 +19,7 @@ import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -295,6 +296,25 @@ void main() {
   }
 
   group('switching to another account', () {
+    testWidgets('exposes the account switch action to automation', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(wrap(const SettingsScreen()));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.settingsAccountSwitchAction),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.settingsExperimentalFeaturesRow),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('warns about an in-flight upload before switching', (
       tester,
     ) async {
