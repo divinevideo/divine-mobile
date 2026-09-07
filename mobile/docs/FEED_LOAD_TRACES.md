@@ -15,16 +15,22 @@ completion behavior.
 
 `VideoEventService` starts one trace for each new subscription load that gets
 past duplicate-subscription detection. The name is
-`feed_load_${subscriptionType.name}`:
+`feed_load_${subscriptionType.name}`, and production subscribes only four of
+the eight `SubscriptionType` values:
 
 - `feed_load_homeFeed`
 - `feed_load_discovery`
 - `feed_load_profile`
-- `feed_load_editorial`
-- `feed_load_popularNow`
-- `feed_load_trending`
 - `feed_load_hashtag`
-- `feed_load_search`
+
+`editorial`, `popularNow`, `trending` and `search` exist on the enum and own
+event lists, but nothing under `mobile/lib` or `mobile/packages` passes them to
+`subscribeToVideoFeed`. Search in particular runs its own path,
+`VideoEventService.searchVideos`, which registers a subscription without
+starting a trace at all. So do not expect `feed_load_editorial`,
+`feed_load_popularNow`, `feed_load_trending` or `feed_load_search` samples in
+Firebase — zero of them is the correct reading, not missing instrumentation. If
+one does appear, a new call site added it and this list needs updating.
 
 Each load owns its own trace handle, even when concurrent loads have the same
 trace name. Reusing an identical subscription does not start another trace.
