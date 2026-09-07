@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "ANALITIK",
     "privacySettingsShareUsage": "Bagikan data penggunaan",
     "privacySettingsShareUsageSubtitle": "Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.",
+    "privacySettingsSaveFailed": "Kami tidak bisa menyimpannya. Data penggunaan tetap nonaktif untuk saat ini.",
     "generalSettingsSectionIntegrations": "INTEGRASI",
     "generalSettingsSectionViewing": "MENONTON",
     "generalSettingsSectionCreating": "MEMBUAT",

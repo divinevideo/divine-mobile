@@ -330,6 +330,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Nie udało się tego zapisać. Dane o użytkowaniu na razie pozostają wyłączone.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRACJE';
 
   @override

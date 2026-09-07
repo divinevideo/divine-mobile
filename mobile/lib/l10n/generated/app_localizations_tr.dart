@@ -259,6 +259,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Bunu kaydedemedik. Kullanım verileri şimdilik kapalı kalıyor.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ENTEGRASYONLAR';
 
   @override

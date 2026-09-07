@@ -319,6 +319,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Helpt ons te zien wat mensen echt gebruiken. Zet je het uit, dan worden wachtende gegevens op dit apparaat verwijderd.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'We konden dit niet opslaan. Gebruiksgegevens blijven voorlopig uit.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIES';
 
   @override

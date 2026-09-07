@@ -2232,6 +2232,7 @@
     "privacySettingsAnalyticsSection": "ANALYTICS",
     "privacySettingsShareUsage": "I-share ang usage data",
     "privacySettingsShareUsageSubtitle": "Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito.",
+    "privacySettingsSaveFailed": "Hindi namin ito na-save. Naka-off muna ang usage data.",
     "contentFiltersAdultContent": "NILALAMAN PARA SA MATATANDA",
     "contentFiltersViolenceGore": "KARAHASAN AT GORE",
     "contentFiltersSubstances": "MGA SUBSTANSIYA",

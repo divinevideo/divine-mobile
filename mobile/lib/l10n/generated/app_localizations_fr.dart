@@ -330,6 +330,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ça nous aide à voir ce qui sert vraiment. Si tu désactives, les données en attente sur cet appareil sont supprimées.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Nous n\'avons pas pu enregistrer ça. Les données d\'usage restent désactivées pour l\'instant.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTÉGRATIONS';
 
   @override

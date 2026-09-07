@@ -340,6 +340,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Nu am putut salva. Datele de utilizare rămân dezactivate deocamdată.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRĂRI';
 
   @override

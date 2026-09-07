@@ -10,6 +10,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -531,6 +532,12 @@ ViewEventRetryService? viewEventRetryService(Ref ref) {
     pendingViewEventsDao: db.pendingViewEventsDao,
     userPubkey: userPubkey,
     appForegroundStream: foregroundController.stream,
+    // `ref.read` inside the callback, not `ref.watch` at build time:
+    // `analyticsServiceProvider` watches *this* provider, so watching it back
+    // would be a dependency cycle. Sweeps run long after both are built, and
+    // sampling then is also what makes a mid-session withdrawal take effect.
+    isAnalyticsEnabled: () =>
+        ref.read(analyticsServiceProvider).analyticsEnabled,
   );
 
   service.initialize().catchError((e) {
@@ -623,6 +630,7 @@ AnalyticsService analyticsService(Ref ref) {
     pendingViewEventsDao: db.pendingViewEventsDao,
     flushPendingViewEvents: retryService?.sweep,
     productEventQueue: productQueue,
+    analyticsCollectionControl: ref.watch(analyticsCollectionControlProvider),
     currentUserPubkey: () => authService.currentPublicKeyHex,
     appVersion: () => appVersion,
   );

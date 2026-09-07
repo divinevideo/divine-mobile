@@ -290,6 +290,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Kami tidak dapat menyimpannya. Data penggunaan kekal dimatikan buat masa ini.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRASI';
 
   @override

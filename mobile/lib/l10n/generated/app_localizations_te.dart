@@ -327,6 +327,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'దీన్ని సేవ్ చేయలేకపోయాం. వినియోగ డేటా ప్రస్తుతానికి ఆఫ్‌లోనే ఉంటుంది.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ఇంటిగ్రేషన్‌లు';
 
   @override

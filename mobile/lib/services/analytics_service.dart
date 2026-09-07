@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:analytics/analytics.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,7 @@ class AnalyticsService implements BackgroundAwareService {
     PendingViewEventsDao? pendingViewEventsDao,
     Future<void> Function()? flushPendingViewEvents,
     ProductEventQueue? productEventQueue,
+    AnalyticsCollectionControl? analyticsCollectionControl,
     String? Function()? currentUserPubkey,
     String Function()? anonymousId,
     String Function()? sessionId,
@@ -46,6 +48,7 @@ class AnalyticsService implements BackgroundAwareService {
        _pendingViewEventsDao = pendingViewEventsDao,
        _flushPendingViewEvents = flushPendingViewEvents,
        _productEventQueue = productEventQueue,
+       _analyticsCollectionControl = analyticsCollectionControl,
        _currentUserPubkey = currentUserPubkey,
        _anonymousIdOverride = anonymousId,
        _sessionIdOverride = sessionId,
@@ -73,6 +76,16 @@ class AnalyticsService implements BackgroundAwareService {
   final PendingViewEventsDao? _pendingViewEventsDao;
   final Future<void> Function()? _flushPendingViewEvents;
   final ProductEventQueue? _productEventQueue;
+
+  /// SDK-level gate for the older Firebase Analytics path.
+  ///
+  /// The consent switch governs all non-essential usage analytics, not just
+  /// the first-party queue, so withdrawal has to reach Firebase too. Gating at
+  /// the SDK is what makes that hold: the Firebase trackers hold their own
+  /// sinks and know nothing about consent, so switching collection off is the
+  /// only place that covers every one of them, including any added later.
+  final AnalyticsCollectionControl? _analyticsCollectionControl;
+
   final String? Function()? _currentUserPubkey;
   final String Function()? _anonymousIdOverride;
   final String Function()? _sessionIdOverride;
@@ -133,34 +146,16 @@ class AnalyticsService implements BackgroundAwareService {
     // defers this call onto a microtask, so a container torn down before that
     // microtask lands calls dispose() first (#8398).
     if (_isDisposed) return;
-    if (_isInitialized) return;
 
     try {
       // Load analytics preference from storage
       final prefs = await SharedPreferences.getInstance();
-      _analyticsEnabled = prefs.getBool(_analyticsEnabledKey) ?? true;
+      final storedConsent = prefs.getBool(_analyticsEnabledKey) ?? true;
       _isInitialized = true;
-      if (!_analyticsEnabled) {
-        // Stored opt-out: rows persisted before the preference loaded (or by
-        // an older version) must neither linger nor be recovered later.
-        _productAnalyticsUtm.clear();
-        try {
-          await _productEventQueue?.clear();
-        } catch (error) {
-          Log.warning(
-            'Failed to clear queued product analytics for stored opt-out: '
-            '$error',
-            name: 'AnalyticsService',
-            category: LogCategory.system,
-          );
-        }
-      }
-      _productEventQueue?.setSendingEnabled(
-        _productAnalyticsEnabled && _analyticsEnabled,
-      );
-      if (_productAnalyticsEnabled && _analyticsEnabled) {
-        _recoverQueuedProductEvents();
-      }
+      // Stored opt-out takes the same withdrawal path a live toggle does, so
+      // rows persisted before the preference loaded (or by a build that
+      // predates the switch) are cleared rather than left to be swept later.
+      await _applyAnalyticsConsent(storedConsent);
 
       // The guard above is not enough on its own: dispose() may have run while
       // the awaits above were in flight. Re-check before the two side effects
@@ -196,7 +191,15 @@ class AnalyticsService implements BackgroundAwareService {
         name: 'AnalyticsService',
         category: LogCategory.system,
       );
-      _isInitialized = true; // Mark as initialized even on error
+      // Initialization is over either way — leaving `_isInitialized` false
+      // would make every tracking call a permanent no-op with no way back.
+      // But the stored answer never arrived, so treat "unknown" as withdrawn
+      // rather than letting the pre-load default of `true` stand in for
+      // consent nobody gave. The switch then reads off, and turning it on
+      // writes and applies a real decision.
+      _isInitialized = true;
+      _analyticsEnabled = false;
+      _productEventQueue?.setSendingEnabled(false);
     }
   }
 
@@ -212,43 +215,129 @@ class AnalyticsService implements BackgroundAwareService {
     return release.isEmpty ? '0.0.0' : release;
   }
 
-  /// Set analytics enabled state.
-  Future<void> setAnalyticsEnabled(bool enabled) async {
-    if (_analyticsEnabled == enabled) return;
+  /// Records the user's consent decision.
+  ///
+  /// Returns whether the decision reached storage, so the UI can tell the
+  /// difference between a saved answer and one that was lost. It is not a
+  /// detail the caller may ignore: the switch is a promise about what happens
+  /// on the next launch, and a write that silently failed breaks that promise
+  /// while still rendering as success.
+  ///
+  /// Consent is only in force once it is stored. Persistence therefore runs
+  /// first and a failed write settles as **disabled**, whichever way the
+  /// switch was moved: a failed opt-in must not start collecting under consent
+  /// that will be gone at the next launch, and a failed opt-out must not
+  /// resume collecting either. Both directions fail closed.
+  ///
+  /// There is deliberately no "already in that state" early return. The stored
+  /// value and the in-memory one diverge exactly when a previous write failed,
+  /// which is the case a retry has to be able to fix.
+  Future<bool> setAnalyticsEnabled(bool enabled) async {
+    final persisted = await _persistAnalyticsPreference(enabled);
+    await _applyAnalyticsConsent(persisted && enabled);
+    return persisted;
+  }
 
-    _analyticsEnabled = enabled;
-    _productEventQueue?.setSendingEnabled(
-      _productAnalyticsEnabled && enabled,
-    );
-
-    if (!enabled) {
-      _productAnalyticsUtm.clear();
-      _rotateProductAnalyticsIdentity();
-      try {
-        await _productEventQueue?.clear();
-      } catch (error) {
-        Log.warning(
-          'Failed to clear queued product analytics after opt-out: $error',
+  /// Writes the preference, reporting whether it actually landed.
+  Future<bool> _persistAnalyticsPreference(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // `setBool` returns false when the platform rejected the write; that is
+      // a failure the caller has to see, not a value to discard.
+      final written = await prefs.setBool(_analyticsEnabledKey, enabled);
+      if (!written) {
+        Log.error(
+          'Storage rejected the analytics preference write',
           name: 'AnalyticsService',
           category: LogCategory.system,
         );
+        return false;
       }
-    } else if (_productAnalyticsEnabled) {
-      _recoverQueuedProductEvents();
-    }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_analyticsEnabledKey, enabled);
-
       Log.info(
         'Analytics ${enabled ? 'enabled' : 'disabled'} by user',
         name: 'AnalyticsService',
         category: LogCategory.system,
       );
+      return true;
     } catch (e) {
       Log.error(
         'Failed to save analytics preference: $e',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+  }
+
+  /// Brings every collector into line with [enabled].
+  ///
+  /// One path for a stored decision read at startup and a decision made at the
+  /// switch, so the two cannot drift — the startup path is where an opt-out is
+  /// most likely to be quietly incomplete, since nobody is watching it happen.
+  Future<void> _applyAnalyticsConsent(bool enabled) async {
+    _analyticsEnabled = enabled;
+    _productEventQueue?.setSendingEnabled(_productAnalyticsEnabled && enabled);
+    await _applyFirebaseAnalyticsConsent(enabled: enabled);
+
+    if (!enabled) {
+      _productAnalyticsUtm.clear();
+      _rotateProductAnalyticsIdentity();
+      await _clearQueuedAnalytics();
+      return;
+    }
+
+    if (_productAnalyticsEnabled) {
+      _recoverQueuedProductEvents();
+    }
+  }
+
+  Future<void> _applyFirebaseAnalyticsConsent({required bool enabled}) async {
+    final control = _analyticsCollectionControl;
+    if (control == null) return;
+    try {
+      await control.setCollectionEnabled(enabled: enabled);
+      if (!enabled) {
+        // Order matters: collection is off before the reset, so nothing is
+        // recorded against the old identity between the two calls.
+        await control.resetAnalyticsData();
+      }
+    } catch (error) {
+      Log.warning(
+        'Failed to apply analytics consent to Firebase: $error',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  /// Deletes everything this switch has promised to delete on withdrawal.
+  ///
+  /// Both queues, not just the first-party one: `pending_view_events` is a
+  /// durable outbox of identity-bearing Kind 22236 events that would otherwise
+  /// outlive the opt-out and publish on the next foreground sweep.
+  Future<void> _clearQueuedAnalytics() async {
+    try {
+      await _productEventQueue?.clear();
+    } catch (error) {
+      Log.warning(
+        'Failed to clear queued product analytics after opt-out: $error',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
+    }
+
+    final dao = _pendingViewEventsDao;
+    final pubkey = _currentUserPubkey?.call();
+    // Rows are scoped per account, so a signed-out opt-out cannot name any to
+    // delete. Nothing escapes: the sweep that would publish them is gated on
+    // the same preference, and signing back in re-runs this on the next
+    // identity boundary.
+    if (dao == null || pubkey == null || pubkey.isEmpty) return;
+    try {
+      await dao.deleteAllForUser(pubkey);
+    } catch (error) {
+      Log.warning(
+        'Failed to delete queued view events after opt-out: $error',
         name: 'AnalyticsService',
         category: LogCategory.system,
       );
@@ -624,10 +713,14 @@ class AnalyticsService implements BackgroundAwareService {
   }) async {
     if (_isDisposed) return;
 
-    // Check if analytics is enabled by user preference
-    if (!_analyticsEnabled) {
-      return;
-    }
+    // Fail closed until the stored preference has been read. `_analyticsEnabled`
+    // holds its pre-load default of `true`, so without the `_isInitialized`
+    // gate an opted-out person's views are queued and published during the
+    // startup window — the durable rows survive, so this is not a race that
+    // resolves itself once `initialize()` lands. Same gate as
+    // `_trackProductEvent`; this is the path that carries the Kind 22236
+    // events.
+    if (!_isInitialized || !_analyticsEnabled) return;
 
     // Deduplicate rapid-fire tracking of the same video
     final dedupeKey = '${video.id}_${eventType}_${sessionToken ?? ''}';
@@ -815,7 +908,7 @@ class AnalyticsService implements BackgroundAwareService {
     List<VideoEvent> videos, {
     String source = 'mobile',
   }) async {
-    if (!_analyticsEnabled || videos.isEmpty) return;
+    if (!_isInitialized || !_analyticsEnabled || videos.isEmpty) return;
 
     for (final video in videos) {
       await trackVideoView(video, source: source);

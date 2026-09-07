@@ -127,6 +127,7 @@
   "privacySettingsAnalyticsSection": "数据分析",
   "privacySettingsShareUsage": "分享使用数据",
   "privacySettingsShareUsageSubtitle": "帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。",
+  "privacySettingsSaveFailed": "没能保存。使用数据暂时保持关闭。",
   "generalSettingsSectionIntegrations": "集成",
   "generalSettingsSectionViewing": "观看",
   "generalSettingsSectionCreating": "创作",

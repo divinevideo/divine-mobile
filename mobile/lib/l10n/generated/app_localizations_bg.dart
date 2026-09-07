@@ -324,6 +324,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Не успяхме да запазим това. Данните за употреба засега остават изключени.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ИНТЕГРАЦИИ';
 
   @override

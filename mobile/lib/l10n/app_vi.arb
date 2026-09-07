@@ -127,6 +127,7 @@
   "privacySettingsAnalyticsSection": "PHÂN TÍCH",
   "privacySettingsShareUsage": "Chia sẻ dữ liệu sử dụng",
   "privacySettingsShareUsageSubtitle": "Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa.",
+  "privacySettingsSaveFailed": "Chúng tôi không lưu được. Dữ liệu sử dụng tạm thời vẫn tắt.",
   "generalSettingsSectionIntegrations": "TÍCH HỢP",
   "generalSettingsSectionViewing": "XEM",
   "generalSettingsSectionCreating": "SÁNG TẠO",

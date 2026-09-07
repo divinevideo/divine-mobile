@@ -2941,6 +2941,7 @@
     "privacySettingsAnalyticsSection": "التحليلات",
     "privacySettingsShareUsage": "مشاركة بيانات الاستخدام",
     "privacySettingsShareUsageSubtitle": "تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز.",
+    "privacySettingsSaveFailed": "تعذّر حفظ هذا التغيير. تبقى بيانات الاستخدام معطّلة في الوقت الحالي.",
     "generalSettingsSectionIntegrations": "التكاملات",
     "generalSettingsSectionViewing": "المشاهدة",
     "generalSettingsSectionCreating": "الإنشاء",

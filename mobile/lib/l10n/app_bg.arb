@@ -3116,6 +3116,7 @@
     "privacySettingsAnalyticsSection": "АНАЛИТИКА",
     "privacySettingsShareUsage": "Споделяй данни за ползване",
     "privacySettingsShareUsageSubtitle": "Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват.",
+    "privacySettingsSaveFailed": "Не успяхме да запазим това. Данните за употреба засега остават изключени.",
     "generalSettingsSectionIntegrations": "ИНТЕГРАЦИИ",
     "generalSettingsSectionViewing": "ГЛЕДАНЕ",
     "generalSettingsSectionCreating": "СЪЗДАВАНЕ",

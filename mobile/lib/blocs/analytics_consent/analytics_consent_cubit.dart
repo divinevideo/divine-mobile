@@ -37,8 +37,23 @@ class AnalyticsConsentCubit extends Cubit<AnalyticsConsentState>
   }
 
   /// Records the user's consent decision and persists it.
+  ///
+  /// The tile renders what the service reports afterwards, never the value the
+  /// switch was moved to: a write the platform rejected leaves consent where it
+  /// was, and echoing the requested value would tell the person their choice
+  /// had been saved when it had not.
   Future<void> setEnabled(bool value) async {
-    await _service.setAnalyticsEnabled(value);
-    emitIfOpen(state.copyWith(isEnabled: _service.analyticsEnabled));
+    emitIfOpen(
+      state.copyWith(saveStatus: AnalyticsConsentSaveStatus.saving),
+    );
+    final persisted = await _service.setAnalyticsEnabled(value);
+    emitIfOpen(
+      state.copyWith(
+        isEnabled: _service.analyticsEnabled,
+        saveStatus: persisted
+            ? AnalyticsConsentSaveStatus.idle
+            : AnalyticsConsentSaveStatus.failure,
+      ),
+    );
   }
 }

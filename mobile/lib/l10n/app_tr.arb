@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "ANALİTİK",
     "privacySettingsShareUsage": "Kullanım verilerini paylaş",
     "privacySettingsShareUsageSubtitle": "İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.",
+    "privacySettingsSaveFailed": "Bunu kaydedemedik. Kullanım verileri şimdilik kapalı kalıyor.",
     "generalSettingsSectionIntegrations": "ENTEGRASYONLAR",
     "generalSettingsSectionViewing": "İZLEME",
     "generalSettingsSectionCreating": "OLUŞTURMA",

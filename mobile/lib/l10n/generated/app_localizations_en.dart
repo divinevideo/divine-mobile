@@ -325,6 +325,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Helps us see what people actually use. Switch it off and queued data is deleted.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'We couldn\'t save that. Usage data stays off for now.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIONS';
 
   @override

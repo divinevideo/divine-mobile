@@ -290,6 +290,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Hindi namin ito na-save. Naka-off muna ang usage data.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'MGA INTEGRATION';
 
   @override

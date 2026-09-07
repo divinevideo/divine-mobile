@@ -320,6 +320,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል።';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'ይህን ማስቀመጥ አልቻልንም። የአጠቃቀም መረጃ ለጊዜው ጠፍቶ ይቆያል።';
+
+  @override
   String get generalSettingsSectionIntegrations => 'ውህደቶች';
 
   @override

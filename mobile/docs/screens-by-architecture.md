@@ -53,6 +53,7 @@ These routes are NOT wrapped in the ShellRoute and display without the AppShell 
 | `/key-management` | `KeyManagementScreen` |
 | `/relay-diagnostic` | `RelayDiagnosticScreen` |
 | `/safety-settings` | `SafetySettingsScreen` |
+| `/settings/privacy` | `PrivacySettingsScreen` |
 | `/developer-options` | `DeveloperOptionsScreen` |
 
 ### Camera & Video

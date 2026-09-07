@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "STATISTIK",
     "privacySettingsShareUsage": "Dela användningsdata",
     "privacySettingsShareUsageSubtitle": "Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten.",
+    "privacySettingsSaveFailed": "Vi kunde inte spara det. Användningsdata är avstängt tills vidare.",
     "generalSettingsSectionIntegrations": "INTEGRATIONER",
     "generalSettingsSectionViewing": "VISNING",
     "generalSettingsSectionCreating": "SKAPANDE",

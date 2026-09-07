@@ -307,6 +307,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Vi kunde inte spara det. Användningsdata är avstängt tills vidare.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIONER';
 
   @override

@@ -100,6 +100,20 @@ final analyticsEventSinkProvider = Provider<AnalyticsEventSink>(
   (ref) => FirebaseAnalyticsEventSink(),
 );
 
+/// Provides the SDK-level consent gate for the Firebase analytics backend.
+///
+/// Derived from [analyticsEventSinkProvider] so both reach the same backend.
+/// A sink that cannot be gated (a test double, or a future non-Firebase sink)
+/// degrades to a no-op rather than crashing — the first-party queue is gated
+/// independently, so consent is still enforced where it is owned.
+final analyticsCollectionControlProvider = Provider<AnalyticsCollectionControl>(
+  (ref) {
+    final sink = ref.watch(analyticsEventSinkProvider);
+    if (sink case final AnalyticsCollectionControl control) return control;
+    return const NoOpAnalyticsCollectionControl();
+  },
+);
+
 final creationAnalyticsTrackerProvider = Provider<CreationAnalyticsTracker>(
   (ref) => CreationAnalyticsTracker(
     analytics: ref.watch(analyticsEventSinkProvider),

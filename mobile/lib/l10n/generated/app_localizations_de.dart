@@ -322,6 +322,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Wir konnten das nicht speichern. Nutzungsdaten bleiben vorerst aus.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRATIONEN';
 
   @override

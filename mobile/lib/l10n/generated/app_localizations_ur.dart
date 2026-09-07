@@ -321,6 +321,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'ہم اسے محفوظ نہیں کر سکے۔ استعمال کا ڈیٹا فی الحال بند رہے گا۔';
+
+  @override
   String get generalSettingsSectionIntegrations => 'انضمام';
 
   @override

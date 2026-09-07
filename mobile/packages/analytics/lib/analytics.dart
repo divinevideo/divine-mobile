@@ -1,3 +1,4 @@
+export 'src/analytics_collection_control.dart';
 export 'src/analytics_event_sink.dart';
 export 'src/analytics_surface.dart';
 export 'src/error_analytics_tracker.dart';

@@ -127,6 +127,7 @@
   "privacySettingsAnalyticsSection": "ANALITIK",
   "privacySettingsShareUsage": "Kongsi data penggunaan",
   "privacySettingsShareUsageSubtitle": "Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam.",
+  "privacySettingsSaveFailed": "Kami tidak dapat menyimpannya. Data penggunaan kekal dimatikan buat masa ini.",
   "generalSettingsSectionIntegrations": "INTEGRASI",
   "generalSettingsSectionViewing": "TONTONAN",
   "generalSettingsSectionCreating": "PENCIPTAAN",

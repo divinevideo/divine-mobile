@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "ESTATÍSTICAS",
     "privacySettingsShareUsage": "Compartilhar dados de uso",
     "privacySettingsShareUsageSubtitle": "Ajuda a gente a ver o que as pessoas realmente usam. Se você desligar, os dados na fila neste dispositivo são apagados.",
+    "privacySettingsSaveFailed": "Não deu para salvar. Os dados de uso ficam desativados por enquanto.",
     "generalSettingsSectionIntegrations": "INTEGRAÇÕES",
     "generalSettingsSectionViewing": "VISUALIZAÇÃO",
     "generalSettingsSectionCreating": "CRIAÇÃO",

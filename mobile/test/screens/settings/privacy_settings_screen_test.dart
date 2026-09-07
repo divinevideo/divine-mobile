@@ -36,6 +36,7 @@ void main() {
         invocation,
       ) async {
         storedPreference = invocation.positionalArguments.first as bool;
+        return true;
       });
     });
 
@@ -156,6 +157,35 @@ void main() {
 
         verify(() => service.setAnalyticsEnabled(false)).called(1);
         expect(consentSwitch(tester).value, isFalse);
+      });
+
+      testWidgets('tells the person when the choice could not be saved', (
+        tester,
+      ) async {
+        // Silence here would be the worst outcome: the switch would show a
+        // decision that is gone at the next launch.
+        storedPreference = true;
+        when(
+          () => service.setAnalyticsEnabled(any()),
+        ).thenAnswer((_) async => false);
+
+        await pumpScreen(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineSwitch));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.privacySettingsSaveFailed), findsOneWidget);
+      });
+
+      testWidgets('says nothing when the choice was saved', (tester) async {
+        await pumpScreen(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineSwitch));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.privacySettingsSaveFailed), findsNothing);
       });
     });
   });

@@ -250,6 +250,9 @@ class AppLocalizationsJa extends AppLocalizations {
       '何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。';
 
   @override
+  String get privacySettingsSaveFailed => '保存できませんでした。利用データは今のところオフのままです。';
+
+  @override
   String get generalSettingsSectionIntegrations => '連携';
 
   @override

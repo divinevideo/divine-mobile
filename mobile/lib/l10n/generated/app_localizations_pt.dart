@@ -322,6 +322,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Ajuda a gente a ver o que as pessoas realmente usam. Se você desligar, os dados na fila neste dispositivo são apagados.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Não deu para salvar. Os dados de uso ficam desativados por enquanto.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRAÇÕES';
 
   @override

@@ -145,6 +145,7 @@
     "privacySettingsAnalyticsSection": "ትንታኔ",
     "privacySettingsShareUsage": "የአጠቃቀም ውሂብ ያጋሩ",
     "privacySettingsShareUsageSubtitle": "ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል።",
+    "privacySettingsSaveFailed": "ይህን ማስቀመጥ አልቻልንም። የአጠቃቀም መረጃ ለጊዜው ጠፍቶ ይቆያል።",
     "generalSettingsSectionIntegrations": "ውህደቶች",
     "generalSettingsSectionViewing": "ማየት",
     "generalSettingsSectionCreating": "መፍጠር",

@@ -1,6 +1,8 @@
 // ABOUTME: Tests for AnalyticsConsentCubit — the Settings analytics toggle.
 // ABOUTME: Covers the stored-preference read, the write, and post-close safety.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/analytics_consent/analytics_consent_cubit.dart';
@@ -31,6 +33,7 @@ void main() {
         invocation,
       ) async {
         storedPreference = invocation.positionalArguments.first as bool;
+        return true;
       });
     });
 
@@ -105,7 +108,9 @@ void main() {
       test('mirrors the service rather than the requested value', () async {
         // A write the service refuses must not leave the switch lying about
         // what was stored.
-        when(() => service.setAnalyticsEnabled(any())).thenAnswer((_) async {});
+        when(
+          () => service.setAnalyticsEnabled(any()),
+        ).thenAnswer((_) async => true);
         final cubit = AnalyticsConsentCubit(service: service);
         addTearDown(cubit.close);
         await cubit.load();
@@ -113,6 +118,53 @@ void main() {
         await cubit.setEnabled(true);
 
         expect(cubit.state.isEnabled, isFalse);
+      });
+
+      test('reports a write that never reached storage', () async {
+        // The switch is a promise about the next launch. A write that failed
+        // has to say so rather than render as a saved decision.
+        storedPreference = true;
+        when(
+          () => service.setAnalyticsEnabled(any()),
+        ).thenAnswer((_) async => false);
+        final cubit = AnalyticsConsentCubit(service: service);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setEnabled(false);
+
+        expect(cubit.state.saveStatus, AnalyticsConsentSaveStatus.failure);
+      });
+
+      test('a stored write leaves no failure behind', () async {
+        final cubit = AnalyticsConsentCubit(service: service);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setEnabled(true);
+
+        expect(cubit.state.saveStatus, AnalyticsConsentSaveStatus.idle);
+      });
+
+      test('marks the write in flight before it resolves', () async {
+        // The tile locks while saving, so a second flip cannot land on top of
+        // an answer that has not come back yet.
+        final pending = Completer<bool>();
+        when(
+          () => service.setAnalyticsEnabled(any()),
+        ).thenAnswer((_) => pending.future);
+        final cubit = AnalyticsConsentCubit(service: service);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        final write = cubit.setEnabled(true);
+        await pumpEventQueue();
+        expect(cubit.state.saveStatus, AnalyticsConsentSaveStatus.saving);
+
+        pending.complete(true);
+        await write;
+
+        expect(cubit.state.saveStatus, AnalyticsConsentSaveStatus.idle);
       });
     });
   });

@@ -255,6 +255,10 @@
   "@privacySettingsShareUsageSubtitle": {
     "description": "Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device."
   },
+  "privacySettingsSaveFailed": "We couldn't save that. Usage data stays off for now.",
+  "@privacySettingsSaveFailed": {
+    "description": "Snackbar shown when the analytics consent switch could not be saved. Both failure directions settle as opted out, so the second sentence is true either way."
+  },
   "generalSettingsSectionIntegrations": "INTEGRATIONS",
   "generalSettingsSectionViewing": "VIEWING",
   "generalSettingsSectionCreating": "CREATING",

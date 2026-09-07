@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "STATISTICHE",
     "privacySettingsShareUsage": "Condividi i dati d'uso",
     "privacySettingsShareUsageSubtitle": "Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.",
+    "privacySettingsSaveFailed": "Non siamo riusciti a salvare. I dati di utilizzo restano disattivati per ora.",
     "generalSettingsSectionIntegrations": "INTEGRAZIONI",
     "generalSettingsSectionViewing": "VISUALIZZAZIONE",
     "generalSettingsSectionCreating": "CREAZIONE",

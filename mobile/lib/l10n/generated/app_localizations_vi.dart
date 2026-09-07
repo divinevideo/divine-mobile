@@ -290,6 +290,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Chúng tôi không lưu được. Dữ liệu sử dụng tạm thời vẫn tắt.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'TÍCH HỢP';
 
   @override

@@ -323,6 +323,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Non siamo riusciti a salvare. I dati di utilizzo restano disattivati per ora.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRAZIONI';
 
   @override

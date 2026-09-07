@@ -16,9 +16,9 @@ import 'package:openvine/router/route_paths.dart';
 ///
 /// Until #7982 the analytics consent preference had no affordance at all — it
 /// could only be changed by calling `AnalyticsService.setAnalyticsEnabled`
-/// from code. Whether Firebase Analytics is gated on the same preference, and
-/// what the shipped default should be, are decided in #7978; this screen only
-/// exposes the preference that already exists.
+/// from code. The switch governs every non-essential usage analytics path:
+/// the first-party queue, the durable Kind 22236 view outbox, and Firebase
+/// collection. What the shipped default should be is still decided in #7978.
 class PrivacySettingsScreen extends StatelessWidget {
   static const routeName = 'privacy-settings';
   static const String path = RoutePaths.privacySettings;
@@ -74,16 +74,31 @@ class _AnalyticsConsentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AnalyticsConsentCubit>().state;
     final isReady = state.status == AnalyticsConsentStatus.ready;
-    return DivineSwitchTile(
-      leadingIcon: DivineIconName.trendUp,
-      title: context.l10n.privacySettingsShareUsage,
-      subtitle: context.l10n.privacySettingsShareUsageSubtitle,
-      value: state.isEnabled,
-      // Disabled until the stored answer is known: a consent control must not
-      // accept a flip away from a value the user has not been shown.
-      onChanged: isReady
-          ? (value) => context.read<AnalyticsConsentCubit>().setEnabled(value)
-          : null,
+    final isSaving = state.saveStatus == AnalyticsConsentSaveStatus.saving;
+    return BlocListener<AnalyticsConsentCubit, AnalyticsConsentState>(
+      listenWhen: (previous, current) =>
+          previous.saveStatus != current.saveStatus &&
+          current.saveStatus == AnalyticsConsentSaveStatus.failure,
+      listener: (context, state) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(context.l10n.privacySettingsSaveFailed)),
+          );
+      },
+      child: DivineSwitchTile(
+        leadingIcon: DivineIconName.trendUp,
+        title: context.l10n.privacySettingsShareUsage,
+        subtitle: context.l10n.privacySettingsShareUsageSubtitle,
+        value: state.isEnabled,
+        // Disabled until the stored answer is known: a consent control must not
+        // accept a flip away from a value the user has not been shown. Also
+        // while a write is in flight, so a second flip cannot land on top of an
+        // answer that has not come back yet.
+        onChanged: isReady && !isSaving
+            ? (value) => context.read<AnalyticsConsentCubit>().setEnabled(value)
+            : null,
+      ),
     );
   }
 }

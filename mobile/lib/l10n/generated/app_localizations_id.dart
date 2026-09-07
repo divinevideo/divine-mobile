@@ -260,6 +260,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'Kami tidak bisa menyimpannya. Data penggunaan tetap nonaktif untuk saat ini.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRASI';
 
   @override

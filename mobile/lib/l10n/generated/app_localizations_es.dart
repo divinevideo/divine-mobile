@@ -321,6 +321,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Nos ayuda a ver qué usa la gente de verdad. Si lo apagás, se borran los datos en espera de este dispositivo.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'No pudimos guardar eso. Los datos de uso quedan desactivados por ahora.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'INTEGRACIONES';
 
   @override

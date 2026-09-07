@@ -251,6 +251,9 @@ class AppLocalizationsKo extends AppLocalizations {
       '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요.';
 
   @override
+  String get privacySettingsSaveFailed => '저장하지 못했어요. 사용 데이터는 당분간 꺼진 상태예요.';
+
+  @override
   String get generalSettingsSectionIntegrations => '연동';
 
   @override

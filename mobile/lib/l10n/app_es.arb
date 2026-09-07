@@ -2956,6 +2956,7 @@
     "privacySettingsAnalyticsSection": "ANALÍTICAS",
     "privacySettingsShareUsage": "Compartir datos de uso",
     "privacySettingsShareUsageSubtitle": "Nos ayuda a ver qué usa la gente de verdad. Si lo apagás, se borran los datos en espera de este dispositivo.",
+    "privacySettingsSaveFailed": "No pudimos guardar eso. Los datos de uso quedan desactivados por ahora.",
     "generalSettingsSectionIntegrations": "INTEGRACIONES",
     "generalSettingsSectionViewing": "VISUALIZACIÓN",
     "generalSettingsSectionCreating": "CREACIÓN",

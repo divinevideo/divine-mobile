@@ -2948,6 +2948,7 @@
     "privacySettingsAnalyticsSection": "STATYSTYKI",
     "privacySettingsShareUsage": "Udostępniaj dane o użyciu",
     "privacySettingsShareUsageSubtitle": "Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte.",
+    "privacySettingsSaveFailed": "Nie udało się tego zapisać. Dane o użytkowaniu na razie pozostają wyłączone.",
     "generalSettingsSectionIntegrations": "INTEGRACJE",
     "generalSettingsSectionViewing": "OGLĄDANIE",
     "generalSettingsSectionCreating": "TWORZENIE",

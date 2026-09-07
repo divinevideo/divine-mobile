@@ -572,6 +572,12 @@ abstract class AppLocalizations {
   /// **'Helps us see what people actually use. Switch it off and queued data is deleted.'**
   String get privacySettingsShareUsageSubtitle;
 
+  /// Snackbar shown when the analytics consent switch could not be saved. Both failure directions settle as opted out, so the second sentence is true either way.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t save that. Usage data stays off for now.'**
+  String get privacySettingsSaveFailed;
+
   /// No description provided for @generalSettingsSectionIntegrations.
   ///
   /// In en, this message translates to:

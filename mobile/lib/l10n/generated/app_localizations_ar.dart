@@ -307,6 +307,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز.';
 
   @override
+  String get privacySettingsSaveFailed =>
+      'تعذّر حفظ هذا التغيير. تبقى بيانات الاستخدام معطّلة في الوقت الحالي.';
+
+  @override
   String get generalSettingsSectionIntegrations => 'التكاملات';
 
   @override
