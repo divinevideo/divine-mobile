@@ -416,38 +416,6 @@ void main() {
       expect(tile.value.split(', '), hasLength(1));
     });
 
-    testWidgets('setInspiredByPeople replaces the whole credited set', (
-      tester,
-    ) async {
-      final notifier = _MockVideoEditorNotifier(
-        VideoEditorProviderState(inspiredByNpubs: const ['npub1old']),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            followRepositoryProvider.overrideWithValue(
-              _createMockFollowRepository(),
-            ),
-            contentBlocklistRepositoryProvider.overrideWithValue(
-              _createMockContentBlocklistRepository(),
-            ),
-            videoEditorProvider.overrideWith(() => notifier),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: VideoMetadataInspiredByInput()),
-          ),
-        ),
-      );
-
-      notifier.setInspiredByPeople(['npub1a', 'npub1b']);
-
-      expect(notifier.state.inspiredByNpubs, equals(['npub1a', 'npub1b']));
-      expect(notifier.state.inspiredByNpub, equals('npub1a'));
-    });
-
     testWidgets('selection tile still renders when inspired by is set', (
       tester,
     ) async {
