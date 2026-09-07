@@ -299,12 +299,18 @@ class _ClipHero extends StatelessWidget {
     final cacheHeight = _stillCacheHeight(context);
     return Hero(
       tag: videoClipPreviewHeroTag(clip.id),
-      flightShuttleBuilder: (_, _, _, _, _) => ClipThumbnailImage(
-        path: thumbnailPath,
-        fit: BoxFit.cover,
-        cacheHeight: cacheHeight,
-        excludeFromSemantics: true,
-        placeholder: const VideoClipThumbnailPlaceholder(),
+      // `excludeFromSemantics` covers the decoded still but not the fallback:
+      // `Image` returns its `errorBuilder` before applying the flag, and the
+      // fallback icon is an SVG that announces itself as an image. Nothing in
+      // a flight is worth announcing, so the whole shuttle is excluded.
+      flightShuttleBuilder: (_, _, _, _, _) => ExcludeSemantics(
+        child: ClipThumbnailImage(
+          path: thumbnailPath,
+          fit: BoxFit.cover,
+          cacheHeight: cacheHeight,
+          excludeFromSemantics: true,
+          placeholder: const VideoClipThumbnailTile(),
+        ),
       ),
       child: child,
     );
