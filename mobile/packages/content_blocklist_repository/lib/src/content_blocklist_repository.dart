@@ -1921,7 +1921,14 @@ class ContentBlocklistRepository {
     if (_pendingUnblocks.isNotEmpty) {
       final retired = <String>[];
       for (final entry in _pendingUnblocks.entries) {
-        if (protectedUnblocks.contains(entry.key)) {
+        // Protection only ever means "do not re-adopt a tag that is still
+        // there". Once the list has dropped it the unblock landed, and the
+        // intent has to retire like any other -- an entry that can never
+        // retire re-arms `_muteListPublishPending` from `_loadPendingUnblocks`
+        // on every cold start, so the device signs and publishes a kind 10000
+        // on every launch for the life of the install.
+        if (protectedUnblocks.contains(entry.key) &&
+            relayMuted.contains(entry.key)) {
           relayMuted.remove(entry.key);
           continue;
         }

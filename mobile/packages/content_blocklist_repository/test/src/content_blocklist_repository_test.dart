@@ -4315,6 +4315,66 @@ void main() {
         );
 
         test(
+          'retires the intent when the refreshed list no longer carries it',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            // Newer than the seeded list and no longer carrying the tag: the
+            // unblock already landed, from another device or an earlier
+            // attempt.
+            final landedList = buildEvent(
+              kind: 10000,
+              tags: const [],
+              createdAt: 2000,
+            )..id = 'unblock-already-landed';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [landedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            // Withheld, so only the refresh can retire the intent here.
+            when(
+              () => mockClient.publishEvent(any()),
+            ).thenAnswer((_) async => const PublishFailed());
+
+            await service.unblockUser(target);
+            // The retire persists fire-and-forget, matching `_saveMutedUsers`
+            // in the same method.
+            await pumpEventQueue();
+
+            // Protection is only ever about refusing a surviving `p` tag. An
+            // intent that outlives the tag can never retire, and
+            // `_loadPendingUnblocks` re-arms the publish from it on every cold
+            // start -- a signing prompt on every launch for a remote signer.
+            final stored = prefs.getString('pending_unblocks.$ourPubkey');
+            expect(stored, isNotNull);
+            expect(
+              jsonDecode(stored!) as Map<String, dynamic>,
+              isNot(contains(target)),
+            );
+          },
+        );
+
+        test(
           'ignores a self `p` tag on our own malformed mute list',
           () async {
             SharedPreferences.setMockInitialValues(<String, Object>{});
