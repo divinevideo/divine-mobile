@@ -165,6 +165,14 @@ class ContentReportingService implements ReportChannelDriver {
   /// dead-lettered. When null (some tests), reporting falls back to a one-shot
   /// inline drive with the same delivery outcome. #8053.
   final PendingReportsDao? _pendingReportsDao;
+
+  /// In-flight Zendesk POSTs, keyed by report id. The inline first drive and a
+  /// background sweep can both pick up the same freshly-enqueued row and file
+  /// its ticket concurrently; Zendesk does not dedup, so without this they
+  /// would create two tickets. Coalescing by report id makes concurrent
+  /// callers share one POST. #8053.
+  final Map<String, Future<bool>> _zendeskInFlight = {};
+
   static const String reportsStorageKey = 'content_reports_history';
 
   final List<ContentReport> _reportHistory = [];
@@ -300,19 +308,34 @@ class ContentReportingService implements ReportChannelDriver {
       // Enqueue a durable row so a channel that fails now is retried by
       // ReportRetryService rather than lost. The moderation DM keeps its own
       // outbox and is not enqueued here. #8053.
+      // The durable queue is enrichment, not the primary path: every DAO call
+      // below is best-effort and must never change the delivery outcome the
+      // caller sees. A DB failure degrades to the pre-queue one-shot send
+      // rather than blocking a (possibly child-safety) report.
       final dao = _pendingReportsDao;
-      final canQueue = dao != null && reporterPubkey != null;
-      if (canQueue) {
-        await dao.enqueue(
-          PendingReport(
-            reportId: reportId,
-            userPubkey: reporterPubkey,
-            eventJson: jsonEncode(reportEvent.toJson()),
-            targetRelays: jsonEncode(targetRelays),
-            zendeskPayload: jsonEncode(zendeskPayload),
-            createdAt: DateTime.now(),
-          ),
-        );
+      final reporter = reporterPubkey;
+      var queued = false;
+      if (dao != null && reporter != null) {
+        try {
+          await dao.enqueue(
+            PendingReport(
+              reportId: reportId,
+              userPubkey: reporter,
+              eventJson: jsonEncode(reportEvent.toJson()),
+              targetRelays: jsonEncode(targetRelays),
+              zendeskPayload: jsonEncode(zendeskPayload),
+              createdAt: DateTime.now(),
+            ),
+          );
+          queued = true;
+        } catch (e) {
+          Log.error(
+            'Failed to enqueue pending report $reportId; delivering without '
+            'the durable queue: $e',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
+        }
       }
 
       // Drive both channels once now. Their outcome is what the UI reports in
@@ -322,7 +345,7 @@ class ContentReportingService implements ReportChannelDriver {
         reportEvent,
         targetRelays,
       );
-      if (canQueue) {
+      if (queued && dao != null) {
         await _recordDriveOutcome(
           dao,
           reportId,
@@ -335,7 +358,7 @@ class ContentReportingService implements ReportChannelDriver {
         zendeskPayload,
         externalId: reportId,
       );
-      if (canQueue) {
+      if (queued && dao != null) {
         await _recordDriveOutcome(
           dao,
           reportId,
@@ -344,7 +367,16 @@ class ContentReportingService implements ReportChannelDriver {
         );
         // A fully delivered report need not linger in the queue.
         if (relayAccepted && zendeskFiled) {
-          await dao.deleteById(reportId);
+          try {
+            await dao.deleteById(reportId);
+          } catch (e) {
+            Log.warning(
+              'Failed to remove delivered report $reportId from the queue; '
+              'the sweep will find both channels done and drop it: $e',
+              name: 'ContentReportingService',
+              category: LogCategory.system,
+            );
+          }
         }
       }
 
@@ -752,10 +784,22 @@ class ContentReportingService implements ReportChannelDriver {
     };
   }
 
-  /// Files a Zendesk ticket from a stored payload. [externalId] tags the ticket
-  /// with the report id for best-effort dedup of a lost-ACK retry (#8053).
-  /// Never throws; a failure returns false so the report is not sunk.
+  /// Files a Zendesk ticket from a stored payload, coalescing concurrent calls
+  /// for the same [externalId] onto one POST so an inline drive and a sweep
+  /// cannot double-file. [externalId] also tags the ticket for best-effort
+  /// dedup of a lost-ACK retry (#8053). Never throws; a failure returns false.
   Future<bool> _fileZendeskTicket(
+    Map<String, dynamic> payload, {
+    required String externalId,
+  }) {
+    final existing = _zendeskInFlight[externalId];
+    if (existing != null) return existing;
+    final future = _fileZendeskTicketInner(payload, externalId: externalId);
+    _zendeskInFlight[externalId] = future;
+    return future.whenComplete(() => _zendeskInFlight.remove(externalId));
+  }
+
+  Future<bool> _fileZendeskTicketInner(
     Map<String, dynamic> payload, {
     required String externalId,
   }) async {
@@ -826,13 +870,24 @@ class ContentReportingService implements ReportChannelDriver {
     ReportChannel channel,
     bool delivered,
   ) async {
-    if (delivered) {
-      await dao.markChannelDone(reportId: reportId, channel: channel);
-    } else {
-      await dao.recordChannelFailure(
-        reportId: reportId,
-        channel: channel,
-        error: '${channel.name} delivery failed on first attempt',
+    // Best-effort bookkeeping: never let a queue write change the delivery
+    // outcome already returned to the caller. The sweep reconciles from the
+    // persisted row if this fails.
+    try {
+      if (delivered) {
+        await dao.markChannelDone(reportId: reportId, channel: channel);
+      } else {
+        await dao.recordChannelFailure(
+          reportId: reportId,
+          channel: channel,
+          error: '${channel.name} delivery failed on first attempt',
+        );
+      }
+    } catch (e) {
+      Log.warning(
+        'Failed to record $reportId ${channel.name} drive outcome: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
       );
     }
   }
