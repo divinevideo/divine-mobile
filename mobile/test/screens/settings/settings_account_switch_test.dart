@@ -535,6 +535,39 @@ void main() {
   });
 
   group('the account picker', () {
+    testWidgets('drives the add-account tile through its automation id', (
+      tester,
+    ) async {
+      // The E2E account-switching journey reaches the welcome screen only
+      // through this tile, and it cannot address it by label: with one known
+      // account the header button renders the identical
+      // `settingsAddAnotherAccount` string, which is why the sibling tests
+      // above need `.last`. Tapping the identifier is what proves the anchor
+      // sits on the node that carries the gesture, not on an inert wrapper.
+      when(() => authService.signOut()).thenAnswer((_) async {});
+      seedPublishState(
+        BackgroundPublishState(
+          uploads: [
+            BackgroundUpload(
+              draft: draftWithId('d1'),
+              result: null,
+              progress: 0,
+            ),
+          ],
+        ),
+      );
+
+      final l10n = await pumpAndTapSwitch(tester);
+      await tester.tap(find.text(l10n.settingsSwitchAnyway));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.settingsAddAccountAction),
+      );
+      await tester.pumpAndSettle();
+
+      verify(() => publishBloc.parkInFlight()).called(1);
+    });
+
     testWidgets('adding an account parks the in-flight uploads', (
       tester,
     ) async {

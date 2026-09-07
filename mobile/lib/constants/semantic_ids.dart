@@ -164,6 +164,16 @@ abstract class SemanticIds {
       'experimental_features_tile';
   static const String settingsAccountSwitchAction = 'account_switch_action';
 
+  /// "Add another account" row at the foot of the account-switcher sheet.
+  ///
+  /// This is the only control in the switcher that ends the current session,
+  /// so it anchors the account-switching E2E journey. It cannot be addressed
+  /// by label: with a single known account the header button behind the sheet
+  /// renders the identical `settingsAddAnotherAccount` string, and a modal
+  /// bottom sheet does not remove the screen beneath it from the semantics
+  /// tree — so a text match finds two nodes and takes the wrong one.
+  static const String settingsAddAccountAction = 'add_account_action';
+
   static const String featureFlagAccountSwitching =
       'feature_flag_account_switching';
 

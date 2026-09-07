@@ -897,6 +897,7 @@ class _AddAccountTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: context.l10n.settingsAddAnotherAccount,
+      identifier: SemanticIds.settingsAddAccountAction,
       child: InkWell(
         onTap: onTap,
         child: ConstrainedBox(
