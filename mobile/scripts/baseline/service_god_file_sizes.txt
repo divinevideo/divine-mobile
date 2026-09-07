@@ -10,4 +10,4 @@ lib/services/auth_service.dart	4536
 lib/services/curated_list_service.dart	1847
 lib/services/upload_manager.dart	1958
 lib/services/video_event_publisher.dart	2295
-lib/services/video_event_service.dart	6517
+lib/services/video_event_service.dart	6500

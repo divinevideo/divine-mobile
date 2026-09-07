@@ -309,35 +309,31 @@ void main() {
       );
     });
 
-    test(
-      'does not add raw collaborator p-tag filters to feed subscriptions',
-      () async {
-        final subscriptionCalls = <List<Filter>>[];
-        when(
-          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-        ).thenAnswer((invocation) {
-          final filters = invocation.positionalArguments[0] as List<Filter>;
-          subscriptionCalls.add(filters);
-          return eventStreamController.stream;
-        });
+    test('does not add raw p-tag filters to home feed subscriptions', () async {
+      final subscriptionCalls = <List<Filter>>[];
+      when(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).thenAnswer((invocation) {
+        final filters = invocation.positionalArguments[0] as List<Filter>;
+        subscriptionCalls.add(filters);
+        return eventStreamController.stream;
+      });
 
-        await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.homeFeed,
-          authors: ['author1'],
-          limit: 50,
-          collaboratorPubkeys: ['author1'],
-        );
+      await videoEventService.subscribeToVideoFeed(
+        subscriptionType: SubscriptionType.homeFeed,
+        authors: ['author1'],
+        limit: 50,
+      );
 
-        expect(subscriptionCalls, hasLength(1));
-        expect(
-          subscriptionCalls.single.where((filter) => filter.p != null),
-          isEmpty,
-          reason:
-              'Confirmed collaborator expansion must come from Funnelcake '
-              'edges, not raw relay p-tags.',
-        );
-      },
-    );
+      expect(subscriptionCalls, hasLength(1));
+      expect(
+        subscriptionCalls.single.where((filter) => filter.p != null),
+        isEmpty,
+        reason:
+            'A p-tag can represent an unaccepted collaborator invite or a '
+            'generic mention, so the home feed must not expand raw p-tags.',
+      );
+    });
 
     test('should handle the classic vines -> open feed sequence correctly', () async {
       // This is the exact sequence that's failing in production
