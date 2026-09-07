@@ -170,6 +170,22 @@ Extract code into a dedicated package when:
 
 Extracting into packages improves CI speed because only the affected package's workflow runs on changes, rather than the full mobile test suite.
 
+Package extraction does not automatically permit a runtime Flutter SDK
+dependency. `mobile/scripts/check_package_flutter_boundary.sh` freezes the
+allowed packages in the shrink-only
+`mobile/scripts/baseline/package_flutter_deps.txt`; `flutter_test` under
+`dev_dependencies` is not counted. After removing a runtime dependency, lock
+the reduction with:
+
+```bash
+UPDATE_BASELINE=1 bash mobile/scripts/check_package_flutter_boundary.sh
+```
+
+The guard runs in Mobile CI's `generated-files` job. See
+[`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md#which-packages-may-depend-on-flutter)
+for the policy, sanctioned package groups, and current per-package rationale;
+that document is the policy source of truth.
+
 ## Dependency Graph
 
 Data should only flow from the bottom up, and a layer can only access the layer directly beneath it.
