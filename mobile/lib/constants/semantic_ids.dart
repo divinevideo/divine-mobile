@@ -112,10 +112,14 @@ abstract class SemanticIds {
   static const String authInviteCodeField = 'invite_code_field';
   static const String authInviteSubmitButton = 'invite_submit_button';
 
-  /// Settings rows on the path to signing the device out. removeKeys is the
-  /// teardown of every E2E flow, so this route has to stay addressable.
+  /// Settings rows on the path to managing local account keys. These journeys
+  /// have to stay addressable after settings information-architecture moves.
   static const String settingsNostrRow = 'nostr_settings_tile';
+  static const String settingsKeyManagementRow = 'key_management_tile';
   static const String settingsRemoveKeysRow = 'remove_keys_tile';
+
+  /// Key backup action. Copy changes should not strand the recovery journey.
+  static const String keyManagementCopyNsecButton = 'copy_nsec_button';
 
   /// Account portability. The row leaves the app for the hosted Divine Exit
   /// flow, so an E2E flow can only assert the handoff by addressing the row.
