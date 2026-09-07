@@ -31,7 +31,7 @@ Generic Flutter and Dart standards live in `.claude/rules/`:
 ## Project Rules
 
 - Most app work happens in `mobile/`. Key entry points are `mobile/lib/main.dart` and `mobile/lib/router/app_router.dart`.
-- Use current code plus focused docs as source of truth: `docs/STATE_MANAGEMENT.md`, `docs/BLOC_UI_MIGRATION_PRD.md`, `docs/NOSTR_EVENT_TYPES.md`, `mobile/docs/NOSTR_VIDEO_EVENTS.md`, `mobile/docs/DESIGN_SYSTEM_COMPONENTS.md`, `mobile/docs/GOLDEN_TESTING_GUIDE.md`, `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, `mobile/docs/PEOPLE_SEARCH.md`, and `mobile/docs/SHOREBIRD_CODE_PUSH.md`.
+- Use current code plus focused docs as source of truth: `docs/STATE_MANAGEMENT.md`, `docs/BLOC_UI_MIGRATION_PRD.md`, `docs/NOSTR_EVENT_TYPES.md`, `mobile/docs/NOSTR_VIDEO_EVENTS.md`, `mobile/docs/FEED_LOAD_TRACES.md`, `mobile/docs/DESIGN_SYSTEM_COMPONENTS.md`, `mobile/docs/GOLDEN_TESTING_GUIDE.md`, `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, `mobile/docs/PEOPLE_SEARCH.md`, and `mobile/docs/SHOREBIRD_CODE_PUSH.md`.
 - Older docs can drift. If documentation disagrees with code, trust the current implementation, targeted tests, and the newest focused doc.
 
 ## Architecture And State

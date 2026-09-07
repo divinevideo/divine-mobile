@@ -34,6 +34,7 @@ This directory is the index for current repository documentation. Use it to find
 - [mobile/docs/settings_screen_structure.md](../mobile/docs/settings_screen_structure.md)
 - [mobile/docs/ZENDESK_INTEGRATION.md](../mobile/docs/ZENDESK_INTEGRATION.md)
 - [mobile/docs/NOSTR_VIDEO_EVENTS.md](../mobile/docs/NOSTR_VIDEO_EVENTS.md)
+- [mobile/docs/FEED_LOAD_TRACES.md](../mobile/docs/FEED_LOAD_TRACES.md) - what the `feed_load_*` Firebase Performance traces measure and how to compare them
 - [mobile/docs/LOCALIZATION_STYLE_GUIDE.md](../mobile/docs/LOCALIZATION_STYLE_GUIDE.md) - per-locale tone, dialect, terminology, and translation review
 
 ## Historical Docs

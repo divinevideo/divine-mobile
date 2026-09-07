@@ -4,7 +4,7 @@
 
 - Most implementation work is in `mobile/`. The main Flutter entry points are `mobile/lib/main.dart` and `mobile/lib/router/app_router.dart`.
 - Shared reusable logic belongs in the owning package under `mobile/packages/`, not as app-layer duplication.
-- Start with current code and focused docs, especially `CONTRIBUTING.md`, `docs/STATE_MANAGEMENT.md`, `docs/BLOC_UI_MIGRATION_PRD.md`, `docs/NOSTR_EVENT_TYPES.md`, `mobile/docs/NOSTR_VIDEO_EVENTS.md`, `mobile/docs/DESIGN_SYSTEM_COMPONENTS.md`, `mobile/docs/GOLDEN_TESTING_GUIDE.md`, `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, `mobile/docs/ANDROID_LOCAL_SETUP.md`, and `mobile/docs/SHOREBIRD_CODE_PUSH.md`.
+- Start with current code and focused docs, especially `CONTRIBUTING.md`, `docs/STATE_MANAGEMENT.md`, `docs/BLOC_UI_MIGRATION_PRD.md`, `docs/NOSTR_EVENT_TYPES.md`, `mobile/docs/NOSTR_VIDEO_EVENTS.md`, `mobile/docs/FEED_LOAD_TRACES.md`, `mobile/docs/DESIGN_SYSTEM_COMPONENTS.md`, `mobile/docs/GOLDEN_TESTING_GUIDE.md`, `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, `mobile/docs/ANDROID_LOCAL_SETUP.md`, and `mobile/docs/SHOREBIRD_CODE_PUSH.md`.
 - Older docs can drift. If documentation conflicts, trust the current implementation, targeted tests, and the newest focused doc over historical notes.
 
 ## Divine Context And Brain
