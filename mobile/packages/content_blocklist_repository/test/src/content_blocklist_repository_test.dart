@@ -4405,6 +4405,42 @@ void main() {
         );
 
         test(
+          'does not lower a watermark an earlier attempt already advanced',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{
+              'blocklist_active_pubkey': ourPubkey,
+              'pending_unblocks.$ourPubkey': jsonEncode({
+                target: 99999999999,
+              }),
+              'block_list_migrated_to_mute_list.$ourPubkey': true,
+              'block_list_retired.$ourPubkey': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            // Every read stays inconclusive, so the publish is withheld and
+            // the intent is still outstanding when the user tries again.
+            stubReadInconclusive();
+            final service = ContentBlocklistRepository(prefs: prefs);
+            addTearDown(service.dispose);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+
+            await service.unblockUser(target);
+
+            // The stored second is what a later reconciliation compares a
+            // relay list's `created_at` against. Rewriting it down to `now`
+            // hands back protection the earlier attempt already earned.
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending[target], 99999999999);
+          },
+        );
+
+        test(
           're-blocking retires contradictory pending intent and republishes',
           () async {
             SharedPreferences.setMockInitialValues(<String, Object>{

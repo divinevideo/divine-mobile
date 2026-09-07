@@ -1341,7 +1341,15 @@ class ContentBlocklistRepository {
     // the other order a kill between the two writes left it unhidden locally
     // with nothing to stop the relay's surviving `p` tag from being
     // re-adopted as a mute on the next launch (#8263).
-    _pendingUnblocks[pubkey] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    // Only ever advance the watermark. The stored second is what a later
+    // reconciliation compares a relay list's `created_at` against, so
+    // lowering it on a repeat attempt hands back protection an earlier
+    // attempt already earned.
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final recordedAt = _pendingUnblocks[pubkey];
+    if (recordedAt == null || recordedAt < now) {
+      _pendingUnblocks[pubkey] = now;
+    }
     await _savePendingUnblocks();
 
     if (removedBlock) {
