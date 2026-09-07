@@ -7,6 +7,15 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// Matches the unkeyed 64x4 rounded Container the header paints as the drag
+// handle. Asserting the rendered tree, rather than the forwarded
+// showDragHandle flag, is what catches a header that stops honouring it.
+final Finder _dragHandle = find.byWidgetPredicate((widget) {
+  if (widget is! Container) return false;
+  final constraints = widget.constraints;
+  return constraints?.maxWidth == 64 && constraints?.maxHeight == 4;
+});
+
 void main() {
   group('VineBottomSheet', () {
     testWidgets('renders with required props', (tester) async {
@@ -1319,6 +1328,158 @@ void main() {
             }),
             findsNothing,
           );
+        },
+      );
+
+      testWidgets(
+        'enableDrag: false hides the drag handle in fixed mode by default',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: false,
+                      enableDrag: false,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open Fixed Without Handle'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open Fixed Without Handle'));
+          await tester.pumpAndSettle();
+
+          expect(_dragHandle, findsNothing);
+        },
+      );
+
+      // Not `enableDrag || scrollable`: the handle sits in the header, which
+      // in scrollable mode is a sibling of the scroll view, so with
+      // enableDrag: false no drag on it reaches DraggableScrollableSheet.
+      // Showing it would restore the #8462 false affordance — see below.
+      testWidgets(
+        'enableDrag: false hides the drag handle in scrollable mode by default',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      enableDrag: false,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open Scrollable Without Handle'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open Scrollable Without Handle'));
+          await tester.pumpAndSettle();
+
+          expect(_dragHandle, findsNothing);
+        },
+      );
+
+      // Evidence for the derivation above: force the handle on, then drag it.
+      testWidgets(
+        'a scrollable sheet with enableDrag: false ignores a header drag',
+        (tester) async {
+          var dismissed = false;
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      enableDrag: false,
+                      showDragHandle: true,
+                      title: const Text('Sheet Title'),
+                      onDismiss: () => dismissed = true,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open Scrollable With Handle'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open Scrollable With Handle'));
+          await tester.pumpAndSettle();
+          expect(_dragHandle, findsOneWidget);
+
+          await tester.drag(find.text('Sheet Title'), const Offset(0, 500));
+          await tester.pumpAndSettle();
+
+          expect(dismissed, isFalse);
+          expect(find.text('Body'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'an explicit drag handle overrides enableDrag: false',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: false,
+                      enableDrag: false,
+                      showDragHandle: true,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open With Handle'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open With Handle'));
+          await tester.pumpAndSettle();
+
+          expect(_dragHandle, findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a draggable sheet shows the drag handle by default',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: false,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open Draggable'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open Draggable'));
+          await tester.pumpAndSettle();
+
+          expect(_dragHandle, findsOneWidget);
         },
       );
     });

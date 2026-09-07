@@ -123,7 +123,10 @@ extension PauseAwareModals on BuildContext {
     Widget? bottomInput,
     bool expanded = true,
     bool showHeaderDivider = true,
-    bool showDragHandle = true,
+    // Nullable so the handle keeps following VineBottomSheet.show's
+    // enableDrag-derived default (#8462); a non-null default here would pin it
+    // on for every caller.
+    bool? showDragHandle,
     bool? isScrollControlled,
     double initialChildSize = 0.6,
     double minChildSize = 0.3,
