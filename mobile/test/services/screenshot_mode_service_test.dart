@@ -16,6 +16,19 @@ import 'package:yaml/yaml.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
+/// Files under [dir] that could legitimately be declared as bundled assets.
+///
+/// Hidden files are excluded. Finder writes `.DS_Store` into any directory a
+/// developer browses — `mobile/.gitignore` carries it for that reason — and
+/// nothing hidden is ever a shipped asset, so counting one only produces a
+/// local failure telling the developer to declare it in `pubspec.yaml`.
+Set<String> bundleCandidatesIn(Directory dir) => dir
+    .listSync(recursive: true)
+    .whereType<File>()
+    .map((file) => file.path.replaceAll(Platform.pathSeparator, '/'))
+    .where((path) => !path.split('/').last.startsWith('.'))
+    .toSet();
+
 void main() {
   group(ScreenshotModeService, () {
     late _MockAuthService authService;
@@ -173,6 +186,16 @@ void main() {
       });
 
       group('editor fixtures', () {
+        test('hidden files are not treated as bundled assets', () {
+          final dir = Directory.systemTemp.createTempSync('seed_media_scan');
+          addTearDown(() => dir.deleteSync(recursive: true));
+          File('${dir.path}/clip.mp4').writeAsStringSync('clip');
+          File('${dir.path}/.DS_Store').writeAsStringSync('finder');
+
+          expect(bundleCandidatesIn(dir), hasLength(1));
+          expect(bundleCandidatesIn(dir).single, endsWith('/clip.mp4'));
+        });
+
         test('every referenced media asset exists on disk', () {
           for (final asset in screenshotMediaAssets()) {
             expect(
@@ -192,13 +215,9 @@ void main() {
               .cast<String>()
               .where((asset) => asset.startsWith('assets/seed_media/'))
               .toSet();
-          final seedMediaOnDisk = Directory('assets/seed_media')
-              .listSync(recursive: true)
-              .whereType<File>()
-              .map(
-                (file) => file.path.replaceAll(Platform.pathSeparator, '/'),
-              )
-              .toSet();
+          final seedMediaOnDisk = bundleCandidatesIn(
+            Directory('assets/seed_media'),
+          );
 
           expect(
             declaredSeedMedia,
