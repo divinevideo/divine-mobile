@@ -54,7 +54,7 @@ The codebase has **253 files in lib/** with an overall test coverage of **45.0%*
   - [ ] Relay connection timeouts
 
 ### 3. Profile Viewing
-- **E2E test exists**: Yes (`test/integration/profile_route_loads_test.dart`, `profile_cache_sync_test.dart`)
+- **E2E test exists**: Yes (`test/integration/profile_route_loads_test.dart`)
 - **Service unit tests**:
   - ⚠️ `profile_repository` package - Has tests but coverage needs verification
   - ❌ `mute_service.dart` - **0% coverage**
