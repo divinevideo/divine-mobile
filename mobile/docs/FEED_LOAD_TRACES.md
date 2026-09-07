@@ -71,6 +71,24 @@ healthier during the outage than outside it. Read a drop in sample volume as a
 failure signal, and do not read `error` + `done` + `setup_error` + `timeout` as
 the total count of feed loads that failed.
 
+### Not every sample is a load someone was waiting for
+
+`subscribeToVideoFeed` is also the app's re-subscribe entry point, so several
+callers with no user in front of them start traces under the same names:
+
+- `resetAndResubscribeAll()` when the relay set changes, from the relay
+  providers and the relay-settings cubit.
+- `_scheduleReconnection`, five seconds after a relay stream closes.
+- `_scheduleRetryWhenRelayReady`, once relays reconnect.
+- `FeedRetryScheduler`, which re-issues a failed subscribe up to
+  `maxAttempts` (3) times at `retryDelay` (10 seconds) apart.
+
+Each attempt forces past duplicate-subscription detection and starts its own
+trace, so one user-visible failed load can leave several samples behind. Treat
+a `feed_load_*` percentile as latency of *a subscribe*, not as time a person
+spent waiting — the background traffic is in there too, and it is the traffic
+most likely to be slow.
+
 ## Completion values
 
 Every trace records a `completion` attribute and an `event_count` metric. The
