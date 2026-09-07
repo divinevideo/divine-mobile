@@ -171,6 +171,11 @@ class ContentReportingService implements ReportChannelDriver {
   /// its ticket concurrently; Zendesk does not dedup, so without this they
   /// would create two tickets. Coalescing by report id makes concurrent
   /// callers share one POST. #8053.
+  ///
+  /// This only dedups because the inline path and the sweep's driver are the
+  /// SAME instance (the keepAlive `reportRetryServiceProvider` pins this
+  /// service alive as its driver). If that ever changes so they use different
+  /// instances, this map no longer coordinates them and the coalescing breaks.
   final Map<String, Future<bool>> _zendeskInFlight = {};
 
   static const String reportsStorageKey = 'content_reports_history';
