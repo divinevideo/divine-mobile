@@ -32,7 +32,6 @@ analyzer:
 linter:
   rules:
     avoid_dynamic_calls: false
-    depend_on_referenced_packages: false
     # Requires `TODO(username)`; a `#` in the parentheses fails the rule. The
     # repo mandates `TODO(#issue)` instead (`.claude/rules/code_style.md`), so
     # the two conventions are mutually exclusive.
