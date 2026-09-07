@@ -2,6 +2,7 @@
 // ABOUTME: Verifies that both action tiles render and return the correct
 // ABOUTME: RequestBulkAction when tapped.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,11 @@ void main() {
   group(RequestBulkActionsSheet, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
     const showSheetButtonKey = Key('show-sheet-button');
+
+    // The dark fallback is silent by design, so a dropped theme extension is
+    // only observable through this counter — reset it around every pump.
+    setUp(() => VineThemeColors.debugFallbackCount = 0);
+    tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
     Widget buildSubject({required ValueChanged<RequestBulkAction?> onResult}) {
       final router = GoRouter(
@@ -43,7 +49,7 @@ void main() {
         routerConfig: router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: ThemeData.dark(),
+        theme: VineTheme.theme,
       );
     }
 
@@ -59,6 +65,14 @@ void main() {
 
       expect(find.text(l10n.inboxRequestsMarkAllRead), findsOneWidget);
       expect(find.text(l10n.inboxRequestsRemoveAll), findsOneWidget);
+      expect(
+        VineThemeColors.debugFallbackCount,
+        0,
+        reason:
+            'A modal route is exactly where the VineThemeColors extension goes '
+            'missing, and _ActionTile reads context.vineColors for its label '
+            'and divider colours.',
+      );
     });
 
     testWidgets('returns markAllRead when first tile tapped', (tester) async {
