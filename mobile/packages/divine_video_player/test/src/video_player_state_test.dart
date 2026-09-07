@@ -246,6 +246,7 @@ void main() {
       expect(state.isFirstFrameRendered, isFalse);
       expect(state.videoWidth, isZero);
       expect(state.videoHeight, isZero);
+      expect(state.pixelWidthHeightRatio, equals(1.0));
       expect(state.rotationDegrees, isZero);
     });
 
@@ -290,6 +291,16 @@ void main() {
           videoHeight: 1080,
         );
         expect(state.aspectRatio, closeTo(1.778, 0.001));
+      });
+
+      test('applies pixel aspect ratio to coded dimensions', () {
+        const state = DivineVideoPlayerState(
+          videoWidth: 1280,
+          videoHeight: 720,
+          pixelWidthHeightRatio: 9 / 16,
+        );
+
+        expect(state.aspectRatio, equals(1.0));
       });
 
       test('returns 0 when width is zero', () {
@@ -373,6 +384,14 @@ void main() {
         expect(a.hashCode, isNot(equals(b.hashCode)));
       });
 
+      test('states with different pixel aspect ratios are not equal', () {
+        const a = DivineVideoPlayerState();
+        const b = DivineVideoPlayerState(pixelWidthHeightRatio: 9 / 16);
+
+        expect(a, isNot(equals(b)));
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
+
       test('copyWith without changes returns equal state', () {
         const original = DivineVideoPlayerState(
           status: PlaybackStatus.playing,
@@ -418,6 +437,10 @@ void main() {
         );
         expect(copy.videoWidth, equals(original.videoWidth));
         expect(copy.videoHeight, equals(original.videoHeight));
+        expect(
+          copy.pixelWidthHeightRatio,
+          equals(original.pixelWidthHeightRatio),
+        );
         expect(copy.rotationDegrees, equals(original.rotationDegrees));
       });
 
@@ -427,6 +450,14 @@ void main() {
 
         expect(copy.rotationDegrees, equals(90));
         expect(original.rotationDegrees, isZero);
+      });
+
+      test('overrides pixelWidthHeightRatio when specified', () {
+        const original = DivineVideoPlayerState();
+        final copy = original.copyWith(pixelWidthHeightRatio: 9 / 16);
+
+        expect(copy.pixelWidthHeightRatio, equals(9 / 16));
+        expect(original.pixelWidthHeightRatio, equals(1.0));
       });
 
       test('overrides only specified fields', () {
@@ -485,6 +516,7 @@ void main() {
           'isFirstFrameRendered': true,
           'videoWidth': 1920,
           'videoHeight': 1080,
+          'pixelWidthHeightRatio': 0.75,
           'rotationDegrees': 90,
         });
 
@@ -500,6 +532,7 @@ void main() {
         expect(state.isFirstFrameRendered, isTrue);
         expect(state.videoWidth, equals(1920));
         expect(state.videoHeight, equals(1080));
+        expect(state.pixelWidthHeightRatio, equals(0.75));
         expect(state.rotationDegrees, equals(90));
       });
 
@@ -518,6 +551,7 @@ void main() {
         expect(state.isFirstFrameRendered, isFalse);
         expect(state.videoWidth, isZero);
         expect(state.videoHeight, isZero);
+        expect(state.pixelWidthHeightRatio, equals(1.0));
         expect(state.rotationDegrees, isZero);
       });
 
@@ -534,6 +568,14 @@ void main() {
           final state = DivineVideoPlayerState.fromMap({'status': name});
           expect(state.status.name, equals(name));
         }
+      });
+
+      test('accepts an integer pixel aspect ratio from the platform', () {
+        final state = DivineVideoPlayerState.fromMap({
+          'pixelWidthHeightRatio': 1,
+        });
+
+        expect(state.pixelWidthHeightRatio, equals(1.0));
       });
 
       test('parses errorCode string into NativePlayerErrorCode', () {
@@ -579,12 +621,14 @@ void main() {
           status: PlaybackStatus.playing,
           videoWidth: 1920,
           videoHeight: 1080,
+          pixelWidthHeightRatio: 0.75,
           rotationDegrees: 90,
         );
         final string = state.toString();
 
         expect(string, contains('playing'));
         expect(string, contains('1920x1080'));
+        expect(string, contains('pixelRatio: 0.75'));
         expect(string, contains('rotation: 90'));
       });
 

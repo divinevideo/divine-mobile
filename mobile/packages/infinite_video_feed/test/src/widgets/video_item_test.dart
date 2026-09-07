@@ -73,9 +73,7 @@ void main() {
         await tester.pumpWidget(
           Directionality(
             textDirection: TextDirection.ltr,
-            child: VideoItemWidget(
-              controller: controller,
-            ),
+            child: VideoItemWidget(controller: controller),
           ),
         );
 
@@ -99,9 +97,7 @@ void main() {
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
-          child: VideoItemWidget(
-            controller: controller,
-          ),
+          child: VideoItemWidget(controller: controller),
         ),
       );
 
@@ -113,6 +109,40 @@ void main() {
 
       final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
       expect(fittedBox.fit, equals(BoxFit.cover));
+    });
+
+    testWidgets('renders anamorphic square video without stretching', (
+      tester,
+    ) async {
+      final controller = FakeController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: VideoItemWidget(controller: controller),
+        ),
+      );
+
+      controller.pushState(
+        const DivineVideoPlayerState(
+          videoWidth: 1280,
+          videoHeight: 720,
+          pixelWidthHeightRatio: 9 / 16,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
+      final fittedSize = tester.widget<SizedBox>(
+        find.descendant(
+          of: find.byType(FittedBox),
+          matching: find.byType(SizedBox),
+        ),
+      );
+      expect(fittedBox.fit, equals(BoxFit.contain));
+      expect(fittedSize.width! / fittedSize.height!, equals(1.0));
     });
 
     testWidgets('uses BoxFit.contain when shouldPortraitExpand is false', (

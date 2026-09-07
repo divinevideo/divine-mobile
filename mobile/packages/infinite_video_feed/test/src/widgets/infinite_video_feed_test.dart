@@ -417,6 +417,7 @@ void main() {
                         'status': 'ready',
                         'videoWidth': 1280,
                         'videoHeight': 720,
+                        'pixelWidthHeightRatio': 9 / 16,
                         'isFirstFrameRendered': false,
                       }),
                       (_) {},
@@ -435,7 +436,7 @@ void main() {
               prefetchCount: 0,
               preloadGracePeriod: Duration.zero,
               loadingBuilder: (_, _, {required isSquare}) =>
-                  const Text('loading'),
+                  Text('loading:isSquare=$isSquare'),
               videoBuilder: (_, _, _, _) {
                 return const Text('video');
               },
@@ -446,7 +447,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.text('loading'), findsOneWidget);
+        expect(find.text('loading:isSquare=true'), findsOneWidget);
         expect(find.text('video'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());

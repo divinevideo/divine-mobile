@@ -161,6 +161,7 @@ internal class DivineVideoPlayerInstance(
     private var decoderRetryRunnable: Runnable? = null
     private var videoWidth = 0
     private var videoHeight = 0
+    private var pixelWidthHeightRatio = 1.0
     private var rotationDegrees = 0
 
     /**
@@ -1223,6 +1224,7 @@ internal class DivineVideoPlayerInstance(
             "isFirstFrameRendered" to firstFrameRendered,
             "videoWidth" to videoWidth,
             "videoHeight" to videoHeight,
+            "pixelWidthHeightRatio" to pixelWidthHeightRatio,
             "rotationDegrees" to rotationDegrees,
         )
         exoPlayer.playerError?.let { error ->
@@ -1601,8 +1603,6 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-            videoWidth = videoSize.width
-            videoHeight = videoSize.height
             // Send 0 when the active backend already applies the GL transform
             // matrix (legacy SurfaceTexture always does; SurfaceProducer does
             // when handlesCropAndRotation() reports true on Android 14+).
@@ -1618,7 +1618,16 @@ internal class DivineVideoPlayerInstance(
                 player?.videoFormat?.rotationDegrees ?: 0
             }
             if (videoSize.width > 0 && videoSize.height > 0) {
+                videoWidth = videoSize.width
+                videoHeight = videoSize.height
+                pixelWidthHeightRatio = videoSize.pixelWidthHeightRatio.toDouble()
                 rotationDegrees = newRotation
+            } else {
+                // Keep all display-dimension fields coherent during Media3's
+                // transient reset between clips and seeks.
+                videoWidth = 0
+                videoHeight = 0
+                pixelWidthHeightRatio = 1.0
             }
             sendStateUpdate()
         }

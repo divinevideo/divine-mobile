@@ -1868,9 +1868,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   bool _isSquareVideo(DivineVideoPlayerController? controller) {
     if (controller == null) return false;
     final state = controller.state;
-    return state.videoWidth > 0 &&
-        state.videoHeight > 0 &&
-        state.videoWidth == state.videoHeight;
+    return state.aspectRatio == 1.0;
   }
 
   // ─── Build ──────────────────────────────────────────────────────────────
