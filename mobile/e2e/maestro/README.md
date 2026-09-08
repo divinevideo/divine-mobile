@@ -58,9 +58,13 @@ The lesson generalises: **before filing a Maestro failure as flaky data,
 check whether the screen is stuck in a state the app has no exit from.**
 A permanent loading placeholder looks exactly like slow live content.
 
-The `e2e-smoke-ios` Codemagic workflow runs on pull requests that touch mobile
-code, excluding Markdown-only changes. It remains non-blocking for an
-observation window of at least 30 runs. Promote it to a required check only if
+The `e2e-smoke-ios` Codemagic workflow is configured to run on pull requests
+that touch mobile code, excluding Markdown-only changes — but no build can fire
+until the Codemagic webhook subscription is restored under
+[#7504](https://github.com/divinevideo/divine-mobile/issues/7504), which is an
+external integration setting this repository cannot change. Once builds do
+fire, the check remains non-blocking for an observation window of at least 30
+runs. Promote it to a required check only if
 at least 95% of runs are infrastructure-clean and the p95 end-to-end duration
 stays below 15 minutes; reset the observation window after a flow, runner image,
 or Maestro version change. The `e2e-smoke-android` workflow is manual.
