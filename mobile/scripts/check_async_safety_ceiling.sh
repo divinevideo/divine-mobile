@@ -50,6 +50,30 @@ emit_current() {
       !/^[[:space:]]+(discarded_futures|unawaited_futures):[[:space:]]+ignore[[:space:]]*$/
     ' "$saved_options" > "$MOBILE_DIR/analysis_options.yaml"
 
+    # The awk above matches one exact spelling. Reformat either line -- add a
+    # trailing comment, requote it, reindent it, or switch it to `false` under
+    # `linter: rules:` -- and the rewrite silently keeps the suppression, the
+    # analyzer reports neither rule, and every baselined key reads as STALE.
+    # The engine then prints UPDATE_BASELINE as the remedy, and running it
+    # writes an EMPTY baseline: the guard deletes itself and stays green. So
+    # assert the suppression is actually gone before trusting the analysis.
+    local suppression_re still_suppressed
+    suppression_re="^[[:space:]]*-?[[:space:]]*[\"']?"
+    suppression_re+="(discarded_futures|unawaited_futures)[\"']?[[:space:]]*:"
+    suppression_re+="[[:space:]]*[\"']?(ignore|false)[\"']?[[:space:]]*(#.*)?$"
+    still_suppressed="$(grep -nE "$suppression_re" \
+      "$MOBILE_DIR/analysis_options.yaml" || true)"
+    if [[ -n "$still_suppressed" ]]; then
+      echo "FAIL [$RATCHET_LABEL]: analysis_options.yaml still suppresses a" >&2
+      echo "  tracked rule after the temporary rewrite, so the analyzer would" >&2
+      echo "  report zero findings and the whole baseline would read as STALE:" >&2
+      echo "$still_suppressed" | sed 's/^/    /' >&2
+      echo "  -> Update the awk filter in $(basename "${BASH_SOURCE[0]}") to match the" >&2
+      echo "     current spelling. Do NOT regenerate the baseline: that would" >&2
+      echo "     erase all tracked async-safety debt. See #3342." >&2
+      return 1
+    fi
+
     local analyzer_status=0
     (
       cd "$MOBILE_DIR"

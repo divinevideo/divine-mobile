@@ -69,4 +69,27 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
       expect(result.stdout, contains('discarded_futures|lib/a.dart'));
     });
   });
+
+  group('analyzer configuration coupling', () {
+    // The guard re-enables the two rules by deleting one exact line shape from
+    // analysis_options.yaml. Reformatting either line leaves the suppression
+    // in place, which reads as 491 STALE keys whose printed remedy erases the
+    // baseline. Removing the lines outright is the endgame and stays legal.
+    test('every suppression of a tracked rule matches the stripped shape', () {
+      const rules = ['discarded_futures', 'unawaited_futures'];
+      final suppresses = RegExp(
+        '^\\s*-?\\s*["\']?(${rules.join('|')})["\']?\\s*:'
+        '\\s*["\']?(ignore|false)["\']?\\s*(#.*)?\$',
+      );
+      final stripped = RegExp('^\\s+(${rules.join('|')}): ignore\\s*\$');
+
+      final offenders = File('analysis_options.yaml')
+          .readAsLinesSync()
+          .where(suppresses.hasMatch)
+          .where((line) => !stripped.hasMatch(line))
+          .toList();
+
+      expect(offenders, isEmpty);
+    });
+  });
 }
