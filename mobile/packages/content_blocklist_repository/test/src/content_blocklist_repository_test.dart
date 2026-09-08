@@ -3805,6 +3805,7 @@ void main() {
           ).thenAnswer((_) => ownList.stream);
 
           final restarted = ContentBlocklistRepository(prefs: prefs);
+          addTearDown(restarted.dispose);
           await restarted.syncMuteListsInBackground(mockClient, ourPubkey);
           ownList.add(
             buildEvent(
@@ -4386,7 +4387,7 @@ void main() {
             // relay serving the list we are trying to replace, and no other
             // assertion in this file would notice.
             expect(publishedAt, isNotNull);
-            expect(publishedAt!, greaterThan(clockSkewedList.createdAt));
+            expect(publishedAt, greaterThan(clockSkewedList.createdAt));
           },
         );
 
@@ -4443,6 +4444,12 @@ void main() {
           () async {
             SharedPreferences.setMockInitialValues(<String, Object>{});
             final prefs = await SharedPreferences.getInstance();
+            // Sampled synchronously at the removal, before the publish's
+            // refresh runs. Without it the closing assertion cannot tell
+            // "the intent was retired" from "no intent was ever recorded":
+            // the test survives a mutation that stops recording it at all.
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
             final service = await serviceWithOwnMute(
               prefs: prefs,
               ownMute: buildEvent(
@@ -4452,7 +4459,14 @@ void main() {
                 ],
                 createdAt: 1000,
               ),
+              onChanged: () {
+                if (!sampling) return;
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
             );
+            sampling = true;
             final landedList = buildEvent(
               kind: 10000,
               createdAt: 2000,
@@ -4478,6 +4492,11 @@ void main() {
             await service.unblockUser(target);
             await pumpEventQueue();
 
+            expect(pendingWhenAnnounced, isNotEmpty);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
             final stored = prefs.getString('pending_unblocks.$ourPubkey');
             expect(stored, isNotNull);
             expect(
@@ -4526,19 +4545,14 @@ void main() {
 
             await service.unblockUser(target);
 
+            // `any(named: 'createdAt')` matches a null stamp too, so this
+            // also covers a call that omits the argument.
             verifyNever(
               () => mockSigner.createAndSignEvent(
                 kind: any(named: 'kind'),
                 content: any(named: 'content'),
                 tags: any(named: 'tags'),
                 createdAt: any(named: 'createdAt'),
-              ),
-            );
-            verifyNever(
-              () => mockSigner.createAndSignEvent(
-                kind: any(named: 'kind'),
-                content: any(named: 'content'),
-                tags: any(named: 'tags'),
               ),
             );
             final pending =
