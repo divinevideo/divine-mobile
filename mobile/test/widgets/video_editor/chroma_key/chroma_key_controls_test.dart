@@ -34,22 +34,37 @@ void main() {
       WidgetTester tester,
       ThemeData theme, {
       TextScaler textScaler = TextScaler.noScaling,
+      Locale? locale,
     }) async {
+      // A phone, not the 800x600 default. The panel is a narrow column of
+      // rows, so a surface 2.2x a phone's width cannot show one overflowing
+      // and the text-scale test below would pass on anything.
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         MaterialApp(
           theme: theme,
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: MediaQuery(
-            data: MediaQueryData(textScaler: textScaler),
-            child: BlocProvider<ChromaKeyEditorCubit>.value(
-              value: cubit,
-              child: Scaffold(
-                backgroundColor: theme
-                    .extension<VineThemeColors>()!
-                    .surfaceContainerHigh,
-                body: ChromaKeyControls(onPickBackground: (_) {}),
-              ),
+          // copyWith, not a fresh MediaQueryData: the default constructor
+          // zeroes size, padding and devicePixelRatio, so every test in this
+          // file would measure a 0x0 unpadded screen. Sitting on `builder`
+          // rather than `home` also carries the scale into pushed routes.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            child: child!,
+          ),
+          home: BlocProvider<ChromaKeyEditorCubit>.value(
+            value: cubit,
+            child: Scaffold(
+              backgroundColor: theme
+                  .extension<VineThemeColors>()!
+                  .surfaceContainerHigh,
+              body: ChromaKeyControls(onPickBackground: (_) {}),
             ),
           ),
         ),
