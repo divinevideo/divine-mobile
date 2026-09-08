@@ -2441,6 +2441,70 @@ void main() {
       },
     );
 
+    test(
+      'a refused tail subscription reconnects so later labels still land',
+      () async {
+        // The sibling test drives onDone, which production cannot reach: a
+        // dead relay socket does not close the stream (the SDK retains the
+        // subscription for re-issue), and a CLOSED from some but not all
+        // serving relays is invisible to the stream. The only live drop signal
+        // is onError, once every serving relay has refused the REQ.
+        final svc = ModerationLabelService(
+          nostrClient: mockNostrClient,
+          authService: mockAuthService,
+          sharedPreferences: mockPrefs,
+          tailReconnectDelay: Duration.zero,
+        );
+        stubCompletedBackfill();
+        final first = StreamController<Event>.broadcast();
+        final second = StreamController<Event>.broadcast();
+        addTearDown(() async {
+          svc.dispose();
+          await first.close();
+          await second.close();
+        });
+        var calls = 0;
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) {
+          calls++;
+          return calls == 1 ? first.stream : second.stream;
+        });
+
+        const custom =
+            'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5';
+        await svc.addLabeler(custom);
+        expect(calls, 1);
+
+        first.addError(const RelaySubscriptionRefusedException('rate-limited'));
+        await pumpEventQueue();
+
+        expect(
+          calls,
+          2,
+          reason: 'a refused subscription should reopen the tail',
+        );
+        final messages = LogCaptureService().getRecentLogs().map(
+          (entry) => entry.message,
+        );
+        expect(
+          messages,
+          contains(
+            'Moderation label tail dropped (subscription error: '
+            'RelaySubscriptionRefusedException: rate-limited)',
+          ),
+        );
+
+        second.add(liveLabelFrom(custom, 'post_refusal', 'refused_tgt'));
+        await pumpEventQueue();
+        expect(svc.getContentWarnings('refused_tgt'), hasLength(1));
+      },
+    );
+
     test('dispose cancels the live tail so no later label lands', () async {
       const custom =
           'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
