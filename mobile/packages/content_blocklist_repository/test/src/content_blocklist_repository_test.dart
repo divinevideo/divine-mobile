@@ -5015,6 +5015,19 @@ void main() {
         expect(await service.unblockUser('pubkey1'), isTrue);
         verifyNever(() => mockClient.publishEvent(any()));
       });
+
+      test(
+        'unblockUser returns the pending retry result for a no-op',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(const PublishFailed());
+          final service = await readyService();
+          expect(await service.blockUser('pubkey1'), isFalse);
+
+          expect(await service.unblockUser('pubkey2'), isFalse);
+          verify(() => mockClient.publishEvent(any())).called(2);
+        },
+      );
     });
   });
 
