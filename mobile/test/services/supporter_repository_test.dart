@@ -25,6 +25,9 @@ class _FakeValidator implements EntitlementValidator {
   int restoreCallCount = 0;
   String? restoredPubkey;
   bool? restoredSilently;
+  int purchaseCallCount = 0;
+  int completePurchaseCallCount = 0;
+  Completer<void>? completionObserved;
   Object? restoreError;
   Completer<void>? restoreCompleter;
 
@@ -42,7 +45,10 @@ class _FakeValidator implements EntitlementValidator {
     String productId, {
     String? capturedPubkey,
     String? attemptId,
-  }) async => purchaseResult;
+  }) async {
+    purchaseCallCount++;
+    return purchaseResult;
+  }
 
   @override
   Future<SupporterEntitlement> restorePurchases({
@@ -69,7 +75,10 @@ class _FakeValidator implements EntitlementValidator {
       proofController.stream;
 
   @override
-  Future<void> completePurchase(SupporterPurchaseProof proof) async {}
+  Future<void> completePurchase(SupporterPurchaseProof proof) async {
+    completePurchaseCallCount++;
+    completionObserved?.complete();
+  }
 
   void emit(SupporterEntitlement e) => _controller.add(e);
 
@@ -119,10 +128,8 @@ void main() {
           200,
         );
       }),
-      authHeaderProvider: ({required url, required method, payload}) async => (
-        authorizationHeader: 'Nostr test-token',
-        pubkey: pubkeyA,
-      ),
+      authHeaderProvider: ({required url, required method, payload}) async =>
+          (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
     );
   }
 
@@ -469,6 +476,97 @@ void main() {
       await repo.recoverPurchases();
 
       expect(validator.restoreCallCount, 1);
+      expect(validator.completePurchaseCallCount, 0);
+    });
+
+    test('acknowledges a purchase once after a successful claim', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final apiClient = buildApiClient(active: true);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: apiClient,
+      );
+      addTearDown(repo.dispose);
+      addTearDown(apiClient.dispose);
+      validator.completionObserved = Completer<void>();
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'stable-attempt-1234',
+          store: 'google',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await validator.completionObserved!.future;
+
+      expect(validator.completePurchaseCallCount, 1);
+      expect(repo.isSupporter, isTrue);
+    });
+
+    test('leaves a redelivered proof unacknowledged and surfaces unavailable '
+        'when no verification client is configured', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+
+      final errorFuture = expectLater(
+        repo.changes,
+        emitsError(
+          isA<SupporterApiException>().having(
+            (error) => error.kind,
+            'kind',
+            SupporterApiFailureKind.unavailable,
+          ),
+        ),
+      );
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'stable-attempt-1234',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+
+      await errorFuture;
+      // The store proof must stay unacknowledged so it can be redelivered once
+      // a verification client is configured.
+      expect(validator.completePurchaseCallCount, 0);
+      expect(repo.isSupporter, isFalse);
+    });
+
+    test('refuses to start billing without a verification client', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+
+      await expectLater(
+        repo.purchase('divine.supporter.monthly'),
+        throwsA(
+          isA<SupporterApiException>().having(
+            (error) => error.kind,
+            'kind',
+            SupporterApiFailureKind.unavailable,
+          ),
+        ),
+      );
+      expect(validator.purchaseCallCount, 0);
     });
   });
 }

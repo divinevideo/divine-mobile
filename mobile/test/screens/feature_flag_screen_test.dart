@@ -96,6 +96,10 @@ void main() {
         findsNothing,
       );
       expect(find.text(FeatureFlag.feedTuning.displayName), findsNothing);
+      expect(
+        find.text(FeatureFlag.divineSupporters.displayName),
+        findsNothing,
+      );
     });
 
     testWidgets('drives the account-switching flag through its automation id', (

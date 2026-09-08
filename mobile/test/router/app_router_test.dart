@@ -19,6 +19,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/universal_link_resolver.dart';
@@ -409,6 +410,21 @@ void main() {
   });
 
   group('feature-flagged settings routes', () {
+    test('supporter route redirects when verification is unavailable', () {
+      final redirectProvider = Provider<String?>(supporterRedirectIfDisabled);
+      final container = ProviderContainer(
+        overrides: [
+          featureFlagStateProvider.overrideWith(
+            (_) => const {FeatureFlag.divineSupporters: true},
+          ),
+          supporterApiClientProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(redirectProvider), SettingsScreen.path);
+    });
+
     test('monetization settings route redirects when flag is off', () {
       final redirectProvider = Provider<String?>(
         monetizationLinksRedirectIfDisabled,

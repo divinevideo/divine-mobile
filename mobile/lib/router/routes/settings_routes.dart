@@ -11,6 +11,7 @@ import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/invite_availability_providers.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/invite_availability_redirects.dart';
 import 'package:openvine/router/routes/route_extras.dart';
@@ -317,7 +318,8 @@ String? supporterRedirectIfDisabled(Ref ref) {
   final enabled = ref.read(
     isFeatureEnabledProvider(FeatureFlag.divineSupporters),
   );
-  if (enabled) return null;
+  final verificationAvailable = ref.read(supporterApiClientProvider) != null;
+  if (enabled && verificationAvailable) return null;
   return SettingsScreen.path;
 }
 

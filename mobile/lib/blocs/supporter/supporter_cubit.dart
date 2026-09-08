@@ -108,6 +108,9 @@ class SupporterCubit extends Cubit<SupporterState> {
         ),
       );
       _trackEvent('supporter_subscribe_failed');
+    } on SupporterApiException catch (error) {
+      _emitApiFailure(error);
+      _trackEvent('supporter_subscribe_failed');
     }
   }
 
@@ -146,13 +149,17 @@ class SupporterCubit extends Cubit<SupporterState> {
   }
 
   void _handleEntitlementError(Object error, StackTrace stackTrace) {
-    if (isClosed || error is! EntitlementException) return;
-    _emit(
-      state.copyWith(
-        status: SupporterStatus.error,
-        failure: SupporterFailure.fromMessage(error.message),
-      ),
-    );
+    if (isClosed) return;
+    if (error is SupporterApiException) {
+      _emitApiFailure(error);
+    } else if (error is EntitlementException) {
+      _emit(
+        state.copyWith(
+          status: SupporterStatus.error,
+          failure: SupporterFailure.fromMessage(error.message),
+        ),
+      );
+    }
   }
 
   Future<void> _refreshFromServer() async {
@@ -169,18 +176,20 @@ class SupporterCubit extends Cubit<SupporterState> {
         ),
       );
     } on SupporterApiException catch (error) {
-      if (isClosed) return;
-      final failure = switch (error.kind) {
-        SupporterApiFailureKind.ownershipConflict =>
-          SupporterFailure.ownershipConflict,
-        SupporterApiFailureKind.unavailable =>
-          SupporterFailure.verificationUnavailable,
-        _ => SupporterFailure.unknown,
-      };
-      _emit(
-        state.copyWith(status: SupporterStatus.error, failure: failure),
-      );
+      _emitApiFailure(error);
     }
+  }
+
+  void _emitApiFailure(SupporterApiException error) {
+    if (isClosed) return;
+    final failure = switch (error.kind) {
+      SupporterApiFailureKind.ownershipConflict =>
+        SupporterFailure.ownershipConflict,
+      SupporterApiFailureKind.unavailable =>
+        SupporterFailure.verificationUnavailable,
+      _ => SupporterFailure.unknown,
+    };
+    _emit(state.copyWith(status: SupporterStatus.error, failure: failure));
   }
 
   @override
