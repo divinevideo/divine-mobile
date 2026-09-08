@@ -1,6 +1,8 @@
 // ABOUTME: User profile state model for managing profile cache and loading states
 // ABOUTME: Used by Riverpod UserProfileProvider to manage reactive profile state
 
+import 'dart:collection';
+
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:openvine/state/copy_with_sentinel.dart';
@@ -10,15 +12,18 @@ part 'user_profile_state.g.dart';
 @JsonSerializable()
 class UserProfileState extends Equatable {
   const UserProfileState({
-    this.pendingRequests = const {},
-    this.knownMissingProfiles = const {},
-    this.missingProfileRetryAfter = const {},
-    this.pendingBatchPubkeys = const {},
+    Set<String> pendingRequests = const {},
+    Set<String> knownMissingProfiles = const {},
+    Map<String, DateTime> missingProfileRetryAfter = const {},
+    Set<String> pendingBatchPubkeys = const {},
     this.isLoading = false,
     this.isInitialized = false,
     this.error,
     this.totalProfilesRequested = 0,
-  });
+  }) : _pendingRequests = pendingRequests,
+       _knownMissingProfiles = knownMissingProfiles,
+       _missingProfileRetryAfter = missingProfileRetryAfter,
+       _pendingBatchPubkeys = pendingBatchPubkeys;
 
   factory UserProfileState.fromJson(Map<String, dynamic> json) =>
       _$UserProfileStateFromJson(json);
@@ -27,14 +32,21 @@ class UserProfileState extends Equatable {
   static const UserProfileState initial = UserProfileState();
 
   // Pending profile requests
-  final Set<String> pendingRequests;
+  final Set<String> _pendingRequests;
+  Set<String> get pendingRequests => UnmodifiableSetView(_pendingRequests);
 
   // Missing profiles to avoid spam
-  final Set<String> knownMissingProfiles;
-  final Map<String, DateTime> missingProfileRetryAfter;
+  final Set<String> _knownMissingProfiles;
+  Set<String> get knownMissingProfiles =>
+      UnmodifiableSetView(_knownMissingProfiles);
+  final Map<String, DateTime> _missingProfileRetryAfter;
+  Map<String, DateTime> get missingProfileRetryAfter =>
+      UnmodifiableMapView(_missingProfileRetryAfter);
 
   // Batch fetching state
-  final Set<String> pendingBatchPubkeys;
+  final Set<String> _pendingBatchPubkeys;
+  Set<String> get pendingBatchPubkeys =>
+      UnmodifiableSetView(_pendingBatchPubkeys);
 
   // Loading and error state
   final bool isLoading;

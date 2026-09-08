@@ -1,6 +1,8 @@
 // ABOUTME: State model for curation provider containing curated video sets
 // ABOUTME: Manages only editor picks - trending/popular handled by infinite feeds
 
+import 'dart:collection';
+
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:openvine/state/copy_with_sentinel.dart';
@@ -8,25 +10,30 @@ import 'package:openvine/state/copy_with_sentinel.dart';
 /// State model for curation provider (only Editor's Picks)
 class CurationState extends Equatable {
   const CurationState({
-    required this.editorsPicks,
+    required List<VideoEvent> editorsPicks,
     required this.isLoading,
-    this.trending = const [],
-    this.curationSets = const [],
+    List<VideoEvent> trending = const [],
+    List<CurationSet> curationSets = const [],
     this.lastRefreshed,
     this.error,
-  });
+  }) : _editorsPicks = editorsPicks,
+       _trending = trending,
+       _curationSets = curationSets;
 
   /// Editor's picks videos (classic vines)
-  final List<VideoEvent> editorsPicks;
+  final List<VideoEvent> _editorsPicks;
+  List<VideoEvent> get editorsPicks => UnmodifiableListView(_editorsPicks);
 
   /// Whether curation data is loading
   final bool isLoading;
 
   /// Trending videos (popular now)
-  final List<VideoEvent> trending;
+  final List<VideoEvent> _trending;
+  List<VideoEvent> get trending => UnmodifiableListView(_trending);
 
   /// All available curation sets
-  final List<CurationSet> curationSets;
+  final List<CurationSet> _curationSets;
+  List<CurationSet> get curationSets => UnmodifiableListView(_curationSets);
 
   /// Last refresh timestamp
   final DateTime? lastRefreshed;
