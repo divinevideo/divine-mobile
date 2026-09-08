@@ -29,6 +29,21 @@ void main() {
       ],
     );
 
+    blocTest<SupportContactCubit, SupportContactState>(
+      'requests fallback when the opener throws instead of returning',
+      // A throwing opener must not strand the tile on `opening` with the tap
+      // disabled and no email fallback — that is the #8921 failure this cubit
+      // exists to prevent.
+      build: () => SupportContactCubit(
+        openSupportMessages: () async => throw Exception('native crash'),
+      ),
+      act: (cubit) => cubit.open(),
+      expect: () => const [
+        SupportContactState(status: SupportContactStatus.opening),
+        SupportContactState(status: SupportContactStatus.unavailable),
+      ],
+    );
+
     test('ignores a second open while the first is in flight', () async {
       final gate = Completer<bool>();
       var calls = 0;

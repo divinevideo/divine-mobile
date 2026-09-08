@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/support_contact/support_contact_state.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/blocs/support_contact/support_contact_state.dart';
 
@@ -25,7 +26,25 @@ class SupportContactCubit extends Cubit<SupportContactState>
       const SupportContactState(status: SupportContactStatus.opening),
     );
 
-    final opened = await _openSupportMessages();
+    bool opened;
+    try {
+      opened = await _openSupportMessages();
+    } catch (error) {
+      // A throwing opener must not strand the tile on `opening` (spinner up,
+      // tap disabled, and the fallback listener never sees `unavailable`) —
+      // that is the #8921 failure this cubit exists to prevent. Treat a throw
+      // as unavailable so the email fallback fires.
+      Log.warning(
+        'SupportContactCubit: opening support threw, using email fallback: '
+        '$error',
+        category: LogCategory.system,
+      );
+      emitIfOpen(
+        const SupportContactState(status: SupportContactStatus.unavailable),
+      );
+      return;
+    }
+
     emitIfOpen(
       SupportContactState(
         status: opened
