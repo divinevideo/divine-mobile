@@ -4,7 +4,6 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/models/atproto_provisioning_state.dart';
 
 /// Response model for crosspost status from keycast's `AtprotoStatusResponse`.
@@ -51,23 +50,28 @@ class CrosspostStatus {
   final String? provisioningError;
 }
 
+/// Reads the active account's bound access token, re-validating the owner
+/// pubkey across the await so a request cannot authenticate as the wrong
+/// account after a mid-flight switch. See
+/// [AuthService.getBoundDivineAccessToken]. #8825.
+typedef CrosspostAccessTokenReader = Future<String?> Function();
+
 /// Client for keycast crosspost API endpoints.
 class CrosspostApiClient {
   CrosspostApiClient({
-    required KeycastOAuth oauthClient,
+    required CrosspostAccessTokenReader accessTokenReader,
     required String serverUrl,
     http.Client? httpClient,
-  }) : _oauthClient = oauthClient,
+  }) : _accessTokenReader = accessTokenReader,
        _serverUrl = serverUrl,
        _httpClient = httpClient ?? http.Client();
 
-  final KeycastOAuth _oauthClient;
+  final CrosspostAccessTokenReader _accessTokenReader;
   final String _serverUrl;
   final http.Client _httpClient;
 
   Future<Map<String, String>> _authHeaders() async {
-    final session = await _oauthClient.getSession();
-    final token = session?.accessToken;
+    final token = await _accessTokenReader();
     if (token == null) {
       throw const CrosspostApiException('Not authenticated', statusCode: 401);
     }
@@ -174,7 +178,11 @@ class CrosspostApiException implements Exception {
   final int? statusCode;
   final CrosspostApiErrorKind kind;
 
+  /// Deliberately omits [message]: it can carry a connection URL or a bearer
+  /// token, and this text reaches logs. Mirrors the sibling
+  /// CrosspostingApiException. #8825.
   @override
   String toString() =>
-      'CrosspostApiException: $message (${statusCode ?? 'no status'})';
+      'CrosspostApiException(status: ${statusCode ?? 'none'}, '
+      'kind: ${kind.name})';
 }

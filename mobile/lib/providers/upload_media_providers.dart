@@ -333,12 +333,12 @@ ApiService apiService(Ref ref) {
 /// Crosspost API client for Bluesky toggle settings
 @riverpod
 CrosspostApiClient crosspostApiClient(Ref ref) {
-  final oauthClient = ref.watch(oauthClientProvider);
+  final authService = ref.watch(authServiceProvider);
   final config = ref.watch(oauthConfigProvider);
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();
   ref.onDispose(httpClient.close);
   return CrosspostApiClient(
-    oauthClient: oauthClient,
+    accessTokenReader: authService.getBoundDivineAccessToken,
     serverUrl: config.serverUrl,
     httpClient: httpClient,
   );

@@ -313,7 +313,7 @@ final class CrosspostApiClientProvider
 }
 
 String _$crosspostApiClientHash() =>
-    r'3c3771a323baade67d52ed7de2882fb42406ba56';
+    r'8c4a25641f2a497b44505baaa50ce56c95c3dd21';
 
 /// Repository for Bluesky toggle settings
 
