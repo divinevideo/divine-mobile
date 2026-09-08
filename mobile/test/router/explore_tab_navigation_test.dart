@@ -9,8 +9,11 @@ import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
+import 'package:openvine/screens/explore/widgets/explore_tab_bar.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('Explore Tab Navigation', () {
@@ -91,12 +94,12 @@ void main() {
     );
 
     testWidgets(
-      'ExploreScreen should show TabBarView in grid mode, not "No videos available"',
+      'ExploreScreen shows the tab bar in grid mode, not the empty-feed message',
       (tester) async {
-        // ARRANGE: Set up providers for grid mode
+        final l10n = lookupAppLocalizations(const Locale('en'));
         final container = ProviderContainer(
           overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
+            ...getStandardTestOverrides(mockSharedPreferences: prefs),
             routerLocationStreamProvider.overrideWith(
               (ref) => Stream.value(ExploreScreen.path),
             ),
@@ -104,46 +107,44 @@ void main() {
           ],
         );
 
-        addTearDown(container.dispose);
-
-        // ACT: Build ExploreScreen in grid mode
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(
+            child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: ExploreScreen()),
+              locale: const Locale('en'),
+              home: const Scaffold(body: ExploreScreen()),
             ),
           ),
         );
-
         await tester.pumpAndSettle();
 
-        // ASSERT: Should show TabBarView tabs, not "No videos available" message
+        // Assert on the tab bar itself rather than on individual tab names:
+        // the tab list is server-driven, so pinning labels here re-breaks the
+        // test every time Explore gains or renames a tab. The contract is that
+        // grid mode shows the bar at all instead of the feed's empty state.
+        final tabBarFound = find.byType(ExploreTabBar).evaluate().length;
+        final emptyMessageFound = find
+            .text(l10n.exploreNoVideosAvailable)
+            .evaluate()
+            .length;
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+        await tester.pump(const Duration(milliseconds: 1));
+
         expect(
-          find.text('New Vines'),
-          findsOneWidget,
-          reason: 'Should show New Vines tab',
+          tabBarFound,
+          equals(1),
+          reason: 'grid mode should render the Explore tab bar',
         );
         expect(
-          find.text('Trending'),
-          findsOneWidget,
-          reason: 'Should show Trending tab',
-        );
-        expect(
-          find.text("Editor's Pick"),
-          findsOneWidget,
-          reason: "Should show Editor's Pick tab",
-        );
-        expect(
-          find.text('No videos available'),
-          findsNothing,
-          reason: 'Should NOT show "No videos available" in grid mode',
+          emptyMessageFound,
+          equals(0),
+          reason: 'grid mode should not show the feed-mode empty state',
         );
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
   });
 }
