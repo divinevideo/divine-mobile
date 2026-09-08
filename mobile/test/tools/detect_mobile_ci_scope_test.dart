@@ -472,9 +472,32 @@ esac
         'smoke',
         'performance',
       },
-      'mobile/e2e/maestro/flows/feed.yaml': {
+      // Was mobile/e2e/maestro/flows/feed.yaml, which does not exist -- that
+      // directory holds captureModeFlow.yaml through searchVideoFlow.yaml. A
+      // fixture no arm can match made the dead *feed* pattern look alive.
+      'mobile/e2e/maestro/asserts/assertVideoFeedDrained.yaml': {
         'app',
         'maestro_static',
+        'performance',
+      },
+      'mobile/e2e/maestro/flows/searchVideoFlow.yaml': {
+        'app',
+        'maestro_static',
+      },
+      'mobile/lib/state/video_feed_state.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'goldens',
+        'smoke',
+        'performance',
+      },
+      'mobile/integration_test/perf/feed_ttff_test.dart': {
+        'app',
+        'android',
+        'ios',
+        'smoke',
         'performance',
       },
       'mobile/packages/dm_repository/lib/src/dm_repository.dart': {

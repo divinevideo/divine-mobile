@@ -185,8 +185,15 @@ while IFS= read -r path; do
       maestro_static=true ;;
   esac
 
+  # `case` is case-sensitive and `*` spans `/`, so two previous patterns
+  # matched no tracked file: mobile/e2e/maestro/*feed* missed
+  # asserts/assertVideoFeedDrained.yaml (capital F, the only candidate) and
+  # nothing under e2e/maestro contains "perf" at all. video_feed_item/* was
+  # redundant, already covered by video_feed*. Meanwhile the feed's state,
+  # providers, player and cache packages, and three of the four suites under
+  # integration_test/perf, sat outside the arm entirely.
   case "$path" in
-    mobile/lib/screens/feed/*|mobile/lib/widgets/video_feed*|mobile/lib/widgets/video_feed_item/*|mobile/lib/blocs/video_feed/*|mobile/lib/repositories/feed*|mobile/packages/feed_repository/*|mobile/packages/infinite_video_feed/*|mobile/test/screens/feed/*|mobile/test/widgets/video_feed*|mobile/test/blocs/video_feed/*|mobile/test/repositories/feed*|mobile/integration_test/*feed*|mobile/e2e/maestro/*feed*|mobile/e2e/maestro/*performance*)
+    mobile/lib/screens/feed/*|mobile/lib/widgets/video_feed*|mobile/lib/widgets/feed_refresh_control.dart|mobile/lib/blocs/video_feed/*|mobile/lib/blocs/fullscreen_feed/*|mobile/lib/providers/video_feed_provider.dart|mobile/lib/state/video_feed_state.dart|mobile/lib/repositories/feed*|mobile/packages/feed_repository/*|mobile/packages/infinite_video_feed/*|mobile/packages/videos_repository/*|mobile/packages/divine_video_player/*|mobile/packages/media_cache/*|mobile/packages/video_event_cache/*|mobile/test/screens/feed/*|mobile/test/widgets/video_feed*|mobile/test/blocs/video_feed/*|mobile/test/repositories/feed*|mobile/integration_test/perf/*|mobile/e2e/maestro/asserts/assertVideoFeedDrained.yaml)
       performance=true ;;
   esac
 done < "$changed_files"
