@@ -34,6 +34,11 @@ const _initialKey = ClipChromaKey(key: ChromaKey.greenScreen());
 /// Everything here is in-memory: the clip is only updated when the screen is
 /// confirmed, and the key is applied by the renderer at export rather than
 /// baked into the clip's file.
+///
+/// Constructing one is not free, though. A clip that arrives without a key
+/// starts a measurement from the constructor body, which crosses the platform
+/// channel and decodes frames, so build this once per screen — never in a
+/// `build()` or a list builder.
 class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     with CloseGuardedEmit<ChromaKeyEditorState> {
   /// Starts measuring straight away when the clip arrives without a key.
