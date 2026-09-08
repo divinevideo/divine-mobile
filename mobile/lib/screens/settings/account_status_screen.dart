@@ -251,7 +251,7 @@ class _StatusBody extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           DivineButton(
-            label: l10n.accountStatusContactSupport,
+            label: l10n.appealOpenSupportCenter,
             expanded: true,
             onPressed: () => context.push(SupportCenterScreen.path),
           ),

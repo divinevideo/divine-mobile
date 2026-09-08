@@ -3317,7 +3317,7 @@
     "minorAccountReviewRestrictionEngagement": "댓글, 좋아요, 리포스트, 팔로우가 중단됨",
     "minorAccountReviewRestrictionMessaging": "일반 메시지 보내기와 답장이 중단됨",
     "minorAccountReviewRestrictionSupport": "지원과 검수 메시지는 계속 이용 가능",
-    "minorAccountReviewOpenSupportCenter": "지원 센터 열기",
+    "appealOpenSupportCenter": "지원 센터 열기",
     "minorAccountReviewOpenModerationMessage": "검수 메시지 열기",
     "minorAccountReviewOpenReviewPage": "검토 페이지 열기",
     "minorAccountReviewCheckAgain": "다시 확인",

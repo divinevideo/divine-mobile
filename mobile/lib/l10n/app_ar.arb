@@ -3779,7 +3779,7 @@
     "minorAccountReviewRestrictionEngagement": "التعليقات والإعجابات وإعادة النشر والمتابعات متوقفة مؤقتًا",
     "minorAccountReviewRestrictionMessaging": "بدء الرسائل العادية أو الرد عليها متوقف مؤقتًا",
     "minorAccountReviewRestrictionSupport": "الدعم ورسالة الإشراف الخاصة بك تبقى متاحة",
-    "minorAccountReviewOpenSupportCenter": "فتح مركز الدعم",
+    "appealOpenSupportCenter": "فتح مركز الدعم",
     "minorAccountReviewOpenModerationMessage": "فتح رسالة الإشراف",
     "minorAccountReviewOpenReviewPage": "فتح صفحة المراجعة",
     "minorAccountReviewCheckAgain": "تحقق مرة أخرى",

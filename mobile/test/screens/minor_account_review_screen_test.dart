@@ -563,7 +563,7 @@ void main() {
         expect(find.text(expectedBody), findsOneWidget);
         expect(find.text(otherBody), findsNothing);
         expect(
-          find.text(l10n.minorAccountReviewOpenSupportCenter),
+          find.text(l10n.appealOpenSupportCenter),
           findsOneWidget,
         );
       }
@@ -611,14 +611,14 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text(l10n.minorAccountReviewOpenSupportCenter),
+        find.text(l10n.appealOpenSupportCenter),
         200,
         scrollable: find.byType(Scrollable),
       );
       await tester.pumpAndSettle();
 
       expect(
-        find.text(l10n.minorAccountReviewOpenSupportCenter),
+        find.text(l10n.appealOpenSupportCenter),
         findsOneWidget,
       );
       expect(find.text(l10n.minorAccountReviewAppealTitle), findsOneWidget);

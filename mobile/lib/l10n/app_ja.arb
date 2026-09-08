@@ -3779,7 +3779,7 @@
     "minorAccountReviewRestrictionEngagement": "コメント、いいね、リポスト、フォローは停止中です",
     "minorAccountReviewRestrictionMessaging": "通常のメッセージの送信と返信は停止中です",
     "minorAccountReviewRestrictionSupport": "サポートとモデレーションメッセージは引き続き利用できます",
-    "minorAccountReviewOpenSupportCenter": "サポートセンターを開く",
+    "appealOpenSupportCenter": "サポートセンターを開く",
     "minorAccountReviewOpenModerationMessage": "モデレーションメッセージを開く",
     "minorAccountReviewOpenReviewPage": "審査ページを開く",
     "minorAccountReviewCheckAgain": "もう一度確認",

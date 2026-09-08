@@ -3779,7 +3779,7 @@
     "minorAccountReviewRestrictionEngagement": "Comentários, curtidas, reposts e seguidas estão pausados",
     "minorAccountReviewRestrictionMessaging": "Iniciar e responder mensagens comuns está pausado",
     "minorAccountReviewRestrictionSupport": "O suporte e sua mensagem da moderação continuam disponíveis",
-    "minorAccountReviewOpenSupportCenter": "Abrir a central de suporte",
+    "appealOpenSupportCenter": "Abrir a central de suporte",
     "minorAccountReviewOpenModerationMessage": "Abrir a mensagem da moderação",
     "minorAccountReviewOpenReviewPage": "Abrir a página de análise",
     "minorAccountReviewCheckAgain": "Verificar de novo",

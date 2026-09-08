@@ -3779,7 +3779,7 @@
     "minorAccountReviewRestrictionEngagement": "Comentarios, me gusta, reposts y seguimientos están en pausa",
     "minorAccountReviewRestrictionMessaging": "Empezar o responder mensajes normales está en pausa",
     "minorAccountReviewRestrictionSupport": "El soporte y tu mensaje de moderación siguen disponibles",
-    "minorAccountReviewOpenSupportCenter": "Abrir el centro de soporte",
+    "appealOpenSupportCenter": "Abrir el centro de soporte",
     "minorAccountReviewOpenModerationMessage": "Abrir el mensaje de moderación",
     "minorAccountReviewOpenReviewPage": "Abrir la página de revisión",
     "minorAccountReviewCheckAgain": "Comprobar otra vez",

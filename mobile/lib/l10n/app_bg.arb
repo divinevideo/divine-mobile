@@ -3917,7 +3917,7 @@
     "minorAccountReviewRestrictionEngagement": "Коментарите, харесванията, споделянията и последванията са спрени",
     "minorAccountReviewRestrictionMessaging": "Започването и отговарянето на обикновени съобщения е спряно",
     "minorAccountReviewRestrictionSupport": "Поддръжката и съобщението от модерацията остават достъпни",
-    "minorAccountReviewOpenSupportCenter": "Отвори центъра за поддръжка",
+    "appealOpenSupportCenter": "Отвори центъра за поддръжка",
     "minorAccountReviewOpenModerationMessage": "Отвори съобщението от модерацията",
     "minorAccountReviewOpenReviewPage": "Отвори страницата за преглед",
     "minorAccountReviewCheckAgain": "Провери пак",
