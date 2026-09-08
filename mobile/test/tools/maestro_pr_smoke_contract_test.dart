@@ -76,7 +76,7 @@ void main() {
     });
 
     test('keeps the PR workflow bounded and docs-aware', () {
-      expect(iosWorkflow, contains('max_build_duration: 18'));
+      expect(iosWorkflow, contains('max_build_duration: 25'));
       expect(iosWorkflow, contains('- mobile/**/*.md'));
       expect(iosWorkflow, contains('cancel_previous_builds: true'));
     });

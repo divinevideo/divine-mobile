@@ -1395,10 +1395,18 @@ workflows:
   e2e-smoke-ios:
     name: E2E Smoke Tests (iOS)
     working_directory: mobile
-    # This is a deliberately small PR signal, not the regression suite. Stop a
-    # stalled build at 18 minutes; promotion requires the p95 to remain below
-    # 15 minutes during the observation window.
-    max_build_duration: 18
+    # A hang-stopper, not a performance gate — those are separate numbers and
+    # only one of them belongs here. Two green runs of the PREVIOUS lane
+    # measured 12 min and 15m42s end to end (builds 6a7bb0d4 and 6a7d30c1),
+    # and this lane does strictly more than that one: prAuthenticateHome still
+    # runs the whole of loginFreshInstall, on top of an extra clean launch and
+    # the video journey. A cap near the slow measurement would turn cache
+    # warmth into a red PR, which is the infrastructure noise this lane exists
+    # to remove. 25 leaves that headroom while still stopping a hung Maestro
+    # driver from billing the hour the previous 60 allowed (build 6a7d2a83).
+    # Speed is governed by the promotion bar instead: p95 below 15 minutes
+    # over the observation window before this becomes a required check.
+    max_build_duration: 25
     instance_type: mac_mini_m2
     environment:
       flutter: 3.44.9
