@@ -79,6 +79,30 @@ void main() {
       expect(list1, isNot(equals(list2)));
     });
 
+    group('authorScopedId', () {
+      test('tells same-named lists from different authors apart', () {
+        final now = DateTime(2026);
+        CuratedList list(String? pubkey) => CuratedList(
+          id: 'my_vine_list',
+          name: 'My List',
+          videoEventIds: const [],
+          createdAt: now,
+          updatedAt: now,
+          pubkey: pubkey,
+        );
+
+        expect(
+          list('a' * 64).authorScopedId,
+          isNot(equals(list('b' * 64).authorScopedId)),
+        );
+        expect(
+          list('a' * 64).authorScopedId,
+          equals('${'a' * 64}:my_vine_list'),
+        );
+        expect(list(null).authorScopedId, equals(':my_vine_list'));
+      });
+    });
+
     group('copyWith', () {
       test('returns same instance when no fields changed', () {
         final list = createSubject();

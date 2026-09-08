@@ -93,7 +93,8 @@ class DivineListThumbnail extends StatelessWidget {
   ///
   /// The subtree is excluded so a screen reader does not read the title
   /// twice with a bare count in between — the badge and the footer are
-  /// both decorative once this label carries their content.
+  /// both decorative once this label carries their content. The description
+  /// travels as the hint, so the card's text is still heard.
   String _semanticLabel(AppLocalizations l10n) => [
     name,
     if (isPrivate) l10n.listVisibilityPrivate,
@@ -107,6 +108,10 @@ class DivineListThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: _semanticLabel(context.l10n),
+      hint: switch (description) {
+        final text? when text.trim().isNotEmpty => text,
+        _ => null,
+      },
       // Without this the card is announced as text: the tap action is
       // exposed by the GestureDetector, but the role is not, so it never
       // shows up in a screen reader's button rotor.
@@ -221,15 +226,16 @@ class _FanSlot extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_mediaRadius),
-          child: imageUrl != null
-              ? PassiveAuthThumbnailImage(
-                  url: imageUrl!,
-                  alignment: Alignment.center,
-                  errorWidget: (_, _, _) => const SizedBox(),
-                  logName: 'DivineListThumbnail',
-                  logPrefix: 'List thumbnail',
-                )
-              : const SizedBox(),
+          child: switch (imageUrl) {
+            final url? => PassiveAuthThumbnailImage(
+              url: url,
+              alignment: Alignment.center,
+              errorWidget: (_, _, _) => const SizedBox(),
+              logName: 'DivineListThumbnail',
+              logPrefix: 'List thumbnail',
+            ),
+            null => const SizedBox(),
+          },
         ),
       ),
     );
@@ -352,18 +358,19 @@ class _MemberTile extends ConsumerWidget {
     final colors = userAvatarPlaceholderColors(
       userAvatarToneForSeed(pubkey ?? 'slot-$slot'),
     );
-    final tile = pictureUrl == null || pictureUrl.isEmpty
-        ? ColoredBox(
-            color: colors.base,
-            child: Center(
-              child: DivineIcon(
-                icon: DivineIconName.user,
-                color: colors.figure,
-                size: 28,
-              ),
-            ),
-          )
-        : VineCachedImage(imageUrl: pictureUrl);
+    final tile = switch (pictureUrl) {
+      final url? when url.isNotEmpty => VineCachedImage(imageUrl: url),
+      _ => ColoredBox(
+        color: colors.base,
+        child: Center(
+          child: DivineIcon(
+            icon: DivineIconName.user,
+            color: colors.figure,
+            size: 28,
+          ),
+        ),
+      ),
+    };
 
     return DecoratedBox(
       position: DecorationPosition.foreground,
