@@ -184,11 +184,6 @@ void main() {
         },
       );
 
-      test('should notify listeners on flag change', () async {
-        // SKIP: Service refactored to use Riverpod instead of ChangeNotifier
-        // Listener notification is now handled by Riverpod providers
-      }, skip: true);
-
       test('should reset flag to build default', () async {
         when(
           () => mockPrefs.remove('ff_enhancedAnalytics'),

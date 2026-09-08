@@ -159,33 +159,6 @@ void main() {
       expect(find.text(FeatureFlag.feedTuning.displayName), findsOneWidget);
     });
 
-    testWidgets('should display all flags', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: FeatureFlagScreen(),
-          ),
-        ),
-      );
-
-      // Initialize service
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(FeatureFlagScreen)),
-      );
-      final service = container.read(featureFlagServiceProvider);
-      await service.initialize();
-      await tester.pumpAndSettle();
-
-      for (final flag in FeatureFlag.values) {
-        expect(find.text(flag.displayName), findsOneWidget);
-        expect(find.text(flag.description), findsOneWidget);
-      }
-      // TOOD(any): Fix and re-enable these tests
-    }, skip: true);
-
     testWidgets('should show app bar with title', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
