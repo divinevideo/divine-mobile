@@ -955,7 +955,13 @@ void main() {
 
         await emitReady(nostrSession, pubkeyA);
 
-        final teardownFuture = beforeSessionTeardownCallback!();
+        // Bounded deliberately: teardown must not serialize behind the
+        // blocked permission check. Without this, a widened operations
+        // filter stalls four real seconds and then fails on the event list,
+        // instead of failing here in 100ms naming the blocked future.
+        final teardownFuture = beforeSessionTeardownCallback!().timeout(
+          const Duration(milliseconds: 100),
+        );
         await pumpEventQueue(times: 2);
 
         await teardownFuture;
