@@ -962,8 +962,9 @@ void main() {
           StateError('initial A initialize failed'),
         );
         factory.initializeCompleters.remove(pubkeyA);
-        // Load-bearing count: the retry runs on a real zero-delay Timer, and
-        // three turns is the measured minimum -- two leaves callCount behind.
+        // Load-bearing count: the retry runs on a real zero-delay Timer, so
+        // the wait must outlast it. Two turns is the measured minimum at
+        // this site; three keeps a turn of margin.
         await pumpEventQueue(times: 3);
 
         expect(
@@ -1017,8 +1018,11 @@ void main() {
 
         final timedOutClient = container.read(nostrServiceProvider);
         factory.addRelaysCompleters.remove(pubkeyA);
-        // Load-bearing count: the retry runs on a real zero-delay Timer, and
-        // three turns is the measured minimum -- two leaves callCount behind.
+        // Load-bearing count: the retry runs on a real zero-delay Timer and
+        // this container adds a second one via createRetryContainer(
+        // initializationTimeout: Duration.zero), so three turns is the
+        // measured minimum here and two leaves callCount behind. The
+        // completeError-driven sibling sites settle in two.
         await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(2));
@@ -1085,8 +1089,9 @@ void main() {
         expect(factory.callCount, equals(1));
 
         firstFailure.completeError(StateError('first initialize failed'));
-        // Load-bearing count: the retry runs on a real zero-delay Timer, and
-        // three turns is the measured minimum -- two leaves callCount behind.
+        // Load-bearing count: the retry runs on a real zero-delay Timer, so
+        // the wait must outlast it. Two turns is the measured minimum at
+        // this site; three keeps a turn of margin.
         await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(2));
@@ -1098,8 +1103,9 @@ void main() {
         );
 
         secondFailure.completeError(StateError('second initialize failed'));
-        // Load-bearing count: the retry runs on a real zero-delay Timer, and
-        // three turns is the measured minimum -- two leaves callCount behind.
+        // Load-bearing count: the retry runs on a real zero-delay Timer, so
+        // the wait must outlast it. Two turns is the measured minimum at
+        // this site; three keeps a turn of margin.
         await pumpEventQueue(times: 3);
 
         expect(factory.callCount, equals(3));
