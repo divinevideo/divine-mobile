@@ -1228,7 +1228,14 @@ class ContentBlocklistRepository {
   /// If [ourPubkey] is provided, it will be used to prevent self-blocking.
   /// Otherwise falls back to [_ourPubkey] set during
   /// [syncMuteListsInBackground].
-  Future<void> blockUser(String pubkey, {String? ourPubkey}) {
+  ///
+  /// Returns whether the kind 10000 mute-list publish was confirmed: `true`
+  /// when it landed or nothing needed publishing, `false` when it is
+  /// unconfirmed. An unconfirmed publish is reconciled on its own later (the
+  /// pending-publish retry and the reconcile-on-read), so callers may ignore
+  /// this; it lets a surface distinguish confirmed from pending and does not by
+  /// itself drive any user-facing message.
+  Future<bool> blockUser(String pubkey, {String? ourPubkey}) {
     return blockUsers([pubkey], ourPubkey: ourPubkey);
   }
 
@@ -1239,13 +1246,18 @@ class ContentBlocklistRepository {
   /// [BlocklistChange] per newly-blocked pubkey because downstream feed
   /// cleanup reacts per author. An idempotent re-block also flushes a pending
   /// mute-list publish without producing another local change event.
-  Future<void> blockUsers(Iterable<String> pubkeys, {String? ourPubkey}) async {
+  ///
+  /// Returns whether the publish was confirmed (see [blockUser]); a batch with
+  /// nothing new to block returns the current publish status.
+  Future<bool> blockUsers(Iterable<String> pubkeys, {String? ourPubkey}) async {
     final selfPubkey = ourPubkey ?? _ourPubkey;
     var skippedSelf = false;
     var hasEligibleTarget = false;
     final newlyBlocked = <String>[];
     final newlySeveredFollowers = <String>[];
     var retiredPendingUnblock = false;
+    // Confirmed unless a publish is attempted and comes back unconfirmed.
+    var published = true;
 
     for (final pubkey in pubkeys) {
       if (pubkey.isEmpty) continue;
@@ -1287,7 +1299,7 @@ class ContentBlocklistRepository {
     // affordance in the app can reach.
     if (retiredPendingUnblock) await _savePendingUnblocks();
     if (newlyBlocked.isNotEmpty) {
-      await _publishMuteListToNostr();
+      published = await _publishMuteListToNostr();
 
       Log.debug(
         'Added ${newlyBlocked.length} users to blocklist',
@@ -1295,8 +1307,8 @@ class ContentBlocklistRepository {
         category: LogCategory.system,
       );
     }
-    if (newlyBlocked.isEmpty && hasEligibleTarget) {
-      await retryPendingMuteListPublish();
+    if (newlyBlocked.isEmpty && hasEligibleTarget && _muteListPublishPending) {
+      published = await retryPendingMuteListPublish();
     }
 
     // Track as severed follower so they stay hidden from our followers
@@ -1305,6 +1317,8 @@ class ContentBlocklistRepository {
       _severedFollowers.addAll(newlySeveredFollowers);
       await _saveSeveredFollowers();
     }
+
+    return published;
   }
 
   /// Stop hiding a public key through this account's own mute list.
@@ -1313,10 +1327,13 @@ class ContentBlocklistRepository {
   /// client, then republishes the updated kind 10000 mute list to Nostr.
   /// Awaits the local write so the change survives an immediate app kill.
   /// Note: Cannot remove users from internal blocklist.
-  Future<void> unblockUser(String pubkey) async {
+  ///
+  /// Returns whether the publish was confirmed (see [blockUser]); a no-op
+  /// returns the current publish status.
+  Future<bool> unblockUser(String pubkey) async {
     // DM surfaces fall back to an empty counterparty when a conversation
     // carries no participants; [blockUsers] already skips it.
-    if (pubkey.isEmpty) return;
+    if (pubkey.isEmpty) return !_muteListPublishPending;
     // coverage:ignore-start
     if (_internalBlocklist.contains(pubkey)) {
       // Internal blocklist is intentionally empty; this branch is
@@ -1327,7 +1344,7 @@ class ContentBlocklistRepository {
         name: 'ContentBlocklistRepository',
         category: LogCategory.system,
       );
-      return;
+      return false;
     }
     // coverage:ignore-end
 
@@ -1342,8 +1359,8 @@ class ContentBlocklistRepository {
         publishedListCarries;
 
     if (!hasExplicitUnblock) {
-      await retryPendingMuteListPublish();
-      return;
+      if (!_muteListPublishPending) return true;
+      return retryPendingMuteListPublish();
     }
 
     // Recorded BEFORE the local removals are persisted, and so before the
@@ -1376,13 +1393,14 @@ class ContentBlocklistRepository {
       _notifyChanged();
     }
 
-    await _publishMuteListToNostr();
+    final published = await _publishMuteListToNostr();
 
     Log.info(
       'Stopped hiding user: ${pubkeyForLogs(pubkey)}',
       name: 'ContentBlocklistRepository',
       category: LogCategory.system,
     );
+    return published;
   }
 
   /// Get all blocked public keys (for debugging)

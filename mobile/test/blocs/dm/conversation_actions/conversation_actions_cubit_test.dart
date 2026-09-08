@@ -51,7 +51,7 @@ void main() {
     );
 
     test('does not emit or throw when closed mid-block', () async {
-      final completer = Completer<void>();
+      final completer = Completer<bool>();
       when(
         () => mockBlocklistRepository.blockUser(
           pubkey,
@@ -63,7 +63,7 @@ void main() {
       final future = cubit.blockUser(pubkey);
       // processing emitted synchronously; close before the block resolves.
       await cubit.close();
-      completer.complete();
+      completer.complete(true);
       await expectLater(future, completes);
 
       expect(cubit.state.status, ConversationActionsStatus.processing);
@@ -244,7 +244,7 @@ void main() {
               pubkey,
               ourPubkey: currentUserPubkey,
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createCubit,
         act: (cubit) => cubit.blockUser(pubkey),
@@ -296,7 +296,7 @@ void main() {
         setUp: () {
           when(
             () => mockBlocklistRepository.unblockUser(pubkey),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createCubit,
         act: (cubit) => cubit.unblockUser(pubkey),

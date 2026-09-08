@@ -95,7 +95,7 @@ void main() {
     ) async {
       when(
         () => blocklistRepository.blockUser(_userIdHex),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
 
       await tester.pumpWidget(
         buildSubject(isFollowing: false, isBlocked: false),
@@ -126,7 +126,7 @@ void main() {
     ) async {
       when(
         () => blocklistRepository.unblockUser(_userIdHex),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
 
       await tester.pumpWidget(
         buildSubject(isFollowing: false, isBlocked: true),
