@@ -135,7 +135,6 @@ discarded_futures|lib/services/deep_link_service.dart	2
 discarded_futures|lib/services/email_verification_listener.dart	3
 discarded_futures|lib/services/hashtag_service.dart	1
 discarded_futures|lib/services/immediate_completion_helper.dart	2
-discarded_futures|lib/services/moderation_label_service.dart	1
 discarded_futures|lib/services/network/rate_limiter.dart	1
 discarded_futures|lib/services/notification_service.dart	1
 discarded_futures|lib/services/outage_diagnosis_service.dart	1
