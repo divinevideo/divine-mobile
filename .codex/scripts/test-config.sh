@@ -12,56 +12,231 @@ CLAUDE_GIT_HOOK="$REPO_ROOT/.claude/hooks/check-git-hooks.sh"
 WORKTREE_GUARD_HOOK="$REPO_ROOT/.claude/hooks/session-start-worktree-guard.sh"
 CLAUDE_PURGE_HOOK="$REPO_ROOT/.claude/hooks/session-end-purge-build-artifacts.sh"
 CLAUDE_ANALYZE_HOOK="$REPO_ROOT/.claude/hooks/post-edit-analyze.sh"
+CLAUDE_SETTINGS="$REPO_ROOT/.claude/settings.json"
+CODEX_HOOKS="$REPO_ROOT/.codex/hooks.json"
+
+SCRATCH_DIR=$(mktemp -d "${TMPDIR:-/tmp}/divine-codex-hooks.XXXXXX")
+trap 'rm -rf "$SCRATCH_DIR"' EXIT
 
 "$REPO_ROOT/.codex/scripts/sync-agent-skills.sh" --check
 
-# Every registered Claude hook command must resolve to an executable file in
-# this repository — a registration pointing at a missing file must fail loudly
-# here, not silently at session end. Every hook timeout must be whole seconds
-# (a millisecond-scale value like 5000 exceeds the 600s ceiling this suite
-# pins). The SessionEnd matcher is asserted exactly because it deliberately
-# excludes non-terminal reasons such as `other`.
-while IFS= read -r hook_cmd; do
-  # Match the literal settings.json command prefix, not the current shell env.
-  # shellcheck disable=SC2016
-  case "$hook_cmd" in
-    '"$CLAUDE_PROJECT_DIR"'/*)
-      hook_path=${hook_cmd#'"$CLAUDE_PROJECT_DIR"'}
-      if [ ! -x "$REPO_ROOT$hook_path" ]; then
-        echo "Registered Claude hook is missing or not executable: $hook_cmd" >&2
-        exit 1
+hook_timeout() {
+  local config=$1
+  local hook_name=$2
+
+  jq -er --arg hook_name "$hook_name" '
+    [.hooks | .[] | .[] | .hooks[]
+      | select(.command | test("/" + $hook_name + "\\\"?$"))
+      | .timeout]
+    | if length == 1 then .[0]
+      else error("expected exactly one registration for " + $hook_name)
+      end
+  ' "$config"
+}
+
+validate_hook_configs() {
+  local claude_settings=$1
+  local codex_hooks=$2
+  local repo_root=$3
+  local config_name config_path hook_cmd hook_path missing_timeouts bad_timeouts
+  local claude_timeout codex_timeout claude_format_timeout claude_analyze_timeout
+  local hook_name registered_hooks expected_hooks
+  local parity_hooks=(
+    pre-edit-nostr-id-guard.sh
+    pre-edit-vinetheme-guard.sh
+    check-git-hooks.sh
+    pre-commit-build-runner.sh
+  )
+  local client_hooks
+
+  # A registration pointing at a missing file must fail loudly here rather
+  # than being silently skipped when a hook event fires.
+  for config_name in Claude Codex; do
+    if [ "$config_name" = Claude ]; then
+      config_path=$claude_settings
+    else
+      config_path=$codex_hooks
+    fi
+
+    while IFS= read -r hook_cmd; do
+      # Match the literal config command prefixes, not the current shell env.
+      # shellcheck disable=SC2016
+      case "$config_name:$hook_cmd" in
+        'Claude:"$CLAUDE_PROJECT_DIR"'/*)
+          hook_path=${hook_cmd#'"$CLAUDE_PROJECT_DIR"'}
+          ;;
+        'Codex:"$(git rev-parse --show-toplevel)'/*'"')
+          hook_path=${hook_cmd#'"$(git rev-parse --show-toplevel)'}
+          hook_path=${hook_path%'"'}
+          ;;
+        *)
+          echo "Unrecognized $config_name hook command shape: $hook_cmd" >&2
+          return 1
+          ;;
+      esac
+      if [ ! -x "$repo_root$hook_path" ]; then
+        echo "Registered $config_name hook is missing or not executable: $hook_cmd" >&2
+        return 1
       fi
-      ;;
-    *)
-      echo "Unrecognized Claude hook command shape: $hook_cmd" >&2
-      exit 1
-      ;;
-  esac
-done < <(jq -r '.hooks | .[] | .[] | .hooks[].command' "$REPO_ROOT/.claude/settings.json")
+    done < <(jq -er '.hooks | .[] | .[] | .hooks[].command' "$config_path")
 
-missing_timeouts=$(jq -r '.hooks | .[] | .[] | .hooks[]
-  | select(.timeout == null)
-  | .command' "$REPO_ROOT/.claude/settings.json")
-if [ -n "$missing_timeouts" ]; then
-  echo "Every Claude hook must declare an explicit whole-second timeout; missing on: $missing_timeouts" >&2
-  exit 1
-fi
+    missing_timeouts=$(jq -r '.hooks | .[] | .[] | .hooks[]
+      | select(.timeout == null)
+      | .command' "$config_path")
+    if [ -n "$missing_timeouts" ]; then
+      echo "Every $config_name hook must declare an explicit timeout; missing on: $missing_timeouts" >&2
+      return 1
+    fi
 
-bad_timeouts=$(jq -r '.hooks | .[] | .[] | .hooks[].timeout' "$REPO_ROOT/.claude/settings.json" \
-  | awk '$1 !~ /^[0-9]+$/ || $1 > 600 { print }')
-if [ -n "$bad_timeouts" ]; then
-  echo "Claude hook timeouts must be whole seconds and at most 600: got $bad_timeouts" >&2
-  exit 1
-fi
+    bad_timeouts=$(jq -r '.hooks | .[] | .[] | .hooks[].timeout' "$config_path" \
+      | awk '$1 !~ /^[0-9]+$/ || $1 < 1 || $1 > 600 { print }')
+    if [ -n "$bad_timeouts" ]; then
+      echo "$config_name hook timeouts must be whole seconds from 1 through 600: got $bad_timeouts" >&2
+      return 1
+    fi
+  done
+
+  # The clients register hooks differently, so parity is an explicit policy,
+  # not blanket config equality. Codex combines Claude's independently budgeted
+  # format and analyze hooks, hence the sum for post-edit-dart.
+  for hook_name in "${parity_hooks[@]}"; do
+    claude_timeout=$(hook_timeout "$claude_settings" "$hook_name") || return 1
+    codex_timeout=$(hook_timeout "$codex_hooks" "$hook_name") || return 1
+    if [ "$codex_timeout" -ne "$claude_timeout" ]; then
+      echo "Hook timeout diverged for $hook_name: Claude=$claude_timeout Codex=$codex_timeout" >&2
+      return 1
+    fi
+  done
+
+  claude_format_timeout=$(hook_timeout "$claude_settings" post-edit-format.sh) || return 1
+  claude_analyze_timeout=$(hook_timeout "$claude_settings" post-edit-analyze.sh) || return 1
+  codex_timeout=$(hook_timeout "$codex_hooks" post-edit-dart.sh) || return 1
+  claude_timeout=$((claude_format_timeout + claude_analyze_timeout))
+  if [ "$codex_timeout" -ne "$claude_timeout" ]; then
+    echo "Combined post-edit timeout diverged: Claude=$claude_timeout Codex=$codex_timeout" >&2
+    return 1
+  fi
+
+  # Every new registration needs an explicit parity or client-only decision.
+  # Claude's cleanup hook deliberately has no Codex counterpart.
+  for config_name in Claude Codex; do
+    if [ "$config_name" = Claude ]; then
+      config_path=$claude_settings
+      client_hooks=(post-edit-format.sh post-edit-analyze.sh session-end-purge-build-artifacts.sh)
+    else
+      config_path=$codex_hooks
+      client_hooks=(post-edit-dart.sh)
+    fi
+    registered_hooks=$(jq -r '.hooks | .[] | .[] | .hooks[]
+      | .command | split("/")[-1] | rtrimstr("\"")' "$config_path" | LC_ALL=C sort)
+    expected_hooks=$(printf '%s\n' "${parity_hooks[@]}" "${client_hooks[@]}" | LC_ALL=C sort)
+    if [ "$registered_hooks" != "$expected_hooks" ]; then
+      echo "$config_name hook registrations changed; update the timeout parity policy." >&2
+      return 1
+    fi
+  done
+}
+
+validate_hook_configs "$CLAUDE_SETTINGS" "$CODEX_HOOKS" "$REPO_ROOT"
 
 jq -e '.hooks.SessionEnd[]
   | select(.matcher == "logout|prompt_input_exit|bypass_permissions_disabled")
   | .hooks[]
   | select(.command | endswith("session-end-purge-build-artifacts.sh"))' \
-  "$REPO_ROOT/.claude/settings.json" >/dev/null || {
+  "$CLAUDE_SETTINGS" >/dev/null || {
   echo "SessionEnd purge hook registration is missing or its matcher changed." >&2
   exit 1
 }
+
+# Prove the validation detects both historical timeout values and a broken
+# registration instead of merely passing the checked-in configuration.
+CONFIG_TEST_DIR="$SCRATCH_DIR/config"
+mkdir -p "$CONFIG_TEST_DIR"
+
+expect_invalid_hook_config() {
+  local description=$1
+  local claude_fixture=$2
+  local codex_fixture=$3
+
+  if validate_hook_configs \
+    "$claude_fixture" "$codex_fixture" "$REPO_ROOT" \
+    >/dev/null 2>&1; then
+    echo "Hook validation accepted $description." >&2
+    exit 1
+  fi
+}
+
+jq '(.hooks.PreToolUse[].hooks[]
+  | select(.command | endswith("/pre-commit-build-runner.sh\""))
+  | .timeout) = 120' "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/build-timeout.json"
+expect_invalid_hook_config \
+  "the historical 120s build-runner timeout" \
+  "$CLAUDE_SETTINGS" \
+  "$CONFIG_TEST_DIR/build-timeout.json"
+
+jq '(.hooks.PostToolUse[].hooks[]
+  | select(.command | endswith("/post-edit-dart.sh\""))
+  | .timeout) = 60' "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/post-edit-timeout.json"
+expect_invalid_hook_config \
+  "the historical 60s post-edit timeout" \
+  "$CLAUDE_SETTINGS" \
+  "$CONFIG_TEST_DIR/post-edit-timeout.json"
+
+jq '(.hooks.PostToolUse[].hooks[]
+  | select(.command | endswith("/post-edit-dart.sh\""))
+  | .command) |= sub("post-edit-dart\\.sh"; "missing-post-edit-dart.sh")' \
+  "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/missing-hook.json"
+expect_invalid_hook_config \
+  "a registration whose script is missing" \
+  "$CLAUDE_SETTINGS" \
+  "$CONFIG_TEST_DIR/missing-hook.json"
+
+for config_name in Claude Codex; do
+  if [ "$config_name" = Claude ]; then
+    config_path=$CLAUDE_SETTINGS
+  else
+    config_path=$CODEX_HOOKS
+  fi
+  for mutation in \
+    '.hooks.PreToolUse[0].hooks[0].timeout = 0' \
+    '.hooks.PreToolUse[0].hooks[0].timeout = 601' \
+    'del(.hooks.PostToolUse)' \
+    '.hooks.PreToolUse[0].hooks[0].command |= sub("pre-edit-nostr-id-guard"; "missing-hook")'; do
+    jq "$mutation" "$config_path" > "$CONFIG_TEST_DIR/invalid.json"
+    if [ "$config_name" = Claude ]; then
+      expect_invalid_hook_config "$config_name $mutation" \
+        "$CONFIG_TEST_DIR/invalid.json" "$CODEX_HOOKS"
+    else
+      expect_invalid_hook_config "$config_name $mutation" \
+        "$CLAUDE_SETTINGS" "$CONFIG_TEST_DIR/invalid.json"
+    fi
+  done
+done
+
+# Keep parity satisfied so only the positive-timeout rule rejects zero.
+jq '(.hooks | .[] | .[] | .hooks[].timeout) = 0' \
+  "$CLAUDE_SETTINGS" > "$CONFIG_TEST_DIR/zero-claude.json"
+jq '(.hooks | .[] | .[] | .hooks[].timeout) = 0' \
+  "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/zero-codex.json"
+expect_invalid_hook_config "zero timeouts despite matching budgets" \
+  "$CONFIG_TEST_DIR/zero-claude.json" "$CONFIG_TEST_DIR/zero-codex.json"
+
+# Use an existing executable that is not a registered hook. A new pair must
+# require an explicit parity decision even when both paths are executable.
+for config_path in "$CLAUDE_SETTINGS" "$CODEX_HOOKS"; do
+  jq '.hooks.PreToolUse[0].hooks += [
+    (.hooks.PreToolUse[0].hooks[0]
+      | .command |= sub("hooks/pre-edit-nostr-id-guard.sh"; "scripts/sync-agent-skills.sh")
+      | .command |= sub(".claude/"; ".codex/")
+      | .timeout = 10)
+    ]' "$config_path" > "$CONFIG_TEST_DIR/$(basename "$config_path")"
+done
+jq '.hooks.PreToolUse[0].hooks[-1].timeout = 599' \
+  "$CONFIG_TEST_DIR/hooks.json" > "$CONFIG_TEST_DIR/new-codex-hook.json"
+expect_invalid_hook_config "a new hook pair without a parity policy" \
+  "$CONFIG_TEST_DIR/settings.json" "$CONFIG_TEST_DIR/new-codex-hook.json"
+expect_invalid_hook_config "a new Codex-only hook without a parity policy" \
+  "$CLAUDE_SETTINGS" "$CONFIG_TEST_DIR/new-codex-hook.json"
 
 # shellcheck disable=SC2016
 grep -Fq 'Read and apply ALL rules from `AGENTS.md`' \
@@ -82,8 +257,6 @@ grep -Fq '**Published**: May 2023<br>' \
 grep -Fq '~/.agents/skills/art-direct/styles/' \
   "$REPO_ROOT/.agents/skills/art-direct/docs/2026-01-28-art-direct-design.md"
 
-SCRATCH_DIR=$(mktemp -d "${TMPDIR:-/tmp}/divine-codex-hooks.XXXXXX")
-trap 'rm -rf "$SCRATCH_DIR"' EXIT
 TEST_REPO="$SCRATCH_DIR/repo"
 BIN_DIR="$SCRATCH_DIR/bin"
 CALL_LOG="$SCRATCH_DIR/dart-calls.log"
