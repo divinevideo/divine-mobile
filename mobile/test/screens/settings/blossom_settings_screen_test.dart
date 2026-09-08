@@ -2,6 +2,7 @@
 // ABOUTME: Verifies https-only enforcement with loopback carve-outs (#3837).
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +80,21 @@ void main() {
       await tester.tap(find.byTooltip('Save'));
       await tester.pumpAndSettle();
     }
+
+    testWidgets('has nav green AppBar', (tester) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      final appBarFinder = find.byType(AppBar);
+      expect(appBarFinder, findsOneWidget);
+
+      final appBar = tester.widget<AppBar>(appBarFinder);
+      expect(
+        appBar.backgroundColor,
+        equals(VineTheme.navGreen),
+        reason: 'BlossomSettingsScreen AppBar should be nav green',
+      );
+    });
 
     testWidgets('saves valid https:// URL', (tester) async {
       await pumpAndSave(tester, 'https://blossom.band');
