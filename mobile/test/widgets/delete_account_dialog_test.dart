@@ -266,6 +266,20 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
   return announced;
 }
 
+/// Asserts the flow signed the user out with no argument shape at all.
+///
+/// Matching exact flags would miss the bare `signOut()` the processing branch
+/// makes, so a path that must not sign out has to reject every call.
+void _verifyNeverSignedOut(_MockAuthService authService) {
+  verifyNever(
+    () => authService.signOut(
+      deleteKeys: any(named: 'deleteKeys'),
+      abortOnKeyDeletionFailure: any(named: 'abortOnKeyDeletionFailure'),
+      deleteLocalUserData: any(named: 'deleteLocalUserData'),
+    ),
+  );
+}
+
 void main() {
   group('showRemoveKeysWarningSheet', () {
     // Written by the sheet's future, which only completes after the sheet
@@ -770,10 +784,7 @@ void main() {
           find.text(_englishL10n().accountDeletionCancelAttemptBody),
           findsOneWidget,
         );
-        verifyNever(
-          () =>
-              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-        );
+        _verifyNeverSignedOut(authService);
       },
     );
 
@@ -1165,9 +1176,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      verifyNever(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      );
+      _verifyNeverSignedOut(authService);
     });
 
     testWidgets(
@@ -1319,7 +1328,7 @@ void main() {
           vanishEventId: any(named: 'vanishEventId'),
         ),
       );
-      verifyNever(authService.signOut);
+      _verifyNeverSignedOut(authService);
     });
 
     testWidgets('username preparation failure keeps neutral guidance', (
@@ -1772,10 +1781,7 @@ void main() {
           find.text(l10n.accountDeletionCancelAttemptBody),
           findsOneWidget,
         );
-        verifyNever(
-          () =>
-              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-        );
+        _verifyNeverSignedOut(authService);
       },
     );
 
@@ -1823,9 +1829,7 @@ void main() {
           expectedPubkey: any(named: 'expectedPubkey'),
         ),
       );
-      verifyNever(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      );
+      _verifyNeverSignedOut(authService);
 
       // The user is told to sign in again, and never the post-publish copy that
       // reports deletion requests as already sent.
