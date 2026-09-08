@@ -31,24 +31,50 @@ STALE_HINT="Async-safety findings were removed."
 FOOTER="unawaited_futures and discarded_futures are frozen per rule and file.
 The #3342 owner and each affected file's owner must drive these counts to zero."
 
+OPTIONS_FILE="$MOBILE_DIR/analysis_options.yaml"
+# The rewrite happens inside the `$(emit_current)` subshell but the restore has
+# to work from the top-level shell, and a subshell shares neither its parent's
+# traps nor its `local`s. A named path is what bridges the two; `$$` is the
+# top-level PID and is unchanged in a subshell, so a second concurrent run gets
+# a different name and can never restore, or delete, a backup it does not own.
+OPTIONS_BACKUP_PREFIX="$MOBILE_DIR/.analysis_options.yaml.ratchet-backup"
+OPTIONS_BACKUP="$OPTIONS_BACKUP_PREFIX.$$"
+
+# At script scope, not inside emit_current: the suppression assertion's
+# `return 1`, a failing analyzer, and a SIGTERM from CI cancellation or the
+# local `timeout`-wrapped ratchet runner all unwind through the top-level shell.
+restore_analysis_options() {
+  if [[ -f "$OPTIONS_BACKUP" ]]; then
+    cp "$OPTIONS_BACKUP" "$OPTIONS_FILE"
+    rm -f "$OPTIONS_BACKUP"
+  fi
+}
+trap restore_analysis_options EXIT HUP INT TERM
+
 emit_current() {
   local output_file="${ASYNC_SAFETY_DIAGNOSTICS_FILE:-}"
-  local saved_options=""
 
   if [[ -z "$output_file" ]]; then
     output_file="$(mktemp)"
-    saved_options="$(mktemp)"
-    cp "$MOBILE_DIR/analysis_options.yaml" "$saved_options"
 
-    cleanup_async_analysis() {
-      cp "$saved_options" "$MOBILE_DIR/analysis_options.yaml"
-      rm -f "$saved_options" "$output_file"
-    }
-    trap cleanup_async_analysis EXIT HUP INT TERM
+    local stray
+    stray="$(ls "$OPTIONS_BACKUP_PREFIX."* 2>/dev/null || true)"
+    if [[ -n "$stray" ]]; then
+      echo "FAIL [$RATCHET_LABEL]: a rewrite of analysis_options.yaml is already" >&2
+      echo "  in flight, or a previous run was killed before restoring it:" >&2
+      echo "$stray" | sed 's/^/    /' >&2
+      echo "  Refusing to continue: taking the already-rewritten file as this" >&2
+      echo "  run's \"original\" is how both suppressions get deleted for good." >&2
+      echo "  -> Wait for the other run, or if none is in progress restore from" >&2
+      echo "     the backup above and delete it:" >&2
+      echo "       cp <backup> '$OPTIONS_FILE' && rm <backup>" >&2
+      return 1
+    fi
+    cp "$OPTIONS_FILE" "$OPTIONS_BACKUP"
 
     awk '
       !/^[[:space:]]+(discarded_futures|unawaited_futures):[[:space:]]+ignore[[:space:]]*$/
-    ' "$saved_options" > "$MOBILE_DIR/analysis_options.yaml"
+    ' "$OPTIONS_BACKUP" > "$OPTIONS_FILE"
 
     # The awk above matches one exact spelling. Reformat either line -- add a
     # trailing comment, requote it, reindent it, or switch it to `false` under
@@ -61,8 +87,7 @@ emit_current() {
     suppression_re="^[[:space:]]*-?[[:space:]]*[\"']?"
     suppression_re+="(discarded_futures|unawaited_futures)[\"']?[[:space:]]*:"
     suppression_re+="[[:space:]]*[\"']?(ignore|false)[\"']?[[:space:]]*(#.*)?$"
-    still_suppressed="$(grep -nE "$suppression_re" \
-      "$MOBILE_DIR/analysis_options.yaml" || true)"
+    still_suppressed="$(grep -nE "$suppression_re" "$OPTIONS_FILE" || true)"
     if [[ -n "$still_suppressed" ]]; then
       echo "FAIL [$RATCHET_LABEL]: analysis_options.yaml still suppresses a" >&2
       echo "  tracked rule after the temporary rewrite, so the analyzer would" >&2
@@ -80,10 +105,7 @@ emit_current() {
       dart analyze --format machine lib test integration_test tools
     ) > "$output_file" 2>&1 || analyzer_status=$?
 
-    cp "$saved_options" "$MOBILE_DIR/analysis_options.yaml"
-    rm -f "$saved_options"
-    saved_options=""
-    trap - EXIT HUP INT TERM
+    restore_analysis_options
 
     # Dart analyze uses 2 for warnings and 3 for errors. Exit 1 is an analyzer
     # invocation/infrastructure failure, not a clean result.
