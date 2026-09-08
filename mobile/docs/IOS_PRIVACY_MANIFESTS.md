@@ -34,9 +34,25 @@ macOS is not listed, which is why `mobile/macos` carries no obligation here.
 | `divine_quick_actions` | `mobile/packages/divine_quick_actions/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
 | `LibProofMode` (vendored) | `mobile/ios/LocalPods/LibProofMode/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
 
-`LibProofMode` is Guardian Project code vendored under `ios/LocalPods/`. No
-upstream release will ship a manifest into Divine's archive, so we own its
-declaration for as long as it is vendored.
+`LibProofMode` is Guardian Project code vendored under `ios/LocalPods/`. Divine
+owns the declaration in its archive for as long as it consumes the library as a
+local path pod, even if the declaration is later accepted upstream.
+
+### LibProofMode vendor delta
+
+The vendored source is based on Guardian Project's upstream `0.1.11` commit
+`1690d3a5237426ef6bd2d78dc5476325ad7a6e68`. Keep these Divine-local changes
+when refreshing it until each change is present upstream:
+
+- `Classes/MediaItem.swift` imports `UniformTypeIdentifiers` and qualifies the
+  movie and audio types as `UTType.movie` and `UTType.audio` for current Xcode.
+- `Resources/PrivacyInfo.xcprivacy` declares the required file-timestamp API,
+  and `LibProofMode.podspec` bundles that manifest.
+
+The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
+sets `showDeviceIds: false`, so compiling out `AdSupport` and
+`ASIdentifierManager` keeps the archive aligned with the behavior and privacy
+declaration described below.
 
 ## What is currently declared, and why
 
@@ -112,8 +128,8 @@ bash scripts/check_privacy_manifest_coverage.sh --archive build/ios/iphoneos/Run
 ```
 
 It also fails on an invalid reason code for a category, an unknown category
-string, and a manifest that exists but is not bundled by its podspec — a
-manifest nothing ships is a manifest Apple never reads.
+string, and a manifest that exists but is not bundled by the selected podspec
+or subspec — a manifest nothing ships is a manifest Apple never reads.
 
 Behaviour is pinned by
 `mobile/test/tools/privacy_manifest_coverage_detector_test.dart`.
