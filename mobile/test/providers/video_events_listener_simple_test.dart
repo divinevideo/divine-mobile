@@ -1,6 +1,4 @@
-// ABOUTME: Simplified tests for VideoEvents provider listener attachment fix
-// ABOUTME: Verifies that listener attachment works correctly after the
-// ABOUTME: idempotent fix
+// ABOUTME: Tests video delivery to initial and late VideoEvents subscribers.
 
 import 'dart:async';
 
@@ -17,6 +15,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
@@ -36,7 +35,7 @@ void main() {
     registerFallbackValue(<VideoEvent>[]);
   });
 
-  group('VideoEvents Provider - Listener Attachment Fix', () {
+  group('VideoEvents Provider - Video Delivery', () {
     late _MockVideoEventService mockVideoEventService;
     late _MockNostrClient mockNostrService;
     late SharedPreferences sharedPreferences;
@@ -51,6 +50,14 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
       when(() => mockVideoEventService.isSubscribed(any())).thenReturn(false);
+      when(
+        () => mockVideoEventService.addVideoUpdateListener(any()),
+      ).thenReturn(() {});
+      when(
+        () => mockVideoEventService.subscribeToDiscovery(
+          nip50Sort: NIP50SortMode.hot,
+        ),
+      ).thenAnswer((_) async {});
       when(() => mockVideoEventService.filterVideoList(any())).thenAnswer(
         (invocation) =>
             invocation.positionalArguments.first as List<VideoEvent>,
@@ -59,80 +66,6 @@ void main() {
       // ignore: invalid_use_of_protected_member
       when(() => mockVideoEventService.hasListeners).thenReturn(false);
     });
-
-    test('should call addListener on VideoEventService', () async {
-      // Arrange
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          pageContextProvider.overrideWith((ref) {
-            return Stream.value(
-              const RouteContext(type: RouteType.explore, videoIndex: 0),
-            );
-          }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
-        ],
-      );
-
-      // Act - Subscribe to provider
-      final listener = container.listen(videoEventsProvider, (prev, next) {});
-
-      // Allow async processing
-      await pumpEventQueue();
-
-      // Assert - Verify listener was attached (remove-then-add pattern)
-      verify(
-        () => mockVideoEventService.removeListener(any()),
-      ).called(greaterThanOrEqualTo(1));
-      verify(
-        () => mockVideoEventService.addListener(any()),
-      ).called(greaterThanOrEqualTo(1));
-
-      listener.close();
-      container.dispose();
-      // TODO(any): Fix and enable this test
-    }, skip: true);
-
-    test('should subscribe to discovery videos', () async {
-      // Arrange
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          pageContextProvider.overrideWith((ref) {
-            return Stream.value(
-              const RouteContext(type: RouteType.explore, videoIndex: 0),
-            );
-          }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
-        ],
-      );
-
-      // Act
-      final listener = container.listen(videoEventsProvider, (prev, next) {});
-
-      await pumpEventQueue();
-
-      // Assert - Use any() matchers for optional arguments
-      // May be called more than once due to async provider rebuilds
-      verify(
-        () => mockVideoEventService.subscribeToDiscovery(
-          limit: any(named: 'limit'),
-          sortBy: any(named: 'sortBy'),
-          nip50Sort: any(named: 'nip50Sort'),
-          force: any(named: 'force'),
-        ),
-      ).called(greaterThanOrEqualTo(1));
-
-      listener.close();
-      container.dispose();
-      // TODO(any): Fix and enable this test
-    }, skip: true);
 
     test('should emit existing videos from service', () async {
       // Arrange - Service has videos
@@ -176,109 +109,27 @@ void main() {
       );
 
       // Act
+      addTearDown(container.dispose);
       final states = <AsyncValue<List<VideoEvent>>>[];
       final listener = container.listen(videoEventsProvider, (prev, next) {
         states.add(next);
       }, fireImmediately: true);
+      addTearDown(listener.close);
 
       // Pump event queue multiple times for async operations
       await pumpEventQueue();
       await pumpEventQueue();
       await pumpEventQueue();
 
-      // Assert - Should emit videos
-      // (BehaviorSubject replays to late subscribers)
-      // The provider emits when listener notifies, so check that
-      // discoveryVideos was accessed
-      verify(
-        () => mockVideoEventService.discoveryVideos,
-      ).called(greaterThan(0));
-
-      listener.close();
-      container.dispose();
+      expect(
+        states.whereType<AsyncData<List<VideoEvent>>>().map(
+          (state) => state.value,
+        ),
+        contains(testVideos),
+      );
     });
 
-    test('should cleanup listener on dispose', () async {
-      // Arrange
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          pageContextProvider.overrideWith((ref) {
-            return Stream.value(
-              const RouteContext(type: RouteType.explore, videoIndex: 0),
-            );
-          }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
-        ],
-      );
-
-      final listener = container.listen(videoEventsProvider, (prev, next) {});
-
-      await pumpEventQueue();
-
-      // Act - Dispose
-      listener.close();
-      container.dispose();
-
-      // Assert - Should remove listener on cleanup
-      verify(
-        () => mockVideoEventService.removeListener(any()),
-      ).called(greaterThanOrEqualTo(1));
-      // TODO(any): Fix and enable this test
-    }, skip: true);
-
-    test('idempotent listener attachment - remove then add', () async {
-      // Arrange
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          pageContextProvider.overrideWith((ref) {
-            return Stream.value(
-              const RouteContext(type: RouteType.explore, videoIndex: 0),
-            );
-          }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
-        ],
-      );
-
-      // Act
-      final listener = container.listen(videoEventsProvider, (prev, next) {});
-
-      await pumpEventQueue();
-
-      // Assert - Should use remove-then-add pattern for idempotency
-      final allCalls = verify(
-        () => mockVideoEventService.removeListener(captureAny()),
-      ).captured;
-      final allAdds = verify(
-        () => mockVideoEventService.addListener(captureAny()),
-      ).captured;
-
-      expect(allCalls.isNotEmpty, isTrue, reason: 'Should call removeListener');
-      expect(allAdds.isNotEmpty, isTrue, reason: 'Should call addListener');
-
-      listener.close();
-      container.dispose();
-      // TODO(any): Fix and enable this test
-    }, skip: true);
-
-    test('BehaviorSubject replays last value to late subscribers', () async {
-      // This test verifies the core fix: using BehaviorSubject
-      // instead of StreamController.broadcast() so late subscribers
-      // receive cached data.
-      //
-      // The bug: PopularVideosTab subscribes AFTER videoEventsProvider
-      // emits, missing the data because broadcast streams don't replay.
-      //
-      // The fix: BehaviorSubject caches last value and replays to late
-      // subscribers.
-
+    test('late provider subscribers receive existing videos', () async {
       // Arrange - Service has videos ready
       final now = DateTime.now();
       final testVideos = <VideoEvent>[
@@ -311,13 +162,17 @@ void main() {
       );
 
       // Act - First subscriber triggers data emission
+      addTearDown(container.dispose);
       final firstListener = container.listen(
         videoEventsProvider,
         (prev, next) {},
       );
+      addTearDown(firstListener.close);
 
       await pumpEventQueue();
       await pumpEventQueue();
+
+      expect(container.read(videoEventsProvider).value, testVideos);
 
       // Late subscriber - like PopularVideosTab subscribing after
       // data emits
@@ -325,21 +180,12 @@ void main() {
       final lateListener = container.listen(videoEventsProvider, (prev, next) {
         lateStates.add(next);
       }, fireImmediately: true);
+      addTearDown(lateListener.close);
 
       await pumpEventQueue();
       await pumpEventQueue();
 
-      // Assert - Late subscriber should have received data via
-      // BehaviorSubject replay.
-      // This would FAIL with broadcast StreamController
-      // (the bug we fixed)
-      verify(
-        () => mockVideoEventService.discoveryVideos,
-      ).called(greaterThan(0));
-
-      firstListener.close();
-      lateListener.close();
-      container.dispose();
+      expect(lateStates.first.value, testVideos);
     });
   });
 }

@@ -73,7 +73,6 @@ test/nostr/transport/nostr_fixture_pump_test.dart	3
 test/notifications/badge_converges_after_tap_read_back_test.dart	8
 test/notifications/bloc/notification_feed_bloc_test.dart	23
 test/observability/divine_bloc_observer_test.dart	8
-test/performance/camera_initialization_benchmark_test.dart	6
 test/providers/account_deletion_recovery_providers_test.dart	4
 test/providers/account_enforcement_providers_test.dart	2
 test/providers/auth_providers_test.dart	3
