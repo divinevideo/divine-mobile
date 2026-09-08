@@ -6,9 +6,34 @@ End-to-end UI tests written with **Maestro**, driving a real build against
 They exist for fast, high-signal regression detection on critical user flows.
 They are not a replacement for unit or widget tests.
 
-## Pull-request smoke versus regression
+## Supported entry points and execution tiers
 
-The automatic PR gate is intentionally limited to three deterministic signals:
+[`tiers.txt`](tiers.txt) is the source of truth for supported Maestro entry
+points. An entry point is either a test, flow, or suite nothing else invokes,
+or a file an automation runner invokes directly. Assertions, utilities, and
+nested journey files inherit the tier of the entry point that reaches them.
+
+| Tier | Runs | Requirements and cost |
+|---|---|---|
+| `pr` | Codemagic's shared iOS/Android smoke command | iOS uses `mac_mini_m2` with a 25-minute cap; manually dispatched Android uses `linux_x2` with a 60-minute cap; promotion target is p95 below 15 minutes over at least 30 comparable iOS runs |
+| `manual-regression` | Operator invokes `smoke.yaml` or `fullRegression.yaml` | Simulator and staging fixture variables; runtime is not yet measured |
+| `manual-hardware` | Operator invokes one recorder flow | Camera-capable Android emulator or physical device with an English system UI; runtime is not yet measured |
+| `scheduled` | No entry points currently | Reserved for a journey connected to a real scheduled runner |
+
+The registry records the runner, prerequisites, and reason for every supported
+entry point. `maestro_pr_smoke_contract_test.dart` checks that the registry
+covers the live flow graph, paths resolve with exact case, PR rows match the
+Codemagic command in order, and manual rows cannot drift into CI. Add or remove
+the registry row in the same change that adds, nests, retires, or automates an
+entry point.
+
+There is currently no scheduled Maestro device regression. The daily workflow
+described in `docs/AUTOMATED_QA.md` runs deterministic headless service tests;
+it does not run these Maestro suites.
+
+## Pull-request smoke
+
+The intended automatic PR lane is limited to three deterministic signals:
 
 1. `prLaunchReady` proves a clean install reaches interactive onboarding.
 2. `prAuthenticateHome` creates a throwaway local identity and proves the
@@ -541,7 +566,8 @@ e2e/maestro
 ├── tests/     single scenarios
 ├── asserts/   reusable screen assertions
 ├── utils/     navigation helpers
-└── scripts/   runners and checks
+├── scripts/   runners and checks
+└── tiers.txt  supported entry points and execution policy
 ```
 
 `scripts/check_refs.sh` verifies every `runFlow:` path resolves,
