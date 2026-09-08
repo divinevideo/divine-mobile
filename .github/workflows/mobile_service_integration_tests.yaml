@@ -36,8 +36,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      focused: ${{ steps.scope.outputs.focused || steps.mobile-scope.outputs.service || steps.full-scope.outputs.focused }}
-      app: ${{ steps.scope.outputs.app || steps.mobile-scope.outputs.service || steps.full-scope.outputs.app }}
+      focused: ${{ steps.resolved.outputs.focused }}
+      app: ${{ steps.resolved.outputs.app }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -66,6 +66,26 @@ jobs:
         run: |
           echo "focused=true" >> "$GITHUB_OUTPUT"
           echo "app=true" >> "$GITHUB_OUTPUT"
+      # The three steps above are mutually exclusive and cover only the four
+      # events in `on:`. With no fallback, an event none of them matches
+      # leaves every lookup empty, the job SUCCEEDS, service-tests skips, and
+      # the workflow reports green having run nothing. The same happens if a
+      # step id is renamed on one side of the `||` chain, which degrades to
+      # '' rather than erroring. Resolving once here makes both fail loudly,
+      # the way mobile_ci.yaml's aggregator already does.
+      - name: Resolve the service suite scope
+        id: resolved
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FOCUSED: ${{ steps.scope.outputs.focused || steps.mobile-scope.outputs.service || steps.full-scope.outputs.focused }}
+          APP: ${{ steps.scope.outputs.app || steps.mobile-scope.outputs.service || steps.full-scope.outputs.app }}
+        run: |
+          if [ -z "${FOCUSED}" ] || [ -z "${APP}" ]; then
+            echo "Could not determine the service suite scope for ${EVENT_NAME}."
+            exit 1
+          fi
+          echo "focused=${FOCUSED}" >> "$GITHUB_OUTPUT"
+          echo "app=${APP}" >> "$GITHUB_OUTPUT"
 
   service-tests:
     name: Integration Tests (services)
