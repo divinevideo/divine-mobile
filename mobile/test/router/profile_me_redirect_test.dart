@@ -2,16 +2,12 @@
 // ABOUTME: Ensures the current user's npub and requested view are preserved.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 
 import '../helpers/test_pubkeys.dart';
 
 void main() {
   group('Profile /me/ redirect', () {
-    final testUserNpub = NostrKeyUtils.encodePubKey(syntheticTestPubkey);
-
     test('resolves the feed index to the current user npub', () {
       expect(
         ProfileScreenRouter.meProfileRedirectPath(
@@ -19,7 +15,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 0,
         ),
-        ProfileScreenRouter.pathForIndex(testUserNpub, 0),
+        '/profile/$syntheticTestNpub/0',
       );
     });
 
@@ -30,7 +26,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 1,
         ),
-        ProfileScreenRouter.pathForIndex(testUserNpub, 1),
+        '/profile/$syntheticTestNpub/1',
       );
     });
 
@@ -41,7 +37,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: null,
         ),
-        ProfileScreenRouter.pathForNpub(testUserNpub),
+        '/profile/$syntheticTestNpub',
       );
     });
 
@@ -52,7 +48,7 @@ void main() {
           currentPublicKeyHex: null,
           videoIndex: 0,
         ),
-        VideoFeedPage.pathForIndex(0),
+        '/home/0',
       );
     });
   });
