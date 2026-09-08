@@ -356,7 +356,7 @@ stack_failure_report() {
         [[ -n "$service" ]] || continue
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
         if [[ "$service" == "funnelcake-migrate" ]] &&
-            grep -qF "Dirty database version" <<<"$service_logs"; then
+            grep -qiE 'dirty database version|migration .* is dirty|schema_migrations.*dirty' <<<"$service_logs"; then
             dirty_migration=1
         fi
         {
@@ -374,7 +374,8 @@ stack_failure_report() {
     if [[ "$dirty_migration" -eq 1 ]]; then
         {
             echo "The Funnelcake migration ledger is dirty, so relay and API cannot start."
-            echo "Reset the disposable local database and retry:"
+            echo "Reset and retry only if all local stack data is disposable."
+            echo "This deletes all local stack data, not just Funnelcake's database:"
             echo ""
             echo "    mise run local_reset"
             echo ""

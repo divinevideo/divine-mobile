@@ -542,6 +542,26 @@ assert_status 0 "$last_status" "a failure report should remain diagnostic"
 assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
 assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
 
+# Current Rust migrator errors for native and bootstrapped legacy ledgers.
+for migration_error in \
+    'migration 259 is dirty; refusing to apply more migrations' \
+    'legacy schema_migrations latest row is dirty at version 70' \
+    'schema_migrations latest row is dirty (version=70)' \
+    'funnelcake_schema_migrations has 1 dirty latest migration state(s)'; do
+    echo "$migration_error" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_status 0 "$last_status" "a Rust migration failure report should remain diagnostic"
+    assert_stderr_contains 'migration ledger is dirty' "a Rust dirty ledger should be classified"
+    assert_stderr_contains 'mise run local_reset' "a Rust dirty ledger should name its recovery"
+    assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
+done
+
+echo 'migration failed: permission denied' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+echo 'migration 259 is dirty; refusing to apply more migrations' >"${FIXTURES}/logs_funnelcake-api.txt"
+run_failure_report
+assert_stderr_lacks 'mise run local_reset' "an unrelated migration error should not recommend deleting data"
+
 # --- up.sh retries transient startup failures --------------------------------
 
 reset_fixtures
