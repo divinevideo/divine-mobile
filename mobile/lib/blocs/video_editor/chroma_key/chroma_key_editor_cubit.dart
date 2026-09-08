@@ -73,22 +73,22 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   /// measurement never overwrites them.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
-    emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.detecting));
+    // Both callers discard this future — the constructor with `unawaited`, the
+    // button with a tear-off assigned to a `VoidCallback` — so an `emit` that
+    // threw here would escape as an unhandled zone error instead of surfacing
+    // as a failure state.
+    if (!emitIfOpen(
+      state.copyWith(detectionStatus: ChromaKeyDetectionStatus.detecting),
+    )) {
+      return;
+    }
 
+    // Only the measurement is wrapped. A wider `try` would catch the emits
+    // below as well and file a post-close `emit` throw as a detection failure,
+    // which is both wrong and unfalsifiable from a test.
+    final ChromaKeyDetection detection;
     try {
-      final detection = await _detect(_video);
-      emitIfOpen(
-        state.copyWith(
-          chromaKey: ClipChromaKey(
-            key: state.chromaKey.key.copyWith(
-              color: detection.color,
-              similarity: detection.similarity,
-            ),
-            backgroundVideoPath: state.chromaKey.backgroundVideoPath,
-          ),
-          detectionStatus: ChromaKeyDetectionStatus.idle,
-        ),
-      );
+      detection = await _detect(_video);
     } on ChromaKeyDetectionException catch (error, stackTrace) {
       // Expected: plenty of footage has no screen reaching the frame border.
       // The UI says so and the user sets the key by hand — not a crash report.
@@ -101,6 +101,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       emitIfOpen(
         state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
       );
+      return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
@@ -117,7 +118,21 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       emitIfOpen(
         state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
       );
+      return;
     }
+
+    emitIfOpen(
+      state.copyWith(
+        chromaKey: ClipChromaKey(
+          key: state.chromaKey.key.copyWith(
+            color: detection.color,
+            similarity: detection.similarity,
+          ),
+          backgroundVideoPath: state.chromaKey.backgroundVideoPath,
+        ),
+        detectionStatus: ChromaKeyDetectionStatus.idle,
+      ),
+    );
   }
 
   /// Clears a failed measurement so the UI stops reporting it.
