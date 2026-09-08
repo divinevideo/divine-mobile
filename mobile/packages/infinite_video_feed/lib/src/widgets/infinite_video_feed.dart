@@ -1868,7 +1868,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   bool _isSquareVideo(DivineVideoPlayerController? controller) {
     if (controller == null) return false;
     final state = controller.state;
-    return state.aspectRatio == 1.0;
+    // Media3 pixel ratios arrive rounded to float32 precision.
+    return (state.aspectRatio - 1.0).abs() < 1e-6;
   }
 
   // ─── Build ──────────────────────────────────────────────────────────────

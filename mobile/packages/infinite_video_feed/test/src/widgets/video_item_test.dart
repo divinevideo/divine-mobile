@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/widgets.dart';
@@ -111,39 +112,41 @@ void main() {
       expect(fittedBox.fit, equals(BoxFit.cover));
     });
 
-    testWidgets('renders anamorphic square video without stretching', (
-      tester,
-    ) async {
-      final controller = FakeController();
-      addTearDown(controller.dispose);
+    testWidgets(
+      'renders float-rounded anamorphic square video without cropping',
+      (tester) async {
+        final controller = FakeController();
+        addTearDown(controller.dispose);
 
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: VideoItemWidget(controller: controller),
-        ),
-      );
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: VideoItemWidget(controller: controller),
+          ),
+        );
 
-      controller.pushState(
-        const DivineVideoPlayerState(
-          videoWidth: 1280,
-          videoHeight: 720,
-          pixelWidthHeightRatio: 9 / 16,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
+        controller.pushState(
+          DivineVideoPlayerState(
+            videoWidth: 720,
+            videoHeight: 480,
+            // Media3 widens its float pixel ratio to a platform-channel double.
+            pixelWidthHeightRatio: Float32List.fromList([2 / 3]).single,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
 
-      final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
-      final fittedSize = tester.widget<SizedBox>(
-        find.descendant(
-          of: find.byType(FittedBox),
-          matching: find.byType(SizedBox),
-        ),
-      );
-      expect(fittedBox.fit, equals(BoxFit.contain));
-      expect(fittedSize.width! / fittedSize.height!, equals(1.0));
-    });
+        final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
+        final fittedSize = tester.widget<SizedBox>(
+          find.descendant(
+            of: find.byType(FittedBox),
+            matching: find.byType(SizedBox),
+          ),
+        );
+        expect(fittedBox.fit, equals(BoxFit.contain));
+        expect(fittedSize.width! / fittedSize.height!, closeTo(1.0, 1e-6));
+      },
+    );
 
     testWidgets('uses BoxFit.contain when shouldPortraitExpand is false', (
       tester,

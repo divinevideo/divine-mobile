@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
@@ -415,9 +416,11 @@ void main() {
                       eventChannelName,
                       methodCodec.encodeSuccessEnvelope(<Object?, Object?>{
                         'status': 'ready',
-                        'videoWidth': 1280,
-                        'videoHeight': 720,
-                        'pixelWidthHeightRatio': 9 / 16,
+                        'videoWidth': 720,
+                        'videoHeight': 480,
+                        'pixelWidthHeightRatio': Float32List.fromList([
+                          2 / 3,
+                        ]).single,
                         'isFirstFrameRendered': false,
                       }),
                       (_) {},
