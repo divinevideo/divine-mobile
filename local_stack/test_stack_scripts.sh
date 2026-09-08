@@ -561,6 +561,40 @@ for migration_error in \
     assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
 done
 
+# --- A dirty ledger does not claim healthy consumers are down ---------------
+#
+# The one-shot migrate container can fail on a re-run of a stack whose relay
+# and API are already up. The status table printed just above says they are
+# running, so the hint must not contradict it.
+
+reset_fixtures
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|running|0
+funnelcake-api|running|0
+PS
+echo 'migration 259 is dirty; refusing to apply more migrations' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+run_failure_report
+
+assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should still be classified"
+assert_stderr_lacks 'Still down, waiting on it' "running consumers must not be reported as blocked"
+
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|running|0
+PS
+run_failure_report
+
+assert_stderr_contains 'Still down, waiting on it: funnelcake-relay.' "only the consumer that is actually down should be named"
+
+# Restore the all-down fixture the remaining ledger cases assume.
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|created|0
+PS
+
 # --- Reassuring ledger log lines must not recommend deleting data -----------
 #
 # crates/migrations logs nothing today, so its container carries only the final

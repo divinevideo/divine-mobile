@@ -352,8 +352,18 @@ stack_failure_report() {
     stack_service_status "$compose_file" "$@"
 
     local service state service_logs dirty_migration=0 ledger_mismatch=0
+    local blocked=""
     while IFS='|' read -r service state; do
         [[ -n "$service" ]] || continue
+        # Which consumers are actually still down. They depend on
+        # funnelcake-migrate completing, but on a re-run they can already be up
+        # while the one-shot migrate container fails, and the status table
+        # printed above would contradict a blanket "they cannot start".
+        case "$service" in
+            funnelcake-relay | funnelcake-api)
+                blocked="${blocked}${blocked:+, }${service}"
+                ;;
+        esac
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
         if [[ "$service" == "funnelcake-migrate" ]]; then
             # Anchored to the three phrasings that actually report a dirty
@@ -382,7 +392,10 @@ stack_failure_report() {
 
     if [[ "$dirty_migration" -eq 1 ]]; then
         {
-            echo "The Funnelcake migration ledger is dirty, so relay and API cannot start."
+            echo "The Funnelcake migration ledger is dirty."
+            if [[ -n "$blocked" ]]; then
+                echo "Still down, waiting on it: ${blocked}."
+            fi
             echo ""
             echo "The dirt is confined to Funnelcake's ClickHouse volume, so discard"
             echo "just that one and let the migrations re-run:"
@@ -402,7 +415,10 @@ stack_failure_report() {
     if [[ "$ledger_mismatch" -eq 1 ]]; then
         {
             echo "The Funnelcake migration ledger and the migrate image disagree, so the"
-            echo "migrator refuses to continue and relay and API stay blocked on it."
+            echo "migrator refuses to continue."
+            if [[ -n "$blocked" ]]; then
+                echo "Still down, waiting on it: ${blocked}."
+            fi
             echo ""
             echo "This is what mixing image sources looks like: a ledger written by"
             echo "locally built images and then read by the default GHCR ones, or the"
