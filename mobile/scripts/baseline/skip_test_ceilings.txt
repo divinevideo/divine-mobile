@@ -34,7 +34,6 @@ test/router/profile_me_redirect_integration_test.dart	1 # rewrite: same authStat
 test/router/profile_me_redirect_test.dart	1 # rewrite: _MockAuthService lacks authStateStream goRouter reads (#4836)
 test/screens/explore_screen_pure_test.dart	1 # delete: tdd stub file; 'Popular Now' tab no longer exists (#4836)
 test/screens/explore_screen_router_test.dart	2 # delete: ExploreScreenRouter is unrouted dead poc code (#4836)
-test/screens/explore_screen_video_display_test.dart	1 # rewrite: tabs now l10n featured/new, not 'Popular Now' (#4836)
 test/screens/feature_flag_screen_test.dart	2 # rewrite: screen hides internal flags, renders 7 of 18 (#4836)
 test/screens/feed_screen_scroll_test.dart	5 # delete: tests its own local helper, no lib/ code touched (#4836)
 test/screens/hashtag_feed_embedded_navigation_test.dart	1 # rewrite: mock lacks filterVideoList, returns null to screen (#4836)
