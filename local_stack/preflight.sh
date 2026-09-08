@@ -356,7 +356,12 @@ stack_failure_report() {
         [[ -n "$service" ]] || continue
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
         if [[ "$service" == "funnelcake-migrate" ]]; then
-            if grep -qiE 'dirty database version|migration .* is dirty|schema_migrations.*dirty' <<<"$service_logs"; then
+            # Anchored to the three phrasings that actually report a dirty
+            # ledger: golang-migrate on pre-2026-05 images, then
+            # crates/migrations/src/lib.rs:391 and :740. Loose alternatives
+            # such as `schema_migrations.*dirty` also match a reassuring
+            # "0 dirty rows", which would recommend deleting the volume.
+            if grep -qiE 'dirty database version [0-9]|migration [^ ]+ is dirty; refusing|schema_migrations latest row is dirty at version [0-9]' <<<"$service_logs"; then
                 dirty_migration=1
             fi
             if grep -qiE 'is missing from the migration directory|checksum changed for applied migration' <<<"$service_logs"; then

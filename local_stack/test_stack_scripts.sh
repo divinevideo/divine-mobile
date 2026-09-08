@@ -561,6 +561,23 @@ for migration_error in \
     assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
 done
 
+# --- Reassuring ledger log lines must not recommend deleting data -----------
+#
+# crates/migrations logs nothing today, so its container carries only the final
+# summary or the error. One upstream status line changes that, and an
+# unanchored `schema_migrations.*dirty` reads every one of these as a wedge.
+for benign_line in \
+    'checked funnelcake_schema_migrations: 0 dirty rows' \
+    'schema_migrations table has no dirty entries' \
+    'no dirty database version found' \
+    'migrations complete; schema_migrations dirty=0'; do
+    echo "$benign_line" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_stderr_lacks 'migration ledger is dirty' "a reassuring ledger line is not a dirty ledger: ${benign_line}"
+    assert_stderr_lacks 'docker volume rm' "a reassuring ledger line must not recommend deleting data: ${benign_line}"
+done
+
 # --- A ledger/image mismatch is not a dirty ledger --------------------------
 #
 # compute_pending_with_options bails four ways; only two of them say "dirty".
