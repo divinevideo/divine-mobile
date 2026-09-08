@@ -32,7 +32,7 @@ The workspace is organized into around 75 packages, grouped roughly as:
 
 How it fits the Divine platform: the app speaks to Nostr relays for the social graph and events, stores and serves media through Blossom, supports Keycast-style remote signers over NIP-46, and verifies identity against `verifier.divine.video`. Persistence is local via Drift (SQLite, at-rest encrypted) and Hive. Firebase provides Crashlytics, push messaging, performance monitoring, and analytics. Code-push updates use Shorebird.
 
-Generated code (Riverpod, Freezed, JSON serialization, Drift, Hive, mocks) is produced by `build_runner` and committed; regenerate after touching any generator input.
+Generated code (Riverpod, JSON serialization, Drift, Hive, mocks) is produced by `build_runner` and committed; regenerate after touching any generator input.
 
 ## Getting started
 
@@ -69,7 +69,7 @@ flutter analyze
 flutter test
 ```
 
-If you touch codegen-backed sources (Riverpod, Freezed, JSON serialization, Drift, Hive, or mocks):
+If you touch codegen-backed sources (Riverpod, JSON serialization, Drift, Hive, or mocks):
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs

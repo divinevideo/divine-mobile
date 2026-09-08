@@ -266,7 +266,7 @@ Then:
   rather than patch. See
   [`agent_workflow.md`](agent_workflow.md#5-failing-tests-are-never-acceptable-and-always-your-fault)
   and [when the failure is not yours](agent_workflow.md#when-the-failure-is-not-yours).
-- [ ] Generated files (Riverpod, Freezed, JSON, Mockito, Drift) are
+- [ ] Generated files (Riverpod, JSON, Mockito, Drift) are
   regenerated and staged if you touched inputs.
 - [ ] `pubspec.lock` churn from a different SDK/pub-resolver run is
   **discarded**, not committed — only commit lockfile changes that come

@@ -2,7 +2,7 @@
 # Git pre-commit hook component
 # Runs build_runner if any staged Dart files contain code generation annotations
 #
-# Annotations: @freezed, @riverpod, @Riverpod, @JsonSerializable,
+# Annotations: @riverpod, @Riverpod, @JsonSerializable,
 #   @GenerateMocks, @HiveType, @DriftDatabase, @DriftAccessor
 
 set -e
@@ -15,7 +15,7 @@ FIRST_CMD=$(echo "$COMMAND" | head -1 | sed 's/\s*&&.*//' | sed 's/\s*|.*//' | s
 echo "$FIRST_CMD" | grep -qE '^\s*git\s+commit\b' || exit 0
 
 # Get staged Dart files (excluding generated files)
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.dart$' | grep -v '\.g\.dart$' | grep -v '\.freezed\.dart$' || true)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.dart$' | grep -v '\.g\.dart$' || true)
 
 if [ -z "$STAGED_FILES" ]; then
   exit 0
@@ -29,7 +29,7 @@ for FILE in $STAGED_FILES; do
   [ -f "$FILE" ] || continue
 
   # Check if file contains code generation annotations
-  if grep -qE '@(freezed|riverpod|Riverpod|JsonSerializable|GenerateMocks|HiveType|DriftDatabase|DriftAccessor)' "$FILE"; then
+  if grep -qE '@(riverpod|Riverpod|JsonSerializable|GenerateMocks|HiveType|DriftDatabase|DriftAccessor)' "$FILE"; then
     # Find the package root
     PACKAGE_DIR="$FILE"
     while [ "$PACKAGE_DIR" != "." ] && [ "$PACKAGE_DIR" != "/" ]; do
@@ -60,9 +60,7 @@ if [ -n "$PACKAGE_ROOTS" ]; then
   # Stage any regenerated files
   for FILE in $STAGED_FILES; do
     GENERATED="${FILE%.dart}.g.dart"
-    FREEZED="${FILE%.dart}.freezed.dart"
     [ -f "$GENERATED" ] && git add "$GENERATED"
-    [ -f "$FREEZED" ] && git add "$FREEZED"
   done
 fi
 

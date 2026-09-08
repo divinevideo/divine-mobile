@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Long-lived build_runner daemon. Run once in a separate terminal and leave
-# it running. Subsequent edits to riverpod / freezed / json / drift inputs
+# it running. Subsequent edits to Riverpod / JSON / Drift inputs
 # regenerate in seconds because the analyzer stays warm. Build scripts
 # detect that codegen is fresh and skip the full re-run.
 

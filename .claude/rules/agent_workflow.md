@@ -320,7 +320,7 @@ wrong. The real explanations, in order of frequency:
 
 1. The change broke the behavior the test asserts (most common).
 2. The change broke a test setup invariant — mocks, fixtures, or
-   generated files (Riverpod, Freezed, JSON, Mockito, Drift) out of
+   generated files (Riverpod, JSON, Mockito, Drift) out of
    sync with their inputs.
 3. The change reveals a real race or order-dependence the test
    correctly catches.
