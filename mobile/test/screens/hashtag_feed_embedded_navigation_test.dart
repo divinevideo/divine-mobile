@@ -1,5 +1,5 @@
-// ABOUTME: Tests that embedded HashtagFeedScreen uses callback instead of Navigator.push
-// ABOUTME: Ensures videos play inline instead of opening as modal overlay
+// ABOUTME: Verifies embedded hashtag feeds delegate video selection to their host.
+// ABOUTME: Keeps embedded navigation separate from the full-screen route path.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,203 +11,93 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+import '../helpers/test_provider_overrides.dart';
 
 class _MockHashtagService extends Mock implements HashtagService {}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
 
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+VideoEvent _video(String id) {
+  const pubkey =
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  return VideoEvent(
+    id: id,
+    pubkey: pubkey,
+    content: 'Test video',
+    createdAt: 1,
+    timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+    videoUrl: 'https://example.com/$id.mp4',
+    thumbnailUrl: 'https://example.com/$id.jpg',
+  );
+}
+
 void main() {
-  group('HashtagFeedScreen embedded navigation', () {
-    late _MockHashtagService mockHashtagService;
-    late _MockVideoEventService mockVideoEventService;
+  setUpAll(() {
+    registerFallbackValue(<VideoEvent>[]);
+  });
 
-    setUp(() {
-      mockHashtagService = _MockHashtagService();
-      mockVideoEventService = _MockVideoEventService();
+  testWidgets('embedded feed delegates the selected video to its host', (
+    tester,
+  ) async {
+    final hashtagService = _MockHashtagService();
+    final videoEventService = _MockVideoEventService();
+    final videosRepository = _MockVideosRepository();
+    final testVideos = [_video('video-1'), _video('video-2')];
 
-      when(() => mockVideoEventService.isLoading).thenReturn(false);
-      when(() => mockHashtagService.getVideosByHashtags(any())).thenReturn([]);
-    });
-
-    testWidgets(
-      'calls onVideoTap callback when embedded and video tapped in grid',
-      (tester) async {
-        final now = DateTime.now();
-        final testVideos = [
-          VideoEvent(
-            id: 'video1',
-            pubkey: 'test',
-            content: 'Test 1',
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-          ),
-          VideoEvent(
-            id: 'video2',
-            pubkey: 'test',
-            content: 'Test 2',
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-          ),
-        ];
-
-        when(
-          () => mockHashtagService.getVideosByHashtags(['funny']),
-        ).thenReturn(testVideos);
-
-        List<VideoEvent>? callbackVideos;
-        int? callbackIndex;
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              hashtagServiceProvider.overrideWithValue(mockHashtagService),
-              videoEventServiceProvider.overrideWithValue(
-                mockVideoEventService,
-              ),
-            ],
-            child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: HashtagFeedScreen(
-                  hashtag: 'funny',
-                  embedded: true,
-                  onVideoTap: (videos, index) {
-                    callbackVideos = videos;
-                    callbackIndex = index;
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Tap the first video tile
-        await tester.tap(find.byType(GestureDetector).first);
-        await tester.pumpAndSettle();
-
-        // Verify callback was called with correct parameters
-        expect(callbackVideos, equals(testVideos));
-        expect(callbackIndex, equals(0));
-
-        // Verify NO navigation happened (no new routes pushed)
-        expect(find.byType(Scaffold), findsOneWidget);
-      },
+    when(
+      () => hashtagService.getVideosByHashtags(['funny']),
+    ).thenReturn(const []);
+    when(
+      () => hashtagService.subscribeToHashtagVideos(['funny']),
+    ).thenAnswer((_) async {});
+    when(() => videoEventService.filterVideoList(any())).thenAnswer(
+      (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
+    when(
+      () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
+    ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
 
-    testWidgets('uses Navigator.push when NOT embedded', (tester) async {
-      final now = DateTime.now();
-      final testVideos = [
-        VideoEvent(
-          id: 'video1',
-          pubkey: 'test',
-          content: 'Test 1',
-          createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          timestamp: now,
-        ),
-      ];
+    List<VideoEvent>? callbackVideos;
+    int? callbackIndex;
 
-      when(
-        () => mockHashtagService.getVideosByHashtags(['funny']),
-      ).thenReturn(testVideos);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            hashtagServiceProvider.overrideWithValue(mockHashtagService),
-            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: HashtagFeedScreen(hashtag: 'funny'),
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...getStandardTestOverrides(),
+          hashtagServiceProvider.overrideWithValue(hashtagService),
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          subscribedListVideoCacheProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HashtagFeedScreen(
+            hashtag: 'funny',
+            embedded: true,
+            onVideoTap: (videos, index) {
+              callbackVideos = videos;
+              callbackIndex = index;
+            },
           ),
         ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Find and tap video tile
-      await tester.tap(find.byType(GestureDetector).first);
-      await tester.pumpAndSettle();
-
-      // Verify navigation DID happen (new route pushed)
-      // When not embedded, should push ExploreVideoScreenPure as new route
-      expect(
-        find.byType(HashtagFeedScreen),
-        findsNothing,
-      ); // Original screen should be covered
-    });
-
-    testWidgets(
-      'calls onVideoTap callback when embedded and video tapped in list view',
-      (tester) async {
-        final now = DateTime.now();
-        final testVideos = [
-          VideoEvent(
-            id: 'video1',
-            pubkey: 'test',
-            content: 'Test 1',
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-          ),
-          VideoEvent(
-            id: 'video2',
-            pubkey: 'test',
-            content: 'Test 2',
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-          ),
-        ];
-
-        when(
-          () => mockHashtagService.getVideosByHashtags(['funny']),
-        ).thenReturn(testVideos);
-
-        List<VideoEvent>? callbackVideos;
-        int? callbackIndex;
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              hashtagServiceProvider.overrideWithValue(mockHashtagService),
-              videoEventServiceProvider.overrideWithValue(
-                mockVideoEventService,
-              ),
-            ],
-            child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: HashtagFeedScreen(
-                  hashtag: 'funny',
-                  embedded: true,
-                  onVideoTap: (videos, index) {
-                    callbackVideos = videos;
-                    callbackIndex = index;
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Both grid and list view use GestureDetector for video tiles
-        // Tap second video
-        final gestures = find.byType(GestureDetector);
-        if (gestures.evaluate().length > 1) {
-          await tester.tap(gestures.at(1));
-          await tester.pumpAndSettle();
-
-          expect(callbackVideos, equals(testVideos));
-          expect(callbackIndex, equals(1));
-        }
-      },
+      ),
     );
-    // TODO(any): Fix and re-enable tests
-  }, skip: true);
+    await tester.pump();
+    await tester.pump();
+
+    final grid = tester.widget<ComposableVideoGrid>(
+      find.byType(ComposableVideoGrid),
+    );
+    grid.onVideoTap(grid.videos, 1);
+
+    expect(callbackVideos, same(grid.videos));
+    expect(callbackVideos![1].id, 'video-2');
+    expect(callbackIndex, 1);
+  });
 }
