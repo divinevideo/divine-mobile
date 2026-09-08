@@ -38,7 +38,11 @@ class RelayDiagnosticsAdapter {
     final key = _DiagnosticKey(diagnostic.relayUrl, diagnostic.site);
     var state = _windows.remove(key);
 
-    if (state == null || now.difference(state.startedAt) >= window) {
+    final elapsed = state == null
+        ? Duration.zero
+        : now.difference(state.startedAt);
+
+    if (state == null || elapsed >= window) {
       if (state != null && state.suppressed > 0) {
         _write(
           RelayDiagnostic(
@@ -47,8 +51,9 @@ class RelayDiagnosticsAdapter {
             relayUrl: diagnostic.relayUrl,
             message:
                 'Suppressed ${state.suppressed} repeated '
-                '${diagnostic.site.name} diagnostics during the previous '
-                '${window.inSeconds} seconds',
+                '${diagnostic.site.name} diagnostics in the '
+                '${elapsed.inSeconds} seconds since '
+                '${state.startedAt.toUtc().toIso8601String()}',
           ),
         );
       }

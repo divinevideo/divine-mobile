@@ -65,6 +65,28 @@ void main() {
       expect(messages.last, contains('after rollover'));
     });
 
+    test('the suppression summary reports the span it actually covers', () {
+      final adapter = RelayDiagnosticsAdapter(
+        maxEventsPerWindow: 1,
+        clock: () => now,
+      );
+      final windowStart = now;
+
+      adapter(diagnostic(message: 'emitted'));
+      adapter(diagnostic(message: 'suppressed'));
+
+      // The storm stops, and the next diagnostic for this key only arrives
+      // ten minutes later. Its summary is timestamped now, so it has to name
+      // when the suppressed traffic actually happened.
+      now = now.add(const Duration(minutes: 10));
+      adapter(diagnostic(message: 'much later'));
+
+      final summary = capture.getRecentLogs().elementAt(1).message;
+      expect(summary, contains('Suppressed 1 repeated'));
+      expect(summary, contains('in the 600 seconds'));
+      expect(summary, contains(windowStart.toUtc().toIso8601String()));
+    });
+
     test('bounds limiter keys and treats separate sites independently', () {
       final adapter = RelayDiagnosticsAdapter(
         maxEventsPerWindow: 1,
