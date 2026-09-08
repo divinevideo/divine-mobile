@@ -266,7 +266,7 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
   return announced;
 }
 
-/// Asserts the flow signed the user out with no argument shape at all.
+/// Asserts the flow did not sign the user out, under any argument shape.
 ///
 /// Matching exact flags would miss the bare `signOut()` the processing branch
 /// makes, so a path that must not sign out has to reject every call.
