@@ -178,6 +178,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return const PeopleListPublishResult.noop();
     }
     if (!record.hasPublishSource) {
+      Log.warning(
+        'Cannot add a member of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
       return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
@@ -211,6 +218,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return const PeopleListPublishResult.noop();
     }
     if (!record.hasPublishSource) {
+      Log.warning(
+        'Cannot remove a member of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
       return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
@@ -310,7 +324,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         list: list,
       );
       final existing = seen[result.addressableId];
-      if (existing != null && existing.list.updatedAt.isAfter(list.updatedAt)) {
+      if (existing != null && !_supersedes(list, existing.list)) {
         continue;
       }
       seen[result.addressableId] = result;
@@ -327,30 +341,36 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     List<List<String>>? sourceTags,
     String? sourceContent,
   }) async {
-    final payload = Nip51PeopleListCodec.encode(
-      list,
-      sourceTags: sourceTags,
-      sourceContent: sourceContent,
-    );
-    final event = Event(
-      ownerPubkey,
-      payload.kind,
-      payload.tags,
-      payload.content,
-    );
-
     try {
+      // encode throws ArgumentError on a malformed or mismatched source, so
+      // it belongs inside the catch: callers only ever see the documented
+      // failure result, never a raw programming-invariant throw.
+      final payload = Nip51PeopleListCodec.encode(
+        list,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent,
+      );
+      final event = Event(
+        ownerPubkey,
+        payload.kind,
+        payload.tags,
+        payload.content,
+      );
       final sent = await _nostrClient.publishEvent(event);
       if (sent is! PublishSuccess) {
         return const PeopleListPublishResult.failed();
       }
       final persisted = list.copyWith(nostrEventId: sent.event.id);
+      // Cache what was published, not what was handed to publishEvent: the
+      // client rebinds event.tags while applying the NIP-89 client tag, so the
+      // payload never sees it. Storing the payload would pair sourceTags with
+      // a nostrEventId those tags cannot hash to.
       await _cache.putList(
         ownerPubkey: ownerPubkey,
         list: persisted,
         receivedAt: DateTime.now().toUtc(),
-        sourceTags: payload.tags,
-        sourceContent: payload.content,
+        sourceTags: sent.event.tags,
+        sourceContent: sent.event.content,
       );
       return PeopleListPublishResult.submitted(eventId: sent.event.id);
     } on Object catch (error, stackTrace) {
@@ -394,13 +414,33 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
           cached.nostrEventId != null &&
           cached.nostrEventId == incoming.nostrEventId;
     }
+    // NIP-01 breaks a created_at tie on the lowest event id. If either id is
+    // absent, this guard does not apply and the incoming revision is adopted,
+    // preserving the existing behavior for incomplete identifiers.
+    final cachedId = cached.nostrEventId;
+    final incomingId = incoming.nostrEventId;
     if (cached.updatedAt == incoming.updatedAt &&
-        cached.nostrEventId != null &&
-        cached.nostrEventId != incoming.nostrEventId &&
-        cached.nostrEventId!.compareTo(incoming.nostrEventId ?? '') < 0) {
+        cachedId != null &&
+        incomingId != null &&
+        cachedId != incomingId &&
+        cachedId.compareTo(incomingId) < 0) {
       return false;
     }
     return true;
+  }
+
+  /// Whether revision [candidate] supersedes [selected] under NIP-01
+  /// replaceable-event ordering: the later `updatedAt` wins, and a tie is
+  /// broken on the lowest event id. An absent id on either side leaves the tie
+  /// unbroken, so the already-selected revision is kept.
+  static bool _supersedes(UserList candidate, UserList selected) {
+    if (candidate.updatedAt != selected.updatedAt) {
+      return candidate.updatedAt.isAfter(selected.updatedAt);
+    }
+    final candidateId = candidate.nostrEventId;
+    final selectedId = selected.nostrEventId;
+    if (candidateId == null || selectedId == null) return false;
+    return candidateId.compareTo(selectedId) < 0;
   }
 
   static bool _isNewerRevision(

@@ -97,6 +97,10 @@ class LocalPeopleListsCache {
   }
 
   /// Returns one non-tombstoned cache record, including its publish source.
+  ///
+  /// A row written before source preservation, or one whose stored source no
+  /// longer matches its list, comes back with
+  /// [CachedPeopleListRecord.hasPublishSource] false rather than as `null`.
   Future<CachedPeopleListRecord?> readRecord({
     required String ownerPubkey,
     required String listId,
@@ -160,7 +164,17 @@ class LocalPeopleListsCache {
   /// equal timestamp already exists. [receivedAt] is stored alongside the
   /// record for diagnostics and future sync logic.
   ///
-  /// Throws if the Hive box cannot be opened or the underlying write fails.
+  /// [sourceTags] and [sourceContent] are the exact tags and content of the
+  /// event [list] was decoded from. Supply both to keep the row editable: a
+  /// membership edit republishes from them, so a row stored without them can
+  /// be displayed but not edited. This write replaces the whole row, so
+  /// omitting them discards a source the row already carried.
+  ///
+  /// Throws:
+  ///
+  /// * [ArgumentError] if exactly one of [sourceTags] and [sourceContent] is
+  ///   supplied. They are both-or-neither.
+  /// * Whatever opening the Hive box or the underlying write throws.
   Future<void> putList({
     required String ownerPubkey,
     required UserList list,
@@ -193,6 +207,11 @@ class LocalPeopleListsCache {
 
   /// Persists every entry in [lists] via [putList], sharing the same
   /// [receivedAt] timestamp.
+  ///
+  /// Passes no publish source, so every row written here is display-only and
+  /// membership edits on it fail closed until a relay revision restores the
+  /// source. Prefer [putList] with the originating event's tags and content
+  /// for anything the user can edit.
   ///
   /// Throws if the Hive box cannot be opened or any underlying write fails.
   /// A partial failure leaves previously written entries in the box.
@@ -292,11 +311,16 @@ class LocalPeopleListsCache {
     return records;
   }
 
-  /// Decodes a single stored record into a [UserList].
+  /// Decodes a single stored record into a [CachedPeopleListRecord].
   ///
   /// Returns `null` and logs a warning when the record is shaped unexpectedly
   /// or when [UserList.fromJson] throws. A single malformed row must not
   /// poison the whole `readLists`/`watchLists` result.
+  ///
+  /// A row whose stored source is malformed, or names a different `d` tag than
+  /// its list, degrades to a record with no source rather than being dropped:
+  /// it still displays, but [CachedPeopleListRecord.hasPublishSource] is false
+  /// and it cannot drive a membership edit.
   CachedPeopleListRecord? _decodeRecord(Map<dynamic, dynamic> record) {
     final raw = record[_CacheKeys.list];
     if (raw is! Map) return null;
