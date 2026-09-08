@@ -67,9 +67,11 @@ class RelayManager {
     required RelayManagerConfig config,
     required RelayPool relayPool,
     @visibleForTesting Relay Function(String url)? relayFactory,
+    RelayDiagnosticsSink? diagnosticsSink,
   }) : _config = config,
        _relayPool = relayPool,
-       _relayFactory = relayFactory;
+       _relayFactory = relayFactory,
+       _diagnosticsSink = diagnosticsSink;
 
   /// Known-dead relays that should never be added.
   ///
@@ -108,6 +110,7 @@ class RelayManager {
   final RelayManagerConfig _config;
   final RelayPool _relayPool;
   final Relay Function(String url)? _relayFactory;
+  final RelayDiagnosticsSink? _diagnosticsSink;
 
   /// Configured relay URLs (user's list, persisted)
   final List<String> _configuredRelays = [];
@@ -707,6 +710,7 @@ class RelayManager {
           url,
           RelayStatus(url),
           channelFactory: _config.webSocketChannelFactory,
+          diagnosticsSink: _diagnosticsSink,
         );
       }
 
@@ -880,5 +884,15 @@ class RelayManager {
 
   void _log(String message) {
     developer.log('[RelayManager] $message');
+    if (_diagnosticsSink == null) return;
+    emitRelayDiagnostic(
+      _diagnosticsSink,
+      RelayDiagnostic(
+        site: RelayDiagnosticSite.connectionLifecycle,
+        level: RelayDiagnosticLevel.info,
+        relayUrl: 'relay-manager',
+        message: message,
+      ),
+    );
   }
 }

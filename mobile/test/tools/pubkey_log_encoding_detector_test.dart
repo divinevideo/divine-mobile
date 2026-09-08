@@ -51,6 +51,28 @@ void report(String pubkey) {
         expect(sites.single.line, 2);
       });
 
+      test('a bare pubkey in a _diagnose message argument', () {
+        // The relay diagnose/_diagnose helpers forward their message to the
+        // support export via nostr_client, so a raw pubkey here is exported
+        // unencoded exactly as a Log.* call would be.
+        final sites = scan(r'''
+class RelayPool {
+  void relayDoSubscribe(String pubkey) {
+    _diagnose(
+      RelayDiagnosticSite.queryDispatch,
+      RelayDiagnosticLevel.info,
+      relayUrl,
+      'fetching for $pubkey',
+    );
+  }
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.expression, 'pubkey');
+        expect(sites.single.sink, '_diagnose');
+      });
+
       test('a prefixed name, matched on its last camelCase segment', () {
         final sites = scan(r'''
 void report(String authorPubkey) {

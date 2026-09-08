@@ -148,6 +148,13 @@ const _characterViews = {'characters', 'runes', 'codeUnits', 'split'};
 /// `Log.<level>(...)` — the app-wide UnifiedLogger typedef.
 const _unifiedLogLevels = {'verbose', 'debug', 'info', 'warning', 'error'};
 
+/// Relay-diagnostics emitters. `diagnose`/`_diagnose` build a [RelayDiagnostic]
+/// whose message nostr_client forwards to `UnifiedLogger`, so their message
+/// argument reaches a support export exactly like a `Log.*` call. The string
+/// literal lives at these call sites, not at the `Log.*` that later forwards
+/// the opaque field, so the ratchet must read them here (#8930).
+const _relayDiagnosticFunctions = {'diagnose', '_diagnose'};
+
 /// package:logging levels, reached on a logger-shaped receiver.
 const _loggingPackageLevels = {
   'finest',
@@ -177,6 +184,8 @@ final _sinkTokens = <String>{
   'Log.',
   for (final r in _loggerReceivers) '$r.',
   for (final f in _bareLogFunctions) '$f(',
+  for (final f in _relayDiagnosticFunctions) '$f(',
+  'RelayDiagnostic(',
 };
 
 /// One forbidden Nostr value reaching a log sink.
@@ -632,7 +641,36 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
   void visitMethodInvocation(MethodInvocation node) {
     final sink = _logSinkName(node);
     if (sink != null) _scanLogCall(node, sink);
+    // A `parseString` AST is unresolved, so an unprefixed `RelayDiagnostic(...)`
+    // is a MethodInvocation, not an InstanceCreationExpression (only const/new
+    // forms are the latter). Emit-site messages interpolate ids so they are
+    // never const — this shape is the one that reaches the export.
+    if (node.realTarget == null && node.methodName.name == 'RelayDiagnostic') {
+      _scanRelayDiagnostic(node.argumentList, node);
+    }
     super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    // The const/new form of the same sink; see visitMethodInvocation.
+    if (node.constructorName.type.name.lexeme == 'RelayDiagnostic') {
+      _scanRelayDiagnostic(node.argumentList, node);
+    }
+    super.visitInstanceCreationExpression(node);
+  }
+
+  /// `RelayDiagnostic(message: ...)` forwards its message to UnifiedLogger via
+  /// nostr_client, so the message is an export sink. The string literal lives
+  /// here at the constructor, not at the Log.* call that later forwards an
+  /// opaque field, so the ratchet is blind to it unless read here.
+  void _scanRelayDiagnostic(ArgumentList args, AstNode scopeNode) {
+    for (final argument in args.arguments) {
+      if (argument is NamedExpression &&
+          argument.name.label.name == 'message') {
+        _scan(argument.expression, scopeNode, 'RelayDiagnostic.message');
+      }
+    }
   }
 
   /// The sink label for [node] if it writes to a diagnostic sink, else null.
@@ -640,7 +678,11 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
     final member = node.methodName.name;
     final target = node.realTarget;
     if (target == null) {
-      return _bareLogFunctions.contains(member) ? member : null;
+      if (_bareLogFunctions.contains(member) ||
+          _relayDiagnosticFunctions.contains(member)) {
+        return member;
+      }
+      return null;
     }
     final receiver = _rootIdentifierName(target);
     if (receiver == null) return null;
@@ -655,10 +697,13 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
     return null;
   }
 
-  void _scanLogCall(MethodInvocation call, String sink) {
-    final locals = _shortenedLocalsVisibleAt(call);
+  void _scanLogCall(MethodInvocation call, String sink) =>
+      _scan(call.argumentList, call, sink);
+
+  void _scan(AstNode toScan, AstNode scopeNode, String sink) {
+    final locals = _shortenedLocalsVisibleAt(scopeNode);
     final finder = _ShorteningFinder(shorteners: shorteners, locals: locals);
-    call.argumentList.accept(finder);
+    toScan.accept(finder);
     for (final hit in finder.hits) {
       if (!_seen.add(hit.offset)) continue;
       sites.add(

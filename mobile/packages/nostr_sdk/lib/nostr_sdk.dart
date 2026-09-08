@@ -52,6 +52,7 @@ export 'relay/event_filter.dart';
 export 'relay/relay_mode.dart';
 export 'relay/relay.dart';
 export 'relay/relay_base.dart';
+export 'relay/relay_diagnostics.dart';
 export 'relay/publish_outcome.dart';
 export 'relay/event_verify_isolate.dart';
 export 'relay/relay_pool.dart';
