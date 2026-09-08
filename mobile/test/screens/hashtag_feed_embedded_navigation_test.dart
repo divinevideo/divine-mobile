@@ -1,5 +1,5 @@
-// ABOUTME: Verifies embedded hashtag feeds delegate video selection to their host.
-// ABOUTME: Keeps embedded navigation separate from the full-screen route path.
+// ABOUTME: Verifies the hashtag feed hands a tapped video to its embedding host,
+// ABOUTME: and pushes the anchored fullscreen route when it owns the screen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +13,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -58,52 +59,55 @@ void main() {
     registerFallbackValue(<VideoEvent>[]);
   });
 
-  group('navigation', () {
+  late _MockHashtagService hashtagService;
+  late _MockVideoEventService videoEventService;
+  late _MockVideosRepository videosRepository;
+
+  setUp(() {
+    hashtagService = _MockHashtagService();
+    videoEventService = _MockVideoEventService();
+    videosRepository = _MockVideosRepository();
+    final testVideos = [_video('video-1'), _video('video-2')];
+
+    when(
+      () => hashtagService.getVideosByHashtags(['funny']),
+    ).thenReturn(const []);
+    when(() => hashtagService.getHashtagStats(any())).thenReturn(null);
+    when(
+      () => hashtagService.subscribeToHashtagVideos(['funny']),
+    ).thenAnswer((_) async {});
+    when(() => videoEventService.filterVideoList(any())).thenAnswer(
+      (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
+    );
+    when(
+      () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
+    ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
+  });
+
+  List<Override> screenOverrides() => [
+    hashtagServiceProvider.overrideWithValue(hashtagService),
+    videoEventServiceProvider.overrideWithValue(videoEventService),
+    videosRepositoryProvider.overrideWithValue(videosRepository),
+    subscribedListVideoCacheProvider.overrideWithValue(null),
+  ];
+
+  group(HashtagFeedScreen, () {
     testWidgets('embedded feed delegates the selected video to its host', (
       tester,
     ) async {
-      final hashtagService = _MockHashtagService();
-      final videoEventService = _MockVideoEventService();
-      final videosRepository = _MockVideosRepository();
-      final testVideos = [_video('video-1'), _video('video-2')];
-
-      when(
-        () => hashtagService.getVideosByHashtags(['funny']),
-      ).thenReturn(const []);
-      when(
-        () => hashtagService.subscribeToHashtagVideos(['funny']),
-      ).thenAnswer((_) async {});
-      when(() => videoEventService.filterVideoList(any())).thenAnswer(
-        (invocation) =>
-            invocation.positionalArguments.first as List<VideoEvent>,
-      );
-      when(
-        () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
-      ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
-
-      List<VideoEvent>? callbackVideos;
-      int? callbackIndex;
+      List<VideoEvent>? hostVideos;
+      int? hostIndex;
 
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            ...getStandardTestOverrides(),
-            hashtagServiceProvider.overrideWithValue(hashtagService),
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-            videosRepositoryProvider.overrideWithValue(videosRepository),
-            subscribedListVideoCacheProvider.overrideWithValue(null),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: HashtagFeedScreen(
-              hashtag: 'funny',
-              embedded: true,
-              onVideoTap: (videos, index) {
-                callbackVideos = videos;
-                callbackIndex = index;
-              },
-            ),
+        testMaterialApp(
+          additionalOverrides: screenOverrides(),
+          home: HashtagFeedScreen(
+            hashtag: 'funny',
+            embedded: true,
+            onVideoTap: (videos, index) {
+              hostVideos = videos;
+              hostIndex = index;
+            },
           ),
         ),
       );
@@ -113,34 +117,16 @@ void main() {
       await tester.tap(_tile(1));
       await tester.pump();
 
-      expect(callbackIndex, equals(1));
-      expect(callbackVideos, isNotNull);
-      expect(callbackVideos![callbackIndex!].id, equals('video-2'));
+      expect(hostIndex, equals(1));
+      expect(hostVideos, isNotNull);
+      expect(hostVideos![hostIndex!].id, equals('video-2'));
     });
 
+    // Keeps a hand-rolled harness rather than testMaterialApp: this path needs
+    // MaterialApp.router so the screen's context.push has a GoRouter to reach.
     testWidgets('feed that owns the screen pushes the tapped video route', (
       tester,
     ) async {
-      final hashtagService = _MockHashtagService();
-      final videoEventService = _MockVideoEventService();
-      final videosRepository = _MockVideosRepository();
-      final testVideos = [_video('video-1'), _video('video-2')];
-
-      when(
-        () => hashtagService.getVideosByHashtags(['funny']),
-      ).thenReturn(const []);
-      when(() => hashtagService.getHashtagStats(any())).thenReturn(null);
-      when(
-        () => hashtagService.subscribeToHashtagVideos(['funny']),
-      ).thenAnswer((_) async {});
-      when(() => videoEventService.filterVideoList(any())).thenAnswer(
-        (invocation) =>
-            invocation.positionalArguments.first as List<VideoEvent>,
-      );
-      when(
-        () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
-      ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
-
       final router = GoRouter(
         initialLocation: '/hashtag/funny',
         routes: [
@@ -160,13 +146,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...getStandardTestOverrides(),
-            hashtagServiceProvider.overrideWithValue(hashtagService),
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-            videosRepositoryProvider.overrideWithValue(videosRepository),
-            subscribedListVideoCacheProvider.overrideWithValue(null),
-          ],
+          overrides: [...getStandardTestOverrides(), ...screenOverrides()],
           child: MaterialApp.router(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
