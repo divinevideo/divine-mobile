@@ -8834,7 +8834,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Ekran bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
+      'Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';

@@ -4809,7 +4809,7 @@
   "videoEditorChromaKeyBackgroundVideo": "کلپ",
   "videoEditorChromaKeyTransparentHint": "ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔",
   "videoEditorChromaKeySurfaceHint": "آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔",
-  "videoEditorChromaKeyDetectFailed": "کوئی بیک گراؤنڈ نہیں ملا: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔",
+  "videoEditorChromaKeyDetectFailed": "کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔",
   "videoEditorChromaKeyPickClipTitle": "کلپ چنیں",
   "videoEditorChromaKeyNoLibraryClips": "آپ کی لائبریری خالی ہے۔ پہلے کوئی کلپ محفوظ کریں، پھر اسے پس منظر کے طور پر استعمال کریں۔",
   "videoEditorChromaKeyImagePickFailed": "وہ تصویر لوڈ نہیں ہو سکی۔",

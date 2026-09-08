@@ -5714,7 +5714,7 @@
   "videoEditorChromaKeyBackgroundVideo": "క్లిప్",
   "videoEditorChromaKeyTransparentHint": "వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.",
   "videoEditorChromaKeySurfaceHint": "మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.",
-  "videoEditorChromaKeyDetectFailed": "బ్యాక్‌గ్రౌండ్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.",
+  "videoEditorChromaKeyDetectFailed": "స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.",
   "videoEditorChromaKeyPickClipTitle": "క్లిప్‌ను ఎంచుకోండి",
   "videoEditorChromaKeyNoLibraryClips": "మీ లైబ్రరీ ఖాళీగా ఉంది. ముందుగా క్లిప్‌ను సేవ్ చేసి, ఆపై దాన్ని నేపథ్యంగా ఉపయోగించండి.",
   "videoEditorChromaKeyImagePickFailed": "ఆ చిత్రాన్ని లోడ్ చేయడం సాధ్యపడలేదు.",

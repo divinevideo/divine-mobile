@@ -8957,7 +8957,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Geen scherm gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
+      'Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';

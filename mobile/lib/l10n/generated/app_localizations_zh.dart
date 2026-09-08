@@ -8407,7 +8407,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      '没找到背景：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
+      '没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';

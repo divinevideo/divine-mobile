@@ -9181,7 +9181,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'బ్యాక్‌గ్రౌండ్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.';
+      'స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';

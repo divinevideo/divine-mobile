@@ -8911,7 +8911,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'کوئی بیک گراؤنڈ نہیں ملا: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
+      'کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';

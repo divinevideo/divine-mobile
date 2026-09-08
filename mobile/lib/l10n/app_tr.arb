@@ -3678,7 +3678,7 @@
     "videoEditorChromaKeyBackgroundVideo": "Klip",
     "videoEditorChromaKeyTransparentHint": "Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.",
     "videoEditorChromaKeySurfaceHint": "Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.",
-    "videoEditorChromaKeyDetectFailed": "Ekran bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.",
+    "videoEditorChromaKeyDetectFailed": "Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.",
     "videoEditorChromaKeyPickClipTitle": "Bir klip seç",
     "videoEditorChromaKeyNoLibraryClips": "Kitaplığın boş. Önce bir klip kaydet, sonra onu arka plan olarak kullan.",
     "videoEditorChromaKeyImagePickFailed": "Bu görsel yüklenemedi.",
