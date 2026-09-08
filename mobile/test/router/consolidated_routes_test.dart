@@ -1,5 +1,5 @@
 // ABOUTME: Tests for consolidated routes with optional parameters
-// ABOUTME: Verifies single route handles both grid and feed modes without GlobalKey conflicts
+// ABOUTME: Verifies parseRoute resolves explore and hashtag paths in grid and feed modes
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/router.dart';
