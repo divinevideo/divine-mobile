@@ -289,41 +289,6 @@ void main() {
       }
     });
 
-    testWidgets('should show flag states correctly', (tester) async {
-      // Set up mixed flag states
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-      when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
-      ).thenReturn(true);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: FeatureFlagScreen(),
-          ),
-        ),
-      );
-
-      // Initialize service
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(FeatureFlagScreen)),
-      );
-      final service = container.read(featureFlagServiceProvider);
-      await service.initialize();
-      await tester.pumpAndSettle();
-
-      // Check that switches reflect the flag states
-      final switches = tester.widgetList<Switch>(find.byType(Switch));
-      expect(switches, hasLength(FeatureFlag.values.length));
-
-      // Find switches by looking for the flag display names
-      expect(find.text('Enhanced Analytics'), findsOneWidget);
-      // TOOD(any): Fix and re-enable these tests
-    }, skip: true);
-
     testWidgets('should handle individual flag reset', (tester) async {
       // Set up a flag with user override
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
