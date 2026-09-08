@@ -109,8 +109,8 @@ class ModerationLabelService {
        _labelerHistoryBudget = labelerHistoryBudget;
 
   final NostrClient _nostrClient;
-  // Retain the injected auth dependency in the service contract used by the
-  // generated provider and direct test construction.
+  // Retained to preserve constructor compatibility for generated-provider
+  // and direct-construction callers while the service does not read auth.
   // ignore: unused_field
   final AuthService _authService;
   final SharedPreferences _prefs;

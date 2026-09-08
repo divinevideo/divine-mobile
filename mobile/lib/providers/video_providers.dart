@@ -37,9 +37,6 @@ import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/nsfw_content_filter.dart';
-// Exposes PendingActionService through this provider barrel's public surface.
-// ignore: unnecessary_import
-import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/seen_videos_service.dart';
