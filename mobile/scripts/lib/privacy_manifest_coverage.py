@@ -239,11 +239,14 @@ def discover(mobile: str) -> list[Unit]:
     podfile = os.path.join(ios, "Podfile")
     try:
         with open(podfile, "r", encoding="utf-8") as handle:
-            podfile_text = strip_noise(handle.read())
+            podfile_text = handle.read()
     except OSError:
         podfile_text = ""
-    for pod, subspec in re.findall(
-        r"\bpod\s+['\"]([^/'\"]+)/([^'\"]+)['\"]", podfile_text
+    # Podfile declarations are Ruby: retain quoted names and ignore comment lines.
+    for _, pod, subspec in re.findall(
+        r"^[ \t]*pod[ \t]+(['\"])([^/'\"\n]+)/([^'\"\n]+)\1",
+        podfile_text,
+        re.M,
     ):
         selected_subspecs[pod] = subspec
 
