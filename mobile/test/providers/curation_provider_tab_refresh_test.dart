@@ -1,215 +1,159 @@
-// ABOUTME: Tests that curation provider refreshes when Editor's Pick tab becomes active
-// ABOUTME: Verifies the fix for videos showing blank when navigating from video back to tab
+// ABOUTME: Tests that the curation provider re-reads editor's picks on refresh
+// ABOUTME: Covers the tab-return path that left Editor's Pick blank after nav
 
 import 'package:curation_repository/curation_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
-import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
-import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 
+import '../helpers/test_helpers.dart';
 import '../helpers/test_provider_overrides.dart';
-
-class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockVideoEventService extends Mock implements VideoEventService {}
-
-class _MockLikesRepository extends Mock implements LikesRepository {}
-
-class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _MockCurationRepository extends Mock implements CurationRepository {}
 
-class _FakeVideoEvent extends Fake implements VideoEvent {}
+/// Emits nothing, so the `videoEventsProvider` listener in `Curation.build`
+/// cannot fire and add refresh calls this file's `verify` counts would see.
+class _SilentVideoEvents extends VideoEvents {
+  @override
+  Stream<List<VideoEvent>> build() => const Stream.empty();
+}
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(<Filter>[]);
-    registerFallbackValue(<String>[]);
-    registerFallbackValue(_FakeVideoEvent());
-  });
-
-  group('CurationProvider Tab Refresh', () {
-    late _MockNostrClient mockNostrService;
-    late _MockVideoEventService mockVideoEventService;
-    late _MockLikesRepository mockLikesRepository;
-    late MockAuthService mockAuthService;
-    late _MockFunnelcakeApiClient mockFunnelcakeApiClient;
+  group('CurationProvider tab refresh', () {
     late _MockCurationRepository mockCurationRepository;
+    late MockAuthService mockAuthService;
 
     setUp(() {
-      mockNostrService = _MockNostrClient();
-      mockVideoEventService = _MockVideoEventService();
-      mockLikesRepository = _MockLikesRepository();
-      mockAuthService = createMockAuthService();
-      mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
       mockCurationRepository = _MockCurationRepository();
+      mockAuthService = createMockAuthService();
+    });
 
-      // Stub nostr service to return empty stream (no async fetch for this test)
-      when(
-        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-      ).thenAnswer((_) => const Stream.empty());
-
-      // Mock getLikeCounts to return empty counts (replaced getCachedLikeCount)
-      when(
-        () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+    void stubEditorsPicks(List<VideoEvent> videos) {
       when(
         () => mockCurationRepository.getVideosForSetType(
           CurationSetType.editorsPicks,
         ),
-      ).thenAnswer((_) => mockVideoEventService.discoveryVideos);
-      when(() => mockCurationRepository.refreshIfNeeded()).thenReturn(null);
-    });
+      ).thenReturn(videos);
+    }
+
+    ProviderContainer createContainer() {
+      final container = ProviderContainer(
+        overrides: [
+          ...getStandardTestOverrides(mockAuthService: mockAuthService),
+          curationRepositoryProvider.overrideWithValue(mockCurationRepository),
+          videoEventsProvider.overrideWith(_SilentVideoEvents.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
 
     test(
-      'refreshAll() picks up videos added to cache after provider initialization',
+      'refreshAll picks up editor picks the repository gained after build',
       () async {
-        // ARRANGE: Start with empty discoveryVideos
-        when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
-        when(() => mockVideoEventService.addVideoEvent(any())).thenReturn(null);
+        stubEditorsPicks([]);
+        when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
 
-        final container = ProviderContainer(
-          overrides: [
-            ...getStandardTestOverrides(
-              mockAuthService: mockAuthService,
-              mockNostrService: mockNostrService,
-            ),
-            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            curationRepositoryProvider.overrideWithValue(
-              mockCurationRepository,
-            ),
-            funnelcakeApiClientProvider.overrideWithValue(
-              mockFunnelcakeApiClient,
-            ),
-          ],
-        );
-
-        // ACT: Wait for initialization
-        container.read(curationProvider);
-        // Wait for initialization
-        await Future.delayed(const Duration(milliseconds: 50));
-
-        final stateAfterInit = container.read(curationProvider);
+        final container = createContainer();
         expect(
-          stateAfterInit.editorsPicks,
+          container.read(curationProvider).editorsPicks,
           isEmpty,
-          reason: 'Should be empty initially with no videos',
+          reason: 'the repository has nothing cached yet',
         );
 
-        // SIMULATE: Videos fetched asynchronously and added to cache
-        final newVideos = List.generate(
-          5,
-          (i) => VideoEvent(
-            id: 'video_$i',
-            pubkey: 'editor_pubkey',
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            content: 'Editor pick $i',
-            timestamp: DateTime.now(),
-            vineId: 'video_$i',
-            videoUrl: 'https://example.com/video_$i.mp4',
-          ),
-        );
+        final fetched = TestHelpers.createMockVideoEvents(3);
+        stubEditorsPicks(fetched);
 
-        // Update mock to return new videos
-        when(() => mockVideoEventService.discoveryVideos).thenReturn(newVideos);
-
-        // ACT: Call refreshAll() (simulates tab change to Editor's Pick)
         await container.read(curationProvider.notifier).refreshAll();
 
-        // ASSERT: Should now have videos from cache
-        final stateAfterRefresh = container.read(curationProvider);
+        final picks = container.read(curationProvider).editorsPicks;
+        expect(picks, hasLength(3));
+        // VideoEvent's == compares id alone, so a plain equals() on the list
+        // would pass on events that lost every other field in transit.
         expect(
-          stateAfterRefresh.editorsPicks.length,
-          greaterThan(0),
-          reason: 'Should have videos after refreshAll() picks up cache',
+          picks.map((v) => v.id).toList(),
+          fetched.map((v) => v.id).toList(),
         );
-
-        container.dispose();
+        expect(
+          picks.map((v) => v.title).toList(),
+          fetched.map((v) => v.title).toList(),
+        );
+        expect(
+          picks.map((v) => v.videoUrl).toList(),
+          fetched.map((v) => v.videoUrl).toList(),
+        );
       },
     );
 
     test(
-      "navigating from video back to Editor's Pick tab triggers refresh",
+      'refreshAll asks the repository to refresh before re-reading it',
       () async {
-        // This test documents the expected behavior:
-        // 1. User opens Editor's Pick tab (provider initializes)
-        // 2. Async fetch starts, adds videos to _editorPicksVideoCache
-        // 3. User clicks a video (navigates within Explore)
-        // 4. User presses back (returns to Editor's Pick tab)
-        // 5. _onTabChanged() detects tab index == 2 and calls refreshAll()
-        // 6. refreshAll() reads updated cache and displays videos
+        stubEditorsPicks([]);
+        when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
 
-        // ARRANGE: Create sample editor's picks videos
-        final editorVideos = List.generate(
-          3,
-          (i) => VideoEvent(
-            id: 'editor_video_$i',
-            pubkey: 'curator_pubkey',
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            content: 'Curated video $i',
-            timestamp: DateTime.now(),
-            vineId: 'editor_video_$i',
-            videoUrl: 'https://example.com/editor_$i.mp4',
-          ),
-        );
-
-        // Initially empty, then populated (simulating async fetch)
-        when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
-
-        final container = ProviderContainer(
-          overrides: [
-            ...getStandardTestOverrides(
-              mockAuthService: mockAuthService,
-              mockNostrService: mockNostrService,
-            ),
-            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            curationRepositoryProvider.overrideWithValue(
-              mockCurationRepository,
-            ),
-            funnelcakeApiClientProvider.overrideWithValue(
-              mockFunnelcakeApiClient,
-            ),
-          ],
-        );
-
-        // ACT: Initialize and wait for async work
+        final container = createContainer();
         container.read(curationProvider);
-        await Future.delayed(const Duration(milliseconds: 50));
+        verifyNever(mockCurationRepository.refreshIfNeeded);
 
-        final stateBeforeNav = container.read(curationProvider);
-        expect(
-          stateBeforeNav.editorsPicks,
-          isEmpty,
-          reason: 'Empty before navigation',
-        );
+        await container.read(curationProvider.notifier).refreshAll();
 
-        // SIMULATE: Videos fetched, cache populated
-        // Update mock to return videos now
+        verifyInOrder([
+          mockCurationRepository.refreshIfNeeded,
+          () => mockCurationRepository.getVideosForSetType(
+            CurationSetType.editorsPicks,
+          ),
+        ]);
+      },
+    );
+
+    test(
+      'a failed refresh records the error and keeps the visible picks',
+      () async {
+        final loaded = TestHelpers.createMockVideoEvents(2);
+        stubEditorsPicks(loaded);
+        when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
+
+        final container = createContainer();
+        expect(container.read(curationProvider).editorsPicks, hasLength(2));
+
         when(
-          () => mockVideoEventService.discoveryVideos,
-        ).thenReturn(editorVideos);
+          mockCurationRepository.refreshIfNeeded,
+        ).thenThrow(StateError('relay unreachable'));
 
-        // SIMULATE: User navigates back to Editor's Pick tab
-        // _onTabChanged() calls refreshAll()
         await container.read(curationProvider.notifier).refreshAll();
 
-        // ASSERT: Videos should now be visible
-        final stateAfterReturn = container.read(curationProvider);
+        final state = container.read(curationProvider);
+        expect(state.error, contains('relay unreachable'));
         expect(
-          stateAfterReturn.editorsPicks.length,
-          equals(editorVideos.length),
-          reason: 'Videos visible after tab return and refresh',
+          state.editorsPicks,
+          hasLength(2),
+          reason: 'a failed refresh must not blank the tab it was refreshing',
         );
-
-        container.dispose();
       },
     );
+
+    test('a later successful refresh clears the stale error', () async {
+      stubEditorsPicks([]);
+      when(
+        mockCurationRepository.refreshIfNeeded,
+      ).thenThrow(StateError('relay unreachable'));
+
+      final container = createContainer();
+      await container.read(curationProvider.notifier).refreshAll();
+      expect(container.read(curationProvider).error, isNotNull);
+
+      when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
+      stubEditorsPicks(TestHelpers.createMockVideoEvents(1));
+
+      await container.read(curationProvider.notifier).refreshAll();
+
+      final state = container.read(curationProvider);
+      expect(state.error, isNull);
+      expect(state.editorsPicks, hasLength(1));
+    });
   });
 }
