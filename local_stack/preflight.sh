@@ -351,10 +351,14 @@ stack_failure_report() {
 
     stack_service_status "$compose_file" "$@"
 
-    local service state service_logs
+    local service state service_logs dirty_migration=0
     while IFS='|' read -r service state; do
         [[ -n "$service" ]] || continue
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
+        if [[ "$service" == "funnelcake-migrate" ]] &&
+            grep -qF "Dirty database version" <<<"$service_logs"; then
+            dirty_migration=1
+        fi
         {
             echo "--- last 20 log lines: ${service} (${state}) ---"
             if [[ -n "$service_logs" ]]; then
@@ -367,6 +371,16 @@ stack_failure_report() {
         } >&2
     done < <(_stack_down_services "$compose_file" "$@")
 
+    if [[ "$dirty_migration" -eq 1 ]]; then
+        {
+            echo "The Funnelcake migration ledger is dirty, so relay and API cannot start."
+            echo "Reset the disposable local database and retry:"
+            echo ""
+            echo "    mise run local_reset"
+            echo ""
+        } >&2
+    fi
+
     stack_bypass_hint "$script_dir" \
         "A service being down does NOT block tests that never call it."
 }
@@ -375,9 +389,8 @@ stack_failure_report() {
 #
 # `pull_policy: always` re-checks the registry every run, but when the remote
 # digest has not moved that is a no-op: `docker compose pull` prints "Pulled"
-# and nothing changes. The funnelcake images have been frozen at 2026-02-24
-# since before they were ever published by CI (divine-mobile#6594), so the stack
-# looks fresh while running a schema ~130 migrations behind.
+# and nothing changes. A previous publishing failure left these images frozen
+# for months, so retain an independent age check even though publishing works.
 #
 # This warns; it never blocks. GHCR is queried anonymously (no credentials of
 # any kind), and every failure path returns 0 so a rate limit, an offline
@@ -463,9 +476,8 @@ preflight_image_staleness() {
         printf '%s' "$stale"
         echo ""
         echo "\`docker compose pull\` reports success because the remote digest has not"
-        echo "moved — there is nothing newer to pull. The relay's kind allowlist is"
-        echo "therefore frozen too, so NIP-17 DMs (kinds 1059 and 10050) are rejected."
-        echo "Tracking: divine-mobile#6594."
+        echo "moved — there is nothing newer to pull. Check the latest divine-funnelcake"
+        echo "CI run's GHCR login and push steps before trusting local relay behaviour."
         echo ""
         echo "To run against current funnelcake instead:"
         echo ""

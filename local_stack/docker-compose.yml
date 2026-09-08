@@ -81,13 +81,9 @@ services:
   # That review was never withdrawn, so treat this as a live trade-off rather
   # than a closed question.
   #
-  # The premise it depends on — that the rolling tag actually rolls — has since
-  # failed for funnelcake specifically. Its GHCR publish has never once
-  # succeeded, so `:latest` is frozen at 2026-02-24 while `docker compose pull`
-  # keeps reporting success. keycast and divine-blossom still publish normally.
-  # See divine-mobile#6594; `preflight_image_staleness` in preflight.sh now
-  # warns rather than letting it stay silent, and build_funnelcake.sh is the
-  # escape hatch.
+  # `preflight_image_staleness` guards the premise this depends on: the rolling
+  # tag must keep moving. build_funnelcake.sh remains available for testing an
+  # unmerged funnelcake branch or building native arm64 images locally.
   # ---------------------------------------------------------------------------
   funnelcake-clickhouse:
     image: clickhouse/clickhouse-server:25.8
@@ -135,7 +131,6 @@ services:
 
   # Shortens the refreshable-MV intervals that local dev and the e2e read, so a
   # freshly published video is visible in seconds instead of up to 15 minutes.
-  # No-op against the pinned 2026-02-24 schema, which has none of these MVs.
   # See tuning/refresh_intervals.sql for the measurements.
   funnelcake-local-tuning:
     image: clickhouse/clickhouse-server:25.8
@@ -147,8 +142,8 @@ services:
     volumes:
       - ./tuning:/tuning:ro
     entrypoint: ["/bin/bash", "-c"]
-    # Applied one statement at a time: on the pinned schema every ALTER fails
-    # because the MV does not exist, and that must not fail the stack.
+    # Applied one statement at a time so a schema transition produces an
+    # actionable count without blocking the rest of the local stack.
     command:
       - |
         applied=0; skipped=0
@@ -185,8 +180,6 @@ services:
       # `up.sh` fails. Measured against a relay built from funnelcake main:
       # 100 events -> ok=10 rejected=90 without these, ok=100 rejected=0 with.
       #
-      # Inert against the currently pinned 2026-02-24 image, which predates the
-      # rate limiter entirely.
       MAX_EVENTS_PER_SECOND: "10000"
       SUSTAINED_EVENTS_PER_SECOND: "10000"
       MAX_EVENTS_PER_MINUTE_PER_PUBKEY: "0"

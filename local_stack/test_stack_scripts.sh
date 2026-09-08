@@ -278,6 +278,13 @@ run_staleness() {
     set -e
 }
 
+run_failure_report() {
+    set +e
+    run_in_sandbox 'stack_failure_report "$2" "$(dirname "$1")" funnelcake-migrate funnelcake-relay funnelcake-api'
+    last_status=$?
+    set -e
+}
+
 # with_tools <tool>... — exactly these of ss/lsof exist for the next run.
 with_tools() {
     rm -f "${BIN}/ss" "${BIN}/lsof"
@@ -520,6 +527,21 @@ echo 'dial tcp: i/o timeout' >"${FIXTURES}/logs_keycast.txt"
 run_transient "${tmp_dir}/up.log" keycast minio-init
 assert_status 1 "$last_status" "with every service up there is no failed log to call transient"
 
+# --- A dirty migration ledger names the destructive local recovery ----------
+
+reset_fixtures
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|created|0
+PS
+echo 'migration failed: Dirty database version 70' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+run_failure_report
+
+assert_status 0 "$last_status" "a failure report should remain diagnostic"
+assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
+assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
+
 # --- up.sh retries transient startup failures --------------------------------
 
 reset_fixtures
@@ -549,27 +571,27 @@ reset_fixtures
 with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
-echo 'refresh-interval tuning: applied=4 skipped=1' >"${FIXTURES}/tuning_output.txt"
-echo 210 >"${FIXTURES}/schema_version.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 259 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 run_up_sh
 
 assert_status 0 "$last_status" "partial tuning should not block local_up"
-assert_stderr_contains 'refresh-interval tuning applied 4/5 expected statements on schema 210' "current-schema tuning drift should be visible"
+assert_stderr_contains 'refresh-interval tuning applied 3/4 expected statements on schema 259' "current-schema tuning drift should be visible"
 
-# --- Pinned schema with skipped tuning stays quiet ---------------------------
+# --- Legacy schema with skipped tuning stays quiet ---------------------------
 
 reset_fixtures
 with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
-echo 'refresh-interval tuning: applied=0 skipped=5' >"${FIXTURES}/tuning_output.txt"
+echo 'refresh-interval tuning: applied=0 skipped=4' >"${FIXTURES}/tuning_output.txt"
 echo 70 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 run_up_sh
 
-assert_status 0 "$last_status" "skipped tuning should not block the pinned schema"
-assert_stderr_lacks 'refresh-interval tuning applied' "the pinned schema should not warn about missing current MVs"
+assert_status 0 "$last_status" "skipped tuning should not block a legacy schema"
+assert_stderr_lacks 'refresh-interval tuning applied' "a legacy schema should not warn about missing current MVs"
 
 # --- .env overrides suppress the stale-image warning through up.sh -----------
 
@@ -578,7 +600,7 @@ with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
 ghcr_fixtures "$(python3 -c 'import datetime;print((datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=163)).isoformat())')" 2
-echo 'refresh-interval tuning: applied=0 skipped=5' >"${FIXTURES}/tuning_output.txt"
+echo 'refresh-interval tuning: applied=0 skipped=4' >"${FIXTURES}/tuning_output.txt"
 echo 70 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 cat >"$ENV_FILE" <<'ENV'
@@ -631,7 +653,8 @@ assert_status 0 "$last_status" "a stale image must never block the stack"
 assert_stderr_contains 'the pinned funnelcake images are stale' "the warning should fire"
 assert_stderr_contains '163 days ago' "the warning should say how stale"
 assert_stderr_contains 'build_funnelcake.sh' "the warning should name the escape hatch"
-assert_stderr_contains '6594' "the warning should cite the tracking issue"
+assert_stderr_contains 'divine-funnelcake' "the warning should identify where publishing failed"
+assert_stderr_contains 'GHCR login and push steps' "the warning should name the registry checks"
 
 # --- A freshly published image says nothing ---------------------------------
 

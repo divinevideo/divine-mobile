@@ -93,22 +93,19 @@ done
 # Snapshot read models rebuild on production cadences (5-60 minutes), which
 # makes a freshly published video invisible to the REST API for far longer than
 # any test waits. Shorten the intervals the app and the e2e actually read.
-# Every statement is optional — none of these views exist on the pinned schema.
 set +e
 TUNING_OUTPUT="$(docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning 2>&1)"
 TUNING_RC=$?
 set -e
 printf '%s\n' "$TUNING_OUTPUT"
 
-# Report the applied schema version. The pre-flight check can only say the image
-# is old; this names the actual gap, and it is the first thing to look at when a
-# relay behaviour does not match production.
+# Report the applied schema version. This is the first thing to compare when a
+# local relay behaviour does not match funnelcake main.
 #
 # Two bookkeeping tables, because funnelcake replaced golang-migrate with a
-# first-party Rust migrator in 2026-05. The pinned 2026-02-24 image is still
-# golang-migrate and writes `schema_migrations`; anything built from current
-# main writes `funnelcake_schema_migrations`. Ask for the new one first — on an
-# upgraded volume both exist and only the new one keeps advancing.
+# first-party Rust migrator in 2026-05. Older volumes may still contain
+# `schema_migrations`; current images write `funnelcake_schema_migrations`. Ask
+# for the new one first — on an upgraded volume only it keeps advancing.
 _stack_schema_version() {
   local table
   for table in funnelcake_schema_migrations schema_migrations; do
@@ -129,7 +126,7 @@ if [[ "$TUNING_RC" -ne 0 ]]; then
   echo "WARNING: refresh-interval tuning failed; local API reads may lag production cadences." >&2
 elif [[ "$SCHEMA_VERSION" =~ ^[0-9]+$ && "$SCHEMA_VERSION" -ge 143 ]]; then
   TUNING_APPLIED="$(sed -n 's/.*refresh-interval tuning: applied=\([0-9][0-9]*\) skipped=.*/\1/p' <<<"$TUNING_OUTPUT" | tail -n 1)"
-  EXPECTED_TUNING_APPLIED=5
+  EXPECTED_TUNING_APPLIED=4
   if [[ -z "$TUNING_APPLIED" || "$TUNING_APPLIED" -lt "$EXPECTED_TUNING_APPLIED" ]]; then
     echo "WARNING: refresh-interval tuning applied ${TUNING_APPLIED:-unknown}/${EXPECTED_TUNING_APPLIED} expected statements on schema ${SCHEMA_VERSION}; local API reads may lag production cadences." >&2
   fi

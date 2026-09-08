@@ -24,21 +24,22 @@
 -- SCOPE
 --
 -- Only the MVs local development actually needs for publish/read visibility.
--- A schema-200 database has 38 refreshable MVs; blanket-shortening all of them
+-- A current database has many refreshable MVs; blanket-shortening all of them
 -- would make a laptop churn on recomputes for read models nothing here touches.
---
--- Statements are applied one at a time and failures are ignored, because none
--- of these MVs exist on the pinned 2026-02-24 schema (which has 6 refreshable
--- MVs, none of them these). On that schema this file is a no-op.
 
 -- The read model behind GET /api/users/{pubkey}/videos. Required by the e2e.
 ALTER TABLE nostr.video_stats_snapshot_refresh_mv MODIFY REFRESH EVERY 10 SECOND;
 
 -- Feed read models, so a developer poking at the app sees their own writes.
-ALTER TABLE nostr.recent_videos_snapshot_refresh_mv MODIFY REFRESH EVERY 10 SECOND;
 ALTER TABLE nostr.popular_videos_snapshot_refresh_mv MODIFY REFRESH EVERY 30 SECOND;
 ALTER TABLE nostr.trending_videos_snapshot_refresh_mv MODIFY REFRESH EVERY 30 SECOND;
 ALTER TABLE nostr.user_feed_video_candidates_refresh_mv MODIFY REFRESH EVERY 30 SECOND;
+
+-- DELIBERATELY NOT SHORTENED: recent_videos_snapshot_refresh_mv.
+--
+-- Migration 000257 removed this view and its destination table when the relay
+-- feed switched to publication-order pagination. Keeping its old ALTER here
+-- would make every current local startup report a misleading skipped tuning.
 
 -- DELIBERATELY NOT SHORTENED: relay_feed_cache_refresh_mv.
 --

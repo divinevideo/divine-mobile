@@ -3,16 +3,9 @@
 #
 # WHY THIS EXISTS
 #
-# local_stack pins ghcr.io/divinevideo/funnelcake-{migrate,relay,api}:latest.
-# Those tags are frozen at 2026-02-24 because divine-funnelcake's CI push to
-# GHCR has failed with `denied: permission_denied: write_package` on every run
-# since the step was added (2026-03-07), and `continue-on-error: true` makes the
-# GitHub jobs API report the failing step as a success. Nothing there is fixable
-# from divine-mobile — see divine-mobile#6594.
-#
-# The consequence is a relay whose `nostr.allowed_kinds` stops at migration 70,
-# so kind 1059 (NIP-59 gift wrap) and kind 10050 (NIP-17 DM relay list) are
-# rejected outright and NIP-17 cannot be exercised locally at all.
+# local_stack normally tracks funnelcake main through its GHCR `:latest` images.
+# This script is the escape hatch for testing an unmerged funnelcake branch and
+# for building native arm64 images while CI publishes linux/amd64 only.
 #
 # This script builds the images the way divine-funnelcake's own CI does, using
 # divine-funnelcake's own Dockerfiles. It deliberately duplicates none of that
@@ -29,8 +22,8 @@
 #
 # ALL THREE OR NONE
 #
-# Do not build only migrate. A schema-200 database under the frozen 2026-02-24
-# api binary makes `GET /api/users/{pubkey}/videos` return HTTP 500
+# Do not build only migrate. A newer database under an older api binary can
+# make `GET /api/users/{pubkey}/videos` return HTTP 500
 # ("query failed: string is not valid utf8"), because the ClickHouse column
 # types moved under a binary that did not. Measured on 2026-08-07.
 #
@@ -147,10 +140,9 @@ print_exports | sed 's/^export /    /'
 echo ""
 echo "Prefer .env over exporting in one shell. The variables have to apply to"
 echo "EVERY compose command: a plain \`docker compose run ...\` in a terminal that"
-echo "lacks them picks the pinned golang-migrate image back up, runs it against a"
-echo "database the Rust migrator owns, and wedges it with"
-echo "\"Dirty database version N\" — recoverable only by wiping the volume."
+echo "lacks them silently mixes the default GHCR images with the local images."
+echo "Keeping all three overrides in .env keeps binaries and migrations aligned."
 echo ""
-echo "Then reset, because the schema jumps from 70 to current:"
+echo "Then reset, so the database schema matches the locally built binaries:"
 echo ""
 echo "    mise run local_reset"
