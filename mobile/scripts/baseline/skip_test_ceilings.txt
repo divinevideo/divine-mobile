@@ -16,12 +16,9 @@
 # Fix a skip rather than regenerating this file. Skip-debt epic: #4337 (WS-1).
 test/providers/video_events_provider_fresh_test.dart	1 # quarantine: real relay via realintegrationtesthelper, 40s timeout (#4836)
 test/providers/video_events_provider_test.dart	1 # rewrite: stubs subscribe(named filters:), now a positional param (#4836)
-test/router/all_routes_test.dart	1 # rewrite: bare container, sharedpreferencesprovider must be set (#4836)
 test/router/app_shell_integration_test.dart	4 # rewrite: bare container, tags tab gone, index 2 is notifications (#4836)
 test/router/explore_tab_navigation_test.dart	1 # rewrite: explore tabs renamed, needs appversionprovider override (#4836)
 test/router/explore_tab_tap_navigation_test.dart	1 # rewrite: shell nav bar is a column, bottomnavigationbar cast dies (#4836)
-test/router/navigation_scenarios_test.dart	1 # rewrite: no overrides, sharedpreferencesprovider now throws (#4836)
-test/router/page_context_provider_test.dart	1 # rewrite: bare ProviderContainer, sharedPreferences unoverridden (#4836)
 test/router/profile_me_redirect_integration_test.dart	1 # rewrite: same authStateStream mock gap; overlaps unit variant (#4836)
 test/router/profile_me_redirect_test.dart	1 # rewrite: _MockAuthService lacks authStateStream goRouter reads (#4836)
 test/screens/feature_flag_screen_test.dart	1 # rewrite: screen hides internal flags, renders 7 of 18 (#4836)
