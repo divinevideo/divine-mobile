@@ -1620,7 +1620,8 @@ internal class DivineVideoPlayerInstance(
             if (videoSize.width > 0 && videoSize.height > 0) {
                 videoWidth = videoSize.width
                 videoHeight = videoSize.height
-                pixelWidthHeightRatio = videoSize.pixelWidthHeightRatio.toDouble()
+                pixelWidthHeightRatio = videoSize.pixelWidthHeightRatio
+                    .takeIf { it.isFinite() && it > 0f }?.toDouble() ?: 1.0
                 rotationDegrees = newRotation
             } else {
                 // Keep all display-dimension fields coherent during Media3's

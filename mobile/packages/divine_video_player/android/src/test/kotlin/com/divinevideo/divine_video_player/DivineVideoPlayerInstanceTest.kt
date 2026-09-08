@@ -11,10 +11,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.view.TextureRegistry
@@ -382,6 +384,47 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.addListener(capture(slot)) } just runs
         materializePlayer()
         return slot.captured
+    }
+
+    @Test
+    fun `video size emits the pixel ratio and resets it with unknown dimensions`() {
+        val listener = capturePlayerListener()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        val state = slot<Any>()
+        every { sink.success(capture(state)) } just runs
+        instance.onListen(null, sink)
+
+        listener.onVideoSizeChanged(VideoSize(720, 480, 2f / 3f))
+
+        val sized = state.captured as Map<*, *>
+        assertEquals(720, sized["videoWidth"])
+        assertEquals(480, sized["videoHeight"])
+        assertEquals((2f / 3f).toDouble(), sized["pixelWidthHeightRatio"])
+
+        listener.onVideoSizeChanged(VideoSize.UNKNOWN)
+
+        val reset = state.captured as Map<*, *>
+        assertEquals(0, reset["videoWidth"])
+        assertEquals(0, reset["videoHeight"])
+        assertEquals(1.0, reset["pixelWidthHeightRatio"])
+    }
+
+    @Test
+    fun `video size uses square pixels when the reported ratio is invalid`() {
+        val listener = capturePlayerListener()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        val state = slot<Any>()
+        every { sink.success(capture(state)) } just runs
+        instance.onListen(null, sink)
+
+        for (ratio in listOf(0f, -1f, Float.NaN, Float.POSITIVE_INFINITY)) {
+            listener.onVideoSizeChanged(VideoSize(720, 480, ratio))
+
+            val sized = state.captured as Map<*, *>
+            assertEquals(720, sized["videoWidth"])
+            assertEquals(480, sized["videoHeight"])
+            assertEquals(1.0, sized["pixelWidthHeightRatio"])
+        }
     }
 
     @Test
