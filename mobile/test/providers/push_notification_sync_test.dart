@@ -1561,6 +1561,9 @@ void main() {
       }, (error, stack) => unhandled.add(error));
 
       expect(unhandled, isEmpty);
+      verify(
+        () => pushService.register(pubkeyA, isCurrent: any(named: 'isCurrent')),
+      ).called(1);
     });
 
     test(
