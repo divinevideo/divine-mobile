@@ -121,9 +121,21 @@ void main() {
       );
       adapter(diagnostic(message: 'first key after eviction'));
 
-      final messages = capture.getRecentLogs().map((entry) => entry.message);
+      final logs = capture.getRecentLogs().toList();
+      final messages = logs.map((entry) => entry.message);
       expect(messages, hasLength(5));
-      expect(messages.elementAt(2), contains('Suppressed 1 repeated'));
+
+      // The eviction summary must be attributed to the EVICTED key, not the
+      // incoming one that triggered the eviction.
+      final eviction = logs.elementAt(2);
+      expect(eviction.message, contains('Suppressed 1 repeated'));
+      expect(eviction.message, contains('wss://relay.example'));
+      expect(eviction.message, contains('connectionLifecycle'));
+      expect(eviction.message, contains('info'));
+      expect(eviction.message, isNot(contains('wss://other.example')));
+      expect(eviction.message, isNot(contains('queryDispatch')));
+      expect(eviction.level, LogLevel.info);
+
       expect(messages.last, contains('first key after eviction'));
     });
 
