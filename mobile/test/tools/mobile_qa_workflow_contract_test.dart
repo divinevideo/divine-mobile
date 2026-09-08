@@ -1,46 +1,115 @@
 // ABOUTME: Pins event routing for selective post-merge and nightly mobile QA.
-// ABOUTME: Ensures docs-aware service scope and full scheduled coverage coexist.
+// ABOUTME: Parses the workflow so each clause is asserted where it lives.
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yaml/yaml.dart';
 
 void main() {
   group('mobile service QA workflow', () {
-    late String workflow;
+    late Map<dynamic, dynamic> workflow;
+    late Map<dynamic, dynamic> triggers;
+    late Map<dynamic, dynamic> changes;
 
+    // Parsed rather than substring-matched. Three of the twelve `contains`
+    // assertions this replaced already passed on the base commit, and
+    // `contains('branches: [main]')` was satisfied by the pre-existing
+    // pull_request trigger — so deleting `branches: [main]` from under the
+    // new `push:` left every needle matching while the workflow started
+    // firing on every push to every branch.
     setUpAll(() {
-      workflow = File(
-        '../.github/workflows/mobile_service_integration_tests.yaml',
-      ).readAsStringSync();
+      workflow =
+          loadYaml(
+                File(
+                  '../.github/workflows/mobile_service_integration_tests.yaml',
+                ).readAsStringSync(),
+              )
+              as Map<dynamic, dynamic>;
+      triggers = workflow['on'] as Map<dynamic, dynamic>;
+      changes =
+          (workflow['jobs'] as Map<dynamic, dynamic>)['changes']
+              as Map<dynamic, dynamic>;
     });
 
-    test('runs for pull requests, main pushes, schedules, and dispatches', () {
-      expect(workflow, contains('pull_request:'));
-      expect(workflow, contains('push:'));
-      expect(workflow, contains('branches: [main]'));
-      expect(workflow, contains('schedule:'));
-      expect(workflow, contains('workflow_dispatch:'));
+    Map<dynamic, dynamic> stepById(String id) => (changes['steps'] as List)
+        .cast<Map<dynamic, dynamic>>()
+        .firstWhere((step) => step['id'] == id);
+
+    group('triggers', () {
+      test('runs on pushes to main only', () {
+        final push = triggers['push'] as Map<dynamic, dynamic>;
+        expect((push['branches'] as List).cast<String>(), equals(['main']));
+      });
+
+      test('runs on pull requests to main', () {
+        final pr = triggers['pull_request'] as Map<dynamic, dynamic>;
+        expect((pr['branches'] as List).cast<String>(), equals(['main']));
+      });
+
+      test('runs nightly on a cron schedule', () {
+        final schedule = (triggers['schedule'] as List)
+            .cast<Map<dynamic, dynamic>>();
+        expect(schedule, isNotEmpty);
+        expect(schedule.single['cron'], isA<String>());
+      });
+
+      test('can be dispatched manually', () {
+        expect(triggers.containsKey('workflow_dispatch'), isTrue);
+      });
     });
 
-    test('uses the shared mobile classifier after merges', () {
-      expect(workflow, contains('detect_mobile_ci_scope.sh'));
-      expect(workflow, contains("github.event_name == 'push'"));
-      expect(workflow, contains('steps.mobile-scope.outputs.service'));
-      expect(workflow, contains('PUSH_BEFORE_SHA:'));
-      expect(workflow, contains('PUSH_AFTER_SHA:'));
+    group('post-merge classification', () {
+      test('classifies a merge with the shared mobile detector', () {
+        final step = stepById('mobile-scope');
+        expect(step['if'] as String, contains("github.event_name == 'push'"));
+        expect(step['run'] as String, contains('detect_mobile_ci_scope.sh'));
+      });
+
+      test('compares github.event.before against github.sha', () {
+        final env = stepById('mobile-scope')['env'] as Map<dynamic, dynamic>;
+        expect(env['PUSH_BEFORE_SHA'], equals(r'${{ github.event.before }}'));
+        expect(env['PUSH_AFTER_SHA'], equals(r'${{ github.sha }}'));
+      });
+
+      test('feeds the mobile service scope into both suite groups', () {
+        final env = stepById('resolved')['env'] as Map<dynamic, dynamic>;
+        for (final key in ['FOCUSED', 'APP']) {
+          expect(
+            env[key] as String,
+            contains('steps.mobile-scope.outputs.service'),
+            reason: key,
+          );
+        }
+      });
+
+      test('gives each merge its own concurrency group', () {
+        final concurrency = workflow['concurrency'] as Map<dynamic, dynamic>;
+        expect(concurrency['group'] as String, contains('github.sha'));
+        expect(concurrency['cancel-in-progress'], isTrue);
+      });
     });
 
-    test('runs every service group on schedules and manual dispatches', () {
-      expect(
-        workflow,
-        contains(
-          "github.event_name == 'schedule' || "
-          "github.event_name == 'workflow_dispatch'",
-        ),
-      );
-      expect(workflow, contains('echo "focused=true"'));
-      expect(workflow, contains('echo "app=true"'));
+    group('scope resolution', () {
+      test('takes both job outputs from the resolve step', () {
+        final outputs = changes['outputs'] as Map<dynamic, dynamic>;
+        expect(outputs['focused'], contains('steps.resolved.outputs.focused'));
+        expect(outputs['app'], contains('steps.resolved.outputs.app'));
+      });
+
+      test('resolves unconditionally so an unclassified event fails', () {
+        expect(stepById('resolved')['if'], isNull);
+        expect(stepById('resolved')['run'] as String, contains('exit 1'));
+      });
+
+      test('runs every service group on schedules and manual dispatches', () {
+        final step = stepById('full-scope');
+        final gate = step['if'] as String;
+        expect(gate, contains("github.event_name == 'schedule'"));
+        expect(gate, contains("github.event_name == 'workflow_dispatch'"));
+        expect(step['run'] as String, contains('focused=true'));
+        expect(step['run'] as String, contains('app=true'));
+      });
     });
   });
 }
