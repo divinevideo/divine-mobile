@@ -28,7 +28,7 @@ import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.da
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, ProVideoEditor, ProgressModel;
+    show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Sets up a clip's green screen.
@@ -44,15 +44,17 @@ import 'package:unified_logger/unified_logger.dart';
 class VideoClipChromaKeyScreen extends StatefulWidget {
   const VideoClipChromaKeyScreen({
     required this.clip,
-    @visibleForTesting this.detectOnOpen = true,
+    @visibleForTesting this.detect = ChromaKey.detect,
     super.key,
   });
 
   final DivineVideoClip clip;
 
-  /// Whether a clip without a key measures itself as soon as the screen opens.
+  /// The screen-colour measurement implementation.
+  ///
+  /// Tests replace the native decoder while keeping the on-open behavior on.
   @visibleForTesting
-  final bool detectOnOpen;
+  final ChromaKeyDetectFn detect;
 
   @override
   State<VideoClipChromaKeyScreen> createState() =>
@@ -84,13 +86,8 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
     _cubit = ChromaKeyEditorCubit(
       video: EditorVideo.file(_previewPath),
       initialChromaKey: widget.clip.chromaKey,
+      detect: widget.detect,
     );
-    // Measuring beats guessing and costs one thumbnail decode, so a clip
-    // without a key opens with the screen colour already measured. A clip that
-    // has one keeps it: re-measuring would throw the user's tuning away.
-    if (widget.detectOnOpen && widget.clip.chromaKey == null) {
-      unawaited(_cubit.detectFromFootage());
-    }
     unawaited(_initializePlayer());
   }
 

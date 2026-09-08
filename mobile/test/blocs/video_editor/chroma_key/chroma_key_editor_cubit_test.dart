@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -10,14 +11,25 @@ void main() {
   group(ChromaKeyEditorCubit, () {
     final video = EditorVideo.file('/a/clip.mp4');
 
+    const measured = ChromaKeyDetection(
+      color: Color(0xFF19A55B),
+      similarity: 0.1,
+      coverage: 0.8,
+      spread: 0.02,
+    );
+
+    // `detectOnOpen` defaults to off here so each test drives the measurement
+    // it is about; the on-open group turns it back on.
     ChromaKeyEditorCubit build({
       ClipChromaKey? initialChromaKey,
       ChromaKeyDetectFn? detect,
+      bool detectOnOpen = false,
     }) {
       return ChromaKeyEditorCubit(
         video: video,
         initialChromaKey: initialChromaKey,
         detect: detect ?? (_) async => throw UnimplementedError(),
+        detectOnOpen: detectOnOpen,
       );
     }
 
@@ -40,6 +52,133 @@ void main() {
       addTearDown(cubit.close);
 
       expect(cubit.state.chromaKey, existing);
+    });
+
+    group('detect on open', () {
+      test('measures the screen with no user action', () async {
+        final cubit = build(
+          detect: (_) async => measured,
+          detectOnOpen: true,
+        );
+        addTearDown(cubit.close);
+
+        // The screen has to open on a cutout rather than an inert panel, so
+        // the measurement starts with the cubit and not with a button tap.
+        expect(cubit.state.isDetecting, isTrue);
+        await pumpEventQueue();
+
+        expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+        expect(cubit.state.chromaKey.key.similarity, 0.1);
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+      });
+
+      test('reports a failure and leaves a usable key behind', () async {
+        final cubit = build(
+          detect: (_) async =>
+              throw const ChromaKeyDetectionException('no screen'),
+          detectOnOpen: true,
+        );
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.failure);
+        // Failing on open must not strand the user: the preset key the colour
+        // swatch and the sliders act on is still there to adjust by hand.
+        expect(cubit.state.chromaKey.key, const ChromaKey.greenScreen());
+      });
+
+      test('leaves a clip that already has a key alone', () async {
+        var calls = 0;
+        const existing = ClipChromaKey(
+          key: ChromaKey(color: Color(0xFF0000FF), similarity: 0.42),
+        );
+        final cubit = build(
+          initialChromaKey: existing,
+          detect: (_) async {
+            calls++;
+            return measured;
+          },
+          detectOnOpen: true,
+        );
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        // Re-opening a keyed clip would otherwise overwrite the tuning the
+        // user already settled on.
+        expect(calls, isZero);
+        expect(cubit.state.chromaKey, existing);
+      });
+
+      test(
+        'the manual control re-measures after the open attempt failed',
+        () async {
+          var calls = 0;
+          final cubit = build(
+            detect: (_) async {
+              calls++;
+              if (calls == 1) {
+                throw const ChromaKeyDetectionException('no screen');
+              }
+              return measured;
+            },
+            detectOnOpen: true,
+          );
+          addTearDown(cubit.close);
+          await pumpEventQueue();
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.failure);
+
+          // Re-running after moving the clip or changing the light is still the
+          // user's call, so the on-open pass must not consume the one attempt.
+          await cubit.detectFromFootage();
+
+          expect(calls, 2);
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        },
+      );
+
+      test('measures on open by default, with no flag passed', () async {
+        var calls = 0;
+        final cubit = ChromaKeyEditorCubit(
+          video: video,
+          detect: (_) async {
+            calls++;
+            return measured;
+          },
+        );
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        // Constructed the way the screen constructs it — nothing passes
+        // `detectOnOpen`. Every other test in this file states the flag
+        // explicitly, so without this one, flipping the production default to
+        // `false` would leave the whole cubit suite green.
+        expect(calls, 1);
+        expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+      });
+
+      test('drops a measurement that lands after the screen closed', () async {
+        final gate = Completer<ChromaKeyDetection>();
+        final cubit = build(detect: (_) => gate.future, detectOnOpen: true);
+        addTearDown(cubit.close);
+        expect(cubit.state.isDetecting, isTrue);
+
+        // The measurement is in flight while the user backs out. With the emit
+        // unguarded this throws `Cannot emit new states after calling close`,
+        // and because the `try` wraps only `_detect` the throw is no longer
+        // swallowed as a detection failure — it escapes into the test zone and
+        // fails here. Widening that `try` again would silently disarm this.
+        await cubit.close();
+        gate.complete(measured);
+        await pumpEventQueue();
+
+        expect(
+          cubit.state.detectionStatus,
+          ChromaKeyDetectionStatus.detecting,
+        );
+        expect(cubit.state.chromaKey.key, const ChromaKey.greenScreen());
+      });
     });
 
     group('detectFromFootage', () {
@@ -145,6 +284,23 @@ void main() {
           '/a/backdrop.mp4',
         ),
       );
+
+      test('a measurement landing after close completes rather than '
+          'throwing', () async {
+        final gate = Completer<ChromaKeyDetection>();
+        final cubit = build(detect: (_) => gate.future);
+        // Driven by hand so the future is in hand. The on-open call is
+        // `unawaited` and the button assigns a tear-off to a `VoidCallback`,
+        // so in production nothing would observe this rejection — which is
+        // exactly why the test has to.
+        final measuring = cubit.detectFromFootage();
+
+        await cubit.close();
+        gate.complete(measured);
+
+        await expectLater(measuring, completes);
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.detecting);
+      });
 
       blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
         'ignores a second request while one is in flight',
