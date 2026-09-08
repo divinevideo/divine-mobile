@@ -14,7 +14,7 @@ void main() {
 
     test('resolves the feed index to the current user npub', () {
       expect(
-        meProfileRedirectPath(
+        ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 0,
@@ -25,7 +25,7 @@ void main() {
 
     test('resolves the grid index to the current user npub', () {
       expect(
-        meProfileRedirectPath(
+        ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 1,
@@ -36,7 +36,7 @@ void main() {
 
     test('preserves the profile route when no video index is present', () {
       expect(
-        meProfileRedirectPath(
+        ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: null,
@@ -47,7 +47,7 @@ void main() {
 
     test('sends unauthenticated users to the home feed', () {
       expect(
-        meProfileRedirectPath(
+        ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: false,
           currentPublicKeyHex: null,
           videoIndex: 0,

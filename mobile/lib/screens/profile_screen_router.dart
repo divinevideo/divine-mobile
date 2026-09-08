@@ -52,6 +52,33 @@ class ProfileScreenRouter extends ConsumerStatefulWidget {
   static String pathForIndex(String npub, int index) =>
       RoutePaths.profileForIndex(npub, index);
 
+  /// Resolves the concrete destination for the `/profile/me` placeholder.
+  ///
+  /// A null [videoIndex] means grid mode and resolves to [pathForNpub]; any
+  /// non-null index means fullscreen feed mode at that video and resolves to
+  /// [pathForIndex]. Index 0 is the first video of the feed, not the grid.
+  ///
+  /// [isAuthenticated] and [currentPublicKeyHex] come from two independent
+  /// AuthService fields and can disagree: on a cold start with a restored
+  /// identity the pubkey is already known while the auth state is still
+  /// `checking`. Either one being absent sends the caller to the home feed,
+  /// so a signed-out session never lands on a profile.
+  @visibleForTesting
+  static String meProfileRedirectPath({
+    required bool isAuthenticated,
+    required String? currentPublicKeyHex,
+    required int? videoIndex,
+  }) {
+    if (!isAuthenticated || currentPublicKeyHex == null) {
+      return VideoFeedPage.pathForIndex(0);
+    }
+
+    final currentUserNpub = NostrKeyUtils.encodePubKey(currentPublicKeyHex);
+    return videoIndex == null
+        ? pathForNpub(currentUserNpub)
+        : pathForIndex(currentUserNpub, videoIndex);
+  }
+
   const ProfileScreenRouter({super.key});
 
   @override
@@ -394,7 +421,7 @@ class _MeProfileRedirect extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
-    final redirectPath = meProfileRedirectPath(
+    final redirectPath = ProfileScreenRouter.meProfileRedirectPath(
       isAuthenticated: authService.isAuthenticated,
       currentPublicKeyHex: authService.currentPublicKeyHex,
       videoIndex: videoIndex,
@@ -411,23 +438,6 @@ class _MeProfileRedirect extends ConsumerWidget {
     // Show loading while redirecting
     return const Center(child: DivineCircularProgressIndicator());
   }
-}
-
-/// Resolves the concrete destination for the `/profile/me` placeholder.
-@visibleForTesting
-String meProfileRedirectPath({
-  required bool isAuthenticated,
-  required String? currentPublicKeyHex,
-  required int? videoIndex,
-}) {
-  if (!isAuthenticated || currentPublicKeyHex == null) {
-    return VideoFeedPage.pathForIndex(0);
-  }
-
-  final currentUserNpub = NostrKeyUtils.encodePubKey(currentPublicKeyHex);
-  return videoIndex == null
-      ? ProfileScreenRouter.pathForNpub(currentUserNpub)
-      : ProfileScreenRouter.pathForIndex(currentUserNpub, videoIndex);
 }
 
 /// Displays profile data after loading videos and stats.
