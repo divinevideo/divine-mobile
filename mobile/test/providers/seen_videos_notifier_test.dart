@@ -1,10 +1,25 @@
 // ABOUTME: Tests for SeenVideosNotifier Riverpod state management
 // ABOUTME: Validates reactive state updates and provider integration
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> _waitUntilInitialized(ProviderContainer container) async {
+  if (container.read(seenVideosProvider).isInitialized) return;
+
+  final initialized = Completer<void>();
+  final subscription = container.listen(seenVideosProvider, (_, state) {
+    if (state.isInitialized && !initialized.isCompleted) {
+      initialized.complete();
+    }
+  }, fireImmediately: true);
+  await initialized.future;
+  subscription.close();
+}
 
 void main() {
   group('SeenVideosNotifier', () {
@@ -20,8 +35,7 @@ void main() {
       expect(initialState.seenVideoIds, isEmpty);
       expect(initialState.isInitialized, isFalse);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       final state = container.read(seenVideosProvider);
       expect(state.isInitialized, isTrue);
@@ -34,8 +48,7 @@ void main() {
 
       final notifier = container.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       const videoId = 'test_video_123';
       await notifier.markVideoAsSeen(videoId);
@@ -51,8 +64,7 @@ void main() {
 
       final notifier = container.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       const videoId = 'test_video_456';
 
@@ -70,8 +82,7 @@ void main() {
 
       final notifier = container.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       const videoId = 'test_video_789';
 
@@ -94,8 +105,7 @@ void main() {
 
       final notifier = container.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       const videoId = 'duplicate_video';
 
@@ -114,8 +124,7 @@ void main() {
 
       final notifier = container.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container);
 
       var listenerCallCount = 0;
       container.listen(seenVideosProvider, (_, _) => listenerCallCount++);
@@ -133,8 +142,7 @@ void main() {
       final container1 = ProviderContainer();
       final notifier1 = container1.read(seenVideosProvider.notifier);
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container1);
 
       const videoId = 'persistent_video';
       await notifier1.markVideoAsSeen(videoId);
@@ -144,14 +152,12 @@ void main() {
       // Second container
       final container2 = ProviderContainer();
 
-      // Wait for initialization
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _waitUntilInitialized(container2);
 
       final notifier2 = container2.read(seenVideosProvider.notifier);
       expect(notifier2.hasSeenVideo(videoId), isTrue);
 
       container2.dispose();
-      // TODO(any): Fix and re-enable tests
-    }, skip: true);
+    });
   });
 }
