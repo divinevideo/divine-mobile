@@ -131,6 +131,37 @@ void main() {
     });
 
     group('false-positive guards', () {
+      for (final symbol in [
+        'volumeAvailableCapacityKey',
+        'volumeAvailableCapacityForImportantUsageKey',
+        'volumeAvailableCapacityForOpportunisticUsageKey',
+        'volumeTotalCapacityKey',
+      ]) {
+        test('detects Swift disk-space key $symbol', () {
+          final root = makeTree(swift: 'let key = URLResourceKey.$symbol\n');
+          final result = run(root: root);
+
+          expect(result.exitCode, equals(1), reason: result.output);
+          expect(
+            result.output,
+            contains('NSPrivacyAccessedAPICategoryDiskSpace'),
+          );
+        });
+      }
+
+      test('ignores unrelated capitalized type names', () {
+        final root = makeTree(
+          swift:
+              'let size = Size(width: 1, height: 2)\n'
+              'let free = FreeSize()\n'
+              'let creation = CreationDate()\n'
+              'let modification = ModificationDate()\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+      });
+
       test('does not fail on a bare PHAsset-style .creationDate accessor', () {
         final root = makeTree(
           swift:

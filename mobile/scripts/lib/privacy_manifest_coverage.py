@@ -70,7 +70,7 @@ DEFINITE = [
         re.compile(
             r"\b(?:contentModificationDateKey|NSURLContentModificationDateKey)\b"
             r"|\b(?:creationDateKey|NSURLCreationDateKey)\b"
-            r"|\b(?:NSFile)?(?:CreationDate|ModificationDate)\b"
+            r"|\bNSFile(?:CreationDate|ModificationDate)\b"
             r"|\bfileModificationDate\b"
             r"|\bFileAttributeKey\.(?:creationDate|modificationDate)\b"
             r"|\bgetattrlistbulk\s*\("
@@ -80,10 +80,10 @@ DEFINITE = [
     (
         DISK_SPACE,
         re.compile(
-            r"\b(?:NSURL)?VolumeAvailableCapacity"
+            r"\b(?:volume|NSURLVolume)AvailableCapacity"
             r"(?:ForImportantUsage|ForOpportunisticUsage)?Key\b"
-            r"|\b(?:NSURL)?VolumeTotalCapacityKey\b"
-            r"|\b(?:NSFileSystem)?FreeSize\b|\b(?:NSFileSystem)?Size\b"
+            r"|\b(?:volume|NSURLVolume)TotalCapacityKey\b"
+            r"|\bNSFileSystem(?:FreeSize|Size)\b"
             r"|\bsystemFreeSize\b|\bsystemSize\b"
             r"|\bstatfs\s*\(|\bstatvfs\s*\(|\bfstatfs\s*\(|\bfstatvfs\s*\("
         ),
