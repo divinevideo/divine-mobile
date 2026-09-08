@@ -148,29 +148,6 @@ def unquote(v):
         return v[1:-1]
     return v
 
-def searchable_flow_text(lines):
-    """Flow text with YAML comments removed but block content preserved."""
-    searchable = []
-    block_parent_indent = None
-    for raw_line in lines:
-        raw = raw_line.rstrip("\n")
-        stripped = raw.strip()
-        indent = len(raw) - len(raw.lstrip())
-        if block_parent_indent is not None:
-            if not stripped or indent > block_parent_indent:
-                searchable.append(raw)
-                continue
-            block_parent_indent = None
-
-        line = strip_comment(raw)
-        searchable.append(line)
-        for pat in EXTRACTION_PATTERNS:
-            match = pat.match(line)
-            if match and is_block_scalar_header(unquote(match.group("v"))):
-                block_parent_indent = indent
-                break
-    return norm("\n".join(searchable))
-
 def flow_literals(path):
     """Literal copy strings a flow asserts, taps, or waits for. Skips
     ${...} interpolations (environment values, not copy), inline maps, and
