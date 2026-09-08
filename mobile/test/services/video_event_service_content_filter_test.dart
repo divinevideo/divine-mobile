@@ -26,11 +26,9 @@ class _FakeFilter extends Fake implements Filter {}
 class _FakeLabelEvent extends Fake implements Event {
   _FakeLabelEvent({required this.pubkey, required this.tags});
 
-  // The live tail (#8255) reads id (dedup) and createdAt (tail watermark).
-  // These fakes model the single-shot backfill only, so fixed values suffice:
-  // an empty id skips dedup, exactly as intended for a one-page load.
   @override
-  String get id => '';
+  String get id =>
+      '7777777777777777777777777777777777777777777777777777777777777777';
 
   @override
   int get createdAt => 0;
@@ -118,6 +116,7 @@ void main() {
       () => mockNostrClient.subscribe(
         any(),
         subscriptionId: any(named: 'subscriptionId'),
+        onEose: any(named: 'onEose'),
       ),
     ).thenAnswer((_) => StreamController<Event>.broadcast().stream);
 

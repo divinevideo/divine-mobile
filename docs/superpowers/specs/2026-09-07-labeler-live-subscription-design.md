@@ -8,27 +8,30 @@ reaches the running client until an app restart. This is the complement of #8214
 
 ## Approved design decisions
 
-1. **One subscription per labeler.** Reuse the existing per-pubkey `_subscriptions`
-   map. The whole service is keyed per-pubkey (load generation, `_loadingLabelers`,
-   `_unloadLabeler`, follow-list churn), so per-labeler subscriptions are the
-   surgical fit. Practical count stays well under the relay's `max_subscriptions:
-   100`. A single combined `authors:[...]` filter was rejected: it would force
-   re-architecting the per-pubkey model and replay every labeler's stored window on
-   each follow-list change.
+1. **One shared subscription for all loaded trusted labelers.** Explicitly selected
+   labelers and followed accounts are multiplexed into one `authors:[...]` filter.
+   The followed-labeler product setting applies to the entire follow list, which can
+   exceed the production relay's 100-subscription limit; one REQ keeps relay work
+   constant without silently weakening that setting. Per-labeler state remains
+   independent for history loading, moderation rows, watermarks, and unloads. A
+   follow-list change cancels the old listener before replacing the stable REQ id,
+   and bulk changes are coalesced into one replacement.
 
 2. **Tail-only live subscription; keep the paged backfill.** A no-`since`
    subscription would re-request the full stored window and undo #8817's paging
    (which exists precisely to avoid OOM/timeout on large histories). So the paged
    backfill (`_loadLabelerHistory`) stays as-is and latches "loaded"; the live
-   subscription opens with `since` = the newest applied label's `created_at`
-   (fallback: now) and carries only new labels.
+   subscription opens from the oldest per-labeler watermark. Each author still has
+   its own watermark, so events older than that author's boundary are ignored even
+   when another author requires an older shared `since`.
 
 3. **Auto-reconnect above the SDK**, mirroring `DmRepository`'s gift-wrap
-   subscription: store the per-pubkey `StreamSubscription`; on `onError`
+   subscription: store the shared `StreamSubscription`; on `onError`
    (relay `CLOSED` → `RelaySubscriptionRefusedException`) or `onDone`, cancel and
-   re-open the tail via a cancellable `Timer`, guarded by `_disposed` and the
-   existing per-pubkey load generation so an unload / account switch / dispose kills
-   pending reconnects. The reconnect re-opens with an updated `since` (newest seen).
+   re-open the tail via one cancellable `Timer`, guarded by `_disposed` and the tail
+   generation so replacement / account switch / dispose kills stale callbacks. The
+   reconnect delay backs off from two seconds to one minute, resets after delivery
+   or EOSE, and logs both the drop and planned retry.
 
 4. **Keep #8214's relay-ready retry.** It recovers an *incomplete backfill* (timed
    out / no relays), a different failure mode than a dropped tail: the tail only
@@ -39,8 +42,10 @@ reaches the running client until an app restart. This is the complement of #8214
 
 `_processLabelEvent` appends unconditionally, so a reconnect that replays the tail
 window (and the small backfill/tail overlap) would create duplicate label rows.
-Track `_appliedLabelEventIds: Map<pubkey, Set<eventId>>`:
+Track event ids only at or after each labeler's current watermark:
 - `_processLabelEvent` skips an event id already applied for its labeler.
+- advancing a labeler's watermark discards ids from older seconds, bounding retained
+  dedup state to the timestamp-tie replay window rather than its complete history;
 - `_removeLabelsForLabeler(pubkey)` also clears that labeler's id-set, so the
   backfill's existing remove-then-reprocess still re-applies, and the
   backfill/tail overlap dedups.
@@ -50,8 +55,8 @@ Track `_appliedLabelEventIds: Map<pubkey, Set<eventId>>`:
 - A labeler's kind-1985 events published *after* subscription reach the label maps
   without an app restart.
 - The same event arriving twice does not produce duplicate label rows.
-- `_subscriptions` holds real subscriptions; `_unloadLabeler` and `dispose()`
-  tear them down.
+- the shared subscription carries all loaded trusted authors; author-set changes and
+  `dispose()` tear down the previous listener.
 - Behaviour survives a relay reconnect (verified, not assumed).
 - No regression to #8214: an incomplete initial load still must not latch loaded.
 
@@ -61,6 +66,8 @@ Extend `test/services/moderation_label_service_test.dart` (mocktail harness). St
 `nostrClient.subscribe(...)` to return a controllable `StreamController<Event>`:
 - live label after load lands in the maps (no restart);
 - duplicate event id → single row (dedup);
+- all followed labelers use one REQ, author-set changes replace it, and old
+  per-author replay is ignored;
 - `_unloadLabeler` / account switch / `dispose` cancels the subscription and stops
   a pending reconnect;
 - stream `onDone`/`onError` triggers a reconnect that re-opens the tail;

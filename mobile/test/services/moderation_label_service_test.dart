@@ -50,14 +50,14 @@ class _FakeNip05Adapter implements HttpClientAdapter {
 
 /// Fake event for testing label processing.
 ///
-/// [id] and [createdAt] default to empty/zero because the single-page tests
-/// never read them; the paging tests (#8252) pass explicit values because the
-/// backward-`until` walk dedups on `id` and cursors on `createdAt`.
+/// [createdAt] defaults to zero because single-page tests do not page. Tests
+/// that compare event identity pass explicit ids.
 class _FakeLabelEvent extends Fake implements Event {
   _FakeLabelEvent({
     required this.pubkey,
     required this.tags,
-    this.id = '',
+    this.id =
+        '9999999999999999999999999999999999999999999999999999999999999999',
     this.createdAt = 0,
   });
 
@@ -104,6 +104,7 @@ void main() {
       () => mockNostrClient.subscribe(
         any(),
         subscriptionId: any(named: 'subscriptionId'),
+        onEose: any(named: 'onEose'),
       ),
     ).thenAnswer((_) => defaultTail.stream);
     service = ModerationLabelService(
@@ -2081,7 +2082,7 @@ void main() {
         _FakeLabelEvent(
           pubkey: labeler,
           id: id,
-          createdAt: 1000,
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           tags: [
             ['L', 'content-warning'],
             ['l', 'nudity', 'content-warning'],
@@ -2104,6 +2105,130 @@ void main() {
     }
 
     test(
+      'all followed labelers share one live relay subscription',
+      () async {
+        stubCompletedBackfill();
+        final tails = <StreamController<Event>>[];
+        var activeListeners = 0;
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) {
+          late final StreamController<Event> tail;
+          tail = StreamController<Event>.broadcast(
+            onListen: () => activeListeners++,
+            onCancel: () => activeListeners--,
+          );
+          tails.add(tail);
+          return tail.stream;
+        });
+        addTearDown(() async {
+          service.dispose();
+          await Future.wait(tails.map((tail) => tail.close()));
+        });
+
+        const followed = [
+          '1111111111111111111111111111111111111111111111111111111111111111',
+          '2222222222222222222222222222222222222222222222222222222222222222',
+          '3333333333333333333333333333333333333333333333333333333333333333',
+        ];
+        await service.setFollowingModerationEnabled(
+          true,
+          followedPubkeys: followed,
+        );
+
+        expect(activeListeners, 1);
+        final captured = verify(
+          () => mockNostrClient.subscribe(
+            captureAny(),
+            subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).captured;
+        expect(captured, hasLength(1));
+        final filter = (captured.single as List<Filter>).single;
+        expect(filter.authors, unorderedEquals(followed));
+        expect(filter.kinds, [NostrEventKinds.label]);
+      },
+    );
+
+    test('changing labelers replaces the shared author filter', () async {
+      stubCompletedBackfill();
+      final tails = <StreamController<Event>>[];
+      var activeListeners = 0;
+      when(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) {
+        late final StreamController<Event> tail;
+        tail = StreamController<Event>.broadcast(
+          onListen: () => activeListeners++,
+          onCancel: () => activeListeners--,
+        );
+        tails.add(tail);
+        return tail.stream;
+      });
+      addTearDown(() async {
+        service.dispose();
+        await Future.wait(tails.map((tail) => tail.close()));
+      });
+
+      const first =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+      const second =
+          '5555555555555555555555555555555555555555555555555555555555555555';
+      await service.addLabeler(first);
+      await service.addLabeler(second);
+      await service.removeLabeler(first);
+
+      expect(activeListeners, 1);
+      final captured = verify(
+        () => mockNostrClient.subscribe(
+          captureAny(),
+          subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).captured;
+      final lastFilter = (captured.last as List<Filter>).single;
+      expect(lastFilter.authors, [second]);
+    });
+
+    test('an event without a Nostr id is rejected', () async {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: <Event>[
+            _FakeLabelEvent(
+              pubkey: service.divineModerationPubkeyHex,
+              id: '',
+              tags: [
+                ['L', 'content-warning'],
+                ['l', 'nudity', 'content-warning'],
+                ['e', 'invalid_id_target'],
+              ],
+            ),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ),
+      );
+
+      await service.subscribeToLabeler(service.divineModerationPubkeyHex);
+
+      expect(service.getContentWarnings('invalid_id_target'), isEmpty);
+    });
+
+    test(
       'a label published after the initial load reaches the maps without a '
       'restart',
       () async {
@@ -2116,6 +2241,7 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) => tail.stream);
 
@@ -2144,6 +2270,7 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) => tail.stream);
 
@@ -2154,6 +2281,53 @@ void main() {
         await pumpEventQueue();
 
         expect(service.getContentWarnings('dup_target'), hasLength(1));
+      },
+    );
+
+    test(
+      'an older replay is ignored after an author watermark advances',
+      () async {
+        stubCompletedBackfill();
+        final tail = StreamController<Event>.broadcast();
+        addTearDown(tail.close);
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => tail.stream);
+
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        await service.subscribeToLabeler(service.divineModerationPubkeyHex);
+        tail.add(
+          _FakeLabelEvent(
+            pubkey: service.divineModerationPubkeyHex,
+            id: 'newer_evt',
+            createdAt: now + 1,
+            tags: [
+              ['L', 'content-warning'],
+              ['l', 'nudity', 'content-warning'],
+              ['e', 'newer_target'],
+            ],
+          ),
+        );
+        tail.add(
+          _FakeLabelEvent(
+            pubkey: service.divineModerationPubkeyHex,
+            id: 'older_evt',
+            createdAt: now,
+            tags: [
+              ['L', 'content-warning'],
+              ['l', 'nudity', 'content-warning'],
+              ['e', 'older_target'],
+            ],
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(service.getContentWarnings('newer_target'), hasLength(1));
+        expect(service.getContentWarnings('older_target'), isEmpty);
       },
     );
 
@@ -2169,6 +2343,7 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) => tail.stream);
 
@@ -2209,6 +2384,7 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) {
           calls++;
@@ -2225,6 +2401,14 @@ void main() {
         await pumpEventQueue();
 
         expect(calls, 2, reason: 'the tail should reopen after it drops');
+        final messages = LogCaptureService().getRecentLogs().map(
+          (entry) => entry.message,
+        );
+        expect(
+          messages,
+          contains('Moderation label tail dropped (stream closed)'),
+        );
+        expect(messages, contains('Re-subscribing to moderation labels in 0s'));
         second.add(liveLabelFrom(custom, 'post', 'reconnect_tgt'));
         await pumpEventQueue();
         expect(svc.getContentWarnings('reconnect_tgt'), hasLength(1));
@@ -2241,6 +2425,7 @@ void main() {
         () => mockNostrClient.subscribe(
           any(),
           subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((_) => tail.stream);
 
