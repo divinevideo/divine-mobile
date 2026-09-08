@@ -165,8 +165,18 @@ while IFS= read -r path; do
       service=true ;;
   esac
 
+  # notification_rows_golden_test renders UserAvatar, which imports the
+  # provider/router graph. Tracing every import from the two tests under
+  # test/goldens plus test/flutter_test_config.dart reaches 2308 files across
+  # nearly all of mobile/lib and mobile/packages, so a list of leaf widget
+  # directories misses real dependencies: package:models,
+  # notification_constants.dart (whose avatarSize the golden pins), the
+  # avatar-SVG bloc/provider/repository chain, and the config that calls
+  # loadAppFonts() for the suite. A miss runs the goldens in no job at all,
+  # because select_test_shard.sh removes test/goldens from every Tests shard.
+  # Same closure shape as the two widget-level service suites, same treatment.
   case "$path" in
-    mobile/test/goldens/*|mobile/lib/screens/*|mobile/lib/widgets/*|mobile/lib/notifications/widgets/*|mobile/lib/l10n/*|mobile/packages/divine_ui/*|mobile/assets/*|mobile/fonts/*|mobile/pubspec.yaml|mobile/pubspec.lock|mobile/scripts/golden.sh)
+    mobile/lib/*|mobile/packages/*|mobile/assets/*|mobile/fonts/*|mobile/test/goldens/*|mobile/test/flutter_test_config.dart|mobile/pubspec.yaml|mobile/pubspec.lock|mobile/scripts/golden.sh)
       goldens=true ;;
   esac
 

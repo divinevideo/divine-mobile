@@ -480,12 +480,29 @@ esac
       'mobile/packages/dm_repository/lib/src/dm_repository.dart': {
         'app',
         'service',
+        // In the golden closure like every workspace package: the golden
+        // tests render UserAvatar, which reaches the provider graph.
+        'goldens',
       },
       'mobile/test/goldens/widgets/notification_rows_golden_test.dart': {
         'app',
         'goldens',
       },
       'mobile/scripts/golden.sh': {'app', 'goldens'},
+      // Reached transitively from the golden tests but outside the original
+      // leaf-widget allowlist: the constants notification_rows_golden pins,
+      // the avatar-SVG chain UserAvatar imports, a workspace package, and the
+      // config that calls loadAppFonts() for the suite.
+      'mobile/lib/constants/notification_constants.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'goldens',
+        'smoke',
+      },
+      'mobile/packages/models/lib/models.dart': {'app', 'service', 'goldens'},
+      'mobile/test/flutter_test_config.dart': {'app', 'goldens'},
       'mobile/packages/divine_ui/lib/src/divine_button.dart': {
         'app',
         'service',
