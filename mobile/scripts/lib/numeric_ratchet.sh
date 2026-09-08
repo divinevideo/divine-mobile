@@ -33,13 +33,18 @@
 #   REQUIRE_BASELINE_UPDATE_ON_DECREASE
 #                         optional "1" when every decrease must be committed to
 #                         the baseline immediately instead of remaining slack.
-#   ALLOW_RENAME_CLAIMS  optional "1" to enable renamed-from annotations.
-#                         Disabled by default so shared-engine consumers do not
-#                         silently inherit an exception to their debt policy.
-#   rename_key_to_repo_path()  required when ALLOW_RENAME_CLAIMS=1; maps a
-#                         baseline key to its repo-relative tracked file path.
 #   emit_current()       prints the current "key<TAB>count" lines (one per key)
 #   print_baseline_header()  prints the baseline file header comment block
+# Optional:
+#   validate_baseline_growth_policy() validates a guard-owned exception policy
+#                         before growth is filtered. It receives MAIN_F, BASE_F,
+#                         CUR_F, and REPO_ROOT; nonzero marks the run failed.
+#   filter_added_baseline_growth() reads proposed added baseline rows from stdin
+#                         and emits only rows that should remain failures. It is
+#                         passed MAIN_F, BASE_F, CUR_F, and REPO_ROOT as args.
+#                         The hook cannot suppress NEW, GROWTH, STALE, or raised
+#                         ceiling failures; the owning guard must validate any
+#                         policy exception before filtering an added row.
 #
 # A trailing "# reason" on a baseline line is documentation, ignored by every
 # comparison and CARRIED FORWARD across UPDATE_BASELINE (matched by key, so a
@@ -47,10 +52,6 @@
 # baselines have always been able to explain themselves; without it a reason
 # survives only until the next regeneration, which is why no numeric baseline
 # carried one before #3340.
-# An opted-in path-keyed guard may also allow `renamed-from: <old-key>` in a
-# trailing comment. The engine verifies the exact Git rename and the inherited
-# ceiling; the annotation may be removed once the new key reaches the base ref.
-#
 # Honours UPDATE_BASELINE=1 to regenerate. Bash 3.2 compatible (sort/join only).
 
 set -euo pipefail
@@ -122,10 +123,10 @@ run_numeric_ratchet() {
     return 0
   fi
 
-  local CUR_F BASE_F MAIN_F RENAME_F
-  CUR_F="$(mktemp)"; BASE_F="$(mktemp)"; MAIN_F="$(mktemp)"; RENAME_F="$(mktemp)"
+  local CUR_F BASE_F MAIN_F
+  CUR_F="$(mktemp)"; BASE_F="$(mktemp)"; MAIN_F="$(mktemp)"
   # shellcheck disable=SC2064
-  trap "rm -f '$CUR_F' '$BASE_F' '$MAIN_F' '$RENAME_F'" RETURN
+  trap "rm -f '$CUR_F' '$BASE_F' '$MAIN_F'" RETURN
 
   printf '%s\n' "$CURRENT" | grep -v '^[[:space:]]*$' | LC_ALL=C sort -t "$TAB" -k1,1 > "$CUR_F" || true
   if [[ -f "$BASELINE_FILE" ]]; then _nr_strip < "$BASELINE_FILE" > "$BASE_F"; else : > "$BASE_F"; fi
@@ -176,31 +177,8 @@ run_numeric_ratchet() {
   elif ! git -C "$REPO_ROOT" show "$BASE_REF:$BASELINE_REPO_PATH" 2>/dev/null | _nr_strip > "$MAIN_F"; then
     base_status=3
   fi
-  # Syntax needs no base ref, so it is checked in every arm. Bootstrap and the
-  # documented local opt-out are exactly the runs where a malformed annotation
-  # gets planted without anyone noticing.
-  if [[ -f "$BASELINE_FILE" ]]; then
-    local malformed rename_annotations
-    rename_annotations="$(awk '
-      /^[[:space:]]*#/ { next }
-      /[#;][[:space:]]*renamed-from:/ { print }
-    ' "$BASELINE_FILE")"
-    if [[ -n "$rename_annotations" && "${ALLOW_RENAME_CLAIMS:-0}" != "1" ]]; then
-      echo "FAIL [$RATCHET_LABEL]: this guard does not allow renamed-from annotations"
-      echo "  -> remove the annotation; this guard's baseline may only shrink"
-      fail=1
-    fi
-    malformed="$(awk -F "$TAB" '
-      /^[[:space:]]*#/ { next }
-      /[#;][[:space:]]*renamed-from:/ {
-        old=$0; sub(/^.*[#;][[:space:]]*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
-        if (old == "" || old == $0) print $1
-      }
-    ' "$BASELINE_FILE")"
-    if [[ -n "$malformed" ]]; then
-      echo "FAIL [$RATCHET_LABEL]: malformed renamed-from annotation on:"
-      echo "$malformed" | sed 's/^/  /'
-      echo "  -> use '# renamed-from: <old-key>' with a non-empty key"
+  if declare -F validate_baseline_growth_policy >/dev/null; then
+    if ! validate_baseline_growth_policy "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT"; then
       fail=1
     fi
   fi
@@ -210,123 +188,9 @@ run_numeric_ratchet() {
       local added raised
       added="$(join -t "$TAB" -v1 "$BASE_F" "$MAIN_F" || true)"
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
-      local rename_claims rename_new rename_old old_count new_count claim_ok
-      rename_claims="$RENAME_F"
-      if [[ -f "$BASELINE_FILE" && "${ALLOW_RENAME_CLAIMS:-0}" == "1" ]]; then
-        awk -F "$TAB" '
-          /^[[:space:]]*#/ { next }
-          # The claim must open a comment clause. Unanchored, an ordinary
-          # "# recover: renamed-from: the legacy harness" reason parsed as a
-          # claim and failed the guard on a key nobody renamed.
-          /[#;][[:space:]]*renamed-from:/ {
-            old=$0; sub(/^.*[#;][[:space:]]*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
-            if (old != "" && old != $0) print $1 "\t" old
-          }
-        ' "$BASELINE_FILE" \
-          | awk -F "$TAB" -v main_f="$MAIN_F" '
-              # Drop settled claims before validation, not inside the loop.
-              # Once the rename is on the base ref the claim grants nothing,
-              # but leaving it in the set let it reserve its old key forever:
-              # the duplicate checks counted it, so a later legitimate rename
-              # reusing that name was rejected as a duplicate claim.
-              BEGIN {
-                while ((getline line < main_f) > 0) {
-                  split(line, f, "\t"); settled[f[1]] = 1
-                }
-              }
-              !($1 in settled)
-            ' > "$rename_claims"
+      if declare -F filter_added_baseline_growth >/dev/null; then
+        added="$(printf '%s\n' "$added" | filter_added_baseline_growth "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT")"
       fi
-      while IFS="$TAB" read -r rename_new rename_old; do
-        [[ -z "$rename_new" ]] && continue
-        if [[ "$(cut -f1 "$rename_claims" | grep -Fxc "$rename_new")" -gt 1 ]]; then
-          echo "FAIL [$RATCHET_LABEL]: duplicate rename claim for new key $rename_new"
-          fail=1
-          continue
-        fi
-        if [[ "$(cut -f2 "$rename_claims" | grep -Fxc "$rename_old")" -gt 1 ]]; then
-          echo "FAIL [$RATCHET_LABEL]: old key $rename_old is claimed more than once"
-          fail=1
-          continue
-        fi
-        claim_ok=1
-        if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
-          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
-          echo "  -> $NEW_HINT"
-          fail=1
-          # Nothing below can say anything true about a key that is not there:
-          # the ceiling comparison used to fire a second time and assert the
-          # new key exceeded a ceiling the old key never had.
-          continue
-        fi
-        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$BASE_F"; then
-          echo "FAIL [$RATCHET_LABEL]: renamed-from old key remains in the branch baseline: $rename_old"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        fi
-        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$CUR_F"; then
-          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        fi
-        local rename_old_path rename_new_path rename_status
-        rename_old_path="$(rename_key_to_repo_path "$rename_old")"
-        rename_new_path="$(rename_key_to_repo_path "$rename_new")"
-        rename_status="$(git -C "$REPO_ROOT" diff --find-renames --name-status "$BASE_REF" -- "$rename_old_path" "$rename_new_path" || true)"
-        if ! awk -F "$TAB" -v old="$rename_old_path" -v new="$rename_new_path" '
-          $1 ~ /^R[0-9]+$/ && $2 == old && $3 == new { found=1 }
-          END { exit !found }
-        ' <<< "$rename_status"; then
-          echo "FAIL [$RATCHET_LABEL]: rename claim $rename_new <- $rename_old is not a Git rename"
-          echo "  -> expected ${rename_old_path} to be renamed to ${rename_new_path} vs ${BASE_REF}"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        fi
-        # The ceiling lookup below reads the FIRST row for the key, while the
-        # `added` subtraction removes EVERY row with it -- so one annotation
-        # could carry a second, un-annotated row for the same key past the
-        # report entirely.
-        if [[ "$(awk -F "$TAB" -v key="$rename_new" '$1 == key { n++ } END { print n+0 }' "$BASE_F")" -gt 1 ]]; then
-          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new appears more than once in the baseline"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        fi
-        new_count="$(awk -F "$TAB" -v key="$rename_new" '$1 == key { print $2; exit }' "$BASE_F")"
-        old_count="$(awk -F "$TAB" -v key="$rename_old" '$1 == key { print $2; exit }' "$MAIN_F")"
-        # Validate before comparing. Both counts come from a row a human
-        # hand-edits, and bash arithmetic on a non-numeric operand makes
-        # `[[ -gt ]]` return 2 rather than 1 — which `if` reads as false, so the
-        # failure branch is skipped and the guard prints OK and exits 0. A bare
-        # word is worse still: it is an unset name under `set -u`, which kills
-        # the script with empty output and no failure banner at all.
-        if ! [[ "$new_count" =~ ^[0-9]+$ ]] || ! [[ "$old_count" =~ ^[0-9]+$ ]]; then
-          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new has a non-numeric ceiling"
-          echo "  branch baseline $rename_new: ${new_count:-<missing>}"
-          echo "  ${BASE_REF} $rename_old: ${old_count:-<missing>}"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        elif [[ "$new_count" -gt "$old_count" ]]; then
-          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new exceeds old ceiling $rename_old (was $old_count -> now $new_count)"
-          echo "  -> $NEW_HINT"
-          fail=1
-          claim_ok=0
-        fi
-        # Only a claim that actually validated may consume its baseline row.
-        # Subtracting unconditionally told the operator the annotation was
-        # wrong while hiding which row was unapproved.
-        if [[ "$claim_ok" -eq 1 ]]; then
-          # Name every consumed claim. The annotation is a reviewable
-          # assertion, so a run that exercised one must not be
-          # byte-identical to a run that did not.
-          echo "NOTE [$RATCHET_LABEL]: honoured rename claim $rename_new <- $rename_old"
-          added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"
-        fi
-      done < "$rename_claims"
       if [[ -n "$added" || -n "$raised" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline ADDED a key or RAISED a ceiling vs ${BASE_REF} (may only shrink):"
         [[ -n "$added" ]] && echo "$added" | sed 's/^/  +added /'
