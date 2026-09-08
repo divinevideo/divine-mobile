@@ -183,6 +183,9 @@ class _VideoListsColumn extends StatelessWidget {
       children: [
         for (final list in lists)
           DivineListThumbnail.videos(
+            // Lists are created, deleted and re-hydrated in place, so cards
+            // shift slots; the key keeps each card's image state with its list.
+            key: ValueKey(list.authorScopedId),
             curatedList: list,
             onTap: () => context.push(
               CuratedListFeedScreen.pathForId(list.id),
@@ -207,6 +210,7 @@ class _PeopleListsColumn extends StatelessWidget {
       children: [
         for (final list in lists)
           DivineListThumbnail.people(
+            key: ValueKey(list.id),
             userList: list,
             onTap: () => context.push(RoutePaths.peopleListForId(list.id)),
           ),

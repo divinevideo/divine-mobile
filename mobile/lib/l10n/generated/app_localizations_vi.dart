@@ -3815,8 +3815,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Thử lại';
 
   @override
-  String get peopleListsLoadFailed =>
-      'Couldn\'t load this list. Check your connection and try again.';
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Thêm';
@@ -4865,7 +4864,8 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Chia sẻ danh sách';

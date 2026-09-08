@@ -150,12 +150,14 @@ class _ResultsGrid extends StatelessWidget {
             if (index < videoResults.length) {
               final list = videoResults[index];
               return _ListCard(
+                key: ValueKey(list.authorScopedId),
                 curatedList: list,
                 onTap: () => _navigateToCuratedList(context, list),
               );
             }
             final peopleResult = peopleResults[index - videoResults.length];
             return _PeopleListCard(
+              key: ValueKey(peopleResult.addressableId),
               result: peopleResult,
               onTap: () => _navigateToPeopleList(context, peopleResult),
             );
@@ -179,6 +181,7 @@ class _ResultsGrid extends StatelessWidget {
             if (previewVideo != null)
               Expanded(
                 child: _ListCard(
+                  key: ValueKey(previewVideo.authorScopedId),
                   curatedList: previewVideo,
                   onTap: () => _navigateToCuratedList(context, previewVideo),
                 ),
@@ -186,6 +189,7 @@ class _ResultsGrid extends StatelessWidget {
             if (previewPeople != null)
               Expanded(
                 child: _PeopleListCard(
+                  key: ValueKey(previewPeople.addressableId),
                   result: previewPeople,
                   onTap: () => _navigateToPeopleList(context, previewPeople),
                 ),
@@ -201,7 +205,11 @@ class _ResultsGrid extends StatelessWidget {
 
 /// Card widget for a curated video list result.
 class _ListCard extends StatelessWidget {
-  const _ListCard({required this.curatedList, required this.onTap});
+  const _ListCard({
+    required this.curatedList,
+    required this.onTap,
+    super.key,
+  });
 
   final CuratedList curatedList;
   final VoidCallback onTap;
@@ -214,7 +222,7 @@ class _ListCard extends StatelessWidget {
 
 /// Card widget for a people list result.
 class _PeopleListCard extends StatelessWidget {
-  const _PeopleListCard({required this.result, required this.onTap});
+  const _PeopleListCard({required this.result, required this.onTap, super.key});
 
   final PeopleListSearchResult result;
   final VoidCallback onTap;

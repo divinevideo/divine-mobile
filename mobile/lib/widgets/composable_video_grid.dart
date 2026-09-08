@@ -553,9 +553,10 @@ class _SelectionBadge extends StatelessWidget {
         ),
         // The design's selected checkbox, exported as one two-tone asset
         // (brand fill, dark ink), so it is rendered untinted.
-        child: isSelected
-            ? const DivineIcon(icon: DivineIconName.checkboxSelected)
-            : null,
+        child: Visibility(
+          visible: isSelected,
+          child: const DivineIcon(icon: DivineIconName.checkboxSelected),
+        ),
       ),
     );
   }

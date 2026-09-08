@@ -2390,7 +2390,7 @@
   "peopleListsAddPeopleSearchHint": "Search people",
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsLoadFailed": "Couldn't load this list. Check your connection and try again.",
+  "peopleListsLoadFailed": "Couldn't load this list.",
   "peopleListsAddButton": "Add",
   "peopleListsAddButtonWithCount": "Add {count}",
   "@peopleListsAddButtonWithCount": {
@@ -3054,7 +3054,7 @@
     "description": "Snackbar when selected videos are still in the list after a removal batch.",
     "placeholders": { "count": { "type": "int" } }
   },
-  "listsDiscoveryEmpty": "Nothing to discover yet. Pull to refresh.",
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
   "@listsDiscoveryEmpty": {
     "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
   },

@@ -89,6 +89,74 @@ void main() {
     });
 
     group('load', () {
+      test(
+        'reads the shared relay window and caps what each column shows',
+        () async {
+          // The window is wide so real lists surface past the empty default
+          // placeholders; the cap bounds the cards built and the thumbnails
+          // resolved. Sixty lists in, fifty cards out, per column.
+          when(
+            () =>
+                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+          ).thenAnswer(
+            (_) => Stream.value([
+              for (var i = 0; i < kListsDiscoveryColumnCap + 10; i++)
+                _videoList('video-$i'),
+            ]),
+          );
+          when(
+            () => curatedRepository.resolveListThumbnails(
+              any(),
+              maxThumbnails: any(named: 'maxThumbnails'),
+            ),
+          ).thenAnswer(
+            (invocation) async =>
+                invocation.positionalArguments.first as List<CuratedList>,
+          );
+          when(
+            () => peopleRepository.discoverPublicLists(
+              limit: any(named: 'limit'),
+              excludeAuthor: any(named: 'excludeAuthor'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              for (var i = 0; i < kListsDiscoveryColumnCap + 10; i++)
+                _peopleList('people-$i'),
+            ],
+          );
+
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          await cubit.load();
+
+          final window = verify(
+            () => service.streamPublicListsFromRelays(
+              limit: captureAny(named: 'limit'),
+            ),
+          ).captured.single;
+          expect(window, equals(kPublicListsRelayWindow));
+          verify(
+            () => peopleRepository.discoverPublicLists(
+              limit: kPublicListsRelayWindow,
+              excludeAuthor: _viewer,
+            ),
+          ).called(1);
+          expect(cubit.state.videoLists, hasLength(kListsDiscoveryColumnCap));
+          expect(cubit.state.peopleLists, hasLength(kListsDiscoveryColumnCap));
+          final resolved =
+              verify(
+                    () => curatedRepository.resolveListThumbnails(
+                      captureAny(),
+                      maxThumbnails: any(named: 'maxThumbnails'),
+                    ),
+                  ).captured.single
+                  as List<CuratedList>;
+          expect(resolved, hasLength(kListsDiscoveryColumnCap));
+          expect(kListsDiscoveryColumnCap, lessThan(kPublicListsRelayWindow));
+        },
+      );
+
       test('populates both columns, newest first, without own lists', () async {
         final older = _videoList('older', createdAtYear: 2024);
         final newer = _videoList('newer');

@@ -3896,8 +3896,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Erneut versuchen';
 
   @override
-  String get peopleListsLoadFailed =>
-      'Couldn\'t load this list. Check your connection and try again.';
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Hinzufügen';
@@ -4960,7 +4959,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Liste teilen';

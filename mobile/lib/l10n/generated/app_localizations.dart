@@ -6628,7 +6628,7 @@ abstract class AppLocalizations {
   /// No description provided for @peopleListsLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t load this list. Check your connection and try again.'**
+  /// **'Couldn\'t load this list.'**
   String get peopleListsLoadFailed;
 
   /// No description provided for @peopleListsAddButton.
@@ -8350,7 +8350,7 @@ abstract class AppLocalizations {
   /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
   ///
   /// In en, this message translates to:
-  /// **'Nothing to discover yet. Pull to refresh.'**
+  /// **'No lists turned up this time. Pull to refresh.'**
   String get listsDiscoveryEmpty;
 
   /// No description provided for @listShareAction.

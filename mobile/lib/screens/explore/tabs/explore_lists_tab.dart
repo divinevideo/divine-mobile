@@ -106,7 +106,7 @@ class ExploreListsView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               // Two independent columns under one scroll: when one runs out
               // its space stays empty while the other keeps going. Discovery
-              // is capped at kListsDiscoveryLimit per column, so building
+              // is capped at kListsDiscoveryColumnCap per column, so building
               // the cards eagerly stays bounded.
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,6 +149,9 @@ class _VideoListsColumn extends StatelessWidget {
       children: [
         for (final list in lists)
           DivineListThumbnail.videos(
+            // The stream re-sorts on every emit, so cards can change slots;
+            // the key keeps each card's image state with its list.
+            key: ValueKey(list.authorScopedId),
             curatedList: list,
             onTap: () {
               Log.info(
@@ -185,6 +188,7 @@ class _PeopleListsColumn extends StatelessWidget {
       children: [
         for (final result in lists)
           DivineListThumbnail.people(
+            key: ValueKey(result.addressableId),
             userList: result.list,
             onTap: () {
               Log.info(
