@@ -107,8 +107,8 @@ emit_current() {
 
     restore_analysis_options
 
-    # Dart analyze uses 2 for warnings and 3 for errors. Exit 1 is an analyzer
-    # invocation/infrastructure failure, not a clean result.
+    # Dart analyze uses 2 for warnings and 3 for errors; a bad invocation exits
+    # 64. Accept only the three result codes.
     if [[ "$analyzer_status" -ne 0 &&
       "$analyzer_status" -ne 2 &&
       "$analyzer_status" -ne 3 ]]; then
@@ -116,6 +116,29 @@ emit_current() {
       rm -f "$output_file"
       echo "Analyzer failed with exit code $analyzer_status." >&2
       return "$analyzer_status"
+    fi
+
+    # Exit 3 covers "the tree does not resolve" as well as "the tree is fine but
+    # has errors", and the two are not interchangeable here: both tracked rules
+    # are type-driven, so an unresolved import silences them wherever the type
+    # is unknown. With no mobile/.dart_tool at all the analyzer reports ZERO of
+    # either rule and still exits 3 -- and a linked worktree starts every
+    # session that way, because the session-end hook deletes .dart_tool. Left
+    # unchecked the guard reads that as "all 489 keys removed" and prints
+    # UPDATE_BASELINE as the remedy, which writes an empty baseline and quietly
+    # deletes the guard. Stale codegen strips the same way, per-subtree.
+    local unresolved
+    unresolved="$(grep -c '|URI_DOES_NOT_EXIST|' "$output_file" || true)"
+    if [[ "$unresolved" -gt 0 ]]; then
+      echo "FAIL [$RATCHET_LABEL]: the analyzed tree does not resolve" >&2
+      echo "  ($unresolved unresolved import(s)). Both tracked rules need type" >&2
+      echo "  resolution, so these counts are undercounts, not reductions." >&2
+      echo "  Do NOT regenerate the baseline from this run." >&2
+      echo "  -> cd mobile && flutter pub get" >&2
+      echo "  -> cd mobile && dart run build_runner build --delete-conflicting-outputs" >&2
+      grep '|URI_DOES_NOT_EXIST|' "$output_file" | head -5 | sed 's/^/    /' >&2
+      rm -f "$output_file"
+      return 1
     fi
   fi
 
