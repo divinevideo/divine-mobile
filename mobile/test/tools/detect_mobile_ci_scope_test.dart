@@ -394,11 +394,19 @@ esac
     });
 
     test('push falls open when the before SHA is all zeroes', () {
+      // A docs-only file, so the zero-file fall-open cannot fire and stand in
+      // for the zeroes guard: without it this test passed unchanged when the
+      // guard was deleted, because the default empty file list falls open on
+      // its own. The stdout reason is what distinguishes the two.
+      final run = runDetector(
+        event: 'push',
+        changedFiles: ['docs/release-notes.md'],
+        pushBeforeSha: '0000000000000000000000000000000000000000',
+      );
+
+      expect(run.result.stdout, contains('no comparable before SHA'));
       expectScope(
-        runDetector(
-          event: 'push',
-          pushBeforeSha: '0000000000000000000000000000000000000000',
-        ),
+        run,
         app: true,
         native: true,
         also: const {
