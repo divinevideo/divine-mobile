@@ -31,6 +31,8 @@ class MockRelayStatisticsService extends Mock
 class MockVideoEventService extends Mock implements VideoEventService {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group('RelaySettingsScreen NIP-11 Info', () {
     late MockNostrService mockNostrService;
     late MockRelayCapabilityService mockCapabilityService;
@@ -137,7 +139,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show "About Relay" section header
-      expect(find.text('About Relay'), findsOneWidget);
+      expect(find.text(l10n.relaySettingsAboutRelay), findsOneWidget);
     });
 
     testWidgets('displays relay name from NIP-11', (tester) async {
@@ -210,7 +212,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show "Supported NIPs" label
-      expect(find.text('Supported NIPs'), findsOneWidget);
+      expect(find.text(l10n.relaySettingsSupportedNips), findsOneWidget);
       // Should show the NIPs as a formatted string
       expect(find.text('1, 2, 9, 11, 12, 71'), findsOneWidget);
     });
@@ -236,9 +238,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show "View Website" button
-      expect(find.text('View Website'), findsOneWidget);
+      expect(find.text(l10n.relaySettingsViewWebsite), findsOneWidget);
       final websiteButton = tester.widget<DivineButton>(
-        find.widgetWithText(DivineButton, 'View Website'),
+        find.widgetWithText(DivineButton, l10n.relaySettingsViewWebsite),
       );
       expect(websiteButton.leadingIcon, DivineIconName.arrowUpRight);
     });
@@ -264,7 +266,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show software info
-      expect(find.text('Software'), findsOneWidget);
+      expect(find.text(l10n.relaySettingsSoftware), findsOneWidget);
       expect(find.text('nosflare v0.3.0'), findsOneWidget);
     });
 
@@ -278,7 +280,8 @@ void main() {
 
       // Should not crash, and should not show "About Relay" if no info
       // The screen should still be functional
-      expect(find.text('Connection'), findsOneWidget);
+      expect(find.text(l10n.relaySettingsConnection), findsOneWidget);
+      expect(find.text(l10n.relaySettingsAboutRelay), findsNothing);
     });
 
     testWidgets('shows loading indicator while fetching NIP-11', (
