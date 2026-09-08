@@ -4930,6 +4930,19 @@ void main() {
       );
 
       test(
+        'blockUser returns the retry result when the block is already local',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(const PublishFailed());
+          final service = await readyService();
+
+          expect(await service.blockUser('pubkey1'), isFalse);
+          expect(await service.blockUser('pubkey1'), isFalse);
+          verify(() => mockClient.publishEvent(any())).called(2);
+        },
+      );
+
+      test(
         'blockUser returns true for an already-blocked pubkey without '
         'republishing',
         () async {
@@ -4977,6 +4990,31 @@ void main() {
           expect(await service.unblockUser('pubkey1'), isFalse);
         },
       );
+
+      test(
+        'unblockUser returns the retry result when the unblock is already '
+        'local',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+          final service = await readyService();
+          await service.blockUser('pubkey1');
+
+          armPublish(const PublishFailed());
+          expect(await service.unblockUser('pubkey1'), isFalse);
+          expect(await service.unblockUser('pubkey1'), isFalse);
+          verify(() => mockClient.publishEvent(any())).called(3);
+        },
+      );
+
+      test('unblockUser returns true for a clean no-op', () async {
+        armAuthenticatedSigner();
+        armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+        final service = await readyService();
+
+        expect(await service.unblockUser('pubkey1'), isTrue);
+        verifyNever(() => mockClient.publishEvent(any()));
+      });
     });
   });
 
