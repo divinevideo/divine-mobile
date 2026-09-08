@@ -385,7 +385,6 @@ discarded_futures|test/services/video_editor/video_render_watchdog_test.dart	3
 discarded_futures|test/services/video_event_publisher_retry_test.dart	9
 discarded_futures|test/services/video_event_service_author_backfill_test.dart	1
 discarded_futures|test/services/video_event_service_author_videos_identity_test.dart	1
-discarded_futures|test/services/video_event_service_deduplication_test.dart	2
 discarded_futures|test/services/video_event_service_deleted_event_purge_test.dart	1
 discarded_futures|test/services/video_event_service_eose_empty_test.dart	3
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
