@@ -612,5 +612,73 @@ void main() {
         expect(capture.isEmpty, isTrue);
       });
     });
+
+    group('off-main sanitization (#7080)', () {
+      BugReportData reportWith(String description) => BugReportData(
+        reportId: 'test-7080',
+        timestamp: DateTime.now(),
+        userDescription: description,
+        deviceInfo: const {},
+        appVersion: '1.0.0',
+        recentLogs: const [],
+        errorCounts: const {},
+      );
+
+      test('the top-level entrypoint matches the sync sanitizer', () {
+        final input = reportWith('My nsec is $_rawNsec');
+        final viaTopLevel = sanitizeBugReportData(input);
+        final viaSync = BugReportService().sanitizeSensitiveData(input);
+        expect(viaTopLevel.userDescription, viaSync.userDescription);
+        expect(viaTopLevel.userDescription, isNot(contains('nsec1')));
+        expect(viaTopLevel.userDescription, contains('[REDACTED]'));
+      });
+
+      test('runs sanitization through the injected off-main runner', () async {
+        var offMainCalls = 0;
+        final service = BugReportService(
+          sanitizeOffMain: (data) async {
+            offMainCalls++;
+            return sanitizeBugReportData(data);
+          },
+        );
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          reportWith('My nsec is $_rawNsec'),
+        );
+
+        expect(offMainCalls, 1);
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+      });
+
+      test(
+        'falls back to inline sanitization when the isolate cannot spawn',
+        () async {
+          final service = BugReportService(
+            sanitizeOffMain: (_) async =>
+                throw StateError('isolate spawn failed'),
+          );
+
+          final sanitized = await service.sanitizeSensitiveDataInBackground(
+            reportWith('My nsec is $_rawNsec'),
+          );
+
+          // Never transmit unsanitized diagnostics: the fallback still redacts.
+          expect(sanitized.userDescription, isNot(contains('nsec1')));
+          expect(sanitized.userDescription, contains('[REDACTED]'));
+        },
+      );
+
+      test('sanitizes off the real isolate via compute', () async {
+        final service = BugReportService();
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          reportWith('My nsec is $_rawNsec'),
+        );
+
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+      });
+    });
   });
 }

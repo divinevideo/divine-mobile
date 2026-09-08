@@ -75,6 +75,7 @@ class BugReportService {
     ui.Locale Function()? resolvedUiLocaleLoader,
     List<ui.Locale> Function()? deviceLocalesLoader,
     bool Function()? hasLocaleOverrideLoader,
+    Future<BugReportData> Function(BugReportData)? sanitizeOffMain,
   }) : _errorTracker = errorTracker ?? ErrorAnalyticsTracker(),
        _storageManagementService = storageManagementService,
        _supportDiagnosticsLoader = supportDiagnosticsLoader,
@@ -91,7 +92,11 @@ class BugReportService {
        _deviceLocalesLoader =
            deviceLocalesLoader ??
            (() => ui.PlatformDispatcher.instance.locales),
-       _hasLocaleOverrideLoader = hasLocaleOverrideLoader ?? (() => false);
+       _hasLocaleOverrideLoader = hasLocaleOverrideLoader ?? (() => false),
+       // Runs the sanitizer in a background isolate; injectable so tests can
+       // force the isolate-spawn-failure fallback. #7080.
+       _sanitizeOffMain =
+           sanitizeOffMain ?? ((data) => compute(sanitizeBugReportData, data));
 
   static const _uuid = Uuid();
 
@@ -111,6 +116,7 @@ class BugReportService {
   final ui.Locale Function() _resolvedUiLocaleLoader;
   final List<ui.Locale> Function() _deviceLocalesLoader;
   final bool Function() _hasLocaleOverrideLoader;
+  final Future<BugReportData> Function(BugReportData) _sanitizeOffMain;
 
   /// Language codes the app ships a translation for. A device language outside
   /// this set cannot be matched during device locale resolution.
@@ -270,7 +276,7 @@ class BugReportService {
         category: LogCategory.system,
       );
 
-      return sanitizeSensitiveData(reportData);
+      return await sanitizeSensitiveDataInBackground(reportData);
     } catch (e) {
       Log.error(
         'Failed to collect diagnostics: $e',
@@ -280,64 +286,41 @@ class BugReportService {
     }
   }
 
-  /// Sanitize sensitive data from bug report
+  /// Sanitize sensitive data from a bug report, synchronously on the calling
+  /// isolate.
+  ///
+  /// Retained for callers and tests that need deterministic in-process
+  /// sanitization. The production collection path uses
+  /// [sanitizeSensitiveDataInBackground] to keep the bulk log work off the main
+  /// isolate; both share the top-level [sanitizeBugReportData]. #7080.
   BugReportData sanitizeSensitiveData(BugReportData data) {
     Log.debug(
       'Sanitizing sensitive data from bug report',
       category: LogCategory.system,
     );
-
-    // Sanitize user description
-    final sanitizedDescription = _sanitizeString(data.userDescription);
-
-    // Sanitize logs
-    final sanitizedLogs = data.recentLogs.map((log) {
-      return LogEntry(
-        timestamp: log.timestamp,
-        level: log.level,
-        message: _sanitizeString(log.message),
-        category: log.category,
-        name: log.name,
-        error: log.error != null ? _sanitizeString(log.error!) : null,
-        stackTrace: log.stackTrace != null
-            ? _sanitizeString(log.stackTrace!)
-            : null,
-      );
-    }).toList();
-
-    // Sanitize additional context if present
-    Map<String, dynamic>? sanitizedContext;
-    if (data.additionalContext != null) {
-      sanitizedContext = _sanitizeMap(data.additionalContext!);
-    }
-
-    return data.copyWith(
-      userDescription: sanitizedDescription,
-      deviceInfo: _sanitizeDeviceInfo(data.deviceInfo),
-      recentLogs: sanitizedLogs,
-      additionalContext: sanitizedContext,
-      errorCounts: _sanitizeErrorCounts(data.errorCounts),
-    );
+    return sanitizeBugReportData(data);
   }
 
-  /// Sanitize error-count keys, which are `'<location>:<errorType>'` strings
-  /// and so can carry a credential-shaped name.
+  /// Sanitize [data] off the main isolate via [compute].
   ///
-  /// Done here rather than only where the counts are rendered, so every
-  /// consumer of the sanitized report inherits it.
-  Map<String, int> _sanitizeErrorCounts(Map<String, int> input) {
-    final sanitized = <String, int>{};
-    input.forEach((key, value) {
-      final composed = '$key: $value';
-      final safeKey = sanitizeDiagnosticText(composed) == composed
-          ? key
-          : '[REDACTED]';
-      // Summed rather than overwritten: two credential-shaped keys both
-      // collapse to the same placeholder, and silently dropping one of the
-      // counts is the kind of quiet loss this sanitizer exists to avoid.
-      sanitized[safeKey] = (sanitized[safeKey] ?? 0) + value;
-    });
-    return sanitized;
+  /// Falls back to inline sanitization if the worker isolate cannot spawn: a
+  /// report must never be transmitted unsanitized, so a spawn failure costs a
+  /// main-thread stall (the pre-#7080 behavior) rather than leaking
+  /// diagnostics. The off-main runner is injectable so tests can force that
+  /// fallback. Mirrors `signer_factory`'s `_verifyOffMain`. #7080.
+  Future<BugReportData> sanitizeSensitiveDataInBackground(
+    BugReportData data,
+  ) async {
+    try {
+      return await _sanitizeOffMain(data);
+    } on Object catch (e) {
+      Log.warning(
+        'Off-main sanitization failed ($e); sanitizing inline so the report '
+        'is never transmitted unsanitized',
+        category: LogCategory.system,
+      );
+      return sanitizeBugReportData(data);
+    }
   }
 
   /// Export logs to a file.
@@ -943,78 +926,119 @@ class BugReportService {
   String _sanitizeString(String input) {
     return sanitizeDiagnosticText(input);
   }
+}
 
-  /// Sanitize a map by removing sensitive values.
-  ///
-  /// Sensitivity is decided on the `key: value` pair, not on the value alone.
-  /// The rules match a credential *key* next to its value, so a value handed
-  /// over on its own arrives with no key attached and survives:
-  /// `{'sessionKey': '<secret>'}` came back unchanged before this, into an
-  /// export the user can share anywhere.
-  ///
-  /// A credential-shaped key redacts its whole value regardless of type. A
-  /// secret is just as exposed as `{'sessionKey': ['<secret>']}` or
-  /// `{'apiKey': {'value': '<secret>'}}`, and recursing into those loses the
-  /// key that identifies them.
-  Map<String, dynamic> _sanitizeMap(Map<String, dynamic> input) {
-    final Map<String, dynamic> sanitized = {};
+/// Sanitizes a [BugReportData] for transmission, redacting sensitive patterns
+/// from the description, logs, device info, additional context, and error
+/// counts.
+///
+/// Top-level (not an instance method) so it can run inside a `compute` worker
+/// isolate — see [BugReportService.sanitizeSensitiveDataInBackground]. Pure:
+/// it depends only on the top-level [sanitizeDiagnosticText], so both it and
+/// its input/output copy safely across the isolate boundary. #7080.
+BugReportData sanitizeBugReportData(BugReportData data) {
+  final sanitizedLogs = data.recentLogs.map((log) {
+    return LogEntry(
+      timestamp: log.timestamp,
+      level: log.level,
+      message: sanitizeDiagnosticText(log.message),
+      category: log.category,
+      name: log.name,
+      error: log.error != null ? sanitizeDiagnosticText(log.error!) : null,
+      stackTrace: log.stackTrace != null
+          ? sanitizeDiagnosticText(log.stackTrace!)
+          : null,
+    );
+  }).toList();
 
-    input.forEach((key, value) {
-      if (_isCredentialKey(key)) {
-        // The whole subtree, whatever shape it is. Recursing would hand the
-        // rules a bare value with no key attached, which is how
-        // `{'apiKey': ['<secret>']}` used to survive.
-        sanitized[key] = '[REDACTED]';
-      } else if (value is String) {
-        sanitized[key] = _sanitizeString(value);
-      } else if (value is Map<String, dynamic>) {
-        sanitized[key] = _sanitizeMap(value);
-      } else if (value is List) {
-        sanitized[key] = _sanitizeList(value);
-      } else {
-        sanitized[key] = value;
-      }
-    });
+  return data.copyWith(
+    userDescription: sanitizeDiagnosticText(data.userDescription),
+    deviceInfo: _sanitizeReportDeviceInfo(data.deviceInfo),
+    recentLogs: sanitizedLogs,
+    additionalContext: data.additionalContext != null
+        ? _sanitizeReportMap(data.additionalContext!)
+        : null,
+    errorCounts: _sanitizeReportErrorCounts(data.errorCounts),
+  );
+}
 
-    return sanitized;
-  }
+/// Sanitize error-count keys, which are `'<location>:<errorType>'` strings and
+/// so can carry a credential-shaped name.
+///
+/// Done here rather than only where the counts are rendered, so every consumer
+/// of the sanitized report inherits it.
+Map<String, int> _sanitizeReportErrorCounts(Map<String, int> input) {
+  final sanitized = <String, int>{};
+  input.forEach((key, value) {
+    final composed = '$key: $value';
+    final safeKey = sanitizeDiagnosticText(composed) == composed
+        ? key
+        : '[REDACTED]';
+    // Summed rather than overwritten: two credential-shaped keys both collapse
+    // to the same placeholder, and silently dropping one of the counts is the
+    // kind of quiet loss this sanitizer exists to avoid.
+    sanitized[safeKey] = (sanitized[safeKey] ?? 0) + value;
+  });
+  return sanitized;
+}
 
-  /// Whether [key] alone reads as a credential key.
-  ///
-  /// Tested with a placeholder value rather than the real one, so the answer
-  /// does not depend on what the value happens to contain: the point is that
-  /// `sessionKey` identifies a credential no matter whether its value is a
-  /// string, a list or a nested map.
-  bool _isCredentialKey(String key) {
-    const probe = 'x';
-    final composed = '$key: $probe';
-    return sanitizeDiagnosticText(composed) != composed;
-  }
-
-  Map<String, dynamic> _sanitizeDeviceInfo(Map<String, dynamic> input) {
-    final sanitized = _sanitizeMap(input);
-    for (final key in const ['name', 'hostName', 'computerName']) {
-      if (sanitized.containsKey(key)) {
-        sanitized[key] = '[REDACTED]';
-      }
+/// Sanitize a map by removing sensitive values.
+///
+/// Sensitivity is decided on the `key: value` pair, not on the value alone. A
+/// credential-shaped key redacts its whole value regardless of type, because a
+/// secret is just as exposed as `{'apiKey': ['<secret>']}` or
+/// `{'apiKey': {'value': '<secret>'}}`, and recursing into those loses the key
+/// that identifies them.
+Map<String, dynamic> _sanitizeReportMap(Map<String, dynamic> input) {
+  final Map<String, dynamic> sanitized = {};
+  input.forEach((key, value) {
+    if (_isReportCredentialKey(key)) {
+      sanitized[key] = '[REDACTED]';
+    } else if (value is String) {
+      sanitized[key] = sanitizeDiagnosticText(value);
+    } else if (value is Map<String, dynamic>) {
+      sanitized[key] = _sanitizeReportMap(value);
+    } else if (value is List) {
+      sanitized[key] = _sanitizeReportList(value);
+    } else {
+      sanitized[key] = value;
     }
-    return sanitized;
-  }
+  });
+  return sanitized;
+}
 
-  /// Sanitize a list by removing sensitive values
-  List<dynamic> _sanitizeList(List<dynamic> input) {
-    return input.map((item) {
-      if (item is String) {
-        return _sanitizeString(item);
-      } else if (item is Map<String, dynamic>) {
-        return _sanitizeMap(item);
-      } else if (item is List) {
-        return _sanitizeList(item);
-      } else {
-        return item;
-      }
-    }).toList();
+/// Whether [key] alone reads as a credential key.
+///
+/// Tested with a placeholder value rather than the real one, so the answer does
+/// not depend on what the value happens to contain.
+bool _isReportCredentialKey(String key) {
+  const probe = 'x';
+  final composed = '$key: $probe';
+  return sanitizeDiagnosticText(composed) != composed;
+}
+
+Map<String, dynamic> _sanitizeReportDeviceInfo(Map<String, dynamic> input) {
+  final sanitized = _sanitizeReportMap(input);
+  for (final key in const ['name', 'hostName', 'computerName']) {
+    if (sanitized.containsKey(key)) {
+      sanitized[key] = '[REDACTED]';
+    }
   }
+  return sanitized;
+}
+
+List<dynamic> _sanitizeReportList(List<dynamic> input) {
+  return input.map((item) {
+    if (item is String) {
+      return sanitizeDiagnosticText(item);
+    } else if (item is Map<String, dynamic>) {
+      return _sanitizeReportMap(item);
+    } else if (item is List) {
+      return _sanitizeReportList(item);
+    } else {
+      return item;
+    }
+  }).toList();
 }
 
 /// Outcome of [BugReportService.exportLogsToFile].
