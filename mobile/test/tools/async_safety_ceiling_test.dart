@@ -100,4 +100,115 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
       expect(offenders, isEmpty);
     });
   });
+
+  // Everything above drives the guard through ASYNC_SAFETY_DIAGNOSTICS_FILE,
+  // which short-circuits the whole config-rewrite block. These run the real
+  // path in a sandbox instead: the guard temporarily deletes the two `ignore`
+  // lines from a tracked file, and losing that file is the worst thing it can
+  // do to a checkout. Each case bails out before `dart analyze`, so they stay
+  // fast.
+  group('analysis_options rewrite and restore', () {
+    late Directory sandbox;
+    late File options;
+
+    const suppressions = '''
+analyzer:
+  errors:
+    discarded_futures: ignore
+    unawaited_futures: ignore
+''';
+
+    ProcessResult runGuard() => Process.runSync(
+      'bash',
+      ['scripts/check_async_safety_ceiling.sh'],
+      workingDirectory: sandbox.path,
+      environment: {
+        'ASYNC_SAFETY_BASELINE_FILE':
+            '${sandbox.path}/scripts/baseline/async_safety_counts.txt',
+        'ASYNC_SAFETY_CEILING_ALLOW_NO_BASE': '1',
+        'UPDATE_BASELINE': '',
+      },
+    );
+
+    List<File> backups() => sandbox
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.contains('.analysis_options.yaml.ratchet-backup.'))
+        .toList();
+
+    setUp(() {
+      final repoRoot = Directory.current.path;
+      sandbox = Directory.systemTemp.createTempSync('async_safety_restore_');
+      Directory('${sandbox.path}/scripts/lib').createSync(recursive: true);
+      Directory('${sandbox.path}/scripts/baseline').createSync(recursive: true);
+      File(
+        '$repoRoot/scripts/check_async_safety_ceiling.sh',
+      ).copySync('${sandbox.path}/scripts/check_async_safety_ceiling.sh');
+      File(
+        '$repoRoot/scripts/lib/numeric_ratchet.sh',
+      ).copySync('${sandbox.path}/scripts/lib/numeric_ratchet.sh');
+      File(
+        '${sandbox.path}/scripts/baseline/async_safety_counts.txt',
+      ).writeAsStringSync('# frozen baseline\n');
+      options = File('${sandbox.path}/analysis_options.yaml');
+    });
+
+    tearDown(() => sandbox.deleteSync(recursive: true));
+
+    test('restores the config when the suppression assertion fails', () {
+      // One line reformatted, one not: the awk strips the plain one and the
+      // assertion then fires on the survivor. That is the path that used to
+      // leave the tracked file permanently missing a suppression.
+      const body = '''
+analyzer:
+  errors:
+    discarded_futures: ignore  # see #3342
+    unawaited_futures: ignore
+''';
+      options.writeAsStringSync(body);
+
+      final result = runGuard();
+
+      // The restore is asserted first: it is the behaviour that matters, so a
+      // regression should fail here rather than on the message wording.
+      expect(options.readAsStringSync(), body);
+      expect(backups(), isEmpty);
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect('${result.stderr}', contains('still suppresses'));
+    });
+
+    test('rejects a tracked rule suppressed in a nested analyzer config', () {
+      options.writeAsStringSync(suppressions);
+      Directory('${sandbox.path}/test').createSync();
+      File('${sandbox.path}/test/analysis_options.yaml').writeAsStringSync('''
+include: ../analysis_options.yaml
+
+analyzer:
+  errors:
+    unawaited_futures: ignore
+''');
+
+      final result = runGuard();
+
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect('${result.stderr}', contains('test/analysis_options.yaml'));
+      expect(options.readAsStringSync(), suppressions);
+    });
+
+    test('refuses to run while another run holds a backup', () {
+      options.writeAsStringSync(suppressions);
+      final foreign = File(
+        '${sandbox.path}/.analysis_options.yaml.ratchet-backup.999999',
+      )..writeAsStringSync('other run owns this\n');
+
+      final result = runGuard();
+
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect('${result.stderr}', contains('already'));
+      // The other run's backup and the config are both left alone; consuming
+      // either is how two concurrent runs delete both suppressions.
+      expect(foreign.readAsStringSync(), 'other run owns this\n');
+      expect(options.readAsStringSync(), suppressions);
+    });
+  });
 }
