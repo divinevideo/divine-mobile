@@ -113,7 +113,7 @@ void main() {
       final router = _MockGoRouter();
       final delegate = _MockGoRouterDelegate();
       final routeInformation = GoRouteInformationProvider(
-        initialLocation: WelcomeScreen.path,
+        initialLocation: '/sentinel-location',
         initialExtra: null,
       );
       addTearDown(routeInformation.dispose);
@@ -125,22 +125,29 @@ void main() {
       addTearDown(container.dispose);
 
       final stream = container.read(routerLocationStreamProvider);
-      final queue = StreamQueue(stream);
-      addTearDown(queue.cancel);
+      final locations = <String>[];
+      var isDone = false;
+      final subscription = stream.listen(
+        locations.add,
+        onDone: () => isDone = true,
+      );
+      addTearDown(subscription.cancel);
       final listener =
           verify(
                 () => delegate.addListener(captureAny()),
               ).captured.single
               as VoidCallback;
 
-      final initial = await queue.next;
-      expect(initial, WelcomeScreen.path);
+      await pumpEventQueue();
+      expect(locations, ['/sentinel-location']);
+      expect(isDone, isFalse);
 
       // Keep the subscription active so cancellation cannot hide a leaked
       // controller. The router remains alive independently of this container.
       container.dispose();
       verify(() => delegate.removeListener(listener)).called(1);
-      expect(await queue.hasNext, isFalse);
+      await pumpEventQueue();
+      expect(isDone, isTrue);
     });
   });
 }
