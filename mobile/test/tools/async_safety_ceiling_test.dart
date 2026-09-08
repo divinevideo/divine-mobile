@@ -18,7 +18,12 @@ void main() {
         'ASYNC_SAFETY_DIAGNOSTICS_FILE': diagnostics.path,
         'ASYNC_SAFETY_BASELINE_FILE': baseline.path,
         'ASYNC_SAFETY_CEILING_ALLOW_NO_BASE': '1',
-        if (update) 'UPDATE_BASELINE': '1',
+        // Explicitly cleared, not merely omitted: Process.runSync merges the
+        // parent environment, and `UPDATE_BASELINE=1 bash scripts/check_*.sh`
+        // is the documented relock idiom, so exporting it for a relock session
+        // would otherwise send the growth test down the regeneration path and
+        // fail it with exit 0 for a reason unrelated to the change under test.
+        'UPDATE_BASELINE': update ? '1' : '',
       },
     );
 
@@ -81,7 +86,10 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
         '^\\s*-?\\s*["\']?(${rules.join('|')})["\']?\\s*:'
         '\\s*["\']?(ignore|false)["\']?\\s*(#.*)?\$',
       );
-      final stripped = RegExp('^\\s+(${rules.join('|')}): ignore\\s*\$');
+      // `\\s+`, not a literal space: the awk this mirrors matches
+      // `:[[:space:]]+ignore`, so a two-space reformat that the guard strips
+      // correctly would otherwise be reported here as an offender.
+      final stripped = RegExp('^\\s+(${rules.join('|')}):\\s+ignore\\s*\$');
 
       final offenders = File('analysis_options.yaml')
           .readAsLinesSync()
