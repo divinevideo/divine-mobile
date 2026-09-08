@@ -151,6 +151,26 @@ void main() {
       expect(result.output, contains('OPERATIONAL ERROR'));
     });
 
+    test('classifies a malformed variant as operational rather than drift', () {
+      final payload = payloadForCatalogue()..['variantOverrides'] = null;
+      final result = run(payload);
+
+      expect(result.exitCode, equals(2), reason: result.output);
+      expect(result.output, contains('OPERATIONAL ERROR'));
+      expect(result.output, isNot(contains('CATALOGUE DRIFT')));
+    });
+
+    test('classifies missing category values as an operational failure', () {
+      final payload = payloadForCatalogue()
+        ..['primaryContentSections'] = [
+          {'kind': 'possibleValues'},
+        ];
+      final result = run(payload);
+
+      expect(result.exitCode, equals(2), reason: result.output);
+      expect(result.output, contains('OPERATIONAL ERROR'));
+    });
+
     test('documentation tables match the catalogue', () {
       final result = Process.runSync('python3', [
         'scripts/lib/render_required_reason_catalogue.py',

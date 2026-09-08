@@ -78,8 +78,11 @@ def extract(payload: dict) -> list[dict]:
     if len(sections) != 1:
         raise PayloadError("expected exactly one possibleValues section")
 
+    values = sections[0].get("values")
+    if not isinstance(values, list):
+        raise PayloadError("category values list is missing")
     categories = []
-    for value in sections[0].get("values", []):
+    for value in values:
         lists = {part.get("type"): part for part in value.get("content", [])}
         try:
             api_items = lists["unorderedList"]["items"]
@@ -170,7 +173,11 @@ def main() -> int:
                 payload = json.load(response)
         pinned = expected(catalogue)
         apple = extract(payload)
-    except (OSError, json.JSONDecodeError, PayloadError, urllib.error.URLError) as error:
+    except (
+        OSError, json.JSONDecodeError, PayloadError, urllib.error.URLError,
+        KeyError, IndexError, TypeError, AttributeError,
+    ) as error:
+        # DocC shape changes are not evidence of a semantic catalogue delta.
         print(f"OPERATIONAL ERROR: could not verify Apple's catalogue: {error}")
         return 2
 
