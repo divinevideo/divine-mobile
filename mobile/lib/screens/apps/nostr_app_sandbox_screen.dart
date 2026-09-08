@@ -27,8 +27,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
-typedef SandboxViewBuilder =
-    Widget Function(void Function(Uri uri) onNavigationAttempt);
+typedef SandboxViewBuilder = Widget Function(
+  void Function(Uri uri) onNavigationAttempt,
+);
 typedef SandboxJavaScriptRunner = Future<void> Function(String script);
 typedef SandboxImageMetadataStripper = Future<File> Function(File imageFile);
 
@@ -806,10 +807,10 @@ Future<List<String>> sandboxAndroidFileSelector(
         if (file == null) {
           return const <String>[];
         }
-        return _strippedFileUris([file], stripMetadata);
+        return await _strippedFileUris([file], stripMetadata);
       }
       final files = await picker.pickMultiImage();
-      return _strippedFileUris(files, stripMetadata);
+      return await _strippedFileUris(files, stripMetadata);
     }
 
     final source = params.isCaptureEnabled
@@ -819,7 +820,7 @@ Future<List<String>> sandboxAndroidFileSelector(
     if (file == null) {
       return const <String>[];
     }
-    return _strippedFileUris([file], stripMetadata);
+    return await _strippedFileUris([file], stripMetadata);
   } catch (error, stackTrace) {
     // Expected, user-driven paths land here too (e.g. denying the camera
     // permission throws PlatformException), so log at warning, not error.

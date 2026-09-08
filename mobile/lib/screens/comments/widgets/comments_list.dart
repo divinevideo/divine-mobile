@@ -1,8 +1,6 @@
 // ABOUTME: Comments list widget with loading, error, and empty states
 // ABOUTME: Renders comments in a flat list using CommentItem widget
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -64,15 +62,13 @@ class _CommentsListState extends State<CommentsList> {
       final targetContext = _scrollTargetKey.currentContext;
       if (targetContext != null) {
         final reduceMotion = MediaQuery.of(context).disableAnimations;
-        unawaited(
-          Scrollable.ensureVisible(
-            targetContext,
-            alignment: 0.3,
-            duration: reduceMotion
-                ? Duration.zero
-                : const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          ),
+        Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.3,
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         );
       }
       context.read<CommentsListBloc>().add(const CommentsScrollHandled());

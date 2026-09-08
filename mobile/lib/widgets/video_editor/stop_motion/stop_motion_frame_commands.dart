@@ -50,7 +50,10 @@ bool commitStopMotionFrames(
   if (identical(frames, clip.stopMotionFrames)) return false;
 
   final updated = StopMotionFrameOps.clipWithFrames(clip, frames);
-  final newClips = [for (final c in state.clips) c.id == clipId ? updated : c];
+  final newClips = [
+    for (final c in state.clips)
+      if (c.id == clipId) updated else c,
+  ];
   final rebasedMarkers = rebaseTimelineMarkersForClipState(
     oldClips: state.clips,
     newClips: newClips,

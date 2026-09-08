@@ -523,15 +523,13 @@ class _ActionsRow extends StatelessWidget {
               // reliably works. A follow-up scroll to the inserted reply itself
               // is driven by CommentsList once the placeholder appears.
               final reduceMotion = MediaQuery.of(context).disableAnimations;
-              unawaited(
-                Scrollable.ensureVisible(
-                  context,
-                  alignment: 0.35,
-                  duration: reduceMotion
-                      ? Duration.zero
-                      : const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                ),
+              Scrollable.ensureVisible(
+                context,
+                alignment: 0.35,
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
               );
               context.read<CommentComposerBloc>().add(
                 CommentReplyToggled(commentId),

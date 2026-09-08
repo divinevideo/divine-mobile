@@ -166,8 +166,10 @@ class CollaboratorInviteWarning extends Equatable {
 /// Callbacks for VideoPublishService to communicate state changes.
 /// This abstraction makes the service testable without Riverpod dependencies.
 typedef OnStateChanged = void Function(VideoPublishState state);
-typedef OnProgressChanged =
-    void Function({required String draftId, required double progress});
+typedef OnProgressChanged = void Function({
+  required String draftId,
+  required double progress,
+});
 
 class VideoPublishService {
   VideoPublishService({
@@ -776,7 +778,7 @@ class VideoPublishService {
         if (File(path).existsSync()) return path;
       }
       if (draft.clips.isNotEmpty) {
-        return draft.clips.first.requireVideo.safeFilePath();
+        return await draft.clips.first.requireVideo.safeFilePath();
       }
     } catch (e) {
       Log.warning('⚠️ Could not resolve video path: $e', category: .video);

@@ -431,7 +431,7 @@ class VideoThumbnailService {
       );
 
       if (bytes != null && bytes.isNotEmpty) {
-        return _writeGhostFrame(bytes);
+        return await _writeGhostFrame(bytes);
       }
 
       Log.warning(
@@ -475,7 +475,7 @@ class VideoThumbnailService {
       );
 
       if (result != null) {
-        return _writeGhostFrame(result.bytes);
+        return await _writeGhostFrame(result.bytes);
       }
 
       Log.warning(

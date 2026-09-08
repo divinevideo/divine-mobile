@@ -109,7 +109,7 @@ class GallerySaveService {
       if (permResult != null) {
         // Permission denied — on desktop, save to Downloads instead.
         if (_isDesktop) {
-          return _saveToDownloads(resolvedPath);
+          return await _saveToDownloads(resolvedPath);
         }
         return permResult;
       }

@@ -26,11 +26,10 @@ import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
-typedef LogExportHeaderBuilder =
-    String Function({
-      required int exportedCount,
-      required int omittedCount,
-    });
+typedef LogExportHeaderBuilder = String Function({
+  required int exportedCount,
+  required int omittedCount,
+});
 
 @immutable
 class LogExportBody {
@@ -394,9 +393,13 @@ class BugReportService {
         return _exportLogsWeb(content, fileName, export.exportedCount);
       }
       if (_isDesktop) {
-        return _exportLogsDesktop(content, fileName, export.exportedCount);
+        return await _exportLogsDesktop(
+          content,
+          fileName,
+          export.exportedCount,
+        );
       }
-      return _exportLogsNative(
+      return await _exportLogsNative(
         content,
         fileName,
         export.exportedCount,

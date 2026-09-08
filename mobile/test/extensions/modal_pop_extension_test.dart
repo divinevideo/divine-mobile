@@ -65,11 +65,9 @@ void main() {
         ),
       );
 
-      unawaited(
-        Navigator.of(hostContext).push<void>(
-          MaterialPageRoute<void>(
-            builder: (_) => const Scaffold(body: Text('covered screen')),
-          ),
+      Navigator.of(hostContext).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('covered screen')),
         ),
       );
       await tester.pumpAndSettle();
