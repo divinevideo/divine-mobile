@@ -401,6 +401,10 @@ class _MeProfileRedirect extends ConsumerWidget {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // The enclosing route body returns SizedBox.shrink() whenever the
+      // location is briefly non-profile during a transition, so this widget
+      // can be unmounted before the frame ends.
+      if (!context.mounted) return;
       context.go(redirectPath);
     });
 
