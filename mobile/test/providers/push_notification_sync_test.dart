@@ -214,6 +214,7 @@ void main() {
     preferenceStore = _FakeNotificationPreferencesStore();
     authStateController = StreamController<AuthState>.broadcast();
     defaultTokenRefreshController = StreamController<String>.broadcast();
+    beforeSessionTeardownCallback = null;
 
     when(
       () => authService.authStateStream,
