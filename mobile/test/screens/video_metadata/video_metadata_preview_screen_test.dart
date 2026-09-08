@@ -118,7 +118,10 @@ void main() {
   late _PlayerEventsStreamHandler playerEvents;
   late List<Map<Object?, Object?>> setClipsArguments;
 
+  final createdPlayerIds = <int>{};
+
   setUp(() async {
+    createdPlayerIds.clear();
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     playerEvents = _PlayerEventsStreamHandler();
@@ -131,6 +134,7 @@ void main() {
           if (call.method == 'create') {
             final args = call.arguments! as Map<Object?, Object?>;
             final id = args['id']! as int;
+            createdPlayerIds.add(id);
             TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
                 .setMockMethodCallHandler(
                   MethodChannel('divine_video_player/player_$id'),
@@ -155,21 +159,27 @@ void main() {
   });
 
   tearDown(() async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('divine_video_player'),
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          ..setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            null,
+          );
+    // Clear exactly what `create` installed. Clearing `player_0` alone stayed
+    // matched only while every test created a single controller; a second one
+    // would leave `player_1` installed for the rest of the isolate.
+    for (final id in createdPlayerIds) {
+      messenger
+        ..setMockMethodCallHandler(
+          MethodChannel('divine_video_player/player_$id'),
+          null,
+        )
+        ..setMockStreamHandler(
+          EventChannel('divine_video_player/player_$id/events'),
           null,
         );
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('divine_video_player/player_0'),
-          null,
-        );
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockStreamHandler(
-          const EventChannel('divine_video_player/player_0/events'),
-          null,
-        );
+    }
+    createdPlayerIds.clear();
   });
 
   group(VideoMetadataPreviewScreen, () {

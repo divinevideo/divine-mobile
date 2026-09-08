@@ -858,6 +858,13 @@ void main() {
             const MethodChannel('divine_video_player/player_0'),
             (call) async => null,
           );
+          // initialize() subscribes unconditionally, so mock the event channel
+          // rather than leaving the subscription's teardown to a
+          // fire-and-forget dispose that races the end of the test.
+          messenger.setMockStreamHandler(
+            const EventChannel('divine_video_player/player_0/events'),
+            _EmptyPlayerStreamHandler(),
+          );
           addTearDown(() {
             messenger
               ..setMockMethodCallHandler(
@@ -866,6 +873,10 @@ void main() {
               )
               ..setMockMethodCallHandler(
                 const MethodChannel('divine_video_player/player_0'),
+                null,
+              )
+              ..setMockStreamHandler(
+                const EventChannel('divine_video_player/player_0/events'),
                 null,
               );
           });
@@ -977,4 +988,12 @@ void main() {
       expect(created, isFalse);
     });
   });
+}
+
+class _EmptyPlayerStreamHandler extends MockStreamHandler {
+  @override
+  void onListen(dynamic arguments, MockStreamHandlerEventSink events) {}
+
+  @override
+  void onCancel(dynamic arguments) {}
 }

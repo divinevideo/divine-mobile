@@ -348,6 +348,20 @@ void _registerMockPlayerChannel(
     }
     return null;
   });
+
+  // The whole app suite runs in one isolate, so a handler left installed here
+  // is live for every file that runs afterwards — and this one appends into a
+  // per-test list captured by the closure above, so a leaked handler writes
+  // into a stale list instead of returning null.
+  addTearDown(() {
+    messenger
+      ..setMockMethodCallHandler(globalChannel, null)
+      ..setMockMethodCallHandler(playerChannel, null)
+      ..setMockStreamHandler(
+        const EventChannel('divine_video_player/player_0/events'),
+        null,
+      );
+  });
 }
 
 class _MockClipManagerNotifier extends ClipManagerNotifier {

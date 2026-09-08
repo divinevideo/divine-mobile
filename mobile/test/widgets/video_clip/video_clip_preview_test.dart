@@ -205,22 +205,35 @@ void main() {
       final videoFile = File('${tempDir.path}/video.mp4')
         ..writeAsBytesSync(const [0]);
       Map<Object?, Object?>? setClipsArguments;
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async {
-              if (call.method == 'setClips') {
-                setClipsArguments = call.arguments! as Map<Object?, Object?>;
-              }
-              return null;
-            },
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            ..setMockMethodCallHandler(
               const MethodChannel('divine_video_player/player_0'),
-              null,
+              (call) async {
+                if (call.method == 'setClips') {
+                  setClipsArguments = call.arguments! as Map<Object?, Object?>;
+                }
+                return null;
+              },
+            )
+            // initialize() subscribes unconditionally, so mock the event
+            // channel the way the sibling hero test below does rather than
+            // leaving the subscription's teardown to a fire-and-forget
+            // dispose that races the end of the test.
+            ..setMockStreamHandler(
+              const EventChannel('divine_video_player/player_0/events'),
+              _EmptyPlayerStreamHandler(),
             );
+      addTearDown(() {
+        messenger
+          ..setMockMethodCallHandler(
+            const MethodChannel('divine_video_player/player_0'),
+            null,
+          )
+          ..setMockStreamHandler(
+            const EventChannel('divine_video_player/player_0/events'),
+            null,
+          );
       });
 
       await tester.pumpWidget(
@@ -754,3 +767,11 @@ const _transparentPngBytes = <int>[
   0x60,
   0x82,
 ];
+
+class _EmptyPlayerStreamHandler extends MockStreamHandler {
+  @override
+  void onListen(dynamic arguments, MockStreamHandlerEventSink events) {}
+
+  @override
+  void onCancel(dynamic arguments) {}
+}
