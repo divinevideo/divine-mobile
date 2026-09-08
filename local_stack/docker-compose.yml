@@ -142,18 +142,24 @@ services:
     volumes:
       - ./tuning:/tuning:ro
     entrypoint: ["/bin/bash", "-c"]
-    # Applied one statement at a time so a schema transition produces an
-    # actionable count without blocking the rest of the local stack.
+    # Applied one statement at a time so a schema transition degrades to a
+    # count instead of blocking the rest of the local stack. Each skip names
+    # the statement and ClickHouse's own reason, because the count alone only
+    # says how many failed: turning "applied 3/4" into "migration 000257
+    # dropped recent_videos_snapshot_refresh_mv" otherwise means reading
+    # funnelcake's migration history by hand.
     command:
       - |
         applied=0; skipped=0
         while IFS= read -r stmt; do
           [ -z "$$stmt" ] && continue
-          if clickhouse-client --host funnelcake-clickhouse --password clickhouse \
-               --query "$$stmt" >/dev/null 2>&1; then
+          if err="$$(clickhouse-client --host funnelcake-clickhouse --password clickhouse \
+               --query "$$stmt" 2>&1 >/dev/null)"; then
             applied=$$((applied + 1))
           else
             skipped=$$((skipped + 1))
+            echo "refresh-interval tuning skipped: $$stmt"
+            echo "  $$(printf '%s' "$$err" | head -n 1)"
           fi
         done < <(grep -v '^--' /tuning/refresh_intervals.sql | tr '\n' ' ' | tr ';' '\n' | sed 's/^ *//')
         echo "refresh-interval tuning: applied=$$applied skipped=$$skipped"
