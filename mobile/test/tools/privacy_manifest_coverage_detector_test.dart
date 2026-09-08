@@ -36,6 +36,7 @@ void main() {
 
   Directory makeTree({
     required String swift,
+    String? objectiveC,
     String? manifest,
     String? selectedSubspec,
     String podspec =
@@ -47,6 +48,9 @@ void main() {
       ..createSync(recursive: true);
     Directory('${pkg.path}/Classes').createSync(recursive: true);
     File('${pkg.path}/Classes/Sample.swift').writeAsStringSync(swift);
+    if (objectiveC != null) {
+      File('${pkg.path}/Classes/Sample.m').writeAsStringSync(objectiveC);
+    }
     File('${pkg.path}/sample.podspec').writeAsStringSync(podspec);
     Directory('${root.path}/ios/Runner').createSync(recursive: true);
     if (selectedSubspec != null) {
@@ -127,6 +131,37 @@ void main() {
     });
 
     group('false-positive guards', () {
+      for (final symbol in [
+        'volumeAvailableCapacityKey',
+        'volumeAvailableCapacityForImportantUsageKey',
+        'volumeAvailableCapacityForOpportunisticUsageKey',
+        'volumeTotalCapacityKey',
+      ]) {
+        test('detects Swift disk-space key $symbol', () {
+          final root = makeTree(swift: 'let key = URLResourceKey.$symbol\n');
+          final result = run(root: root);
+
+          expect(result.exitCode, equals(1), reason: result.output);
+          expect(
+            result.output,
+            contains('NSPrivacyAccessedAPICategoryDiskSpace'),
+          );
+        });
+      }
+
+      test('ignores unrelated capitalized type names', () {
+        final root = makeTree(
+          swift:
+              'let size = Size(width: 1, height: 2)\n'
+              'let free = FreeSize()\n'
+              'let creation = CreationDate()\n'
+              'let modification = ModificationDate()\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+      });
+
       test('does not fail on a bare PHAsset-style .creationDate accessor', () {
         final root = makeTree(
           swift:
@@ -138,7 +173,7 @@ void main() {
         // Reported for a human to judge, never fatal: PHAsset metadata carries
         // no declaration duty, and over-declaring is itself inaccurate.
         expect(result.exitCode, equals(0), reason: result.output);
-        expect(result.output, contains('ambiguous accessor'));
+        expect(result.output, contains('review required'));
       });
 
       test('does fail on the unambiguous URLResourceKey form', () {
@@ -154,6 +189,60 @@ void main() {
           result.output,
           contains('NSPrivacyAccessedAPICategoryFileTimestamp'),
         );
+      });
+
+      test('detects Objective-C timestamp and disk-space constants', () {
+        final root = makeTree(
+          swift: '',
+          objectiveC:
+              'id timestamp = NSURLContentModificationDateKey;\n'
+              'id capacity = NSURLVolumeTotalCapacityKey;\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(
+          result.output,
+          contains('NSPrivacyAccessedAPICategoryFileTimestamp'),
+        );
+        expect(
+          result.output,
+          contains('NSPrivacyAccessedAPICategoryDiskSpace'),
+        );
+      });
+
+      test(
+        'reports cross-category getattrlist calls without forcing either',
+        () {
+          final root = makeTree(
+            swift: 'getattrlist(path, &attributes, &buffer, size, 0)\n',
+          );
+          final result = run(root: root);
+
+          expect(result.exitCode, equals(0), reason: result.output);
+          expect(
+            result.output,
+            contains('possible NSPrivacyAccessedAPICategoryFileTimestamp use'),
+          );
+          expect(
+            result.output,
+            contains('possible NSPrivacyAccessedAPICategoryDiskSpace use'),
+          );
+        },
+      );
+
+      test('does not suggest removing a declaration with an ambiguous use', () {
+        final root = makeTree(
+          swift: 'getattrlist(path, &attributes, &buffer, size, 0)\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategoryFileTimestamp',
+            'C617.1',
+          ),
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+        expect(result.output, isNot(contains('no call site was detected')));
       });
 
       test('ignores an API named only in a comment or string literal', () {

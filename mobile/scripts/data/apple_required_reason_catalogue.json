@@ -1,0 +1,73 @@
+{
+  "source": "https://developer.apple.com/tutorials/data/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype.json",
+  "verified": "2026-09-07",
+  "categories": [
+    {
+      "id": "NSPrivacyAccessedAPICategoryFileTimestamp",
+      "name": "FileTimestamp",
+      "symbols": {
+        "swift": ["creationDate", "modificationDate", "fileModificationDate", "contentModificationDateKey", "creationDateKey", "getattrlist", "getattrlistbulk", "fgetattrlist", "stat", "fstat", "fstatat", "lstat", "getattrlistat"],
+        "objectiveC": ["NSFileCreationDate", "NSFileModificationDate", "fileModificationDate", "NSURLContentModificationDateKey", "NSURLCreationDateKey", "getattrlist", "getattrlistbulk", "fgetattrlist", "stat", "fstat", "fstatat", "lstat", "getattrlistat"]
+      },
+      "reasons": {
+        "DDA9.1": "display file timestamps to the user; not sent off-device",
+        "C617.1": "metadata of files in the app, app-group, or CloudKit container",
+        "3B52.1": "files the user explicitly granted access to",
+        "0A2A.1": "third-party SDK wrapper function only"
+      }
+    },
+    {
+      "id": "NSPrivacyAccessedAPICategorySystemBootTime",
+      "name": "SystemBootTime",
+      "symbols": {
+        "swift": ["systemUptime", "mach_absolute_time"],
+        "objectiveC": ["systemUptime", "mach_absolute_time"]
+      },
+      "reasons": {
+        "35F9.1": "elapsed time between in-app events, or timers",
+        "8FFB.1": "absolute timestamps for in-app events",
+        "3D61.1": "user-submitted bug report"
+      }
+    },
+    {
+      "id": "NSPrivacyAccessedAPICategoryDiskSpace",
+      "name": "DiskSpace",
+      "symbols": {
+        "swift": ["volumeAvailableCapacityKey", "volumeAvailableCapacityForImportantUsageKey", "volumeAvailableCapacityForOpportunisticUsageKey", "volumeTotalCapacityKey", "systemFreeSize", "systemSize", "statfs", "statvfs", "fstatfs", "fstatvfs", "getattrlist", "fgetattrlist", "getattrlistat"],
+        "objectiveC": ["NSURLVolumeAvailableCapacityKey", "NSURLVolumeAvailableCapacityForImportantUsageKey", "NSURLVolumeAvailableCapacityForOpportunisticUsageKey", "NSURLVolumeTotalCapacityKey", "NSFileSystemFreeSize", "NSFileSystemSize", "statfs", "statvfs", "fstatfs", "fstatvfs", "getattrlist", "fgetattrlist", "getattrlistat"]
+      },
+      "reasons": {
+        "85F4.1": "display disk space to the user",
+        "E174.1": "check sufficient or low disk space, with observable behaviour",
+        "7D9E.1": "user-submitted bug report",
+        "B728.1": "health research app"
+      }
+    },
+    {
+      "id": "NSPrivacyAccessedAPICategoryActiveKeyboards",
+      "name": "ActiveKeyboards",
+      "symbols": {
+        "swift": ["activeInputModes"],
+        "objectiveC": ["activeInputModes"]
+      },
+      "reasons": {
+        "3EC4.1": "custom keyboard app",
+        "54BD.1": "customize UI to the active keyboards"
+      }
+    },
+    {
+      "id": "NSPrivacyAccessedAPICategoryUserDefaults",
+      "name": "UserDefaults",
+      "symbols": {
+        "swift": ["UserDefaults"],
+        "objectiveC": ["NSUserDefaults"]
+      },
+      "reasons": {
+        "CA92.1": "data accessible only to the app itself",
+        "1C8F.1": "App Group-scoped defaults",
+        "C56D.1": "third-party SDK wrapper function only",
+        "AC6B.1": "MDM managed app configuration"
+      }
+    }
+  ]
+}

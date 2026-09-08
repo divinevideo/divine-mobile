@@ -30,15 +30,24 @@ REVIEW (non-fatal) and never as a failure.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import plistlib
 import re
 import sys
 
 # --- Apple's required-reason API catalogue -------------------------------
-# Symbols verified against Apple's DocC payload for
-# bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/
-# nsprivacyaccessedapitype (symbol reference links resolved), 2026-09-08.
+
+CATALOGUE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)),
+    "data",
+    "apple_required_reason_catalogue.json",
+)
+
+with open(CATALOGUE_PATH, encoding="utf-8") as catalogue_file:
+    CATALOGUE = json.load(catalogue_file)
+
+CATEGORIES = {category["id"]: category for category in CATALOGUE["categories"]}
 
 FILE_TIMESTAMP = "NSPrivacyAccessedAPICategoryFileTimestamp"
 SYSTEM_BOOT_TIME = "NSPrivacyAccessedAPICategorySystemBootTime"
@@ -46,20 +55,10 @@ DISK_SPACE = "NSPrivacyAccessedAPICategoryDiskSpace"
 ACTIVE_KEYBOARDS = "NSPrivacyAccessedAPICategoryActiveKeyboards"
 USER_DEFAULTS = "NSPrivacyAccessedAPICategoryUserDefaults"
 
-ALL_CATEGORIES = {
-    FILE_TIMESTAMP,
-    SYSTEM_BOOT_TIME,
-    DISK_SPACE,
-    ACTIVE_KEYBOARDS,
-    USER_DEFAULTS,
-}
-
+ALL_CATEGORIES = set(CATEGORIES)
 VALID_REASONS = {
-    FILE_TIMESTAMP: {"DDA9.1", "C617.1", "3B52.1", "0A2A.1"},
-    SYSTEM_BOOT_TIME: {"35F9.1", "8FFB.1", "3D61.1"},
-    DISK_SPACE: {"85F4.1", "E174.1", "7D9E.1", "B728.1"},
-    ACTIVE_KEYBOARDS: {"3EC4.1", "54BD.1"},
-    USER_DEFAULTS: {"CA92.1", "1C8F.1", "C56D.1", "AC6B.1"},
+    category_id: set(category["reasons"])
+    for category_id, category in CATEGORIES.items()
 }
 
 # Unambiguous: each pattern can only mean the required-reason API.
@@ -69,18 +68,23 @@ DEFINITE = [
     (
         FILE_TIMESTAMP,
         re.compile(
-            r"\bcontentModificationDateKey\b|\bcreationDateKey\b"
+            r"\b(?:contentModificationDateKey|NSURLContentModificationDateKey)\b"
+            r"|\b(?:creationDateKey|NSURLCreationDateKey)\b"
+            r"|\bNSFile(?:CreationDate|ModificationDate)\b"
             r"|\bfileModificationDate\b"
             r"|\bFileAttributeKey\.(?:creationDate|modificationDate)\b"
-            r"|\bgetattrlist(?:bulk|at)?\s*\(|\bfgetattrlist\s*\("
+            r"|\bgetattrlistbulk\s*\("
             r"|\bfstatat\s*\(|\blstat\s*\(|\bfstat\s*\(|(?<![\w.])stat\s*\("
         ),
     ),
     (
         DISK_SPACE,
         re.compile(
-            r"\bvolumeAvailableCapacity(?:ForImportantUsage|ForOpportunisticUsage)?Key\b"
-            r"|\bvolumeTotalCapacityKey\b|\bsystemFreeSize\b|\bsystemSize\b"
+            r"\b(?:volume|NSURLVolume)AvailableCapacity"
+            r"(?:ForImportantUsage|ForOpportunisticUsage)?Key\b"
+            r"|\b(?:volume|NSURLVolume)TotalCapacityKey\b"
+            r"|\bNSFileSystem(?:FreeSize|Size)\b"
+            r"|\bsystemFreeSize\b|\bsystemSize\b"
             r"|\bstatfs\s*\(|\bstatvfs\s*\(|\bfstatfs\s*\(|\bfstatvfs\s*\("
         ),
     ),
@@ -93,6 +97,14 @@ AMBIGUOUS = [
     (
         FILE_TIMESTAMP,
         re.compile(r"\battributesOfItem\b|\.(?:creationDate|modificationDate)\b"),
+    ),
+    (
+        FILE_TIMESTAMP,
+        re.compile(r"\b(?:f?getattrlist|getattrlistat)\s*\("),
+    ),
+    (
+        DISK_SPACE,
+        re.compile(r"\b(?:f?getattrlist|getattrlistat)\s*\("),
     ),
 ]
 
@@ -458,7 +470,7 @@ def check_sources(mobile: str) -> int:
                         + (f" (+{len(sites) - 3} more)" if len(sites) > 3 else "")
                         + f" but {unit.manifest} does not declare it"
                     )
-            for category in sorted(set(declared) - set(definite)):
+            for category in sorted(set(declared) - set(definite) - set(ambiguous)):
                 warnings.append(
                     f"{unit.name}: {unit.manifest} declares {category} but no "
                     f"call site was detected -- confirm it is still used, or "
@@ -497,11 +509,11 @@ def check_sources(mobile: str) -> int:
             if declared and category in declared:
                 continue
             warnings.append(
-                f"{unit.name}: possible {category} use (ambiguous accessor) at "
+                f"{unit.name}: possible {category} use (review required) at "
                 + ", ".join(sites[:3])
                 + (f" (+{len(sites) - 3} more)" if len(sites) > 3 else "")
-                + " -- confirm whether this is FileAttributeKey/URLResourceKey "
-                  "(declare it) or unrelated metadata such as PHAsset (ignore)"
+                + " -- inspect the concrete type or requested attributes, then "
+                  "declare only the category actually accessed"
             )
 
     for warning in warnings:
