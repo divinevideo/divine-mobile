@@ -5,8 +5,18 @@ tags:
   - auth
 ---
 - runFlow: loginFreshInstall.yaml
+
+# loginFreshInstall leaves the app on Explore, and the bottom-nav tabs it
+# already asserted are present on every shell route -- so re-asserting them
+# after the tap cannot fail. The shell wraps every inactive branch in
+# ExcludeSemantics, so Explore's search field disappearing is the id-based
+# signal that the Home tap actually switched branch.
 - tapOn:
     id: "home_tab"
+- extendedWaitUntil:
+    notVisible:
+      id: "explore_search_bar"
+    timeout: 30000
 - assertVisible:
     id: "home_tab"
 - assertVisible:
