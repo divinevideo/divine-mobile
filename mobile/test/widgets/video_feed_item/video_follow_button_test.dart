@@ -375,6 +375,56 @@ void main() {
       expect(tester.getSize(find.byType(VideoFollowButton)), before);
     });
 
+    testWidgets('lets taps through while the reservation is empty', (
+      tester,
+    ) async {
+      // The reservation is laid out before the badge decides whether to
+      // paint, and in the blocked case it never paints at all. It has to stay
+      // invisible to the hit test for as long as that lasts: an opaque 48dp
+      // box with nothing in it would take double-tap-to-like and
+      // press-and-hold-to-peek from the video behind it, in a state the
+      // viewer has no way to see.
+      final authorPubkey = 'f' * 64;
+      var reachedTheVideo = false;
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => reachedTheVideo = true,
+                  ),
+                ),
+                VideoFollowButton(pubkey: authorPubkey),
+              ],
+            ),
+          ),
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              blocklist(authorPubkey: authorPubkey, blocksUs: true),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      // Guard against a vacuous pass: the point only exists while the
+      // reservation is standing and empty.
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+      expect(
+        tester.getSize(find.byType(VideoFollowButton)),
+        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
+      );
+
+      await tester.tapAt(tester.getCenter(find.byType(VideoFollowButton)));
+      await tester.pump();
+
+      expect(reachedTheVideo, isTrue);
+    });
+
     testWidgets('reserves the tap target before the following list resolves', (
       tester,
     ) async {
