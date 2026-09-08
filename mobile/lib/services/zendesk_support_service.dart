@@ -383,7 +383,15 @@ class ZendeskSupportService {
     // Signed and requested must be the same string: relay-manager compares
     // the NIP-98 `u` tag to the request URL exactly, and `Uri.parse`
     // normalizes host case, a default port and dot segments.
-    final uri = Uri.parse('$relayManagerUrl/api/zendesk/pre-auth');
+    //
+    // The trailing slash is trimmed first, as the other NIP-98 clients do.
+    // `Uri.parse` does not collapse `//`, so a caller-supplied base ending in
+    // one would post to `//api/zendesk/pre-auth`. Signed would still equal
+    // sent, so NIP-98 passes and only the path is wrong.
+    final base = relayManagerUrl.endsWith('/')
+        ? relayManagerUrl.substring(0, relayManagerUrl.length - 1)
+        : relayManagerUrl;
+    final uri = Uri.parse('$base/api/zendesk/pre-auth');
     final url = uri.toString();
 
     // Clear NIP-98 cache to avoid reusing a token with a stale timestamp.

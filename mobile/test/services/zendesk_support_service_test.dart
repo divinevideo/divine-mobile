@@ -1745,6 +1745,7 @@ void main() {
       'HTTPS://relay.example',
       'https://relay.example:443',
       'https://relay.example/.',
+      'https://relay.example/',
     ]) {
       test('is canonical for a base of $base', () async {
         final nip98 = _RecordingUrlNip98AuthService();
