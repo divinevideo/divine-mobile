@@ -486,17 +486,32 @@ class VideoEditorRenderService {
     return proofData != null ? jsonEncode(proofData) : null;
   }
 
-  /// Ensures every clip has a [proofManifestJson].
+  /// Fills in a [proofManifestJson] for clips that arrived without one.
   ///
   /// Clips that already have proof data are returned as-is. For clips without
   /// proof, [NativeProofModeService.proofFile] is called on the clip's video
   /// file and the clip is updated with the result.
+  ///
+  /// **Currently a pass-through.**
+  /// [NativeProofModeService.clipLevelProofGenerationEnabled] is `false`, so
+  /// nothing is generated and every clip is returned unchanged. A recorded
+  /// clip is attested at record time, so in the normal case the list handed to
+  /// `proofFile` is exactly what it would have been; only a clip that reached
+  /// render unattested stays that way. The per-clip progress tick runs either
+  /// way, so the export's proof-phase budget resolves in the same number of
+  /// steps. See that constant for why, and for what has to be resolved before
+  /// it flips back.
   static Future<List<DivineVideoClip>> _ensureClipProofs(
     List<DivineVideoClip> clips, {
     VoidCallback? onClipProcessed,
   }) async {
     final result = <DivineVideoClip>[];
     for (final clip in clips) {
+      if (!NativeProofModeService.clipLevelProofGenerationEnabled) {
+        result.add(clip);
+        onClipProcessed?.call();
+        continue;
+      }
       if (clip.proofManifestJson != null) {
         result.add(clip);
         onClipProcessed?.call();

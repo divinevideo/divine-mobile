@@ -37,6 +37,29 @@ class NativeProofModeService {
   @visibleForTesting
   static C2paSigningService Function()? c2paSigningServiceFactoryOverride;
 
+  /// Whether a clip that arrives without its own attestation gets one
+  /// generated before the final combined proof is built.
+  ///
+  /// **Temporarily off** while the combined proof described in [proofFile]'s
+  /// TODO is being implemented. Until that lands, each backfill costs a
+  /// full-file SHA-256, a full C2PA re-sign and a native ProofMode pass for a
+  /// result nothing reads.
+  ///
+  /// Switching it off costs almost nothing: a recorded clip is already
+  /// attested at record time, so the per-clip data a combined proof will read
+  /// is present either way. Only the gap case loses something — a clip that
+  /// reaches render without proof cannot be referenced by a later ingredient
+  /// chain.
+  ///
+  /// Keeping that gap-fill is not free either: it runs through the C2PA
+  /// re-sign, which replaces the user's original recording on disk (#8799).
+  /// Resolve that first, then flip this to `true` and delete the constant in
+  /// the same change that starts reading the per-clip data (#8798).
+  ///
+  /// The [proofFile] `clips` and `editorStateHistory` parameters stay as they
+  /// are: `clips` is exactly the list a combined proof draws from.
+  static const bool clipLevelProofGenerationEnabled = false;
+
   /// Generate native ProofMode proof for a video file.
   ///
   /// Returns [NativeProofData] if proof generation succeeds, null otherwise.
@@ -70,7 +93,13 @@ class NativeProofModeService {
 
     try {
       // TODO(n8fr8): Incorporate clip-level proof data into the final
-      // combined proof. Each clip now carries its own attestation:
+      // combined proof. Each clip now carries its own attestation.
+      //
+      // Until this lands, [clipLevelProofGenerationEnabled] is false, so a
+      // clip arriving here without proof is not backfilled (#8798). Recorded
+      // clips are unaffected — they are attested at record time — but a clip
+      // that slipped through unattested has nothing to reference, so see
+      // #8799 before flipping that constant back.
       //
       // Access per-clip data via the [clips] parameter:
       //   for (final clip in clips ?? []) {

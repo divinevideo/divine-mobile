@@ -271,11 +271,21 @@ void main() {
           result.$1.thumbnailPath,
           equals('${Directory.systemTemp.path}/clip-0-thumb.jpg'),
         );
+        // With clip-level generation switched off (#8798) the three per-clip
+        // backfill calls are gone, but the combined call still receives all
+        // three clips: the switch removes generated data, not the plumbing
+        // that carries it. Derived from the constant rather than hardcoded, so
+        // this stays right on the day the combination lands and it flips.
+        final expectedProofCallClipCounts =
+            NativeProofModeService.clipLevelProofGenerationEnabled
+            ? [null, null, null, 3]
+            : [3];
         expect(
           proofCallClipCounts,
-          equals([null, null, null, 3]),
+          equals(expectedProofCallClipCounts),
           reason:
-              'three clip-proof steps plus the final combined proofFile step',
+              'The final combined proofFile call must still be handed every '
+              'clip, whether or not the missing ones were backfilled first.',
         );
 
         const renderBudget = 0.95;
