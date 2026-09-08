@@ -1,36 +1,22 @@
 // Tests for readiness gate providers
-// Ensures subscriptions only start when app is ready
-// (foregrounded + Nostr initialized + correct tab)
+// Ensures subscriptions only start when the app is foregrounded, and that
+// discovery work is gated on the explore tab being the active route
 
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/router/router.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
-
 void main() {
   group('Readiness Gate Providers', () {
-    late _MockNostrClient mockNostrService;
-
-    setUp(() {
-      mockNostrService = _MockNostrClient();
-    });
-
     group('appReadyProvider', () {
-      test('should return true when both foreground and Nostr are ready', () {
+      test('should return true when app is foregrounded', () {
         // Arrange
-        when(() => mockNostrService.isInitialized).thenReturn(true);
-
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
             appForegroundProvider.overrideWith(_FakeAppForeground.new),
           ],
         );
@@ -48,14 +34,10 @@ void main() {
         container.dispose();
       });
 
-      test('should return false when app is backgrounded even if '
-          'Nostr is ready', () {
+      test('should return false when app is backgrounded', () {
         // Arrange
-        when(() => mockNostrService.isInitialized).thenReturn(true);
-
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
             appForegroundProvider.overrideWith(_FakeAppForeground.new),
           ],
         );
@@ -76,36 +58,10 @@ void main() {
         container.dispose();
       });
 
-      test('should return false when both are not ready', () {
-        // Arrange
-        when(() => mockNostrService.isInitialized).thenReturn(false);
-
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-            appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          ],
-        );
-
-        // Set background state after initialization
-        container.read(appForegroundProvider.notifier).setForeground(false);
-
-        // Act
-        final isReady = container.read(appReadyProvider);
-
-        // Assert
-        expect(isReady, isFalse);
-
-        container.dispose();
-      });
-
       test('should reactively update when foreground state changes', () {
         // Arrange
-        when(() => mockNostrService.isInitialized).thenReturn(true);
-
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
             appForegroundProvider.overrideWith(_FakeAppForeground.new),
           ],
         );

@@ -1,5 +1,5 @@
 // ABOUTME: Gate providers for coordinating app readiness state
-// ABOUTME: Ensures subscriptions only start when Nostr is initialized and app is foregrounded
+// ABOUTME: Ensures subscriptions only start when the app is foregrounded
 
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -22,7 +22,6 @@ bool appReady(Ref ref) {
     category: LogCategory.system,
   );
 
-  // App is ready when both foreground and Nostr are ready
   return ready;
 }
 
