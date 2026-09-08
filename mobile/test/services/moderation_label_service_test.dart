@@ -2474,50 +2474,67 @@ void main() {
     });
 
     test(
-      'a reload reapplies a labelers rows instead of dropping them as '
-      'duplicates (guards the dedup clear on reprocess)',
+      'unloading a labeler clears its dedup set so a re-add reapplies its '
+      'labels',
       () async {
+        // _removeLabelsForLabeler drops the labeler's rows AND its applied-id
+        // set. Only the _unloadLabeler call site makes that load-bearing: on
+        // the backfill path no id is ever recorded (an incomplete load sets no
+        // watermark, and a latched labeler never reloads), so deleting the
+        // clear cannot be caught there. Here the tail has recorded a real id
+        // while the labeler was loaded, and the re-add must be able to apply
+        // that same event again after its rows were dropped.
         const custom =
             'd4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4';
-        // The same real-id event on two loads: an incomplete load applies it
-        // (so the dedup set holds its id) without latching, then a complete
-        // load reprocesses. _removeLabelsForLabeler must clear the dedup set so
-        // the reprocess reapplies rather than skipping every event as a dup.
-        var complete = false;
+        stubCompletedBackfill();
+        final tail = StreamController<Event>.broadcast();
+        addTearDown(() async {
+          service.dispose();
+          await tail.close();
+        });
         when(
-          () => mockNostrClient.queryEventsDetailed(
+          () => mockNostrClient.subscribe(
             any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            subscriptionId: any(named: 'subscriptionId'),
+            onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer(
-          (_) async => (
-            events: <Event>[
-              _FakeLabelEvent(
-                pubkey: custom,
-                id: 'reload_evt_1',
-                createdAt: 100,
-                tags: [
-                  ['L', 'content-warning'],
-                  ['l', 'nudity', 'content-warning'],
-                  ['e', 'reload_tgt'],
-                ],
-              ),
-            ],
-            timedOut: !complete,
-            noRelays: false,
-          ),
+        ).thenAnswer((_) => tail.stream);
+
+        // Comfortably above any watermark this test can produce, so the
+        // assertions never straddle a second boundary.
+        final label = _FakeLabelEvent(
+          pubkey: custom,
+          id: 'sticky_evt',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+          tags: [
+            ['L', 'content-warning'],
+            ['l', 'nudity', 'content-warning'],
+            ['e', 'sticky_tgt'],
+          ],
         );
 
         await service.addLabeler(custom);
-        expect(service.getContentWarnings('reload_tgt'), hasLength(1));
+        tail.add(label);
+        await pumpEventQueue();
+        expect(
+          service.getContentWarnings('sticky_tgt'),
+          hasLength(1),
+          reason: 'the tail applies the label and records its id',
+        );
 
-        complete = true;
-        await service.subscribeToLabeler(custom);
+        await service.removeLabeler(custom);
+        expect(service.getContentWarnings('sticky_tgt'), isEmpty);
+
+        await service.addLabeler(custom);
+        tail.add(label);
+        await pumpEventQueue();
 
         expect(
-          service.getContentWarnings('reload_tgt'),
+          service.getContentWarnings('sticky_tgt'),
           hasLength(1),
-          reason: 'a reload must reapply the labeler rows, not drop them',
+          reason:
+              'the re-added labeler must reapply the same event; without the '
+              'dedup-set clear its id is still recorded and it is skipped',
         );
       },
     );
