@@ -97,12 +97,10 @@ ServiceSuiteScopeResult detectServiceSuiteScope({
   }
 
   final uncovered = <String>[];
+  // Either selector arm sets focused=true, including for local path packages.
+  final matchers = [...focusedMatchers, ...sharedMatchers];
   for (final file in visited) {
     final relative = _relative(root, file);
-    final production =
-        relative.startsWith('mobile/lib/') ||
-        relative.startsWith('mobile/packages/');
-    final matchers = production ? focusedMatchers : sharedMatchers;
     if (!matchers.any((matcher) => matcher.hasMatch(relative))) {
       final parent = importers[file];
       uncovered.add(
@@ -114,16 +112,9 @@ ServiceSuiteScopeResult detectServiceSuiteScope({
   }
 
   final stale = <String>[];
-  final productionPaths = visited
-      .map((file) => _relative(root, file))
-      .where(
-        (path) =>
-            path.startsWith('mobile/lib/') ||
-            path.startsWith('mobile/packages/'),
-      )
-      .toList();
+  final paths = visited.map((file) => _relative(root, file)).toList();
   for (var index = 0; index < scopes.focused.length; index++) {
-    if (!productionPaths.any(focusedMatchers[index].hasMatch)) {
+    if (!paths.any(focusedMatchers[index].hasMatch)) {
       stale.add(scopes.focused[index]);
     }
   }
@@ -236,6 +227,46 @@ Map<String, String> _workspacePackages(String mobileRoot) {
   }
   for (final entity in packages.listSync()) {
     if (entity is Directory) addPackage(entity.path);
+  }
+
+  // Path overrides can live elsewhere in the repo, outside the workspace list.
+  final lockPath = p.join(mobileRoot, 'pubspec.lock');
+  Object? lock;
+  try {
+    lock = loadYaml(File(lockPath).readAsStringSync());
+  } on Object catch (error) {
+    throw ScopeDriftException('unreadable lockfile $lockPath: $error');
+  }
+  final lockedPackages = lock is YamlMap ? lock['packages'] : null;
+  if (lockedPackages is! YamlMap) {
+    throw ScopeDriftException('lockfile has no package map: $lockPath');
+  }
+  for (final entry in lockedPackages.entries) {
+    final package = entry.value;
+    if (package is! YamlMap) {
+      throw ScopeDriftException('invalid locked package: ${entry.key}');
+    }
+    if (package['source'] != 'path') continue;
+    final description = package['description'];
+    final path = description is YamlMap ? description['path'] : null;
+    final relative = description is YamlMap ? description['relative'] : null;
+    if (entry.key is! String ||
+        path is! String ||
+        path.isEmpty ||
+        relative is! bool ||
+        relative == p.isAbsolute(path)) {
+      throw ScopeDriftException('invalid path package mapping: ${entry.key}');
+    }
+    final directory = p.normalize(
+      relative ? p.join(mobileRoot, path) : path,
+    );
+    if (!p.isWithin(p.dirname(mobileRoot), directory)) continue;
+    final lib = p.join(directory, 'lib');
+    if (roots[entry.key] == lib) continue;
+    addPackage(directory);
+    if (roots[entry.key] != lib) {
+      throw ScopeDriftException('path package name mismatch: ${entry.key}');
+    }
   }
   return roots;
 }

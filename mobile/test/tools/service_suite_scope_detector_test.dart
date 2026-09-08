@@ -100,6 +100,94 @@ focused_suites=(
       );
     });
 
+    test('reports transitive dependencies of in-repo path packages', () {
+      fixture
+        ..writePathPackage()
+        ..writeApp(
+          'covered.dart',
+          "import 'package:local_override/entry.dart';\n",
+        )
+        ..writeSuite("import 'package:openvine/covered.dart';\n")
+        ..writeScopes(focused: ['mobile/lib/covered.dart']);
+
+      expect(
+        fixture.detect,
+        throwsA(
+          isA<ScopeDriftException>().having(
+            (error) => error.message,
+            'message',
+            contains('mobile/overrides/local_override/lib/dependency.dart'),
+          ),
+        ),
+      );
+    });
+
+    test('accepts covered in-repo path packages', () {
+      fixture
+        ..writePathPackage()
+        ..writeSuite("import 'package:local_override/entry.dart';\n")
+        ..writeScopes(focused: ['mobile/overrides/local_override/*']);
+
+      expect(fixture.detect().files, hasLength(3));
+    });
+
+    test('accepts a production dependency covered by the shared arm', () {
+      fixture
+        ..writeApp('covered.dart', "export 'shared.dart';\n")
+        ..writeApp('shared.dart', 'const value = true;\n')
+        ..writeSuite("import 'package:openvine/covered.dart';\n")
+        ..writeScopes(focused: ['mobile/lib/covered.dart']);
+      fixture.writeRawScopes(
+        File(fixture.scopes).readAsStringSync().replaceFirst(
+          'mobile/integration_test/e2e/*)',
+          'mobile/integration_test/e2e/*|mobile/lib/shared.dart)',
+        ),
+      );
+
+      expect(fixture.detect().files, hasLength(3));
+    });
+
+    test('fails on malformed path package mappings', () {
+      fixture
+        ..writeSuite('const value = true;\n')
+        ..writeScopes(focused: ['mobile/lib/*'])
+        ..writeLock('packages: {broken: {source: path, description: {}}}\n');
+
+      expect(
+        fixture.detect,
+        throwsA(
+          isA<ScopeDriftException>().having(
+            (error) => error.message,
+            'message',
+            contains('invalid path package mapping'),
+          ),
+        ),
+      );
+    });
+
+    test('fails when a path package name disagrees with its pubspec', () {
+      fixture
+        ..writePathPackage()
+        ..writeSuite("import 'package:local_override/entry.dart';\n")
+        ..writeScopes(focused: ['mobile/overrides/local_override/*']);
+      fixture.writeLock(
+        File(
+          p.join(fixture.mobile, 'pubspec.lock'),
+        ).readAsStringSync().replaceFirst('local_override:', 'wrong_name:'),
+      );
+
+      expect(
+        fixture.detect,
+        throwsA(
+          isA<ScopeDriftException>().having(
+            (error) => error.message,
+            'message',
+            contains('path package name mismatch'),
+          ),
+        ),
+      );
+    });
+
     test('walks every conditional import and export branch', () {
       fixture
         ..writeApp(
@@ -331,11 +419,36 @@ class _Fixture {
 
   void createBase() {
     _write(p.join(mobile, 'pubspec.yaml'), 'name: openvine\n');
+    _write(p.join(mobile, 'pubspec.lock'), 'packages: {}\n');
     Directory(p.join(mobile, 'packages')).createSync(recursive: true);
     writeWorkflow(_workflow());
   }
 
   void writeWorkflow(String source) => _write(workflow, source);
+
+  void writeLock(String source) =>
+      _write(p.join(mobile, 'pubspec.lock'), source);
+
+  void writePathPackage() {
+    _write(p.join(mobile, 'pubspec.lock'), '''
+packages:
+  local_override:
+    source: path
+    description:
+      path: overrides/local_override
+      relative: true
+''');
+    final directory = p.join(mobile, 'overrides', 'local_override');
+    _write(p.join(directory, 'pubspec.yaml'), 'name: local_override\n');
+    _write(
+      p.join(directory, 'lib', 'entry.dart'),
+      "export 'dependency.dart';\n",
+    );
+    _write(
+      p.join(directory, 'lib', 'dependency.dart'),
+      'const value = true;\n',
+    );
+  }
 
   void writeSuite(String source) => _write(
     p.join(mobile, 'integration_test', 'e2e', 'focused_test.dart'),
