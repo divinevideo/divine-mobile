@@ -6,17 +6,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
-import 'package:openvine/screens/explore/explore_screen.dart';
-import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/services/auth_service.dart';
+
+import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 void main() {
+  Future<ProviderContainer> createContainer() async {
+    final container = ProviderContainer(
+      overrides: [
+        ...getStandardTestOverrides(
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: syntheticTestPubkey,
+          ),
+        ).cast(),
+        currentMinorAccountReviewStatusProvider.overrideWith(
+          (ref) async => MinorAccountReviewStatus.active(),
+        ),
+        currentAccountDeletionAttemptProvider.overrideWith((ref) async => null),
+      ],
+    );
+    await container.read(currentMinorAccountReviewStatusProvider.future);
+    await container.read(currentAccountDeletionAttemptProvider.future);
+    return container;
+  }
+
   group('Router Location Provider', () {
     testWidgets('emits initial location immediately', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      // Build minimal widget tree with GoRouter
+      final container = await createContainer();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -30,18 +52,19 @@ void main() {
 
       final stream = container.read(routerLocationStreamProvider);
       final queue = StreamQueue(stream);
-      addTearDown(() async => queue.cancel());
 
       // Get initial location
       final initial = await queue.next;
-      expect(initial, VideoFeedPage.pathForIndex(0));
+      expect(initial, WelcomeScreen.path);
+
+      await queue.cancel();
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
     });
 
     testWidgets('emits new location when router navigates', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      // Build minimal widget tree with GoRouter
+      final container = await createContainer();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -56,31 +79,33 @@ void main() {
       // Listen to the raw stream for deterministic events
       final stream = container.read(routerLocationStreamProvider);
       final queue = StreamQueue(stream);
-      addTearDown(() async => queue.cancel());
 
       // 1) Initial location
       final initial = await queue.next;
-      expect(initial, VideoFeedPage.pathForIndex(0));
+      expect(initial, WelcomeScreen.path);
 
-      // 2) Navigate to explore
-      container.read(goRouterProvider).go(ExploreScreen.pathForIndex(0));
-      await tester.pump(); // Flush delegate change notification
+      // Use error routes so this provider test does not initialize unrelated
+      // app-shell side effects.
+      container.read(goRouterProvider).go('/unknown-one');
+      await tester.pump();
 
       final next1 = await queue.next;
-      expect(next1, ExploreScreen.pathForIndex(0));
+      expect(next1, '/unknown-one');
 
-      // 3) Navigate to explore page 5
-      container.read(goRouterProvider).go(ExploreScreen.pathForIndex(5));
+      container.read(goRouterProvider).go('/unknown-two');
       await tester.pump();
 
       final next2 = await queue.next;
-      expect(next2, ExploreScreen.pathForIndex(5));
+      expect(next2, '/unknown-two');
+
+      await queue.cancel();
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
     });
 
     testWidgets('cleans up listener on dispose', (tester) async {
-      final container = ProviderContainer();
-
-      // Build minimal widget tree
+      final container = await createContainer();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -101,11 +126,12 @@ void main() {
 
       // Cancel and dispose
       await queue.cancel();
+      await tester.pumpWidget(const SizedBox.shrink());
       container.dispose();
+      await tester.pump();
 
       // If this completes without error, cleanup worked
       expect(true, isTrue);
     });
-    // TODO(Any): Fix and re-enable these tests
-  }, skip: true);
+  });
 }
