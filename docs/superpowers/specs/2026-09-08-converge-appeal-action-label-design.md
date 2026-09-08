@@ -5,11 +5,12 @@ with different labels ("Contact support" vs "Open Support Center"). #8248 asks t
 on #8239's approved wording; it explicitly says do the button label first, separately.
 
 **Corrected premise (verified on origin/main).** The issue says account-status copy is
-translated and minor-review is English-only — the reverse is true: `accountStatusContactSupport`
-("Contact support") is English-only (in `_knownUntranslatedDebt`), while
-`minorAccountReviewOpenSupportCenter` ("Open Support Center") is translated in all 22 locales.
-So converging to "Open Support Center" is both the approved direction and the already-translated
-one — the button slice ships clean with no new translation.
+translated and minor-review is English-only. In fact, `accountStatusContactSupport` ("Contact
+support") is translated only in Telugu and falls back to English in the other 21 locales (as
+tracked by `_knownUntranslatedDebt`), while `minorAccountReviewOpenSupportCenter` ("Open Support
+Center") is translated in all 22 locales. So converging to "Open Support Center" is both the
+approved direction and the already-translated one — the button slice ships clean with no new
+translation.
 
 ## Scope (this PR)
 
