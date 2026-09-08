@@ -137,13 +137,14 @@ class Curation extends _$Curation {
       }
     });
 
-    // Initialize with empty state
-    _initializeCuration();
-
-    return const CurationState(editorsPicks: [], isLoading: true);
+    return _initialCurationState();
   }
 
-  Future<void> _initializeCuration() async {
+  /// Reads the caches [CurationRepository] populates in its constructor.
+  ///
+  /// Returned rather than assigned to `state`: the read is synchronous, so an
+  /// assignment here is immediately overwritten by whatever `build` returns.
+  CurationState _initialCurationState() {
     try {
       final service = ref.read(curationRepositoryProvider);
 
@@ -153,18 +154,17 @@ class Curation extends _$Curation {
         category: LogCategory.system,
       );
 
-      // CurationRepository initializes itself in constructor
-      // Just get the current data
-      state = CurationState(
-        editorsPicks: service.getVideosForSetType(CurationSetType.editorsPicks),
-        isLoading: false,
+      final editorsPicks = service.getVideosForSetType(
+        CurationSetType.editorsPicks,
       );
 
       Log.info(
-        'Curation: Loaded ${state.editorsPicks.length} editor picks',
+        'Curation: Loaded ${editorsPicks.length} editor picks',
         name: 'CurationProvider',
         category: LogCategory.system,
       );
+
+      return CurationState(editorsPicks: editorsPicks, isLoading: false);
     } catch (e) {
       Log.error(
         'Curation: Initialization error: $e',
@@ -172,8 +172,8 @@ class Curation extends _$Curation {
         category: LogCategory.system,
       );
 
-      state = CurationState(
-        editorsPicks: [],
+      return CurationState(
+        editorsPicks: const [],
         isLoading: false,
         error: e.toString(),
       );

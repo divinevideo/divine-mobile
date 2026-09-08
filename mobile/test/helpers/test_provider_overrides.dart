@@ -25,6 +25,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/moderation_label_service.dart';
@@ -153,6 +154,13 @@ MockAuthService createMockAuthService({
   when(
     () => mockAuth.authStateStream,
   ).thenAnswer((_) => const Stream<AuthState>.empty());
+
+  // Providers built from an authenticated identity read requireIdentity, which
+  // throws on the real service and returned null here. A pubkey-only identity
+  // keeps those providers constructible without granting signing ability.
+  when(() => mockAuth.requireIdentity).thenReturn(
+    PubkeyOnlyNostrIdentity(pubkey: currentPublicKeyHex ?? 'a' * 64),
+  );
   _stubSessionCleanupRegistration(mockAuth);
 
   return mockAuth;

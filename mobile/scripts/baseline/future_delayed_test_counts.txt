@@ -80,8 +80,6 @@ test/providers/auth_rpc_capability_provider_test.dart	1
 test/providers/broken_video_tracker_identity_test.dart	1
 test/providers/bug_report_providers_test.dart	1
 test/providers/crossposting_providers_test.dart	1
-test/providers/curation_provider_lifecycle_test.dart	1
-test/providers/curation_provider_tab_refresh_test.dart	2
 test/providers/deep_link_provider_test.dart	3
 test/providers/dm_repository_provider_test.dart	4
 test/providers/feed_background_preservation_test.dart	8
