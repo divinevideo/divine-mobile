@@ -355,6 +355,36 @@ void main() {
         expect(card.hasAction(SemanticsAction.tap), isTrue);
       });
 
+      testWidgets('activates through the semantics owner', (tester) async {
+        // A pointer tap proves hit testing; assistive tech activates the
+        // node's own action, which the excluded subtree cannot supply.
+        final handle = tester.ensureSemantics();
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(), onTap: () => tapped = true),
+        );
+
+        final node = tester.getSemantics(find.byType(DivineListThumbnail));
+        node.owner!.performAction(node.id, SemanticsAction.tap);
+        await tester.pump();
+
+        expect(tapped, isTrue);
+        handle.dispose();
+      });
+
+      testWidgets('speaks the description as the hint', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(description: 'Best skate clips'),
+          ),
+        );
+
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(card.hint, equals('Best skate clips'));
+      });
+
       testWidgets('calls onTap when tapped', (tester) async {
         var tapped = false;
         await tester.pumpWidget(

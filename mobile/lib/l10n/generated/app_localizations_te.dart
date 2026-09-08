@@ -3995,8 +3995,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
-  String get peopleListsLoadFailed =>
-      'Couldn\'t load this list. Check your connection and try again.';
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'జోడించండి';
@@ -5058,7 +5057,8 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'షేర్ జాబితా';
