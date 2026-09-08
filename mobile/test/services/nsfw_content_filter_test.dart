@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -20,6 +22,13 @@ class _FakeFilter extends Fake implements Filter {}
 
 class _FakeLabelEvent extends Fake implements Event {
   _FakeLabelEvent({required this.pubkey, required this.tags});
+
+  @override
+  String get id =>
+      '8888888888888888888888888888888888888888888888888888888888888888';
+
+  @override
+  int get createdAt => 0;
 
   @override
   final String pubkey;
@@ -103,6 +112,14 @@ void main() {
       await contentFilterService.initialize();
       mockNostrClient = _MockNostrClient();
       mockAuthService = _MockAuthService();
+      // The moderation labeler opens a live tail after its backfill (#8255).
+      when(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => StreamController<Event>.broadcast().stream);
       moderationLabelService = ModerationLabelService(
         nostrClient: mockNostrClient,
         authService: mockAuthService,

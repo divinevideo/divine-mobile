@@ -100,13 +100,17 @@ class ModerationLabelService {
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
     int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
     Duration labelerHistoryBudget = defaultLabelerHistoryBudget,
+    Duration tailReconnectDelay = defaultTailReconnectDelay,
+    Duration tailMaxReconnectDelay = defaultTailMaxReconnectDelay,
   }) : _nostrClient = nostrClient,
        _authService = authService,
        _prefs = sharedPreferences,
        _canQueryRelays = canQueryRelays ?? (() => true),
        _labelerHistoryPageSize = labelerHistoryPageSize,
        _maxLabelerHistoryPages = maxLabelerHistoryPages,
-       _labelerHistoryBudget = labelerHistoryBudget;
+       _labelerHistoryBudget = labelerHistoryBudget,
+       _tailReconnectDelay = tailReconnectDelay,
+       _tailMaxReconnectDelay = tailMaxReconnectDelay;
 
   final NostrClient _nostrClient;
   // Retained to preserve constructor compatibility for generated-provider
@@ -157,6 +161,22 @@ class ModerationLabelService {
   static const Duration defaultLabelerHistoryBudget = Duration(seconds: 30);
 
   final Duration _labelerHistoryBudget;
+
+  /// Delay before re-opening a live tail that dropped, mirroring
+  /// `DmRepository`'s gift-wrap reconnect. #8255.
+  static const Duration defaultTailReconnectDelay = Duration(seconds: 2);
+
+  /// Maximum delay between attempts to restore the shared labeler tail.
+  static const Duration defaultTailMaxReconnectDelay = Duration(minutes: 1);
+
+  /// How far behind an author's newest label the live tail accepts unseen
+  /// events. Relays deliver independently, so arrival order is not timestamp
+  /// order; this window prevents a faster relay from suppressing a distinct
+  /// label delivered later by another relay while keeping replay dedup bounded.
+  static const Duration defaultTailReplayTolerance = Duration(minutes: 5);
+
+  final Duration _tailReconnectDelay;
+  final Duration _tailMaxReconnectDelay;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
   ///
@@ -268,8 +288,39 @@ class ModerationLabelService {
   bool _isLabelerLoadCurrent(String pubkey, int generation) =>
       !_disposed && _labelerLoadGeneration(pubkey) == generation;
 
-  /// Active subscriptions.
-  final Map<String, StreamSubscription<dynamic>> _subscriptions = {};
+  /// One multiplexed live tail for every loaded trusted labeler.
+  StreamSubscription<Event>? _tailSubscription;
+
+  /// Serializes tail replacement so an old explicit subscription id is fully
+  /// released before [NostrClient.subscribe] sees it again.
+  Future<void> _tailUpdate = Future<void>.value();
+
+  /// Stable identity of the author set currently carried by the live tail.
+  Set<String> _tailAuthors = {};
+
+  /// Invalidates callbacks from a tail intentionally replaced or disposed.
+  int _tailGeneration = 0;
+
+  /// Coalesces the many per-labeler loads in one follow-list sync into one REQ.
+  int _tailRebuildDeferrals = 0;
+  bool _tailRebuildPending = false;
+
+  /// Ids within each labeler's retained replay window.
+  ///
+  /// Relays can deliver distinct events out of timestamp order. Moving the
+  /// watermark therefore prunes only ids older than
+  /// [defaultTailReplayTolerance],
+  /// rather than rejecting every event older than the newest one. #8255.
+  final Map<String, Map<String, int>> _appliedLabelEventIds = {};
+
+  /// Newest label timestamp seen per labeler. A reconnect resumes the tail from
+  /// here (dedup absorbs the overlap) rather than from now, so labels published
+  /// during the gap are not missed. #8255.
+  final Map<String, int> _tailWatermark = {};
+
+  /// Pending reconnect for the one shared tail. #8255.
+  Timer? _tailReconnectTimer;
+  int _tailReconnectAttempt = 0;
 
   /// Whether persisted settings have been loaded.
   bool _loadedPersistedState = false;
@@ -343,9 +394,11 @@ class ModerationLabelService {
   }
 
   Future<void> _syncSubscribedLabelersWithRelays() async {
-    for (final pubkey in _subscribedLabelers) {
-      await subscribeToLabeler(pubkey);
-    }
+    await _withDeferredTailRebuild(() async {
+      for (final pubkey in _subscribedLabelers) {
+        await subscribeToLabeler(pubkey);
+      }
+    });
   }
 
   /// Subscribe to Kind 1985 events from a labeler pubkey.
@@ -584,6 +637,7 @@ class ModerationLabelService {
       return;
     }
 
+    final tailStart = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     try {
       final result = await _loadLabelerHistory(pubkey, generation);
 
@@ -620,6 +674,9 @@ class ModerationLabelService {
       // expire. Preserve existing warnings until a retry produces events or an
       // affirmative empty answer.
       if (events.isNotEmpty || !isIncomplete) {
+        if (!isIncomplete) {
+          _tailWatermark[pubkey] = tailStart;
+        }
         _removeLabelsForLabeler(pubkey);
         events.forEach(_processLabelEvent);
       }
@@ -643,6 +700,7 @@ class ModerationLabelService {
       }
 
       _loadedLabelers.add(pubkey);
+      await _requestTailRebuild();
 
       Log.debug(
         'Subscribed to labeler ${pubkeyForLogs(pubkey)}, '
@@ -657,6 +715,153 @@ class ModerationLabelService {
         category: LogCategory.system,
       );
     }
+  }
+
+  static const String _tailSubscriptionId = 'moderation_labeler_tail';
+
+  Set<String> get _wantedLoadedLabelers => Set<String>.of(_loadedLabelers);
+
+  Future<void> _requestTailRebuild() {
+    _tailRebuildPending = true;
+    if (_tailRebuildDeferrals > 0) return Future<void>.value();
+
+    final next = _tailUpdate.then((_) => _flushTailRebuild());
+    _tailUpdate = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        Log.error(
+          'Failed to rebuild moderation label tail: $error',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+      },
+    );
+    return next;
+  }
+
+  Future<void> _flushTailRebuild() async {
+    while (_tailRebuildPending && !_disposed) {
+      _tailRebuildPending = false;
+      await _replaceLiveTail();
+    }
+  }
+
+  Future<void> _withDeferredTailRebuild(Future<void> Function() action) async {
+    _tailRebuildDeferrals++;
+    try {
+      await action();
+    } finally {
+      _tailRebuildDeferrals--;
+      if (_tailRebuildDeferrals == 0 && _tailRebuildPending) {
+        await _requestTailRebuild();
+      }
+    }
+  }
+
+  Future<void> _replaceLiveTail() async {
+    final generation = ++_tailGeneration;
+    _tailReconnectTimer?.cancel();
+    _tailReconnectTimer = null;
+    final previous = _tailSubscription;
+    _tailSubscription = null;
+    await previous?.cancel();
+    if (_disposed || generation != _tailGeneration) return;
+
+    final authors = _wantedLoadedLabelers;
+    _tailAuthors = authors;
+    if (authors.isEmpty) return;
+
+    final since = authors
+        .map((pubkey) => _tailReplayFloor(_tailWatermark[pubkey]!))
+        .reduce((oldest, value) => value < oldest ? value : oldest);
+    final stream = _nostrClient.subscribe(
+      [
+        Filter(
+          authors: authors.toList(),
+          kinds: [NostrEventKinds.label],
+          since: since,
+        ),
+      ],
+      subscriptionId: _tailSubscriptionId,
+      onEose: () => _tailReconnectAttempt = 0,
+    );
+    _tailSubscription = stream.listen(
+      _onTailEvent,
+      onError: (Object error) => _scheduleTailReconnect(generation, error),
+      onDone: () => _scheduleTailReconnect(generation),
+    );
+  }
+
+  void _onTailEvent(Event event) {
+    final watermark = _tailWatermark[event.pubkey];
+    if (watermark == null || !_tailAuthors.contains(event.pubkey)) return;
+    if (event.createdAt < _tailReplayFloor(watermark)) return;
+    if (event.createdAt > watermark) {
+      _tailWatermark[event.pubkey] = event.createdAt;
+      _appliedLabelEventIds[event.pubkey]?.removeWhere((_, createdAt) {
+        return createdAt < _tailReplayFloor(event.createdAt);
+      });
+    }
+    _tailReconnectAttempt = 0;
+    _processLabelEvent(event);
+  }
+
+  int _tailReplayFloor(int watermark) {
+    final floor = watermark - defaultTailReplayTolerance.inSeconds;
+    return floor < 0 ? 0 : floor;
+  }
+
+  void _scheduleTailReconnect(int generation, [Object? error]) {
+    if (_disposed || generation != _tailGeneration) return;
+    if (_tailReconnectTimer != null || _wantedLoadedLabelers.isEmpty) return;
+
+    final delay = _nextTailReconnectDelay();
+    final reason = error == null
+        ? 'stream closed'
+        : 'subscription error: $error';
+    Log.warning(
+      'Moderation label tail dropped ($reason)',
+      name: 'ModerationLabelService',
+      category: LogCategory.system,
+    );
+    Log.info(
+      'Re-subscribing to moderation labels in ${delay.inSeconds}s',
+      name: 'ModerationLabelService',
+      category: LogCategory.system,
+    );
+
+    _tailReconnectTimer = Timer(delay, () {
+      _tailReconnectTimer = null;
+      if (_disposed || generation != _tailGeneration) return;
+      unawaited(_requestTailRebuild());
+    });
+    _tailReconnectAttempt++;
+    unawaited(_tailSubscription?.cancel());
+    _tailSubscription = null;
+  }
+
+  /// Exponential backoff for the shared tail, clamped to
+  /// [_tailMaxReconnectDelay].
+  ///
+  /// Doubles the delay itself and returns as soon as it reaches the cap, so
+  /// the loop runs at most log2(cap / base) times however high the attempt
+  /// count climbs. Scaling a separate multiplier by the attempt count cannot
+  /// terminate early when the base delay is zero — `0 * multiplier >= cap` is
+  /// never true — leaving the multiplier to double until it wraps at 64 bits.
+  /// A zero base is what tests use to drive the reconnect path, so that is the
+  /// configuration the early return has to survive.
+  Duration _nextTailReconnectDelay() {
+    final base = _tailReconnectDelay.inMicroseconds;
+    final cap = _tailMaxReconnectDelay.inMicroseconds;
+    if (base <= 0) return Duration.zero;
+    if (base >= cap) return _tailMaxReconnectDelay;
+
+    var delay = base;
+    for (var attempt = 0; attempt < _tailReconnectAttempt; attempt++) {
+      delay *= 2;
+      if (delay >= cap) return _tailMaxReconnectDelay;
+    }
+    return Duration(microseconds: delay);
   }
 
   /// Retry [pubkey] the next time a relay connects.
@@ -827,10 +1032,31 @@ class ModerationLabelService {
   }
 
   /// Process a Kind 1985 label event and cache its labels.
-  void _processLabelEvent(dynamic event) {
+  void _processLabelEvent(Event event) {
     try {
-      final tags = event.tags as List<dynamic>;
-      final labelerPubkey = event.pubkey as String;
+      final tags = event.tags;
+      final labelerPubkey = event.pubkey;
+      final eventId = event.id;
+
+      if (eventId.isEmpty) {
+        Log.warning(
+          'Ignoring moderation label without a Nostr event id from '
+          '${pubkeyForLogs(labelerPubkey)}',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
+      final watermark = _tailWatermark[labelerPubkey];
+      if (watermark != null && event.createdAt >= _tailReplayFloor(watermark)) {
+        final applied = _appliedLabelEventIds.putIfAbsent(
+          labelerPubkey,
+          () => <String, int>{},
+        );
+        if (applied.containsKey(eventId)) return;
+        applied[eventId] = event.createdAt;
+      }
 
       final namespaces = <String>{};
       final labels = <_PendingModerationLabel>[];
@@ -840,10 +1066,9 @@ class ModerationLabelService {
       final hashes = <String>[];
 
       for (final tag in tags) {
-        if (tag is! List || tag.length < 2) continue;
+        if (tag.length < 2) continue;
         final tagName = tag[0];
         final tagValue = tag[1];
-        if (tagName is! String || tagValue is! String) continue;
 
         switch (tagName) {
           case 'L':
@@ -852,14 +1077,12 @@ class ModerationLabelService {
               namespaces.add(namespace);
             }
           case 'l':
-            final metadata = tag.length > 3 && tag[3] is String
-                ? _parseMetadata(tag[3] as String)
-                : null;
+            final metadata = tag.length > 3 ? _parseMetadata(tag[3]) : null;
             labels.add(
               _PendingModerationLabel(
                 value: tagValue,
-                namespace: tag.length > 2 && tag[2] is String
-                    ? _normalizeLabelNamespace(tag[2] as String)
+                namespace: tag.length > 2
+                    ? _normalizeLabelNamespace(tag[2])
                     : null,
                 metadata: metadata,
               ),
@@ -1000,33 +1223,35 @@ class ModerationLabelService {
         .where((pubkey) => pubkey.isNotEmpty)
         .toSet();
 
-    final toRemove = _followedLabelers.difference(normalized);
+    await _withDeferredTailRebuild(() async {
+      final toRemove = _followedLabelers.difference(normalized);
 
-    for (final pubkey in toRemove) {
-      _followedLabelers.remove(pubkey);
-      if (!_subscribedLabelers.contains(pubkey)) {
-        await _unloadLabeler(pubkey);
+      for (final pubkey in toRemove) {
+        _followedLabelers.remove(pubkey);
+        if (!_subscribedLabelers.contains(pubkey)) {
+          await _unloadLabeler(pubkey);
+        }
       }
-    }
 
-    for (final pubkey in normalized) {
-      _followedLabelers.add(pubkey);
-      if (!_subscribedLabelers.contains(pubkey) &&
-          !_loadedLabelers.contains(pubkey)) {
-        await subscribeToLabeler(pubkey);
+      for (final pubkey in normalized) {
+        _followedLabelers.add(pubkey);
+        if (!_subscribedLabelers.contains(pubkey) &&
+            !_loadedLabelers.contains(pubkey)) {
+          await subscribeToLabeler(pubkey);
+        }
       }
-    }
+    });
   }
 
   Future<void> _unloadLabeler(String pubkey) async {
     // Synchronously, before the first await: a walk in flight has to see this
     // the moment the caller decides the labeler is going away.
     _invalidateLabelerLoad(pubkey);
-    await _subscriptions[pubkey]?.cancel();
-    _subscriptions.remove(pubkey);
+    _tailWatermark.remove(pubkey);
     _removePendingLabelerRetry(pubkey);
     _loadedLabelers.remove(pubkey);
     _removeLabelsForLabeler(pubkey);
+    await _requestTailRebuild();
   }
 
   void _removePendingLabelerRetry(String pubkey) {
@@ -1039,6 +1264,15 @@ class ModerationLabelService {
   }
 
   void _removeLabelsForLabeler(String pubkey) {
+    // Drop the dedup set too, so the labeler's events can apply again once its
+    // rows are gone. This matters at the [_unloadLabeler] call site, where the
+    // tail has been recording ids all session: without it, a labeler removed
+    // and re-added would have its re-delivered events skipped as duplicates
+    // after their rows were dropped. On the backfill path the set is always
+    // empty — ids are only recorded once a watermark exists, a watermark only
+    // exists once the labeler has latched, and a latched labeler never
+    // reloads. #8255.
+    _appliedLabelEventIds.remove(pubkey);
     _labelsByEventId.forEach((_, labels) {
       labels.removeWhere((l) => l.labelerPubkey == pubkey);
     });
@@ -1188,11 +1422,7 @@ class ModerationLabelService {
     await _saveSubscribedLabelers();
 
     for (final pubkey in retired) {
-      // Clean up any labels fetched from the old key
-      _invalidateLabelerLoad(pubkey);
-      _removePendingLabelerRetry(pubkey);
-      _removeLabelsForLabeler(pubkey);
-      _loadedLabelers.remove(pubkey);
+      await _unloadLabeler(pubkey);
     }
 
     Log.info(
@@ -1206,14 +1436,16 @@ class ModerationLabelService {
   /// Clean up subscriptions.
   void dispose() {
     _disposed = true;
+    _tailGeneration++;
     unawaited(_relayReadyRetrySubscription?.cancel());
     _relayReadyRetrySubscription = null;
     _labelersAwaitingRelay.clear();
     _hadConnectedRelayWhileWaiting = false;
-    for (final sub in _subscriptions.values) {
-      sub.cancel();
-    }
-    _subscriptions.clear();
+    _tailReconnectTimer?.cancel();
+    _tailReconnectTimer = null;
+    unawaited(_tailSubscription?.cancel());
+    _tailSubscription = null;
+    _tailAuthors = {};
   }
 }
 
