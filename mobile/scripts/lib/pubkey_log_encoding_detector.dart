@@ -116,6 +116,10 @@ const _loggerReceivers = {'log', '_log', 'logger', '_logger'};
 /// Log functions callable without a receiver.
 const _bareLogFunctions = {'debugPrint', 'print', 'log'};
 
+/// Relay-diagnostics emitters whose message nostr_client forwards to the
+/// support export (#8930); their message argument is a log sink.
+const _relayDiagnosticFunctions = {'diagnose', '_diagnose'};
+
 /// Substrings that must appear in a file for it to hold a sink.
 ///
 /// DERIVED from the sink sets rather than written out, so a sink added above
@@ -126,6 +130,8 @@ final _sinkTokens = <String>{
   'developer.log',
   for (final f in _bareLogFunctions) '$f(',
   for (final r in _loggerReceivers) '$r.',
+  for (final f in _relayDiagnosticFunctions) '$f(',
+  'RelayDiagnostic(',
 };
 
 /// One pubkey reaching a log sink in a single encoding.
@@ -312,22 +318,48 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
   @override
   void visitMethodInvocation(MethodInvocation node) {
     final sink = _logSinkName(node);
-    if (sink != null) {
-      final finder = _BarePubkeyFinder();
-      node.argumentList.accept(finder);
-      for (final hit in finder.hits) {
-        if (!_seen.add(hit.offset)) continue;
-        sites.add(
-          PubkeyLogSite(
-            path: path,
-            line: lineInfo.getLocation(hit.offset).lineNumber,
-            expression: hit.expression,
-            sink: sink,
-          ),
-        );
-      }
+    if (sink != null) _scan(node.argumentList, sink);
+    // Unresolved parse: an unprefixed `RelayDiagnostic(...)` is a
+    // MethodInvocation, and the diagnose/_diagnose helpers build it from a
+    // message argument that reaches the export. Both are covered above via
+    // `_logSinkName`; this catches a diagnostic built inline at a call site.
+    if (node.realTarget == null && node.methodName.name == 'RelayDiagnostic') {
+      _scanRelayDiagnostic(node.argumentList);
     }
     super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    if (node.constructorName.type.name.lexeme == 'RelayDiagnostic') {
+      _scanRelayDiagnostic(node.argumentList);
+    }
+    super.visitInstanceCreationExpression(node);
+  }
+
+  void _scanRelayDiagnostic(ArgumentList args) {
+    for (final argument in args.arguments) {
+      if (argument is NamedExpression &&
+          argument.name.label.name == 'message') {
+        _scan(argument.expression, 'RelayDiagnostic.message');
+      }
+    }
+  }
+
+  void _scan(AstNode toScan, String sink) {
+    final finder = _BarePubkeyFinder();
+    toScan.accept(finder);
+    for (final hit in finder.hits) {
+      if (!_seen.add(hit.offset)) continue;
+      sites.add(
+        PubkeyLogSite(
+          path: path,
+          line: lineInfo.getLocation(hit.offset).lineNumber,
+          expression: hit.expression,
+          sink: sink,
+        ),
+      );
+    }
   }
 
   /// The sink label for [node] if it writes to a diagnostic sink, else null.
@@ -335,7 +367,11 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
     final member = node.methodName.name;
     final target = node.realTarget;
     if (target == null) {
-      return _bareLogFunctions.contains(member) ? member : null;
+      if (_bareLogFunctions.contains(member) ||
+          _relayDiagnosticFunctions.contains(member)) {
+        return member;
+      }
+      return null;
     }
     final receiver = _rootIdentifierName(target);
     if (receiver == null) return null;

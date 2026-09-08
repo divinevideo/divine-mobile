@@ -59,6 +59,46 @@ void report(String eventId) {
         expect(sites.single.line, 2);
       });
 
+      test('a substring in a _diagnose message argument', () {
+        // The real emit path: relay sites call the diagnose/_diagnose helpers,
+        // which build the RelayDiagnostic and hand its message to nostr_client,
+        // which forwards it to UnifiedLogger and thus the support export. The
+        // literal is the helper argument, so the ratchet must read it there.
+        final sites = scan(r'''
+class RelayPool {
+  void relayDoSubscribe(String eventId) {
+    _diagnose(
+      RelayDiagnosticSite.queryDispatch,
+      RelayDiagnosticLevel.info,
+      relayUrl,
+      'found ${eventId.substring(0, 8)}...',
+    );
+  }
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.identifier, 'eventId');
+        expect(sites.single.sink, '_diagnose');
+      });
+
+      test('a substring in a directly-built RelayDiagnostic message', () {
+        // Belt for a call site that skips the helper and builds the diagnostic
+        // inline with a literal message.
+        final sites = scan(r'''
+void report(String eventId) {
+  emitRelayDiagnostic(
+    sink,
+    RelayDiagnostic(message: 'found ${eventId.substring(0, 8)}...'),
+  );
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.identifier, 'eventId');
+        expect(sites.single.sink, 'RelayDiagnostic.message');
+      });
+
       test('a shortened local reaching a log one statement later', () {
         // The shape three of the four #3372 sites used: compute a `preview`,
         // then log it. The truncation and the log call are different
