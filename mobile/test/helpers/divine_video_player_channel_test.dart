@@ -12,31 +12,33 @@ void main() {
   const methodChannel = MethodChannel('divine_video_player/player_7');
   const eventChannel = EventChannel('divine_video_player/player_7/events');
 
-  test('installs the method and event handlers together', () {
-    installMockDivineVideoPlayer(playerId: 7);
+  group('installMockDivineVideoPlayer', () {
+    test('installs the method and event handlers together', () {
+      installMockDivineVideoPlayer(playerId: 7);
 
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    expect(
-      messenger.checkMockMessageHandler(methodChannel.name, null),
-      isFalse,
-    );
-    expect(
-      messenger.checkMockMessageHandler(eventChannel.name, null),
-      isFalse,
-    );
-  });
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      expect(
+        messenger.checkMockMessageHandler(methodChannel.name, null),
+        isFalse,
+      );
+      expect(
+        messenger.checkMockMessageHandler(eventChannel.name, null),
+        isFalse,
+      );
+    });
 
-  test('clears both handlers after the prior test', () {
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    expect(
-      messenger.checkMockMessageHandler(methodChannel.name, null),
-      isTrue,
-    );
-    expect(
-      messenger.checkMockMessageHandler(eventChannel.name, null),
-      isTrue,
-    );
+    test('clears both handlers after the prior test', () {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      expect(
+        messenger.checkMockMessageHandler(methodChannel.name, null),
+        isTrue,
+      );
+      expect(
+        messenger.checkMockMessageHandler(eventChannel.name, null),
+        isTrue,
+      );
+    });
   });
 }
