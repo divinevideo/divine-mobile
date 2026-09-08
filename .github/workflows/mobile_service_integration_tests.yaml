@@ -19,7 +19,13 @@ on:
 # sync when suite dependencies change.
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  # Pushes get a per-commit group. The ref alone is constant across every
+  # merge to main, so the next merge would cancel the previous merge's
+  # post-merge suite — and if that next merge is docs-only its own service
+  # scope is false, so nothing reruns and the regression goes unreported
+  # until the nightly. Every other event still collapses to the ref, so a
+  # PR's superseded runs are cancelled as before.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
