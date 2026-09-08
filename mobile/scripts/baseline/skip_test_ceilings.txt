@@ -59,7 +59,6 @@ test/unit/services/video_event_service_subscription_test.dart	1 # rewrite: kind 
 test/widget/screens/hashtag_feed_screen_test.dart	1 # rewrite: container lacks sharedpreferencesprovider override (#4836)
 test/widgets/all_settings_screens_scaffold_test.dart	2 # rewrite: relaysettingsscreen throws: no sharedprefs override (#4836)
 test/widgets/comprehensive_clickable_hashtag_text_test.dart	4 # rewrite: taps need a gorouter harness; style expects materialcolor (#4836)
-test/widgets/profile_menu_drafts_test.dart	1 # delete: inline fake sheet; libraryscreen has no 'drafts' text (#4836)
 test/widgets/settings_bottom_nav_test.dart	1 # delete: settings screens have no bottomnavigationbar or fab (#4836)
 test/widgets/settings_screen_scaffold_test.dart	1 # rewrite: no sharedprefs override; divineappbar has no backbutton (#4836)
 test/widgets/user_profile_tile_layout_test.dart	1 # delete: tile has no container decoration, bio, or elevatedbutton (#4836)
