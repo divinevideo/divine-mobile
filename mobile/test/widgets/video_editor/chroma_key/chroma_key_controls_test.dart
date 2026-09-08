@@ -115,6 +115,22 @@ void main() {
       expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
     });
 
+    testWidgets('puts the hint above auto-detect', (tester) async {
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(
+        tester.getTopLeft(find.text(en.videoEditorChromaKeySurfaceHint)).dy,
+        lessThan(
+          tester.getTopLeft(find.text(en.videoEditorChromaKeyAutoDetect)).dy,
+        ),
+        reason:
+            'The hint has to be read before the button it qualifies, or the '
+            'panel is still inert to a first-time user (#8547). find.text '
+            'alone passes with the hint moved below the fold.',
+      );
+    });
+
     testWidgets('holds at the largest system text scale', (tester) async {
       await pump(
         tester,
