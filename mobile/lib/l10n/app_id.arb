@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "Dengarkan suaranya",
   "savedSoundEditAction": "Edit detail suara",
   "savedSoundRemoveAction": "Hapus suara tersimpan",
+  "savedSoundFileMissing": "File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar. Hapus saja biar rapi.",
   "savedSoundClearHashtagFilter": "Bersihkan filter tagar",
   "soundAllowRemix": "Izinkan orang lain me-remix suara ini",
   "soundReuseUnavailable": "Suara ini belum bisa di-remix sekarang.",

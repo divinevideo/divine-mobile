@@ -11456,6 +11456,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get savedSoundRemoveAction => 'Rimuovi il suono salvato';
 
   @override
+  String get savedSoundFileMissing =>
+      'Il file audio di questo suono non è più su questo dispositivo, quindi non può essere riprodotto. Rimuovilo per fare ordine.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Azzera il filtro per hashtag';
 
   @override

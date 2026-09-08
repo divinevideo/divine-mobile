@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "Geluid beluisteren",
   "savedSoundEditAction": "Geluidsgegevens bewerken",
   "savedSoundRemoveAction": "Opgeslagen geluid verwijderen",
+  "savedSoundFileMissing": "Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen. Verwijder het om op te ruimen.",
   "savedSoundClearHashtagFilter": "Hashtagfilter wissen",
   "soundAllowRemix": "Laat anderen dit geluid remixen",
   "soundReuseUnavailable": "Dit geluid kan nu niet worden geremixt.",

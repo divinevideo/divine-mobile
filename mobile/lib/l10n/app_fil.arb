@@ -3464,6 +3464,7 @@
   "savedSoundPreviewAction": "Pakinggan ang sound",
   "savedSoundEditAction": "I-edit ang detalye ng sound",
   "savedSoundRemoveAction": "Alisin ang naka-save na sound",
+  "savedSoundFileMissing": "Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog. I-remove na lang para malinis ang library mo.",
   "savedSoundClearHashtagFilter": "I-clear ang hashtag filter",
   "soundAllowRemix": "Payagan ang iba na i-remix ang sound na ito",
   "soundReuseUnavailable": "Hindi pwedeng i-remix ang sound na ito ngayon.",

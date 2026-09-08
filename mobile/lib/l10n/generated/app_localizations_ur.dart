@@ -11306,6 +11306,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get savedSoundRemoveAction => 'محفوظ شدہ ساؤنڈ ہٹائیں';
 
   @override
+  String get savedSoundFileMissing =>
+      'اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔ لائبریری صاف رکھنے کے لیے اسے ہٹا دیں۔';
+
+  @override
   String get savedSoundClearHashtagFilter => 'ہیش ٹیگ فلٹر صاف کریں';
 
   @override

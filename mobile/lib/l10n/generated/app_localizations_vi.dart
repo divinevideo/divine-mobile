@@ -11272,6 +11272,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get savedSoundRemoveAction => 'Gỡ âm thanh đã lưu';
 
   @override
+  String get savedSoundFileMissing =>
+      'Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được. Xoá đi cho gọn thư viện.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Xóa bộ lọc hashtag';
 
   @override

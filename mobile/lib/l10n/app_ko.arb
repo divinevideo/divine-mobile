@@ -4046,6 +4046,7 @@
   "savedSoundPreviewAction": "사운드 미리 듣기",
   "savedSoundEditAction": "사운드 정보 편집",
   "savedSoundRemoveAction": "저장한 사운드 삭제",
+  "savedSoundFileMissing": "이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요. 라이브러리를 정리하려면 삭제해 주세요.",
   "savedSoundClearHashtagFilter": "해시태그 필터 지우기",
   "soundAllowRemix": "다른 사람이 이 사운드를 리믹스하도록 허용",
   "soundReuseUnavailable": "이 사운드는 지금 리믹스할 수 없어요.",

@@ -10763,6 +10763,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedSoundRemoveAction => '저장한 사운드 삭제';
 
   @override
+  String get savedSoundFileMissing =>
+      '이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요. 라이브러리를 정리하려면 삭제해 주세요.';
+
+  @override
   String get savedSoundClearHashtagFilter => '해시태그 필터 지우기';
 
   @override

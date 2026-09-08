@@ -11650,6 +11650,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get savedSoundRemoveAction => 'సేవ్ చేయబడిన ధ్వనిని తీసివేయండి';
 
   @override
+  String get savedSoundFileMissing =>
+      'ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు. మీ లైబ్రరీని చక్కబెట్టడానికి దీన్ని తీసివేయండి.';
+
+  @override
   String get savedSoundClearHashtagFilter =>
       'హ్యాష్‌ట్యాగ్ ఫిల్టర్‌ను క్లియర్ చేయండి';
 

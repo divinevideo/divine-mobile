@@ -11020,6 +11020,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get savedSoundRemoveAction => 'የተቀመጠውን ድምፅ አስወግድ';
 
   @override
+  String get savedSoundFileMissing =>
+      'የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም። ቤተ-መጻሕፍትዎን ለማጽዳት ያስወግዱት።';
+
+  @override
   String get savedSoundClearHashtagFilter => 'የሃሽታግ ማጣሪያን አጽዳ';
 
   @override

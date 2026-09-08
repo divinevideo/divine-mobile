@@ -11240,6 +11240,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get savedSoundRemoveAction => 'Hapus suara tersimpan';
 
   @override
+  String get savedSoundFileMissing =>
+      'File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar. Hapus saja biar rapi.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Bersihkan filter tagar';
 
   @override

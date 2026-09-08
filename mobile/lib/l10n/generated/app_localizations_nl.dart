@@ -11380,6 +11380,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get savedSoundRemoveAction => 'Opgeslagen geluid verwijderen';
 
   @override
+  String get savedSoundFileMissing =>
+      'Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen. Verwijder het om op te ruimen.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Hashtagfilter wissen';
 
   @override

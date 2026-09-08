@@ -4640,6 +4640,7 @@
   "savedSoundPreviewAction": "ድምፁን አዳምጥ",
   "savedSoundEditAction": "የድምፅ ዝርዝሮችን አርም",
   "savedSoundRemoveAction": "የተቀመጠውን ድምፅ አስወግድ",
+  "savedSoundFileMissing": "የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም። ቤተ-መጻሕፍትዎን ለማጽዳት ያስወግዱት።",
   "savedSoundClearHashtagFilter": "የሃሽታግ ማጣሪያን አጽዳ",
   "soundAllowRemix": "ሌሎች ይህን ድምፅ እንዲቀላቅሉ ፍቀድ",
   "soundReuseUnavailable": "ይህ ድምፅ አሁን መቀላቀል አይችልም።",

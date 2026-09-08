@@ -19146,6 +19146,12 @@ abstract class AppLocalizations {
   /// **'Remove saved sound'**
   String get savedSoundRemoveAction;
 
+  /// Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped — but it cannot play, and removal is the only action left that changes anything.
+  ///
+  /// In en, this message translates to:
+  /// **'This sound\'s audio file is gone from this device, so it can\'t play. Remove it to tidy up your library.'**
+  String get savedSoundFileMissing;
+
   /// No description provided for @savedSoundClearHashtagFilter.
   ///
   /// In en, this message translates to:

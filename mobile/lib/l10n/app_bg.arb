@@ -4646,6 +4646,7 @@
   "savedSoundPreviewAction": "Чуй звука",
   "savedSoundEditAction": "Редактирай данните за звука",
   "savedSoundRemoveAction": "Премахни запазения звук",
+  "savedSoundFileMissing": "Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе. Премахни го, за да разчистиш библиотеката.",
   "savedSoundClearHashtagFilter": "Изчисти филтъра по хаштаг",
   "soundAllowRemix": "Позволи на другите да ремиксират този звук",
   "soundReuseUnavailable": "Този звук не може да се ремиксира в момента.",

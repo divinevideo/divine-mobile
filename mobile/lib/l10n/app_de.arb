@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "Sound anhören",
   "savedSoundEditAction": "Sound-Details bearbeiten",
   "savedSoundRemoveAction": "Gespeicherten Sound entfernen",
+  "savedSoundFileMissing": "Die Audiodatei dieses Sounds ist nicht mehr auf dem Gerät, er lässt sich also nicht abspielen. Entferne ihn, um aufzuräumen.",
   "savedSoundClearHashtagFilter": "Hashtag-Filter zurücksetzen",
   "soundAllowRemix": "Anderen erlauben, diesen Sound zu remixen",
   "soundReuseUnavailable": "Dieser Sound kann gerade nicht remixt werden.",

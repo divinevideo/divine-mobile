@@ -10749,6 +10749,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get savedSoundRemoveAction => '保存したサウンドを削除';
 
   @override
+  String get savedSoundFileMissing =>
+      'このサウンドの音声ファイルは端末に残っていないため再生できません。ライブラリを整理するには削除してください。';
+
+  @override
   String get savedSoundClearHashtagFilter => 'ハッシュタグの絞り込みを解除';
 
   @override

@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "Sesi dinle",
   "savedSoundEditAction": "Ses bilgilerini düzenle",
   "savedSoundRemoveAction": "Kaydedilen sesi kaldır",
+  "savedSoundFileMissing": "Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor. Kitaplığını toparlamak için kaldır.",
   "savedSoundClearHashtagFilter": "Hashtag filtresini temizle",
   "soundAllowRemix": "Başkalarının bu sesi remikslemesine izin ver",
   "soundReuseUnavailable": "Bu ses şu anda remikslenemiyor.",

@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "Écouter le son",
   "savedSoundEditAction": "Modifier les infos du son",
   "savedSoundRemoveAction": "Retirer le son enregistré",
+  "savedSoundFileMissing": "Le fichier audio de ce son n'est plus sur cet appareil, il ne peut donc pas être lu. Supprime-le pour ranger ta bibliothèque.",
   "savedSoundClearHashtagFilter": "Effacer le filtre de hashtags",
   "soundAllowRemix": "Autoriser les autres à remixer ce son",
   "soundReuseUnavailable": "Ce son ne peut pas être remixé pour le moment.",

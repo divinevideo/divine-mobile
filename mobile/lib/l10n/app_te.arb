@@ -7483,6 +7483,7 @@
   "savedSoundPreviewAction": "ప్రివ్యూ సౌండ్",
   "savedSoundEditAction": "ధ్వని వివరాలను సవరించండి",
   "savedSoundRemoveAction": "సేవ్ చేయబడిన ధ్వనిని తీసివేయండి",
+  "savedSoundFileMissing": "ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు. మీ లైబ్రరీని చక్కబెట్టడానికి దీన్ని తీసివేయండి.",
   "savedSoundClearHashtagFilter": "హ్యాష్‌ట్యాగ్ ఫిల్టర్‌ను క్లియర్ చేయండి",
   "soundAllowRemix": "ఈ ధ్వనిని రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి",
   "soundReuseUnavailable": "ఈ ధ్వనిని ప్రస్తుతం రీమిక్స్ చేయడం సాధ్యం కాదు.",

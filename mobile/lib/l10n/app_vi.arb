@@ -6291,6 +6291,7 @@
   "savedSoundPreviewAction": "Nghe thử âm thanh",
   "savedSoundEditAction": "Chỉnh sửa chi tiết âm thanh",
   "savedSoundRemoveAction": "Gỡ âm thanh đã lưu",
+  "savedSoundFileMissing": "Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được. Xoá đi cho gọn thư viện.",
   "savedSoundClearHashtagFilter": "Xóa bộ lọc hashtag",
   "soundAllowRemix": "Cho phép người khác remix âm thanh này",
   "soundReuseUnavailable": "Hiện chưa thể remix âm thanh này.",

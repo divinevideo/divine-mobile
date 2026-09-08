@@ -11320,6 +11320,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get savedSoundRemoveAction => 'Ta bort sparat ljud';
 
   @override
+  String get savedSoundFileMissing =>
+      'Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp. Ta bort det för att rensa biblioteket.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Rensa hashtaggfiltret';
 
   @override

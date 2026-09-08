@@ -11328,6 +11328,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get savedSoundRemoveAction => 'Buang bunyi tersimpan';
 
   @override
+  String get savedSoundFileMissing =>
+      'Fail audio bunyi ini sudah tiada pada peranti anda, jadi ia tidak boleh dimainkan. Buang ia untuk mengemaskan pustaka anda.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Kosongkan penapis hashtag';
 
   @override

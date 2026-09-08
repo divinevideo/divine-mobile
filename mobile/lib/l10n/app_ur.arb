@@ -6291,6 +6291,7 @@
   "savedSoundPreviewAction": "ساؤنڈ سنیں",
   "savedSoundEditAction": "ساؤنڈ کی تفصیلات میں ترمیم کریں",
   "savedSoundRemoveAction": "محفوظ شدہ ساؤنڈ ہٹائیں",
+  "savedSoundFileMissing": "اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔ لائبریری صاف رکھنے کے لیے اسے ہٹا دیں۔",
   "savedSoundClearHashtagFilter": "ہیش ٹیگ فلٹر صاف کریں",
   "soundAllowRemix": "دوسروں کو اس ساؤنڈ کو ری مکس کرنے دیں",
   "soundReuseUnavailable": "اس ساؤنڈ کو ابھی ری مکس نہیں کیا جا سکتا۔",

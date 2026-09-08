@@ -4508,6 +4508,7 @@
   "savedSoundPreviewAction": "استمع إلى الصوت",
   "savedSoundEditAction": "تعديل تفاصيل الصوت",
   "savedSoundRemoveAction": "إزالة الصوت المحفوظ",
+  "savedSoundFileMissing": "ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله. يمكن حذفه لترتيب المكتبة.",
   "savedSoundClearHashtagFilter": "مسح تصفية الوسوم",
   "soundAllowRemix": "اسمح للآخرين بإعادة مزج هذا الصوت",
   "soundReuseUnavailable": "لا يمكن إعادة مزج هذا الصوت الآن.",

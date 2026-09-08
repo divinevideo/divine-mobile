@@ -11249,6 +11249,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get savedSoundRemoveAction => 'Kaydedilen sesi kaldır';
 
   @override
+  String get savedSoundFileMissing =>
+      'Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor. Kitaplığını toparlamak için kaldır.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Hashtag filtresini temizle';
 
   @override

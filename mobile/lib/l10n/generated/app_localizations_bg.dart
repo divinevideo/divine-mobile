@@ -11436,6 +11436,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get savedSoundRemoveAction => 'Премахни запазения звук';
 
   @override
+  String get savedSoundFileMissing =>
+      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе. Премахни го, за да разчистиш библиотеката.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Изчисти филтъра по хаштаг';
 
   @override

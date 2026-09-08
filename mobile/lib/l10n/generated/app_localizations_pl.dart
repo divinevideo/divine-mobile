@@ -11540,6 +11540,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get savedSoundRemoveAction => 'Usuń zapisany dźwięk';
 
   @override
+  String get savedSoundFileMissing =>
+      'Pliku audio tego dźwięku już nie ma na tym urządzeniu, więc nie da się go odtworzyć. Usuń go, żeby uporządkować bibliotekę.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Wyczyść filtr hashtagów';
 
   @override

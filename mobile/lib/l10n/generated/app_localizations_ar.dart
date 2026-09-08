@@ -11243,6 +11243,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get savedSoundRemoveAction => 'إزالة الصوت المحفوظ';
 
   @override
+  String get savedSoundFileMissing =>
+      'ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله. يمكن حذفه لترتيب المكتبة.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'مسح تصفية الوسوم';
 
   @override

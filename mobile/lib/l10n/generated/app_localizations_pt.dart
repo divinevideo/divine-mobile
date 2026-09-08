@@ -11409,6 +11409,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get savedSoundRemoveAction => 'Remover som salvo';
 
   @override
+  String get savedSoundFileMissing =>
+      'O arquivo de áudio deste som não está mais neste aparelho, então ele não toca. Remova para organizar sua biblioteca.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Limpar filtro de hashtag';
 
   @override

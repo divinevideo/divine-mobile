@@ -11569,6 +11569,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get savedSoundRemoveAction => 'Elimină sunetul salvat';
 
   @override
+  String get savedSoundFileMissing =>
+      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat. Șterge-l ca să faci ordine în bibliotecă.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Șterge filtrul de hashtaguri';
 
   @override

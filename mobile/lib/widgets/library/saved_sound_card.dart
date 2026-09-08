@@ -20,6 +20,7 @@ class SavedSoundCard extends StatelessWidget {
     required this.onPreview,
     required this.onEdit,
     required this.onRemove,
+    this.isMissingFile = false,
     this.isPlaying = false,
     this.progress,
     this.progressValue = 0,
@@ -31,6 +32,13 @@ class SavedSoundCard extends StatelessWidget {
   final VoidCallback onPreview;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
+
+  /// Whether the device-local audio file behind this entry is gone.
+  ///
+  /// The entry stays listed — it still carries the label, hashtags and source
+  /// context the user wrote — but it cannot play, so the card says so and
+  /// takes the preview away instead of starting a silent one (#8023).
+  final bool isMissingFile;
 
   /// Whether this sound is actively playing (not paused).
   final bool isPlaying;
@@ -63,8 +71,13 @@ class SavedSoundCard extends StatelessWidget {
     final source = sound.sourceContext;
     final duration = sound.audio.formattedDuration;
     final displayTitle = _displayTitle(context);
+    final unavailableNotice = context.l10n.savedSoundFileMissing;
     return Semantics(
-      label: duration.isEmpty ? displayTitle : '$displayTitle, $duration',
+      label: [
+        displayTitle,
+        if (duration.isNotEmpty) duration,
+        if (isMissingFile) unavailableNotice,
+      ].join(', '),
       button: true,
       container: true,
       child: DecoratedBox(
@@ -77,7 +90,7 @@ class SavedSoundCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
+            onTap: isMissingFile ? null : onTap,
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -97,7 +110,27 @@ class SavedSoundCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (sound.waveformSamples.isNotEmpty)
+                  if (isMissingFile)
+                    Row(
+                      spacing: 8,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DivineIcon(
+                          icon: .warning,
+                          size: 16,
+                          color: context.vineColors.onErrorContainer,
+                        ),
+                        Expanded(
+                          child: Text(
+                            unavailableNotice,
+                            style: VineTheme.bodySmallFont(
+                              color: context.vineColors.onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (!isMissingFile && sound.waveformSamples.isNotEmpty)
                     _SavedSoundWaveform(
                       sound: sound,
                       progress: progress,
@@ -110,16 +143,20 @@ class SavedSoundCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     spacing: 8,
                     children: [
-                      DivineIconButton(
-                        key: const Key('saved_sound_preview'),
-                        icon: isPlaying
-                            ? DivineIconName.pause
-                            : DivineIconName.play,
-                        semanticLabel: _previewSemanticLabel(context),
-                        size: DivineIconButtonSize.small,
-                        type: DivineIconButtonType.secondary,
-                        onPressed: onPreview,
-                      ),
+                      // No preview button at all rather than a disabled one:
+                      // there is nothing to wait for, and removing the entry
+                      // is the only action left that changes anything.
+                      if (!isMissingFile)
+                        DivineIconButton(
+                          key: const Key('saved_sound_preview'),
+                          icon: isPlaying
+                              ? DivineIconName.pause
+                              : DivineIconName.play,
+                          semanticLabel: _previewSemanticLabel(context),
+                          size: DivineIconButtonSize.small,
+                          type: DivineIconButtonType.secondary,
+                          onPressed: onPreview,
+                        ),
                       DivineIconButton(
                         key: const Key('saved_sound_edit'),
                         icon: DivineIconName.pencilSimple,
