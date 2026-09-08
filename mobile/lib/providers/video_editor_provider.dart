@@ -88,10 +88,14 @@ final videoEditorProvider =
 /// [VideoEditorRenderService] directly, keeping the UI/service boundary clean.
 final StreamProvider<ProgressModel> videoEditorCompositeProgressProvider =
     StreamProvider.autoDispose<ProgressModel>((ref) {
-      // draftId is set once during initialization and does not change within a
-      // session, so a one-time read is sufficient.
-      final draftId = ref.read(videoEditorProvider.notifier).draftId;
-      return VideoEditorRenderService.compositeProgressStreamById(draftId);
+      // draftId is NOT fixed for the session: it has a setter and is
+      // reassigned at three sites in this file. Hand the stream a callback so
+      // the filter follows the current id instead of the one this provider
+      // happened to see first (#8796).
+      final notifier = ref.read(videoEditorProvider.notifier);
+      return VideoEditorRenderService.compositeProgressStreamById(
+        () => notifier.draftId,
+      );
     });
 
 /// Manages video editor state and operations.

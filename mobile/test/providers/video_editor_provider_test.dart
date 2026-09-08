@@ -1696,6 +1696,92 @@ void main() {
     });
   });
 
+  group('videoEditorCompositeProgressProvider', () {
+    late ProviderContainer container;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('keeps reporting progress after the draft id is reassigned', () async {
+      final notifier = container.read(videoEditorProvider.notifier)
+        ..setDraftId('draft-before');
+
+      final readings = <double>[];
+      final subscription = container.listen(
+        videoEditorCompositeProgressProvider,
+        (_, next) {
+          final value = next.asData?.value;
+          if (value != null) readings.add(value.progress);
+        },
+      );
+      addTearDown(subscription.close);
+
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'draft-before',
+        progress: 0.25,
+      );
+      await pumpEventQueue();
+      expect(
+        readings,
+        equals([0.25]),
+        reason:
+            'Without a first reading under the original id the assertion '
+            'below could pass on an provider that reports nothing at all.',
+      );
+
+      notifier.setDraftId('draft-after');
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'draft-after',
+        progress: 0.5,
+      );
+      await pumpEventQueue();
+
+      expect(
+        readings,
+        equals([0.25, 0.5]),
+        reason:
+            'A filter pinned to the id this provider first saw goes silent '
+            'when the export publishes under a new draft id, which the '
+            'overlay cannot tell apart from a genuine 0% (#8796).',
+      );
+    });
+
+    test('ignores progress published under a different draft id', () async {
+      container.read(videoEditorProvider.notifier).setDraftId('mine');
+
+      final readings = <double>[];
+      final subscription = container.listen(
+        videoEditorCompositeProgressProvider,
+        (_, next) {
+          final value = next.asData?.value;
+          if (value != null) readings.add(value.progress);
+        },
+      );
+      addTearDown(subscription.close);
+
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'someone-elses-draft',
+        progress: 0.9,
+      );
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'mine',
+        progress: 0.1,
+      );
+      await pumpEventQueue();
+
+      expect(readings, equals([0.1]));
+    });
+  });
+
   group('getActiveDraft', () {
     late ProviderContainer container;
 
