@@ -3,18 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart';
-import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
-
-// Mock class for VideoEvents provider
-class VideoEventsMock extends VideoEvents {
-  @override
-  Stream<List<VideoEvent>> build() {
-    // Return empty stream to avoid infinite loading
-    return Stream.value(<VideoEvent>[]);
-  }
-}
 
 void main() {
   group('ExploreScreen Pure (TDD)', () {
@@ -134,8 +123,5 @@ void main() {
         }, throwsA(isA<UnimplementedError>()));
       });
     });
-
-    // Integration test - basic widget rendering with mocked providers
-    group('Phase 6: Widget Integration Tests (Basic)', () {});
   });
 }
