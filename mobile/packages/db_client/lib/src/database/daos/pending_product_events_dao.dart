@@ -207,6 +207,20 @@ class PendingProductEventsDao extends DatabaseAccessor<AppDatabase>
     )..where((table) => table.id.equals(id))).go();
   }
 
+  /// Deletes every queued product event belonging to [ownerPubkey].
+  ///
+  /// Rows are already filtered to the current owner at flush time, so these
+  /// never publish under another account's signature. They were simply never
+  /// deleted when their owner was removed from the device (#8314).
+  ///
+  /// Legacy rows predating the owner column carry NULL and are left alone;
+  /// they flush under whoever is active, which is existing behaviour.
+  Future<int> deleteForOwner(String ownerPubkey) {
+    return (delete(
+      pendingProductEvents,
+    )..where((table) => table.ownerPubkey.equals(ownerPubkey))).go();
+  }
+
   Future<int> deleteAll() => delete(pendingProductEvents).go();
 
   /// Removes expired rows, then trims the oldest survivors to [maxRecords].

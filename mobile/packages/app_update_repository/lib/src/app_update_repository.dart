@@ -4,6 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences keys for caching and dismissal tracking.
 abstract class UpdatePrefsKeys {
+  /// Update availability and prompts belong to the installation,
+  /// not an account.
+  static const List<String> deviceScopedPrefsKeys = [
+    dismissedVersion,
+    dismissedAt,
+    lastChecked,
+    latestVersion,
+    downloadUrl,
+  ];
+
   /// Key for the dismissed version string.
   static const dismissedVersion = 'update_dismissed_version';
 

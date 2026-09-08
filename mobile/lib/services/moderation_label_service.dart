@@ -159,10 +159,18 @@ class ModerationLabelService {
   final Duration _labelerHistoryBudget;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
-  static const String _subscribedLabelersKey = 'subscribed_labeler_pubkeys';
+  ///
+  /// Public so `UserDataCleanupService` can clear it by reference rather than
+  /// by a copied literal. The literal it copied drifted from this one when the
+  /// service was re-created under a new key name, and the account-switch sweep
+  /// silently stopped clearing it (#6985).
+  static const String subscribedLabelersStorageKey =
+      'subscribed_labeler_pubkeys';
 
   /// SharedPreferences key for using followed accounts as trusted labelers.
-  static const String _followingModerationEnabledKey =
+  ///
+  /// Public for the same reason as [subscribedLabelersStorageKey].
+  static const String followingModerationEnabledStorageKey =
       'following_moderation_enabled';
 
   /// SharedPreferences key for the NIP-05 resolved moderation pubkey.
@@ -299,12 +307,12 @@ class ModerationLabelService {
       // initialize(), which is called only from relay-ready paths.
       _adoptModerationPubkey(_cachedModerationPubkey(_prefs));
 
-      final saved = _prefs.getStringList(_subscribedLabelersKey);
+      final saved = _prefs.getStringList(subscribedLabelersStorageKey);
       if (saved != null) {
         _subscribedLabelers.addAll(saved);
       }
       _isFollowingModerationEnabled =
-          _prefs.getBool(_followingModerationEnabledKey) ?? false;
+          _prefs.getBool(followingModerationEnabledStorageKey) ?? false;
 
       // Migrate retired pubkeys if present in stored subscriptions
       await _migrateLegacyPubkey();
@@ -957,7 +965,7 @@ class ModerationLabelService {
   Future<void> _saveSubscribedLabelers() async {
     try {
       await _prefs.setStringList(
-        _subscribedLabelersKey,
+        subscribedLabelersStorageKey,
         _subscribedLabelers.toList(),
       );
     } catch (e) {
@@ -973,7 +981,7 @@ class ModerationLabelService {
   Future<void> _saveFollowingModerationEnabled() async {
     try {
       await _prefs.setBool(
-        _followingModerationEnabledKey,
+        followingModerationEnabledStorageKey,
         _isFollowingModerationEnabled,
       );
     } catch (e) {

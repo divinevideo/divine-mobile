@@ -465,6 +465,19 @@ jobs:
           # a worklist, each carrying '# wire: <path>:<line>' or
           # '# staged: <why>'.
           bash scripts/check_orphaned_arb_key_floor.sh
+      - name: 🧹 Verify every stored preference key is classified (#8314)
+        run: |
+          # Issues #8314 / #6985. The account-switch sweep named its keys by
+          # copied string literal for nine months: eleven listed keys rotted
+          # into no-ops when their owning service was renamed or deleted, and
+          # fourteen live keys were never listed, two of them a real
+          # cross-account leak. The sweep now references the constants its
+          # services own, so a RENAME is a compile error. This freezes the
+          # other direction, which the compiler cannot see: a NEW key nobody
+          # classifies. Declare it in the sweep, or in a
+          # `deviceScopedPrefsKeys` list beside the constant — never here.
+          # Baseline entries are a worklist, not exemptions.
+          bash scripts/check_prefs_key_classification.sh
       - name: 🔐 Verify no profile publish reaches the ungated read provider (#6423)
         run: bash scripts/check_profile_read_write_split.sh
       - name: 🔨 Verify generated files are up-to-date

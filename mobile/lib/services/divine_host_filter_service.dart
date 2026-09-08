@@ -8,9 +8,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// wider Nostr media-host space by toggling this off in Safety settings.
 class DivineHostFilterService extends ChangeNotifier {
   DivineHostFilterService(this._prefs)
-    : _showDivineHostedOnly = _prefs.getBool(_prefsKey) ?? true;
+    : _showDivineHostedOnly =
+          _prefs.getBool(showDivineHostedOnlyStorageKey) ?? true;
 
-  static const String _prefsKey = 'show_divine_hosted_only';
+  /// Public so `UserDataCleanupService` can clear it by reference.
+  /// A copied literal cannot detect that this key was renamed (#8314).
+  static const String showDivineHostedOnlyStorageKey =
+      'show_divine_hosted_only';
 
   final SharedPreferences _prefs;
   bool _showDivineHostedOnly;
@@ -20,7 +24,7 @@ class DivineHostFilterService extends ChangeNotifier {
   Future<void> setShowDivineHostedOnly(bool value) async {
     if (_showDivineHostedOnly == value) return;
 
-    await _prefs.setBool(_prefsKey, value);
+    await _prefs.setBool(showDivineHostedOnlyStorageKey, value);
     _showDivineHostedOnly = value;
     notifyListeners();
   }

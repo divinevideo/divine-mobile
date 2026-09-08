@@ -52,6 +52,9 @@ class _FakeNotificationPreferencesStore
   final publishedSchemaVersions = <String, int>{};
 
   @override
+  Future<void> clearPreferences() async {}
+
+  @override
   Future<int?> loadPublishedSchemaVersion(String pubkey) async =>
       publishedSchemaVersions[pubkey];
 
