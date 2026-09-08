@@ -39,7 +39,7 @@ void main() {
         () => followRepository.isFollowing(_userIdHex),
       ).thenReturn(isFollowing);
       when(
-        () => blocklistRepository.isBlocked(_userIdHex),
+        () => blocklistRepository.canUnblock(_userIdHex),
       ).thenReturn(isBlocked);
 
       return ProviderScope(

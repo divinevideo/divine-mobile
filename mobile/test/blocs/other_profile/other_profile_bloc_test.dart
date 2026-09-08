@@ -95,6 +95,9 @@ void main() {
     test('reports a blocked account as not followed', () {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+      when(
         () => mockBlocklistRepository.isBlocked(testPubkey),
       ).thenReturn(true);
 
@@ -107,10 +110,41 @@ void main() {
     test('reports an unblocked account as followed', () {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(false);
+      when(
         () => mockBlocklistRepository.isBlocked(testPubkey),
       ).thenReturn(false);
 
       final bloc = createBloc();
+      expect(bloc.isFollowing, isTrue);
+      bloc.close();
+    });
+
+    test('offers Unblock for an imported mute', () {
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+
+      final bloc = createBloc();
+      expect(bloc.isBlocked, isTrue);
+      bloc.close();
+    });
+
+    test('still reports an imported mute as followed', () {
+      when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.isBlocked(testPubkey),
+      ).thenReturn(false);
+
+      final bloc = createBloc();
+      // A mute severs nothing: MyFollowingBloc still lists the account and
+      // the kind 3 we publish still carries it, so the profile sheet has to
+      // keep offering `Unfollow` rather than hiding the row.
+      expect(bloc.isBlocked, isTrue);
       expect(bloc.isFollowing, isTrue);
       bloc.close();
     });
@@ -747,7 +781,7 @@ void main() {
             () => mockFollowRepository.isFollowing(testPubkey),
           ).thenReturn(true);
           when(
-            () => mockBlocklistRepository.isBlocked(testPubkey),
+            () => mockBlocklistRepository.canUnblock(testPubkey),
           ).thenReturn(true);
         },
         build: createBloc,

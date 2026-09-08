@@ -2866,6 +2866,7 @@ void main() {
         kind: invocation.namedArguments[#kind] as int,
         content: invocation.namedArguments[#content] as String,
         tags: invocation.namedArguments[#tags] as List<List<String>>,
+        createdAt: invocation.namedArguments[#createdAt] as int?,
       );
     }
 
@@ -3702,6 +3703,16 @@ void main() {
         ).thenAnswer(
           (invocation) async => signedEventFromInvocation(invocation),
         );
+        when(
+          () => mockSigner.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => signedEventFromInvocation(invocation),
+        );
         when(() => mockClient.publishEvent(any())).thenAnswer(
           (invocation) async => PublishSuccess(
             event: invocation.positionalArguments.first as Event,
@@ -3783,31 +3794,34 @@ void main() {
         },
       );
 
-      test('IS honoured when the list is newer than the unblock, because that '
-          'is another client muting them again', () async {
-        final prefs = await prefsAfterAWithheldUnblock();
-        final ownList = StreamController<Event>.broadcast();
-        addTearDown(ownList.close);
-        when(
-          () => mockClient.subscribe(any()),
-        ).thenAnswer((_) => ownList.stream);
+      test(
+        'does not let a later relay echo override outstanding intent',
+        () async {
+          final prefs = await prefsAfterAWithheldUnblock();
+          final ownList = StreamController<Event>.broadcast();
+          addTearDown(ownList.close);
+          when(
+            () => mockClient.subscribe(any()),
+          ).thenAnswer((_) => ownList.stream);
 
-        final restarted = ContentBlocklistRepository(prefs: prefs);
-        await restarted.syncMuteListsInBackground(mockClient, ourPubkey);
-        ownList.add(
-          buildEvent(
-            kind: 10000,
-            tags: const [
-              ['p', target],
-            ],
-            // Comfortably after the unblock we just recorded.
-            createdAt: 99999999999,
-          ),
-        );
-        await Future<void>.delayed(Duration.zero);
+          final restarted = ContentBlocklistRepository(prefs: prefs);
+          addTearDown(restarted.dispose);
+          await restarted.syncMuteListsInBackground(mockClient, ourPubkey);
+          ownList.add(
+            buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              // A client-controlled timestamp cannot prove our removal landed.
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+            ),
+          );
+          await Future<void>.delayed(Duration.zero);
 
-        expect(restarted.isMutedByUs(target), isTrue);
-      });
+          expect(restarted.isMutedByUs(target), isFalse);
+        },
+      );
 
       test('is not re-adopted from a stale list in the same second', () async {
         final prefs = await prefsAfterAWithheldUnblock();
@@ -4130,6 +4144,734 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         expect(restarted.isMutedByUs(target), isTrue);
+      });
+
+      group('explicit unblock intent (#6438)', () {
+        Future<ContentBlocklistRepository> serviceWithOwnMute({
+          required SharedPreferences prefs,
+          required Event ownMute,
+          void Function()? onChanged,
+        }) async {
+          await prefs.setBool(
+            'block_list_migrated_to_mute_list.$ourPubkey',
+            true,
+          );
+          await prefs.setBool('block_list_retired.$ourPubkey', true);
+          final ownList = StreamController<Event>.broadcast();
+          addTearDown(ownList.close);
+          when(() => mockClient.subscribe(any())).thenAnswer(
+            (_) => ownList.stream,
+          );
+          stubHealthy();
+          stubReadSettled();
+
+          final service = ContentBlocklistRepository(
+            prefs: prefs,
+            onChanged: onChanged,
+          );
+          addTearDown(service.dispose);
+          await service.syncBlockListsInBackground(
+            mockClient,
+            mockSigner,
+            ourPubkey,
+          );
+          await service.syncMuteListsInBackground(mockClient, ourPubkey);
+          ownList.add(ownMute);
+          await pumpEventQueue();
+          clearInteractions(mockSigner);
+          return service;
+        }
+
+        test(
+          'records the unblock intent before it persists the mute removal',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            // Sampled synchronously, the moment the removal is announced.
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+              onChanged: () {
+                if (!sampling) return;
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
+            );
+            sampling = true;
+
+            await service.unblockUser(target);
+
+            // A kill in the window between the removal write and the intent
+            // write leaves the mute gone locally with nothing to defend that
+            // against the relay's surviving `p` tag, so the next launch
+            // re-adopts it -- the exact revert the intent prevents (#8263).
+            expect(pendingWhenAnnounced, isNotEmpty);
+            expect(pendingWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
+          },
+        );
+
+        test(
+          'removes and publishes a mute that is not a runtime block',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final changes = <BlocklistChange>[];
+            final subscription = service.changes.listen(changes.add);
+            addTearDown(subscription.cancel);
+
+            expect(service.isBlocked(target), isFalse);
+            expect(service.canUnblock(target), isTrue);
+
+            await service.unblockUser(target);
+
+            expect(service.isMutedByUs(target), isFalse);
+            expect(service.canUnblock(target), isFalse);
+            expect(service.shouldFilterFromFeeds(target), isFalse);
+            expect(
+              changes,
+              contains(
+                const BlocklistChange(
+                  pubkey: target,
+                  op: BlocklistOp.unmutedByUs,
+                ),
+              ),
+            );
+            final tags =
+                verify(
+                      () => mockSigner.createAndSignEvent(
+                        kind: 10000,
+                        content: any(named: 'content'),
+                        tags: captureAny(named: 'tags'),
+                      ),
+                    ).captured.single
+                    as List<List<String>>;
+            expect(tags, isNot(contains(equals(['p', target]))));
+          },
+        );
+
+        test(
+          'protects the unblock from a clock-skewed publish refresh',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final clockSkewedList = buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+            )..id = 'clock-skewed-event';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [clockSkewedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            when(
+              () => mockClient.publishEvent(any()),
+            ).thenAnswer((_) async => const PublishFailed());
+
+            await service.unblockUser(target);
+
+            expect(service.isMutedByUs(target), isFalse);
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending, contains(target));
+            final tags =
+                verify(
+                      () => mockSigner.createAndSignEvent(
+                        kind: 10000,
+                        content: any(named: 'content'),
+                        tags: captureAny(named: 'tags'),
+                        createdAt: any(named: 'createdAt'),
+                      ),
+                    ).captured.single
+                    as List<List<String>>;
+            expect(tags, isNot(contains(equals(['p', target]))));
+          },
+        );
+
+        test(
+          'supersedes a future-dated own list with a strictly newer stamp',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final clockSkewedList = buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+            )..id = 'clock-skewed-event';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [clockSkewedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+
+            await service.unblockUser(target);
+
+            final publishedAt =
+                verify(
+                      () => mockSigner.createAndSignEvent(
+                        kind: 10000,
+                        content: any(named: 'content'),
+                        tags: any(named: 'tags'),
+                        createdAt: captureAny(named: 'createdAt'),
+                      ),
+                    ).captured.single
+                    as int?;
+
+            // Kind 10000 is replaceable, and an equal `created_at` does not
+            // win the tie by rule -- relays keep the lower id. Stamping the
+            // replacement at the skewed list's own second would leave the
+            // relay serving the list we are trying to replace, and no other
+            // assertion in this file would notice.
+            expect(publishedAt, isNotNull);
+            expect(publishedAt, greaterThan(clockSkewedList.createdAt));
+          },
+        );
+
+        test(
+          'retires a clock-skew-protected intent after publish succeeds',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final clockSkewedList = buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+            )..id = 'clock-skewed-event';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [clockSkewedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+
+            await service.unblockUser(target);
+            await pumpEventQueue();
+
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending, isNot(contains(target)));
+            expect(service.isMutedByUs(target), isFalse);
+          },
+        );
+
+        test(
+          'retires the intent when the refreshed list no longer carries it',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            // Sampled synchronously at the removal, before the publish's
+            // refresh runs. Without it the closing assertion cannot tell
+            // "the intent was retired" from "no intent was ever recorded":
+            // the test survives a mutation that stops recording it at all.
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+              onChanged: () {
+                if (!sampling) return;
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
+            );
+            sampling = true;
+            final landedList = buildEvent(
+              kind: 10000,
+              createdAt: 2000,
+            )..id = 'unblock-already-landed';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [landedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            when(
+              () => mockClient.publishEvent(any()),
+            ).thenAnswer((_) async => const PublishFailed());
+
+            await service.unblockUser(target);
+            await pumpEventQueue();
+
+            expect(pendingWhenAnnounced, isNotEmpty);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
+            final stored = prefs.getString('pending_unblocks.$ourPubkey');
+            expect(stored, isNotNull);
+            expect(
+              jsonDecode(stored!) as Map<String, dynamic>,
+              isNot(contains(target)),
+            );
+          },
+        );
+
+        test(
+          'does not ask the signer to supersede an invalid future list',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final invalidFutureList = buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              createdAt: 99999999999,
+            )..id = 'invalid-future-event';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [invalidFutureList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+
+            await service.unblockUser(target);
+
+            // `any(named: 'createdAt')` matches a null stamp too, so this
+            // also covers a call that omits the argument.
+            verifyNever(
+              () => mockSigner.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            );
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending, contains(target));
+            expect(service.isMutedByUs(target), isFalse);
+          },
+        );
+
+        test('protects every outstanding unblock during a refresh', () async {
+          const other =
+              '00000000000000000000000000000000'
+              '000000000000000000000000000000ee';
+          SharedPreferences.setMockInitialValues(<String, Object>{
+            'blocklist_active_pubkey': ourPubkey,
+            'pending_unblocks.$ourPubkey': jsonEncode({
+              target: 1000,
+              other: 1000,
+            }),
+            'block_list_migrated_to_mute_list.$ourPubkey': true,
+            'block_list_retired.$ourPubkey': true,
+          });
+          final prefs = await SharedPreferences.getInstance();
+          stubHealthy();
+          final clockSkewedList = buildEvent(
+            kind: 10000,
+            tags: const [
+              ['p', target],
+              ['p', other],
+            ],
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+          )..id = 'clock-skewed-event';
+          when(
+            () => mockClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [clockSkewedList],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => mockClient.publishEvent(any()),
+          ).thenAnswer((_) async => const PublishFailed());
+          final service = ContentBlocklistRepository(prefs: prefs);
+          addTearDown(service.dispose);
+          await service.syncBlockListsInBackground(
+            mockClient,
+            mockSigner,
+            ourPubkey,
+          );
+
+          expect(await service.retryPendingMuteListPublish(), isFalse);
+
+          expect(service.isMutedByUs(target), isFalse);
+          expect(service.isMutedByUs(other), isFalse);
+          final pending =
+              jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                  as Map<String, dynamic>;
+          expect(pending.keys, containsAll([target, other]));
+        });
+
+        test(
+          'ignores a self `p` tag on our own malformed mute list',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', ourPubkey],
+                ],
+                createdAt: 1000,
+              ),
+            );
+
+            await service.unblockUser(ourPubkey);
+
+            // Our own pubkey can never be in a hide bucket, so there is
+            // nothing to unblock and nothing to record. A pending entry
+            // keyed on self would also re-arm the publish on every launch.
+            verifyNever(
+              () => mockSigner.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            );
+            expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+          },
+        );
+
+        test('ignores an empty pubkey', () async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final prefs = await SharedPreferences.getInstance();
+          final service = await serviceWithOwnMute(
+            prefs: prefs,
+            ownMute: buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', ''],
+              ],
+              createdAt: 1000,
+            ),
+          );
+
+          // DM surfaces derive the counterparty as
+          // `participants.isNotEmpty ? participants.first : ''`, so an empty
+          // string reaches this method. `blockUsers` already skips it.
+          await service.unblockUser('');
+
+          verifyNever(
+            () => mockSigner.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          );
+          expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+        });
+
+        test(
+          'is a true no-op when no local or published state carries it',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            stubReadSettled();
+            final service = ContentBlocklistRepository(prefs: prefs);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+            clearInteractions(mockSigner);
+
+            await service.unblockUser(target);
+
+            verifyNever(
+              () => mockSigner.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            );
+            expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+            expect(prefs.getString('pending_unblocks'), isNull);
+          },
+        );
+
+        test(
+          'does not lower a watermark an earlier attempt already advanced',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{
+              'blocklist_active_pubkey': ourPubkey,
+              'pending_unblocks.$ourPubkey': jsonEncode({
+                target: 99999999999,
+              }),
+              'block_list_migrated_to_mute_list.$ourPubkey': true,
+              'block_list_retired.$ourPubkey': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            // Every read stays inconclusive, so the publish is withheld and
+            // the intent is still outstanding when the user tries again.
+            stubReadInconclusive();
+            final service = ContentBlocklistRepository(prefs: prefs);
+            addTearDown(service.dispose);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+
+            await service.unblockUser(target);
+
+            // The recorded second is monotonic so the diagnostic and the
+            // legacy-key merge tiebreak stay meaningful; a repeat attempt
+            // must not rewrite it down to `now`.
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending[target], 99999999999);
+          },
+        );
+
+        test(
+          're-blocking retires contradictory pending intent and republishes',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{
+              'blocklist_active_pubkey': ourPubkey,
+              'blocked_users_list.$ourPubkey': jsonEncode([target]),
+              'pending_unblocks.$ourPubkey': jsonEncode({target: 1000}),
+              'block_list_migrated_to_mute_list.$ourPubkey': true,
+              'block_list_retired.$ourPubkey': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            stubReadSettled();
+            final service = ContentBlocklistRepository(prefs: prefs);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+            clearInteractions(mockSigner);
+
+            await service.blockUser(target);
+
+            final pending =
+                jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
+                    as Map<String, dynamic>;
+            expect(pending, isNot(contains(target)));
+            final tags =
+                verify(
+                      () => mockSigner.createAndSignEvent(
+                        kind: 10000,
+                        content: any(named: 'content'),
+                        tags: captureAny(named: 'tags'),
+                      ),
+                    ).captured.single
+                    as List<List<String>>;
+            expect(tags, contains(equals(['p', target])));
+          },
+        );
+
+        test(
+          'persists the block before dropping the intent it contradicts',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{
+              'blocklist_active_pubkey': ourPubkey,
+              'pending_unblocks.$ourPubkey': jsonEncode({target: 1000}),
+              'block_list_migrated_to_mute_list.$ourPubkey': true,
+              'block_list_retired.$ourPubkey': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            // Withheld throughout, so the seeded intent survives the sync
+            // and is still outstanding when the block arrives.
+            stubReadInconclusive();
+            // Sampled synchronously, the moment the block is announced.
+            final blockedWhenAnnounced = <String?>[];
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
+            final service = ContentBlocklistRepository(
+              prefs: prefs,
+              onChanged: () {
+                if (!sampling) return;
+                blockedWhenAnnounced.add(
+                  prefs.getString('blocked_users_list.$ourPubkey'),
+                );
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
+            );
+            addTearDown(service.dispose);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+            sampling = true;
+
+            await service.blockUser(target);
+
+            // A kill between the two writes must not leave "no pending
+            // unblock" recorded against a block that never landed: the
+            // relay's surviving `p` tag would then come back as a foreign
+            // mute instead of a block, which no affordance can lift.
+            expect(blockedWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(blockedWhenAnnounced.first!) as List<dynamic>,
+              contains(target),
+            );
+            expect(pendingWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
+          },
+        );
+
+        test('re-blocking is a no-op when no publish is pending', () async {
+          SharedPreferences.setMockInitialValues(<String, Object>{
+            'blocklist_active_pubkey': ourPubkey,
+            'blocked_users_list.$ourPubkey': jsonEncode([target]),
+            'block_list_migrated_to_mute_list.$ourPubkey': true,
+            'block_list_retired.$ourPubkey': true,
+          });
+          final prefs = await SharedPreferences.getInstance();
+          stubHealthy();
+          stubReadSettled();
+          final service = ContentBlocklistRepository(prefs: prefs);
+          await service.syncBlockListsInBackground(
+            mockClient,
+            mockSigner,
+            ourPubkey,
+          );
+          clearInteractions(mockSigner);
+
+          await service.blockUser(target);
+
+          verifyNever(
+            () => mockSigner.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          );
+        });
       });
     });
   });

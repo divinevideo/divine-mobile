@@ -37,7 +37,13 @@ import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
 class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
+    implements ContentBlocklistRepository {
+  @override
+  bool isBlocked(String pubkey) => false;
+
+  @override
+  bool canUnblock(String pubkey) => false;
+}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -208,7 +214,6 @@ void main() {
       when(
         () => blocklistRepository.shouldFilterFromFeeds(any()),
       ).thenReturn(false);
-      when(() => blocklistRepository.isBlocked(any())).thenReturn(false);
       when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(false);
       when(() => blocklistRepository.hasMutedUs(any())).thenReturn(false);
       when(

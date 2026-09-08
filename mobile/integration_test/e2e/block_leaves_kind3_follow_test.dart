@@ -89,8 +89,15 @@ class _LocalBlockListSigner implements BlockListSigner {
     required int kind,
     required String content,
     List<List<String>>? tags,
+    int? createdAt,
   }) async {
-    final event = Event(_pubkey, kind, tags ?? const [], content);
+    final event = Event(
+      _pubkey,
+      kind,
+      tags ?? const [],
+      content,
+      createdAt: createdAt,
+    );
     return _signer.signEvent(event);
   }
 }

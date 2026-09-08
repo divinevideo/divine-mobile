@@ -45,7 +45,13 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
 class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
+    implements ContentBlocklistRepository {
+  @override
+  bool isBlocked(String pubkey) => false;
+
+  @override
+  bool canUnblock(String pubkey) => false;
+}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
@@ -137,7 +143,6 @@ void main() {
     );
     when(() => peopleListsBloc.state).thenReturn(const PeopleListsState());
 
-    when(() => blocklistRepository.isBlocked(any())).thenReturn(false);
     when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(false);
     when(() => blocklistRepository.hasMutedUs(any())).thenReturn(false);
     when(
