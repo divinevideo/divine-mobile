@@ -51,6 +51,13 @@ class _FakeCuratedListsState extends CuratedListsState {
 
 const _pollInterval = Duration(seconds: 30);
 
+/// English copy the tab bar renders through `context.l10n`.
+///
+/// The tap targets below are matched by their rendered label, so spelling
+/// them as literals would break this suite on a copy change rather than on
+/// the selection behaviour it exists to guard.
+final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
+
 final _testFeaturedTabAgeGateProvider = StateProvider<bool>((ref) => true);
 
 const _featuredConfig = FeaturedTabConfig(
@@ -275,7 +282,7 @@ void main() {
         initialTabSlug: _featuredConfig.slug,
       );
 
-      await tester.tap(find.text('Categories'));
+      await tester.tap(find.text(_l10n.exploreTabCategories));
       await tester.pumpAndSettle();
       expect(selectedTabName(tester), equals(exploreCategoriesTabName));
 
