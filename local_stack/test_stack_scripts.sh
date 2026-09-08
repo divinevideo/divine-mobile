@@ -542,12 +542,14 @@ assert_status 0 "$last_status" "a failure report should remain diagnostic"
 assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
 assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
 
-# Current Rust migrator errors for native and bootstrapped legacy ledgers.
+# The migrate image runs funnelcake-migrate, which reaches only
+# crates/migrations. Its two dirty bails are the native ledger (lib.rs:391) and
+# the bootstrapped legacy one (lib.rs:740). The similar strings in
+# crates/clickhouse belong to the janitor binary, which local_stack does not
+# run, so they can never reach a funnelcake-migrate log.
 for migration_error in \
     'migration 259 is dirty; refusing to apply more migrations' \
-    'legacy schema_migrations latest row is dirty at version 70' \
-    'schema_migrations latest row is dirty (version=70)' \
-    'funnelcake_schema_migrations has 1 dirty latest migration state(s)'; do
+    'legacy schema_migrations latest row is dirty at version 70'; do
     echo "$migration_error" >"${FIXTURES}/logs_funnelcake-migrate.txt"
     run_failure_report
 
