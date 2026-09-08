@@ -12,9 +12,12 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
+import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockNostrService extends Mock implements NostrClient {}
@@ -25,17 +28,23 @@ class MockRelayCapabilityService extends Mock
 class MockRelayStatisticsService extends Mock
     implements RelayStatisticsService {}
 
+class MockVideoEventService extends Mock implements VideoEventService {}
+
 void main() {
   group('RelaySettingsScreen NIP-11 Info', () {
     late MockNostrService mockNostrService;
     late MockRelayCapabilityService mockCapabilityService;
     late MockRelayStatisticsService mockStatsService;
+    late MockVideoEventService mockVideoEventService;
+    late SharedPreferences sharedPreferences;
 
-    setUp(() {
+    setUp(() async {
       mockNostrService = MockNostrService();
       mockCapabilityService = MockRelayCapabilityService();
       mockStatsService = MockRelayStatisticsService();
+      mockVideoEventService = MockVideoEventService();
       SharedPreferences.setMockInitialValues({});
+      sharedPreferences = await SharedPreferences.getInstance();
     });
 
     Widget createTestWidget(
@@ -53,6 +62,7 @@ void main() {
       final relayUrl = configuredRelays.isNotEmpty
           ? configuredRelays.first
           : 'wss://test.relay';
+      when(() => mockNostrService.defaultRelayUrl).thenReturn(relayUrl);
       final stats = RelayStatistics(relayUrl: relayUrl);
       stats.isConnected = true;
       when(() => mockStatsService.getStatistics(any())).thenReturn(stats);
@@ -76,7 +86,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           nostrServiceProvider.overrideWithValue(mockNostrService),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           relayCapabilityServiceProvider.overrideWithValue(
             mockCapabilityService,
           ),
@@ -86,6 +98,7 @@ void main() {
           ),
         ],
       );
+      addTearDown(container.dispose);
 
       return UncontrolledProviderScope(
         container: container,
@@ -224,7 +237,10 @@ void main() {
 
       // Should show "View Website" button
       expect(find.text('View Website'), findsOneWidget);
-      expect(find.byIcon(Icons.open_in_new), findsWidgets);
+      final websiteButton = tester.widget<DivineButton>(
+        find.widgetWithText(DivineButton, 'View Website'),
+      );
+      expect(websiteButton.leadingIcon, DivineIconName.arrowUpRight);
     });
 
     testWidgets('shows software info when available', (tester) async {
@@ -279,6 +295,9 @@ void main() {
       when(
         () => mockNostrService.configuredRelays,
       ).thenReturn(['wss://relay.divine.video']);
+      when(
+        () => mockNostrService.defaultRelayUrl,
+      ).thenReturn('wss://relay.divine.video');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       final loadingStats = RelayStatistics(
         relayUrl: 'wss://relay.divine.video',
@@ -298,7 +317,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           nostrServiceProvider.overrideWithValue(mockNostrService),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           relayCapabilityServiceProvider.overrideWithValue(
             mockCapabilityService,
           ),
@@ -308,6 +329,7 @@ void main() {
           ),
         ],
       );
+      addTearDown(container.dispose);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -327,7 +349,7 @@ void main() {
       await tester.pump();
 
       // Should show loading indicator while fetching
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
 
       // Complete the future to avoid pending timer error
       completer.complete(
@@ -339,6 +361,5 @@ void main() {
       );
       await tester.pumpAndSettle();
     });
-    // TODO(any): Fix and enable this test
-  }, skip: true);
+  });
 }

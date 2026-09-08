@@ -44,7 +44,6 @@ test/screens/hashtag_feed_screen_tdd_test.dart	1 # delete: dupe of test/widget s
 test/screens/hashtag_grid_view_simple_test.dart	1 # rewrite: mock lacks filterVideoList; needs prefs override (#4836)
 test/screens/profile_menu_drafts_navigation_test.dart	1 # rewrite: fixture pubkey 'currentuser1111' is non-hex, throws (#4836)
 test/screens/profile_share_edit_buttons_test.dart	1 # delete: own-profile asserts inside if(); findsNothing vacuous (#4836)
-test/screens/relay_settings_nip11_info_test.dart	1 # rewrite: needs sharedPreferencesProvider override, ui intact (#4836)
 test/screens/video_editor/video_text_editor_screen_test.dart	3 # rewrite: layer path fetches anonymouspro via google_fonts (#4836)
 test/services/account_deletion_flow_test.dart	1 # rewrite: delete entry moved from Settings to NostrSettings (#4836)
 test/services/feature_flag_service_test.dart	1 # rewrite: empty body; skip comment's riverpod claim is false (#4836)
