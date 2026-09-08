@@ -8300,9 +8300,6 @@
   "@accountStatusAppealBody": {
     "description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."
   },
-  "@accountStatusContactSupport": {
-    "description": "Button opening the in-app support center."
-  },
   "accountStatusMoveAccount": "మీ ఖాతాను తరలించండి",
   "@accountStatusMoveAccount": {
     "description": "Button opening the account portability page."

@@ -8330,7 +8330,6 @@
   "@accountStatusAppealHeading": {"description": "Heading for the appeal section."},
   "accountStatusAppealBody": "Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.",
   "@accountStatusAppealBody": {"description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."},
-  "@accountStatusContactSupport": {"description": "Button opening the in-app support center."},
   "accountStatusMoveAccount": "Move your account",
   "@accountStatusMoveAccount": {"description": "Button opening the account portability page."},
   "accountStatusRetry": "Try again",
