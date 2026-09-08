@@ -239,13 +239,15 @@ void main() {
       expect(selectedTabName(tester), equals(chosen));
     });
 
-    testWidgets('a chosen tab is persisted for the next mount', (
+    testWidgets('a tab tap writes the choice to the persisted tab name', (
       tester,
     ) async {
       // Explore is torn down and rebuilt on every grid -> feed -> grid trip,
-      // so the choice has to outlive the widget. Covering the write directly
-      // because reading the provider back through a fresh mount is what the
-      // rest of this group already exercises.
+      // so the choice has to outlive the widget. This covers the write half;
+      // the read half — a fresh mount restoring the stored name — is
+      // `ExploreScreen restores the selected tab by stable name` in
+      // test/screens/explore_screen_apps_tab_test.dart. Nothing in this
+      // group remounts.
       final repository = _StagedFeaturedTabsRepository();
       await pumpExplore(tester, repository: repository);
 
