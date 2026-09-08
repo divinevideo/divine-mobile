@@ -468,9 +468,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // Both copy blocks are readable in the opened explanation.
-        expect(find.textContaining('excludes accounts'), findsOneWidget);
         expect(
-          find.textContaining('removed from your follower count'),
+          find.textContaining('counts the accounts that currently follow you'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('stops showing you their content'),
           findsOneWidget,
         );
       },

@@ -2988,14 +2988,14 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Divine counts accounts that currently follow you and excludes accounts you’ve blocked. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.';
+      'Divine counts the accounts that currently follow you. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.';
 
   @override
   String get analyticsBlockingHeading => 'What blocking does';
 
   @override
   String get analyticsBlockingBody =>
-      'People you block are removed from your follower count and follower list, and Divine stops showing them your content. Because Nostr is a public network, blocking cannot prevent someone from finding public posts through another app or relay.';
+      'When you block someone, Divine stops showing you their content and hides their interactions with you. Because Nostr is a public network, blocking doesn’t remove their follow or change public follower counts, and it can’t stop them from finding your public posts through another app or relay.';
 
   @override
   String get analyticsRetention => 'Retentie';
