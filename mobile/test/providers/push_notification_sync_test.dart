@@ -2820,7 +2820,9 @@ void main() {
               .updatePreferences(prefs),
           completes,
         );
-        await pumpEventQueue(times: 5);
+        // Drain fully: the retry ladder is microtasks bounded by
+        // maxDirtySyncRetries, so the assertion pins the retry cap.
+        await pumpEventQueue();
 
         verify(() => pushService.updatePreferences(prefs)).called(5);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
