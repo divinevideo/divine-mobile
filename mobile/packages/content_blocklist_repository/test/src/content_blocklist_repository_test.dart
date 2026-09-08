@@ -4333,6 +4333,64 @@ void main() {
         );
 
         test(
+          'supersedes a future-dated own list with a strictly newer stamp',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            final prefs = await SharedPreferences.getInstance();
+            final service = await serviceWithOwnMute(
+              prefs: prefs,
+              ownMute: buildEvent(
+                kind: 10000,
+                tags: const [
+                  ['p', target],
+                ],
+                createdAt: 1000,
+              ),
+            );
+            final clockSkewedList = buildEvent(
+              kind: 10000,
+              tags: const [
+                ['p', target],
+              ],
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+            )..id = 'clock-skewed-event';
+            when(
+              () => mockClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [clockSkewedList],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+
+            await service.unblockUser(target);
+
+            final publishedAt =
+                verify(
+                      () => mockSigner.createAndSignEvent(
+                        kind: 10000,
+                        content: any(named: 'content'),
+                        tags: any(named: 'tags'),
+                        createdAt: captureAny(named: 'createdAt'),
+                      ),
+                    ).captured.single
+                    as int?;
+
+            // Kind 10000 is replaceable, and an equal `created_at` does not
+            // win the tie by rule -- relays keep the lower id. Stamping the
+            // replacement at the skewed list's own second would leave the
+            // relay serving the list we are trying to replace, and no other
+            // assertion in this file would notice.
+            expect(publishedAt, isNotNull);
+            expect(publishedAt!, greaterThan(clockSkewedList.createdAt));
+          },
+        );
+
+        test(
           'retires a clock-skew-protected intent after publish succeeds',
           () async {
             SharedPreferences.setMockInitialValues(<String, Object>{});
