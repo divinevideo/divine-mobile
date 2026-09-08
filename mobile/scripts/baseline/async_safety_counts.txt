@@ -29,7 +29,7 @@ discarded_futures|lib/notifications/notification_tap_router.dart	1
 discarded_futures|lib/notifications/view/inbox_notifications_page.dart	5
 discarded_futures|lib/notifications/view/notifications_view.dart	3
 discarded_futures|lib/providers/auth_providers.dart	1
-discarded_futures|lib/providers/curation_providers.dart	2
+discarded_futures|lib/providers/curation_providers.dart	1
 discarded_futures|lib/providers/foreground_idle_warmup_provider.dart	1
 discarded_futures|lib/providers/moderation_providers.dart	3
 discarded_futures|lib/providers/nip05_verification_provider.dart	2
@@ -305,7 +305,6 @@ discarded_futures|test/blocs/my_followers/my_followers_bloc_test.dart	1
 discarded_futures|test/blocs/my_following/my_following_bloc_test.dart	2
 discarded_futures|test/blocs/my_profile/my_profile_bloc_test.dart	3
 discarded_futures|test/blocs/notifications/badge/notification_badge_cubit_test.dart	2
-discarded_futures|test/blocs/other_profile/other_profile_bloc_test.dart	3
 discarded_futures|test/blocs/others_followers/others_followers_bloc_test.dart	1
 discarded_futures|test/blocs/others_following/others_following_bloc_test.dart	1
 discarded_futures|test/blocs/profile_collab_videos/profile_collab_videos_bloc_test.dart	1
