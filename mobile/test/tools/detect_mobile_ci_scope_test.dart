@@ -443,25 +443,113 @@ esac
       });
     }
 
-    test('classifies focused QA scopes independently', () {
-      final run = runDetector(
-        event: 'pull_request',
-        changedFiles: [
-          'mobile/lib/screens/feed/video_feed_page.dart',
-          'mobile/e2e/maestro/flows/feed.yaml',
-          '.github/workflows/mobile_ci.yaml',
-        ],
-        changedTotal: 3,
-      );
+    // One path per row, and the complete set of scopes it must turn on —
+    // everything else is asserted false. The test this replaced passed three
+    // paths at once, one of them .github/workflows/mobile_ci.yaml, which hits
+    // the arm that sets every scope true; the other two contributed nothing,
+    // so deleting the performance block, the maestro pattern and the goldens
+    // screens pattern together left it green.
+    const allScopes = {
+      'app',
+      'native',
+      'android',
+      'ios',
+      'service',
+      'goldens',
+      'maestro_static',
+      'smoke',
+      'performance',
+      'ci_config',
+    };
 
+    const scopeArms = <String, Set<String>>{
+      'mobile/lib/screens/feed/video_feed_page.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'goldens',
+        'smoke',
+        'performance',
+      },
+      'mobile/e2e/maestro/flows/feed.yaml': {
+        'app',
+        'maestro_static',
+        'performance',
+      },
+      'mobile/packages/dm_repository/lib/src/dm_repository.dart': {
+        'app',
+        'service',
+      },
+      'mobile/test/goldens/widgets/notification_rows_golden_test.dart': {
+        'app',
+        'goldens',
+      },
+      'mobile/scripts/golden.sh': {'app', 'goldens'},
+      'mobile/packages/divine_ui/lib/src/divine_button.dart': {
+        'app',
+        'service',
+        'goldens',
+      },
+      'mobile/lib/widgets/user_avatar.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'goldens',
+        'smoke',
+      },
+      'mobile/fonts/Roboto.ttf': {
+        'app',
+        'android',
+        'ios',
+        'goldens',
+        'smoke',
+      },
+      'mobile/android/app/build.gradle.kts': {
+        'app',
+        'native',
+        'android',
+        'smoke',
+      },
+      'mobile/ios/Runner/Info.plist': {'app', 'native', 'ios', 'smoke'},
+      '.github/workflows/badge_repository.yaml': {'app', 'ci_config'},
+    };
+
+    for (final entry in scopeArms.entries) {
+      test('${entry.key} turns on exactly its own scopes', () {
+        final run = runDetector(
+          event: 'pull_request',
+          changedFiles: [entry.key],
+          changedTotal: 1,
+        );
+
+        expect(run.result.exitCode, 0, reason: run.result.stderr.toString());
+        expect(run.outputs['docs_only'], 'false');
+        for (final scope in allScopes) {
+          expect(
+            run.outputs[scope],
+            entry.value.contains(scope) ? 'true' : 'false',
+            reason: '$scope for ${entry.key}',
+          );
+        }
+      });
+    }
+
+    test('a mobile_ci.yaml change runs every scope', () {
       expectScope(
-        run,
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['.github/workflows/mobile_ci.yaml'],
+          changedTotal: 1,
+        ),
         app: true,
         native: true,
         also: const {
           'docs_only': false,
           'android': true,
           'ios': true,
+          'service': true,
           'goldens': true,
           'maestro_static': true,
           'smoke': true,
