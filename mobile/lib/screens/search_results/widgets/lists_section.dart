@@ -4,6 +4,8 @@
 // ABOUTME: peopleListSearch feature flag is enabled (injected via BLoC),
 // ABOUTME: people lists (kind 30000).
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -345,8 +347,13 @@ void _navigateToPeopleList(
   BuildContext context,
   PeopleListSearchResult result,
 ) {
-  context.push(
-    RoutePaths.peopleListForId(result.list.id, ownerPubkey: result.ownerPubkey),
+  unawaited(
+    context.push(
+      RoutePaths.peopleListForId(
+        result.list.id,
+        ownerPubkey: result.ownerPubkey,
+      ),
+    ),
   );
 }
 
