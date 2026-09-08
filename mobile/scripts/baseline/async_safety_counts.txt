@@ -461,7 +461,6 @@ unawaited_futures|test/providers/explore_active_video_test.dart	2
 unawaited_futures|test/providers/subtitle_visibility_test.dart	1
 unawaited_futures|test/providers/video_playback_stop_integration_test.dart	5
 unawaited_futures|test/screens/comments/comments_screen_test.dart	1
-unawaited_futures|test/screens/feed_screen_scroll_test.dart	2
 unawaited_futures|test/screens/settings/nip05_settings_screen_test.dart	1
 unawaited_futures|test/screens/settings/storage/storage_management_view_test.dart	10
 unawaited_futures|test/screens/video_recorder_screen_test.dart	1
