@@ -152,8 +152,13 @@ void main() {
       await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
 
-      // The design-system app bar owns the navigation control.
-      expect(find.byType(DivineAppBarIconButton), findsOneWidget);
+      // The design-system app bar owns the navigation control. Match the
+      // leading slot's back-button identifier rather than the icon-button
+      // type, which a menu button or an app-bar action would satisfy too.
+      expect(
+        find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+        findsOneWidget,
+      );
     });
 
     testWidgets('NotificationSettingsScreen has nav green AppBar', (
