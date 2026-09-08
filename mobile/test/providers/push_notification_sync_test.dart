@@ -192,9 +192,11 @@ void main() {
     environment: AppEnvironment.staging,
     configuredPushServicePubkey: pushServicePubkey,
   );
+  const switchedPushServicePubkey =
+      'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
   const stagingEnvironment = _ConfiguredEnvironmentConfig(
     environment: AppEnvironment.staging,
-    configuredPushServicePubkey: pushServicePubkey,
+    configuredPushServicePubkey: switchedPushServicePubkey,
   );
 
   setUpAll(() {
