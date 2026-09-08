@@ -561,6 +561,27 @@ for migration_error in \
     assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
 done
 
+# --- A ledger/image mismatch is not a dirty ledger --------------------------
+#
+# compute_pending_with_options bails four ways; only two of them say "dirty".
+# These two are what you get from building a funnelcake branch locally, letting
+# it record its migration, and then dropping the .env overrides — the workflow
+# build_funnelcake.sh exists for. Wiping the volume is the last resort here,
+# not the first, because aligning the overrides recovers the ledger intact.
+for mismatch_error in \
+    'applied migration 000260_mybranch is missing from the migration directory' \
+    'checksum changed for applied migration 000257: database=abc disk=def'; do
+    echo "$mismatch_error" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_status 0 "$last_status" "a ledger mismatch report should remain diagnostic"
+    assert_stderr_contains 'ledger and the migrate image disagree' "a ledger mismatch should be classified"
+    assert_stderr_contains 'FUNNELCAKE_(MIGRATE|RELAY|API)_IMAGE' "the mismatch should name the override check"
+    assert_stderr_contains 'docker volume rm local_stack_funnelcake-ch-data' "the mismatch should name the last-resort recovery"
+    assert_stderr_lacks 'migration ledger is dirty' "a mismatch is not a dirty ledger"
+    assert_stderr_lacks 'mise run local_reset' "a mismatch should not recommend deleting keycast data"
+done
+
 echo 'migration failed: permission denied' >"${FIXTURES}/logs_funnelcake-migrate.txt"
 echo 'migration 259 is dirty; refusing to apply more migrations' >"${FIXTURES}/logs_funnelcake-api.txt"
 run_failure_report

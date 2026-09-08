@@ -351,13 +351,17 @@ stack_failure_report() {
 
     stack_service_status "$compose_file" "$@"
 
-    local service state service_logs dirty_migration=0
+    local service state service_logs dirty_migration=0 ledger_mismatch=0
     while IFS='|' read -r service state; do
         [[ -n "$service" ]] || continue
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
-        if [[ "$service" == "funnelcake-migrate" ]] &&
-            grep -qiE 'dirty database version|migration .* is dirty|schema_migrations.*dirty' <<<"$service_logs"; then
-            dirty_migration=1
+        if [[ "$service" == "funnelcake-migrate" ]]; then
+            if grep -qiE 'dirty database version|migration .* is dirty|schema_migrations.*dirty' <<<"$service_logs"; then
+                dirty_migration=1
+            fi
+            if grep -qiE 'is missing from the migration directory|checksum changed for applied migration' <<<"$service_logs"; then
+                ledger_mismatch=1
+            fi
         fi
         {
             echo "--- last 20 log lines: ${service} (${state}) ---"
@@ -386,6 +390,26 @@ stack_failure_report() {
             echo "just Funnelcake's database:"
             echo ""
             echo "    mise run local_reset"
+            echo ""
+        } >&2
+    fi
+
+    if [[ "$ledger_mismatch" -eq 1 ]]; then
+        {
+            echo "The Funnelcake migration ledger and the migrate image disagree, so the"
+            echo "migrator refuses to continue and relay and API stay blocked on it."
+            echo ""
+            echo "This is what mixing image sources looks like: a ledger written by"
+            echo "locally built images and then read by the default GHCR ones, or the"
+            echo "reverse. Set all three overrides together, or none of them:"
+            echo ""
+            echo "    grep -E 'FUNNELCAKE_(MIGRATE|RELAY|API)_IMAGE' local_stack/.env"
+            echo ""
+            echo "If the ledger records a funnelcake branch you no longer build, discard"
+            echo "Funnelcake's database and let the current image migrate from scratch:"
+            echo ""
+            echo "    docker compose -f ${compose_file} down"
+            echo "    docker volume rm local_stack_funnelcake-ch-data"
             echo ""
         } >&2
     fi
