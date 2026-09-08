@@ -45,7 +45,6 @@ class AppConfig {
 
   // App configuration
   static const String appName = 'Divine';
-  static const String appVersion = '1.0.0';
 
   // Relay configuration handled by NostrClient
 
