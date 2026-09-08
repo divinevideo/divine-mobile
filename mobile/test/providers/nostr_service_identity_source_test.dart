@@ -308,7 +308,10 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await pumpEventQueue(times: 2);
+      // Drain fully: every assertion here is a negative -- that nothing
+      // was initialized yet -- so a deferred bootstrap behind any timer
+      // would still look absent at a fixed turn budget.
+      await pumpEventQueue();
 
       expect(factory.callCount, equals(1));
       expect(factory.signers.single, isNull);
