@@ -4,10 +4,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -114,6 +116,75 @@ void main() {
       expect(callbackIndex, equals(1));
       expect(callbackVideos, isNotNull);
       expect(callbackVideos![callbackIndex!].id, equals('video-2'));
+    });
+
+    testWidgets('feed that owns the screen pushes the tapped video route', (
+      tester,
+    ) async {
+      final hashtagService = _MockHashtagService();
+      final videoEventService = _MockVideoEventService();
+      final videosRepository = _MockVideosRepository();
+      final testVideos = [_video('video-1'), _video('video-2')];
+
+      when(
+        () => hashtagService.getVideosByHashtags(['funny']),
+      ).thenReturn(const []);
+      when(() => hashtagService.getHashtagStats(any())).thenReturn(null);
+      when(
+        () => hashtagService.subscribeToHashtagVideos(['funny']),
+      ).thenAnswer((_) async {});
+      when(() => videoEventService.filterVideoList(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<VideoEvent>,
+      );
+      when(
+        () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
+      ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
+
+      final router = GoRouter(
+        initialLocation: '/hashtag/funny',
+        routes: [
+          GoRoute(
+            path: '/hashtag/:hashtag',
+            builder: (_, state) => HashtagFeedScreen(
+              hashtag: state.pathParameters['hashtag'] ?? '',
+            ),
+          ),
+          GoRoute(
+            path: PooledFullscreenVideoFeedScreen.path,
+            builder: (_, _) => const Scaffold(body: Text('fullscreen feed')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...getStandardTestOverrides(),
+            hashtagServiceProvider.overrideWithValue(hashtagService),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+            subscribedListVideoCacheProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(_tile(1));
+      await tester.pumpAndSettle();
+
+      expect(find.text('fullscreen feed'), findsOneWidget);
+      expect(
+        router.state.uri.toString(),
+        equals(PooledFullscreenVideoFeedScreen.pathForVideoId('video-2')),
+      );
     });
   });
 }
