@@ -17,6 +17,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MOBILE_DIR_PHYSICAL="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 TAB="$(printf '\t')"
 
 RATCHET_LABEL="async_safety_ceiling"
@@ -157,10 +158,20 @@ emit_current() {
     fi
   fi
 
-  awk -F '|' -v root="$MOBILE_DIR/" '
+  # Strip the prefix literally, not as a regex: `sub("^" root, ...)` compiles the
+  # checkout path as an ERE, so a `+` in a directory name silently matches
+  # nothing and every key keeps its absolute prefix, while an unbalanced `[` is
+  # a hard "nonterminated character class". Both roots are offered because
+  # MOBILE_DIR is a logical path while the analyzer prints resolved ones, so a
+  # checkout reached through a symlink would otherwise match neither.
+  awk -F '|' -v root="$MOBILE_DIR/" -v root_physical="$MOBILE_DIR_PHYSICAL/" '
     $3 == "UNAWAITED_FUTURES" || $3 == "DISCARDED_FUTURES" {
       path = $4
-      sub("^" root, "", path)
+      if (index(path, root) == 1) {
+        path = substr(path, length(root) + 1)
+      } else if (index(path, root_physical) == 1) {
+        path = substr(path, length(root_physical) + 1)
+      }
       counts[tolower($3) "|" path]++
     }
     END {
