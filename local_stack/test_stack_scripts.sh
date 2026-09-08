@@ -541,12 +541,17 @@ funnelcake-migrate|exited|1
 funnelcake-relay|created|0
 funnelcake-api|created|0
 PS
+# golang-migrate's wording, which only a pre-2026-05 migrate image can emit
+# (funnelcake #423 replaced it with the Rust migrator). Kept because a developer
+# pinning an old FUNNELCAKE_MIGRATE_IMAGE still gets it; the current default
+# image's own strings are the loop below.
 echo 'migration failed: Dirty database version 70' >"${FIXTURES}/logs_funnelcake-migrate.txt"
 run_failure_report
 
 assert_status 0 "$last_status" "a failure report should remain diagnostic"
 assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
 assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
+assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
 assert_stderr_contains 'docker volume rm local_stack_funnelcake-ch-data' "the Funnelcake-only recovery should come first"
 assert_stderr_lacks 'keycast-pg-data' "the narrow recovery must not touch the keycast volume"
 
