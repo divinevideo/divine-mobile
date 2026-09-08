@@ -11,7 +11,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -35,6 +34,22 @@ VideoEvent _video(String id) {
     thumbnailUrl: 'https://example.com/$id.jpg',
   );
 }
+
+/// The tappable tile the grid renders for [index].
+///
+/// Resolved through the semantics identifier the grid stamps on each
+/// thumbnail, so the test exercises the same tap-to-index plumbing a user
+/// does instead of positionally guessing a `GestureDetector`.
+Finder _tile(int index) => find
+    .descendant(
+      of: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.identifier == 'video_thumbnail_$index',
+      ),
+      matching: find.byType(GestureDetector),
+    )
+    .first;
 
 void main() {
   setUpAll(() {
@@ -93,14 +108,12 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      final grid = tester.widget<ComposableVideoGrid>(
-        find.byType(ComposableVideoGrid),
-      );
-      grid.onVideoTap(grid.videos, 1);
+      await tester.tap(_tile(1));
+      await tester.pump();
 
-      expect(callbackVideos, same(grid.videos));
-      expect(callbackVideos![1].id, 'video-2');
-      expect(callbackIndex, 1);
+      expect(callbackIndex, equals(1));
+      expect(callbackVideos, isNotNull);
+      expect(callbackVideos![callbackIndex!].id, equals('video-2'));
     });
   });
 }
