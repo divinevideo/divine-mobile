@@ -174,7 +174,11 @@ if [ "$CURRENT_BRANCH" != "main" ]; then
     # it reaches everyone without a re-run of `mise run setup_hooks`. Skipped
     # when absent, e.g. on a branch predating it.
     MERGEABLE_CHECK="$REPO_ROOT/scripts/check_branch_mergeable.sh"
-    if [ -x "$MERGEABLE_CHECK" ]; then
+    # Invoked through `bash`, so it needs to be present and readable, not
+    # executable. Testing `-x` would skip the whole check on a checkout that
+    # lost the +x bit (Windows, a mode-stripped copy) and let a genuine
+    # conflict through — the check must fail closed, not open.
+    if [ -f "$MERGEABLE_CHECK" ]; then
         bash "$MERGEABLE_CHECK" "$BASE_BRANCH" || exit 1
     else
         echo "Skipped: scripts/check_branch_mergeable.sh not present"

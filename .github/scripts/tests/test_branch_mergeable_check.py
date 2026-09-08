@@ -132,6 +132,19 @@ class InstallHooksWiringTest(unittest.TestCase):
             source,
         )
 
+    def test_pre_push_delegation_does_not_gate_on_the_execute_bit(self):
+        source = (
+            Path(__file__).resolve().parents[3] / "scripts" / "install-hooks.sh"
+        ).read_text()
+
+        # The check is run through `bash "$MERGEABLE_CHECK"`, which needs the
+        # file readable, not executable. Gating on `-x` skips the whole
+        # merge-conflict check on any checkout that lost the +x bit (Windows, a
+        # mode-stripped copy), so a genuine conflict stops blocking the push —
+        # a safety gate failing open. Guard on presence instead.
+        self.assertIn('bash "$MERGEABLE_CHECK"', source)
+        self.assertNotIn('[ -x "$MERGEABLE_CHECK" ]', source)
+
 
 if __name__ == "__main__":
     unittest.main()
