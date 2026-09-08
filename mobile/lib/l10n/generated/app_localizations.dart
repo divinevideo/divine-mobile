@@ -15200,13 +15200,13 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
-  /// Standing hint at the top of the chroma key controls. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys.
+  /// Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register.
   ///
   /// In en, this message translates to:
   /// **'Any plain surface behind you works — a wall is fine — as long as it fills the frame.'**
   String get videoEditorChromaKeySurfaceHint;
 
-  /// No description provided for @videoEditorChromaKeyDetectFailed.
+  /// Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.'**
