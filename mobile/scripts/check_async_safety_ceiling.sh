@@ -87,15 +87,30 @@ emit_current() {
     suppression_re="^[[:space:]]*-?[[:space:]]*[\"']?"
     suppression_re+="(discarded_futures|unawaited_futures)[\"']?[[:space:]]*:"
     suppression_re+="[[:space:]]*[\"']?(ignore|false)[\"']?[[:space:]]*(#.*)?$"
-    still_suppressed="$(grep -nE "$suppression_re" "$OPTIONS_FILE" || true)"
+    # Scan every analyzer config that governs an analyzed path, not just the
+    # one the awk rewrites. mobile/test/ and mobile/integration_test/ each carry
+    # an `analyzer: errors:` block of their own already (only_throw_errors), so
+    # adding a rule there is this repo's established idiom rather than an exotic
+    # edit -- and an including file's `errors:` block wins. Verified against the
+    # real analyzer: a child `discarded_futures: ignore` halves the reported
+    # count while the parent file stays clean, which the engine then reads as a
+    # legitimate shrink. test/ and integration_test/ hold 179 of the 489 keys.
+    still_suppressed="$( { grep -nHE "$suppression_re" "$OPTIONS_FILE" || true
+      find "$MOBILE_DIR/lib" "$MOBILE_DIR/test" "$MOBILE_DIR/integration_test" \
+        "$MOBILE_DIR/tools" -name analysis_options.yaml -print0 2>/dev/null \
+        | xargs -0 grep -nHE "$suppression_re" 2>/dev/null || true
+      } )"
     if [[ -n "$still_suppressed" ]]; then
-      echo "FAIL [$RATCHET_LABEL]: analysis_options.yaml still suppresses a" >&2
-      echo "  tracked rule after the temporary rewrite, so the analyzer would" >&2
-      echo "  report zero findings and the whole baseline would read as STALE:" >&2
+      echo "FAIL [$RATCHET_LABEL]: an analyzer config still suppresses a tracked" >&2
+      echo "  rule after the temporary rewrite, so the analyzer would under-report" >&2
+      echo "  and those keys would read as STALE:" >&2
       echo "$still_suppressed" | sed 's/^/    /' >&2
-      echo "  -> Update the awk filter in $(basename "${BASH_SOURCE[0]}") to match the" >&2
-      echo "     current spelling. Do NOT regenerate the baseline: that would" >&2
-      echo "     erase all tracked async-safety debt. See #3342." >&2
+      echo "  -> If the line is in analysis_options.yaml, update the awk filter in" >&2
+      echo "     $(basename "${BASH_SOURCE[0]}") to match its current spelling." >&2
+      echo "     If it is in a nested config, remove it: suppressing a tracked" >&2
+      echo "     rule per-subtree hides debt this ratchet exists to freeze." >&2
+      echo "     Do NOT regenerate the baseline either way -- that would erase" >&2
+      echo "     the tracked async-safety debt. See #3342." >&2
       return 1
     fi
 
