@@ -133,7 +133,7 @@ while IFS= read -r path; do
   esac
 
   case "$path" in
-    mobile/test/goldens/*|mobile/lib/screens/*|mobile/lib/widgets/*|mobile/packages/divine_ui/*|mobile/assets/*|mobile/fonts/*|mobile/scripts/golden.sh)
+    mobile/test/goldens/*|mobile/lib/screens/*|mobile/lib/widgets/*|mobile/lib/notifications/widgets/*|mobile/lib/l10n/*|mobile/packages/divine_ui/*|mobile/assets/*|mobile/fonts/*|mobile/pubspec.yaml|mobile/pubspec.lock|mobile/scripts/golden.sh)
       goldens=true ;;
   esac
 

@@ -363,6 +363,26 @@ esac
       );
     });
 
+    for (final path in [
+      'mobile/lib/notifications/widgets/actor_notification_row.dart',
+      'mobile/lib/l10n/app_en.arb',
+      'mobile/pubspec.yaml',
+      'mobile/pubspec.lock',
+    ]) {
+      test('$path runs the golden suite', () {
+        expectScope(
+          runDetector(
+            event: 'pull_request',
+            changedFiles: [path],
+            changedTotal: 1,
+          ),
+          app: true,
+          native: false,
+          also: const {'goldens': true},
+        );
+      });
+    }
+
     test('classifies focused QA scopes independently', () {
       final run = runDetector(
         event: 'pull_request',
