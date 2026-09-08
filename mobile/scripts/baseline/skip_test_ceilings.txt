@@ -32,7 +32,6 @@ test/router/navigation_scenarios_test.dart	1 # rewrite: no overrides, sharedpref
 test/router/page_context_provider_test.dart	1 # rewrite: bare ProviderContainer, sharedPreferences unoverridden (#4836)
 test/router/profile_me_redirect_integration_test.dart	1 # rewrite: same authStateStream mock gap; overlaps unit variant (#4836)
 test/router/profile_me_redirect_test.dart	1 # rewrite: _MockAuthService lacks authStateStream goRouter reads (#4836)
-test/router/router_location_provider_test.dart	1 # rewrite: bare ProviderContainer, sharedPreferences unoverridden (#4836)
 test/screens/explore_screen_pure_test.dart	1 # delete: tdd stub file; 'Popular Now' tab no longer exists (#4836)
 test/screens/explore_screen_router_test.dart	2 # delete: ExploreScreenRouter is unrouted dead poc code (#4836)
 test/screens/explore_screen_video_display_test.dart	1 # rewrite: tabs now l10n featured/new, not 'Popular Now' (#4836)
