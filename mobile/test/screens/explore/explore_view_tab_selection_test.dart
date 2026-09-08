@@ -239,6 +239,33 @@ void main() {
       expect(selectedTabName(tester), equals(chosen));
     });
 
+    testWidgets('a chosen tab is persisted for the next mount', (
+      tester,
+    ) async {
+      // Explore is torn down and rebuilt on every grid -> feed -> grid trip,
+      // so the choice has to outlive the widget. Covering the write directly
+      // because reading the provider back through a fresh mount is what the
+      // rest of this group already exercises.
+      final repository = _StagedFeaturedTabsRepository();
+      await pumpExplore(tester, repository: repository);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ExploreScreen)),
+      );
+      expect(
+        container.read(exploreTabNameProvider),
+        isNot(exploreCategoriesTabName),
+      );
+
+      await tester.tap(find.text(_l10n.exploreTabCategories));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(exploreTabNameProvider),
+        equals(exploreCategoriesTabName),
+      );
+    });
+
     testWidgets('a deep link still lands on a tab that arrives late', (
       tester,
     ) async {
