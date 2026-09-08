@@ -376,6 +376,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
       if (list.pubkeys.isEmpty) continue;
+      if (Nip51PeopleListCodec.machineryDTags.contains(list.id)) continue;
       if (where != null && !where(list)) continue;
 
       final result = PeopleListSearchResult(
