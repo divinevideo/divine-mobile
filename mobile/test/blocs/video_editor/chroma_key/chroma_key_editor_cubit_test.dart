@@ -137,6 +137,27 @@ void main() {
         },
       );
 
+      test('measures on open by default, with no flag passed', () async {
+        var calls = 0;
+        final cubit = ChromaKeyEditorCubit(
+          video: video,
+          detect: (_) async {
+            calls++;
+            return measured;
+          },
+        );
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        // Constructed the way the screen constructs it — nothing passes
+        // `detectOnOpen`. Every other test in this file states the flag
+        // explicitly, so without this one, flipping the production default to
+        // `false` would leave the whole cubit suite green.
+        expect(calls, 1);
+        expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+      });
+
       test('drops a measurement that lands after the screen closed', () async {
         final gate = Completer<ChromaKeyDetection>();
         final cubit = build(detect: (_) => gate.future, detectOnOpen: true);
