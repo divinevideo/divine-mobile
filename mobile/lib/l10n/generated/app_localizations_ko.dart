@@ -4365,9 +4365,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supportRevealLogsAction => '폴더에서 보기';
 
   @override
-  String get supportChatNotAvailable => '지원 채팅을 사용할 수 없어요';
-
-  @override
   String get supportCouldNotOpenMessages => '지원 메시지를 열 수 없어요';
 
   @override

@@ -1588,7 +1588,6 @@
     "supportLoginRequired": "Login untuk menghubungi dukungan",
     "supportExportingLogs": "Mengekspor log...",
     "supportExportLogsFailed": "Gagal mengekspor log",
-    "supportChatNotAvailable": "Chat dukungan tidak tersedia",
     "supportCouldNotOpenMessages": "Tidak bisa membuka pesan dukungan",
     "supportCouldNotOpenPage": "Tidak bisa membuka {pageName}",
     "@supportCouldNotOpenPage": {

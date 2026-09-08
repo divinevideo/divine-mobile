@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Autentifică-te ca să contactezi asistența",
     "supportExportingLogs": "Se exportă jurnalele...",
     "supportExportLogsFailed": "N-am putut exporta jurnalele",
-    "supportChatNotAvailable": "Chatul de asistență nu e disponibil",
     "supportCouldNotOpenMessages": "N-am putut deschide mesajele de asistență",
     "supportCouldNotOpenPage": "N-am putut deschide {pageName}",
     "@supportCouldNotOpenPage": {

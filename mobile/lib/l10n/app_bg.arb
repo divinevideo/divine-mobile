@@ -1798,7 +1798,6 @@
     "supportLoginRequired": "Влез, за да се свържеш с поддръжката",
     "supportExportingLogs": "Логовете се експортират...",
     "supportExportLogsFailed": "Не успяхме да експортираме логовете",
-    "supportChatNotAvailable": "Чатът за поддръжка не е наличен",
     "supportCouldNotOpenMessages": "Не можах да отворя съобщения за поддръжка",
     "supportCouldNotOpenPage": "Не може да се отвори {pageName}",
     "@supportCouldNotOpenPage": {

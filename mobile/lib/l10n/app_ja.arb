@@ -1581,7 +1581,6 @@
     "supportLoginRequired": "サポートに連絡するにはログインしてね",
     "supportExportingLogs": "ログをエクスポート中...",
     "supportExportLogsFailed": "ログのエクスポートがうまくいかなかった",
-    "supportChatNotAvailable": "サポートチャットは今使えないよ",
     "supportCouldNotOpenMessages": "サポートメッセージが開けなかった",
     "supportCouldNotOpenPage": "{pageName}が開けなかった",
     "@supportCouldNotOpenPage": {

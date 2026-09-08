@@ -4626,9 +4626,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supportRevealLogsAction => 'Tunjuk dalam folder';
 
   @override
-  String get supportChatNotAvailable => 'Sembang sokongan tidak tersedia';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Tidak dapat membuka mesej sokongan';
 

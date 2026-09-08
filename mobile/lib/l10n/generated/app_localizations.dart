@@ -7933,12 +7933,6 @@ abstract class AppLocalizations {
   /// **'Show in folder'**
   String get supportRevealLogsAction;
 
-  /// No description provided for @supportChatNotAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Support chat not available'**
-  String get supportChatNotAvailable;
-
   /// No description provided for @supportCouldNotOpenMessages.
   ///
   /// In en, this message translates to:

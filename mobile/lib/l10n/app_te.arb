@@ -2869,7 +2869,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "మద్దతు చాట్ అందుబాటులో లేదు",
   "supportCouldNotOpenMessages": "మద్దతు సందేశాలను తెరవడం సాధ్యపడలేదు",
   "supportCouldNotOpenPage": "తెరవడం సాధ్యపడలేదు {pageName}",
   "@supportCouldNotOpenPage": {

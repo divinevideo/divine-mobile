@@ -1588,7 +1588,6 @@
     "supportLoginRequired": "Destekle iletişime geçmek için giriş yap",
     "supportExportingLogs": "Günlükler dışa aktarılıyor...",
     "supportExportLogsFailed": "Günlükler dışa aktarılamadı",
-    "supportChatNotAvailable": "Destek sohbeti kullanılamıyor",
     "supportCouldNotOpenMessages": "Destek mesajları açılamadı",
     "supportCouldNotOpenPage": "{pageName} açılamadı",
     "@supportCouldNotOpenPage": {

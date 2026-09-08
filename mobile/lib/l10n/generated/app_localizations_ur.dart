@@ -4636,9 +4636,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get supportRevealLogsAction => 'فولڈر میں دکھائیں';
 
   @override
-  String get supportChatNotAvailable => 'سپورٹ چیٹ دستیاب نہیں';
-
-  @override
   String get supportCouldNotOpenMessages => 'سپورٹ پیغامات نہیں کھل سکے';
 
   @override

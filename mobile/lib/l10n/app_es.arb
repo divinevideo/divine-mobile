@@ -1595,7 +1595,6 @@
     "supportLoginRequired": "Iniciá sesión para contactar a soporte",
     "supportExportingLogs": "Exportando logs...",
     "supportExportLogsFailed": "No se pudieron exportar los logs",
-    "supportChatNotAvailable": "El chat de soporte no está disponible",
     "supportCouldNotOpenMessages": "No se pudieron abrir los mensajes de soporte",
     "supportCouldNotOpenPage": "No se pudo abrir {pageName}",
     "@supportCouldNotOpenPage": {

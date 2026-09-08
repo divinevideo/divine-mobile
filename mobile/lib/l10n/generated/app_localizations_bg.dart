@@ -4676,9 +4676,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get supportRevealLogsAction => 'Покажи в папка';
 
   @override
-  String get supportChatNotAvailable => 'Чатът за поддръжка не е наличен';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Не можах да отворя съобщения за поддръжка';
 

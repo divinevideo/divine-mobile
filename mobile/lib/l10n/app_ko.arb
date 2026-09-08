@@ -1119,7 +1119,6 @@
     "supportLoginRequired": "지원팀에 문의하려면 로그인해 주세요",
     "supportExportingLogs": "로그 내보내는 중...",
     "supportExportLogsFailed": "로그 내보내기에 실패했어요",
-    "supportChatNotAvailable": "지원 채팅을 사용할 수 없어요",
     "supportCouldNotOpenMessages": "지원 메시지를 열 수 없어요",
     "supportCouldNotOpenPage": "{pageName}을(를) 열 수 없어요",
     "@supportCouldNotOpenPage": {

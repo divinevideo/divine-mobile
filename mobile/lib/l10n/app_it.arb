@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Accedi per contattare l'assistenza",
     "supportExportingLogs": "Esportazione log...",
     "supportExportLogsFailed": "Esportazione log fallita",
-    "supportChatNotAvailable": "Chat di assistenza non disponibile",
     "supportCouldNotOpenMessages": "Impossibile aprire i messaggi di assistenza",
     "supportCouldNotOpenPage": "Impossibile aprire {pageName}",
     "@supportCouldNotOpenPage": {

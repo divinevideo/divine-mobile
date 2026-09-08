@@ -4685,9 +4685,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get supportRevealLogsAction => 'Im Ordner anzeigen';
 
   @override
-  String get supportChatNotAvailable => 'Support-Chat nicht verfügbar';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Support-Nachrichten konnten nicht geöffnet werden';
 

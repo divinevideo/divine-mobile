@@ -4623,9 +4623,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get supportRevealLogsAction => 'Visa i mapp';
 
   @override
-  String get supportChatNotAvailable => 'Supportchatten är inte tillgänglig';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Kunde inte öppna supportmeddelanden';
 

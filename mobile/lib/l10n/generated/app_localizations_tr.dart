@@ -4567,9 +4567,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get supportRevealLogsAction => 'Klasörde göster';
 
   @override
-  String get supportChatNotAvailable => 'Destek sohbeti kullanılamıyor';
-
-  @override
   String get supportCouldNotOpenMessages => 'Destek mesajları açılamadı';
 
   @override

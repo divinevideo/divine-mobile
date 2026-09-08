@@ -4764,9 +4764,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get supportRevealLogsAction => 'Arată în dosar';
 
   @override
-  String get supportChatNotAvailable => 'Chatul de asistență nu e disponibil';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'N-am putut deschide mesajele de asistență';
 

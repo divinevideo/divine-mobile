@@ -4518,9 +4518,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supportRevealLogsAction => 'በአቃፊ ውስጥ አሳይ';
 
   @override
-  String get supportChatNotAvailable => 'የድጋፍ ውይይት አይገኝም';
-
-  @override
   String get supportCouldNotOpenMessages => 'የድጋፍ መልዕክቶችን መክፈት አልተቻለም';
 
   @override

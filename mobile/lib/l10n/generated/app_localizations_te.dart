@@ -4797,9 +4797,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get supportRevealLogsAction => 'ఫోల్డర్‌లో చూపించు';
 
   @override
-  String get supportChatNotAvailable => 'మద్దతు చాట్ అందుబాటులో లేదు';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'మద్దతు సందేశాలను తెరవడం సాధ్యపడలేదు';
 

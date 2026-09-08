@@ -511,6 +511,7 @@ class ZendeskSupportService {
     String? description,
     List<String>? tags,
   }) async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot show ticket screen',
@@ -583,6 +584,7 @@ class ZendeskSupportService {
   /// If the native SDK returns a `NO_IDENTITY` error, this method
   /// automatically falls back to anonymous identity and retries once.
   static Future<bool> showTicketListScreen() async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot show ticket list',
@@ -656,6 +658,7 @@ class ZendeskSupportService {
     List<Map<String, dynamic>>? customFields,
     List<String>? attachmentPaths,
   }) async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot create ticket',
