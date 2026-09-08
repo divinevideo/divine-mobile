@@ -17,6 +17,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
@@ -51,6 +52,14 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
       when(() => mockVideoEventService.isSubscribed(any())).thenReturn(false);
+      when(
+        () => mockVideoEventService.addVideoUpdateListener(any()),
+      ).thenReturn(() {});
+      when(
+        () => mockVideoEventService.subscribeToDiscovery(
+          nip50Sort: NIP50SortMode.hot,
+        ),
+      ).thenAnswer((_) async {});
       when(() => mockVideoEventService.filterVideoList(any())).thenAnswer(
         (invocation) =>
             invocation.positionalArguments.first as List<VideoEvent>,
@@ -102,39 +111,22 @@ void main() {
       );
 
       // Act
+      addTearDown(container.dispose);
       final states = <AsyncValue<List<VideoEvent>>>[];
       final listener = container.listen(videoEventsProvider, (prev, next) {
         states.add(next);
       }, fireImmediately: true);
+      addTearDown(listener.close);
 
       // Pump event queue multiple times for async operations
       await pumpEventQueue();
       await pumpEventQueue();
       await pumpEventQueue();
 
-      // Assert - Should emit videos
-      // (BehaviorSubject replays to late subscribers)
-      // The provider emits when listener notifies, so check that
-      // discoveryVideos was accessed
-      verify(
-        () => mockVideoEventService.discoveryVideos,
-      ).called(greaterThan(0));
-
-      listener.close();
-      container.dispose();
+      expect(states, contains(AsyncData<List<VideoEvent>>(testVideos)));
     });
 
-    test('BehaviorSubject replays last value to late subscribers', () async {
-      // This test verifies the core fix: using BehaviorSubject
-      // instead of StreamController.broadcast() so late subscribers
-      // receive cached data.
-      //
-      // The bug: PopularVideosTab subscribes AFTER videoEventsProvider
-      // emits, missing the data because broadcast streams don't replay.
-      //
-      // The fix: BehaviorSubject caches last value and replays to late
-      // subscribers.
-
+    test('late provider subscribers receive existing videos', () async {
       // Arrange - Service has videos ready
       final now = DateTime.now();
       final testVideos = <VideoEvent>[
@@ -167,13 +159,17 @@ void main() {
       );
 
       // Act - First subscriber triggers data emission
+      addTearDown(container.dispose);
       final firstListener = container.listen(
         videoEventsProvider,
         (prev, next) {},
       );
+      addTearDown(firstListener.close);
 
       await pumpEventQueue();
       await pumpEventQueue();
+
+      expect(container.read(videoEventsProvider).value, testVideos);
 
       // Late subscriber - like PopularVideosTab subscribing after
       // data emits
@@ -181,21 +177,12 @@ void main() {
       final lateListener = container.listen(videoEventsProvider, (prev, next) {
         lateStates.add(next);
       }, fireImmediately: true);
+      addTearDown(lateListener.close);
 
       await pumpEventQueue();
       await pumpEventQueue();
 
-      // Assert - Late subscriber should have received data via
-      // BehaviorSubject replay.
-      // This would FAIL with broadcast StreamController
-      // (the bug we fixed)
-      verify(
-        () => mockVideoEventService.discoveryVideos,
-      ).called(greaterThan(0));
-
-      firstListener.close();
-      lateListener.close();
-      container.dispose();
+      expect(lateStates.first.value, testVideos);
     });
   });
 }
