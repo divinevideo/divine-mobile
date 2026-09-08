@@ -11,7 +11,7 @@ reaches the running client until an app restart. This is the complement of #8214
 1. **One shared subscription for all loaded trusted labelers.** Explicitly selected
    labelers and followed accounts are multiplexed into one `authors:[...]` filter.
    The followed-labeler product setting applies to the entire follow list, which can
-   exceed the production relay's 100-subscription limit; one REQ keeps relay work
+   exceed a relay's per-connection subscription limit; one REQ keeps relay work
    constant without silently weakening that setting. Per-labeler state remains
    independent for history loading, moderation rows, watermarks, and unloads. A
    follow-list change cancels the old listener before replacing the stable REQ id,
