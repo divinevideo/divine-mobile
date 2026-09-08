@@ -41,6 +41,10 @@ def _objective_c_titles(payload: dict) -> dict[str, str]:
         ):
             titles = {}
             for item in patch:
+                if item.get("path", "").startswith("/primaryContentSections"):
+                    raise PayloadError(
+                        "Objective-C category content patches are not supported"
+                    )
                 reference = _pointer_reference(item.get("path", ""))
                 if reference and item.get("op") == "replace":
                     titles[reference] = item["value"]

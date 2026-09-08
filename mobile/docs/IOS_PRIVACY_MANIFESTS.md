@@ -80,6 +80,11 @@ updated in the same change.**
 
 ## Apple's catalogue
 
+The table uses Apple's short symbol titles. In Swift, `creationDate` and
+`modificationDate` here belong to `FileAttributeKey`, `fileModificationDate` to
+`UIDocument`, `systemUptime` to `ProcessInfo`, and `activeInputModes` to
+`UITextInputMode`. Identically named properties on other types are not equivalent.
+
 <!-- apple-required-reason-catalogue:start -->
 | Category | Swift APIs | Objective-C APIs |
 |---|---|---|
@@ -142,6 +147,14 @@ When a successfully parsed payload differs from the pinned catalogue, it opens
 or updates one marker-tagged incident issue and closes that issue after the
 catalogue matches again.
 
+After three failed fetch or parse attempts, the workflow stays red in Actions;
+it does not open an operational incident. Maintainers must inspect failed runs,
+repair persistent payload-shape failures, and rerun the workflow before treating
+the catalogue as current. There is no separate operational alert in this workflow.
+The comparison covers category identifiers, symbol titles, and reason codes, not
+edits to Apple's explanatory prose. The meanings above are summaries; consult
+Apple's current restrictions before choosing a reason, even when the probe passes.
+
 When the probe reports a new category or symbol, update the catalogue and teach
 the detector how to recognize the new API before accepting uses of it. When it
 reports a new reason code, verify Apple's restrictions, add a concise meaning
@@ -169,7 +182,7 @@ document still matches the catalogue.
 ## Adding or changing a declaration
 
 1. Find the call site: `bash scripts/check_privacy_manifest_coverage.sh --detail`.
-2. Pick the reason from the table above whose wording matches what the code
+2. Consult Apple's current restrictions and pick the reason whose wording matches what the code
    actually does — including its off-device restriction. If none fits, the code
    needs to change, not the manifest.
 3. Edit the owning bundle's manifest. For a pod, confirm its podspec has a

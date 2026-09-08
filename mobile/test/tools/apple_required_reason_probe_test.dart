@@ -171,6 +171,21 @@ void main() {
       expect(result.output, contains('OPERATIONAL ERROR'));
     });
 
+    test('does not silently ignore Objective-C category content patches', () {
+      final payload = payloadForCatalogue();
+      final overrides = payload['variantOverrides']! as List<dynamic>;
+      final override = overrides.single! as Map<String, dynamic>;
+      final patches = override['patch']! as List<dynamic>;
+      patches.add({
+        'op': 'remove',
+        'path': '/primaryContentSections/0/values/0',
+      });
+      final result = run(payload);
+
+      expect(result.exitCode, equals(2), reason: result.output);
+      expect(result.output, contains('OPERATIONAL ERROR'));
+    });
+
     test('documentation tables match the catalogue', () {
       final result = Process.runSync('python3', [
         'scripts/lib/render_required_reason_catalogue.py',
