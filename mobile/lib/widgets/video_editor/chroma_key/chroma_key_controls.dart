@@ -113,25 +113,50 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
   }
 }
 
-/// A secondary notice with the panel's shared info treatment.
+/// The panel's shared info treatment: an info glyph beside one line of
+/// secondary copy.
+///
+/// Carries both the standing surface prerequisite and the conditional
+/// preview-unavailable notice.
 class _InfoRow extends StatelessWidget {
   const _InfoRow({required this.text});
+
+  /// What `DivineIcon` draws at its default size, before text scaling.
+  static const double _glyphSize = 24;
 
   final String text;
 
   @override
   Widget build(BuildContext context) {
+    final style = VineTheme.bodySmallFont(
+      color: context.vineColors.onSurfaceVariant,
+    );
+
+    // The glyph is taller than one line of the copy it labels — 24 against a
+    // 16dp line box — so aligning both to the top leaves the text riding
+    // above the glyph's optical centre. Same correction `DivineInfoCard`
+    // makes for the same reason.
+    final lineHeight =
+        MediaQuery.textScalerOf(context).scale(style.fontSize ?? 14) *
+        (style.height ?? 1.2);
+    final overhang =
+        (DivineIcon.scaleSize(context, _glyphSize) - lineHeight) / 2;
+
     return Row(
       spacing: 8,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DivineIcon(icon: .info, color: context.vineColors.onSurfaceVariant),
+        Padding(
+          padding: EdgeInsets.only(top: overhang < 0 ? -overhang : 0),
+          child: DivineIcon(
+            icon: .info,
+            color: context.vineColors.onSurfaceVariant,
+          ),
+        ),
         Expanded(
-          child: Text(
-            text,
-            style: VineTheme.bodySmallFont(
-              color: context.vineColors.onSurfaceVariant,
-            ),
+          child: Padding(
+            padding: EdgeInsets.only(top: overhang > 0 ? overhang : 0),
+            child: Text(text, style: style),
           ),
         ),
       ],
