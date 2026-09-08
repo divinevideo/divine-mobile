@@ -402,7 +402,6 @@ discarded_futures|test/utils/pause_aware_modals_test.dart	6
 discarded_futures|test/widgets/feed_tuning/feed_tuning_swipe_overlay_test.dart	1
 discarded_futures|test/widgets/find_people_sheet_test.dart	1
 discarded_futures|test/widgets/profile/profile_actions_sheet/profile_actions_sheet_content_test.dart	1
-discarded_futures|test/widgets/profile_menu_drafts_test.dart	6
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/upload_failure_listener_test.dart	1
 discarded_futures|test/widgets/upload_progress_dialog_test.dart	1
