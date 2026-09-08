@@ -132,7 +132,6 @@ esac
           'android',
           'ios',
           'service',
-          'goldens',
           'maestro_static',
           'smoke',
           'performance',
@@ -315,7 +314,6 @@ esac
           'android': true,
           'ios': true,
           'service': true,
-          'goldens': true,
           'maestro_static': true,
           'smoke': true,
           'performance': true,
@@ -414,7 +412,6 @@ esac
           'android': true,
           'ios': true,
           'service': true,
-          'goldens': true,
           'maestro_static': true,
           'smoke': true,
           'performance': true,
@@ -422,26 +419,6 @@ esac
         },
       );
     });
-
-    for (final path in [
-      'mobile/lib/notifications/widgets/actor_notification_row.dart',
-      'mobile/lib/l10n/app_en.arb',
-      'mobile/pubspec.yaml',
-      'mobile/pubspec.lock',
-    ]) {
-      test('$path runs the golden suite', () {
-        expectScope(
-          runDetector(
-            event: 'pull_request',
-            changedFiles: [path],
-            changedTotal: 1,
-          ),
-          app: true,
-          native: false,
-          also: const {'goldens': true},
-        );
-      });
-    }
 
     // One path per row, and the complete set of scopes it must turn on —
     // everything else is asserted false. The test this replaced passed three
@@ -455,7 +432,6 @@ esac
       'android',
       'ios',
       'service',
-      'goldens',
       'maestro_static',
       'smoke',
       'performance',
@@ -468,7 +444,6 @@ esac
         'android',
         'ios',
         'service',
-        'goldens',
         'smoke',
         'performance',
       },
@@ -481,31 +456,20 @@ esac
         'app',
         'service',
       },
-      'mobile/test/goldens/widgets/notification_rows_golden_test.dart': {
-        'app',
-        'goldens',
-      },
-      'mobile/scripts/golden.sh': {'app', 'goldens'},
+      'mobile/test/goldens/widgets/notification_rows_golden_test.dart': {'app'},
+      'mobile/scripts/golden.sh': {'app'},
       'mobile/packages/divine_ui/lib/src/divine_button.dart': {
         'app',
         'service',
-        'goldens',
       },
       'mobile/lib/widgets/user_avatar.dart': {
         'app',
         'android',
         'ios',
         'service',
-        'goldens',
         'smoke',
       },
-      'mobile/fonts/Roboto.ttf': {
-        'app',
-        'android',
-        'ios',
-        'goldens',
-        'smoke',
-      },
+      'mobile/fonts/Roboto.ttf': {'app', 'android', 'ios', 'smoke'},
       'mobile/android/app/build.gradle.kts': {
         'app',
         'native',
@@ -558,7 +522,6 @@ esac
           'android': true,
           'ios': true,
           'service': true,
-          'goldens': true,
           'maestro_static': true,
           'smoke': true,
           'performance': true,

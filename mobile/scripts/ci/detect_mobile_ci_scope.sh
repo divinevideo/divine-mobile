@@ -7,7 +7,7 @@ set -euo pipefail
 changed_files="$(mktemp)"
 trap 'rm -f "$changed_files"' EXIT
 
-scope_names=(docs_only app native android ios service goldens maestro_static smoke performance ci_config)
+scope_names=(docs_only app native android ios service maestro_static smoke performance ci_config)
 
 write_all_true() {
   for scope in "${scope_names[@]}"; do
@@ -93,7 +93,6 @@ native=false
 android=false
 ios=false
 service=false
-goldens=false
 maestro_static=false
 smoke=false
 performance=false
@@ -112,7 +111,7 @@ while IFS= read -r path; do
     .gitattributes|analytics-contract.lock|analytics-contract.manifest.json|.github/ci-timing-budgets.json)
       app=true ;;
     .github/workflows/mobile_ci.yaml|mobile/scripts/ci/detect_mobile_ci_scope.sh)
-      app=true; native=true; android=true; ios=true; service=true; goldens=true
+      app=true; native=true; android=true; ios=true; service=true
       maestro_static=true; smoke=true; performance=true; ci_config=true ;;
     .github/workflows/*)
       # Four `generated-files` guards read workflow files as their only input
@@ -163,11 +162,6 @@ while IFS= read -r path; do
     mobile/scripts/ci/detect_service_suite_scope.sh|\
     mobile/scripts/check_service_suite_coverage.sh)
       service=true ;;
-  esac
-
-  case "$path" in
-    mobile/test/goldens/*|mobile/lib/screens/*|mobile/lib/widgets/*|mobile/lib/notifications/widgets/*|mobile/lib/l10n/*|mobile/packages/divine_ui/*|mobile/assets/*|mobile/fonts/*|mobile/pubspec.yaml|mobile/pubspec.lock|mobile/scripts/golden.sh)
-      goldens=true ;;
   esac
 
   case "$path" in

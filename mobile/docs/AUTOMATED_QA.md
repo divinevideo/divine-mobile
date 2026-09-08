@@ -8,20 +8,28 @@ small change wait for a device build.
 
 | Event | Automatic coverage | Blocking |
 |---|---|---|
-| Pull request | Change-scoped Mobile CI and headless service integration; iOS Maestro PR smoke when Codemagic webhooks are connected | Mobile CI and service checks are blocking; Maestro is observational |
+| Pull request | Change-scoped Mobile CI and headless service integration; iOS Maestro PR smoke when Codemagic webhooks are connected | Mobile CI is blocking; service integration and Maestro are additional evidence |
 | Merge to `main` | Change-scoped Mobile CI and all service suites when service dependencies changed | Reports regressions on `main` |
-| Nightly | Every deterministic headless service suite | Alert/triage signal |
+| Daily at 07:23 UTC | Every deterministic headless service suite | Opens or updates a shared triage issue on failure and closes it after recovery |
 | Manual | Full headless service suite; platform-specific Maestro workflows | Operator-owned |
 
-The shared classifier is `scripts/ci/detect_mobile_ci_scope.sh`. It is the
-source of truth for documentation-only, app, native platform, service, golden,
-Maestro, smoke, performance, and CI-configuration applicability. Incomplete or
+The shared classifier is `mobile/scripts/ci/detect_mobile_ci_scope.sh`. It is
+the source of truth for documentation-only, app, native platform, service,
+Maestro, smoke, performance, and CI-configuration applicability. Goldens follow
+the app scope because their transitive dependency graph is too broad for a safe
+independent path allowlist. Incomplete or
 unsupported change data fails open to all scopes.
 
 Documentation-only pull requests and merges still publish the required Mobile
 CI result, but skip Flutter analysis, tests, goldens, and device builds. Cheap
 configuration guards remain unconditional because they protect the filters
 themselves.
+
+The daily time gives Europe a start-of-day signal, Asia a daytime signal, and
+the Americas results ready for the start of their day. The odd minute avoids
+the top-of-hour scheduler surge. The first maintainer who picks up a failure
+owns initial classification and leaves a handoff when another time zone needs
+to continue.
 
 ## Maestro policy
 

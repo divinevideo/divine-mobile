@@ -1,4 +1,4 @@
-// ABOUTME: Pins event routing for selective post-merge and nightly mobile QA.
+// ABOUTME: Pins event routing and alerting for selective post-merge and daily mobile QA.
 // ABOUTME: Parses the workflow so each clause is asserted where it lives.
 
 import 'dart:io';
@@ -9,8 +9,11 @@ import 'package:yaml/yaml.dart';
 void main() {
   group('mobile service QA workflow', () {
     late Map<dynamic, dynamic> workflow;
+    late Map<dynamic, dynamic> mobileCiWorkflow;
     late Map<dynamic, dynamic> triggers;
     late Map<dynamic, dynamic> changes;
+    late Map<dynamic, dynamic> serviceTests;
+    late Map<dynamic, dynamic> dailySignal;
 
     // Parsed rather than substring-matched. Three of the twelve `contains`
     // assertions this replaced already passed on the base commit, and
@@ -26,15 +29,31 @@ void main() {
                 ).readAsStringSync(),
               )
               as Map<dynamic, dynamic>;
+      mobileCiWorkflow =
+          loadYaml(
+                File('../.github/workflows/mobile_ci.yaml').readAsStringSync(),
+              )
+              as Map<dynamic, dynamic>;
       triggers = workflow['on'] as Map<dynamic, dynamic>;
       changes =
           (workflow['jobs'] as Map<dynamic, dynamic>)['changes']
+              as Map<dynamic, dynamic>;
+      serviceTests =
+          (workflow['jobs'] as Map<dynamic, dynamic>)['service-tests']
+              as Map<dynamic, dynamic>;
+      dailySignal =
+          (workflow['jobs'] as Map<dynamic, dynamic>)['daily-signal']
               as Map<dynamic, dynamic>;
     });
 
     Map<dynamic, dynamic> stepById(String id) => (changes['steps'] as List)
         .cast<Map<dynamic, dynamic>>()
         .firstWhere((step) => step['id'] == id);
+
+    Map<dynamic, dynamic> serviceStepByName(String name) =>
+        (dailySignal['steps'] as List).cast<Map<dynamic, dynamic>>().firstWhere(
+          (step) => step['name'] == name,
+        );
 
     group('triggers', () {
       test('runs on pushes to main only', () {
@@ -47,11 +66,11 @@ void main() {
         expect((pr['branches'] as List).cast<String>(), equals(['main']));
       });
 
-      test('runs nightly on a cron schedule', () {
+      test('runs daily at 07:23 UTC', () {
         final schedule = (triggers['schedule'] as List)
             .cast<Map<dynamic, dynamic>>();
         expect(schedule, isNotEmpty);
-        expect(schedule.single['cron'], isA<String>());
+        expect(schedule.single['cron'], equals('23 7 * * *'));
       });
 
       test('can be dispatched manually', () {
@@ -109,6 +128,60 @@ void main() {
         expect(gate, contains("github.event_name == 'workflow_dispatch'"));
         expect(step['run'] as String, contains('focused=true'));
         expect(step['run'] as String, contains('app=true'));
+      });
+    });
+
+    group('daily failure signal', () {
+      test('isolates issue access in the scheduled signal job', () {
+        expect(serviceTests['permissions'], isNull);
+        final permissions = dailySignal['permissions'] as Map<dynamic, dynamic>;
+        expect(permissions['contents'], equals('read'));
+        expect(permissions['issues'], equals('write'));
+        expect(
+          dailySignal['if'] as String,
+          contains("github.event_name == 'schedule'"),
+        );
+      });
+
+      test('opens one durable incident only after a scheduled failure', () {
+        final step = serviceStepByName(
+          'Open or update the daily service-test incident',
+        );
+        final gate = step['if'] as String;
+        expect(gate, contains("needs.changes.result != 'success'"));
+        expect(gate, contains("needs.service-tests.result != 'success'"));
+        final script =
+            (step['with'] as Map<dynamic, dynamic>)['script'] as String;
+        expect(script, contains('daily-service-integration-incident'));
+        expect(script, contains('issues.create'));
+        expect(script, contains("state: 'open'"));
+      });
+
+      test('closes the incident only after a scheduled recovery', () {
+        final step = serviceStepByName(
+          'Close the recovered daily service-test incident',
+        );
+        final gate = step['if'] as String;
+        expect(gate, contains("needs.changes.result == 'success'"));
+        expect(gate, contains("needs.service-tests.result == 'success'"));
+        final script =
+            (step['with'] as Map<dynamic, dynamic>)['script'] as String;
+        expect(script, contains('daily-service-integration-incident'));
+        expect(script, contains("state: 'closed'"));
+      });
+    });
+
+    group('golden coverage', () {
+      test('follows app scope instead of a separate path allowlist', () {
+        final jobs = mobileCiWorkflow['jobs'] as Map<dynamic, dynamic>;
+        final goldens = jobs['goldens'] as Map<dynamic, dynamic>;
+        final gate = goldens['if'] as String;
+        expect(gate, contains("needs.changes.outputs.app == 'true'"));
+        expect(gate, isNot(contains('outputs.goldens')));
+
+        final changesJob = jobs['changes'] as Map<dynamic, dynamic>;
+        final outputs = changesJob['outputs'] as Map<dynamic, dynamic>;
+        expect(outputs.containsKey('goldens'), isFalse);
       });
     });
   });
