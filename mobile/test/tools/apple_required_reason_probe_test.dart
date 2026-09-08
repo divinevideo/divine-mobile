@@ -107,59 +107,61 @@ void main() {
     );
   }
 
-  test('accepts a matching Swift and Objective-C catalogue', () {
-    final result = run(payloadForCatalogue());
+  group('Apple required-reason catalogue probe', () {
+    test('accepts a matching Swift and Objective-C catalogue', () {
+      final result = run(payloadForCatalogue());
 
-    expect(result.exitCode, equals(0), reason: result.output);
-    expect(result.output, contains('matches the pinned data'));
-  });
-
-  test('reports a semantic reason-code delta', () {
-    final payload = payloadForCatalogue();
-    final sections = payload['primaryContentSections']! as List<dynamic>;
-    final section = sections.single! as Map<String, dynamic>;
-    final values = section['values']! as List<dynamic>;
-    final category = values.first! as Map<String, dynamic>;
-    final content = category['content']! as List<dynamic>;
-    final termList = content.last! as Map<String, dynamic>;
-    final items = termList['items']! as List<dynamic>;
-    items.add({
-      'term': {
-        'inlineContent': [
-          {'type': 'codeVoice', 'code': 'NEW1.1'},
-        ],
-      },
+      expect(result.exitCode, equals(0), reason: result.output);
+      expect(result.output, contains('matches the pinned data'));
     });
 
-    final result = run(payload);
+    test('reports a semantic reason-code delta', () {
+      final payload = payloadForCatalogue();
+      final sections = payload['primaryContentSections']! as List<dynamic>;
+      final section = sections.single! as Map<String, dynamic>;
+      final values = section['values']! as List<dynamic>;
+      final category = values.first! as Map<String, dynamic>;
+      final content = category['content']! as List<dynamic>;
+      final termList = content.last! as Map<String, dynamic>;
+      final items = termList['items']! as List<dynamic>;
+      items.add({
+        'term': {
+          'inlineContent': [
+            {'type': 'codeVoice', 'code': 'NEW1.1'},
+          ],
+        },
+      });
 
-    expect(result.exitCode, equals(1), reason: result.output);
-    expect(result.output, contains('CATALOGUE DRIFT'));
-    expect(
-      result.output,
-      contains('+ NSPrivacyAccessedAPICategoryFileTimestamp reason NEW1.1'),
-    );
-  });
+      final result = run(payload);
 
-  test('classifies a missing Objective-C variant as operational', () {
-    final payload = payloadForCatalogue()..['variantOverrides'] = <dynamic>[];
+      expect(result.exitCode, equals(1), reason: result.output);
+      expect(result.output, contains('CATALOGUE DRIFT'));
+      expect(
+        result.output,
+        contains('+ NSPrivacyAccessedAPICategoryFileTimestamp reason NEW1.1'),
+      );
+    });
 
-    final result = run(payload);
+    test('classifies a missing Objective-C variant as operational', () {
+      final payload = payloadForCatalogue()..['variantOverrides'] = <dynamic>[];
 
-    expect(result.exitCode, equals(2), reason: result.output);
-    expect(result.output, contains('OPERATIONAL ERROR'));
-  });
+      final result = run(payload);
 
-  test('documentation tables match the catalogue', () {
-    final result = Process.runSync('python3', [
-      'scripts/lib/render_required_reason_catalogue.py',
-      '--check',
-    ]);
+      expect(result.exitCode, equals(2), reason: result.output);
+      expect(result.output, contains('OPERATIONAL ERROR'));
+    });
 
-    expect(
-      result.exitCode,
-      equals(0),
-      reason: '${result.stdout}${result.stderr}',
-    );
+    test('documentation tables match the catalogue', () {
+      final result = Process.runSync('python3', [
+        'scripts/lib/render_required_reason_catalogue.py',
+        '--check',
+      ]);
+
+      expect(
+        result.exitCode,
+        equals(0),
+        reason: '${result.stdout}${result.stderr}',
+      );
+    });
   });
 }
