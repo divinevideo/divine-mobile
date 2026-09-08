@@ -1,0 +1,68 @@
+# Reviewed Maestro literals that intentionally do not equal app_en.arb copy.
+# Format: <literal><TAB><category><TAB><reason>
+# Categories: regex, platform, dynamic, rendered, legacy.
+#
+# This is a shrink-only worklist. The guard permits this initial bootstrap
+# while the file is absent from origin/main; after it lands, branches may
+# remove rows but cannot add them.
+#vine	dynamic	Hashtag supplied by seeded search data
+.*(Standard|Cinematic|Preview Optimized|Low Latency|Auto).*	regex	Matches the active capture-quality option
+.*10 seconds.*	regex	Matches the rendered capture-duration label
+.*3 seconds.*	regex	Matches the rendered capture-duration label
+.*Add audio.*	regex	Matches the recorder audio-gate semantics
+.*Auto.*	regex	Matches the current flash-mode semantics
+.*Back camera.*	regex	Matches the current camera-lens semantics
+.*Bruh Sound Effect.*	regex	Matches seeded sound metadata
+.*Front camera.*	regex	Matches the current camera-lens semantics
+.*Off.*	regex	Matches the current disabled control state
+.*On.*	regex	Matches the current enabled control state
+.*Square.*	regex	Matches the current aspect-ratio semantics
+.*Vertical.*	regex	Matches the current aspect-ratio semantics
+.*•.*You.*	regex	Matches a comment row composed with author metadata
+1	dynamic	Count produced by seeded follow data
+Already have keys? Import them here →	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Continue?	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+Don't have a Nostr identity yet?	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Enter your private key	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Find something cool...	legacy	Legacy search-field hint awaiting journey audit (tracked by #8862)
+Go back and create a new identity. We'll generate a secure key pair for you.	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Hashtags \((?!0)\d+\)	regex	Matches a non-zero rendered search-result count
+How should people know you?	legacy	Legacy edit-profile hint awaiting journey audit (tracked by #8862)
+Import Identity	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Import your existing Nostr identity using your private key (nsec or hex format)	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Invalid key format. Use nsec... or 64-character hex	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Keep your private key secure! Never share it with anyone. This key gives full access to your Nostr identity.	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Make sure you have your nsec backed up elsewhere or you will lose access to your account!	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+Menu	legacy	Legacy top-bar semantics awaiting journey audit (tracked by #8862)
+New.*	regex	Matches the rendered new-feed tab semantics
+Private Key	legacy	Existing-key login journey needs current-product audit (tracked by #8862)
+Register	legacy	Legacy fresh-profile account action awaiting journey audit (tracked by #8862)
+Remove Keys	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+Save Password?	platform	iOS password-manager dialog
+Search.*	regex	Matches search-field semantics with dynamic suffixes
+Share your first video to see it here	legacy	Legacy fresh-profile empty-state copy awaiting journey audit (tracked by #8862)
+Tab 1 of 3	platform	Flutter tab semantics append the selected index and count
+Tab 2 of 3	platform	Flutter tab semantics append the selected index and count
+Tab 3 of 3	platform	Flutter tab semantics append the selected index and count
+Tab 3 of 5	platform	Flutter tab semantics append the selected index and count
+Tap to view videos with this hashtag	legacy	Legacy hashtag-result semantics awaiting journey audit (tracked by #8862)
+Tell people about yourself...	legacy	Legacy edit-profile hint awaiting journey audit (tracked by #8862)
+This will:	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+User on Divine	dynamic	Profile label composed from seeded user data
+Users \((?!0)\d+\)	regex	Matches a non-zero rendered search-result count
+Videos \((?!0)\d+\)	regex	Matches a non-zero rendered search-result count
+\\d+\\sComments?	regex	Matches the rendered singular or plural comment count
+\b(0|[1-9]\d*)\/360\b	regex	Matches the live profile-bio character count
+^.*\\sFollowers$	regex	Matches a rendered follower count
+^.*\\sFollowing$	regex	Matches a rendered following count
+^[0-9][0-9.,KM]*\\sFollowers$	regex	Matches a compact rendered follower count
+^[0-9][0-9.,KM]*\\sFollowing$	regex	Matches a compact rendered following count
+^npub[a-zA-Z0-9]+$	regex	Matches a generated public-key display value
+done	platform	Software-keyboard action label
+nsec1...	dynamic	Private-key input hint rather than stable product copy
+return	platform	Software-keyboard action label
+username	dynamic	Seeded account identifier
+• Remove your Nostr private key (nsec) from this device	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+• Sign you out immediately	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+• Your content will REMAIN on Nostr relays	legacy	Legacy remove-keys confirmation copy (tracked by #8862)
+⚠️ Remove Keys from Device?	legacy	Legacy remove-keys confirmation copy (tracked by #8862)

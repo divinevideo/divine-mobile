@@ -12,9 +12,10 @@
 # the printed diff — regeneration re-blesses whatever app_en.arb says today.
 # Duplicate values retain the manifest's reviewed key choice. To correct a
 # wrong choice, edit that row to another valid key before regenerating.
-# Known v1 limit, tracked in #7213: already-drifted flow literals do not bind
-# until the inverse literal check lands.
+# Every extracted literal must also bind or carry a reviewed waiver in
+# maestro_copy_waivers.txt; regeneration never creates waivers.
 
+analyticsNoVideosYet	e2e/maestro/asserts/assertProfileFresh.yaml	bound:No videos yet
 appsDirectoryRefresh	e2e/maestro/tests/profileNavigation.yaml	bound:Refresh
 authConnectSignerApp	e2e/maestro/asserts/assertSignIn.yaml	bound:Connect with a signer app
 authEmailLabel	e2e/maestro/asserts/assertSignIn.yaml	bound:Email
@@ -33,6 +34,7 @@ authUseDivineNoBackup	e2e/maestro/tests/loginFreshInstall.yaml	bound:Use Divine 
 authUseThisDeviceOnly	e2e/maestro/tests/loginFreshInstall.yaml	bound:Use this device only
 blossomSaveTooltip	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Save
 blossomSaveTooltip	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Save
+blueskySetUpHandle	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Set up
 commentOptionsTitle	e2e/maestro/asserts/assertCommentsOptions.yaml	bound:Options
 commonBack	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Back
 commonBack	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:Back
@@ -51,11 +53,6 @@ devOptionsMinorReviewStateLoading	e2e/maestro/asserts/assertProfileFresh.yaml	bo
 emojiPickerSearchHint	e2e/maestro/tests/searchTags.yaml	bound:Search
 emojiPickerSearchHint	e2e/maestro/tests/searchVideos.yaml	bound:Search
 emojiPickerSearchHint	e2e/maestro/utils/searchWorkaround.yaml	bound:Search
-exploreTabClassics	e2e/maestro/asserts/assertExplore.yaml	bound:Classics
-exploreTabForYou	e2e/maestro/asserts/assertExplore.yaml	bound:For You
-exploreTabLists	e2e/maestro/asserts/assertExplore.yaml	bound:Lists
-exploreTabNew	e2e/maestro/asserts/assertExplore.yaml	bound:New
-exploreTabPopular	e2e/maestro/asserts/assertExplore.yaml	bound:Popular
 exploreTabPopular	e2e/maestro/utils/searchWorkaround.yaml	bound:Popular
 followingTitle	e2e/maestro/asserts/assertUsersFollowing.yaml	bound:Following
 keyManagementBackupSubtitle	e2e/maestro/asserts/assertNostrKeys.yaml	bound:Save your private key (nsec) to use your account in other Nostr apps.
@@ -78,7 +75,6 @@ libraryTabClips	e2e/maestro/asserts/assertLibraryScreen.yaml	bound:Clips
 listContinue	e2e/maestro/tests/loginExistingKeys.yaml	bound:Continue
 navHome	e2e/maestro/asserts/assertHome.yaml	bound:Home
 navMyProfile	e2e/maestro/tests/profileNavigation.yaml	bound:My Profile
-navOpenCamera	e2e/maestro/asserts/assertExplore.yaml	bound:Open camera
 navOpenCamera	e2e/maestro/asserts/assertHome.yaml	bound:Open camera
 nostrInfoGotIt	e2e/maestro/utils/openRecorder.yaml	bound:Got it!
 profileCompleteSubtitle	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Add your name, bio, and picture to get started
@@ -86,6 +82,7 @@ profileCompleteYourProfile	e2e/maestro/asserts/assertProfileFresh.yaml	bound:Com
 profileCopyPublicKey	e2e/maestro/tests/profileNavigation.yaml	bound:Copy public key (npub)
 profileFollowLabel	e2e/maestro/asserts/assertSpecificUserProfile.yaml	bound:Follow
 profileFollowLabel	e2e/maestro/tests/follow.yaml	bound:Follow
+profileFollowerCountUsers	e2e/maestro/asserts/assertUsersFollowing.yaml	rendered:1 user
 profileFollowingStatLabel	e2e/maestro/tests/follow.yaml	bound:Following
 profileMoreTooltip	e2e/maestro/tests/profileNavigation.yaml	bound:More
 profilePublicKeyCopied	e2e/maestro/tests/profileNavigation.yaml	bound:Public key copied to clipboard
@@ -103,11 +100,10 @@ profileSetupUsernameLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:U
 profileSetupUsernameLabel	e2e/maestro/tests/userAlreadyTaken.yaml	bound:Username (Optional)
 profileSetupUsernameTakenIndicator	e2e/maestro/asserts/assertUserTaken.yaml	bound:Username already taken
 profileShareLabel	e2e/maestro/tests/profileNavigation.yaml	bound:Share profile
-profileSupportButtonLabel	e2e/maestro/asserts/assertMenu.yaml	bound:Support
 profileVideoThumbnailLabel	e2e/maestro/tests/searchTags.yaml	rendered:Video thumbnail 1
+profileVideoThumbnailLabel	e2e/maestro/tests/searchVideos.yaml	rendered:Video thumbnail 1
 saveOriginalNotNow	e2e/maestro/flows/loginEmailPwd.yaml	bound:Not Now
-settingsTitle	e2e/maestro/asserts/assertMenu.yaml	bound:Settings
-supportFaq	e2e/maestro/asserts/assertMenu.yaml	bound:FAQ
+unfollowUserIndexedSemanticLabel	e2e/maestro/asserts/assertUsersFollowing.yaml	rendered:Unfollow user 0
 videoActionUnlike	e2e/maestro/asserts/assertVideoLiked.yaml	bound:Unlike video
 videoEditorFontUnknown	e2e/maestro/asserts/assertVideoUser&Description.yaml	bound:Unknown
 videoEditorLibraryLabel	e2e/maestro/tests/profileNavigation.yaml	bound:Library
