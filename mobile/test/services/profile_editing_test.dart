@@ -362,51 +362,6 @@ void main() {
       // Both events should have been published
       verify(() => mockNostrService.publishEvent(any())).called(2);
     });
-
-    test('should retry failed publishes with exponential backoff', () async {
-      // This test would verify that failed publishes are retried
-      // with increasing delays between attempts
-
-      final mockEvent = Event(
-        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-        0,
-        [],
-        '{"name":"Test User"}',
-      );
-
-      when(
-        () => mockAuthService.createAndSignEvent(
-          kind: 0,
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        ),
-      ).thenAnswer((_) async => mockEvent);
-
-      // First two attempts fail, third succeeds
-      when(
-        () => mockNostrService.publishEvent(any()),
-      ).thenThrow(Exception('Network error'));
-
-      // This test verifies that retry logic would work if implemented
-
-      // This would need to be implemented in the actual service
-      // For now, just verify the pattern
-      var attempts = 0;
-
-      for (var i = 0; i < 3; i++) {
-        try {
-          attempts++;
-          await mockNostrService.publishEvent(mockEvent);
-          break; // Success, exit loop
-        } catch (e) {
-          if (attempts >= 3) rethrow;
-          // Would wait with exponential backoff here
-        }
-      }
-
-      expect(attempts, equals(3));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
   });
 }
 

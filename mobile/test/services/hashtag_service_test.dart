@@ -63,20 +63,6 @@ void main() {
       expect(trendingStats?.videoCount, equals(2));
       expect(rareStats?.videoCount, equals(1));
     });
-
-    test(
-      'should combine and sort hashtags from TopHashtagsService JSON '
-      'and local HashtagService cache',
-      // Not implemented: explore screen currently uses TopHashtagsService
-      // alone. This test documents a planned feature to merge JSON-sourced
-      // counts (e.g. {'vine': 1000, 'comedy': 800, 'dance': 600}) with
-      // locally observed counts (e.g. {'vine': 50, 'local': 100,
-      // 'dance': 700}) and sort by the combined total.
-      skip:
-          'Feature not yet implemented — explore screen only uses '
-          'TopHashtagsService',
-      () {},
-    );
   });
 
   group('Relay Hashtag Fetching Tests', () {
