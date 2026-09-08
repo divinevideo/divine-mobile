@@ -94,6 +94,7 @@ void main() {
               currentScreen: 'SupportCenterScreen',
               userPubkey: _pubkeyHex,
               submitBugReport: submitBugReport,
+              buildLogsSummary: (_) async => null,
             ),
           ),
         ],

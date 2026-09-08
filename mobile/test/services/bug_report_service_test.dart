@@ -612,5 +612,110 @@ void main() {
         expect(capture.isEmpty, isTrue);
       });
     });
+
+    group('off-main sanitization (#7080)', () {
+      BugReportData reportWith(String description) => BugReportData(
+        reportId: 'test-7080',
+        timestamp: DateTime.now(),
+        userDescription: description,
+        deviceInfo: const {},
+        appVersion: '1.0.0',
+        recentLogs: const [],
+        errorCounts: const {},
+      );
+
+      test('the top-level entrypoint matches the sync sanitizer', () {
+        final input = reportWith('My nsec is $_rawNsec');
+        final viaTopLevel = sanitizeBugReportData(input);
+        final viaSync = BugReportService().sanitizeSensitiveData(input);
+        expect(viaTopLevel.userDescription, viaSync.userDescription);
+        expect(viaTopLevel.userDescription, isNot(contains('nsec1')));
+        expect(viaTopLevel.userDescription, contains('[REDACTED]'));
+      });
+
+      test('runs sanitization through the injected off-main runner', () async {
+        var offMainCalls = 0;
+        final service = BugReportService(
+          sanitizeOffMain: (data) async {
+            offMainCalls++;
+            return sanitizeBugReportData(data);
+          },
+        );
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          reportWith('My nsec is $_rawNsec'),
+        );
+
+        expect(offMainCalls, 1);
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+      });
+
+      test(
+        'falls back to inline sanitization when the isolate cannot spawn',
+        () async {
+          final service = BugReportService(
+            sanitizeOffMain: (_) async =>
+                throw StateError('isolate spawn failed'),
+          );
+
+          final sanitized = await service.sanitizeSensitiveDataInBackground(
+            reportWith('My nsec is $_rawNsec'),
+          );
+
+          // Never transmit unsanitized diagnostics: the fallback still redacts.
+          expect(sanitized.userDescription, isNot(contains('nsec1')));
+          expect(sanitized.userDescription, contains('[REDACTED]'));
+        },
+      );
+
+      test('sanitizes a production-shaped report via real compute', () async {
+        final service = BugReportService();
+        final input = BugReportData(
+          reportId: 'test-7080',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(7080),
+          userDescription: 'My nsec is $_rawNsec',
+          deviceInfo: {
+            'platform': 'test',
+            'localStorage': {
+              'sessionKey': 'device-secret',
+              'counts': [1, 2],
+            },
+          },
+          appVersion: '1.0.0',
+          recentLogs: [
+            LogEntry(
+              timestamp: DateTime.fromMillisecondsSinceEpoch(7081),
+              level: LogLevel.error,
+              category: LogCategory.api,
+              name: 'request',
+              message: 'token: message-secret',
+              error: 'password: error-secret',
+              stackTrace: 'authorization: bearer stack-secret',
+            ),
+          ],
+          errorCounts: const {'password: count-secret': 2},
+        );
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          input,
+        );
+
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+        expect(sanitized.timestamp, input.timestamp);
+        expect(sanitized.recentLogs.single.level, LogLevel.error);
+        expect(sanitized.recentLogs.single.category, LogCategory.api);
+        expect(sanitized.recentLogs.single.message, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.error, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.stackTrace, contains('[REDACTED]'));
+        expect(
+          (sanitized.deviceInfo['localStorage']
+              as Map<String, dynamic>)['sessionKey'],
+          '[REDACTED]',
+        );
+        expect(sanitized.errorCounts, {'[REDACTED]': 2});
+      });
+    });
   });
 }

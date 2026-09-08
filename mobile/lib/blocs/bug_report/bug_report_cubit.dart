@@ -28,7 +28,7 @@ typedef SubmitBugReportAction =
     });
 
 /// Builds the logs summary string the cubit passes to Zendesk.
-typedef BuildLogsSummary = String? Function(List<LogEntry> logs);
+typedef BuildLogsSummary = Future<String?> Function(List<LogEntry> logs);
 
 /// Cubit backing the bug report flow. Owns the submission lifecycle plus
 /// the `BugReportFailureKey` that distinguishes attachment-upload
@@ -87,7 +87,7 @@ class BugReportCubit extends Cubit<BugReportState> {
         currentScreen: currentScreen,
         userPubkey: userPubkey,
         errorCounts: reportData.errorCounts,
-        logsSummary: _buildLogsSummary(reportData.recentLogs),
+        logsSummary: await _buildLogsSummary(reportData.recentLogs),
         attachmentPaths: attachments.map((f) => f.path).toList(),
       );
       if (isClosed) return;

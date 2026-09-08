@@ -30,6 +30,7 @@ class BugReportScreen extends StatefulWidget {
     this.currentScreen,
     this.userPubkey,
     this.submitBugReport,
+    this.buildLogsSummary = buildLogsSummaryOffMain,
   });
 
   static const routeName = 'support-report-bug';
@@ -39,6 +40,7 @@ class BugReportScreen extends StatefulWidget {
   final String? currentScreen;
   final String? userPubkey;
   final SubmitBugReportAction? submitBugReport;
+  final BuildLogsSummary buildLogsSummary;
 
   @override
   State<BugReportScreen> createState() => _BugReportScreenState();
@@ -58,7 +60,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
     return BlocProvider(
       create: (_) => BugReportCubit(
         bugReportService: widget.bugReportService,
-        buildLogsSummary: buildLogsSummary,
+        buildLogsSummary: widget.buildLogsSummary,
         submitBugReport:
             widget.submitBugReport ??
             ZendeskSupportService.createStructuredBugReport,
