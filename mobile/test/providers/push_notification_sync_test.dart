@@ -2334,6 +2334,10 @@ void main() {
         );
         addTearDown(container.dispose);
 
+        // Build the subject: the token-refresh subscription lives in the
+        // coordinator, which only pushNotificationSyncProvider constructs.
+        container.read(pushNotificationSyncProvider);
+
         expect(container.read(pushNotificationServiceProvider), isNull);
 
         tokenRefreshController.add('refreshed-token');
