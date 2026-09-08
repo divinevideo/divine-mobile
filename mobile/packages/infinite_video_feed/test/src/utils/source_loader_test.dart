@@ -77,7 +77,7 @@ void main() {
       expect(clips.map((clip) => clip.end), equals([cap, cap]));
     });
 
-    test('forwards the caller\'s loop-seam choice to every source', () async {
+    test("forwards the caller's loop-seam choice to every source", () async {
       final controller = FakeController();
       addTearDown(controller.dispose);
 
