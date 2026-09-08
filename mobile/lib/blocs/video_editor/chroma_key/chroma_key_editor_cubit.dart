@@ -21,8 +21,9 @@ part 'chroma_key_editor_state.dart';
 /// app it is [ChromaKey.detect], which samples a ring around the frame border
 /// through the thumbnail pipeline — a metadata call, three thumbnails from a
 /// quarter, half and three quarters through, and a decode each. No render.
-typedef ChromaKeyDetectFn =
-    Future<ChromaKeyDetection> Function(EditorVideo video);
+typedef ChromaKeyDetectFn = Future<ChromaKeyDetection> Function(
+  EditorVideo video,
+);
 
 /// The key a clip starts from before anything is measured or adjusted.
 ///
