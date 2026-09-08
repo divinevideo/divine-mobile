@@ -501,7 +501,7 @@ print(int((now - created).total_seconds() // 86400), sys.argv[2])
 }
 
 # preflight_image_staleness <script_dir>
-# Warns when the pinned funnelcake images are stale. Always returns 0.
+# Warns when the default funnelcake images are stale. Always returns 0.
 preflight_image_staleness() {
     local script_dir="$1"
     local package age_and_tags age tags stale=""
@@ -525,7 +525,7 @@ preflight_image_staleness() {
 
     {
         echo ""
-        echo "WARNING: the pinned funnelcake images are stale."
+        echo "WARNING: the default funnelcake images are stale."
         echo ""
         printf '%s' "$stale"
         echo ""

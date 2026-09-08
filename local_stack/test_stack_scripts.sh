@@ -752,7 +752,7 @@ run_up_sh
 rm -f "$ENV_FILE"
 
 assert_status 0 "$last_status" "up.sh should load .env overrides"
-assert_stderr_lacks 'the pinned funnelcake images are stale' ".env image overrides should suppress the stale-image warning"
+assert_stderr_lacks 'the default funnelcake images are stale' ".env image overrides should suppress the stale-image warning"
 
 # --- A failed seed reports the seed, not the healthy services ---------------
 # The services came up; saying "Local stack failed to come up" over a list of
@@ -788,7 +788,7 @@ ghcr_fixtures "$(python3 -c 'import datetime;print((datetime.datetime.now(dateti
 run_staleness
 
 assert_status 0 "$last_status" "a stale image must never block the stack"
-assert_stderr_contains 'the pinned funnelcake images are stale' "the warning should fire"
+assert_stderr_contains 'the default funnelcake images are stale' "the warning should fire"
 assert_stderr_contains '163 days ago' "the warning should say how stale"
 assert_stderr_contains 'build_funnelcake.sh' "the warning should name the escape hatch"
 assert_stderr_contains 'divine-funnelcake' "the warning should identify where publishing failed"
@@ -814,7 +814,7 @@ ghcr_fixtures "2026-02-24T12:31:46.817075705-03:00" 2
 run_staleness
 
 assert_status 0 "$last_status" "an odd timestamp must not break the check"
-assert_stderr_contains 'the pinned funnelcake images are stale' "a 2026-02-24 build is stale and must warn"
+assert_stderr_contains 'the default funnelcake images are stale' "a 2026-02-24 build is stale and must warn"
 
 # --- An unreachable registry fails open -------------------------------------
 # Offline, rate-limited, or GHCR down: warn about nothing, never block.
