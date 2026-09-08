@@ -885,6 +885,16 @@ jobs:
             "${VGV_TAG_GATE_RESULT}"
           )
 
+          # An unset value means the scope never resolved — a renamed or
+          # misspelled `goldens` output leaves both the job's `if` and this
+          # variable empty. Without this arm that reads as "not required",
+          # the elif accepts the skip, and every PR reports green having
+          # verified no pixels. Mirrors the APP_CI_REQUIRED backstop below.
+          if [ "${GOLDENS_REQUIRED}" != "true" ] && [ "${GOLDENS_REQUIRED}" != "false" ]; then
+            echo "Could not determine the Goldens scope."
+            exit 1
+          fi
+
           if [ "${GOLDENS_REQUIRED}" = "true" ]; then
             required_results+=("${GOLDENS_RESULT}")
           elif [[ "${GOLDENS_RESULT}" != "success" && "${GOLDENS_RESULT}" != "skipped" ]]; then
