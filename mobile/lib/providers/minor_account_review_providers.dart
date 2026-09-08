@@ -64,5 +64,7 @@ final currentMinorAccountReviewStatusProvider =
       }
 
       final repository = ref.watch(minorAccountReviewRepositoryProvider);
-      return repository.fetchCurrentStatus();
-    });
+      return repository.fetchCurrentStatus().timeout(
+        const Duration(seconds: 10),
+      );
+    }, retry: (_, error) => null);

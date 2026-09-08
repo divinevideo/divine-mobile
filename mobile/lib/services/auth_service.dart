@@ -4155,44 +4155,37 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         followingKnownEmpty,
       );
 
-      // Pre-fetch following list from REST API BEFORE setting auth state.
-      // Populate redirect state before the synchronous auth-state transition.
-      if (_preFetchFollowing != null && !hasFollowingCache) {
-        Log.debug(
-          '_setupUserSession: pre-fetching following list...',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        try {
-          await _preFetchFollowing(pubkeyHex);
-          Log.debug(
-            '_setupUserSession: following list pre-fetched',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        } catch (e) {
-          Log.warning(
-            'Pre-fetch following list failed (will rely on '
-            'FollowRepository): $e',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        }
-      } else if (hasFollowingCache) {
-        Log.debug(
-          '_setupUserSession: following list already cached — '
-          'skipping pre-fetch',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-      }
-
       Log.info(
         '_setupUserSession: setting auth state to authenticated',
         name: 'AuthService',
         category: LogCategory.auth,
       );
       _setAuthState(AuthState.authenticated);
+
+      if (_preFetchFollowing != null && !hasFollowingCache) {
+        unawaited(() async {
+          Log.debug(
+            '_setupUserSession: pre-fetching following list...',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
+          try {
+            await _preFetchFollowing(pubkeyHex);
+            Log.debug(
+              '_setupUserSession: following list pre-fetched',
+              name: 'AuthService',
+              category: LogCategory.auth,
+            );
+          } catch (e) {
+            Log.warning(
+              'Pre-fetch following list failed (will rely on '
+              'FollowRepository): $e',
+              name: 'AuthService',
+              category: LogCategory.auth,
+            );
+          }
+        }());
+      }
 
       // Register this account in the known accounts list
       await _knownAccounts.upsert(pubkeyHex, source);
