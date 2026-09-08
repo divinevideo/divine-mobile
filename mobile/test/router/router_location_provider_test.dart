@@ -26,7 +26,7 @@ void main() {
             authState: AuthState.authenticated,
             currentPublicKeyHex: syntheticTestPubkey,
           ),
-        ).cast(),
+        ),
         currentMinorAccountReviewStatusProvider.overrideWith(
           (ref) async => MinorAccountReviewStatus.active(),
         ),
