@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -1123,65 +1124,79 @@ void main() {
       },
     );
 
-    test('auth change cancels pending initialization retry', () async {
-      final failedInitialAInitialize = Completer<void>();
-      factory.initializeCompleters[pubkeyA] = failedInitialAInitialize;
-      when(() => mockAuth.currentIdentity).thenReturn(identityA);
-      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+    test('auth change cancels pending initialization retry', () {
+      fakeAsync((async) {
+        final failedInitialAInitialize = Completer<void>();
+        factory.initializeCompleters[pubkeyA] = failedInitialAInitialize;
+        when(() => mockAuth.currentIdentity).thenReturn(identityA);
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
 
-      final container = createRetryContainer(
-        retryDelay: (_) => const Duration(hours: 1),
-      );
-      addTearDown(container.dispose);
+        final container = createRetryContainer(
+          retryDelay: (_) => const Duration(hours: 1),
+        );
+        addTearDown(container.dispose);
 
-      container.read(nostrServiceProvider);
-      await pumpEventQueue(times: 1);
-      failedInitialAInitialize.completeError(
-        StateError('initial A initialize failed'),
-      );
-      await pumpEventQueue(times: 2);
+        container.read(nostrServiceProvider);
+        async.elapse(const Duration(milliseconds: 1));
+        failedInitialAInitialize.completeError(
+          StateError('initial A initialize failed'),
+        );
+        async.elapse(const Duration(milliseconds: 1));
 
-      factory.initializeCompleters.remove(pubkeyA);
-      when(() => mockAuth.currentIdentity).thenReturn(identityB);
-      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
-      authStream.add(AuthState.authenticated);
-      await pumpEventQueue(times: 3);
+        factory.initializeCompleters.remove(pubkeyA);
+        when(() => mockAuth.currentIdentity).thenReturn(identityB);
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
+        authStream.add(AuthState.authenticated);
+        async.elapse(const Duration(milliseconds: 1));
 
-      expect(factory.callCount, equals(2));
-      expect(factory.signers.last, same(identityB));
-      expect(container.read(nostrServiceProvider), same(factory.clients.last));
-      expect(
-        container.read(nostrSessionProvider).pubkey,
-        equals(pubkeyB),
-      );
-      expect(
-        container.read(nostrSessionProvider).phase,
-        equals(NostrSessionPhase.nostrReady),
-      );
+        expect(factory.callCount, equals(2));
+        expect(factory.signers.last, same(identityB));
+        expect(
+          container.read(nostrServiceProvider),
+          same(factory.clients.last),
+        );
+        expect(container.read(nostrSessionProvider).pubkey, equals(pubkeyB));
+        expect(
+          container.read(nostrSessionProvider).phase,
+          equals(NostrSessionPhase.nostrReady),
+        );
+
+        // Teeth: identity A's pending retry must have been cancelled.
+        // callCount cannot see this -- when the retry fires it bails on the
+        // changed identity anyway -- so assert on the timer itself. Removing
+        // the cancel in _handleIdentityChange leaves one timer pending here.
+        expect(async.pendingTimers, isEmpty);
+      });
     });
 
-    test('dispose cancels pending initialization retry', () async {
-      final failedInitialAInitialize = Completer<void>();
-      factory.initializeCompleters[pubkeyA] = failedInitialAInitialize;
-      when(() => mockAuth.currentIdentity).thenReturn(identityA);
-      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+    test('dispose cancels pending initialization retry', () {
+      fakeAsync((async) {
+        final failedInitialAInitialize = Completer<void>();
+        factory.initializeCompleters[pubkeyA] = failedInitialAInitialize;
+        when(() => mockAuth.currentIdentity).thenReturn(identityA);
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
 
-      final container = createRetryContainer(
-        retryDelay: (_) => const Duration(hours: 1),
-      );
+        final container = createRetryContainer(
+          retryDelay: (_) => const Duration(hours: 1),
+        );
 
-      final failedClient = container.read(nostrServiceProvider);
-      await pumpEventQueue(times: 1);
-      failedInitialAInitialize.completeError(
-        StateError('initial A initialize failed'),
-      );
-      await pumpEventQueue(times: 2);
+        final failedClient = container.read(nostrServiceProvider);
+        async.elapse(const Duration(milliseconds: 1));
+        failedInitialAInitialize.completeError(
+          StateError('initial A initialize failed'),
+        );
+        async.elapse(const Duration(milliseconds: 1));
 
-      container.dispose();
-      await pumpEventQueue(times: 1);
+        container.dispose();
+        async.elapse(const Duration(milliseconds: 1));
 
-      expect(factory.callCount, equals(1));
-      verify(failedClient.dispose).called(1);
+        expect(factory.callCount, equals(1));
+        verify(failedClient.dispose).called(1);
+
+        // Teeth, as above: removing the cancel in ref.onDispose leaves one
+        // timer pending here, which no callCount assertion can observe.
+        expect(async.pendingTimers, isEmpty);
+      });
     });
 
     test(
