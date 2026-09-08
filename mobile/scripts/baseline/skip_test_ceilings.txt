@@ -19,7 +19,6 @@ test/infrastructure/drift_setup_test.dart	1 # delete: asserts schemaVersion 6, n
 test/providers/curation_provider_lifecycle_test.dart	2 # rewrite: mock authservice lacks authstatestream, init errors out (#4836)
 test/providers/curation_provider_tab_refresh_test.dart	1 # rewrite: unstubbed authstatestream, no videoevent fallback value (#4836)
 test/providers/readiness_gate_providers_test.dart	1 # delete: appready no longer gates on nostr, only on foreground (#4836)
-test/providers/seen_videos_notifier_test.dart	1 # rewrite: races hydration, load lands after the 100ms expect (#4836)
 test/providers/video_events_provider_fresh_test.dart	1 # quarantine: real relay via realintegrationtesthelper, 40s timeout (#4836)
 test/providers/video_events_provider_test.dart	1 # rewrite: stubs subscribe(named filters:), now a positional param (#4836)
 test/repositories/profile_cache_sync_test.dart	1 # delete: pure mocktail tautology, asserts only values it stubbed (#4836)

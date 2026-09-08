@@ -92,7 +92,6 @@ test/providers/list_providers_test.dart	17
 test/providers/moderation_label_provider_session_test.dart	3
 test/providers/moderation_providers_blocked_follow_reconciler_test.dart	19
 test/providers/provider_identity_stream_test.dart	10
-test/providers/seen_videos_notifier_test.dart	8
 test/providers/sounds_providers_test.dart	2
 test/providers/supporter_providers_test.dart	1
 test/providers/user_profile_providers_test.dart	31
