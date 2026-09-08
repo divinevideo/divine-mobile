@@ -696,7 +696,7 @@ void main() {
         setUp: () {
           when(
             () => mockContentBlocklistRepository.blockUser(any()),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createBloc,
         act: (b) => b.add(CommentBlockUserRequested(validId('blocked'))),

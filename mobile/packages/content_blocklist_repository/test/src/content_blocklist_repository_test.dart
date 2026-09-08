@@ -4874,6 +4874,110 @@ void main() {
         });
       });
     });
+
+    group('publish result propagation (#6436)', () {
+      // The repository knows whether the kind 10000 mute-list publish landed
+      // (_publishMuteListToNostr returns a bool), but before #6436 that result
+      // was dropped at the blockUser/blockUsers/unblockUser boundary, so no
+      // caller could tell a confirmed change from one still pending on the
+      // relay. These pin that the result now reaches the caller. User-facing
+      // messaging is left alone: an unconfirmed publish is pending, not
+      // failed, and the retry-on-next-launch path (#8263) recovers it.
+      void armAuthenticatedSigner() {
+        when(() => mockSigner.isAuthenticated).thenReturn(true);
+        when(
+          () => mockSigner.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((inv) async => signedEventFromInvocation(inv));
+      }
+
+      void armPublish(PublishResult result) {
+        when(
+          () => mockClient.publishEvent(any()),
+        ).thenAnswer((_) async => result);
+      }
+
+      Future<ContentBlocklistRepository> readyService() async {
+        final service = ContentBlocklistRepository();
+        await service.syncBlockListsInBackground(
+          mockClient,
+          mockSigner,
+          ourPubkey,
+        );
+        return service;
+      }
+
+      test('blockUser returns true when the publish is confirmed', () async {
+        armAuthenticatedSigner();
+        armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+        final service = await readyService();
+
+        expect(await service.blockUser('pubkey1'), isTrue);
+      });
+
+      test(
+        'blockUser returns false when the publish is not confirmed',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(const PublishFailed());
+          final service = await readyService();
+
+          expect(await service.blockUser('pubkey1'), isFalse);
+        },
+      );
+
+      test(
+        'blockUser returns true for an already-blocked pubkey without '
+        'republishing',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+          final service = await readyService();
+
+          expect(await service.blockUser('pubkey1'), isTrue);
+          // No new pubkey, so nothing to publish: the state is already
+          // confirmed and the relay is not touched again.
+          expect(await service.blockUser('pubkey1'), isTrue);
+          verify(() => mockClient.publishEvent(any())).called(1);
+        },
+      );
+
+      test(
+        'blockUsers returns false when the batch publish is not confirmed',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(const PublishFailed());
+          final service = await readyService();
+
+          expect(await service.blockUsers(['pubkey1', 'pubkey2']), isFalse);
+        },
+      );
+
+      test('unblockUser returns true when the publish is confirmed', () async {
+        armAuthenticatedSigner();
+        armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+        final service = await readyService();
+        await service.blockUser('pubkey1');
+
+        expect(await service.unblockUser('pubkey1'), isTrue);
+      });
+
+      test(
+        'unblockUser returns false when the publish is not confirmed',
+        () async {
+          armAuthenticatedSigner();
+          armPublish(PublishSuccess(event: buildEvent(kind: 10000)));
+          final service = await readyService();
+          await service.blockUser('pubkey1');
+
+          armPublish(const PublishFailed());
+          expect(await service.unblockUser('pubkey1'), isFalse);
+        },
+      );
+    });
   });
 
   group('ContentBlocklistRepository - legacy block list migration', () {

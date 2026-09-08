@@ -151,7 +151,7 @@ void main() {
       ).thenAnswer((_) async => claimants);
       when(
         () => contentBlocklistRepository.blockUsers(any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
