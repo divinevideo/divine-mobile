@@ -70,7 +70,7 @@ class _VideoMetadataCaptionFieldState
   @override
   void dispose() {
     widget.focusNode.removeListener(_handleFocusChange);
-    _cubit.close();
+    unawaited(_cubit.close());
     super.dispose();
   }
 
