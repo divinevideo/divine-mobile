@@ -13,8 +13,12 @@ import 'package:people_lists_repository/people_lists_repository.dart';
 
 export 'package:openvine/features/lists_discovery/cubit/lists_discovery_state.dart';
 
-/// How many lists each column asks the relays for.
-const kListsDiscoveryLimit = 50;
+/// How many lists each column shows and enriches.
+///
+/// The relays are read over [kPublicListsRelayWindow] events so real lists
+/// surface past the empty default-list placeholders; this cap bounds the
+/// cards built and the thumbnails resolved, not what was read.
+const kListsDiscoveryColumnCap = 50;
 
 /// How many thumbnails each video-list card fan needs.
 const kListsDiscoveryThumbnails = 5;
@@ -91,7 +95,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     var latest = const <CuratedList>[];
 
     _videoSubscription = _curatedListService
-        .streamPublicListsFromRelays(limit: kListsDiscoveryLimit)
+        .streamPublicListsFromRelays()
         .listen(
           (lists) {
             latest = _sortedVideoLists(lists);
@@ -167,7 +171,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
       for (final list in lists)
         if (_viewerPubkey == null || list.pubkey != _viewerPubkey) list,
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return visible;
+    return List.unmodifiable(visible.take(kListsDiscoveryColumnCap));
   }
 
   Future<void> _loadPeopleLists() async {
@@ -176,16 +180,15 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     );
     try {
       final lists = await _peopleListsRepository.discoverPublicLists(
-        // Explicit even though it matches the repository default: both
-        // columns page by the same product invariant.
-        // ignore: avoid_redundant_argument_values
-        limit: kListsDiscoveryLimit,
+        limit: kPublicListsRelayWindow,
         excludeAuthor: _viewerPubkey,
       );
       emitIfOpen(
         state.copyWith(
           peopleStatus: ListsDiscoveryColumnStatus.success,
-          peopleLists: lists,
+          peopleLists: List.unmodifiable(
+            lists.take(kListsDiscoveryColumnCap),
+          ),
         ),
       );
     } catch (error, stackTrace) {
