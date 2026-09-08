@@ -1,5 +1,5 @@
-// ABOUTME: Pins the crosspost job client to the account-bound Divine token
-// ABOUTME: Guards against regressing to a raw, unbound Keycast session read
+// ABOUTME: Pins crosspost API providers to the account-bound Divine token
+// ABOUTME: Guards provider wiring against raw, unbound Keycast session reads
 
 import 'dart:convert';
 
@@ -11,6 +11,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/crosspost_api_client.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -58,13 +59,13 @@ void main() {
     // Keycast's rotating refresh (#7802).
     test('authenticates with the account-bound Divine token', () async {
       when(
-        () => auth.getBoundDivineAccessToken(),
+        auth.getBoundDivineAccessToken,
       ).thenAnswer((_) async => 'owner-bound-token');
 
       final client = buildContainer().read(crossposterApiClientProvider);
       await client.getCrossposts(eventId: eventId);
 
-      verify(() => auth.getBoundDivineAccessToken()).called(1);
+      verify(auth.getBoundDivineAccessToken).called(1);
       final headers =
           verify(
                 () => httpClient.get(
@@ -98,5 +99,45 @@ void main() {
         );
       },
     );
+  });
+
+  group('crosspostApiClientProvider', () {
+    test('authenticates with the account-bound Divine token', () async {
+      final auth = _MockAuthService();
+      final httpClient = _MockHttpClient();
+      when(
+        auth.getBoundDivineAccessToken,
+      ).thenAnswer((_) async => 'owner-bound-token');
+      when(
+        () => httpClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async =>
+            http.Response(jsonEncode({'enabled': false, 'state': null}), 200),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          instrumentedHttpClientFactoryProvider.overrideWithValue(
+            () => httpClient,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final client = container.read(crosspostApiClientProvider);
+      expect(client, isA<CrosspostApiClient>());
+      await client.getStatus();
+
+      verify(auth.getBoundDivineAccessToken).called(1);
+      final headers =
+          verify(
+                () => httpClient.get(
+                  any(),
+                  headers: captureAny(named: 'headers'),
+                ),
+              ).captured.single
+              as Map<String, String>;
+      expect(headers['Authorization'], equals('Bearer owner-bound-token'));
+    });
   });
 }

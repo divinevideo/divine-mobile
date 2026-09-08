@@ -2,20 +2,21 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/atproto_provisioning_state.dart';
 import 'package:openvine/services/crosspost_api_client.dart';
-
-class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
 class _MockHttpClient extends Mock implements http.Client {}
 
 void main() {
   group(CrosspostApiClient, () {
-    late _MockKeycastOAuth oauthClient;
     late _MockHttpClient httpClient;
     late CrosspostApiClient client;
+
+    // The token the injected account-bound reader returns, and how many times
+    // it was consulted. #8825.
+    String? boundToken;
+    var readerCalls = 0;
 
     const serverUrl = 'https://login.divine.video';
     const pubkey = 'abc123def456';
@@ -34,18 +35,16 @@ void main() {
     });
 
     setUp(() {
-      oauthClient = _MockKeycastOAuth();
       httpClient = _MockHttpClient();
+      boundToken = accessToken;
+      readerCalls = 0;
       client = CrosspostApiClient(
-        oauthClient: oauthClient,
+        accessTokenReader: () async {
+          readerCalls++;
+          return boundToken;
+        },
         serverUrl: serverUrl,
         httpClient: httpClient,
-      );
-      when(() => oauthClient.getSession()).thenAnswer(
-        (_) async => const KeycastSession(
-          bunkerUrl: 'bunker://test',
-          accessToken: accessToken,
-        ),
       );
     });
 
@@ -155,7 +154,7 @@ void main() {
       });
 
       test('throws CrosspostApiException when no session token', () async {
-        when(() => oauthClient.getSession()).thenAnswer((_) async => null);
+        boundToken = null;
 
         expect(
           () => client.getStatus(),
@@ -336,6 +335,46 @@ void main() {
 
         expect(status.username, isNull);
         expect(status.handle, isNull);
+      });
+    });
+
+    group('account-bound token (#8825)', () {
+      test(
+        'authenticates with the token from the injected bound reader',
+        () async {
+          // Pins the account-bound reader as the token source. Goes red if the
+          // client reverts to an unbound session read (the header would then
+          // carry the session token, not the bound reader's).
+          boundToken = 'bound-token-xyz';
+          when(
+            () => httpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer((_) async => http.Response(jsonEncode(statusJson), 200));
+
+          await client.getStatus();
+
+          final headers =
+              verify(
+                    () => httpClient.get(
+                      any(),
+                      headers: captureAny(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Map<String, String>;
+          expect(readerCalls, 1);
+          expect(headers['Authorization'], 'Bearer bound-token-xyz');
+        },
+      );
+
+      test('exception diagnostics omit the raw message', () {
+        const e = CrosspostApiException(
+          'connect failed for https://host?token=SECRETVALUE',
+          statusCode: 500,
+        );
+
+        final text = e.toString();
+        expect(text, isNot(contains('SECRETVALUE')));
+        expect(text, isNot(contains('https://host')));
+        expect(text, contains('500'));
       });
     });
   });
