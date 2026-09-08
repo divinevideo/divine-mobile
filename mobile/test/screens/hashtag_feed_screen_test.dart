@@ -1,5 +1,5 @@
-// ABOUTME: Covers the chrome the hashtag feed owns when it is not embedded,
-// ABOUTME: starting with the app-bar title that names the hashtag.
+// ABOUTME: Covers the chrome the hashtag feed owns when it is not embedded:
+// ABOUTME: its app-bar title and the pull-to-refresh wiring on its grid.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,6 +8,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
@@ -85,6 +86,14 @@ void main() {
       await pumpScreen(tester, 'bitcoin');
 
       expect(find.text('#bitcoin'), findsOneWidget);
+    });
+
+    testWidgets('offers pull-to-refresh over the results', (tester) async {
+      await pumpScreen(tester, 'bitcoin');
+
+      // FeedRefreshControl is only inserted when the grid is given an
+      // onRefresh, so its presence is what proves the screen wired one.
+      expect(find.byType(FeedRefreshControl), findsOneWidget);
     });
   });
 }
