@@ -161,4 +161,65 @@ void main() {
       );
     });
   });
+
+  group('connectionDiagnosticLevelFor', () {
+    // Every string below is copied verbatim from a `log(...)` call in
+    // web_socket_connection_manager.dart, with its interpolations resolved
+    // the way the manager resolves them — a Duration renders as
+    // `0:00:05.000000`, which is why none of the give-up messages contains
+    // the substring `timeout`.
+    test('reports how a connection gave up as a warning', () {
+      const gaveUp = [
+        'Connection timed out after 0:00:05.000000',
+        'Max reconnect attempts reached for wss://relay.example',
+        'Connect abandoned: wss://relay.example - no handshake time left',
+        'Reconnect budget cannot fit the next backoff for '
+            'wss://relay.example; stopping before attempt 3',
+        'Timed out closing orphaned channel after 0:00:02.000000',
+      ];
+
+      for (final message in gaveUp) {
+        expect(
+          RelayBase.connectionDiagnosticLevelFor(message),
+          RelayDiagnosticLevel.warning,
+          reason: 'a support export has to surface "$message"',
+        );
+      }
+    });
+
+    test('keeps already-classified failures at warning', () {
+      const failures = [
+        'Connection failed (WebSocket): WebSocketChannelException',
+        'Stream error: connection reset by peer',
+        'Health check failed: connection idle, forcing disconnect',
+        'Connection idle for 90s (timeout: 60s), forcing disconnect',
+      ];
+
+      for (final message in failures) {
+        expect(
+          RelayBase.connectionDiagnosticLevelFor(message),
+          RelayDiagnosticLevel.warning,
+          reason: 'a support export has to surface "$message"',
+        );
+      }
+    });
+
+    test('leaves ordinary lifecycle progress at info', () {
+      const progress = [
+        'Connecting to wss://relay.example',
+        'Connected to wss://relay.example',
+        'Already connected to wss://relay.example',
+        'Disconnected from wss://relay.example',
+        'Reconnecting in 4s (attempt 2/5)',
+      ];
+
+      for (final message in progress) {
+        expect(
+          RelayBase.connectionDiagnosticLevelFor(message),
+          RelayDiagnosticLevel.info,
+          reason: '"$message" is not a failure',
+        );
+      }
+    });
+  });
 }

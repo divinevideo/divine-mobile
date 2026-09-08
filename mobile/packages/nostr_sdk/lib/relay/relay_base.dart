@@ -73,7 +73,7 @@ class RelayBase extends Relay {
           log("[$url] $msg");
           diagnose(
             RelayDiagnosticSite.connectionLifecycle,
-            _connectionDiagnosticLevel(msg),
+            connectionDiagnosticLevelFor(msg),
             msg,
           );
         },
@@ -102,13 +102,35 @@ class RelayBase extends Relay {
     }
   }
 
-  RelayDiagnosticLevel _connectionDiagnosticLevel(String message) {
+  /// Phrases [WebSocketConnectionManager] uses when a connection attempt
+  /// did not succeed.
+  ///
+  /// The manager reports its outcome in prose, so this list has to track the
+  /// wording it actually emits. `timed out` is the one that reads like a
+  /// duplicate and is not: the manager renders a `Duration` after
+  /// `Connection timed out after`, so that line carries no `timeout`
+  /// substring, and the same holds for `Max reconnect attempts reached`,
+  /// `Connect abandoned` and `stopping before attempt`. Those four are how a
+  /// relay actually gives up, so without them a relay that timed out on every
+  /// handshake and then spent its reconnect budget reaches a support export
+  /// at the same severity as an ordinary `Connecting to` line.
+  static const List<String> _connectionFailurePhrases = [
+    'error',
+    'failed',
+    'timeout',
+    'timed out',
+    'abandoned',
+    'exhausted',
+    'max reconnect attempts',
+    'stopping before attempt',
+  ];
+
+  /// Severity for a [WebSocketConnectionManager] log line.
+  @visibleForTesting
+  static RelayDiagnosticLevel connectionDiagnosticLevelFor(String message) {
     final normalized = message.toLowerCase();
-    if (normalized.contains('error') ||
-        normalized.contains('failed') ||
-        normalized.contains('timeout') ||
-        normalized.contains('exhausted')) {
-      return RelayDiagnosticLevel.warning;
+    for (final phrase in _connectionFailurePhrases) {
+      if (normalized.contains(phrase)) return RelayDiagnosticLevel.warning;
     }
     return RelayDiagnosticLevel.info;
   }
