@@ -282,14 +282,36 @@ class RelayPool {
     ),
   );
 
+  /// NIP-01's machine-readable `OK` / `CLOSED` prefixes, plus NIP-42's
+  /// `auth-required` and the `unsupported` prefix NIP-01 uses in its own
+  /// `CLOSED` examples.
+  static const Set<String> _closedReasonPrefixes = {
+    'auth-required',
+    'blocked',
+    'duplicate',
+    'error',
+    'invalid',
+    'mute',
+    'pow',
+    'rate-limited',
+    'restricted',
+    'unsupported',
+  };
+
+  /// Reduces a `CLOSED` reason to its NIP-01 prefix, or `other`.
+  ///
+  /// Matches the prefix rather than searching the whole reason, like
+  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
+  /// Searching mislabels the human-readable half: `blocked: too many failed
+  /// auth attempts` is not an auth problem, and sends triage after NIP-42
+  /// when the account is blocked. Only the fixed prefixes above are ever
+  /// emitted, so relay-supplied text still cannot reach a support export.
   String _closedReasonCategory(String reason) {
-    final normalized = reason.toLowerCase();
-    if (normalized.contains('auth')) return 'auth-required';
-    if (normalized.contains('rate') || normalized.contains('limit')) {
-      return 'rate-limited';
-    }
-    if (normalized.contains('blocked') || normalized.contains('restricted')) {
-      return 'restricted';
+    final normalized = reason.trim().toLowerCase();
+    for (final prefix in _closedReasonPrefixes) {
+      if (!normalized.startsWith(prefix)) continue;
+      final rest = normalized.substring(prefix.length);
+      if (rest.isEmpty || rest.startsWith(':')) return prefix;
     }
     return 'other';
   }

@@ -114,6 +114,35 @@ void main() {
       },
     );
 
+    test('categorizes a CLOSED reason by its NIP-01 prefix', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      // The human-readable half mentions auth and rate limits; neither is
+      // what the relay actually said, and both are what a substring search
+      // would have reported.
+      await relay.deliver([
+        'CLOSED',
+        'blocked-subscription-id',
+        'blocked: too many failed auth attempts, slow your rate down',
+      ]);
+      await relay.deliver([
+        'CLOSED',
+        'unsupported-subscription-id',
+        'unsupported: filter contains unknown elements',
+      ]);
+
+      final settlements = diagnostics
+          .where((entry) => entry.site == RelayDiagnosticSite.requestSettlement)
+          .map((entry) => entry.message)
+          .toList();
+      expect(settlements, hasLength(2));
+      expect(settlements.first, contains('reason=blocked'));
+      expect(settlements.first, isNot(contains('auth-required')));
+      expect(settlements.first, isNot(contains('rate-limited')));
+      expect(settlements.last, contains('reason=unsupported'));
+    });
+
     test('a throwing diagnostics sink cannot break relay behavior', () async {
       final throwingNostr = Nostr(
         LocalNostrSigner(
