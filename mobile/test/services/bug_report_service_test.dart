@@ -8,6 +8,8 @@ import 'package:analytics/analytics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show BugReportData, LogEntry, LogLevel;
+import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -87,27 +89,52 @@ void main() {
       expect(data.timestamp, isA<DateTime>());
     });
 
-    test('includes captured relay diagnostics in the support export', () async {
+    test('retains a terminal relay failure after bounded chatter', () async {
       final capture = LogCaptureService();
       await capture.clearAllLogs();
       // The capture buffer is a process-global singleton shared by every
-      // suite in the merged VGV isolate, so this entry has to go back out.
+      // suite in the merged VGV isolate, so these entries have to go back out.
       addTearDown(capture.clearAllLogs);
-      Log.info(
-        '[wss://relay.example] Relay connection succeeded',
-        name: 'RelayDiagnostics',
-        category: LogCategory.relay,
+      final adapter = RelayDiagnosticsAdapter(maxEventsPerWindow: 1);
+      const relayUrl = 'wss://relay.example';
+      for (var i = 0; i < 4; i++) {
+        adapter(
+          RelayDiagnostic(
+            site: RelayDiagnosticSite.connectionLifecycle,
+            level: RelayDiagnosticLevel.info,
+            relayUrl: relayUrl,
+            message: 'Connection progress $i',
+          ),
+        );
+      }
+      adapter(
+        const RelayDiagnostic(
+          site: RelayDiagnosticSite.connectionLifecycle,
+          level: RelayDiagnosticLevel.warning,
+          relayUrl: relayUrl,
+          message: 'Relay connection failed',
+        ),
       );
 
       final data = await service.collectDiagnostics(
         userDescription: 'Relay connection problem',
       );
 
-      final relayEntry = data.recentLogs.singleWhere(
+      final relayEntries = data.recentLogs.where(
         (entry) => entry.name == 'RelayDiagnostics',
       );
-      expect(relayEntry.category, LogCategory.relay);
-      expect(relayEntry.message, contains('Relay connection succeeded'));
+      expect(
+        relayEntries.where(
+          (entry) => entry.message.contains('Relay connection failed'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        relayEntries.where(
+          (entry) => entry.message.contains('diagnostics suppressed'),
+        ),
+        hasLength(1),
+      );
     });
 
     test('should collect error counts from injected tracker', () async {
