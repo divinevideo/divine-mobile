@@ -196,6 +196,16 @@ MockNostrClient createMockNostrService() {
   // type 'Null' is not a subtype of type 'Future<List<String>>'
   when(() => mockNostr.queryEvents(any())).thenAnswer((_) async => <Event>[]);
 
+  // Stub the relay-status surface (never null) so the shell's relay side
+  // effects — AppShellSideEffects watching relay_providers — do not get
+  // type 'Null' is not a subtype of type 'Map<String, RelayConnectionStatus>'
+  when(() => mockNostr.relayStatuses).thenReturn(const {});
+  when(
+    () => mockNostr.relayStatusStream,
+  ).thenAnswer((_) => const Stream<Map<String, RelayConnectionStatus>>.empty());
+  when(mockNostr.getRelayPoolCounters).thenReturn(const {});
+  when(() => mockNostr.defaultRelayUrl).thenReturn('wss://relay.test');
+
   // Stub publicKey with empty string default so tests that access it
   // do not get type 'Null' is not a subtype of type 'String'
   when(() => mockNostr.publicKey).thenReturn('');
