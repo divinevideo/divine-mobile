@@ -92,7 +92,10 @@ ci_config=false
 
 while IFS= read -r path; do
   case "$path" in
-    *.md|docs/*|brand-guidelines/*|mobile/docs/*) ;;
+    # A markdown file renders no pixel, builds no binary and exercises no
+    # service suite, wherever it sits. Skipping the scope blocks outright
+    # keeps a README inside a code directory from turning them on.
+    *.md|docs/*|brand-guidelines/*|mobile/docs/*) continue ;;
     *) docs_only=false ;;
   esac
 
@@ -113,7 +116,6 @@ while IFS= read -r path; do
       ci_config=true ;;
     mobile/scripts/ci/*)
       app=true; ci_config=true ;;
-    *.md|docs/*|brand-guidelines/*|mobile/docs/*) ;;
     mobile/lib/*|mobile/test/*|mobile/integration_test/*|mobile/scripts/*|scripts/*)
       app=true ;;
     mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/web/*|mobile/assets/*|mobile/fonts/*|mobile/overrides/*|mobile/l10n/*)
