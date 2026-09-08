@@ -162,30 +162,38 @@ void main() {
     testWidgets('speaks the sponsored state rather than relying on colour', (
       tester,
     ) async {
-      final handle = tester.ensureSemantics();
-      await pumpBar(
-        tester,
-        ExploreTabsState(
-          featuredTab: _featured(
-            disclosureLabel: const {'default': 'Acme Bikes'},
-          ),
-        ),
-      );
-
+      // Disposed in a finally rather than an addTearDown: flutter_test runs
+      // _verifySemanticsHandlesWereDisposed inside the test body, before any
+      // teardown callback, so a deferred dispose reads as a leak. A bare
+      // dispose after the expect would be skipped when the expect throws,
+      // leaving semantics enabled for the rest of the merged isolate.
       final l10n = lookupAppLocalizations(const Locale('en'));
-      // Matched as a substring: Tab merges its children into one node, so the
-      // pill's label arrives joined to the tab's own.
-      expect(
-        find.bySemanticsLabel(
-          RegExp(
-            RegExp.escape(
-              l10n.exploreFeaturedSponsoredPillSemanticLabel('Skate Week'),
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpBar(
+          tester,
+          ExploreTabsState(
+            featuredTab: _featured(
+              disclosureLabel: const {'default': 'Acme Bikes'},
             ),
           ),
-        ),
-        findsWidgets,
-      );
-      handle.dispose();
+        );
+
+        // Matched as a substring: Tab merges its children into one node, so
+        // the pill's label arrives joined to the tab's own.
+        expect(
+          find.bySemanticsLabel(
+            RegExp(
+              RegExp.escape(
+                l10n.exploreFeaturedSponsoredPillSemanticLabel('Skate Week'),
+              ),
+            ),
+          ),
+          findsWidgets,
+        );
+      } finally {
+        handle.dispose();
+      }
     });
 
     testWidgets('truncates an overlong pill harder than the label', (
