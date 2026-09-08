@@ -26,6 +26,7 @@ import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -3973,6 +3974,73 @@ void main() {
           reason: 'the surviving draft still references this rendered file',
         );
         expect(goner.existsSync(), isFalse);
+      },
+    );
+
+    test(
+      'discard reaps the files its deleted autosave row referenced',
+      () async {
+        // The deferred reference check asks the drafts table whether anything
+        // still points at a path. On discard reset() deletes the autosave row,
+        // so the check is only meaningful once that row is gone: run it first
+        // and the row it is about to delete keeps the file, while the flush has
+        // already emptied the deferral set so nothing retries it.
+        final orphan = File(p.join(tempDir.path, 'discarded-orphan.mp4'))
+          ..writeAsBytesSync(const [0, 1, 2, 3]);
+        final realDraftStorage = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        await realDraftStorage.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [
+              DivineVideoClip(
+                id: 'discarded',
+                video: EditorVideo.file(orphan.path),
+                duration: const Duration(seconds: 6),
+                recordedAt: DateTime(2025),
+                targetAspectRatio: AspectRatio.square,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+          ),
+        );
+        when(() => mockDraftStorage.draftExists(any())).thenAnswer(
+          (invocation) => realDraftStorage.draftExists(
+            invocation.positionalArguments.first as String,
+          ),
+        );
+        when(() => mockDraftStorage.deleteDraft(any())).thenAnswer(
+          (invocation) => realDraftStorage.deleteDraft(
+            invocation.positionalArguments.first as String,
+          ),
+        );
+
+        final notifier = container.read(videoEditorProvider.notifier);
+        notifier.deferFileCleanup([orphan.path]);
+        expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+
+        await container.read(videoPublishProvider.notifier).clearAll();
+        await settleBackgroundWork();
+
+        expect(
+          await realDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
+          isFalse,
+          reason: 'discard must have deleted the autosave row',
+        );
+        expect(
+          orphan.existsSync(),
+          isFalse,
+          reason:
+              'the discarded autosave row was the only thing referencing this '
+              'file, so the same reset must reap it',
+        );
+        expect(notifier.deferredFileCleanupForTest, isEmpty);
       },
     );
 

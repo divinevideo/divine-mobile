@@ -297,11 +297,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
-    _startDeferredFileCleanup();
     draftId = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
     }
+    // Started last, not first: the cleanup reference-checks each path against
+    // the drafts table, so it has to run against the state this reset leaves
+    // behind. Started before [removeAutosavedDraft], it sees the autosave row
+    // that is about to be deleted, keeps the file it references, and cannot
+    // retry — [_flushDeferredFileCleanup] empties the deferral set as it goes.
+    // [removeAutosavedDraft] logs its own failures instead of throwing, so
+    // this still runs on every path.
+    _startDeferredFileCleanup();
   }
 
   // === METADATA ===
