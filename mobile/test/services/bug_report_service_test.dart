@@ -90,6 +90,9 @@ void main() {
     test('includes captured relay diagnostics in the support export', () async {
       final capture = LogCaptureService();
       await capture.clearAllLogs();
+      // The capture buffer is a process-global singleton shared by every
+      // suite in the merged VGV isolate, so this entry has to go back out.
+      addTearDown(capture.clearAllLogs);
       Log.info(
         '[wss://relay.example] Relay connection succeeded',
         name: 'RelayDiagnostics',
