@@ -17,7 +17,8 @@ Guardian Project's `libproofmode` generates:
 2. **Sensor Data CSV** - Device sensor readings at capture time (location, network, device info)
 3. **PGP Signature** - OpenPGP signature of the video file
 4. **Public Key** - PGP public key for signature verification
-5. **Device Attestation** (Android only) - Hardware attestation token from SafetyNet/Play Integrity
+5. **Device Attestation** - Android Keystore hardware attestation during proof
+   generation, plus iOS App Attest added at publish time
 
 ## Nostr Event Tags
 

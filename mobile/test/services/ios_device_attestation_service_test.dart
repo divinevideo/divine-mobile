@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:app_device_integrity/app_device_integrity.dart';
+import 'package:divine_device_attestation/divine_device_attestation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,7 +77,7 @@ void main() {
 
     test('times out when App Attest never answers', () async {
       service = IosDeviceAttestationService(
-        deviceIntegrity: _NeverCompletingAppDeviceIntegrity(),
+        deviceAttestation: _NeverCompletingDeviceAttestation(),
         attestationTimeout: const Duration(milliseconds: 1),
       );
 
@@ -133,11 +133,10 @@ void main() {
   });
 }
 
-class _NeverCompletingAppDeviceIntegrity extends AppDeviceIntegrity {
+class _NeverCompletingDeviceAttestation extends DivineDeviceAttestation {
   @override
   Future<String?> getAttestationServiceSupport({
     required String challengeString,
-    int? gcp,
-    String? keyScope,
+    required String keyScope,
   }) => Completer<String?>().future;
 }
