@@ -118,6 +118,18 @@ class CheckBranchMergeableTest(unittest.TestCase):
         self.assertIn("--deepen", result.stdout)
 
 
+    def test_missing_base_ref_warns_but_does_not_report_a_conflict(self):
+        # origin/main renamed, deleted, or never fetched: merge-tree exits 1
+        # here ("not something we can merge"), the same code as a real
+        # conflict, so an unchecked ref would be misreported as one.
+        result = self.run_check(base="origin/does-not-exist-ref")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("does not resolve to a", result.stdout)
+        self.assertIn("Continuing", result.stdout)
+        self.assertNotIn("Branch has merge conflicts", result.stdout)
+
+
 class InstallHooksWiringTest(unittest.TestCase):
     def test_pre_push_delegates_to_the_script(self):
         source = (
