@@ -330,29 +330,37 @@ void main() {
   });
 
   test('platform settings compare equivalent connection values', () {
+    // Deliberately not `const`: Dart canonicalizes identical const objects to
+    // one instance, which would satisfy the equality assertion below by
+    // identity and let it pass even if `props` were wrong.
+    // ignore: prefer_const_constructors
     final first = CrosspostingPlatformSettings(
       platform: CrosspostingPlatform.instagram,
       supportsAutomatic: true,
+      // Keep connections distinct so equality exercises their value fields.
+      // ignore: prefer_const_constructors
       connection: CrosspostingConnection(
         id: 'connection-id',
         platform: CrosspostingPlatform.instagram,
         status: CrosspostingConnectionStatus.connected,
         externalAccountId: 'account-id',
         externalAccountName: '@creator',
-        tokenExpiresAt: DateTime.utc(2026, 7, 22),
       ),
       mode: CrosspostingMode.manual,
     );
+    // Keep settings distinct so equality cannot pass by const identity.
+    // ignore: prefer_const_constructors
     final second = CrosspostingPlatformSettings(
       platform: CrosspostingPlatform.instagram,
       supportsAutomatic: true,
+      // Keep connections distinct so equality exercises their value fields.
+      // ignore: prefer_const_constructors
       connection: CrosspostingConnection(
         id: 'connection-id',
         platform: CrosspostingPlatform.instagram,
         status: CrosspostingConnectionStatus.connected,
         externalAccountId: 'account-id',
         externalAccountName: '@creator',
-        tokenExpiresAt: DateTime.utc(2026, 7, 22),
       ),
       mode: CrosspostingMode.manual,
     );

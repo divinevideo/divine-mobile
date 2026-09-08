@@ -24,7 +24,7 @@ import 'package:openvine/repositories/bluesky_crosspost_repository.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/crosspost_api_client.dart';
-import 'package:openvine/services/crossposter_api_client.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/services/media_viewer_auth_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -359,10 +359,10 @@ BlueskyCrosspostRepository blueskyCrosspostRepository(Ref ref) {
 
 /// Crossposter service client for manual per-video crossposting
 @riverpod
-CrossposterApiClient crossposterApiClient(Ref ref) {
-  final oauthClient = ref.watch(oauthClientProvider);
-  final client = CrossposterApiClient(
-    oauthClient: oauthClient,
+CrosspostingApiClient crossposterApiClient(Ref ref) {
+  final authService = ref.watch(authServiceProvider);
+  final client = CrosspostingApiClient(
+    accessTokenReader: authService.getBoundDivineAccessToken,
     httpClient: ref.watch(instrumentedHttpClientFactoryProvider)(),
   );
   ref.onDispose(client.close);
