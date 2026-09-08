@@ -2,12 +2,6 @@
 // ABOUTME: Tests audio extraction result model, exceptions, cleanup, and
 // ABOUTME: core extraction path with ProVideoEditor mock.
 
-// Permanent: swaps the global ProVideoEditor.instance while exercising file
-// extraction paths; remove when AudioExtractionService accepts an injected
-// editor dependency.
-@Tags(['skip_very_good_optimization'])
-library;
-
 import 'dart:io';
 import 'dart:ui';
 
@@ -272,12 +266,14 @@ void main() {
   group('AudioExtractionService with ProVideoEditor mock', () {
     late AudioExtractionService service;
     late _MockProVideoEditor mockEditor;
+    late ProVideoEditor originalProVideoEditorInstance;
     late Directory tempDir;
     late File fakeVideoFile;
 
     setUp(() async {
       service = AudioExtractionService();
       mockEditor = _MockProVideoEditor();
+      originalProVideoEditorInstance = ProVideoEditor.instance;
       ProVideoEditor.instance = mockEditor;
 
       tempDir = await Directory.systemTemp.createTemp('extraction_test_');
@@ -286,6 +282,7 @@ void main() {
     });
 
     tearDown(() async {
+      ProVideoEditor.instance = originalProVideoEditorInstance;
       try {
         await tempDir.delete(recursive: true);
       } catch (_) {
