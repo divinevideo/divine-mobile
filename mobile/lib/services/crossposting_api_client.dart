@@ -482,9 +482,14 @@ class CrosspostingApiClient {
     return _parseJobs(json);
   }
 
+  /// A body without a `jobs` collection is malformed, not an empty result:
+  /// reporting zero jobs tells the user the crosspost finished when nothing
+  /// was scheduled. Matches how `platforms`, `connections` and `preferences`
+  /// are read, and keeps a non-list value a [CrosspostingApiException] rather
+  /// than a raw cast error no caller catches.
   List<CrosspostJob> _parseJobs(Map<String, dynamic> json) {
-    final jobs = json['jobs'] as List<dynamic>? ?? const [];
-    return jobs
+    final entries = _requiredJsonField<List<dynamic>>(json, 'jobs');
+    return entries
         .whereType<Map<String, dynamic>>()
         .map(CrosspostJob.fromJson)
         .toList();

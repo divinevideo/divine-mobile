@@ -1152,6 +1152,22 @@ void main() {
           );
         });
 
+        // Same user-visible failure as the empty body above, through the
+        // other door: an empty JSON object is well-formed, so the guard on
+        // the raw body does not see it and the sheet reports a finished
+        // crosspost with nothing scheduled.
+        test('rejects a success body with no jobs collection', () {
+          stubPost(jsonEncode(<String, dynamic>{}));
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(isA<CrosspostingApiException>()),
+          );
+        });
+
         test('POSTs the platform list and parses jobs', () async {
           stubPost(
             jsonEncode({
@@ -1234,6 +1250,18 @@ void main() {
       });
 
       group('getCrossposts', () {
+        // A cast error here escapes the cubit's `on CrosspostingApiException`
+        // poll handler, so the timer keeps firing it every tick with the
+        // sheet stuck mid-progress.
+        test('rejects a jobs value that is not a collection', () {
+          stubGet(jsonEncode({'jobs': 'none'}));
+
+          expect(
+            () => client.getCrossposts(eventId: eventId),
+            throwsA(isA<CrosspostingApiException>()),
+          );
+        });
+
         test('parses pending job statuses from the wire', () async {
           stubGet(
             jsonEncode({
