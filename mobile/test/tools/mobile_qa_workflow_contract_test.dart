@@ -22,18 +22,14 @@ void main() {
     // new `push:` left every needle matching while the workflow started
     // firing on every push to every branch.
     setUpAll(() {
-      workflow =
-          loadYaml(
-                File(
-                  '../.github/workflows/mobile_service_integration_tests.yaml',
-                ).readAsStringSync(),
-              )
-              as Map<dynamic, dynamic>;
-      mobileCiWorkflow =
-          loadYaml(
-                File('../.github/workflows/mobile_ci.yaml').readAsStringSync(),
-              )
-              as Map<dynamic, dynamic>;
+      workflow = loadYaml(
+        File(
+          '../.github/workflows/mobile_service_integration_tests.yaml',
+        ).readAsStringSync(),
+      ) as Map<dynamic, dynamic>;
+      mobileCiWorkflow = loadYaml(
+        File('../.github/workflows/mobile_ci.yaml').readAsStringSync(),
+      ) as Map<dynamic, dynamic>;
       triggers = workflow['on'] as Map<dynamic, dynamic>;
       changes =
           (workflow['jobs'] as Map<dynamic, dynamic>)['changes']
