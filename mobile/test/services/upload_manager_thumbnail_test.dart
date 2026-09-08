@@ -8,19 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/background_activity_manager.dart';
-import 'package:openvine/services/circuit_breaker_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
-
-class _MockVideoCircuitBreaker extends Mock implements VideoCircuitBreaker {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('UploadManager - Local Thumbnail Generation', () {
     late _MockBlossomUploadService mockBlossomService;
-    late _MockVideoCircuitBreaker mockCircuitBreaker;
 
     setUpAll(() {
       registerFallbackValue(File(''));
@@ -28,14 +24,6 @@ void main() {
 
     setUp(() {
       mockBlossomService = _MockBlossomUploadService();
-      mockCircuitBreaker = _MockVideoCircuitBreaker();
-
-      // Default circuit breaker behavior
-      when(() => mockCircuitBreaker.allowRequests).thenReturn(true);
-      when(
-        () => mockCircuitBreaker.state,
-      ).thenReturn(CircuitBreakerState.closed);
-      when(() => mockCircuitBreaker.failureRate).thenReturn(0.0);
     });
 
     test('BlossomUploadService has uploadImage method', () {
