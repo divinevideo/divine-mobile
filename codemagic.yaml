@@ -1488,6 +1488,13 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Same fixture as the iOS lane, and it has to be: both workflows run
+        # the shared *run_maestro_smoke_tests script, which passes
+        # `-e QA_VIDEO_EVENT_ID`. Leaving it unset here expands to an empty
+        # string under `set -e` (no `set -u`), which fails prSeededVideoPlayback
+        # on every dispatched Android run. The contract test pins the two
+        # values as equal so they cannot drift.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/.gradle/caches
