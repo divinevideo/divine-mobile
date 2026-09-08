@@ -40,6 +40,13 @@ ALTER TABLE nostr.user_feed_video_candidates_refresh_mv MODIFY REFRESH EVERY 30 
 -- Migration 000257 removed this view and its destination table when the relay
 -- feed switched to publication-order pagination. Keeping its old ALTER here
 -- would make every current local startup report a misleading skipped tuning.
+--
+-- The same migration created a successor, nostr.new_videos_snapshot_refresh_mv
+-- (000257:174), at `REFRESH EVERY 15 MINUTE OFFSET 4 MINUTE`. It is left
+-- unshortened because nothing local reads it: it serves
+-- `/api/videos?sort=published` (client.rs:2539 should_use_new_snapshot), and
+-- divine-mobile only ever sends sort=recent/trending/watching/popular/loops.
+-- Shorten it here if a New feed is ever wired up.
 
 -- DELIBERATELY NOT SHORTENED: relay_feed_cache_refresh_mv.
 --
