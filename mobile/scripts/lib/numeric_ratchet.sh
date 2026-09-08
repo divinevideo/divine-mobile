@@ -38,7 +38,8 @@
 # Optional:
 #   validate_baseline_growth_policy() validates a guard-owned exception policy
 #                         before growth is filtered. It receives MAIN_F, BASE_F,
-#                         CUR_F, and REPO_ROOT; nonzero marks the run failed.
+#                         CUR_F, REPO_ROOT, and BASE_STATUS; nonzero marks the
+#                         run failed. BASE_STATUS is 0 only when MAIN_F is usable.
 #   filter_added_baseline_growth() reads proposed added baseline rows from stdin
 #                         and emits only rows that should remain failures. It is
 #                         passed MAIN_F, BASE_F, CUR_F, and REPO_ROOT as args.
@@ -178,7 +179,7 @@ run_numeric_ratchet() {
     base_status=3
   fi
   if declare -F validate_baseline_growth_policy >/dev/null; then
-    if ! validate_baseline_growth_policy "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT"; then
+    if ! validate_baseline_growth_policy "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT" "$base_status"; then
       fail=1
     fi
   fi

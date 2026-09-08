@@ -38,7 +38,7 @@ ALLOW_NO_BASE="${SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE"
 
 NEW_HINT="Do not grow service-layer god files under mobile/lib/services. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. For an in-tree move, annotate the new baseline row with '# renamed-from: <old-key>' after reviewing the provenance. See epic #4338."
-STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold."
+STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold. If this is paired with a NEW key for an in-tree move, UPDATE_BASELINE alone cannot approve the moved oversized service."
 FOOTER="Service-layer god-file sizes are frozen and may only decrease. Keep new
 work out of oversized services and continue the UI -> BLoC/Cubit -> Repository
 -> Client extraction path from epic #4338."
@@ -94,7 +94,7 @@ service_god_file_rename_claims() {
 }
 
 validate_baseline_growth_policy() {
-  local main_f="$1" base_f="$2" cur_f="$3" repo_root="$4"
+  local main_f="$1" base_f="$2" cur_f="$3" repo_root="$4" base_status="$5"
   local claims claim_kind new_key new_count old_key old_count current_count base_new_count
   local old_path new_path rename_status merge_base fail=0
   SERVICE_GOD_FILE_VALID_RENAME_KEYS=""
@@ -113,6 +113,9 @@ validate_baseline_growth_policy() {
       fail=1
       continue
     fi
+    # Shape validation remains active without a base, but provenance and count
+    # validation require MAIN_F, which is usable only when base_status is zero.
+    [[ "$base_status" -ne 0 ]] && continue
 
     if [[ "$(printf '%s\n' "$claims" | awk -F "$TAB" -v key="$new_key" '$1 == "CLAIM" && $2 == key { n++ } END { print n+0 }')" -gt 1 ]]; then
       echo "FAIL [$RATCHET_LABEL]: duplicate rename claim for new key $new_key"

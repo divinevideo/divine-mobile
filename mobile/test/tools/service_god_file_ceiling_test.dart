@@ -141,6 +141,10 @@ void main() {
       expect(res.exitCode, 1);
       expect(res.stdout, contains('no longer emitted'));
       expect(res.stdout, contains('removed, renamed, or dropped below'));
+      expect(
+        res.stdout,
+        contains('UPDATE_BASELINE alone cannot approve'),
+      );
       expect(res.stdout, contains('UPDATE_BASELINE=1 bash'));
       expect(res.stdout, contains('check_service_god_file_ceiling.sh'));
     });
@@ -294,6 +298,24 @@ void main() {
 
           expect(res.exitCode, 1);
           expect(res.stdout, contains('malformed renamed-from annotation'));
+        },
+      );
+
+      test(
+        'allows a settled annotation when the base ref is unavailable',
+        () {
+          writeLines('new_service.dart', 6);
+          File(baselinePath).writeAsStringSync(
+            '# Frozen baseline\n'
+            'lib/services/new_service.dart\t6 '
+            '# renamed-from: lib/services/old_service.dart\n',
+          );
+
+          final res = run();
+
+          expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+          expect(res.stdout, contains('unavailable; skipping'));
+          expect(res.stdout, isNot(contains('renamed-from old key is not')));
         },
       );
 
