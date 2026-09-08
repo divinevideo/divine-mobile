@@ -218,7 +218,7 @@ void main() {
       );
     });
 
-    test('should correctly handle replace parameter', () async {
+    test('replace preserves cached videos while resubscribing', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
@@ -231,8 +231,9 @@ void main() {
       // Add some test events
       final event1 = Event(
         'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
-        22,
+        34236,
         [
+          ['d', 'video-1'],
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
           [
@@ -257,7 +258,8 @@ void main() {
 
       expect(videoEventService.discoveryVideos.length, equals(1));
 
-      // Second subscription with replace=true should clear existing videos
+      // Second subscription with replace=true should replace the relay
+      // subscription without emptying the visible cache.
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 100,
@@ -265,12 +267,11 @@ void main() {
 
       expect(
         videoEventService.discoveryVideos.length,
-        equals(0),
-        reason: 'replace=true should clear existing videos',
+        equals(1),
+        reason: 'Replacing a subscription should preserve cached videos',
       );
       expect(subscriptionCalls.length, equals(2));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test('should track active subscription parameters', () async {
       // This test exposes the current bug where subscription parameters aren't tracked
