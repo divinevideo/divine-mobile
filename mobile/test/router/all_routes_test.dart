@@ -33,12 +33,26 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         VideoFeedPage.pathForIndex(0),
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(VideoFeedPage.pathForIndex(0)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
 
       router.go(VideoFeedPage.pathForIndex(5));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.toString(),
         VideoFeedPage.pathForIndex(5),
+      );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(VideoFeedPage.pathForIndex(5)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -57,6 +71,11 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         ExploreScreen.path,
       );
+      expect(
+        router.configuration.findMatch(Uri.parse(ExploreScreen.path)).isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
     });
 
     testWidgets('${ExploreScreen.pathWithIndex} route works (feed mode)', (
@@ -74,12 +93,26 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         ExploreScreen.pathForIndex(0),
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(ExploreScreen.pathForIndex(0)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
 
       router.go(ExploreScreen.pathForIndex(3));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.toString(),
         ExploreScreen.pathForIndex(3),
+      );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(ExploreScreen.pathForIndex(3)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -98,12 +131,26 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         NotificationsPage.pathForIndex(0),
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(NotificationsPage.pathForIndex(0)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
 
       router.go(NotificationsPage.pathForIndex(2));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.toString(),
         NotificationsPage.pathForIndex(2),
+      );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(NotificationsPage.pathForIndex(2)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -122,12 +169,28 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         ProfileScreenRouter.pathForIndex('me', 0),
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(ProfileScreenRouter.pathForIndex('me', 0)))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
 
       router.go(ProfileScreenRouter.pathForIndex('npub1abc', 5));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.toString(),
         ProfileScreenRouter.pathForIndex('npub1abc', 5),
+      );
+      expect(
+        router.configuration
+            .findMatch(
+              Uri.parse(ProfileScreenRouter.pathForIndex('npub1abc', 5)),
+            )
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -146,6 +209,13 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         HashtagScreenRouter.pathForTag('bitcoin'),
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(HashtagScreenRouter.pathForTag('bitcoin')))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
     });
 
     testWidgets('${SettingsScreen.path} route works', (tester) async {
@@ -160,6 +230,11 @@ void main() {
       expect(
         router.routeInformationProvider.value.uri.toString(),
         SettingsScreen.path,
+      );
+      expect(
+        router.configuration.findMatch(Uri.parse(SettingsScreen.path)).isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -176,6 +251,13 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         AppsDirectoryScreen.path,
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(AppsDirectoryScreen.path))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
     });
 
     testWidgets('${AppDetailScreen.path} route works', (tester) async {
@@ -190,6 +272,13 @@ void main() {
       expect(
         router.routeInformationProvider.value.uri.toString(),
         AppDetailScreen.pathForSlug('primal'),
+      );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(AppDetailScreen.pathForSlug('primal')))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
 
@@ -206,6 +295,13 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         VideoRecorderScreen.path,
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(VideoRecorderScreen.path))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
     });
 
     testWidgets('${VideoEditorScreen.path} route works', (tester) async {
@@ -221,6 +317,13 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         VideoEditorScreen.path,
       );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(VideoEditorScreen.path))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
+      );
     });
 
     testWidgets('${VideoMetadataScreen.path} route works', (tester) async {
@@ -235,6 +338,13 @@ void main() {
       expect(
         router.routeInformationProvider.value.uri.toString(),
         VideoMetadataScreen.path,
+      );
+      expect(
+        router.configuration
+            .findMatch(Uri.parse(VideoMetadataScreen.path))
+            .isError,
+        isFalse,
+        reason: 'route must resolve to a registered route, not the error route',
       );
     });
   });
