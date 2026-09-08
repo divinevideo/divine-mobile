@@ -46,7 +46,7 @@ if ! preflight_ports "$COMPOSE_FILE"; then
   exit 1
 fi
 
-# Advisory only — a stale mirror still starts, it just cannot serve NIP-17.
+# Advisory only — an old image may not support the features being tested.
 preflight_image_staleness "$SCRIPT_DIR"
 
 UP_CMD=(docker compose -f "$COMPOSE_FILE" up -d --wait)
