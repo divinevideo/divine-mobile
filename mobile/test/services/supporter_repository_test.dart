@@ -508,6 +508,45 @@ void main() {
       expect(repo.isSupporter, isTrue);
     });
 
+    test('leaves a redelivered proof unacknowledged and surfaces unavailable '
+        'when no verification client is configured', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+
+      final errorFuture = expectLater(
+        repo.changes,
+        emitsError(
+          isA<SupporterApiException>().having(
+            (error) => error.kind,
+            'kind',
+            SupporterApiFailureKind.unavailable,
+          ),
+        ),
+      );
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'stable-attempt-1234',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+
+      await errorFuture;
+      // The store proof must stay unacknowledged so it can be redelivered once
+      // a verification client is configured.
+      expect(validator.completePurchaseCallCount, 0);
+      expect(repo.isSupporter, isFalse);
+    });
+
     test('refuses to start billing without a verification client', () async {
       final prefs = await SharedPreferences.getInstance();
       final repo = SupporterRepository(
