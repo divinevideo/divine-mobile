@@ -121,6 +121,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           ],
@@ -151,10 +152,9 @@ void main() {
       await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
 
-      // Verify back button exists
-      expect(find.byType(BackButton), findsOneWidget);
-      // TODO(any): Fix and re-enable these tests
-    }, skip: true);
+      // The design-system app bar owns the navigation control.
+      expect(find.byType(DivineAppBarIconButton), findsOneWidget);
+    });
 
     testWidgets('NotificationSettingsScreen has nav green AppBar', (
       tester,
