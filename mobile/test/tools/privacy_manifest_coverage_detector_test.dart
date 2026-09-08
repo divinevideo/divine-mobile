@@ -37,6 +37,7 @@ void main() {
   Directory makeTree({
     required String swift,
     String? manifest,
+    String? selectedSubspec,
     String podspec =
         "s.resource_bundles = {'p' => ['Resources/PrivacyInfo.xcprivacy']}",
   }) {
@@ -48,6 +49,11 @@ void main() {
     File('${pkg.path}/Classes/Sample.swift').writeAsStringSync(swift);
     File('${pkg.path}/sample.podspec').writeAsStringSync(podspec);
     Directory('${root.path}/ios/Runner').createSync(recursive: true);
+    if (selectedSubspec != null) {
+      File('${root.path}/ios/Podfile').writeAsStringSync(
+        "pod 'sample/$selectedSubspec', :path => '../packages/sample/ios'\n",
+      );
+    }
     if (manifest != null) {
       Directory('${pkg.path}/Resources').createSync(recursive: true);
       File(
@@ -310,6 +316,46 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
 
         expect(result.exitCode, equals(1));
         expect(result.output, contains('never reaches the archive'));
+      });
+
+      test('rejects a manifest bundled only by an unselected root spec', () {
+        final root = makeTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          selectedSubspec: 'PrivacyProtected',
+          podspec:
+              "s.resource_bundles = {'p' => "
+              "['Resources/PrivacyInfo.xcprivacy']}\n"
+              "s.subspec 'PrivacyProtected' do |ss|\n"
+              "  ss.source_files = 'Classes/**/*'\n"
+              'end\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(result.output, contains('never reaches the archive'));
+      });
+
+      test('accepts a manifest bundled by the selected subspec', () {
+        final root = makeTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          selectedSubspec: 'PrivacyProtected',
+          podspec:
+              "s.subspec 'PrivacyProtected' do |ss|\n"
+              "  ss.resource_bundles = {'p' => "
+              "['Resources/PrivacyInfo.xcprivacy']}\n"
+              'end\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
       });
     });
 

@@ -221,18 +221,31 @@ class Unit:
         roots: list[str],
         manifest: str,
         podspec: str | None,
+        selected_subspec: str | None = None,
         xcodeproj: str | None = None,
     ):
         self.name = name
         self.roots = roots
         self.manifest = manifest
         self.podspec = podspec
+        self.selected_subspec = selected_subspec
         self.xcodeproj = xcodeproj
 
 
 def discover(mobile: str) -> list[Unit]:
     units: list[Unit] = []
     ios = os.path.join(mobile, "ios")
+    selected_subspecs: dict[str, str] = {}
+    podfile = os.path.join(ios, "Podfile")
+    try:
+        with open(podfile, "r", encoding="utf-8") as handle:
+            podfile_text = strip_noise(handle.read())
+    except OSError:
+        podfile_text = ""
+    for pod, subspec in re.findall(
+        r"\bpod\s+['\"]([^/'\"]+)/([^'\"]+)['\"]", podfile_text
+    ):
+        selected_subspecs[pod] = subspec
 
     units.append(
         Unit(
@@ -261,7 +274,8 @@ def discover(mobile: str) -> list[Unit]:
             units.append(
                 Unit(f"localpod:{pod}", [path],
                      os.path.join(path, "Resources", "PrivacyInfo.xcprivacy"),
-                     os.path.join(path, specs[0]) if specs else None)
+                     os.path.join(path, specs[0]) if specs else None,
+                     selected_subspec=selected_subspecs.get(pod))
             )
 
     packages = os.path.join(mobile, "packages")
@@ -274,7 +288,8 @@ def discover(mobile: str) -> list[Unit]:
             units.append(
                 Unit(f"package:{pkg}", [pkg_ios],
                      os.path.join(pkg_ios, "Resources", "PrivacyInfo.xcprivacy"),
-                     os.path.join(pkg_ios, specs[0]) if specs else None)
+                     os.path.join(pkg_ios, specs[0]) if specs else None,
+                     selected_subspec=selected_subspecs.get(pkg))
             )
     return units
 
@@ -384,11 +399,29 @@ def xcode_manifest_is_runner_resource(project: str) -> bool:
     return False
 
 
-def podspec_bundles_manifest(spec: str) -> bool:
-    """Return whether a real resource_bundles assignment includes the manifest."""
+def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
+    """Return whether the selected pod specification bundles the manifest."""
     uncommented = "\n".join(
         line for line in spec.splitlines() if not line.lstrip().startswith("#")
     )
+    if selected_subspec:
+        subspec = re.search(
+            rf"\bs\.subspec\s+['\"]{re.escape(selected_subspec)}['\"]\s+do\s+"
+            r"\|(?P<var>\w+)\|(?P<body>.*?)^\s*end\b",
+            uncommented,
+            re.M | re.S,
+        )
+        if not subspec:
+            return False
+        variable = re.escape(subspec.group("var"))
+        return bool(
+            re.search(
+                rf"\b{variable}\.resource_bundles\s*=\s*"
+                r"\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
+                subspec.group("body"),
+                re.S,
+            )
+        )
     return bool(
         re.search(
             r"\b\w+\.resource_bundles\s*=\s*\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
@@ -450,7 +483,7 @@ def check_sources(mobile: str) -> int:
                         spec = handle.read()
                 except OSError:
                     spec = ""
-                if not podspec_bundles_manifest(spec):
+                if not podspec_bundles_manifest(spec, unit.selected_subspec):
                     failures.append(
                         f"{unit.name}: {unit.manifest} exists but "
                         f"{unit.podspec} has no resource_bundles entry for it, "
