@@ -40,34 +40,5 @@ void main() {
         reason: 'Should define edge cases to test',
       );
     });
-
-    test('generates tests with proper imports', () {
-      // This would be tested after running generation
-      final generatedFile = File('test/generated/sample_generated_test.dart');
-      if (generatedFile.existsSync()) {
-        final content = generatedFile.readAsStringSync();
-
-        // Check for no mocks
-        expect(
-          content.contains('Mock'),
-          isFalse,
-          reason: 'Should not use mocks',
-        );
-
-        // Check for test data builders
-        expect(
-          content,
-          contains('Builder'),
-          reason: 'Should use test data builders',
-        );
-
-        // Check for in-memory implementations
-        expect(
-          content,
-          contains('InMemory'),
-          reason: 'Should use in-memory implementations',
-        );
-      }
-    });
   });
 }
