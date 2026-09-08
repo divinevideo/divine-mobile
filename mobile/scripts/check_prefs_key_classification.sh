@@ -71,7 +71,10 @@ FOOTER="This set may only shrink. Entries are unclassified keys — a worklist, 
 exemptions. See .claude/rules/data_foundation.md and #8314."
 
 emit_current() {
-  (cd "$MOBILE_DIR" && dart run scripts/lib/prefs_key_classification_detector.dart \
+  # This is a standalone script, so invoke it directly. `dart run` also
+  # evaluates package build hooks before starting the same program, adding
+  # several seconds to the already crowded Generated Files CI job.
+  (cd "$MOBILE_DIR" && dart scripts/lib/prefs_key_classification_detector.dart \
     lib packages) | LC_ALL=C sort -u
 }
 
