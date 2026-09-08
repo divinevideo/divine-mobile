@@ -21,6 +21,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA', 'urlB'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
       );
 
@@ -41,6 +42,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['optimizedUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         maxPlaybackDuration: cap,
       );
@@ -62,6 +64,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         maxPlaybackDuration: cap,
         delay: (_) async {},
@@ -79,6 +82,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
       );
 
@@ -127,6 +131,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         httpHeadersForSource: (source) =>
             source == 'urlA' ? {'Authorization': 'Nostr token'} : null,
@@ -147,6 +152,7 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['badUrl', 'goodUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
       );
 
@@ -164,6 +170,7 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['badUrl', 'goodUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         onSourceLoadFailure: failedSources.add,
       );
@@ -189,6 +196,7 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['slowOptimizedUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
       );
 
@@ -220,6 +228,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         delay: (duration) async => delays.add(duration),
       );
@@ -254,6 +263,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         delay: (duration) async => delays.add(duration),
       );
@@ -276,6 +286,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         onFailoverSourceFailure: recordedFailures.add,
       );
@@ -316,6 +327,7 @@ void main() {
           index: 2,
           controller: controller,
           sources: ['derivedMp4', 'hlsUrl'],
+          trimToCommonTrackEnd: true,
           log: logs.add,
           onFailoverSourceFailure: recordedFailures.add,
         );
@@ -355,6 +367,7 @@ void main() {
             index: 2,
             controller: controller,
             sources: ['derivedMp4', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
           ),
           throwsA(same(error)),
@@ -382,6 +395,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['derivedMp4', 'hlsUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         applyTypedFailoverPolicy: false,
       );
@@ -403,6 +417,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         httpHeadersForSource: (_) => headers,
         delay: (_) async {},
@@ -432,6 +447,7 @@ void main() {
             index: 2,
             controller: controller,
             sources: ['processingUrl'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
             delay: (_) async {},
           ),
@@ -464,6 +480,7 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['optimizedUrl', 'hlsUrl'],
+          trimToCommonTrackEnd: true,
           log: logs.add,
           // Mirrors _httpHeadersByIndex: one hash-bound header set returned for
           // every resolved source, so the fallback authenticates too.
@@ -499,6 +516,7 @@ void main() {
             index: 0,
             controller: controller,
             sources: ['optimizedUrl', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
             applyTypedFailoverPolicy: false,
           ),
@@ -536,6 +554,7 @@ void main() {
             index: 0,
             controller: controller,
             sources: ['optimizedUrl', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
           );
         } on Object catch (error, stackTrace) {
@@ -561,6 +580,7 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['anonymousUrl', 'authedUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         httpHeadersForSource: (source) =>
             source == 'authedUrl' ? headers : null,
@@ -586,6 +606,7 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['derivedMp4', 'hls', 'raw'],
+          trimToCommonTrackEnd: true,
           log: logs.add,
           isLoadCurrent: () => isCurrent,
         ),
@@ -613,6 +634,7 @@ void main() {
             index: 3,
             controller: controller,
             sources: ['derivedMp4', 'hls', 'raw'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
             isLoadCurrent: () => isCurrent,
           ),
@@ -648,6 +670,7 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['url1', 'url2'],
+          trimToCommonTrackEnd: true,
           log: logs.add,
         ),
         throwsA(isA<Exception>()),
@@ -663,6 +686,7 @@ void main() {
           index: 0,
           controller: controller,
           sources: [],
+          trimToCommonTrackEnd: true,
           log: logs.add,
         ),
         throwsA(isA<StateError>()),
@@ -679,6 +703,7 @@ void main() {
           index: 5,
           controller: controller,
           sources: ['onlyUrl'],
+          trimToCommonTrackEnd: true,
           log: logs.add,
         );
 

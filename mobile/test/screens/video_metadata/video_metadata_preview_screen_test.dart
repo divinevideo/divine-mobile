@@ -29,7 +29,7 @@ import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_cap
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../mocks/mock_nostr_service.dart';
+import '../../mocks/mock_nostr_service.dart';
 
 class _MockVideoPublishNotifier extends VideoPublishNotifier {
   _MockVideoPublishNotifier(this._initialState);
@@ -116,11 +116,13 @@ void main() {
 
   late SharedPreferences prefs;
   late _PlayerEventsStreamHandler playerEvents;
+  late List<Map<Object?, Object?>> setClipsArguments;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     playerEvents = _PlayerEventsStreamHandler();
+    setClipsArguments = [];
     DivineVideoPlayerController.resetIdCounterForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('divine_video_player'), (
@@ -132,7 +134,14 @@ void main() {
             TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
                 .setMockMethodCallHandler(
                   MethodChannel('divine_video_player/player_$id'),
-                  (call) async => null,
+                  (call) async {
+                    if (call.method == 'setClips') {
+                      setClipsArguments.add(
+                        call.arguments! as Map<Object?, Object?>,
+                      );
+                    }
+                    return null;
+                  },
                 );
             TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
                 .setMockStreamHandler(
@@ -247,6 +256,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(DivineVideoPlayer), findsOneWidget);
+    });
+
+    testWidgets('matches the feed common-track-end loop boundary', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final clips = setClipsArguments.single['clips']! as List<Object?>;
+      final clip = clips.single! as Map<Object?, Object?>;
+      expect(clip['trimToCommonTrackEnd'], isTrue);
     });
 
     testWidgets('cover-fits a non-square clip like the feed does', (

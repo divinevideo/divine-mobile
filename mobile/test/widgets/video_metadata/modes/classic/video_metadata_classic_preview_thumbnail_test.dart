@@ -157,7 +157,11 @@ void main() {
         'initializes player when finalRenderedClip becomes non-null',
         (tester) async {
           final methodCalls = <String>[];
-          _registerMockPlayerChannel(methodCalls);
+          final setClipsArguments = <Map<Object?, Object?>>[];
+          _registerMockPlayerChannel(
+            methodCalls,
+            setClipsArguments: setClipsArguments,
+          );
 
           final tmpDir = Directory.systemTemp.createTempSync('test_clip_');
           final tmpFile = File('${tmpDir.path}/rendered.mp4')
@@ -198,6 +202,9 @@ void main() {
             methodCalls,
             containsAllInOrder(['create', 'setClips', 'play']),
           );
+          final clips = setClipsArguments.single['clips']! as List<Object?>;
+          final clip = clips.single! as Map<Object?, Object?>;
+          expect(clip['trimToCommonTrackEnd'], isTrue);
         },
       );
     });
@@ -308,7 +315,10 @@ Future<void> _waitForMethodCall({
 /// The global channel handles `create` / `dispose`; the per-player channel
 /// handles `setClips`, `play`, `setLooping`, etc. Both record into
 /// [methodCalls].
-void _registerMockPlayerChannel(List<String> methodCalls) {
+void _registerMockPlayerChannel(
+  List<String> methodCalls, {
+  List<Map<Object?, Object?>>? setClipsArguments,
+}) {
   const globalChannel = MethodChannel('divine_video_player');
   // Player ID resets via resetIdCounterForTesting in setUp, so first is 0.
   const playerChannel = MethodChannel('divine_video_player/player_0');
@@ -321,6 +331,11 @@ void _registerMockPlayerChannel(List<String> methodCalls) {
       // Register the per-player channel on first create.
       messenger.setMockMethodCallHandler(playerChannel, (call) async {
         methodCalls.add(call.method);
+        if (call.method == 'setClips') {
+          setClipsArguments?.add(
+            call.arguments! as Map<Object?, Object?>,
+          );
+        }
         return null;
       });
 

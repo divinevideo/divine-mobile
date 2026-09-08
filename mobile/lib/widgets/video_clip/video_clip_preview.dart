@@ -100,7 +100,9 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
         await controller.dispose();
         return;
       }
-      await controller.setSource(VideoClip.file(file.path));
+      await controller.setSource(
+        VideoClip.file(file.path, trimToCommonTrackEnd: true),
+      );
       if (!mounted) {
         await controller.dispose();
         return;

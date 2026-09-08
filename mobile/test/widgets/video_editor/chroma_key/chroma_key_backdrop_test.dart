@@ -1,7 +1,9 @@
 // ABOUTME: Widget tests for ChromaKeyBackdrop's background-type dispatch.
-// ABOUTME: The video branch is left out: it builds a real native player.
+// ABOUTME: Verifies the video branch's serialized player policy.
 
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
@@ -9,6 +11,8 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorLayerImage;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group(ChromaKeyBackdrop, () {
     Future<void> pump(WidgetTester tester, ClipChromaKey chromaKey) {
       return tester.pumpWidget(
@@ -58,6 +62,61 @@ void main() {
       final image = tester.widget<Image>(find.byType(Image));
       expect(image.fit, BoxFit.fill);
       expect(find.byType(ChromaKeyTransparencyCheckerboard), findsNothing);
+    });
+
+    testWidgets('keeps the container-duration loop used by export', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      Map<Object?, Object?>? setClipsArguments;
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('divine_video_player'),
+        (call) async {
+          if (call.method == 'create') {
+            messenger.setMockMethodCallHandler(
+              const MethodChannel('divine_video_player/player_0'),
+              (call) async {
+                if (call.method == 'setClips') {
+                  setClipsArguments = call.arguments! as Map<Object?, Object?>;
+                }
+                return null;
+              },
+            );
+            return <String, Object?>{'textureId': 1};
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        messenger
+          ..setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            null,
+          )
+          ..setMockMethodCallHandler(
+            const MethodChannel('divine_video_player/player_0'),
+            null,
+          );
+      });
+
+      await pump(
+        tester,
+        const ClipChromaKey(
+          key: ChromaKey.greenScreen(),
+          backgroundVideoPath: '/tmp/backdrop.mp4',
+        ),
+      );
+      await tester.pump();
+
+      final clips = setClipsArguments!['clips']! as List<Object?>;
+      final clip = clips.single! as Map<Object?, Object?>;
+      expect(
+        clip.containsKey('trimToCommonTrackEnd'),
+        isFalse,
+        reason: 'The bake tiles by container duration, so preview must too.',
+      );
     });
   });
 }

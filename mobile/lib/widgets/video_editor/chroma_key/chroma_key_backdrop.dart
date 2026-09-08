@@ -192,6 +192,9 @@ class _VideoBackdropState extends State<_VideoBackdrop> {
       await controller.initialize();
       if (superseded()) return await controller.dispose();
       await controller.setSource(
+        // ChromaKeyBakeService.backdropSegments tiles the export by the
+        // container duration. Keep that same loop boundary in the preview by
+        // leaving trimToCommonTrackEnd at false.
         VideoClip.file(
           widget.path,
           volume: 0,
