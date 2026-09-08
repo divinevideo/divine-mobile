@@ -58,7 +58,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
     return BlocProvider(
       create: (_) => BugReportCubit(
         bugReportService: widget.bugReportService,
-        buildLogsSummary: buildLogsSummary,
+        buildLogsSummary: buildLogsSummaryOffMain,
         submitBugReport:
             widget.submitBugReport ??
             ZendeskSupportService.createStructuredBugReport,

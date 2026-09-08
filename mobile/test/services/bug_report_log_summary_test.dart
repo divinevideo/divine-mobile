@@ -2,7 +2,7 @@
 // ABOUTME: Verifies error/warning prioritization, dedup, chronological ordering
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show LogEntry, LogLevel;
+import 'package:models/models.dart' show LogCategory, LogEntry, LogLevel;
 import 'package:openvine/services/bug_report_log_summary.dart';
 
 LogEntry _log(int minute, LogLevel level, String msg) => LogEntry(
@@ -138,6 +138,24 @@ void main() {
 
       expect(result, contains('[REDACTED]'));
       expect(result, isNot(contains('hunter2')));
+    });
+
+    test('builds a production-shaped summary via real compute', () async {
+      final result = await buildLogsSummaryOffMain([
+        LogEntry(
+          timestamp: DateTime.fromMillisecondsSinceEpoch(7080),
+          level: LogLevel.error,
+          category: LogCategory.api,
+          name: 'request',
+          message: 'token: summary-secret',
+          error: 'network error',
+          stackTrace: 'stack trace',
+        ),
+      ]);
+
+      expect(result, contains('[REDACTED]'));
+      expect(result, isNot(contains('summary-secret')));
+      expect(result, contains('[API]'));
     });
 
     test('a credential in one entry cannot consume the next entry', () {

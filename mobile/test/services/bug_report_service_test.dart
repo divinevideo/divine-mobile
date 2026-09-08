@@ -669,15 +669,52 @@ void main() {
         },
       );
 
-      test('sanitizes off the real isolate via compute', () async {
+      test('sanitizes a production-shaped report via real compute', () async {
         final service = BugReportService();
+        final input = BugReportData(
+          reportId: 'test-7080',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(7080),
+          userDescription: 'My nsec is $_rawNsec',
+          deviceInfo: {
+            'platform': 'test',
+            'localStorage': {
+              'sessionKey': 'device-secret',
+              'counts': [1, 2],
+            },
+          },
+          appVersion: '1.0.0',
+          recentLogs: [
+            LogEntry(
+              timestamp: DateTime.fromMillisecondsSinceEpoch(7081),
+              level: LogLevel.error,
+              category: LogCategory.api,
+              name: 'request',
+              message: 'token: message-secret',
+              error: 'password: error-secret',
+              stackTrace: 'authorization: bearer stack-secret',
+            ),
+          ],
+          errorCounts: const {'password: count-secret': 2},
+        );
 
         final sanitized = await service.sanitizeSensitiveDataInBackground(
-          reportWith('My nsec is $_rawNsec'),
+          input,
         );
 
         expect(sanitized.userDescription, isNot(contains('nsec1')));
         expect(sanitized.userDescription, contains('[REDACTED]'));
+        expect(sanitized.timestamp, input.timestamp);
+        expect(sanitized.recentLogs.single.level, LogLevel.error);
+        expect(sanitized.recentLogs.single.category, LogCategory.api);
+        expect(sanitized.recentLogs.single.message, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.error, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.stackTrace, contains('[REDACTED]'));
+        expect(
+          (sanitized.deviceInfo['localStorage']
+              as Map<String, dynamic>)['sessionKey'],
+          '[REDACTED]',
+        );
+        expect(sanitized.errorCounts, {'[REDACTED]': 2});
       });
     });
   });

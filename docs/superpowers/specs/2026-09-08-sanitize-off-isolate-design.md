@@ -6,11 +6,13 @@ messages, errors, and stack traces. #6909 bounded typed fields, but the log corp
 app-generated and the largest uncapped sanitization workload, so submitting a report
 can still stall the UI.
 
-**Serializability (verified).** `BugReportData` and `LogEntry` are immutable data
-classes of only `String`/`DateTime`/enum fields (`error`/`stackTrace` are Strings), so
-they copy cleanly across a `compute()` boundary. Established codebase pattern:
-`compute(_topLevelFn, arg)` — `signer_factory._verifyEventSignature`,
-`seed_data_preload_service._decodeBundle`.
+**Serializability (verified).** `LogEntry` is an immutable data class containing
+`String`/`DateTime`/enum fields (`error`/`stackTrace` are Strings). `BugReportData`
+also carries dynamic diagnostic maps, so the real-`compute` test sends the current
+production shapes—nested device data, populated logs, and error counts—across the
+boundary rather than assuming every future dynamic value is sendable. Established
+codebase pattern: `compute(_topLevelFn, arg)` —
+`signer_factory._verifyEventSignature`, `seed_data_preload_service._decodeBundle`.
 
 ## Approved design (mirrors `signer_factory`)
 
@@ -34,6 +36,16 @@ they copy cleanly across a `compute()` boundary. Established codebase pattern:
    If the worker isolate cannot spawn, sanitize inline rather than transmit
    unsanitized diagnostics. Sanitization must never be skipped — this serves the AC
    "keep public-support payloads sanitized before public projections."
+5. **Build the bounded Zendesk log summary through `compute` too.** Its
+   defense-in-depth sanitizer runs over each formatted entry before truncation, so
+   leaving summary construction in `BugReportCubit` would retain a pathological
+   main-isolate scan for one oversized entry. Await an async summary seam before
+   submission and use the same privacy-preserving inline fallback if its worker cannot
+   start.
+
+On Flutter web, `compute` runs on the current event loop rather than a separate
+isolate. The off-main performance benefit therefore applies to the native builds; the
+same API preserves behavior on web.
 
 ## Tests (TDD)
 
@@ -41,10 +53,14 @@ they copy cleanly across a `compute()` boundary. Established codebase pattern:
   (now exercising the moved top-level fn via the delegate) must stay green.
 - The seam's job: inject a throwing `_sanitizeOffMain`, assert the report still comes
   back fully sanitized (the inline fallback). Mutation-checkable.
-- One real-`compute` happy-path test proving the serialization shape end-to-end.
+- Real-`compute` happy-path tests proving the populated report and summary
+  serialization shapes end-to-end.
+- The Cubit awaits asynchronous summary construction before submission.
 - `flutter analyze` + the bug-report/privacy tests.
 
 ## Files
 
 `mobile/lib/services/bug_report_service.dart` (extract + delegate + seam + fallback),
-`mobile/test/services/bug_report_service_test.dart` (seam/fallback + real-compute).
+`mobile/lib/services/bug_report_log_summary.dart` and
+`mobile/lib/blocs/bug_report/bug_report_cubit.dart` (off-main summary), plus their
+focused tests.
