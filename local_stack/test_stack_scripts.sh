@@ -541,6 +541,8 @@ run_failure_report
 assert_status 0 "$last_status" "a failure report should remain diagnostic"
 assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
 assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
+assert_stderr_contains 'docker volume rm local_stack_funnelcake-ch-data' "the Funnelcake-only recovery should come first"
+assert_stderr_lacks 'keycast-pg-data' "the narrow recovery must not touch the keycast volume"
 
 # The migrate image runs funnelcake-migrate, which reaches only
 # crates/migrations. Its two dirty bails are the native ledger (lib.rs:391) and

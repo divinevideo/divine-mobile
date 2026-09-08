@@ -374,8 +374,16 @@ stack_failure_report() {
     if [[ "$dirty_migration" -eq 1 ]]; then
         {
             echo "The Funnelcake migration ledger is dirty, so relay and API cannot start."
-            echo "Reset and retry only if all local stack data is disposable."
-            echo "This deletes all local stack data, not just Funnelcake's database:"
+            echo ""
+            echo "The dirt is confined to Funnelcake's ClickHouse volume, so discard"
+            echo "just that one and let the migrations re-run:"
+            echo ""
+            echo "    docker compose -f ${compose_file} down"
+            echo "    docker volume rm local_stack_funnelcake-ch-data"
+            echo ""
+            echo "That keeps the keycast accounts created by setup.sh. Only if the"
+            echo "whole stack is disposable — this deletes all local stack data, not"
+            echo "just Funnelcake's database:"
             echo ""
             echo "    mise run local_reset"
             echo ""
