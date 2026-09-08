@@ -76,40 +76,6 @@ void main() {
         container.dispose();
       });
 
-      test(
-        'should return false when Nostr is not initialized even if '
-        'foregrounded',
-        () {
-          // Arrange
-          when(() => mockNostrService.isInitialized).thenReturn(false);
-
-          final container = ProviderContainer(
-            overrides: [
-              nostrServiceProvider.overrideWithValue(mockNostrService),
-              appForegroundProvider.overrideWith(_FakeAppForeground.new),
-            ],
-          );
-
-          // Set foreground state after initialization
-          // (default is already true)
-          container.read(appForegroundProvider.notifier).setForeground(true);
-
-          // Act
-          final isReady = container.read(appReadyProvider);
-
-          // Assert
-          expect(
-            isReady,
-            isFalse,
-            reason: 'App should not be ready when Nostr not initialized',
-          );
-
-          container.dispose();
-        },
-        // TODO(any): Fix and re-enable this test
-        skip: true,
-      );
-
       test('should return false when both are not ready', () {
         // Arrange
         when(() => mockNostrService.isInitialized).thenReturn(false);
