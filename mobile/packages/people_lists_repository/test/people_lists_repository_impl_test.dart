@@ -1295,6 +1295,42 @@ void main() {
         );
       }
 
+      test("skips other clients' machinery sets", () async {
+        // A titled mute set is still a mute set: nothing to browse.
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mute',
+              title: 'Mute',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-contacts',
+              title: 'dm-contacts',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((r) => r.list.id), equals(['crew']));
+      });
+
       test('returns lists newest first without a text filter', () async {
         final client = _MockNostrClient();
         when(
@@ -1521,6 +1557,29 @@ void main() {
           createdAt: createdAt,
         );
       }
+
+      test("skips other clients' machinery sets", () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-archive',
+              title: 'Archive crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, isEmpty);
+      });
 
       test('issues a kind 30000 relay query with the given limit', () async {
         final client = _MockNostrClient();
