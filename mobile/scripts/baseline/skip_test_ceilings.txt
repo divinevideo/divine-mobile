@@ -14,11 +14,8 @@
 # offset, not a disabled test, and is not counted either.
 #
 # Fix a skip rather than regenerating this file. Skip-debt epic: #4337 (WS-1).
-test/providers/video_events_provider_fresh_test.dart	1 # quarantine: real relay via realintegrationtesthelper, 40s timeout (#4836)
 test/providers/video_events_provider_test.dart	1 # rewrite: stubs subscribe(named filters:), now a positional param (#4836)
 test/router/app_shell_integration_test.dart	4 # rewrite: bare container, tags tab gone, index 2 is notifications (#4836)
-test/router/explore_tab_navigation_test.dart	1 # rewrite: explore tabs renamed, needs appversionprovider override (#4836)
-test/router/explore_tab_tap_navigation_test.dart	1 # rewrite: shell nav bar is a column, bottomnavigationbar cast dies (#4836)
 test/screens/video_editor/video_text_editor_screen_test.dart	3 # rewrite: layer path fetches anonymouspro via google_fonts (#4836)
 test/services/m3u8_resolver_service_test.dart	1 # quarantine: real http to stream.divine.video playlist (#4836)
 test/services/video_event_service_repost_test.dart	1 # rewrite: uses kind 6 reposts and kind 22 originals; both dropped (#4836)
