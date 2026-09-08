@@ -73,12 +73,11 @@ work do not:
 - Matching branch names against an issue number deletes live work.
   `fix/7606-semantic-tokens` was destroyed exactly this way: unpushed
   local work on a parallel attempt at the same task.
-- `git merge-base --is-ancestor` cannot tell you a tip is already on
-  `main`. This checkout is **shallow**, and a shallow clone's ancestry
-  walk stops at the graft boundary, so it answers "not an ancestor" for a
-  commit that is one — exit 1, silently, with the ref still resolving and
-  no error to catch. A worktree you are still working in reads as
-  prunable.
+- In a **shallow** checkout, `git merge-base --is-ancestor` can miss a tip
+  already on `main`. The ancestry walk stops at the graft boundary, so it
+  can answer "not an ancestor" for a commit that is one — exit 1, silently,
+  with the ref still resolving and no error to catch. A worktree you are
+  still working in can read as prunable.
 
 The useful signals are GitHub reporting a same-repo merged PR to `main`
 with that head ref, or a worktree tip that belongs to a merged PR and is
