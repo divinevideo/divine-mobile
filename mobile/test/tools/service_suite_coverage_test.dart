@@ -14,6 +14,7 @@ void main() {
     late Directory e2eDirectory;
     late File manifest;
     late File baseManifest;
+    late String workflowParserPath;
 
     setUp(() {
       sandbox = Directory.systemTemp.createTempSync('service_suite_coverage_');
@@ -22,6 +23,14 @@ void main() {
           Directory.current.path,
           'scripts',
           'check_service_suite_coverage.sh',
+        ),
+      ).absolute.path;
+      workflowParserPath = File(
+        p.join(
+          Directory.current.path,
+          'scripts',
+          'lib',
+          'service_suite_workflow_parser.dart',
         ),
       ).absolute.path;
       workflow = File(p.join(sandbox.path, 'workflow.yaml'));
@@ -61,6 +70,7 @@ void main() {
         'SERVICE_SUITE_MANIFEST_FILE': manifest.path,
         'SERVICE_SUITE_BASE_MANIFEST': baseManifest.path,
         'SERVICE_SUITE_BASE_REF': 'test-base',
+        'SERVICE_SUITE_WORKFLOW_PARSER': workflowParserPath,
       },
     );
 
@@ -115,7 +125,7 @@ void main() {
       final result = runGuard();
 
       expect(result.exitCode, 1);
-      expect(result.stdout, contains('exactly one service-suite list marker'));
+      expect(result.stderr, contains('exactly one service-suite list marker'));
     });
 
     test('rejects an exclusion without a reason', () {
@@ -230,6 +240,7 @@ void main() {
     late File manifest;
     late String scriptPath;
     late String defaultPath;
+    late String workflowParserPath;
 
     ProcessResult git(List<String> arguments) =>
         Process.runSync('git', arguments, workingDirectory: repo.path);
@@ -267,6 +278,7 @@ void main() {
         'SERVICE_SUITE_PATH_ROOT': p.join(repo.path, 'mobile'),
         'SERVICE_SUITE_MANIFEST_FILE': manifest.path,
         'SERVICE_SUITE_BASE_REF': baseRef,
+        'SERVICE_SUITE_WORKFLOW_PARSER': workflowParserPath,
         if (allowNoBase) 'SERVICE_SUITE_ALLOW_NO_BASE': '1',
       },
     );
@@ -275,6 +287,14 @@ void main() {
       repo = Directory.systemTemp.createTempSync('service_suite_base_ref_');
       expect(git(['init', '-q']).exitCode, 0);
       defaultPath = Platform.environment['PATH']!;
+      workflowParserPath = File(
+        p.join(
+          Directory.current.path,
+          'scripts',
+          'lib',
+          'service_suite_workflow_parser.dart',
+        ),
+      ).absolute.path;
       final scripts = Directory(p.join(repo.path, 'mobile', 'scripts'))
         ..createSync(recursive: true);
       final sourceScript = File(
