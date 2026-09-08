@@ -342,32 +342,40 @@ class _SkipButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: Semantics(
-        identifier: SemanticIds.authUseWithoutBackupButton,
-        child: TextButton(
-          onPressed: isDisabled ? null : onPressed,
-          style: TextButton.styleFrom(
-            foregroundColor: context.vineColors.secondaryText,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+      // MergeSemantics, not a bare Semantics wrapper: TextButton declares
+      // `container: true`, so an identifier-only annotation above it cannot
+      // merge and becomes its own node carrying no label, no button flag and
+      // no tap action. iOS exposes only focusable nodes as accessibility
+      // elements, so Maestro would not see the identifier at all. Merging
+      // puts it on the node that already announces and activates the button.
+      child: MergeSemantics(
+        child: Semantics(
+          identifier: SemanticIds.authUseWithoutBackupButton,
+          child: TextButton(
+            onPressed: isDisabled ? null : onPressed,
+            style: TextButton.styleFrom(
+              foregroundColor: context.vineColors.secondaryText,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
+            child: isSkipping
+                ? SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: DivineCircularProgressIndicator(
+                      color: context.vineColors.secondaryText,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    context.l10n.authUseDivineNoBackup,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
           ),
-          child: isSkipping
-              ? SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: DivineCircularProgressIndicator(
-                    color: context.vineColors.secondaryText,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(
-                  context.l10n.authUseDivineNoBackup,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
         ),
       ),
     );
@@ -465,21 +473,25 @@ class _SkipConfirmationSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 56,
-            child: Semantics(
-              identifier: SemanticIds.authUseDeviceOnlyButton,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: context.vineColors.secondaryText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+            // Merged for the same reason as _SkipButton above: the identifier
+            // has to land on the node that carries the label and the tap.
+            child: MergeSemantics(
+              child: Semantics(
+                identifier: SemanticIds.authUseDeviceOnlyButton,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.vineColors.secondaryText,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                ),
-                child: Text(
-                  context.l10n.authUseThisDeviceOnly,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                  child: Text(
+                    context.l10n.authUseThisDeviceOnly,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),

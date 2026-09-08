@@ -240,9 +240,21 @@ void main() {
           find.widgetWithText(TextButton, 'Use Divine with no backup'),
           findsOneWidget,
         );
+        // The identifier has to sit on the node that also announces and
+        // activates the button. A bare Semantics wrapper over a TextButton
+        // yields a separate, non-focusable node that iOS never exposes as an
+        // accessibility element, so `find.bySemanticsIdentifier` alone would
+        // stay green while Maestro's `tapOn: id:` found nothing on device.
         expect(
-          find.bySemanticsIdentifier(SemanticIds.authUseWithoutBackupButton),
-          findsOneWidget,
+          tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.authUseWithoutBackupButton),
+          ),
+          isSemantics(
+            identifier: SemanticIds.authUseWithoutBackupButton,
+            label: 'Use Divine with no backup',
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
       });
 
@@ -280,8 +292,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.bySemanticsIdentifier(SemanticIds.authUseDeviceOnlyButton),
-          findsOneWidget,
+          tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.authUseDeviceOnlyButton),
+          ),
+          isSemantics(
+            identifier: SemanticIds.authUseDeviceOnlyButton,
+            label: 'Use this device only',
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
       });
 
