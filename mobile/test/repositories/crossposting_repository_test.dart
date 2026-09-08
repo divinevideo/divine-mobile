@@ -337,6 +337,7 @@ void main() {
     final first = CrosspostingPlatformSettings(
       platform: CrosspostingPlatform.instagram,
       supportsAutomatic: true,
+      // Keep connections distinct so equality exercises their value fields.
       // ignore: prefer_const_constructors
       connection: CrosspostingConnection(
         id: 'connection-id',
@@ -347,10 +348,12 @@ void main() {
       ),
       mode: CrosspostingMode.manual,
     );
+    // Keep settings distinct so equality cannot pass by const identity.
     // ignore: prefer_const_constructors
     final second = CrosspostingPlatformSettings(
       platform: CrosspostingPlatform.instagram,
       supportsAutomatic: true,
+      // Keep connections distinct so equality exercises their value fields.
       // ignore: prefer_const_constructors
       connection: CrosspostingConnection(
         id: 'connection-id',
