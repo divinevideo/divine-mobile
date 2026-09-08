@@ -10,8 +10,9 @@
 # CI, and restores the configuration before comparing results. This deliberately
 # uses type resolution rather than a source-text approximation.
 #
-# Regenerate only after fixing findings:
-#   UPDATE_BASELINE=1 bash mobile/scripts/check_async_safety_ceiling.sh
+# Regenerate only after fixing findings, under the pinned toolchain (the two
+# rules are type-resolving, so the counts move with the Dart SDK):
+#   UPDATE_BASELINE=1 mise exec -- bash mobile/scripts/check_async_safety_ceiling.sh
 
 set -euo pipefail
 
@@ -22,11 +23,20 @@ TAB="$(printf '\t')"
 
 RATCHET_LABEL="async_safety_ceiling"
 BASELINE_FILE="${ASYNC_SAFETY_BASELINE_FILE:-$SCRIPT_DIR/baseline/async_safety_counts.txt}"
-BASELINE_REPO_PATH="mobile/scripts/baseline/async_safety_counts.txt"
+BASELINE_REPO_PATH="${ASYNC_SAFETY_BASELINE_REPO_PATH:-mobile/scripts/baseline/async_safety_counts.txt}"
 BASE_REF="${ASYNC_SAFETY_BASELINE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${ASYNC_SAFETY_CEILING_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="ASYNC_SAFETY_CEILING_ALLOW_NO_BASE"
 REQUIRE_BASELINE_UPDATE_ON_DECREASE=1
+# Unlike every sibling detector -- source-text AST parses whose output does not
+# move with the toolchain -- both tracked rules are type-resolving, so this
+# baseline is a function of the Dart SDK. CI gets its SDK from
+# subosito/flutter-action, so bare `dart` is right there; a laptop with a
+# different system Flutter on PATH will produce keys CI rejects, so regenerate
+# under the pin -- `mise exec -- bash scripts/check_async_safety_ceiling.sh` --
+# or point ASYNC_SAFETY_DART at the SDK to use. Mirrors SKIP_CEILING_DART.
+DART_BIN="${ASYNC_SAFETY_DART:-dart}"
+
 NEW_HINT="Await the future, return it, or explicitly mark an intentional fire-and-forget operation with unawaited(). Do not raise this baseline. See #3342."
 STALE_HINT="Async-safety findings were removed."
 FOOTER="unawaited_futures and discarded_futures are frozen per rule and file.
@@ -118,7 +128,7 @@ emit_current() {
     local analyzer_status=0
     (
       cd "$MOBILE_DIR"
-      dart analyze --format machine lib test integration_test tools
+      "$DART_BIN" analyze --format machine lib test integration_test tools
     ) > "$output_file" 2>&1 || analyzer_status=$?
 
     restore_analysis_options
