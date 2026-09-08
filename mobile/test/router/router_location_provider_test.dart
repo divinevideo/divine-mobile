@@ -5,6 +5,8 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -39,6 +41,7 @@ void main() {
   group('Router Location Provider', () {
     testWidgets('emits initial location immediately', (tester) async {
       final container = await createContainer();
+      addTearDown(container.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -65,6 +68,7 @@ void main() {
 
     testWidgets('emits new location when router navigates', (tester) async {
       final container = await createContainer();
+      addTearDown(container.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -104,34 +108,43 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('cleans up listener on dispose', (tester) async {
-      final container = await createContainer();
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+    test('removes its listener and closes the stream on dispose', () async {
+      registerFallbackValue(() {});
+      final router = _MockGoRouter();
+      final delegate = _MockGoRouterDelegate();
+      final routeInformation = GoRouteInformationProvider(
+        initialLocation: WelcomeScreen.path,
+        initialExtra: null,
       );
+      addTearDown(routeInformation.dispose);
+      when(() => router.routerDelegate).thenReturn(delegate);
+      when(() => router.routeInformationProvider).thenReturn(routeInformation);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
 
       final stream = container.read(routerLocationStreamProvider);
       final queue = StreamQueue(stream);
+      addTearDown(queue.cancel);
+      final listener =
+          verify(
+                () => delegate.addListener(captureAny()),
+              ).captured.single
+              as VoidCallback;
 
-      // Get initial value to confirm stream is working
       final initial = await queue.next;
-      expect(initial, isNotEmpty);
+      expect(initial, WelcomeScreen.path);
 
-      // Cancel and dispose
-      await queue.cancel();
-      await tester.pumpWidget(const SizedBox.shrink());
+      // Keep the subscription active so cancellation cannot hide a leaked
+      // controller. The router remains alive independently of this container.
       container.dispose();
-      await tester.pump();
-
-      // If this completes without error, cleanup worked
-      expect(true, isTrue);
+      verify(() => delegate.removeListener(listener)).called(1);
+      expect(await queue.hasNext, isFalse);
     });
   });
 }
+
+class _MockGoRouter extends Mock implements GoRouter {}
+
+class _MockGoRouterDelegate extends Mock implements GoRouterDelegate {}
