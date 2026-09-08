@@ -137,7 +137,22 @@ while IFS= read -r path; do
   esac
 
   case "$path" in
-    mobile/lib/*|mobile/packages/*|mobile/integration_test/e2e/*|mobile/integration_test/helpers/*|.github/workflows/mobile_service_integration_tests.yaml|mobile/scripts/ci/detect_service_suite_scope.sh|mobile/scripts/check_service_suite_coverage.sh)
+    # Keep this in lockstep with detect_service_suite_scope.sh. That
+    # detector decides which suites run; this one decides whether a merge
+    # to main schedules them at all, so anything it treats as a service
+    # dependency has to be here too — including the runner-level inputs
+    # (pubspec, dart_test.yaml, the Linux embedder the suites build on).
+    mobile/lib/*|\
+    mobile/packages/*|\
+    mobile/integration_test/e2e/*|\
+    mobile/integration_test/helpers/*|\
+    mobile/pubspec.yaml|\
+    mobile/pubspec.lock|\
+    mobile/dart_test.yaml|\
+    mobile/linux/*|\
+    .github/workflows/mobile_service_integration_tests.yaml|\
+    mobile/scripts/ci/detect_service_suite_scope.sh|\
+    mobile/scripts/check_service_suite_coverage.sh)
       service=true ;;
   esac
 
