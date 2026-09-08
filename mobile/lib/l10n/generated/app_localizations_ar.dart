@@ -4587,9 +4587,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supportRevealLogsAction => 'إظهار في المجلد';
 
   @override
-  String get supportChatNotAvailable => 'محادثة الدعم غير متاحة';
-
-  @override
   String get supportCouldNotOpenMessages => 'تعذر فتح رسائل الدعم';
 
   @override

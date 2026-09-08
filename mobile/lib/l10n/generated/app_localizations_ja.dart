@@ -4351,9 +4351,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supportRevealLogsAction => 'フォルダで表示';
 
   @override
-  String get supportChatNotAvailable => 'サポートチャットは今使えないよ';
-
-  @override
   String get supportCouldNotOpenMessages => 'サポートメッセージが開けなかった';
 
   @override

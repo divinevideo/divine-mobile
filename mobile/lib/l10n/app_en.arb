@@ -2910,7 +2910,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "Support chat not available",
   "supportCouldNotOpenMessages": "Could not open support messages",
   "supportCouldNotOpenPage": "Could not open {pageName}",
   "@supportCouldNotOpenPage": {

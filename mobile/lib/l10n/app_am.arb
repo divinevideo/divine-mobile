@@ -1984,7 +1984,6 @@
     "supportLoginRequired": "ድጋፍን ለማግኘት ይግቡ",
     "supportExportingLogs": "ምዝግብ ማስታወሻዎችን በመላክ ላይ...",
     "supportExportLogsFailed": "ምዝግብ ማስታወሻዎችን ወደ ውጭ መላክ አልተሳካም።",
-    "supportChatNotAvailable": "የድጋፍ ውይይት አይገኝም",
     "supportCouldNotOpenMessages": "የድጋፍ መልዕክቶችን መክፈት አልተቻለም",
     "supportCouldNotOpenPage": "{pageName} መክፈት አልተቻለም",
     "@supportCouldNotOpenPage": {

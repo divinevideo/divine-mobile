@@ -1581,7 +1581,6 @@
     "supportLoginRequired": "سجِّل الدخول للتواصل مع الدعم",
     "supportExportingLogs": "جارٍ تصدير السجلات...",
     "supportExportLogsFailed": "تعذر تصدير السجلات",
-    "supportChatNotAvailable": "محادثة الدعم غير متاحة",
     "supportCouldNotOpenMessages": "تعذر فتح رسائل الدعم",
     "supportCouldNotOpenPage": "تعذر فتح {pageName}",
     "@supportCouldNotOpenPage": {

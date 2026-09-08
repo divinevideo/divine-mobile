@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -221,6 +223,11 @@ void main() {
 
   group('ZendeskSupportService.showNewTicketScreen', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.showNewTicketScreen();
 
       expect(result, false);
@@ -353,8 +360,111 @@ void main() {
     });
   });
 
+  group('ZendeskSupportService user-facing initialization gate', () {
+    test('showNewTicketScreen waits for an in-flight initialization', () async {
+      final initializationRelease = Completer<void>();
+      var showNewTicketCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') {
+              await initializationRelease.future;
+              return true;
+            }
+            if (call.method == 'showNewTicket') showNewTicketCalls++;
+            return null;
+          });
+
+      final initialization = ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      final opening = ZendeskSupportService.showNewTicketScreen();
+      await pumpEventQueue();
+
+      expect(showNewTicketCalls, 0);
+      initializationRelease.complete();
+
+      expect(await opening, isTrue);
+      await initialization;
+      expect(showNewTicketCalls, 1);
+    });
+
+    test(
+      'showTicketListScreen waits for an in-flight initialization',
+      () async {
+        final initializationRelease = Completer<void>();
+        var showTicketListCalls = 0;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (MethodCall call) async {
+              if (call.method == 'initialize') {
+                await initializationRelease.future;
+                return true;
+              }
+              if (call.method == 'showTicketList') showTicketListCalls++;
+              return null;
+            });
+
+        final initialization = ZendeskSupportService.initialize(
+          appId: 'test',
+          clientId: 'test',
+          zendeskUrl: 'https://test.zendesk.com',
+        );
+        final opening = ZendeskSupportService.showTicketListScreen();
+        await pumpEventQueue();
+
+        expect(showTicketListCalls, 0);
+        initializationRelease.complete();
+
+        expect(await opening, isTrue);
+        await initialization;
+        expect(showTicketListCalls, 1);
+      },
+    );
+
+    test('createTicket waits for an in-flight initialization', () async {
+      final initializationRelease = Completer<void>();
+      var createTicketCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') {
+              await initializationRelease.future;
+              return true;
+            }
+            if (call.method == 'createTicket') {
+              createTicketCalls++;
+              return true;
+            }
+            return null;
+          });
+
+      final initialization = ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      final creation = ZendeskSupportService.createTicket(
+        subject: 'Subject',
+        description: 'Description',
+      );
+      await pumpEventQueue();
+
+      expect(createTicketCalls, 0);
+      initializationRelease.complete();
+
+      expect(await creation, isTrue);
+      await initialization;
+      expect(createTicketCalls, 1);
+    });
+  });
+
   group('ZendeskSupportService.showTicketListScreen', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.showTicketListScreen();
 
       expect(result, false);
@@ -567,6 +677,11 @@ void main() {
 
   group('ZendeskSupportService.createTicket', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.createTicket(
         subject: 'Test',
         description: 'Test description',

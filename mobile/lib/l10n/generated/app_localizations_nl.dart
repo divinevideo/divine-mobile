@@ -4645,9 +4645,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get supportRevealLogsAction => 'Tonen in map';
 
   @override
-  String get supportChatNotAvailable => 'Supportchat niet beschikbaar';
-
-  @override
   String get supportCouldNotOpenMessages => 'Supportberichten openen mislukt';
 
   @override

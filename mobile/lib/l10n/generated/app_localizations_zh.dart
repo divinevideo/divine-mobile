@@ -4330,9 +4330,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportRevealLogsAction => '在文件夹中显示';
 
   @override
-  String get supportChatNotAvailable => '客服聊天不可用';
-
-  @override
   String get supportCouldNotOpenMessages => '无法打开客服消息';
 
   @override

@@ -4659,9 +4659,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get supportRevealLogsAction => 'Ipakita sa folder';
 
   @override
-  String get supportChatNotAvailable => 'Hindi available ang support chat';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Hindi nabuksan ang support messages';
 

@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "سپورٹ چیٹ دستیاب نہیں",
   "supportCouldNotOpenMessages": "سپورٹ پیغامات نہیں کھل سکے",
   "supportCouldNotOpenPage": "{pageName} نہیں کھل سکا",
   "@supportCouldNotOpenPage": {

@@ -1161,7 +1161,6 @@
     "supportLoginRequired": "Mag-log in para makipag-ugnayan sa support",
     "supportExportingLogs": "Nag-e-export ng logs...",
     "supportExportLogsFailed": "Hindi na-export ang logs",
-    "supportChatNotAvailable": "Hindi available ang support chat",
     "supportCouldNotOpenMessages": "Hindi nabuksan ang support messages",
     "supportCouldNotOpenPage": "Hindi nabuksan ang {pageName}",
     "reportWhyReporting": "Bakit mo rine-report ang content na ito?",

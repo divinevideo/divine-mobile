@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Log in om contact op te nemen met support",
     "supportExportingLogs": "Logs exporteren...",
     "supportExportLogsFailed": "Logs exporteren mislukt",
-    "supportChatNotAvailable": "Supportchat niet beschikbaar",
     "supportCouldNotOpenMessages": "Supportberichten openen mislukt",
     "supportCouldNotOpenPage": "{pageName} openen mislukt",
     "@supportCouldNotOpenPage": {

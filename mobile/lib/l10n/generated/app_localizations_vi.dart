@@ -4594,9 +4594,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supportRevealLogsAction => 'Hiện trong thư mục';
 
   @override
-  String get supportChatNotAvailable => 'Chat hỗ trợ không khả dụng';
-
-  @override
   String get supportCouldNotOpenMessages => 'Không mở được tin nhắn hỗ trợ';
 
   @override

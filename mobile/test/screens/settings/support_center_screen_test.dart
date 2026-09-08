@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -342,7 +343,7 @@ void main() {
       expect(find.text(en.supportRequestFeature), findsNothing);
     });
 
-    testWidgets('opens email support when Zendesk is unavailable', (
+    testWidgets('opens email support when native support is unavailable', (
       tester,
     ) async {
       String? capturedToEmail;
@@ -351,6 +352,7 @@ void main() {
       await pump(
         tester,
         authState: AuthState.unauthenticated,
+        openZendeskSupport: () async => false,
         composeEmail:
             ({
               required String toEmail,
@@ -369,8 +371,45 @@ void main() {
 
       expect(capturedToEmail, AppConstants.supportEmail);
       expect(capturedSubject, en.supportContactSupport);
-      expect(capturedBody, contains(en.supportChatNotAvailable));
+      expect(capturedBody, contains(en.supportCouldNotOpenMessages));
       expect(capturedBody, contains(en.supportContactSupportSubtitle));
+    });
+
+    testWidgets('shows progress and suppresses repeat taps while opening', (
+      tester,
+    ) async {
+      final opening = Completer<bool>();
+      var openCalls = 0;
+      var composed = false;
+      await pump(
+        tester,
+        openZendeskSupport: () {
+          openCalls++;
+          return opening.future;
+        },
+        composeEmail:
+            ({
+              required String toEmail,
+              required String subject,
+              required String body,
+              Rect? sharePositionOrigin,
+            }) async {
+              composed = true;
+            },
+      );
+
+      await tester.tap(find.text(en.supportContactSupport));
+      await tester.pump();
+
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      await tester.tap(find.text(en.supportContactSupport));
+      expect(openCalls, 1);
+
+      opening.complete(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      expect(composed, isFalse);
     });
 
     testWidgets('falls back to email when Zendesk cannot open messages', (
@@ -404,6 +443,7 @@ void main() {
       await pump(
         tester,
         authState: AuthState.unauthenticated,
+        openZendeskSupport: () async => false,
         composeEmail:
             ({
               required String toEmail,

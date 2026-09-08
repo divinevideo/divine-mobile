@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "Sembang sokongan tidak tersedia",
   "supportCouldNotOpenMessages": "Tidak dapat membuka mesej sokongan",
   "supportCouldNotOpenPage": "Tidak dapat membuka {pageName}",
   "@supportCouldNotOpenPage": {

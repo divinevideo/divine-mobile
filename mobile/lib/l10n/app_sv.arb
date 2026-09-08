@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Logga in för att kontakta supporten",
     "supportExportingLogs": "Exporterar loggar...",
     "supportExportLogsFailed": "Kunde inte exportera loggar",
-    "supportChatNotAvailable": "Supportchatten är inte tillgänglig",
     "supportCouldNotOpenMessages": "Kunde inte öppna supportmeddelanden",
     "supportCouldNotOpenPage": "Kunde inte öppna {pageName}",
     "@supportCouldNotOpenPage": {

@@ -4693,9 +4693,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get supportRevealLogsAction => 'Afficher dans le dossier';
 
   @override
-  String get supportChatNotAvailable => 'Chat du support indisponible';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Impossible d\'ouvrir les messages du support';
 

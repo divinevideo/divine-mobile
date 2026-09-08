@@ -4559,9 +4559,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get supportRevealLogsAction => 'Tampilkan di folder';
 
   @override
-  String get supportChatNotAvailable => 'Chat dukungan tidak tersedia';
-
-  @override
   String get supportCouldNotOpenMessages => 'Tidak bisa membuka pesan dukungan';
 
   @override
