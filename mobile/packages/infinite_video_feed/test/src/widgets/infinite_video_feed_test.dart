@@ -385,90 +385,97 @@ void main() {
         expect(find.byType(InfiniteVideoFeed), findsOneWidget);
       });
 
-      testWidgets('shows loading while first frame is not rendered', (
-        tester,
-      ) async {
-        DivineVideoPlayerController.resetIdCounterForTesting();
-        const globalChannel = MethodChannel('divine_video_player');
-        const playerChannel = MethodChannel('divine_video_player/player_0');
-        const eventChannelName = 'divine_video_player/player_0/events';
-        const methodCodec = StandardMethodCodec();
+      for (final isSquare in [true, false]) {
+        testWidgets(
+          'shows loading with isSquare=$isSquare before first frame',
+          (
+            tester,
+          ) async {
+            DivineVideoPlayerController.resetIdCounterForTesting();
+            const globalChannel = MethodChannel('divine_video_player');
+            const playerChannel = MethodChannel('divine_video_player/player_0');
+            const eventChannelName = 'divine_video_player/player_0/events';
+            const methodCodec = StandardMethodCodec();
 
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          (call) async {
-            if (call.method == 'create') return <Object?, Object?>{};
-            return null;
-          },
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          (_) async => null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMessageHandler(
-          eventChannelName,
-          (message) async {
-            final call = methodCodec.decodeMethodCall(message);
-            if (call.method == 'listen') {
-              scheduleMicrotask(() async {
-                await tester.binding.defaultBinaryMessenger
-                    .handlePlatformMessage(
-                      eventChannelName,
-                      methodCodec.encodeSuccessEnvelope(<Object?, Object?>{
-                        'status': 'ready',
-                        'videoWidth': 720,
-                        'videoHeight': 480,
-                        'pixelWidthHeightRatio': Float32List.fromList([
-                          2 / 3,
-                        ]).single,
-                        'isFirstFrameRendered': false,
-                      }),
-                      (_) {},
-                    );
-              });
-            }
-            return methodCodec.encodeSuccessEnvelope(null);
-          },
-        );
-
-        await tester.pumpWidget(
-          _wrapFeed(
-            InfiniteVideoFeed(
-              videos: [_makeVideo('first_frame_pending')],
-              cache: cache,
-              prefetchCount: 0,
-              preloadGracePeriod: Duration.zero,
-              loadingBuilder: (_, _, {required isSquare}) =>
-                  Text('loading:isSquare=$isSquare'),
-              videoBuilder: (_, _, _, _) {
-                return const Text('video');
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              globalChannel,
+              (call) async {
+                if (call.method == 'create') return <Object?, Object?>{};
+                return null;
               },
-            ),
-          ),
-        );
+            );
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              playerChannel,
+              (_) async => null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+              eventChannelName,
+              (message) async {
+                final call = methodCodec.decodeMethodCall(message);
+                if (call.method == 'listen') {
+                  scheduleMicrotask(() async {
+                    await tester.binding.defaultBinaryMessenger
+                        .handlePlatformMessage(
+                          eventChannelName,
+                          methodCodec.encodeSuccessEnvelope(<Object?, Object?>{
+                            'status': 'ready',
+                            'videoWidth': 720,
+                            'videoHeight': 480,
+                            'pixelWidthHeightRatio': isSquare
+                                ? Float32List.fromList([
+                                    2 / 3,
+                                  ]).single
+                                : 1.0,
+                            'isFirstFrameRendered': false,
+                          }),
+                          (_) {},
+                        );
+                  });
+                }
+                return methodCodec.encodeSuccessEnvelope(null);
+              },
+            );
 
-        await tester.pump();
-        await tester.pump();
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('first_frame_pending')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  loadingBuilder: (_, _, {required isSquare}) =>
+                      Text('loading:isSquare=$isSquare'),
+                  videoBuilder: (_, _, _, _) {
+                    return const Text('video');
+                  },
+                ),
+              ),
+            );
 
-        expect(find.text('loading:isSquare=true'), findsOneWidget);
-        expect(find.text('video'), findsOneWidget);
+            await tester.pump();
+            await tester.pump();
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
+            expect(find.text('loading:isSquare=$isSquare'), findsOneWidget);
+            expect(find.text('video'), findsOneWidget);
 
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          null,
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              globalChannel,
+              null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              playerChannel,
+              null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+              eventChannelName,
+              null,
+            );
+          },
         );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMessageHandler(
-          eventChannelName,
-          null,
-        );
-      });
+      }
 
       testWidgets(
         'hides loading when first frame becomes rendered after init',
