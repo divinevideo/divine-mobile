@@ -11,13 +11,22 @@ void main() {
     late File diagnostics;
     late File baseline;
 
-    ProcessResult run({bool update = false}) => Process.runSync(
+    ProcessResult run({
+      bool update = false,
+      String? baseRef,
+    }) => Process.runSync(
       'bash',
       ['scripts/check_async_safety_ceiling.sh'],
       environment: {
         'ASYNC_SAFETY_DIAGNOSTICS_FILE': diagnostics.path,
         'ASYNC_SAFETY_BASELINE_FILE': baseline.path,
         'ASYNC_SAFETY_CEILING_ALLOW_NO_BASE': '1',
+        'ASYNC_SAFETY_BASELINE_BASE_REF': ?baseRef,
+        // A repo-relative path no ref carries, so the engine takes its
+        // "no baseline on the base ref" branch deterministically instead of
+        // comparing the three-key fixture against the real one.
+        'ASYNC_SAFETY_BASELINE_REPO_PATH':
+            'mobile/scripts/baseline/__async_safety_fixture_absent.txt',
         // Explicitly cleared, not merely omitted: Process.runSync merges the
         // parent environment, and `UPDATE_BASELINE=1 bash scripts/check_*.sh`
         // is the documented relock idiom, so exporting it for a relock session
@@ -55,6 +64,32 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|4|1|1|mes
           'unawaited_futures|test/b_test.dart\t1',
         ]),
       );
+    });
+
+    test('reports growth alone when the base ref carries a baseline', () {
+      // The growth test above passes today only because origin/main has no
+      // async-safety baseline yet, so the engine skips its bypass check. Once
+      // this merges it will have one, and without the repo-path seam the
+      // three-key fixture would be compared against the real 488-key baseline:
+      // the run would still exit 1 and still say GREW, so both existing
+      // assertions would hold while a second, unasked failure did the work --
+      // and a regression in the growth check alone could no longer turn the
+      // suite red. Pointing the base ref at a commit that does carry a
+      // baseline is what makes that reachable here rather than after merge.
+      expect(run(update: true, baseRef: 'HEAD').exitCode, 0);
+      diagnostics.writeAsStringSync('''
+INFO|LINT|DISCARDED_FUTURES|${Directory.current.path}/lib/a.dart|1|1|1|message
+INFO|LINT|DISCARDED_FUTURES|${Directory.current.path}/lib/a.dart|2|1|1|message
+INFO|LINT|DISCARDED_FUTURES|${Directory.current.path}/lib/a.dart|3|1|1|message
+INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/lib/a.dart|4|1|1|message
+INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|message
+''');
+
+      final result = run(baseRef: 'HEAD');
+
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('GREW'));
+      expect(result.stdout, isNot(contains('may only shrink')));
     });
 
     test('rejects growth in one diagnostic without conflating rules', () {
