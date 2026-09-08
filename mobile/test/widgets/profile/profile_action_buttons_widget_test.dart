@@ -101,13 +101,14 @@ void main() {
     bool isMessageRestricted = false,
     bool newPostNotifications = true,
     bool constrainWidth = false,
+    VoidCallback? onOpenClips,
   }) {
     final row = ProfileActionButtons(
       userIdHex: isOwnProfile ? viewerPubkey : targetPubkey,
       isOwnProfile: isOwnProfile,
       displayName: 'Target User',
       onEditProfile: () {},
-      onOpenClips: () {},
+      onOpenClips: onOpenClips ?? () {},
       onMessageUser: () {},
       isMessageRestricted: isMessageRestricted,
       onShareProfile: (_) {},
@@ -215,6 +216,25 @@ void main() {
     expect(find.text('Message'), findsNothing);
     expect(find.byType(DivineButton), findsOneWidget);
     expect(find.byType(DivineIconButton), findsOneWidget);
+  });
+
+  group('library button', () {
+    testWidgets('tapping it opens the drafts library', (tester) async {
+      var openedClips = 0;
+
+      await tester.pumpWidget(
+        buildWidget(isOwnProfile: true, onOpenClips: () => openedClips++),
+      );
+      await tester.pump();
+
+      final libraryButton = find.byKey(const Key('library-button'));
+      expect(libraryButton, findsOneWidget);
+
+      await tester.tap(libraryButton);
+      await tester.pump();
+
+      expect(openedClips, 1);
+    });
   });
 
   group('notification bell', () {
