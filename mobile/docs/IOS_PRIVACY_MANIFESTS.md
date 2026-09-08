@@ -5,9 +5,11 @@ without declaring it in a privacy manifest. This document is the ownership and
 update process for those declarations (#8803).
 
 Source of truth for the rules is Apple's
-[Describing use of required reason API][apple-rr]. The tables below were
-verified against Apple's documentation payload on 2026-09-08; re-verify them
-when Apple updates the list, which the page says happens periodically.
+[Describing use of required reason API][apple-rr]. The generated tables below
+were verified against Apple's documentation payload on 2026-09-07. A monthly
+probe compares Apple's current Swift and Objective-C variants with the
+machine-readable catalogue in
+`scripts/data/apple_required_reason_catalogue.json`.
 
 [apple-rr]: https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
 
@@ -78,37 +80,37 @@ updated in the same change.**
 
 ## Apple's catalogue
 
-Symbols, verified against Apple's documentation:
-
-| Category | APIs |
-|---|---|
-| `FileTimestamp` | `FileAttributeKey.creationDate`, `FileAttributeKey.modificationDate`, `UIDocument.fileModificationDate`, `URLResourceKey.contentModificationDateKey`, `URLResourceKey.creationDateKey`, `getattrlist`, `getattrlistbulk`, `fgetattrlist`, `stat`, `fstat`, `fstatat`, `lstat`, `getattrlistat` |
-| `SystemBootTime` | `ProcessInfo.systemUptime`, `mach_absolute_time()` |
-| `DiskSpace` | `volumeAvailableCapacityKey`, `volumeAvailableCapacityForImportantUsageKey`, `volumeAvailableCapacityForOpportunisticUsageKey`, `volumeTotalCapacityKey`, `systemFreeSize`, `systemSize`, `statfs`, `statvfs`, `fstatfs`, `fstatvfs`, `getattrlist`, `fgetattrlist`, `getattrlistat` |
-| `ActiveKeyboards` | `UITextInputMode.activeInputModes` |
-| `UserDefaults` | `UserDefaults` |
+<!-- apple-required-reason-catalogue:start -->
+| Category | Swift APIs | Objective-C APIs |
+|---|---|---|
+| `FileTimestamp` | `creationDate`, `modificationDate`, `fileModificationDate`, `contentModificationDateKey`, `creationDateKey`, `getattrlist`, `getattrlistbulk`, `fgetattrlist`, `stat`, `fstat`, `fstatat`, `lstat`, `getattrlistat` | `NSFileCreationDate`, `NSFileModificationDate`, `fileModificationDate`, `NSURLContentModificationDateKey`, `NSURLCreationDateKey`, `getattrlist`, `getattrlistbulk`, `fgetattrlist`, `stat`, `fstat`, `fstatat`, `lstat`, `getattrlistat` |
+| `SystemBootTime` | `systemUptime`, `mach_absolute_time` | `systemUptime`, `mach_absolute_time` |
+| `DiskSpace` | `volumeAvailableCapacityKey`, `volumeAvailableCapacityForImportantUsageKey`, `volumeAvailableCapacityForOpportunisticUsageKey`, `volumeTotalCapacityKey`, `systemFreeSize`, `systemSize`, `statfs`, `statvfs`, `fstatfs`, `fstatvfs`, `getattrlist`, `fgetattrlist`, `getattrlistat` | `NSURLVolumeAvailableCapacityKey`, `NSURLVolumeAvailableCapacityForImportantUsageKey`, `NSURLVolumeAvailableCapacityForOpportunisticUsageKey`, `NSURLVolumeTotalCapacityKey`, `NSFileSystemFreeSize`, `NSFileSystemSize`, `statfs`, `statvfs`, `fstatfs`, `fstatvfs`, `getattrlist`, `fgetattrlist`, `getattrlistat` |
+| `ActiveKeyboards` | `activeInputModes` | `activeInputModes` |
+| `UserDefaults` | `UserDefaults` | `NSUserDefaults` |
 
 Reason codes:
 
 | Code | Category | Meaning |
 |---|---|---|
 | `DDA9.1` | FileTimestamp | display file timestamps to the user; not sent off-device |
-| `C617.1` | FileTimestamp | metadata of files in the app / app-group / CloudKit container |
-| `3B52.1` | FileTimestamp | files the user explicitly granted access to (document picker) |
+| `C617.1` | FileTimestamp | metadata of files in the app, app-group, or CloudKit container |
+| `3B52.1` | FileTimestamp | files the user explicitly granted access to |
 | `0A2A.1` | FileTimestamp | third-party SDK wrapper function only |
 | `35F9.1` | SystemBootTime | elapsed time between in-app events, or timers |
 | `8FFB.1` | SystemBootTime | absolute timestamps for in-app events |
 | `3D61.1` | SystemBootTime | user-submitted bug report |
 | `85F4.1` | DiskSpace | display disk space to the user |
-| `E174.1` | DiskSpace | check sufficient / low disk space, with observable behaviour |
+| `E174.1` | DiskSpace | check sufficient or low disk space, with observable behaviour |
 | `7D9E.1` | DiskSpace | user-submitted bug report |
 | `B728.1` | DiskSpace | health research app |
 | `3EC4.1` | ActiveKeyboards | custom keyboard app |
 | `54BD.1` | ActiveKeyboards | customize UI to the active keyboards |
 | `CA92.1` | UserDefaults | data accessible only to the app itself |
-| `1C8F.1` | UserDefaults | App Group–scoped defaults |
+| `1C8F.1` | UserDefaults | App Group-scoped defaults |
 | `C56D.1` | UserDefaults | third-party SDK wrapper function only |
 | `AC6B.1` | UserDefaults | MDM managed app configuration |
+<!-- apple-required-reason-catalogue:end -->
 
 ## The guard
 
@@ -134,6 +136,19 @@ or subspec — a manifest nothing ships is a manifest Apple never reads.
 Behaviour is pinned by
 `mobile/test/tools/privacy_manifest_coverage_detector_test.dart`.
 
+`apple_required_reason_probe.yml` runs monthly and can also be dispatched by
+hand. It retries transient fetch and parse failures without opening an issue.
+When a successfully parsed payload differs from the pinned catalogue, it opens
+or updates one marker-tagged incident issue and closes that issue after the
+catalogue matches again.
+
+When the probe reports a new category or symbol, update the catalogue and teach
+the detector how to recognize the new API before accepting uses of it. When it
+reports a new reason code, verify Apple's restrictions, add a concise meaning
+to the catalogue, and update detector tests. Run
+`python3 scripts/lib/render_required_reason_catalogue.py --check` to prove this
+document still matches the catalogue.
+
 ### Two things it deliberately does not do
 
 - **Bare `.creationDate` / `.modificationDate` are reported, never fatal.**
@@ -146,6 +161,10 @@ Behaviour is pinned by
   Release, so it needs no declaration. Any other condition
   (`#if canImport(…)`, `#if !DEBUG`) is scanned normally, so the guard errs
   toward reporting rather than hiding a use.
+- **The `getattrlist`, `fgetattrlist`, and `getattrlistat` families are review
+  findings.** Apple lists them under both file timestamps and disk space. The
+  requested attribute list decides which declaration is accurate, so the guard
+  reports both possibilities without forcing either one.
 
 ## Adding or changing a declaration
 

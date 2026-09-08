@@ -36,6 +36,7 @@ void main() {
 
   Directory makeTree({
     required String swift,
+    String? objectiveC,
     String? manifest,
     String? selectedSubspec,
     String podspec =
@@ -47,6 +48,9 @@ void main() {
       ..createSync(recursive: true);
     Directory('${pkg.path}/Classes').createSync(recursive: true);
     File('${pkg.path}/Classes/Sample.swift').writeAsStringSync(swift);
+    if (objectiveC != null) {
+      File('${pkg.path}/Classes/Sample.m').writeAsStringSync(objectiveC);
+    }
     File('${pkg.path}/sample.podspec').writeAsStringSync(podspec);
     Directory('${root.path}/ios/Runner').createSync(recursive: true);
     if (selectedSubspec != null) {
@@ -138,7 +142,7 @@ void main() {
         // Reported for a human to judge, never fatal: PHAsset metadata carries
         // no declaration duty, and over-declaring is itself inaccurate.
         expect(result.exitCode, equals(0), reason: result.output);
-        expect(result.output, contains('ambiguous accessor'));
+        expect(result.output, contains('review required'));
       });
 
       test('does fail on the unambiguous URLResourceKey form', () {
@@ -155,6 +159,46 @@ void main() {
           contains('NSPrivacyAccessedAPICategoryFileTimestamp'),
         );
       });
+
+      test('detects Objective-C timestamp and disk-space constants', () {
+        final root = makeTree(
+          swift: '',
+          objectiveC:
+              'id timestamp = NSURLContentModificationDateKey;\n'
+              'id capacity = NSURLVolumeTotalCapacityKey;\n',
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(
+          result.output,
+          contains('NSPrivacyAccessedAPICategoryFileTimestamp'),
+        );
+        expect(
+          result.output,
+          contains('NSPrivacyAccessedAPICategoryDiskSpace'),
+        );
+      });
+
+      test(
+        'reports cross-category getattrlist calls without forcing either',
+        () {
+          final root = makeTree(
+            swift: 'getattrlist(path, &attributes, &buffer, size, 0)\n',
+          );
+          final result = run(root: root);
+
+          expect(result.exitCode, equals(0), reason: result.output);
+          expect(
+            result.output,
+            contains('possible NSPrivacyAccessedAPICategoryFileTimestamp use'),
+          );
+          expect(
+            result.output,
+            contains('possible NSPrivacyAccessedAPICategoryDiskSpace use'),
+          );
+        },
+      );
 
       test('ignores an API named only in a comment or string literal', () {
         final root = makeTree(
