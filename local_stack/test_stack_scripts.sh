@@ -90,6 +90,12 @@ assert_file_matches() {
 assert_file_matches '^[[:space:]]+platform: \$\{INVITE_PLATFORM:-linux/amd64\}$' "$COMPOSE_FILE" \
     "the invite image platform default and override should remain configured"
 
+# A count alone says how many statements failed, not which. The skip branch has
+# to name the statement and ClickHouse's reason, or diagnosing "applied 3/4"
+# means reading funnelcake's migration history by hand.
+assert_file_matches '^[[:space:]]+echo "refresh-interval tuning skipped: \$\$stmt"$' "$COMPOSE_FILE" \
+    "a skipped tuning statement should name itself"
+
 # --- Sandbox ----------------------------------------------------------------
 
 # Only what these scripts and the stubs actually shell out to. `ss` and `lsof`
@@ -274,6 +280,13 @@ ghcr_fixtures() {
 run_staleness() {
     set +e
     run_in_sandbox 'preflight_image_staleness "$(dirname "$1")"'
+    last_status=$?
+    set -e
+}
+
+run_failure_report() {
+    set +e
+    run_in_sandbox 'stack_failure_report "$2" "$(dirname "$1")" funnelcake-migrate funnelcake-relay funnelcake-api'
     last_status=$?
     set -e
 }
@@ -520,6 +533,122 @@ echo 'dial tcp: i/o timeout' >"${FIXTURES}/logs_keycast.txt"
 run_transient "${tmp_dir}/up.log" keycast minio-init
 assert_status 1 "$last_status" "with every service up there is no failed log to call transient"
 
+# --- A dirty migration ledger names the destructive local recovery ----------
+
+reset_fixtures
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|created|0
+PS
+# golang-migrate's wording, which only a pre-2026-05 migrate image can emit
+# (funnelcake #423 replaced it with the Rust migrator). Kept because a developer
+# pinning an old FUNNELCAKE_MIGRATE_IMAGE still gets it; the current default
+# image's own strings are the loop below.
+echo 'migration failed: Dirty database version 70' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+run_failure_report
+
+assert_status 0 "$last_status" "a failure report should remain diagnostic"
+assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should be classified"
+assert_stderr_contains 'mise run local_reset' "the dirty ledger should name its recovery"
+assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
+assert_stderr_contains 'docker volume rm local_stack_funnelcake-ch-data' "the Funnelcake-only recovery should come first"
+assert_stderr_lacks 'keycast-pg-data' "the narrow recovery must not touch the keycast volume"
+
+# The migrate image runs funnelcake-migrate, which reaches only
+# crates/migrations. Its two dirty bails are the native ledger (lib.rs:391) and
+# the bootstrapped legacy one (lib.rs:740). The similar strings in
+# crates/clickhouse belong to the janitor binary, which local_stack does not
+# run, so they can never reach a funnelcake-migrate log.
+for migration_error in \
+    'migration 259 is dirty; refusing to apply more migrations' \
+    'legacy schema_migrations latest row is dirty at version 70'; do
+    echo "$migration_error" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_status 0 "$last_status" "a Rust migration failure report should remain diagnostic"
+    assert_stderr_contains 'migration ledger is dirty' "a Rust dirty ledger should be classified"
+    assert_stderr_contains 'mise run local_reset' "a Rust dirty ledger should name its recovery"
+    assert_stderr_contains 'deletes all local stack data' "the reset scope should be explicit"
+done
+
+# --- A dirty ledger does not claim healthy consumers are down ---------------
+#
+# The one-shot migrate container can fail on a re-run of a stack whose relay
+# and API are already up. The status table printed just above says they are
+# running, so the hint must not contradict it.
+
+reset_fixtures
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|running|0
+funnelcake-api|running|0
+PS
+echo 'migration 259 is dirty; refusing to apply more migrations' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+run_failure_report
+
+assert_stderr_contains 'migration ledger is dirty' "the dirty ledger should still be classified"
+assert_stderr_lacks 'Still down, waiting on it' "running consumers must not be reported as blocked"
+
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|running|0
+PS
+run_failure_report
+
+assert_stderr_contains 'Still down, waiting on it: funnelcake-relay.' "only the consumer that is actually down should be named"
+
+# Restore the all-down fixture the remaining ledger cases assume.
+cat >"${FIXTURES}/compose_ps_pipe.txt" <<'PS'
+funnelcake-migrate|exited|1
+funnelcake-relay|created|0
+funnelcake-api|created|0
+PS
+
+# --- Reassuring ledger log lines must not recommend deleting data -----------
+#
+# crates/migrations logs nothing today, so its container carries only the final
+# summary or the error. One upstream status line changes that, and an
+# unanchored `schema_migrations.*dirty` reads every one of these as a wedge.
+for benign_line in \
+    'checked funnelcake_schema_migrations: 0 dirty rows' \
+    'schema_migrations table has no dirty entries' \
+    'no dirty database version found' \
+    'migrations complete; schema_migrations dirty=0'; do
+    echo "$benign_line" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_stderr_lacks 'migration ledger is dirty' "a reassuring ledger line is not a dirty ledger: ${benign_line}"
+    assert_stderr_lacks 'docker volume rm' "a reassuring ledger line must not recommend deleting data: ${benign_line}"
+done
+
+# --- A ledger/image mismatch is not a dirty ledger --------------------------
+#
+# compute_pending_with_options bails four ways; only two of them say "dirty".
+# These two are what you get from building a funnelcake branch locally, letting
+# it record its migration, and then dropping the .env overrides — the workflow
+# build_funnelcake.sh exists for. Wiping the volume is the last resort here,
+# not the first, because aligning the overrides recovers the ledger intact.
+for mismatch_error in \
+    'applied migration 000260_mybranch is missing from the migration directory' \
+    'checksum changed for applied migration 000257: database=abc disk=def'; do
+    echo "$mismatch_error" >"${FIXTURES}/logs_funnelcake-migrate.txt"
+    run_failure_report
+
+    assert_status 0 "$last_status" "a ledger mismatch report should remain diagnostic"
+    assert_stderr_contains 'ledger and the migrate image disagree' "a ledger mismatch should be classified"
+    assert_stderr_contains 'FUNNELCAKE_(MIGRATE|RELAY|API)_IMAGE' "the mismatch should name the override check"
+    assert_stderr_contains 'docker volume rm local_stack_funnelcake-ch-data' "the mismatch should name the last-resort recovery"
+    assert_stderr_lacks 'migration ledger is dirty' "a mismatch is not a dirty ledger"
+    assert_stderr_lacks 'mise run local_reset' "a mismatch should not recommend deleting keycast data"
+done
+
+echo 'migration failed: permission denied' >"${FIXTURES}/logs_funnelcake-migrate.txt"
+echo 'migration 259 is dirty; refusing to apply more migrations' >"${FIXTURES}/logs_funnelcake-api.txt"
+run_failure_report
+assert_stderr_lacks 'mise run local_reset' "an unrelated migration error should not recommend deleting data"
+
 # --- up.sh retries transient startup failures --------------------------------
 
 reset_fixtures
@@ -549,27 +678,58 @@ reset_fixtures
 with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
-echo 'refresh-interval tuning: applied=4 skipped=1' >"${FIXTURES}/tuning_output.txt"
-echo 210 >"${FIXTURES}/schema_version.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 259 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 run_up_sh
 
 assert_status 0 "$last_status" "partial tuning should not block local_up"
-assert_stderr_contains 'refresh-interval tuning applied 4/5 expected statements on schema 210' "current-schema tuning drift should be visible"
+assert_stderr_contains 'refresh-interval tuning applied 3/4 expected statements on schema 259' "current-schema tuning drift should be visible"
 
-# --- Pinned schema with skipped tuning stays quiet ---------------------------
+# --- The band below the last tuned MV stays quiet ----------------------------
+#
+# trending_videos_snapshot_refresh_mv is created at migration 150, so on
+# schema 143-149 only three of the four ALTERs can ever apply. Warning there
+# reports drift that the schema makes inevitable.
 
 reset_fixtures
 with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
-echo 'refresh-interval tuning: applied=0 skipped=5' >"${FIXTURES}/tuning_output.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 149 >"${FIXTURES}/schema_version.txt"
+echo 'seed ok' >"${FIXTURES}/seed_output.txt"
+run_up_sh
+
+assert_status 0 "$last_status" "a pre-150 schema should not block local_up"
+assert_stderr_lacks 'refresh-interval tuning applied' "schema 149 cannot carry the fourth MV, so it should not warn"
+
+# --- The first schema carrying all four MVs does warn ------------------------
+
+reset_fixtures
+with_tools lsof
+: >"${FIXTURES}/docker_ps.txt"
+: >"${FIXTURES}/lsof.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 150 >"${FIXTURES}/schema_version.txt"
+echo 'seed ok' >"${FIXTURES}/seed_output.txt"
+run_up_sh
+
+assert_stderr_contains 'refresh-interval tuning applied 3/4 expected statements on schema 150' "schema 150 carries all four MVs, so drift should be visible"
+
+# --- Legacy schema with skipped tuning stays quiet ---------------------------
+
+reset_fixtures
+with_tools lsof
+: >"${FIXTURES}/docker_ps.txt"
+: >"${FIXTURES}/lsof.txt"
+echo 'refresh-interval tuning: applied=0 skipped=4' >"${FIXTURES}/tuning_output.txt"
 echo 70 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 run_up_sh
 
-assert_status 0 "$last_status" "skipped tuning should not block the pinned schema"
-assert_stderr_lacks 'refresh-interval tuning applied' "the pinned schema should not warn about missing current MVs"
+assert_status 0 "$last_status" "skipped tuning should not block a legacy schema"
+assert_stderr_lacks 'refresh-interval tuning applied' "a legacy schema should not warn about missing current MVs"
 
 # --- .env overrides suppress the stale-image warning through up.sh -----------
 
@@ -578,7 +738,7 @@ with_tools lsof
 : >"${FIXTURES}/docker_ps.txt"
 : >"${FIXTURES}/lsof.txt"
 ghcr_fixtures "$(python3 -c 'import datetime;print((datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=163)).isoformat())')" 2
-echo 'refresh-interval tuning: applied=0 skipped=5' >"${FIXTURES}/tuning_output.txt"
+echo 'refresh-interval tuning: applied=0 skipped=4' >"${FIXTURES}/tuning_output.txt"
 echo 70 >"${FIXTURES}/schema_version.txt"
 echo 'seed ok' >"${FIXTURES}/seed_output.txt"
 cat >"$ENV_FILE" <<'ENV'
@@ -592,7 +752,7 @@ run_up_sh
 rm -f "$ENV_FILE"
 
 assert_status 0 "$last_status" "up.sh should load .env overrides"
-assert_stderr_lacks 'the pinned funnelcake images are stale' ".env image overrides should suppress the stale-image warning"
+assert_stderr_lacks 'the default funnelcake images are stale' ".env image overrides should suppress the stale-image warning"
 
 # --- A failed seed reports the seed, not the healthy services ---------------
 # The services came up; saying "Local stack failed to come up" over a list of
@@ -628,10 +788,11 @@ ghcr_fixtures "$(python3 -c 'import datetime;print((datetime.datetime.now(dateti
 run_staleness
 
 assert_status 0 "$last_status" "a stale image must never block the stack"
-assert_stderr_contains 'the pinned funnelcake images are stale' "the warning should fire"
+assert_stderr_contains 'the default funnelcake images are stale' "the warning should fire"
 assert_stderr_contains '163 days ago' "the warning should say how stale"
 assert_stderr_contains 'build_funnelcake.sh' "the warning should name the escape hatch"
-assert_stderr_contains '6594' "the warning should cite the tracking issue"
+assert_stderr_contains 'divine-funnelcake' "the warning should identify where publishing failed"
+assert_stderr_contains 'GHCR login and push steps' "the warning should name the registry checks"
 
 # --- A freshly published image says nothing ---------------------------------
 
@@ -653,7 +814,7 @@ ghcr_fixtures "2026-02-24T12:31:46.817075705-03:00" 2
 run_staleness
 
 assert_status 0 "$last_status" "an odd timestamp must not break the check"
-assert_stderr_contains 'the pinned funnelcake images are stale' "a 2026-02-24 build is stale and must warn"
+assert_stderr_contains 'the default funnelcake images are stale' "a 2026-02-24 build is stale and must warn"
 
 # --- An unreachable registry fails open -------------------------------------
 # Offline, rate-limited, or GHCR down: warn about nothing, never block.

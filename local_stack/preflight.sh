@@ -351,10 +351,33 @@ stack_failure_report() {
 
     stack_service_status "$compose_file" "$@"
 
-    local service state service_logs
+    local service state service_logs dirty_migration=0 ledger_mismatch=0
+    local blocked=""
     while IFS='|' read -r service state; do
         [[ -n "$service" ]] || continue
+        # Which consumers are actually still down. They depend on
+        # funnelcake-migrate completing, but on a re-run they can already be up
+        # while the one-shot migrate container fails, and the status table
+        # printed above would contradict a blanket "they cannot start".
+        case "$service" in
+            funnelcake-relay | funnelcake-api)
+                blocked="${blocked}${blocked:+, }${service}"
+                ;;
+        esac
         service_logs="$(docker compose -f "$compose_file" logs --tail=20 --no-log-prefix "$service" 2>&1 || true)"
+        if [[ "$service" == "funnelcake-migrate" ]]; then
+            # Anchored to the three phrasings that actually report a dirty
+            # ledger: golang-migrate on pre-2026-05 images, then
+            # crates/migrations/src/lib.rs:391 and :740. Loose alternatives
+            # such as `schema_migrations.*dirty` also match a reassuring
+            # "0 dirty rows", which would recommend deleting the volume.
+            if grep -qiE 'dirty database version [0-9]|migration [^ ]+ is dirty; refusing|schema_migrations latest row is dirty at version [0-9]' <<<"$service_logs"; then
+                dirty_migration=1
+            fi
+            if grep -qiE 'is missing from the migration directory|checksum changed for applied migration' <<<"$service_logs"; then
+                ledger_mismatch=1
+            fi
+        fi
         {
             echo "--- last 20 log lines: ${service} (${state}) ---"
             if [[ -n "$service_logs" ]]; then
@@ -367,6 +390,51 @@ stack_failure_report() {
         } >&2
     done < <(_stack_down_services "$compose_file" "$@")
 
+    if [[ "$dirty_migration" -eq 1 ]]; then
+        {
+            echo "The Funnelcake migration ledger is dirty."
+            if [[ -n "$blocked" ]]; then
+                echo "Still down, waiting on it: ${blocked}."
+            fi
+            echo ""
+            echo "The dirt is confined to Funnelcake's ClickHouse volume, so discard"
+            echo "just that one and let the migrations re-run:"
+            echo ""
+            echo "    docker compose -f ${compose_file} down"
+            echo "    docker volume rm local_stack_funnelcake-ch-data"
+            echo ""
+            echo "That keeps the keycast accounts created by setup.sh. Only if the"
+            echo "whole stack is disposable — this deletes all local stack data, not"
+            echo "just Funnelcake's database:"
+            echo ""
+            echo "    mise run local_reset"
+            echo ""
+        } >&2
+    fi
+
+    if [[ "$ledger_mismatch" -eq 1 ]]; then
+        {
+            echo "The Funnelcake migration ledger and the migrate image disagree, so the"
+            echo "migrator refuses to continue."
+            if [[ -n "$blocked" ]]; then
+                echo "Still down, waiting on it: ${blocked}."
+            fi
+            echo ""
+            echo "This is what mixing image sources looks like: a ledger written by"
+            echo "locally built images and then read by the default GHCR ones, or the"
+            echo "reverse. Set all three overrides together, or none of them:"
+            echo ""
+            echo "    grep -E 'FUNNELCAKE_(MIGRATE|RELAY|API)_IMAGE' local_stack/.env"
+            echo ""
+            echo "If the ledger records a funnelcake branch you no longer build, discard"
+            echo "Funnelcake's database and let the current image migrate from scratch:"
+            echo ""
+            echo "    docker compose -f ${compose_file} down"
+            echo "    docker volume rm local_stack_funnelcake-ch-data"
+            echo ""
+        } >&2
+    fi
+
     stack_bypass_hint "$script_dir" \
         "A service being down does NOT block tests that never call it."
 }
@@ -375,9 +443,8 @@ stack_failure_report() {
 #
 # `pull_policy: always` re-checks the registry every run, but when the remote
 # digest has not moved that is a no-op: `docker compose pull` prints "Pulled"
-# and nothing changes. The funnelcake images have been frozen at 2026-02-24
-# since before they were ever published by CI (divine-mobile#6594), so the stack
-# looks fresh while running a schema ~130 migrations behind.
+# and nothing changes. A previous publishing failure left these images frozen
+# for months, so retain an independent age check even though publishing works.
 #
 # This warns; it never blocks. GHCR is queried anonymously (no credentials of
 # any kind), and every failure path returns 0 so a rate limit, an offline
@@ -434,7 +501,7 @@ print(int((now - created).total_seconds() // 86400), sys.argv[2])
 }
 
 # preflight_image_staleness <script_dir>
-# Warns when the pinned funnelcake images are stale. Always returns 0.
+# Warns when the default funnelcake images are stale. Always returns 0.
 preflight_image_staleness() {
     local script_dir="$1"
     local package age_and_tags age tags stale=""
@@ -458,14 +525,13 @@ preflight_image_staleness() {
 
     {
         echo ""
-        echo "WARNING: the pinned funnelcake images are stale."
+        echo "WARNING: the default funnelcake images are stale."
         echo ""
         printf '%s' "$stale"
         echo ""
         echo "\`docker compose pull\` reports success because the remote digest has not"
-        echo "moved — there is nothing newer to pull. The relay's kind allowlist is"
-        echo "therefore frozen too, so NIP-17 DMs (kinds 1059 and 10050) are rejected."
-        echo "Tracking: divine-mobile#6594."
+        echo "moved — there is nothing newer to pull. Check the latest divine-funnelcake"
+        echo "CI run's GHCR login and push steps before trusting local relay behaviour."
         echo ""
         echo "To run against current funnelcake instead:"
         echo ""
