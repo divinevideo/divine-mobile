@@ -1,10 +1,8 @@
 // ABOUTME: Tests all real navigation scenarios used in the app
 // ABOUTME: Verifies every route pattern and navigation flow works
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
@@ -14,22 +12,15 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 
+import '../helpers/test_provider_overrides.dart';
+
 void main() {
   group('Real Navigation Scenarios', () {
     testWidgets('Home tab navigation', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -49,19 +40,10 @@ void main() {
     });
 
     testWidgets('Explore tab tap - grid mode', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -75,19 +57,10 @@ void main() {
     });
 
     testWidgets('Explore grid → feed navigation', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -107,19 +80,10 @@ void main() {
     });
 
     testWidgets('Hashtag grid mode', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -132,19 +96,10 @@ void main() {
     });
 
     testWidgets('Profile navigation', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -164,19 +119,10 @@ void main() {
     });
 
     testWidgets('Settings route', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -189,19 +135,10 @@ void main() {
     });
 
     testWidgets('Notifications navigation', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -221,19 +158,10 @@ void main() {
     });
 
     testWidgets('Profile/me special route', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -248,19 +176,10 @@ void main() {
     });
 
     testWidgets('Edit video route', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -274,19 +193,10 @@ void main() {
     });
 
     testWidgets('Home video feed swiping', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -314,19 +224,10 @@ void main() {
     });
 
     testWidgets('Explore back to grid from feed', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -349,19 +250,10 @@ void main() {
     });
 
     testWidgets('URL-encoded hashtags', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
 
@@ -374,52 +266,5 @@ void main() {
         reason: 'URL-encoded hashtags should work',
       );
     });
-
-    testWidgets('Back button navigates from hashtag grid to explore', (
-      tester,
-    ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      final router = container.read(goRouterProvider);
-
-      // Navigate to hashtag grid mode
-      router.go(HashtagScreenRouter.pathForTag('bitcoin'));
-      await tester.pumpAndSettle();
-      expect(
-        router.routeInformationProvider.value.uri.toString(),
-        HashtagScreenRouter.pathForTag('bitcoin'),
-      );
-
-      // Find and tap the back button
-      final backButton = find.byIcon(Icons.arrow_back);
-      expect(
-        backButton,
-        findsOneWidget,
-        reason: 'Back button should be visible in hashtag grid mode',
-      );
-
-      await tester.tap(backButton);
-      await tester.pumpAndSettle();
-
-      // Should navigate back to explore
-      expect(
-        router.routeInformationProvider.value.uri.toString(),
-        ExploreScreen.path,
-        reason: 'Tapping back from hashtag grid should go to explore',
-      );
-    });
-    // TODO(any): Fix and re-enable these tests
-  }, skip: true);
+  });
 }

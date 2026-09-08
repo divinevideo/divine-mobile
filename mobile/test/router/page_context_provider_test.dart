@@ -1,10 +1,10 @@
-// ABOUTME: Tests for derived page context provider
-// ABOUTME: Verifies route location is parsed into structured context
+// ABOUTME: Tests for the page context provider's route derivation.
+// ABOUTME: Verifies router locations become structured, updating contexts.
 
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -14,180 +14,98 @@ import 'package:openvine/screens/video_recorder_screen.dart';
 
 void main() {
   group('Page Context Provider', () {
-    testWidgets('parses home route from router location', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      // Build widget tree with router
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
+    Future<RouteContext> contextFor(String location) async {
+      final container = ProviderContainer(
+        overrides: [
+          routerLocationStreamProvider.overrideWith(
+            (ref) => Stream.value(location),
           ),
-        ),
+        ],
       );
+      addTearDown(container.dispose);
+      final result = Completer<RouteContext>();
+      final subscription = container.listen(
+        pageContextProvider,
+        (_, next) {
+          final value = next.value;
+          if (value != null && !result.isCompleted) result.complete(value);
+        },
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+      return result.future;
+    }
 
-      // Wait for initial render
-      await tester.pumpAndSettle();
-
-      // Access the context via AsyncValue
-      final contextAsync = container.read(pageContextProvider);
-      final context = contextAsync.value!;
-
+    test('parses home route from router location', () async {
+      final context = await contextFor('/home/0');
       expect(context.type, RouteType.home);
       expect(context.videoIndex, 0);
     });
 
-    testWidgets('updates context when router navigates', (tester) async {
-      final container = ProviderContainer();
+    test('updates context when router location changes', () async {
+      final locations = StreamController<String>();
+      addTearDown(locations.close);
+      final container = ProviderContainer(
+        overrides: [
+          routerLocationStreamProvider.overrideWith((ref) => locations.stream),
+        ],
+      );
       addTearDown(container.dispose);
-
-      // Build widget tree
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final contexts = StreamController<RouteContext>.broadcast();
+      addTearDown(contexts.close);
+      container.listen(
+        pageContextProvider,
+        (_, next) {
+          final value = next.value;
+          if (value != null) contexts.add(value);
+        },
+        fireImmediately: true,
       );
 
-      // Initial state - home
-      await tester.pumpAndSettle();
-      var contextAsync = container.read(pageContextProvider);
-      expect(contextAsync.hasValue, true);
-      expect(contextAsync.value!.type, RouteType.home);
-      expect(contextAsync.value!.videoIndex, 0);
+      locations.add('/home/0');
+      var context = await contexts.stream.first;
+      expect(context.type, RouteType.home);
+      expect(context.videoIndex, 0);
 
-      // Navigate to explore
-      container.read(goRouterProvider).go(ExploreScreen.pathForIndex(3));
-      await tester.pumpAndSettle();
+      locations.add(ExploreScreen.pathForIndex(3));
+      context = await contexts.stream.firstWhere(
+        (value) => value.type == RouteType.explore,
+      );
+      expect(context.videoIndex, 3);
 
-      // Context should update
-      contextAsync = container.read(pageContextProvider);
-      expect(contextAsync.value!.type, RouteType.explore);
-      expect(contextAsync.value!.videoIndex, 3);
-
-      // Navigate to profile
-      container
-          .read(goRouterProvider)
-          .go(ProfileScreenRouter.pathForIndex('npub1test', 7));
-      await tester.pumpAndSettle();
-
-      // Context should update again
-      contextAsync = container.read(pageContextProvider);
-      expect(contextAsync.value!.type, RouteType.profile);
-      expect(contextAsync.value!.npub, 'npub1test');
-      expect(contextAsync.value!.videoIndex, 7);
+      locations.add(ProfileScreenRouter.pathForIndex('npub1test', 7));
+      context = await contexts.stream.firstWhere(
+        (value) => value.type == RouteType.profile,
+      );
+      expect(context.npub, 'npub1test');
+      expect(context.videoIndex, 7);
     });
 
-    testWidgets('parses hashtag route correctly', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+    test('parses hashtag route correctly', () async {
+      final context = await contextFor(
+        HashtagScreenRouter.pathForTag('bitcoin'),
       );
-
-      // Navigate to hashtag
-      container
-          .read(goRouterProvider)
-          .go(HashtagScreenRouter.pathForTag('bitcoin'));
-      await tester.pumpAndSettle();
-
-      final contextAsync = container.read(pageContextProvider);
-      final context = contextAsync.value!;
       expect(context.type, RouteType.hashtag);
       expect(context.hashtag, 'bitcoin');
       expect(context.videoIndex, isNull);
     });
 
-    testWidgets('parses video-recorder route correctly', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      // Navigate to video-recorder
-      container.read(goRouterProvider).go(VideoRecorderScreen.path);
-      await tester.pumpAndSettle();
-
-      final contextAsync = container.read(pageContextProvider);
-      final context = contextAsync.value!;
+    test('parses video-recorder route correctly', () async {
+      final context = await contextFor(VideoRecorderScreen.path);
       expect(context.type, RouteType.videoRecorder);
       expect(context.videoIndex, isNull);
     });
 
-    testWidgets('parses video-editor route correctly', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      // Navigate to video-editor
-      container.read(goRouterProvider).go('/video-editor');
-      await tester.pumpAndSettle();
-
-      final contextAsync = container.read(pageContextProvider);
-      final context = contextAsync.value!;
+    test('parses video-editor route correctly', () async {
+      final context = await contextFor('/video-editor');
       expect(context.type, RouteType.videoEditor);
       expect(context.videoIndex, isNull);
     });
 
-    testWidgets('parses settings route correctly', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      // Navigate to settings
-      container.read(goRouterProvider).go(SettingsScreen.path);
-      await tester.pumpAndSettle();
-
-      final contextAsync = container.read(pageContextProvider);
-      final context = contextAsync.value!;
+    test('parses settings route correctly', () async {
+      final context = await contextFor(SettingsScreen.path);
       expect(context.type, RouteType.settings);
       expect(context.videoIndex, isNull);
     });
-    // TODO(Any): Fix and re-enable these tests
-  }, skip: true);
+  });
 }

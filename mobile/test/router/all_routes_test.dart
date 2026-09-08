@@ -1,10 +1,8 @@
 // ABOUTME: Comprehensive test verifying all app routes are properly configured
 // ABOUTME: Tests both grid and feed modes for explore, hashtag, and profile routes
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
@@ -18,22 +16,15 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 
+import '../helpers/test_provider_overrides.dart';
+
 void main() {
   group('App Router - All Routes', () {
     testWidgets('${VideoFeedPage.pathWithIndex} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(VideoFeedPage.pathForIndex(0));
@@ -54,19 +45,10 @@ void main() {
     testWidgets('${ExploreScreen.path} route works (grid mode)', (
       tester,
     ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(ExploreScreen.path);
@@ -80,19 +62,10 @@ void main() {
     testWidgets('${ExploreScreen.pathWithIndex} route works (feed mode)', (
       tester,
     ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(ExploreScreen.pathForIndex(0));
@@ -113,19 +86,10 @@ void main() {
     testWidgets('${NotificationsPage.pathWithIndex} route works', (
       tester,
     ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(NotificationsPage.pathForIndex(0));
@@ -146,19 +110,10 @@ void main() {
     testWidgets('${ProfileScreenRouter.pathWithIndex} route works', (
       tester,
     ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(ProfileScreenRouter.pathForIndex('me', 0));
@@ -179,19 +134,10 @@ void main() {
     testWidgets('${HashtagScreenRouter.path} route works (grid mode)', (
       tester,
     ) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(HashtagScreenRouter.pathForTag('bitcoin'));
@@ -203,19 +149,10 @@ void main() {
     });
 
     testWidgets('${SettingsScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(SettingsScreen.path);
@@ -227,19 +164,10 @@ void main() {
     });
 
     testWidgets('${AppsDirectoryScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(AppsDirectoryScreen.path);
@@ -251,19 +179,10 @@ void main() {
     });
 
     testWidgets('${AppDetailScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(AppDetailScreen.pathForSlug('primal'));
@@ -275,19 +194,10 @@ void main() {
     });
 
     testWidgets('${VideoRecorderScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(VideoRecorderScreen.path);
@@ -299,19 +209,10 @@ void main() {
     });
 
     testWidgets('${VideoEditorScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(VideoEditorScreen.path);
@@ -323,19 +224,10 @@ void main() {
     });
 
     testWidgets('${VideoMetadataScreen.path} route works', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
       );
+      addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
       router.go(VideoMetadataScreen.path);
@@ -345,6 +237,5 @@ void main() {
         VideoMetadataScreen.path,
       );
     });
-    // TOOD(any): Fix and re-enable these tests
-  }, skip: true);
+  });
 }
