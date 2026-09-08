@@ -2450,7 +2450,14 @@ void main() {
       ).thenAnswer((_) => tail.stream);
 
       await service.addLabeler(custom);
+      expect(tail.hasListener, isTrue);
+
       service.dispose();
+
+      // Assert the cancel itself. Without this, clearing _tailAuthors alone
+      // also keeps the label out of the maps, so the emptiness below passes
+      // while a live StreamSubscription leaks on a disposed service.
+      expect(tail.hasListener, isFalse);
 
       tail.add(liveLabelFrom(custom, 'post_dispose', 'disposed_tgt'));
       await pumpEventQueue();
