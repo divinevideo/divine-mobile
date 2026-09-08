@@ -167,6 +167,12 @@ class ModerationLabelService {
   /// Maximum delay between attempts to restore the shared labeler tail.
   static const Duration defaultTailMaxReconnectDelay = Duration(minutes: 1);
 
+  /// How far behind an author's newest label the live tail accepts unseen
+  /// events. Relays deliver independently, so arrival order is not timestamp
+  /// order; this window prevents a faster relay from suppressing a distinct
+  /// label delivered later by another relay while keeping replay dedup bounded.
+  static const Duration defaultTailReplayTolerance = Duration(minutes: 5);
+
   final Duration _tailReconnectDelay;
   final Duration _tailMaxReconnectDelay;
 
@@ -289,11 +295,12 @@ class ModerationLabelService {
   int _tailRebuildDeferrals = 0;
   bool _tailRebuildPending = false;
 
-  /// Ids at each labeler's current watermark second.
+  /// Ids within each labeler's retained replay window.
   ///
-  /// Events older than the watermark are ignored on replay. Moving to a newer
-  /// second replaces this set, so dedup retention is bounded by timestamp ties
-  /// rather than the labeler's complete history. #8255.
+  /// Relays can deliver distinct events out of timestamp order. Moving the
+  /// watermark therefore prunes only ids older than
+  /// [defaultTailReplayTolerance],
+  /// rather than rejecting every event older than the newest one. #8255.
   final Map<String, Map<String, int>> _appliedLabelEventIds = {};
 
   /// Newest label timestamp seen per labeler. A reconnect resumes the tail from
@@ -755,7 +762,7 @@ class ModerationLabelService {
     if (authors.isEmpty) return;
 
     final since = authors
-        .map((pubkey) => _tailWatermark[pubkey]!)
+        .map((pubkey) => _tailReplayFloor(_tailWatermark[pubkey]!))
         .reduce((oldest, value) => value < oldest ? value : oldest);
     final stream = _nostrClient.subscribe(
       [
@@ -778,15 +785,20 @@ class ModerationLabelService {
   void _onTailEvent(Event event) {
     final watermark = _tailWatermark[event.pubkey];
     if (watermark == null || !_tailAuthors.contains(event.pubkey)) return;
-    if (event.createdAt < watermark) return;
+    if (event.createdAt < _tailReplayFloor(watermark)) return;
     if (event.createdAt > watermark) {
       _tailWatermark[event.pubkey] = event.createdAt;
       _appliedLabelEventIds[event.pubkey]?.removeWhere((_, createdAt) {
-        return createdAt < event.createdAt;
+        return createdAt < _tailReplayFloor(event.createdAt);
       });
     }
     _tailReconnectAttempt = 0;
     _processLabelEvent(event);
+  }
+
+  int _tailReplayFloor(int watermark) {
+    final floor = watermark - defaultTailReplayTolerance.inSeconds;
+    return floor < 0 ? 0 : floor;
   }
 
   void _scheduleTailReconnect(int generation, [Object? error]) {
@@ -1027,7 +1039,7 @@ class ModerationLabelService {
       }
 
       final watermark = _tailWatermark[labelerPubkey];
-      if (watermark != null && event.createdAt >= watermark) {
+      if (watermark != null && event.createdAt >= _tailReplayFloor(watermark)) {
         final applied = _appliedLabelEventIds.putIfAbsent(
           labelerPubkey,
           () => <String, int>{},

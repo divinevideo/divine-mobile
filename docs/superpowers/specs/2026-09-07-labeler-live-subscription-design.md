@@ -22,8 +22,8 @@ reaches the running client until an app restart. This is the complement of #8214
    (which exists precisely to avoid OOM/timeout on large histories). So the paged
    backfill (`_loadLabelerHistory`) stays as-is and latches "loaded"; the live
    subscription opens from the oldest per-labeler watermark. Each author still has
-   its own watermark, so events older than that author's boundary are ignored even
-   when another author requires an older shared `since`.
+   its own watermark and a five-minute replay tolerance, so distinct events that
+   arrive slightly out of timestamp order still apply while older replay is ignored.
 
 3. **Auto-reconnect above the SDK**, mirroring `DmRepository`'s gift-wrap
    subscription: store the shared `StreamSubscription`; on `onError`
@@ -42,10 +42,11 @@ reaches the running client until an app restart. This is the complement of #8214
 
 `_processLabelEvent` appends unconditionally, so a reconnect that replays the tail
 window (and the small backfill/tail overlap) would create duplicate label rows.
-Track event ids only at or after each labeler's current watermark:
+Track event ids within a bounded window around each labeler's current watermark:
 - `_processLabelEvent` skips an event id already applied for its labeler.
-- advancing a labeler's watermark discards ids from older seconds, bounding retained
-  dedup state to the timestamp-tie replay window rather than its complete history;
+- advancing a labeler's watermark discards ids older than the five-minute replay
+  tolerance, bounding retained dedup state without treating cross-relay delivery
+  order as timestamp order;
 - `_removeLabelsForLabeler(pubkey)` also clears that labeler's id-set, so the
   backfill's existing remove-then-reprocess still re-applies, and the
   backfill/tail overlap dedups.

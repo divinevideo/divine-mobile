@@ -2164,8 +2164,10 @@ void main() {
         // Nothing asserted `since` before, so dropping it from the filter left
         // every test in the suite green.
         expect(filter.since, isNotNull);
-        expect(filter.since, greaterThanOrEqualTo(beforeLoad));
-        expect(filter.since, lessThanOrEqualTo(afterLoad));
+        final tolerance =
+            ModerationLabelService.defaultTailReplayTolerance.inSeconds;
+        expect(filter.since, greaterThanOrEqualTo(beforeLoad - tolerance));
+        expect(filter.since, lessThanOrEqualTo(afterLoad - tolerance));
       },
     );
 
@@ -2305,7 +2307,7 @@ void main() {
     );
 
     test(
-      'an older replay is ignored after an author watermark advances',
+      'a distinct out-of-order event is applied after the watermark advances',
       () async {
         stubCompletedBackfill();
         final tail = StreamController<Event>.broadcast();
@@ -2350,9 +2352,58 @@ void main() {
         await pumpEventQueue();
 
         expect(service.getContentWarnings('newer_target'), hasLength(1));
-        expect(service.getContentWarnings('older_target'), isEmpty);
+        expect(service.getContentWarnings('older_target'), hasLength(1));
       },
     );
+
+    test('an event older than the bounded replay window is ignored', () async {
+      stubCompletedBackfill();
+      final tail = StreamController<Event>.broadcast();
+      addTearDown(() async {
+        service.dispose();
+        await tail.close();
+      });
+      when(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => tail.stream);
+
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final outsideWindow =
+          ModerationLabelService.defaultTailReplayTolerance.inSeconds + 1;
+      await service.subscribeToLabeler(service.divineModerationPubkeyHex);
+      tail.add(
+        _FakeLabelEvent(
+          pubkey: service.divineModerationPubkeyHex,
+          id: 'newest_evt',
+          createdAt: now,
+          tags: [
+            ['L', 'content-warning'],
+            ['l', 'nudity', 'content-warning'],
+            ['e', 'newest_target'],
+          ],
+        ),
+      );
+      tail.add(
+        _FakeLabelEvent(
+          pubkey: service.divineModerationPubkeyHex,
+          id: 'outside_window_evt',
+          createdAt: now - outsideWindow,
+          tags: [
+            ['L', 'content-warning'],
+            ['l', 'nudity', 'content-warning'],
+            ['e', 'outside_window_target'],
+          ],
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(service.getContentWarnings('newest_target'), hasLength(1));
+      expect(service.getContentWarnings('outside_window_target'), isEmpty);
+    });
 
     test(
       'removing a labeler cancels its live tail so later labels do not land',
