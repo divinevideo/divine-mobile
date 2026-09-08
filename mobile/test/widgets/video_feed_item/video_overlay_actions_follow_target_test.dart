@@ -114,6 +114,29 @@ void main() {
       );
     });
 
+    testWidgets('grows away from the avatar rather than into it', (
+      tester,
+    ) async {
+      await pumpOverlay(tester, alreadyFollowing: false);
+
+      final avatar = tester.getRect(find.byType(UserAvatar));
+      final target = tester.getRect(find.byType(VideoFollowButtonView));
+
+      // The cluster size alone does not say which direction the target grew,
+      // and the direction is the whole argument for this geometry: any 48dp
+      // box that stays inside the old 58dp cluster has to start at or before
+      // 10, swallowing most of the avatar's profile tap. Pinning the origin
+      // and the overlap is what makes that regression loud.
+      expect(
+        target.topLeft - avatar.topLeft,
+        const Offset(_badgeOffset, _badgeOffset),
+      );
+      expect(
+        avatar.intersect(target).size,
+        Size(avatar.width - _badgeOffset, avatar.height - _badgeOffset),
+      );
+    });
+
     testWidgets('leaves the cluster at its floor for an author already '
         'followed', (tester) async {
       await pumpOverlay(tester, alreadyFollowing: true);
