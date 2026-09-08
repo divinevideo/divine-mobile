@@ -24,11 +24,17 @@ import '../../helpers/test_provider_overrides.dart';
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {
-  @override
-  bool isBlocked(String pubkey) => false;
+  /// Answers for the two hide predicates the row reads. Plain fields keep
+  /// them out of the shared `setUp`, but settable ones let a test make the
+  /// two disagree -- the only way to pin which predicate the row calls.
+  bool blocked = false;
+  bool unblockable = false;
 
   @override
-  bool canUnblock(String pubkey) => false;
+  bool isBlocked(String pubkey) => blocked;
+
+  @override
+  bool canUnblock(String pubkey) => unblockable;
 }
 
 class _MockNotifySubscriptionsRepository extends Mock
@@ -242,6 +248,35 @@ void main() {
     });
   });
 
+  group('blocked state', () {
+    testWidgets('shows the blocked pill for a mute imported elsewhere', (
+      tester,
+    ) async {
+      // The two predicates disagree only for a mute the viewer authored on
+      // another Nostr client: not a Divine block, but still hidden and still
+      // liftable. Reading `isBlocked` here would miss it.
+      blocklistRepository
+        ..unblockable = true
+        ..blocked = false;
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.profileBlockedLabel), findsOneWidget);
+    });
+
+    testWidgets('shows no blocked pill when the viewer hides nothing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.profileBlockedLabel), findsNothing);
+    });
+  });
+
   group('notification bell', () {
     late StreamController<List<String>> followingStream;
 
@@ -287,24 +322,23 @@ void main() {
       expect(find.byType(ProfileNotifyBellButton), findsOneWidget);
     });
 
-    testWidgets(
-      'stays hidden behind the flag, and reads no subscriptions',
-      (tester) async {
-        followingTarget();
+    testWidgets('stays hidden behind the flag, and reads no subscriptions', (
+      tester,
+    ) async {
+      followingTarget();
 
-        await tester.pumpWidget(buildWidget(newPostNotifications: false));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(buildWidget(newPostNotifications: false));
+      await tester.pumpAndSettle();
 
-        expect(find.byType(ProfileNotifyBellButton), findsNothing);
-        // The cubit must not be constructed either — otherwise a flagged-off
-        // build still hits the relay for a list it can never show.
-        verifyNever(
-          () => notifyRepository.watchSubscriptions(
-            ownerPubkey: any(named: 'ownerPubkey'),
-          ),
-        );
-      },
-    );
+      expect(find.byType(ProfileNotifyBellButton), findsNothing);
+      // The cubit must not be constructed either — otherwise a flagged-off
+      // build still hits the relay for a list it can never show.
+      verifyNever(
+        () => notifyRepository.watchSubscriptions(
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      );
+    });
 
     testWidgets('tapping it subscribes the viewer to the target', (
       tester,
