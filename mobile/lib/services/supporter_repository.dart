@@ -7,8 +7,10 @@ import 'dart:convert';
 
 import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Persists and surfaces the current [SupporterEntitlement].
 ///
@@ -81,7 +83,25 @@ class SupporterRepository {
 
   /// Starts a purchase with the current full pubkey captured in the attempt.
   /// The store result is proof only; it cannot activate support.
-  Future<SupporterEntitlement> purchase(String productId) {
+  Future<SupporterEntitlement> purchase(String productId) async {
+    if (!hasServerClient) {
+      Log.warning(
+        'Supporter purchase blocked because verification is unavailable for '
+        '${pubkeyForLogs(_pubkey)}',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
+      throw const SupporterApiException(
+        SupporterApiFailureKind.unavailable,
+        'Supporter verification is not configured.',
+      );
+    }
+    Log.info(
+      'Starting supporter purchase for ${pubkeyForLogs(_pubkey)} '
+      '(productId=$productId)',
+      name: 'SupporterRepository',
+      category: LogCategory.system,
+    );
     return _validator.purchase(
       productId,
       capturedPubkey: _pubkey,
@@ -235,8 +255,22 @@ class SupporterRepository {
     // switch. A device-scope durable queue will retain this case once wired.
     if (proof.capturedPubkey != _pubkey) return;
 
+    Log.info(
+      'Received supporter purchase proof for ${pubkeyForLogs(_pubkey)} '
+      '(store=${proof.store}, productId=${proof.productId})',
+      name: 'SupporterRepository',
+      category: LogCategory.system,
+    );
+
     final client = _apiClient;
     if (client == null) {
+      Log.warning(
+        'Supporter purchase proof cannot be claimed for '
+        '${pubkeyForLogs(_pubkey)}; purchase left unacknowledged for '
+        'redelivery',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
       _handleValidatorError(
         const SupporterApiException(
           SupporterApiFailureKind.unavailable,
@@ -259,8 +293,22 @@ class SupporterRepository {
       );
       _handleChange(snapshot.entitlement);
       await _validator.completePurchase(proof);
+      Log.info(
+        'Claimed and acknowledged supporter purchase for '
+        '${pubkeyForLogs(_pubkey)} '
+        '(store=${proof.store}, productId=${proof.productId})',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
     } on Object catch (error, stackTrace) {
       _recoveryCompleted = _isTerminalClaimFailure(error);
+      Log.warning(
+        'Supporter purchase claim failed for ${pubkeyForLogs(_pubkey)}; '
+        'purchase left unacknowledged for redelivery '
+        '(failure=${error.runtimeType})',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
       if (!proof.silent) _handleValidatorError(error, stackTrace);
       // Keep the purchase unacknowledged so the store can redeliver it after
       // the Worker or signer becomes available.
