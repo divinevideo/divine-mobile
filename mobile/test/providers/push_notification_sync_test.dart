@@ -2786,7 +2786,9 @@ void main() {
               client: nostrClient,
             ),
           );
-          await pumpEventQueue(times: 3);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
