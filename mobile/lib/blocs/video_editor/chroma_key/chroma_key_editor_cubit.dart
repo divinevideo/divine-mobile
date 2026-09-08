@@ -97,16 +97,13 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
         name: _logName,
         category: LogCategory.video,
       );
-      addError(error, stackTrace);
-      emitIfOpen(
-        state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
-      );
+      _reportDetectionFailure(error, stackTrace);
       return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
       // not.
-      addError(
+      _reportDetectionFailure(
         switch (error) {
           StateError() ||
           TypeError() ||
@@ -114,9 +111,6 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
           _ => error,
         },
         stackTrace,
-      );
-      emitIfOpen(
-        state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
       );
       return;
     }
@@ -132,6 +126,20 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
         ),
         detectionStatus: ChromaKeyDetectionStatus.idle,
       ),
+    );
+  }
+
+  /// Reports a failed measurement, unless the screen already closed.
+  ///
+  /// `BlocBase.addError` documents that it must not be called on a closed
+  /// sink, and it has no `isClosed` check of its own: it forwards straight to
+  /// the observer, which logs and — for an invariant violation — files a crash
+  /// report against a cubit the user already backed out of.
+  void _reportDetectionFailure(Object error, StackTrace stackTrace) {
+    if (isClosed) return;
+    addError(error, stackTrace);
+    emitIfOpen(
+      state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
     );
   }
 
