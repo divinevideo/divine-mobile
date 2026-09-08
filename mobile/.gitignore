@@ -95,3 +95,7 @@ ios/fastlane/screenshots/**/*.html
 ios/fastlane/README.md
 ios/fastlane/DerivedData/
 ios/fastlane/.venv/
+
+# Transient backup written by scripts/check_async_safety_ceiling.sh while it
+# temporarily re-enables the two async-safety lints. Present only mid-run.
+.analysis_options.yaml.ratchet-backup.*

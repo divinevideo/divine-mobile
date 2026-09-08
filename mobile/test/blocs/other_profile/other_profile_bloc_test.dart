@@ -92,7 +92,7 @@ void main() {
     // so if it disagrees the app offers to unfollow an account it elsewhere
     // says you do not follow. #6903 stopped severing the follow locally, which
     // makes that disagreement reachable from every block entry point.
-    test('reports a blocked account as not followed', () {
+    test('reports a blocked account as not followed', () async {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
@@ -104,10 +104,10 @@ void main() {
       final bloc = createBloc();
       expect(bloc.isBlocked, isTrue);
       expect(bloc.isFollowing, isFalse);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('reports an unblocked account as followed', () {
+    test('reports an unblocked account as followed', () async {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
@@ -118,20 +118,20 @@ void main() {
 
       final bloc = createBloc();
       expect(bloc.isFollowing, isTrue);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('offers Unblock for an imported mute', () {
+    test('offers Unblock for an imported mute', () async {
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
       ).thenReturn(true);
 
       final bloc = createBloc();
       expect(bloc.isBlocked, isTrue);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('still reports an imported mute as followed', () {
+    test('still reports an imported mute as followed', () async {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
@@ -146,14 +146,14 @@ void main() {
       // keep offering `Unfollow` rather than hiding the row.
       expect(bloc.isBlocked, isTrue);
       expect(bloc.isFollowing, isTrue);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('initial state is OtherProfileInitial', () {
+    test('initial state is OtherProfileInitial', () async {
       final bloc = createBloc();
       expect(bloc.state, isA<OtherProfileInitial>());
       expect(bloc.pubkey, equals(testPubkey));
-      bloc.close();
+      await bloc.close();
     });
 
     group('vanished accounts', () {
