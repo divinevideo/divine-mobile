@@ -1020,6 +1020,7 @@ void main() {
 
         publishCompleter.complete();
         await pumpEventQueue(times: 1);
+        expect(registerCalls, equals(1));
       },
     );
 
