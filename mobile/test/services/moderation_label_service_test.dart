@@ -2104,6 +2104,11 @@ void main() {
       );
     }
 
+    // [LogCaptureService] is a process-wide singleton with a 50k ring buffer,
+    // so a tail drop logged by an earlier test satisfies this group's log
+    // assertions before they run. Clear it so each test only sees its own.
+    setUp(() => LogCaptureService().clearAllLogs());
+
     test(
       'all followed labelers share one live relay subscription',
       () async {
@@ -2236,7 +2241,10 @@ void main() {
         // and the service opens its live tail.
         stubCompletedBackfill();
         final tail = StreamController<Event>.broadcast();
-        addTearDown(tail.close);
+        addTearDown(() async {
+          service.dispose();
+          await tail.close();
+        });
         when(
           () => mockNostrClient.subscribe(
             any(),
@@ -2265,7 +2273,10 @@ void main() {
         // so the same kind-1985 event arrives again. It must not double-count.
         stubCompletedBackfill();
         final tail = StreamController<Event>.broadcast();
-        addTearDown(tail.close);
+        addTearDown(() async {
+          service.dispose();
+          await tail.close();
+        });
         when(
           () => mockNostrClient.subscribe(
             any(),
@@ -2289,7 +2300,10 @@ void main() {
       () async {
         stubCompletedBackfill();
         final tail = StreamController<Event>.broadcast();
-        addTearDown(tail.close);
+        addTearDown(() async {
+          service.dispose();
+          await tail.close();
+        });
         when(
           () => mockNostrClient.subscribe(
             any(),
@@ -2338,7 +2352,10 @@ void main() {
             'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
         stubCompletedBackfill();
         final tail = StreamController<Event>.broadcast();
-        addTearDown(tail.close);
+        addTearDown(() async {
+          service.dispose();
+          await tail.close();
+        });
         when(
           () => mockNostrClient.subscribe(
             any(),
@@ -2374,10 +2391,10 @@ void main() {
         stubCompletedBackfill();
         final first = StreamController<Event>.broadcast();
         final second = StreamController<Event>.broadcast();
-        addTearDown(() {
-          first.close();
-          second.close();
+        addTearDown(() async {
           svc.dispose();
+          await first.close();
+          await second.close();
         });
         var calls = 0;
         when(
@@ -2420,7 +2437,10 @@ void main() {
           'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
       stubCompletedBackfill();
       final tail = StreamController<Event>.broadcast();
-      addTearDown(tail.close);
+      addTearDown(() async {
+        service.dispose();
+        await tail.close();
+      });
       when(
         () => mockNostrClient.subscribe(
           any(),
