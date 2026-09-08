@@ -8921,8 +8921,12 @@ class AppLocalizationsMs extends AppLocalizations {
       'Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Skrin tidak ditemui. Ia perlu mencapai tepi bingkai — pilih warnanya secara manual.';
+      'Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';

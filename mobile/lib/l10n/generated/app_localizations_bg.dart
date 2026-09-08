@@ -8990,8 +8990,12 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Не открихме фон. Той трябва да стига до ръба на кадъра — иначе избери цвета ръчно.';
+      'Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';

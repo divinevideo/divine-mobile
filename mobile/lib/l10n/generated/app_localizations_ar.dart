@@ -8860,8 +8860,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'لم نعثر على خلفية. يجب أن تصل إلى حواف الإطار، وإلا فاختر اللون يدويًا.';
+      'لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'اختر مقطعًا';

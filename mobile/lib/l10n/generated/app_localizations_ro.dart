@@ -9117,8 +9117,12 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nu am găsit niciun fundal. Trebuie să ajungă la marginile cadrului — altfel alege culoarea manual.';
+      'Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';

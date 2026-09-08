@@ -8874,8 +8874,12 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Không tìm thấy phông. Phông phải chạm tới các cạnh khung hình — nếu không, hãy tự chọn màu.';
+      'Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Chọn một clip';

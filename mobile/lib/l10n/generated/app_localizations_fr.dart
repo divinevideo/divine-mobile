@@ -9041,8 +9041,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'La vidéo ne gère pas la transparence : à l\'export, ce sera du noir.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'N\'importe quelle surface unie derrière toi fait l\'affaire — un mur suffit — tant qu\'elle remplit tout le cadre.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Aucun fond détecté. Il doit toucher les bords de l\'image — sinon, choisis la couleur à la main.';
+      'Aucun fond trouvé : il doit remplir tout le cadre derrière toi. Un mur uni fait l\'affaire. Ou choisis la couleur à la main.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Choisir un clip';

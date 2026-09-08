@@ -9011,8 +9011,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Video can\'t hold transparency, so this exports as black.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Any plain surface behind you works — a wall is fine — as long as it fills the frame.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Couldn\'t find a screen. It has to reach the edges of the frame — pick the color by hand instead.';
+      'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pick a clip';

@@ -15200,10 +15200,16 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
+  /// Standing hint at the top of the chroma key controls. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — before the user spends a take finding out. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys.
+  ///
+  /// In en, this message translates to:
+  /// **'Any plain surface behind you works — a wall is fine — as long as it fills the frame.'**
+  String get videoEditorChromaKeySurfaceHint;
+
   /// No description provided for @videoEditorChromaKeyDetectFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t find a screen. It has to reach the edges of the frame — pick the color by hand instead.'**
+  /// **'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.'**
   String get videoEditorChromaKeyDetectFailed;
 
   /// No description provided for @videoEditorChromaKeyPickClipTitle.

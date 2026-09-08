@@ -8906,8 +8906,12 @@ class AppLocalizationsUr extends AppLocalizations {
       'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'کوئی اسکرین نہیں ملی۔ اسے فریم کے کناروں تک پہنچنا چاہیے — ورنہ رنگ خود منتخب کریں۔';
+      'کوئی بیک گراؤنڈ نہیں ملا: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';

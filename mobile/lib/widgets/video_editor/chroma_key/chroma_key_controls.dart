@@ -27,6 +27,7 @@ class ChromaKeyControls extends StatelessWidget {
         spacing: 20,
         children: [
           const _Gutter(child: _PreviewUnavailableNotice()),
+          const _Gutter(child: _SurfaceRequirementHint()),
           const _Gutter(child: _DetectRow()),
           const _Gutter(child: _ScreenColorRow()),
           const _Gutter(child: _ToleranceSliders()),
@@ -64,6 +65,36 @@ class _Gutter extends StatelessWidget {
 ///
 /// Without this the preview just quietly shows the unkeyed video, which reads
 /// as "the green screen does nothing" rather than "you can't see it yet".
+/// States the feature's one prerequisite before a take is spent on finding it
+/// out.
+///
+/// The requirement used to surface only as a failed detect, after the clip was
+/// already shot — and it named a screen, which most people do not own. Saying
+/// a wall works is what turns the biggest bounce point into onboarding
+/// (#8547).
+class _SurfaceRequirementHint extends StatelessWidget {
+  const _SurfaceRequirementHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      spacing: 8,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DivineIcon(icon: .info, color: context.vineColors.onSurfaceVariant),
+        Expanded(
+          child: Text(
+            context.l10n.videoEditorChromaKeySurfaceHint,
+            style: VineTheme.bodySmallFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PreviewUnavailableNotice extends StatefulWidget {
   const _PreviewUnavailableNotice();
 

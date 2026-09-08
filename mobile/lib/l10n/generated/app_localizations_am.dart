@@ -8704,8 +8704,12 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'ስክሪን አልተገኘም። እስከ ፍሬሙ ጠርዝ መድረስ አለበት — ካልሆነ ቀለሙን በእጅ ምረጥ።';
+      'ዳራ አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';

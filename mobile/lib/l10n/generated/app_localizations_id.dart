@@ -8828,8 +8828,12 @@ class AppLocalizationsId extends AppLocalizations {
       'Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Layar tidak ditemukan. Layar harus mencapai tepi bingkai — kalau tidak, pilih warnanya secara manual.';
+      'Layar tidak ditemukan: harus memenuhi seluruh bingkai di belakang kamu. Tembok polos juga bisa. Atau pilih warnanya sendiri.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';

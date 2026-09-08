@@ -8997,8 +8997,12 @@ class AppLocalizationsEs extends AppLocalizations {
       'El vídeo no admite transparencia, así que esto se exporta en negro.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Sirve cualquier superficie lisa detrás tuyo — una pared alcanza — siempre que llene todo el cuadro.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'No se encontró ningún fondo. Tiene que llegar a los bordes del cuadro; si no, elige el color a mano.';
+      'No encontramos ningún fondo: tiene que llenar todo el cuadro detrás tuyo. Una pared lisa sirve. O elegí el color a mano.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Elegir un clip';

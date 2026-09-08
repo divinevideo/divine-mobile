@@ -9024,8 +9024,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Video kann keine Transparenz speichern – das wird beim Export schwarz.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Jede glatte Fläche hinter dir funktioniert – eine Wand reicht –, solange sie das ganze Bild füllt.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Kein Screen gefunden. Er muss bis an den Bildrand reichen – wähl die Farbe sonst von Hand.';
+      'Kein Screen gefunden – er muss das ganze Bild hinter dir füllen. Eine glatte Wand zählt. Oder wähl die Farbe von Hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Clip auswählen';

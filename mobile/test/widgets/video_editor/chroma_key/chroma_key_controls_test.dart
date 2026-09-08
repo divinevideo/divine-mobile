@@ -56,6 +56,38 @@ void main() {
         .map((t) => t.style?.color)
         .toSet();
 
+    testWidgets('states the surface requirement without being asked', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(en.videoEditorChromaKeySurfaceHint),
+        findsOneWidget,
+        reason:
+            'The prerequisite used to surface only as a failed detect, after '
+            'the clip was already shot (#8547).',
+      );
+      expect(
+        en.videoEditorChromaKeySurfaceHint.toLowerCase(),
+        contains('wall'),
+        reason:
+            'Naming a wall is the point: most people own no green screen and '
+            'do not know an ordinary wall keys. Epic #8543 ratified that '
+            'framing.',
+      );
+      expect(
+        find.text(
+          lookupAppLocalizations(
+            const Locale('de'),
+          ).videoEditorChromaKeySurfaceHint,
+        ),
+        findsNothing,
+        reason: 'Proves the widget resolves the string through l10n.',
+      );
+    });
+
     testWidgets('takes its text from the light palette, not fixed dark', (
       tester,
     ) async {

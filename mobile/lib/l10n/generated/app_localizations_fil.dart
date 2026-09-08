@@ -8980,8 +8980,12 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Walang nakitang screen. Kailangang umabot ito sa gilid ng frame — kung hindi, piliin ang kulay nang manu-mano.';
+      'Walang nahanap na screen: kailangang punuin nito ang buong frame sa likod mo. Pwede ang plain na pader. O pumili ng kulay nang manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';
