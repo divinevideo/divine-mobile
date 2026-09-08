@@ -22,6 +22,8 @@ import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_cla
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/divine_video_player_channel.dart';
+
 void main() {
   group(VideoMetadataClassicPreviewThumbnail, () {
     late DivineVideoClip testClip;
@@ -320,33 +322,32 @@ void _registerMockPlayerChannel(
   List<Map<Object?, Object?>>? setClipsArguments,
 }) {
   const globalChannel = MethodChannel('divine_video_player');
-  // Player ID resets via resetIdCounterForTesting in setUp, so first is 0.
-  const playerChannel = MethodChannel('divine_video_player/player_0');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+  // Player ID resets via resetIdCounterForTesting in setUp, so first is 0.
+  installMockDivineVideoPlayer(
+    onMethodCall: (call) async {
+      methodCalls.add(call.method);
+      if (call.method == 'setClips') {
+        setClipsArguments?.add(
+          call.arguments! as Map<Object?, Object?>,
+        );
+      }
+      return null;
+    },
+  );
 
   messenger.setMockMethodCallHandler(globalChannel, (call) async {
     methodCalls.add(call.method);
     if (call.method == 'create') {
-      // Register the per-player channel on first create.
-      messenger.setMockMethodCallHandler(playerChannel, (call) async {
-        methodCalls.add(call.method);
-        if (call.method == 'setClips') {
-          setClipsArguments?.add(
-            call.arguments! as Map<Object?, Object?>,
-          );
-        }
-        return null;
-      });
-
-      // Also register an empty event channel so the player stream works.
-      messenger.setMockStreamHandler(
-        const EventChannel('divine_video_player/player_0/events'),
-        _EmptyStreamHandler(),
-      );
       return <String, dynamic>{'textureId': 1};
     }
     return null;
+  });
+
+  addTearDown(() {
+    messenger.setMockMethodCallHandler(globalChannel, null);
   });
 }
 
@@ -366,12 +367,4 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 
   @override
   VideoEditorProviderState build() => _state;
-}
-
-class _EmptyStreamHandler extends MockStreamHandler {
-  @override
-  void onListen(dynamic arguments, MockStreamHandlerEventSink events) {}
-
-  @override
-  void onCancel(dynamic arguments) {}
 }
