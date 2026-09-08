@@ -36,7 +36,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () => mockNostrService.subscribe(any()),
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       videoEventService = VideoEventService(
@@ -59,7 +59,9 @@ void main() {
         videoEventService.subscribeToDiscovery();
 
         // Verify NostrService was only called once (reused existing)
-        verify(() => mockNostrService.subscribe(any())).called(1);
+        verify(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).called(1);
       });
     });
 
@@ -73,10 +75,10 @@ void main() {
         await videoEventService.subscribeToHomeFeed(['author1']);
 
         // Both should create separate subscriptions
-        verify(() => mockNostrService.subscribe(any())).called(2);
+        verify(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).called(2);
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
 
     test('should generate different IDs for different authors', () async {
@@ -87,9 +89,10 @@ void main() {
       await videoEventService.subscribeToHomeFeed(['author3', 'author4']);
 
       // Both should create separate subscriptions
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+    });
 
     test('should generate same ID regardless of author order', () async {
       // Subscribe with authors in one order
@@ -108,9 +111,10 @@ void main() {
       ]);
 
       // Should reuse the subscription pattern (2 calls total, not 3)
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+    });
 
     test('should generate different IDs for different hashtags', () async {
       // Subscribe with first hashtag
@@ -120,9 +124,10 @@ void main() {
       await videoEventService.subscribeToHashtagVideos(['music']);
 
       // Both should create separate subscriptions
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+    });
 
     test('should not create duplicate subscriptions for rapid calls', () async {
       // Simulate rapid subscription calls (like from multiple UI components)
@@ -135,9 +140,10 @@ void main() {
       await Future.wait(futures);
 
       // Should only create one subscription despite 5 calls
-      verify(() => mockNostrService.subscribe(any())).called(1);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(1);
+    });
 
     test('subscription count should stay reasonable', () async {
       // Create various subscription types
@@ -154,8 +160,7 @@ void main() {
       expect(activeSubscriptions, contains('discovery'));
       expect(activeSubscriptions, contains('homeFeed'));
       expect(activeSubscriptions, contains('hashtag'));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test('should handle subscription replacement correctly', () async {
       // First subscription
@@ -165,13 +170,14 @@ void main() {
       await videoEventService.subscribeToDiscovery();
 
       // Should create two subscriptions (old one cancelled, new one created)
-      verify(() => mockNostrService.subscribe(any())).called(2);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
 
       // But only one should be active
       final status = videoEventService.getConnectionStatus();
       final activeSubscriptions = status['activeSubscriptions'] as List;
       expect(activeSubscriptions.length, equals(1));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
   });
 }
