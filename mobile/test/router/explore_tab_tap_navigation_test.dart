@@ -10,10 +10,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
-import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -35,6 +35,7 @@ void main() {
         final container = ProviderContainer(
           overrides: getStandardTestOverrides(),
         );
+        addTearDown(container.dispose);
 
         final dmUnreadCubit = _MockDmUnreadCountCubit();
         whenListen(dmUnreadCubit, const Stream<int>.empty(), initialState: 0);
@@ -42,8 +43,6 @@ void main() {
         whenListen(notifBadgeCubit, const Stream<int>.empty(), initialState: 0);
         final appUpdateBloc = _MockAppUpdateBloc();
         when(() => appUpdateBloc.state).thenReturn(const AppUpdateState());
-        final retapCubit = HomeFeedRetapCubit();
-        addTearDown(retapCubit.close);
 
         await tester.pumpWidget(
           MultiBlocProvider(
@@ -53,7 +52,6 @@ void main() {
                 value: notifBadgeCubit,
               ),
               BlocProvider<AppUpdateBloc>.value(value: appUpdateBloc),
-              BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
             ],
             child: UncontrolledProviderScope(
               container: container,
@@ -84,7 +82,7 @@ void main() {
         // Tap the explore tab through its semantics identifier: the shell's
         // nav is a VineBottomNav inside a Column, not Scaffold.bottomNavigationBar,
         // so there is no BottomNavigationBar.onTap to invoke.
-        await tester.tap(find.bySemanticsIdentifier('explore_tab'));
+        await tester.tap(find.bySemanticsIdentifier(SemanticIds.exploreTab));
         await tester.pumpAndSettle();
 
         final exploreLocation = container

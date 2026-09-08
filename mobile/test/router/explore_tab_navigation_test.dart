@@ -106,6 +106,7 @@ void main() {
             exploreTabVideosProvider.overrideWith((ref) => null),
           ],
         );
+        addTearDown(container.dispose);
 
         await tester.pumpWidget(
           UncontrolledProviderScope(
