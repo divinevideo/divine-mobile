@@ -414,10 +414,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
           cached.nostrEventId != null &&
           cached.nostrEventId == incoming.nostrEventId;
     }
-    // NIP-01 breaks a created_at tie on the lowest event id. An absent id on
-    // either side leaves nothing to compare, so the tie-break does not apply;
-    // substituting '' for a missing incoming id sorts below every real id and
-    // would let the id-less revision win every tie instead of losing it.
+    // NIP-01 breaks a created_at tie on the lowest event id. If either id is
+    // absent, this guard does not apply and the incoming revision is adopted,
+    // preserving the existing behavior for incomplete identifiers.
     final cachedId = cached.nostrEventId;
     final incomingId = incoming.nostrEventId;
     if (cached.updatedAt == incoming.updatedAt &&
