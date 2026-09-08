@@ -818,19 +818,28 @@ class ModerationLabelService {
     _tailSubscription = null;
   }
 
+  /// Exponential backoff for the shared tail, clamped to
+  /// [_tailMaxReconnectDelay].
+  ///
+  /// Doubles the delay itself and returns as soon as it reaches the cap, so
+  /// the loop runs at most log2(cap / base) times however high the attempt
+  /// count climbs. Scaling a separate multiplier by the attempt count cannot
+  /// terminate early when the base delay is zero — `0 * multiplier >= cap` is
+  /// never true — leaving the multiplier to double until it wraps at 64 bits.
+  /// A zero base is what tests use to drive the reconnect path, so that is the
+  /// configuration the early return has to survive.
   Duration _nextTailReconnectDelay() {
-    var multiplier = 1;
+    final base = _tailReconnectDelay.inMicroseconds;
+    final cap = _tailMaxReconnectDelay.inMicroseconds;
+    if (base <= 0) return Duration.zero;
+    if (base >= cap) return _tailMaxReconnectDelay;
+
+    var delay = base;
     for (var attempt = 0; attempt < _tailReconnectAttempt; attempt++) {
-      if (_tailReconnectDelay.inMicroseconds * multiplier >=
-          _tailMaxReconnectDelay.inMicroseconds) {
-        return _tailMaxReconnectDelay;
-      }
-      multiplier *= 2;
+      delay *= 2;
+      if (delay >= cap) return _tailMaxReconnectDelay;
     }
-    final candidate = _tailReconnectDelay * multiplier;
-    return candidate.inMicroseconds > _tailMaxReconnectDelay.inMicroseconds
-        ? _tailMaxReconnectDelay
-        : candidate;
+    return Duration(microseconds: delay);
   }
 
   /// Retry [pubkey] the next time a relay connects.
