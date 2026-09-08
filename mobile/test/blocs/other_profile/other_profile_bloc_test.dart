@@ -97,6 +97,9 @@ void main() {
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
       ).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.isBlocked(testPubkey),
+      ).thenReturn(true);
 
       final bloc = createBloc();
       expect(bloc.isBlocked, isTrue);
@@ -108,6 +111,9 @@ void main() {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
       when(
         () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(false);
+      when(
+        () => mockBlocklistRepository.isBlocked(testPubkey),
       ).thenReturn(false);
 
       final bloc = createBloc();
@@ -122,6 +128,24 @@ void main() {
 
       final bloc = createBloc();
       expect(bloc.isBlocked, isTrue);
+      bloc.close();
+    });
+
+    test('still reports an imported mute as followed', () {
+      when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.isBlocked(testPubkey),
+      ).thenReturn(false);
+
+      final bloc = createBloc();
+      // A mute severs nothing: MyFollowingBloc still lists the account and
+      // the kind 3 we publish still carries it, so the profile sheet has to
+      // keep offering `Unfollow` rather than hiding the row.
+      expect(bloc.isBlocked, isTrue);
+      expect(bloc.isFollowing, isTrue);
       bloc.close();
     });
 

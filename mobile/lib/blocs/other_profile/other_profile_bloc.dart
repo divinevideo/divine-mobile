@@ -85,7 +85,16 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   /// pubkeys, and it matches the kind 3 we publish (#6903). The profile ⋯
   /// sheet gates its `Unfollow <name>` row on this, so without the check it
   /// offers to unfollow an account the rest of the app says is not followed.
-  bool get isFollowing => !isBlocked && _followRepository.isFollowing(pubkey);
+  ///
+  /// This reads the repository's block predicate rather than [isBlocked]:
+  /// a mute imported from another client severs nothing, so `MyFollowingBloc`
+  /// still lists the account and `blockedPubkeysForAccount` still publishes
+  /// the follow. Widening it here would hide the `Unfollow` row for an
+  /// account the viewer does follow -- the same disagreement this getter
+  /// exists to prevent, with the sign flipped.
+  bool get isFollowing =>
+      !_blocklistRepository.isBlocked(pubkey) &&
+      _followRepository.isFollowing(pubkey);
 
   Future<void> _onLoadRequested(
     OtherProfileLoadRequested event,
