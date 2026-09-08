@@ -5786,7 +5786,7 @@
   "videoEditorChromaKeyTransparentHint": "Video can't hold transparency, so this exports as black.",
   "videoEditorChromaKeySurfaceHint": "Any plain surface behind you works — a wall is fine — as long as it fills the frame.",
   "@videoEditorChromaKeySurfaceHint": {
-    "description": "Standing hint at the top of the chroma key controls. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — before the user spends a take finding out. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys."
+    "description": "Standing hint at the top of the chroma key controls. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys."
   },
   "videoEditorChromaKeyDetectFailed": "Couldn't find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.",
   "videoEditorChromaKeyPickClipTitle": "Pick a clip",

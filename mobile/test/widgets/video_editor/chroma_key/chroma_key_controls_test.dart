@@ -30,19 +30,26 @@ void main() {
       );
     });
 
-    Future<void> pump(WidgetTester tester, ThemeData theme) async {
+    Future<void> pump(
+      WidgetTester tester,
+      ThemeData theme, {
+      TextScaler textScaler = TextScaler.noScaling,
+    }) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: theme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<ChromaKeyEditorCubit>.value(
-            value: cubit,
-            child: Scaffold(
-              backgroundColor: theme
-                  .extension<VineThemeColors>()!
-                  .surfaceContainerHigh,
-              body: ChromaKeyControls(onPickBackground: (_) {}),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: textScaler),
+            child: BlocProvider<ChromaKeyEditorCubit>.value(
+              value: cubit,
+              child: Scaffold(
+                backgroundColor: theme
+                    .extension<VineThemeColors>()!
+                    .surfaceContainerHigh,
+                body: ChromaKeyControls(onPickBackground: (_) {}),
+              ),
             ),
           ),
         ),
@@ -85,6 +92,24 @@ void main() {
         ),
         findsNothing,
         reason: 'Proves the widget resolves the string through l10n.',
+      );
+    });
+
+    testWidgets('holds at the largest system text scale', (tester) async {
+      await pump(
+        tester,
+        VineTheme.theme,
+        textScaler: const TextScaler.linear(2),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(
+          lookupAppLocalizations(
+            const Locale('en'),
+          ).videoEditorChromaKeySurfaceHint,
+        ),
+        findsOneWidget,
       );
     });
 

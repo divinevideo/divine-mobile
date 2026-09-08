@@ -61,12 +61,7 @@ class _Gutter extends StatelessWidget {
   }
 }
 
-/// Says so when the renderer cannot show the key applied.
-///
-/// Without this the preview just quietly shows the unkeyed video, which reads
-/// as "the green screen does nothing" rather than "you can't see it yet".
-/// States the feature's one prerequisite before a take is spent on finding it
-/// out.
+/// States the feature's one prerequisite on entry to the controls.
 ///
 /// The requirement used to surface only as a failed detect, after the clip was
 /// already shot — and it named a screen, which most people do not own. Saying
@@ -77,24 +72,14 @@ class _SurfaceRequirementHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      spacing: 8,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DivineIcon(icon: .info, color: context.vineColors.onSurfaceVariant),
-        Expanded(
-          child: Text(
-            context.l10n.videoEditorChromaKeySurfaceHint,
-            style: VineTheme.bodySmallFont(
-              color: context.vineColors.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
-    );
+    return _InfoRow(text: context.l10n.videoEditorChromaKeySurfaceHint);
   }
 }
 
+/// Says so when the renderer cannot show the key applied.
+///
+/// Without this the preview just quietly shows the unkeyed video, which reads
+/// as "the green screen does nothing" rather than "you can't see it yet".
 class _PreviewUnavailableNotice extends StatefulWidget {
   const _PreviewUnavailableNotice();
 
@@ -124,6 +109,18 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
       return const SizedBox.shrink();
     }
 
+    return _InfoRow(text: context.l10n.videoEditorChromaKeyPreviewUnavailable);
+  }
+}
+
+/// A secondary notice with the panel's shared info treatment.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       spacing: 8,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +128,7 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
         DivineIcon(icon: .info, color: context.vineColors.onSurfaceVariant),
         Expanded(
           child: Text(
-            context.l10n.videoEditorChromaKeyPreviewUnavailable,
+            text,
             style: VineTheme.bodySmallFont(
               color: context.vineColors.onSurfaceVariant,
             ),
