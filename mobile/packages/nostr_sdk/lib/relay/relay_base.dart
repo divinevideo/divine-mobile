@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'client_connected.dart';
 import 'platform_websocket_factory.dart';
 import 'relay.dart';
+import 'relay_diagnostics.dart';
 import 'web_socket_connection_manager.dart';
 
 class RelayBase extends Relay {
@@ -23,6 +24,7 @@ class RelayBase extends Relay {
     super.url,
     super.relayStatus, {
     WebSocketChannelFactory? channelFactory,
+    super.diagnosticsSink,
   }) : _channelFactory = channelFactory;
 
   /// Tracks whether doConnect is in progress to avoid duplicate onConnected calls
@@ -67,7 +69,14 @@ class RelayBase extends Relay {
         url: url,
         channelFactory:
             _channelFactory ?? const PlatformWebSocketChannelFactory(),
-        logger: (msg) => log("[$url] $msg"),
+        logger: (msg) {
+          log("[$url] $msg");
+          diagnose(
+            RelayDiagnosticSite.connectionLifecycle,
+            _connectionDiagnosticLevel(msg),
+            msg,
+          );
+        },
       );
 
       // Set up stream listeners
@@ -91,6 +100,17 @@ class RelayBase extends Relay {
       onError(e.toString(), reconnect: true);
       return false;
     }
+  }
+
+  RelayDiagnosticLevel _connectionDiagnosticLevel(String message) {
+    final normalized = message.toLowerCase();
+    if (normalized.contains('error') ||
+        normalized.contains('failed') ||
+        normalized.contains('timeout') ||
+        normalized.contains('exhausted')) {
+      return RelayDiagnosticLevel.warning;
+    }
+    return RelayDiagnosticLevel.info;
   }
 
   void _setupStreamListeners() {

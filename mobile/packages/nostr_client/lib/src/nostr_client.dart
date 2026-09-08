@@ -8,6 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_client/src/nip89_client_tag.dart';
 import 'package:nostr_client/src/publish_result.dart';
+import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
 import 'package:nostr_client/src/relay_manager.dart';
 import 'package:nostr_client/src/relay_rejection_classifier.dart';
 import 'package:nostr_client/src/social_publish_result.dart';
@@ -93,10 +94,12 @@ class NostrClient {
     required RelayManagerConfig relayManagerConfig,
     AppDbClient? dbClient,
   }) {
-    final nostr = _createNostr(config);
+    final relayDiagnostics = RelayDiagnosticsAdapter();
+    final nostr = _createNostr(config, relayDiagnostics.call);
     final relayManager = RelayManager(
       config: relayManagerConfig,
       relayPool: nostr.relayPool,
+      diagnosticsSink: relayDiagnostics.call,
     );
     return NostrClient._internal(
       nostr: nostr,
@@ -129,17 +132,22 @@ class NostrClient {
        _dbClient = dbClient,
        _eventVerifyWorkerSpawner = eventVerifyWorkerSpawner;
 
-  static Nostr _createNostr(NostrClientConfig config) {
+  static Nostr _createNostr(
+    NostrClientConfig config,
+    RelayDiagnosticsSink diagnosticsSink,
+  ) {
     RelayBase tempRelayGenerator(String url) => RelayBase(
       url,
       RelayStatus(url),
       channelFactory: config.webSocketChannelFactory,
+      diagnosticsSink: diagnosticsSink,
     );
     return Nostr(
       config.signer,
       config.eventFilters,
       tempRelayGenerator,
       onNotice: config.onNotice,
+      diagnosticsSink: diagnosticsSink,
       channelFactory: config.webSocketChannelFactory,
       signatureVerificationPolicy: config.signatureVerificationPolicy,
     );

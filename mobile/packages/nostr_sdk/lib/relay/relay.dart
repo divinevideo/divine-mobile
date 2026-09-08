@@ -9,6 +9,7 @@ import '../subscription.dart';
 import 'client_connected.dart';
 import 'relay_info.dart';
 import 'relay_info_util.dart';
+import 'relay_diagnostics.dart';
 import 'relay_status.dart';
 
 enum WriteAccess { readOnly, writeOnly, readWrite, nothing }
@@ -47,7 +48,27 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
-  Relay(this.url, this.relayStatus);
+  Relay(this.url, this.relayStatus, {this.diagnosticsSink});
+
+  final RelayDiagnosticsSink? diagnosticsSink;
+
+  void diagnose(
+    RelayDiagnosticSite site,
+    RelayDiagnosticLevel level,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) => emitRelayDiagnostic(
+    diagnosticsSink,
+    RelayDiagnostic(
+      site: site,
+      level: level,
+      relayUrl: url,
+      message: message,
+      error: error,
+      stackTrace: stackTrace,
+    ),
+  );
 
   /// The method to call connect function by framework.
   Future<bool> connect() async {
@@ -184,13 +205,33 @@ abstract class Relay {
     List<Subscription> saved,
   ) async {
     if (saved.isEmpty) return;
+    diagnose(
+      RelayDiagnosticSite.subscriptionReplay,
+      RelayDiagnosticLevel.info,
+      'Re-issuing ${saved.length} saved relay requests '
+      '(source=${source ?? "unknown"})',
+    );
     log(
       '[Relay] onConnected[${source ?? "unknown"}]: ${relayStatus.addr} - re-issuing ${saved.length} saved REQs',
     );
     for (final subscription in saved) {
       try {
-        await send(subscription.toJson(), skipReconnect: true);
-      } catch (e) {
+        final sent = await send(subscription.toJson(), skipReconnect: true);
+        if (!sent) {
+          diagnose(
+            RelayDiagnosticSite.subscriptionReplay,
+            RelayDiagnosticLevel.warning,
+            'Saved relay request ${subscription.id} was not sent',
+          );
+        }
+      } catch (e, stackTrace) {
+        diagnose(
+          RelayDiagnosticSite.subscriptionReplay,
+          RelayDiagnosticLevel.error,
+          'Saved relay request ${subscription.id} threw while replaying',
+          error: e,
+          stackTrace: stackTrace,
+        );
         log('subscription re-issue exception onConnected');
         log('$e');
       }

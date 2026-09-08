@@ -18,6 +18,8 @@ dependencies:
     path: ../nostr_sdk
   pool: ^1.5.1
   shared_preferences: ^2.5.3
+  unified_logger:
+    path: ../unified_logger
 
 dev_dependencies:
   flutter_test:

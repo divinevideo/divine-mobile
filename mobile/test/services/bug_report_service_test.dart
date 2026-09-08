@@ -87,6 +87,26 @@ void main() {
       expect(data.timestamp, isA<DateTime>());
     });
 
+    test('includes captured relay diagnostics in the support export', () async {
+      final capture = LogCaptureService();
+      await capture.clearAllLogs();
+      Log.info(
+        '[wss://relay.example] Relay connection succeeded',
+        name: 'RelayDiagnostics',
+        category: LogCategory.relay,
+      );
+
+      final data = await service.collectDiagnostics(
+        userDescription: 'Relay connection problem',
+      );
+
+      final relayEntry = data.recentLogs.singleWhere(
+        (entry) => entry.name == 'RelayDiagnostics',
+      );
+      expect(relayEntry.category, LogCategory.relay);
+      expect(relayEntry.message, contains('Relay connection succeeded'));
+    });
+
     test('should collect error counts from injected tracker', () async {
       final errorTracker =
           ErrorAnalyticsTracker(sink: const NoOpAnalyticsEventSink())
