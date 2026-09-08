@@ -59,15 +59,19 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
               RepaintBoundary(
                 child: Consumer(
                   builder: (context, ref, _) {
-                    final progress =
-                        (ref
-                                    .watch(videoEditorCompositeProgressProvider)
-                                    .asData
-                                    ?.value
-                                    .progress ??
-                                0)
-                            .clamp(0.0, 1.0);
-                    return PartialCircleSpinner(progress: progress);
+                    // No reading yet is not 0% — collapsing the two is what
+                    // made a healthy export read as a hang (#8796). The
+                    // indicator above already says work is in flight, so show
+                    // the ring only once there is a real value to draw.
+                    final reading = ref
+                        .watch(videoEditorCompositeProgressProvider)
+                        .asData
+                        ?.value
+                        .progress;
+                    if (reading == null) return const SizedBox.shrink();
+                    return PartialCircleSpinner(
+                      progress: reading.clamp(0.0, 1.0),
+                    );
                   },
                 ),
               ),

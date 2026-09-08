@@ -151,9 +151,18 @@ class VideoEditorRenderService {
     return (normalizedClipCount * 0.01).clamp(0.05, 0.10);
   }
 
-  static Stream<ProgressModel> compositeProgressStreamById(String taskId) {
+  /// Composite render + proof progress for whatever [taskId] resolves to.
+  ///
+  /// [taskId] is a callback re-read per event rather than a value captured
+  /// once, because a draft id can be reassigned mid-session. A filter pinned
+  /// to the id the caller first saw goes silent while the export publishes
+  /// under the new one, which reads as a steady 0% through a healthy render
+  /// (#8796).
+  static Stream<ProgressModel> compositeProgressStreamById(
+    String Function() taskId,
+  ) {
     return _compositeProgressController.stream.where(
-      (progress) => progress.id == taskId,
+      (progress) => progress.id == taskId(),
     );
   }
 

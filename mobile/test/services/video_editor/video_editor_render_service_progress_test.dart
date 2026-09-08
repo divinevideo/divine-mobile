@@ -208,7 +208,7 @@ void main() {
 
         final progressSubscription =
             VideoEditorRenderService.compositeProgressStreamById(
-              taskId,
+              () => taskId,
             ).listen((progress) => progressValues.add(progress.progress));
         addTearDown(progressSubscription.cancel);
 
@@ -314,7 +314,7 @@ void main() {
 
         final progressSubscription =
             VideoEditorRenderService.compositeProgressStreamById(
-              taskId,
+              () => taskId,
             ).listen((progress) => progressValues.add(progress.progress));
         addTearDown(progressSubscription.cancel);
 
