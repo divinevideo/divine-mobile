@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:meta/meta.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -37,13 +38,15 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     with CloseGuardedEmit<ChromaKeyEditorState> {
   /// Starts measuring straight away when the clip arrives without a key.
   ///
-  /// Set [detectOnOpen] to `false` only to keep a test off the measurement
-  /// path; the screen leaves it on.
+  /// [detectOnOpen] exists only so a test can stay off the measurement path.
+  /// The screen passes nothing and takes the default, so a production caller
+  /// turning it off would ship the inert panel this measurement replaced —
+  /// hence `@visibleForTesting`, which makes that a static analysis failure.
   ChromaKeyEditorCubit({
     required EditorVideo video,
     ClipChromaKey? initialChromaKey,
     ChromaKeyDetectFn detect = ChromaKey.detect,
-    bool detectOnOpen = true,
+    @visibleForTesting bool detectOnOpen = true,
   }) : _video = video,
        _detect = detect,
        super(
