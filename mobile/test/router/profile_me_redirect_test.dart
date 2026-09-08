@@ -41,10 +41,42 @@ void main() {
       );
     });
 
-    test('sends unauthenticated users to the home feed', () {
+    test('sends a signed-out session to the home feed', () {
       expect(
         ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: false,
+          currentPublicKeyHex: null,
+          videoIndex: 0,
+        ),
+        '/home/0',
+      );
+    });
+
+    // The two cases below are what pin the isAuthenticated half of the guard:
+    // it and currentPublicKeyHex are independent AuthService fields, so either
+    // can be present without the other. With only the agreeing cases above,
+    // dropping `!isAuthenticated ||` from the guard keeps the suite green
+    // while sending a signed-out session to /profile/<npub>. (Changing the
+    // `||` to `&&` is caught earlier, by the compiler: flow analysis cannot
+    // promote currentPublicKeyHex to non-null past an `&&`.)
+    test(
+      'sends a known pubkey with an unsettled auth state to the home feed',
+      () {
+        expect(
+          ProfileScreenRouter.meProfileRedirectPath(
+            isAuthenticated: false,
+            currentPublicKeyHex: syntheticTestPubkey,
+            videoIndex: 0,
+          ),
+          '/home/0',
+        );
+      },
+    );
+
+    test('sends an authenticated session with no pubkey to the home feed', () {
+      expect(
+        ProfileScreenRouter.meProfileRedirectPath(
+          isAuthenticated: true,
           currentPublicKeyHex: null,
           videoIndex: 0,
         ),
