@@ -41,63 +41,66 @@ void main() {
     registerFallbackValue(<VideoEvent>[]);
   });
 
-  testWidgets('embedded feed delegates the selected video to its host', (
-    tester,
-  ) async {
-    final hashtagService = _MockHashtagService();
-    final videoEventService = _MockVideoEventService();
-    final videosRepository = _MockVideosRepository();
-    final testVideos = [_video('video-1'), _video('video-2')];
+  group('navigation', () {
+    testWidgets('embedded feed delegates the selected video to its host', (
+      tester,
+    ) async {
+      final hashtagService = _MockHashtagService();
+      final videoEventService = _MockVideoEventService();
+      final videosRepository = _MockVideosRepository();
+      final testVideos = [_video('video-1'), _video('video-2')];
 
-    when(
-      () => hashtagService.getVideosByHashtags(['funny']),
-    ).thenReturn(const []);
-    when(
-      () => hashtagService.subscribeToHashtagVideos(['funny']),
-    ).thenAnswer((_) async {});
-    when(() => videoEventService.filterVideoList(any())).thenAnswer(
-      (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
-    );
-    when(
-      () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
-    ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
+      when(
+        () => hashtagService.getVideosByHashtags(['funny']),
+      ).thenReturn(const []);
+      when(
+        () => hashtagService.subscribeToHashtagVideos(['funny']),
+      ).thenAnswer((_) async {});
+      when(() => videoEventService.filterVideoList(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first as List<VideoEvent>,
+      );
+      when(
+        () => videosRepository.getHashtagFeedVideos(hashtag: 'funny'),
+      ).thenAnswer((_) async => HashtagFeedVideosResult.success(testVideos));
 
-    List<VideoEvent>? callbackVideos;
-    int? callbackIndex;
+      List<VideoEvent>? callbackVideos;
+      int? callbackIndex;
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ...getStandardTestOverrides(),
-          hashtagServiceProvider.overrideWithValue(hashtagService),
-          videoEventServiceProvider.overrideWithValue(videoEventService),
-          videosRepositoryProvider.overrideWithValue(videosRepository),
-          subscribedListVideoCacheProvider.overrideWithValue(null),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: HashtagFeedScreen(
-            hashtag: 'funny',
-            embedded: true,
-            onVideoTap: (videos, index) {
-              callbackVideos = videos;
-              callbackIndex = index;
-            },
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...getStandardTestOverrides(),
+            hashtagServiceProvider.overrideWithValue(hashtagService),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+            subscribedListVideoCacheProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: HashtagFeedScreen(
+              hashtag: 'funny',
+              embedded: true,
+              onVideoTap: (videos, index) {
+                callbackVideos = videos;
+                callbackIndex = index;
+              },
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.pump();
 
-    final grid = tester.widget<ComposableVideoGrid>(
-      find.byType(ComposableVideoGrid),
-    );
-    grid.onVideoTap(grid.videos, 1);
+      final grid = tester.widget<ComposableVideoGrid>(
+        find.byType(ComposableVideoGrid),
+      );
+      grid.onVideoTap(grid.videos, 1);
 
-    expect(callbackVideos, same(grid.videos));
-    expect(callbackVideos![1].id, 'video-2');
-    expect(callbackIndex, 1);
+      expect(callbackVideos, same(grid.videos));
+      expect(callbackVideos![1].id, 'video-2');
+      expect(callbackIndex, 1);
+    });
   });
 }
