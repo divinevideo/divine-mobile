@@ -2,7 +2,7 @@
 // ABOUTME: Aggregates logs, device info, errors
 // and user description for NIP-17 transmission
 
-import 'package:models/src/log_entry.dart';
+import 'package:logging_types/logging_types.dart' show LogEntry;
 
 /// Complete diagnostic data for a bug report
 class BugReportData {

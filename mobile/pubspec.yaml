@@ -62,6 +62,7 @@ workspace:
   - packages/invite_api_client
   - packages/keycast_flutter
   - packages/likes_repository
+  - packages/logging_types
   - packages/media_cache
   - packages/models
   - packages/notification_repository
@@ -330,6 +331,7 @@ dependencies:
 
   # Logging
   logging: ^1.2.0
+  logging_types:
   unified_logger:
 
   # Verifier Client - HTTP client for verifier.divine.video identity attestations

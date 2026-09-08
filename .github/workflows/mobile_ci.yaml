@@ -295,6 +295,8 @@ jobs:
           # Issues #3574 / #3575: optionless packages silently inherit the
           # app's relaxed analyzer config; workflow-less packages get no CI.
           bash scripts/check_package_ci_floor.sh
+      - name: 🔄 Verify workspace package dependencies remain acyclic
+        run: bash scripts/check_package_dependency_cycles.sh
       - name: 🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)
         run: |
           # Issue #3338. A package with no `flutter: sdk: flutter` entry has

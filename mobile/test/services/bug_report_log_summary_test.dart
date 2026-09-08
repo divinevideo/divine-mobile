@@ -2,7 +2,8 @@
 // ABOUTME: Verifies error/warning prioritization, dedup, chronological ordering
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show LogCategory, LogEntry, LogLevel;
+import 'package:logging_types/logging_types.dart'
+    show LogCategory, LogEntry, LogLevel;
 import 'package:openvine/services/bug_report_log_summary.dart';
 
 LogEntry _log(int minute, LogLevel level, String msg) => LogEntry(

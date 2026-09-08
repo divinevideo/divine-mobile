@@ -1,12 +1,13 @@
-// ABOUTME: Data model representing a single log entry in the circular buffer
-// ABOUTME: Includes timestamp, level, message, category, optional error/stack
+// ABOUTME: Data model representing a single log entry in the circular buffer.
+// ABOUTME: Includes timestamp, level, message, category, optional error/stack.
 
+import 'package:logging_types/src/logging_types.dart';
 import 'package:meta/meta.dart';
-import 'package:models/src/logging_types.dart';
 
-/// Represents a single log entry in the circular buffer
+/// Represents a single log entry in the circular buffer.
 @immutable
 class LogEntry {
+  /// Creates a log entry.
   const LogEntry({
     required this.timestamp,
     required this.level,
@@ -17,7 +18,7 @@ class LogEntry {
     this.stackTrace,
   });
 
-  /// Create from JSON
+  /// Creates a log entry from its serialized representation.
   factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
     timestamp: DateTime.parse(json['timestamp'] as String),
     level: LogLevel.fromString(json['level'] as String),
@@ -30,15 +31,28 @@ class LogEntry {
     stackTrace: json['stackTrace'] as String?,
   );
 
+  /// When this entry was recorded.
   final DateTime timestamp;
+
+  /// Severity used for filtering and display.
   final LogLevel level;
+
+  /// Human-readable log message.
   final String message;
+
+  /// Optional functional area associated with the entry.
   final LogCategory? category;
+
+  /// Optional logger or operation name.
   final String? name;
+
+  /// Optional error description.
   final String? error;
+
+  /// Optional serialized stack trace.
   final String? stackTrace;
 
-  /// Convert to JSON for bug report
+  /// Converts this entry to its serialized representation.
   Map<String, dynamic> toJson() => {
     'timestamp': timestamp.toIso8601String(),
     'level': level.name,
@@ -49,7 +63,7 @@ class LogEntry {
     if (stackTrace != null) 'stackTrace': stackTrace,
   };
 
-  /// Create formatted string for display
+  /// Formats this entry for display.
   String toFormattedString() {
     final buffer = StringBuffer()
       ..write('[${timestamp.toIso8601String()}] ')

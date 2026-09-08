@@ -43,6 +43,7 @@ infinite_video_feed 100
 invite_api_client 89
 keycast_flutter 44
 likes_repository 62
+logging_types 100
 media_cache 98
 models 25
 nostr_app_bridge_repository 78

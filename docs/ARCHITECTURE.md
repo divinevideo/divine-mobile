@@ -124,7 +124,9 @@ ship exactly that shape.
 (`compute.dart` ports Flutter's implementation, conditional import and all;
 `build_mode.dart` reuses Flutter's exact `kReleaseMode` definition so the
 `_classifyDiagnostics` const still folds away under AOT product mode). That is
-the worked example for the rest of the group. `unified_logger` is the next
+the worked example for the rest of the group. The logging value types now live
+in the pure-Dart `logging_types` leaf, so `unified_logger` no longer depends on
+the `models`/`nostr_sdk` cone. Making the logger itself pure Dart is the next
 candidate — it needs an injected console sink, since `debugPrint`'s throttling
 has no drop-in replacement. The others are genuinely bound: `dart:ui`,
 `defaultTargetPlatform`, and `NavigatorObserver` have no pure-Dart substitute
