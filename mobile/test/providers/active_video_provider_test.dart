@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/active_video_provider.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -49,6 +50,30 @@ void main() {
       expect(container.read(activeVideoIdProvider), video.stableId);
     });
 
+    test('returns null for a feed-backed route when backgrounded', () {
+      final container = ProviderContainer(
+        overrides: [
+          appForegroundProvider.overrideWith(
+            () => _TestAppForegroundNotifier(false),
+          ),
+          hasVisibleOverlayProvider.overrideWithValue(false),
+          pageContextProvider.overrideWithValue(
+            const AsyncValue.data(
+              RouteContext(type: RouteType.explore, videoIndex: 0),
+            ),
+          ),
+          videosForExploreRouteProvider.overrideWithValue(
+            AsyncValue.data(
+              VideoFeedState(videos: [video], hasMoreContent: false),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(activeVideoIdProvider), isNull);
+    });
+
     // Every fullscreen video route hands playback to a screen that owns its
     // own player. Profile joined them in #7680: resolving an active video
     // here needed a second video list, and the only one a Riverpod provider
@@ -72,4 +97,13 @@ void main() {
       });
     }
   });
+}
+
+class _TestAppForegroundNotifier extends AppForeground {
+  _TestAppForegroundNotifier(this._initialValue);
+
+  final bool _initialValue;
+
+  @override
+  bool build() => _initialValue;
 }
