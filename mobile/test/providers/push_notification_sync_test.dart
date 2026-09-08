@@ -1605,6 +1605,12 @@ void main() {
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
+        verify(
+          () => pushService.publishDeregistrationEvent(
+            any(),
+            publishClient: any(named: 'publishClient'),
+          ),
+        ).called(1);
       },
     );
 
