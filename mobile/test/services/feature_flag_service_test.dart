@@ -339,6 +339,17 @@ void main() {
 
         expect(notifications, equals(1));
       });
+
+      // The refusal path mutates state too: it resolves the flag back to its
+      // build default, so it owes consumers the same notification.
+      test(
+        'notifies listeners when an internal flag write is refused',
+        () async {
+          await service.setFlag(FeatureFlag.communityContentWarnings, true);
+
+          expect(notifications, equals(1));
+        },
+      );
     });
   });
 }
