@@ -514,6 +514,14 @@ esac
       },
       'mobile/ios/Runner/Info.plist': {'app', 'native', 'ios', 'smoke'},
       '.github/workflows/badge_repository.yaml': {'app', 'ci_config'},
+      // `app` is what keeps mobile/test/tools/ running — the contract test
+      // that pins this very workflow lives there, so without it the test
+      // could not fire on a change to its own subject.
+      '.github/workflows/mobile_service_integration_tests.yaml': {
+        'app',
+        'service',
+        'ci_config',
+      },
     };
 
     for (final entry in scopeArms.entries) {
