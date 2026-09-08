@@ -304,5 +304,41 @@ void main() {
         expect(newState.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
       });
     });
+
+    // featureFlagStateProvider invalidates itself from these notifications, so
+    // a mutation that updates state without notifying leaves every consumer of
+    // isFeatureEnabledProvider showing the previous value.
+    group('change notification', () {
+      late int notifications;
+
+      setUp(() {
+        notifications = 0;
+        service.addListener(() => notifications++);
+      });
+
+      test('notifies listeners when a flag is set', () async {
+        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when a flag is reset', () async {
+        await service.resetFlag(FeatureFlag.enhancedAnalytics);
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when all flags are reset', () async {
+        await service.resetAllFlags();
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when persisted overrides are loaded', () async {
+        await service.initialize();
+
+        expect(notifications, equals(1));
+      });
+    });
   });
 }
