@@ -2140,10 +2140,12 @@ void main() {
           '2222222222222222222222222222222222222222222222222222222222222222',
           '3333333333333333333333333333333333333333333333333333333333333333',
         ];
+        final beforeLoad = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         await service.setFollowingModerationEnabled(
           true,
           followedPubkeys: followed,
         );
+        final afterLoad = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
         expect(activeListeners, 1);
         final captured = verify(
@@ -2157,6 +2159,13 @@ void main() {
         final filter = (captured.single as List<Filter>).single;
         expect(filter.authors, unorderedEquals(followed));
         expect(filter.kinds, [NostrEventKinds.label]);
+        // The whole point of the watermark: the tail resumes from the oldest
+        // per-labeler boundary rather than re-requesting the stored window.
+        // Nothing asserted `since` before, so dropping it from the filter left
+        // every test in the suite green.
+        expect(filter.since, isNotNull);
+        expect(filter.since, greaterThanOrEqualTo(beforeLoad));
+        expect(filter.since, lessThanOrEqualTo(afterLoad));
       },
     );
 
