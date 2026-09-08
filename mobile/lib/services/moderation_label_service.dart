@@ -1233,8 +1233,14 @@ class ModerationLabelService {
   }
 
   void _removeLabelsForLabeler(String pubkey) {
-    // Drop the dedup set too: the backfill removes then reprocesses a labeler's
-    // rows, so its events must be allowed to apply again. #8255.
+    // Drop the dedup set too, so the labeler's events can apply again once its
+    // rows are gone. This matters at the [_unloadLabeler] call site, where the
+    // tail has been recording ids all session: without it, a labeler removed
+    // and re-added would have its re-delivered events skipped as duplicates
+    // after their rows were dropped. On the backfill path the set is always
+    // empty — ids are only recorded once a watermark exists, a watermark only
+    // exists once the labeler has latched, and a latched labeler never
+    // reloads. #8255.
     _appliedLabelEventIds.remove(pubkey);
     _labelsByEventId.forEach((_, labels) {
       labels.removeWhere((l) => l.labelerPubkey == pubkey);
