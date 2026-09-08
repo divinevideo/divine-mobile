@@ -3,6 +3,7 @@
 // ABOUTME: handlers forward to the repository. Per-row state / unread
 // ABOUTME: rollback semantics are tested at the repository layer.
 
+// Explicit constructor calls and defaults keep each event fixture readable.
 // ignore_for_file: prefer_const_constructors, avoid_redundant_argument_values
 
 import 'dart:async';

@@ -138,6 +138,7 @@ class RouteContext {
 String _safeDecode(String segment) {
   try {
     return Uri.decodeComponent(segment);
+    // ArgumentError is Uri.decodeComponent's malformed-input boundary.
     // ignore: avoid_catching_errors
   } on ArgumentError {
     return segment;

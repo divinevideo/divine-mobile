@@ -518,12 +518,12 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
         if (stale != null) {
           try {
             await transport.repository.cancelOutgoingSend(rumorId: stale);
+            // ArgumentError is the repository's boundary signal for a queued
+            // send owned by a different account.
             // ignore: avoid_catching_errors
           } on ArgumentError {
-            // Same ambiguity as recoverFullSend: the row may be gone because
-            // the sweep delivered it, the user deleted it, or the active
-            // account changed. Do not mint a fresh report DM when we cannot
-            // prove the stale one was cancelled.
+            // The active account changed. Do not mint a fresh report DM when
+            // we cannot prove the stale row belongs to this account.
             _markUnverifiable();
             return true;
           }
@@ -560,6 +560,8 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
             rumorId: parked,
             resetRetryBudget: true,
           );
+          // ArgumentError is the repository's boundary signal for an
+          // absent or account-mismatched queued send.
           // ignore: avoid_catching_errors
         } on ArgumentError {
           // Ambiguous. `recoverFullSend` throws the same type when the row is

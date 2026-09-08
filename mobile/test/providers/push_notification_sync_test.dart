@@ -1108,8 +1108,10 @@ void main() {
             'publish ${pubkeysByEvent[event]} cleanup ${identical(publishClient, cleanupClient)}',
           );
         });
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1187,8 +1189,10 @@ void main() {
             return PushRegistrationResult.published;
           });
           recordMockDeregistration(events);
+          // Mocktail needs the closure to capture this mock invocation.
           // ignore: unnecessary_lambdas
           when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+          // Mocktail needs the closure to capture this mock invocation.
           // ignore: unnecessary_lambdas
           when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1258,8 +1262,10 @@ void main() {
           return PushRegistrationResult.published;
         });
         recordMockDeregistration(events);
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1325,8 +1331,10 @@ void main() {
           await registerCompleter.future;
           return PushRegistrationResult.published;
         });
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
         recordMockDeregistration(
@@ -1376,8 +1384,10 @@ void main() {
           'register $pubkeyA',
           'deregister $pubkeyA with cleanup client true',
         ]);
+        // Mocktail needs the closure to capture this verification invocation.
         // ignore: unnecessary_lambdas
         verify(() => cleanupClient.initialize()).called(1);
+        // Mocktail needs the closure to capture this verification invocation.
         // ignore: unnecessary_lambdas
         verify(() => cleanupClient.dispose()).called(1);
       });
@@ -1924,6 +1934,7 @@ void main() {
         when(
           cleanupClient.initialize,
         ).thenAnswer((_) => initializeCompleter.future);
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 

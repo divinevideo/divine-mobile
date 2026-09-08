@@ -109,6 +109,8 @@ class ModerationLabelService {
        _labelerHistoryBudget = labelerHistoryBudget;
 
   final NostrClient _nostrClient;
+  // Retained to preserve constructor compatibility for generated-provider
+  // and direct-construction callers while the service does not read auth.
   // ignore: unused_field
   final AuthService _authService;
   final SharedPreferences _prefs;

@@ -55,6 +55,7 @@ void main() {
         (invocation) =>
             invocation.positionalArguments.first as List<VideoEvent>,
       );
+      // This mock exposes ChangeNotifier listener state to isolate the provider.
       // ignore: invalid_use_of_protected_member
       when(() => mockVideoEventService.hasListeners).thenReturn(false);
     });

@@ -202,6 +202,7 @@ void main() {
         () => mockCleanupService.clearUserSpecificData(
           reason: 'explicit_logout',
           userPubkey: any(named: 'userPubkey'),
+          // Explicit false is the sign-out cleanup behavior under verification.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
         ),
@@ -240,6 +241,7 @@ void main() {
         () => mockCleanupService.clearUserSpecificData(
           reason: 'explicit_logout',
           userPubkey: any(named: 'userPubkey'),
+          // Explicit false is the sign-out cleanup behavior under verification.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
         ),

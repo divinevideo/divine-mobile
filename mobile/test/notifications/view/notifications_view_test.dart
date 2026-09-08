@@ -1,6 +1,7 @@
 // ABOUTME: Tests for NotificationsView — verifies rendering of loading,
 // ABOUTME: failure, empty, and loaded states using a mock BLoC.
 
+// Fresh widget instances make per-pump fixture ownership explicit.
 // ignore_for_file: prefer_const_constructors
 
 import 'dart:async';

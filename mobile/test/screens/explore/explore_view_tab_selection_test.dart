@@ -116,6 +116,7 @@ void main() {
     when(() => videoEventService.discoveryVideos).thenReturn([]);
     when(() => videoEventService.popularNowVideos).thenReturn([]);
     when(() => videoEventService.isSubscribed(any())).thenReturn(false);
+    // This mock exposes ChangeNotifier listener state to isolate rendering.
     // ignore: invalid_use_of_protected_member
     when(() => videoEventService.hasListeners).thenReturn(false);
   });

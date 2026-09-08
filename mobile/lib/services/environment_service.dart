@@ -12,6 +12,8 @@ class EnvironmentService extends ChangeNotifier {
   static const _keyDeveloperMode = 'developer_mode_enabled';
   static const _keyEnvironment = 'app_environment';
 
+  // Initialization is asynchronous, and null represents the valid
+  // pre-initialize state guarded by _ensureInitialized.
   // ignore: use_late_for_private_fields_and_variables
   SharedPreferences? _prefs;
   bool _developerModeEnabled = false;

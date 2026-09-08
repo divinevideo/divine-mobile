@@ -164,6 +164,8 @@ class _TestPaginationWidget extends StatefulWidget {
   const _TestPaginationWidget({
     required this.onLoadMore,
     this.threshold = 3,
+    // Mirrors the production constructor so tests can describe throttle
+    // scenarios even though this minimal harness exercises only pagination.
     // ignore: unused_element_parameter
     this.throttleSeconds = 5,
   });
