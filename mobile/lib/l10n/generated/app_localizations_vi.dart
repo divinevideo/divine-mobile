@@ -2935,6 +2935,27 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phân tích nguồn/vùng/thời gian của khán giả sẽ xuất hiện khi Funnelcake bổ sung endpoint phân tích khán giả.';
 
   @override
+  String get analyticsSocialCountsInfoLabel =>
+      'How social counts are calculated';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'How social counts work';
+
+  @override
+  String get analyticsFollowerCountsHeading => 'How follower counts work';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Divine counts accounts that currently follow you and excludes accounts you’ve blocked. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.';
+
+  @override
+  String get analyticsBlockingHeading => 'What blocking does';
+
+  @override
+  String get analyticsBlockingBody =>
+      'People you block are removed from your follower count and follower list, and Divine stops showing them your content. Because Nostr is a public network, blocking cannot prevent someone from finding public posts through another app or relay.';
+
+  @override
   String get analyticsRetention => 'Tỷ lệ giữ chân';
 
   @override

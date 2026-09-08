@@ -5089,6 +5089,42 @@ abstract class AppLocalizations {
   /// **'Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.'**
   String get analyticsAudiencePlaceholder;
 
+  /// No description provided for @analyticsSocialCountsInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'How social counts are calculated'**
+  String get analyticsSocialCountsInfoLabel;
+
+  /// No description provided for @analyticsSocialCountsInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How social counts work'**
+  String get analyticsSocialCountsInfoTitle;
+
+  /// No description provided for @analyticsFollowerCountsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'How follower counts work'**
+  String get analyticsFollowerCountsHeading;
+
+  /// No description provided for @analyticsFollowerCountsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine counts accounts that currently follow you and excludes accounts you’ve blocked. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.'**
+  String get analyticsFollowerCountsBody;
+
+  /// No description provided for @analyticsBlockingHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'What blocking does'**
+  String get analyticsBlockingHeading;
+
+  /// No description provided for @analyticsBlockingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'People you block are removed from your follower count and follower list, and Divine stops showing them your content. Because Nostr is a public network, blocking cannot prevent someone from finding public posts through another app or relay.'**
+  String get analyticsBlockingBody;
+
   /// No description provided for @analyticsRetention.
   ///
   /// In en, this message translates to:
