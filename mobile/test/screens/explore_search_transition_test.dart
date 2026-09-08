@@ -24,6 +24,7 @@ import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -68,7 +69,7 @@ void main() {
       when(() => videoEventService.hasListeners).thenReturn(false);
     });
 
-    List<dynamic> exploreOverrides() => [
+    List<Override> exploreOverrides() => [
       appForegroundProvider.overrideWith(_FakeAppForeground.new),
       videoEventServiceProvider.overrideWithValue(videoEventService),
       routerLocationStreamProvider.overrideWith(

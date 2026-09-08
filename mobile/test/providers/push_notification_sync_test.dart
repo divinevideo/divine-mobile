@@ -22,6 +22,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
@@ -293,7 +294,7 @@ void main() {
 
   ProviderContainer buildContainer({
     _TestNostrSession? nostrSession,
-    List<dynamic> extraOverrides = const [],
+    List<Override> extraOverrides = const [],
   }) {
     final container = ProviderContainer(
       overrides: [

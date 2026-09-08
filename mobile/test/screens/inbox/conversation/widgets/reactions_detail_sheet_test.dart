@@ -14,6 +14,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reactions_detail_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../../helpers/test_provider_overrides.dart';
 
@@ -55,7 +56,7 @@ void main() {
 
   Widget host(
     _MockConversationReactionsCubit cubit, {
-    List<dynamic> additionalOverrides = const <dynamic>[],
+    List<Override> additionalOverrides = const <Override>[],
     Locale? locale,
   }) {
     return testMaterialApp(

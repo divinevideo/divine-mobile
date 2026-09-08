@@ -33,6 +33,7 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock classes (public because they are imported by many test files)
@@ -372,7 +373,7 @@ MockVideoEventService createMockVideoEventService() {
 }
 
 /// Standard provider overrides that fix most ProviderException failures
-List<dynamic> getStandardTestOverrides({
+List<Override> getStandardTestOverrides({
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
@@ -480,7 +481,7 @@ List<dynamic> getStandardTestOverrides({
 /// ```
 Widget testProviderScope({
   required Widget child,
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
@@ -519,7 +520,7 @@ Widget testProviderScope({
   );
 }
 
-bool _overridesProvider(List<dynamic>? overrides, Object provider) {
+bool _overridesProvider(List<Override>? overrides, Object provider) {
   final providerPrefix = '$provider.';
   return overrides?.any((override) => '$override'.startsWith(providerPrefix)) ??
       false;
@@ -543,7 +544,7 @@ Widget testMaterialApp({
   Widget? home,
   Map<String, WidgetBuilder>? routes,
   String? initialRoute,
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,

@@ -47,6 +47,7 @@ import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.dart';
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
@@ -283,7 +284,7 @@ void main() {
 
     Widget buildSubject({
       FullscreenFeedState? state,
-      List<dynamic>? additionalOverrides,
+      List<Override>? additionalOverrides,
       MockAuthService? mockAuthService,
       String? contextTitle,
       String? sponsorName,

@@ -15,6 +15,7 @@ import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../../helpers/go_router.dart';
 import '../../../../helpers/test_helpers.dart';
@@ -56,7 +57,7 @@ void main() {
       MockGoRouter goRouter, {
       ValueChanged<VideoEvent>? onVideoUpdated,
       VideoMetadataUpdateService? updateService,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
     }) {
       return ProviderScope(
         overrides: [

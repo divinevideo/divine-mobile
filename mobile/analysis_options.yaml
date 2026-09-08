@@ -23,7 +23,6 @@ analyzer:
     inference_failure_on_function_return_type: ignore
     inference_failure_on_instance_creation: ignore
     inference_failure_on_untyped_parameter: ignore
-    list_element_type_not_assignable: ignore
     prefer_int_literals: ignore
     sort_constructors_first: ignore
     strict_raw_type: ignore

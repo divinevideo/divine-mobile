@@ -22,6 +22,7 @@ import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart'
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -75,7 +76,7 @@ GoRouter _messageRouter(String message) {
 
 Widget _routerTestApp(
   GoRouter router, {
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   MockNostrClient? mockNostrService,
 }) {
   return testProviderScope(
