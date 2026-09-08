@@ -142,8 +142,11 @@ void main() {
         final cubit = build(detect: (_) => gate.future, detectOnOpen: true);
         expect(cubit.state.isDetecting, isTrue);
 
-        // The measurement is in flight while the user backs out; resuming into
-        // a closed cubit would throw instead of being dropped.
+        // The measurement is in flight while the user backs out. With the emit
+        // unguarded this throws `Cannot emit new states after calling close`,
+        // and because the `try` wraps only `_detect` the throw is no longer
+        // swallowed as a detection failure — it escapes into the test zone and
+        // fails here. Widening that `try` again would silently disarm this.
         await cubit.close();
         gate.complete(measured);
         await pumpEventQueue();
@@ -259,6 +262,23 @@ void main() {
           '/a/backdrop.mp4',
         ),
       );
+
+      test('a measurement landing after close completes rather than '
+          'throwing', () async {
+        final gate = Completer<ChromaKeyDetection>();
+        final cubit = build(detect: (_) => gate.future);
+        // Driven by hand so the future is in hand. The on-open call is
+        // `unawaited` and the button assigns a tear-off to a `VoidCallback`,
+        // so in production nothing would observe this rejection — which is
+        // exactly why the test has to.
+        final measuring = cubit.detectFromFootage();
+
+        await cubit.close();
+        gate.complete(measured);
+
+        await expectLater(measuring, completes);
+        expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.detecting);
+      });
 
       blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
         'ignores a second request while one is in flight',
