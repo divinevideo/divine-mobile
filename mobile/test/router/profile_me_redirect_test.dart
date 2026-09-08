@@ -15,7 +15,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 0,
         ),
-        '/profile/$syntheticTestNpub/0',
+        equals('/profile/$syntheticTestNpub/0'),
       );
     });
 
@@ -26,7 +26,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: 1,
         ),
-        '/profile/$syntheticTestNpub/1',
+        equals('/profile/$syntheticTestNpub/1'),
       );
     });
 
@@ -37,7 +37,7 @@ void main() {
           currentPublicKeyHex: syntheticTestPubkey,
           videoIndex: null,
         ),
-        '/profile/$syntheticTestNpub',
+        equals('/profile/$syntheticTestNpub'),
       );
     });
 
@@ -48,17 +48,14 @@ void main() {
           currentPublicKeyHex: null,
           videoIndex: 0,
         ),
-        '/home/0',
+        equals('/home/0'),
       );
     });
 
-    // The two cases below are what pin the isAuthenticated half of the guard:
-    // it and currentPublicKeyHex are independent AuthService fields, so either
-    // can be present without the other. With only the agreeing cases above,
-    // dropping `!isAuthenticated ||` from the guard keeps the suite green
-    // while sending a signed-out session to /profile/<npub>. (Changing the
-    // `||` to `&&` is caught earlier, by the compiler: flow analysis cannot
-    // promote currentPublicKeyHex to non-null past an `&&`.)
+    // These two pin the isAuthenticated half of the guard: it and
+    // currentPublicKeyHex are independent AuthService fields, so either can be
+    // present without the other. Without them, dropping `!isAuthenticated ||`
+    // keeps the suite green while sending a signed-out session to a profile.
     test(
       'sends a known pubkey with an unsettled auth state to the home feed',
       () {
@@ -68,7 +65,7 @@ void main() {
             currentPublicKeyHex: syntheticTestPubkey,
             videoIndex: 0,
           ),
-          '/home/0',
+          equals('/home/0'),
         );
       },
     );
@@ -80,7 +77,7 @@ void main() {
           currentPublicKeyHex: null,
           videoIndex: 0,
         ),
-        '/home/0',
+        equals('/home/0'),
       );
     });
   });
