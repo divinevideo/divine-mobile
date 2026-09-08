@@ -1,35 +1,38 @@
-// ABOUTME: Freezed state model for curation provider containing curated video sets
+// ABOUTME: State model for curation provider containing curated video sets
 // ABOUTME: Manages only editor picks - trending/popular handled by infinite feeds
 
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
-
-part 'curation_state.freezed.dart';
+import 'package:openvine/state/copy_with_sentinel.dart';
 
 /// State model for curation provider (only Editor's Picks)
-@freezed
-sealed class CurationState with _$CurationState {
-  const factory CurationState({
-    /// Editor's picks videos (classic vines)
-    required List<VideoEvent> editorsPicks,
+class CurationState extends Equatable {
+  const CurationState({
+    required this.editorsPicks,
+    required this.isLoading,
+    this.trending = const [],
+    this.curationSets = const [],
+    this.lastRefreshed,
+    this.error,
+  });
 
-    /// Whether curation data is loading
-    required bool isLoading,
+  /// Editor's picks videos (classic vines)
+  final List<VideoEvent> editorsPicks;
 
-    /// Trending videos (popular now)
-    @Default([]) List<VideoEvent> trending,
+  /// Whether curation data is loading
+  final bool isLoading;
 
-    /// All available curation sets
-    @Default([]) List<CurationSet> curationSets,
+  /// Trending videos (popular now)
+  final List<VideoEvent> trending;
 
-    /// Last refresh timestamp
-    DateTime? lastRefreshed,
+  /// All available curation sets
+  final List<CurationSet> curationSets;
 
-    /// Error message if any
-    String? error,
-  }) = _CurationState;
+  /// Last refresh timestamp
+  final DateTime? lastRefreshed;
 
-  const CurationState._();
+  /// Error message if any
+  final String? error;
 
   /// Get total number of curated videos
   int get totalCuratedVideos => editorsPicks.length + trending.length;
@@ -42,4 +45,36 @@ sealed class CurationState with _$CurationState {
     CurationSetType.editorsPicks => editorsPicks,
     CurationSetType.trending => trending,
   };
+
+  CurationState copyWith({
+    List<VideoEvent>? editorsPicks,
+    bool? isLoading,
+    List<VideoEvent>? trending,
+    List<CurationSet>? curationSets,
+    Object? lastRefreshed = unsetCopyWithArgument,
+    Object? error = unsetCopyWithArgument,
+  }) {
+    return CurationState(
+      editorsPicks: editorsPicks ?? this.editorsPicks,
+      isLoading: isLoading ?? this.isLoading,
+      trending: trending ?? this.trending,
+      curationSets: curationSets ?? this.curationSets,
+      lastRefreshed: identical(lastRefreshed, unsetCopyWithArgument)
+          ? this.lastRefreshed
+          : lastRefreshed as DateTime?,
+      error: identical(error, unsetCopyWithArgument)
+          ? this.error
+          : error as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    editorsPicks,
+    isLoading,
+    trending,
+    curationSets,
+    lastRefreshed,
+    error,
+  ];
 }

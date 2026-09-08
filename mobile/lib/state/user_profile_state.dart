@@ -1,40 +1,48 @@
 // ABOUTME: User profile state model for managing profile cache and loading states
 // ABOUTME: Used by Riverpod UserProfileProvider to manage reactive profile state
 
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+import 'package:openvine/state/copy_with_sentinel.dart';
 
-part 'user_profile_state.freezed.dart';
 part 'user_profile_state.g.dart';
 
-@freezed
-sealed class UserProfileState with _$UserProfileState {
-  const factory UserProfileState({
-    // Pending profile requests
-    @Default({}) Set<String> pendingRequests,
-
-    // Missing profiles to avoid spam
-    @Default({}) Set<String> knownMissingProfiles,
-    @Default({}) Map<String, DateTime> missingProfileRetryAfter,
-
-    // Batch fetching state
-    @Default({}) Set<String> pendingBatchPubkeys,
-
-    // Loading and error state
-    @Default(false) bool isLoading,
-    @Default(false) bool isInitialized,
-    String? error,
-
-    // Stats
-    @Default(0) int totalProfilesRequested,
-  }) = _UserProfileState;
+@JsonSerializable()
+class UserProfileState extends Equatable {
+  const UserProfileState({
+    this.pendingRequests = const {},
+    this.knownMissingProfiles = const {},
+    this.missingProfileRetryAfter = const {},
+    this.pendingBatchPubkeys = const {},
+    this.isLoading = false,
+    this.isInitialized = false,
+    this.error,
+    this.totalProfilesRequested = 0,
+  });
 
   factory UserProfileState.fromJson(Map<String, dynamic> json) =>
       _$UserProfileStateFromJson(json);
 
-  const UserProfileState._();
-
   /// Create initial state
   static const UserProfileState initial = UserProfileState();
+
+  // Pending profile requests
+  final Set<String> pendingRequests;
+
+  // Missing profiles to avoid spam
+  final Set<String> knownMissingProfiles;
+  final Map<String, DateTime> missingProfileRetryAfter;
+
+  // Batch fetching state
+  final Set<String> pendingBatchPubkeys;
+
+  // Loading and error state
+  final bool isLoading;
+  final bool isInitialized;
+  final String? error;
+
+  // Stats
+  final int totalProfilesRequested;
 
   /// Check if profile request is pending
   bool isRequestPending(String pubkey) => pendingRequests.contains(pubkey);
@@ -48,4 +56,44 @@ sealed class UserProfileState with _$UserProfileState {
 
     return DateTime.now().isBefore(retryAfter);
   }
+
+  Map<String, dynamic> toJson() => _$UserProfileStateToJson(this);
+
+  UserProfileState copyWith({
+    Set<String>? pendingRequests,
+    Set<String>? knownMissingProfiles,
+    Map<String, DateTime>? missingProfileRetryAfter,
+    Set<String>? pendingBatchPubkeys,
+    bool? isLoading,
+    bool? isInitialized,
+    Object? error = unsetCopyWithArgument,
+    int? totalProfilesRequested,
+  }) {
+    return UserProfileState(
+      pendingRequests: pendingRequests ?? this.pendingRequests,
+      knownMissingProfiles: knownMissingProfiles ?? this.knownMissingProfiles,
+      missingProfileRetryAfter:
+          missingProfileRetryAfter ?? this.missingProfileRetryAfter,
+      pendingBatchPubkeys: pendingBatchPubkeys ?? this.pendingBatchPubkeys,
+      isLoading: isLoading ?? this.isLoading,
+      isInitialized: isInitialized ?? this.isInitialized,
+      error: identical(error, unsetCopyWithArgument)
+          ? this.error
+          : error as String?,
+      totalProfilesRequested:
+          totalProfilesRequested ?? this.totalProfilesRequested,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    pendingRequests,
+    knownMissingProfiles,
+    missingProfileRetryAfter,
+    pendingBatchPubkeys,
+    isLoading,
+    isInitialized,
+    error,
+    totalProfilesRequested,
+  ];
 }

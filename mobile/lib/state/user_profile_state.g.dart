@@ -6,8 +6,8 @@ part of 'user_profile_state.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_UserProfileState _$UserProfileStateFromJson(Map<String, dynamic> json) =>
-    _UserProfileState(
+UserProfileState _$UserProfileStateFromJson(Map<String, dynamic> json) =>
+    UserProfileState(
       pendingRequests:
           (json['pendingRequests'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -35,7 +35,7 @@ _UserProfileState _$UserProfileStateFromJson(Map<String, dynamic> json) =>
           (json['totalProfilesRequested'] as num?)?.toInt() ?? 0,
     );
 
-Map<String, dynamic> _$UserProfileStateToJson(_UserProfileState instance) =>
+Map<String, dynamic> _$UserProfileStateToJson(UserProfileState instance) =>
     <String, dynamic>{
       'pendingRequests': instance.pendingRequests.toList(),
       'knownMissingProfiles': instance.knownMissingProfiles.toList(),
