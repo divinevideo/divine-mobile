@@ -102,7 +102,14 @@ while IFS= read -r path; do
     .github/workflows/mobile_ci.yaml|mobile/scripts/ci/detect_mobile_ci_scope.sh)
       app=true; native=true; android=true; ios=true; service=true; goldens=true
       maestro_static=true; smoke=true; performance=true; ci_config=true ;;
-    .github/workflows/*|codemagic.yaml)
+    .github/workflows/*)
+      # Four `generated-files` guards read workflow files as their only input
+      # (package coverage floor, package CI floor, backend host defaults,
+      # service suite coverage), and `mobile/test/tools/` holds the contract
+      # tests that pin these workflows. Both live behind `app`, so a workflow
+      # edit has to keep running it.
+      app=true; ci_config=true ;;
+    codemagic.yaml)
       ci_config=true ;;
     mobile/scripts/ci/*)
       app=true; ci_config=true ;;
