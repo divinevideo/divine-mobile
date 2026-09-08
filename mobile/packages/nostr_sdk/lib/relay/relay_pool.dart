@@ -1739,7 +1739,14 @@ class RelayPool {
     } else if (messageType == 'EOSE') {
       final subId = _stringAt(relay, json, 1, 'EOSE subscription id');
       if (subId == null) return;
-      log('Relay ${relay.url} settled request $subId with EOSE');
+      // Debug-only: EOSE is a per-settlement frame, and logging it
+      // unconditionally cost ~6% of main-isolate CPU in on-device profiling
+      // (#5957). The assert closure never runs in profile/release; the
+      // structured diagnostic below carries the settlement to injected sinks.
+      assert(() {
+        log('Relay ${relay.url} settled request $subId with EOSE');
+        return true;
+      }());
       _diagnose(
         RelayDiagnosticSite.requestSettlement,
         RelayDiagnosticLevel.info,
