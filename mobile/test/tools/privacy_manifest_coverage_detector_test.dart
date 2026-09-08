@@ -231,6 +231,20 @@ void main() {
         },
       );
 
+      test('does not suggest removing a declaration with an ambiguous use', () {
+        final root = makeTree(
+          swift: 'getattrlist(path, &attributes, &buffer, size, 0)\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategoryFileTimestamp',
+            'C617.1',
+          ),
+        );
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+        expect(result.output, isNot(contains('no call site was detected')));
+      });
+
       test('ignores an API named only in a comment or string literal', () {
         final root = makeTree(
           swift:

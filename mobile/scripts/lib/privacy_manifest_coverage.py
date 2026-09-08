@@ -470,7 +470,7 @@ def check_sources(mobile: str) -> int:
                         + (f" (+{len(sites) - 3} more)" if len(sites) > 3 else "")
                         + f" but {unit.manifest} does not declare it"
                     )
-            for category in sorted(set(declared) - set(definite)):
+            for category in sorted(set(declared) - set(definite) - set(ambiguous)):
                 warnings.append(
                     f"{unit.name}: {unit.manifest} declares {category} but no "
                     f"call site was detected -- confirm it is still used, or "
