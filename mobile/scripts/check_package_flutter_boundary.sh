@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Package Flutter-dependency boundary ratchet (#3338). Freezes the set of
 # packages under mobile/packages that declare a RUNTIME Flutter SDK dependency.
-# The set may only SHRINK except when registering a package that itself ships a
-# native Flutter plugin. A package re-adding `flutter: sdk: flutter` without
-# its own `flutter: plugin:` block still fails CI. See lib/list_ratchet.sh for
-# NEW/STALE/GROWTH semantics and docs/ARCHITECTURE.md ("Which packages may
-# depend on Flutter") for the policy this enforces.
+# The set may only SHRINK except when registering a newly created package that
+# itself ships a native Flutter plugin. An existing package re-adding
+# `flutter: sdk: flutter` still fails CI even if it already ships a plugin.
+# See lib/list_ratchet.sh for NEW/STALE/GROWTH semantics and
+# docs/ARCHITECTURE.md ("Which packages may depend on Flutter") for the policy
+# this enforces.
 #
 # Why this is worth a guard. Every package under mobile/packages carries its own
 # analysis_options.yaml including very_good_analysis, which enables
@@ -42,7 +43,7 @@ BASELINE_REPO_PATH="mobile/scripts/baseline/package_flutter_deps.txt"
 BASE_REF="${PACKAGE_FLUTTER_BASELINE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${PACKAGE_FLUTTER_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="PACKAGE_FLUTTER_ALLOW_NO_BASE"
-NEW_HINT="A package under mobile/packages declared a runtime Flutter SDK dependency that is not in the baseline. Only three kinds of package may: a native plugin (ships or wraps a flutter: plugin: block), a presentation-layer package that exports widgets, and a consumer of a Flutter-only API with no pure-Dart substitute. A repository / client / data package is none of those — drop the dependency and use a pure-Dart equivalent (dm_repository's compute + kReleaseMode shims in lib/src/compute.dart and lib/src/build_mode.dart are the worked example). If the package genuinely belongs in one of the three groups, add it to the baseline with a trailing '# reason' and document it in docs/ARCHITECTURE.md."
+NEW_HINT="A package under mobile/packages declared a runtime Flutter SDK dependency that is not in the baseline. Drop the dependency and use a pure-Dart equivalent (dm_repository's compute + kReleaseMode shims in lib/src/compute.dart and lib/src/build_mode.dart are the worked example). The baseline can grow automatically only for a newly created package that ships its own flutter: plugin: block; add that package with a trailing '# reason' and document it in docs/ARCHITECTURE.md. A wrapper, presentation package, existing plugin, or consumer of a Flutter-only API requires an explicit guard-policy change in the same review — regenerating the baseline alone will continue to fail."
 STALE_HINT="A package no longer declares a runtime Flutter SDK dependency."
 FOOTER="Runtime Flutter SDK dependencies under mobile/packages are frozen and may
 only decrease, except for packages that ship their own native Flutter plugin.
@@ -89,14 +90,17 @@ EOF
 }
 
 # A newly created first-party native plugin necessarily depends on the Flutter
-# SDK. Permit that narrowly verifiable case while leaving wrappers, UI
-# packages, repositories, clients, and ordinary API consumers shrink-only.
+# SDK. Permit that narrowly verifiable case while leaving existing plugins,
+# wrappers, UI packages, repositories, clients, and ordinary API consumers
+# shrink-only.
 filter_baseline_growth() {
-  local name pubspec
+  local name pubspec base_pubspec
   while IFS= read -r name; do
     [[ -z "$name" ]] && continue
     pubspec="$MOBILE_DIR/packages/$name/pubspec.yaml"
-    if [[ -f "$pubspec" ]] && awk '
+    base_pubspec="mobile/packages/$name/pubspec.yaml"
+    if ! git -C "$MOBILE_DIR/.." cat-file -e "$BASE_REF:$base_pubspec" 2>/dev/null &&
+      [[ -f "$pubspec" ]] && awk '
       /^flutter:[[:space:]]*$/ { flutter = 1; next }
       /^[^[:space:]#]/ { flutter = 0 }
       flutter && /^  plugin:[[:space:]]*$/ { found = 1 }

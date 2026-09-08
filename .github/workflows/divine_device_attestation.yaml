@@ -25,4 +25,4 @@ jobs:
     with:
       working_directory: "mobile/packages/divine_device_attestation"
       flutter_version: "3.44.9"
-      min_coverage: 85
+      min_coverage: 100

@@ -129,5 +129,29 @@ flutter:
       expect(result.stdout, contains('baseline GREW'));
       expect(result.stdout, contains('new_widgets'));
     });
+
+    test('rejects an existing plugin re-growing its baseline entry', () {
+      writePackage('existing_plugin', isPlugin: true);
+      git(['add', '-A']);
+      git([
+        '-c',
+        'user.email=boundary-test@example.invalid',
+        '-c',
+        'user.name=Boundary Test',
+        '-c',
+        'commit.gpgsign=false',
+        'commit',
+        '-q',
+        '-m',
+        'add existing plugin without baseline entry',
+      ]);
+      writeBaseline(['existing_ui', 'existing_plugin']);
+
+      final result = runGuard();
+
+      expect(result.exitCode, isNot(0));
+      expect(result.stdout, contains('baseline GREW'));
+      expect(result.stdout, contains('existing_plugin'));
+    });
   });
 }
