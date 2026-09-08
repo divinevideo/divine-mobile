@@ -1673,19 +1673,6 @@ void main() {
       });
     });
 
-    group('Image Upload - File Extension Correction', () {
-      late _MockDio mockDio;
-
-      setUp(() {
-        mockDio = _MockDio();
-        // Create service with mocked Dio
-        service = BlossomUploadService(
-          authProvider: mockAuthProvider,
-          dio: mockDio,
-        );
-      });
-    });
-
     group('Capability Cache', () {
       late _MockDio mockDio;
       late DateTime fakeNow;
