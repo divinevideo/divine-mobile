@@ -185,7 +185,6 @@ services:
       # "rate-limited: too many events, slow down", seed.py exits non-zero and
       # `up.sh` fails. Measured against a relay built from funnelcake main:
       # 100 events -> ok=10 rejected=90 without these, ok=100 rejected=0 with.
-      #
       MAX_EVENTS_PER_SECOND: "10000"
       SUSTAINED_EVENTS_PER_SECOND: "10000"
       MAX_EVENTS_PER_MINUTE_PER_PUBKEY: "0"
