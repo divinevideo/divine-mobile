@@ -52,7 +52,6 @@ test/services/hashtag_service_test.dart	1 # delete: empty body for a feature nev
 test/services/m3u8_resolver_service_test.dart	1 # quarantine: real http to stream.divine.video playlist (#4836)
 test/services/profile_editing_test.dart	1 # delete: asserts its own for-loop; no retry logic exists (#4836)
 test/services/upload_manager_thumbnail_test.dart	2 # delete: assert the mock's own return; one is self-contradictory (#4836)
-test/services/video_event_service_deduplication_test.dart	7 # rewrite: verify() misses subscribe's oneose/subscriptionid args (#4836)
 test/services/video_event_service_replaceable_test.dart	1 # delete: kind 22 rejected: isvideokind() is 34236-only (#4836)
 test/services/video_event_service_repost_test.dart	1 # rewrite: uses kind 6 reposts and kind 22 originals; both dropped (#4836)
 test/tools/naming_convention_test.dart	2 # delete: 147 of 238 lib/screens files break the asserted rule (#4836)
