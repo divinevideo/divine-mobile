@@ -23,6 +23,7 @@ import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import '../../helpers/divine_video_player_channel.dart';
 import '../../helpers/go_router.dart';
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
@@ -138,18 +139,7 @@ void main() {
     });
 
     testWidgets('exposes an action to close the video preview', (tester) async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              null,
-            );
-      });
+      installMockDivineVideoPlayer();
 
       await tester.pumpWidget(buildTestWidget());
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -169,18 +159,7 @@ void main() {
     });
 
     testWidgets('renders $DivineVideoPlayer and save button', (tester) async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              null,
-            );
-      });
+      installMockDivineVideoPlayer();
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
@@ -205,36 +184,14 @@ void main() {
       final videoFile = File('${tempDir.path}/video.mp4')
         ..writeAsBytesSync(const [0]);
       Map<Object?, Object?>? setClipsArguments;
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            ..setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              (call) async {
-                if (call.method == 'setClips') {
-                  setClipsArguments = call.arguments! as Map<Object?, Object?>;
-                }
-                return null;
-              },
-            )
-            // initialize() subscribes unconditionally, so mock the event
-            // channel the way the sibling hero test below does rather than
-            // leaving the subscription's teardown to a fire-and-forget
-            // dispose that races the end of the test.
-            ..setMockStreamHandler(
-              const EventChannel('divine_video_player/player_0/events'),
-              _EmptyPlayerStreamHandler(),
-            );
-      addTearDown(() {
-        messenger
-          ..setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            null,
-          )
-          ..setMockStreamHandler(
-            const EventChannel('divine_video_player/player_0/events'),
-            null,
-          );
-      });
+      installMockDivineVideoPlayer(
+        onMethodCall: (call) async {
+          if (call.method == 'setClips') {
+            setClipsArguments = call.arguments! as Map<Object?, Object?>;
+          }
+          return null;
+        },
+      );
 
       await tester.pumpWidget(
         buildTestWidget(
@@ -251,18 +208,7 @@ void main() {
     testWidgets('renders delete button when onDelete is provided', (
       tester,
     ) async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              null,
-            );
-      });
+      installMockDivineVideoPlayer();
 
       await tester.pumpWidget(buildTestWidget(onDelete: () {}));
       await tester.pump(const Duration(milliseconds: 100));
@@ -276,18 +222,7 @@ void main() {
     });
 
     testWidgets('hides delete button when onDelete is null', (tester) async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              null,
-            );
-      });
+      installMockDivineVideoPlayer();
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
@@ -301,18 +236,7 @@ void main() {
     });
 
     testWidgets('renders placeholder with progress indicator', (tester) async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              null,
-            );
-      });
+      installMockDivineVideoPlayer();
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
@@ -329,27 +253,9 @@ void main() {
       final thumbnailFile = File('${tempDir.path}/thumbnail.jpg')
         ..writeAsBytesSync(_transparentPngBytes);
 
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            ..setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              (call) async => null,
-            )
-            ..setMockStreamHandler(
-              const EventChannel('divine_video_player/player_0/events'),
-              _FirstFrameStreamHandler(),
-            );
-      addTearDown(() {
-        messenger
-          ..setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            null,
-          )
-          ..setMockStreamHandler(
-            const EventChannel('divine_video_player/player_0/events'),
-            null,
-          );
-      });
+      installMockDivineVideoPlayer(
+        streamHandler: _FirstFrameStreamHandler(),
+      );
 
       final clip = testClip.copyWith(
         video: EditorVideo.file(videoFile.path),
@@ -613,18 +519,7 @@ void main() {
         WidgetTester tester,
         GallerySaveResult result,
       ) async {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player/player_0'),
-              (call) async => null,
-            );
-        addTearDown(() {
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMethodCallHandler(
-                const MethodChannel('divine_video_player/player_0'),
-                null,
-              );
-        });
+        installMockDivineVideoPlayer();
 
         when(
           () => mockGallerySaveService.saveVideoToGallery(any()),
@@ -767,11 +662,3 @@ const _transparentPngBytes = <int>[
   0x60,
   0x82,
 ];
-
-class _EmptyPlayerStreamHandler extends MockStreamHandler {
-  @override
-  void onListen(dynamic arguments, MockStreamHandlerEventSink events) {}
-
-  @override
-  void onCancel(dynamic arguments) {}
-}
