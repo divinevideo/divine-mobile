@@ -33,9 +33,11 @@ fetch_compare_files() {
     fall_open "$label is missing a base or head SHA; running all mobile QA."
   fi
 
-  gh api --method GET --paginate -F per_page=100 \
+  if ! gh api --method GET --paginate -F per_page=100 \
     "/repos/${GITHUB_REPOSITORY}/compare/${base_sha}...${head_sha}" \
-    --jq '.files[]?.filename' > "$changed_files"
+    --jq '.files[]?.filename' > "$changed_files"; then
+    fall_open "$label compare API call failed; running all mobile QA."
+  fi
 
   local file_count
   file_count=$(( $(wc -l < "$changed_files") ))
@@ -46,13 +48,20 @@ fetch_compare_files() {
 
 case "${GITHUB_EVENT_NAME}" in
   pull_request)
-    changed_total=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.changed_files')
+    if ! changed_total=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.changed_files'); then
+      fall_open "PR metadata API call failed; running all mobile QA."
+    fi
+    if ! [[ "$changed_total" =~ ^[0-9]+$ ]]; then
+      fall_open "PR reported a non-numeric changed-file count; running all mobile QA."
+    fi
     if [ "$changed_total" -gt 3000 ]; then
       fall_open "PR touches $changed_total files (> 3000 API cap); running all mobile QA."
     fi
-    gh api --method GET --paginate -F per_page=100 \
+    if ! gh api --method GET --paginate -F per_page=100 \
       "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
-      --jq '.[].filename' > "$changed_files"
+      --jq '.[].filename' > "$changed_files"; then
+      fall_open "PR files API call failed; running all mobile QA."
+    fi
     file_count=$(( $(wc -l < "$changed_files") ))
     if [ "$file_count" -eq 0 ] || [ "$file_count" -ne "$changed_total" ]; then
       fall_open "PR returned $file_count files but reported $changed_total changed files; running all mobile QA."
