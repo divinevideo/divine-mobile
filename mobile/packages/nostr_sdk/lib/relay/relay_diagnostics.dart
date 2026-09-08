@@ -1,8 +1,6 @@
 // ABOUTME: Structured, injectable relay diagnostics for SDK consumers.
 // ABOUTME: Keeps support logging policy outside nostr_sdk's dependency graph.
 
-import 'dart:developer' as developer;
-
 /// Severity of a relay diagnostic.
 enum RelayDiagnosticLevel { debug, info, warning, error }
 
@@ -17,6 +15,10 @@ enum RelayDiagnosticSite {
 }
 
 /// A safe, structured description of relay activity.
+///
+/// [error] and [stackTrace] are available to SDK consumers that inject a sink,
+/// but support exporters must not serialize either value. The Divine support
+/// adapter exports only [error]'s runtime type as a bounded failure category.
 class RelayDiagnostic {
   const RelayDiagnostic({
     required this.site,
@@ -36,24 +38,20 @@ class RelayDiagnostic {
 }
 
 /// Receives structured relay diagnostics from nostr_sdk.
+///
+/// A null sink disables this structured channel. Console logging is owned by
+/// relay call sites so diagnostics never duplicate an existing console entry.
 typedef RelayDiagnosticsSink = void Function(RelayDiagnostic diagnostic);
 
-/// Emits [diagnostic] without allowing observability failures to affect I/O.
+/// Emits [diagnostic] to [sink] without allowing observability failures to
+/// affect relay I/O.
 void emitRelayDiagnostic(
   RelayDiagnosticsSink? sink,
   RelayDiagnostic diagnostic,
 ) {
+  if (sink == null) return;
   try {
-    if (sink != null) {
-      sink(diagnostic);
-      return;
-    }
-    developer.log(
-      diagnostic.message,
-      name: 'RelayDiagnostics',
-      error: diagnostic.error,
-      stackTrace: diagnostic.stackTrace,
-    );
+    sink(diagnostic);
   } on Object catch (_) {
     // Diagnostics are best-effort and must never change relay behavior.
   }

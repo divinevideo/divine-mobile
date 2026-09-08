@@ -218,6 +218,7 @@ abstract class Relay {
       try {
         final sent = await send(subscription.toJson(), skipReconnect: true);
         if (!sent) {
+          log('Saved relay request ${subscription.id} was not sent');
           diagnose(
             RelayDiagnosticSite.subscriptionReplay,
             RelayDiagnosticLevel.warning,
