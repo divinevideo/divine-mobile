@@ -394,36 +394,45 @@ class _MeProfileRedirect extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
+    final redirectPath = meProfileRedirectPath(
+      isAuthenticated: authService.isAuthenticated,
+      currentPublicKeyHex: authService.currentPublicKeyHex,
+      videoIndex: videoIndex,
+    );
 
     if (!authService.isAuthenticated ||
         authService.currentPublicKeyHex == null) {
       // Not authenticated - redirect to home
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go(VideoFeedPage.pathForIndex(0));
+        context.go(redirectPath);
       });
       return const Center(child: DivineCircularProgressIndicator());
     }
 
-    // Get current user's npub and redirect (preserve grid/feed mode from context)
-    final currentUserNpub = NostrKeyUtils.encodePubKey(
-      authService.currentPublicKeyHex!,
-    );
-
-    // Redirect to actual user profile using GoRouter explicitly
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Use direct GoRouter calls to properly handle null videoIndex (grid mode)
-      if (videoIndex != null) {
-        context.go(
-          ProfileScreenRouter.pathForIndex(currentUserNpub, videoIndex!),
-        );
-      } else {
-        context.go(ProfileScreenRouter.pathForNpub(currentUserNpub));
-      }
+      context.go(redirectPath);
     });
 
     // Show loading while redirecting
     return const Center(child: DivineCircularProgressIndicator());
   }
+}
+
+/// Resolves the concrete destination for the `/profile/me` placeholder.
+@visibleForTesting
+String meProfileRedirectPath({
+  required bool isAuthenticated,
+  required String? currentPublicKeyHex,
+  required int? videoIndex,
+}) {
+  if (!isAuthenticated || currentPublicKeyHex == null) {
+    return VideoFeedPage.pathForIndex(0);
+  }
+
+  final currentUserNpub = NostrKeyUtils.encodePubKey(currentPublicKeyHex);
+  return videoIndex == null
+      ? ProfileScreenRouter.pathForNpub(currentUserNpub)
+      : ProfileScreenRouter.pathForIndex(currentUserNpub, videoIndex);
 }
 
 /// Displays profile data after loading videos and stats.

@@ -1,196 +1,59 @@
-// ABOUTME: Test for /profile/me/:index routing that should redirect to actual user npub
-// ABOUTME: Ensures the "me" placeholder is resolved to the current user's profile URL
+// ABOUTME: Tests resolution of the /profile/me placeholder.
+// ABOUTME: Ensures the current user's npub and requested view are preserved.
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
 import '../helpers/test_pubkeys.dart';
 
 void main() {
-  group('Profile /me/ Redirect', () {
-    testWidgets('should redirect /profile/me/0 to current user npub', (
-      tester,
-    ) async {
-      // ARRANGE: Create a test user with known public key
-      const testUserHex = syntheticTestPubkey;
-      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
+  group('Profile /me/ redirect', () {
+    final testUserNpub = NostrKeyUtils.encodePubKey(syntheticTestPubkey);
 
-      // Create a mock auth service that returns our test user
-      final mockAuthService = _MockAuthService(testUserHex);
-
-      // Create a container with the mock auth service
-      final container = ProviderContainer(
-        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
-      );
-
-      // Build the app with GoRouter
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      // Wait for initial route to settle
-      await tester.pumpAndSettle();
-
-      // ACT: Navigate to /profile/me/0
-      final router = container.read(goRouterProvider);
-      router.go(ProfileScreenRouter.pathForIndex('me', 0));
-      await tester.pumpAndSettle();
-
-      // ASSERT: The route should have redirected to the actual user's npub
-      final location = router.routeInformationProvider.value.uri.toString();
+    test('resolves the feed index to the current user npub', () {
       expect(
-        location,
+        meProfileRedirectPath(
+          isAuthenticated: true,
+          currentPublicKeyHex: syntheticTestPubkey,
+          videoIndex: 0,
+        ),
         ProfileScreenRouter.pathForIndex(testUserNpub, 0),
-        reason: 'Should redirect /profile/me/0 to actual user npub',
       );
     });
 
-    testWidgets('should handle /profile/me/1 (grid tab) redirect', (
-      tester,
-    ) async {
-      // ARRANGE
-      const testUserHex = syntheticTestPubkey;
-      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
-
-      final mockAuthService = _MockAuthService(testUserHex);
-      final container = ProviderContainer(
-        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // ACT: Navigate to /profile/me/1 (grid view)
-      final router = container.read(goRouterProvider);
-      router.go(ProfileScreenRouter.pathForIndex('me', 1));
-      await tester.pumpAndSettle();
-
-      // ASSERT: Should redirect to grid view with actual npub
-      final location = router.routeInformationProvider.value.uri.toString();
+    test('resolves the grid index to the current user npub', () {
       expect(
-        location,
+        meProfileRedirectPath(
+          isAuthenticated: true,
+          currentPublicKeyHex: syntheticTestPubkey,
+          videoIndex: 1,
+        ),
         ProfileScreenRouter.pathForIndex(testUserNpub, 1),
-        reason: 'Should redirect /profile/me/1 to actual user npub',
       );
     });
 
-    testWidgets('should NOT redirect when npub is not "me"', (tester) async {
-      // ARRANGE
-      const currentUserHex = syntheticTestPubkey;
-      const otherUserHex = syntheticOtherTestPubkey;
-      final otherUserNpub = NostrKeyUtils.encodePubKey(otherUserHex);
-
-      final mockAuthService = _MockAuthService(currentUserHex);
-      final container = ProviderContainer(
-        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // ACT: Navigate to another user's profile (not "me")
-      final router = container.read(goRouterProvider);
-      router.go(ProfileScreenRouter.pathForIndex(otherUserNpub, 0));
-      await tester.pumpAndSettle();
-
-      // ASSERT: Should NOT redirect - should stay on other user's profile
-      final location = router.routeInformationProvider.value.uri.toString();
+    test('preserves the profile route when no video index is present', () {
       expect(
-        location,
-        ProfileScreenRouter.pathForIndex(otherUserNpub, 0),
-        reason: 'Should NOT redirect when viewing other user profiles',
-      );
-    });
-
-    testWidgets('should redirect to home if not authenticated', (tester) async {
-      // ARRANGE: Auth service with no current user
-      final mockAuthService = _MockAuthService(null);
-      final container = ProviderContainer(
-        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
+        meProfileRedirectPath(
+          isAuthenticated: true,
+          currentPublicKeyHex: syntheticTestPubkey,
+          videoIndex: null,
         ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // ACT: Try to navigate to /profile/me/0 when not logged in
-      final router = container.read(goRouterProvider);
-      router.go(ProfileScreenRouter.pathForIndex('me', 0));
-      await tester.pumpAndSettle();
-
-      // ASSERT: Should redirect to home (or login screen)
-      final location = router.routeInformationProvider.value.uri.toString();
-      expect(
-        location.contains(VideoFeedPage.path),
-        isTrue,
-        reason: 'Should redirect to home when not authenticated',
+        ProfileScreenRouter.pathForNpub(testUserNpub),
       );
     });
-    // TOOD(any): Fix and re-enable these tests
-  }, skip: true);
-}
 
-/// Mock auth service for testing
-class _MockAuthService implements AuthService {
-  final String? _currentUserHex;
-
-  _MockAuthService(this._currentUserHex);
-
-  @override
-  String? get currentPublicKeyHex => _currentUserHex;
-
-  @override
-  bool get isAuthenticated => _currentUserHex != null;
-
-  @override
-  AuthState get authState =>
-      isAuthenticated ? AuthState.authenticated : AuthState.unauthenticated;
-
-  // Implement other required methods as no-ops for this test
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+    test('sends unauthenticated users to the home feed', () {
+      expect(
+        meProfileRedirectPath(
+          isAuthenticated: false,
+          currentPublicKeyHex: null,
+          videoIndex: 0,
+        ),
+        VideoFeedPage.pathForIndex(0),
+      );
+    });
+  });
 }
