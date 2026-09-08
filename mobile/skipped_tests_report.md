@@ -53,7 +53,6 @@
 | `nip42_auth_integration_test.dart` | 124 | 1 | `skip: true` |
 | `profile_cache_sync_test.dart` | 136 | 1 | `skip: true` |
 | `profile_me_redirect_integration_test.dart` | 224 | 1 | `skip: true` |
-| `profile_menu_drafts_navigation_test.dart` | 164 | 1 | `skip: true` |
 | `profile_route_loads_test.dart` | 160 | 1 | `skip: true` |
 | `reactive_pagination_test.dart` | 179 | 1 | `skip: true` |
 | `real_nostr_video_integration_test.dart` | 67, 97 | 2 | `skip: true` |
@@ -208,7 +207,6 @@
 | `comprehensive_clickable_hashtag_text_test.dart` | 180, 234, 261, 304 | 4 | `skip: true` |
 | `comprehensive_user_avatar_test.dart` | golden group | 4 | `skip: 'Golden tests require golden file generation and are maintained separately'` |
 | `original_content_badge_test.dart` | 157, 228 | 2 | `skip: true` |
-| `profile_menu_drafts_test.dart` | 133 | 1 | `skip: true` |
 | `proofmode_badge_test.dart` | 177 | 1 | `skip: true` |
 | `settings_bottom_nav_test.dart` | 93 | 1 | `skip: true` |
 | `settings_delete_account_test.dart` | 55, 114, 152 | 3 | `skip: true` |
