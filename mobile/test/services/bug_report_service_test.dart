@@ -305,10 +305,8 @@ void main() {
         recentLogs: [],
         errorCounts: {},
         additionalContext: {
-          'eventId':
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-          'pubkeyHex':
-              'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+          'eventId': '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          'pubkeyHex': 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         },
       );
 

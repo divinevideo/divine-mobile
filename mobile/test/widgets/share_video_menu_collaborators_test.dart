@@ -49,10 +49,8 @@ void main() {
       verify(
         () => inviteService.sendInvite(
           collaboratorPubkey: collaboratorPubkey,
-          creatorPubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          videoAddress:
-              '34236:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:video-d-tag',
+          creatorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          videoAddress: '34236:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:video-d-tag',
           title: 'Updated title',
           thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
           relayHint: 'wss://relay.divine.video',

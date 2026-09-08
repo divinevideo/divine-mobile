@@ -268,8 +268,7 @@ void main() {
         'consent_category': 'product_analytics',
         'event_name': 'content_impression_recorded',
         'properties': <String, Object?>{
-          'content_id':
-              '4444444444444444444444444444444444444444444444444444444444444444',
+          'content_id': '4444444444444444444444444444444444444444444444444444444444444444',
           'surface': 'feed',
           'position': 3,
           'visible_ms': 1500,
@@ -301,8 +300,7 @@ void main() {
           backgroundActivityManager: BackgroundActivityManager(),
           productEventQueue: queue,
           productAnalyticsEnabled: true,
-          currentUserPubkey: () =>
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          currentUserPubkey: () => '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           anonymousId: () => '018ff7d7-2ef5-7000-8000-000000000001',
           sessionId: () => '018ff7d7-2ef5-7000-8000-000000000002',
           platform: () => 'ios',
@@ -312,8 +310,7 @@ void main() {
         await analyticsService.initialize();
 
         final eventId = await analyticsService.recordContentImpression(
-          contentId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          contentId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           surface: ProductAnalyticsV2Surface.feed,
           position: 4,
           visibleMs: 1000,
@@ -804,8 +801,7 @@ void main() {
 
         await analyticsService.trackDetailedVideoViewWithUser(
           video,
-          userId:
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          userId: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           source: 'mobile',
           eventType: 'view_end',
           watchDuration: const Duration(seconds: 2),
@@ -997,8 +993,7 @@ void main() {
       await expectLater(
         analyticsService.trackDetailedVideoViewWithUser(
           video,
-          userId:
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          userId: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           source: 'mobile',
           eventType: 'view_end',
           watchDuration: const Duration(seconds: 2),
@@ -1126,8 +1121,7 @@ void main() {
         return service.trackDetailedVideoViewWithUser(
           VideoEvent(
             id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
-            pubkey:
-                'ae73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+            pubkey: 'ae73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
             content: 'Test video',
             timestamp: DateTime.now(),

@@ -5,7 +5,7 @@ publish_to: none
 
 environment:
   sdk: ^3.11.0
-  flutter: ^3.41.1
+  flutter: ^3.47.0
 
 resolution: workspace
 

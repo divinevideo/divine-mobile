@@ -9,14 +9,13 @@ import 'package:unified_logger/unified_logger.dart';
 /// doesn't need to know about the static `ZendeskSupportService` surface
 /// directly. Tests inject a fake; production wires
 /// `ZendeskSupportService.createFeatureRequest`.
-typedef SubmitFeatureRequestAction =
-    Future<bool> Function({
-      required String subject,
-      required String description,
-      required String usefulness,
-      required String whenToUse,
-      String? userPubkey,
-    });
+typedef SubmitFeatureRequestAction = Future<bool> Function({
+  required String subject,
+  required String description,
+  required String usefulness,
+  required String whenToUse,
+  String? userPubkey,
+});
 
 /// Cubit backing the feature request flow. Owns only the submission
 /// lifecycle (`idle / submitting / success / failure`); the four

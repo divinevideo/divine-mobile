@@ -32,8 +32,7 @@ void main() {
       registerFallbackValue(
         Event.fromJson({
           'id': 'fallback_event_id',
-          'pubkey':
-              'aabbccdd00112233445566778899aabbccdd00112233445566778899aabbccdd',
+          'pubkey': 'aabbccdd00112233445566778899aabbccdd00112233445566778899aabbccdd',
           'created_at': 0,
           'kind': 1,
           'tags': <List<String>>[],

@@ -219,8 +219,7 @@ void main() {
                         Text(
                           'Failed to load',
                           style: TextStyle(
-                            color: Colors
-                                .white70, // Should match VineTheme.secondaryText
+                            color: Colors.white70, // Should match VineTheme.secondaryText
                             fontSize: 12,
                           ),
                         ),

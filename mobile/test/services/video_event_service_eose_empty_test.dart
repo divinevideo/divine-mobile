@@ -267,48 +267,52 @@ void main() {
       },
     );
 
-    test('logs expected empty profile state without subscription error', () async {
-      void Function()? capturedOnEose;
-      final controller = StreamController<Event>();
-      addTearDown(controller.close);
+    test(
+      'logs expected empty profile state without subscription error',
+      () async {
+        void Function()? capturedOnEose;
+        final controller = StreamController<Event>();
+        addTearDown(controller.close);
 
-      when(
-        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-      ).thenAnswer((invocation) {
-        capturedOnEose = invocation.namedArguments[#onEose] as void Function()?;
-        return controller.stream;
-      });
+        when(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).thenAnswer((invocation) {
+          capturedOnEose =
+              invocation.namedArguments[#onEose] as void Function()?;
+          return controller.stream;
+        });
 
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.profile,
-        authors: const [_profileAuthor],
-      );
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.profile,
+          authors: const [_profileAuthor],
+        );
 
-      capturedOnEose!();
-      await pumpEventQueue();
+        capturedOnEose!();
+        await pumpEventQueue();
 
-      final logs = LogCaptureService().getRecentLogs();
-      expect(
-        logs.where(
-          (entry) =>
-              entry.level == LogLevel.error &&
-              entry.message.contains(
-                'subscription filtering is too restrictive OR subscription stream is broken',
-              ),
-        ),
-        isEmpty,
-      );
-      expect(
-        logs.where(
-          (entry) =>
-              entry.level == LogLevel.info &&
-              entry.message.contains(
-                'No cached events match the empty SubscriptionType.profile subscription filters',
-              ),
-        ),
-        isNotEmpty,
-      );
-    });
+        final logs = LogCaptureService().getRecentLogs();
+        expect(
+          logs.where(
+            (entry) =>
+                entry.level == LogLevel.error &&
+                entry.message.contains(
+                  'subscription filtering is too restrictive OR subscription stream is broken',
+                ),
+          ),
+          isEmpty,
+        );
+        expect(
+          logs.where(
+            (entry) =>
+                entry.level == LogLevel.info &&
+                entry.message.contains(
+                  'No cached events match the empty SubscriptionType.profile subscription filters',
+                ),
+          ),
+          isNotEmpty,
+        );
+      },
+    );
 
     test(
       'keeps subscription error when filtered diagnostic query has events',

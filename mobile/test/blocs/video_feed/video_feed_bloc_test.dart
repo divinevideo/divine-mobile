@@ -2257,8 +2257,7 @@ void main() {
           videos: [
             createTestVideo(
               'original-event-id',
-              pubkey:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
               vineId: 'shared-d-tag',
               createdAt: 2000,
             ),
@@ -2317,8 +2316,7 @@ void main() {
           videos: [
             createTestVideo(
               'author-a-event',
-              pubkey:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
               vineId: 'shared-d-tag',
               createdAt: 2000,
             ),

@@ -282,8 +282,7 @@ void main() {
           expect(
             redirect,
             isNull,
-            reason:
-                'Authenticated users should remain on reset-password deep links',
+            reason: 'Authenticated users should remain on reset-password deep links',
           );
         },
       );

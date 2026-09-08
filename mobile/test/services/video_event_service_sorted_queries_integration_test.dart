@@ -273,8 +273,7 @@ void main() {
           expect(
             filterJson.containsKey('sort'),
             false,
-            reason:
-                'Should fall back to standard filter when relay does not support divine extensions',
+            reason: 'Should fall back to standard filter when relay does not support divine extensions',
           );
           expect(filterJson['limit'], 50);
         },

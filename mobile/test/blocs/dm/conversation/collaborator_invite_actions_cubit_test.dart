@@ -30,8 +30,7 @@ void main() {
   const invite = CollaboratorInvite(
     messageId:
         'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-    videoAddress:
-        '34236:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:skate-loop',
+    videoAddress: '34236:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:skate-loop',
     videoKind: 34236,
     creatorPubkey: creatorPubkey,
     videoDTag: 'skate-loop',

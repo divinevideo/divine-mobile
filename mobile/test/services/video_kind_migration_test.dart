@@ -53,8 +53,7 @@ void main() {
       expect(
         NIP71VideoKinds.getAllVideoKinds(),
         isNot(contains(deprecatedKind)),
-        reason:
-            'Kind 32222 is deprecated and should not be in accepted video kinds',
+        reason: 'Kind 32222 is deprecated and should not be in accepted video kinds',
       );
     });
 

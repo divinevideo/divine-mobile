@@ -651,13 +651,12 @@ void main() {
 
     test('renderVideoToClip maps a cancelled stop-motion assembly to canceled, '
         'not stop_motion_assembly', () async {
-      StopMotionRenderService.assembleOverride =
-          ({
-            required frames,
-            required aspectRatio,
-            frameRate = StopMotionRenderService.defaultFrameRate,
-            String? taskId,
-          }) async => throw const RenderCanceledException();
+      StopMotionRenderService.assembleOverride = ({
+        required frames,
+        required aspectRatio,
+        frameRate = StopMotionRenderService.defaultFrameRate,
+        String? taskId,
+      }) async => throw const RenderCanceledException();
 
       final stopMotionClip = DivineVideoClip(
         id: 'sm-clip',
@@ -692,15 +691,14 @@ void main() {
 
     test('renderVideo keeps returning null so callers that only need the '
         'path are unaffected', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => null;
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => null;
 
       expect(
         await VideoEditorRenderService.renderVideo(
@@ -747,15 +745,14 @@ void main() {
     });
 
     void failRenderWith(Object error) {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => throw error;
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => throw error;
     }
 
     Future<void> exportClip() => expectLater(

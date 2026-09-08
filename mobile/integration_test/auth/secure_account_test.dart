@@ -119,8 +119,7 @@ void main() {
         expect(
           textFields,
           findsNWidgets(3),
-          reason:
-              'Secure account screen should show email, password, and confirmation',
+          reason: 'Secure account screen should show email, password, and confirmation',
         );
 
         await tester.enterText(textFields.at(0), testEmail);

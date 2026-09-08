@@ -4026,8 +4026,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
     // Create filter without restrictive date constraints
     final filter = Filter(
-      kinds:
-          NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
+      kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
       authors: authors, // Use same authors as main subscription if available
       until: until, // Only use 'until' if we have existing events
       limit: limit,

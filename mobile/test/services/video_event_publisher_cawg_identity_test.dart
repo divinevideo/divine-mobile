@@ -86,8 +86,7 @@ void main() {
         final content = invocation.namedArguments[#content] as String;
         capturedEvent = Event.fromJson({
           'id': 'event123',
-          'pubkey':
-              '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+          'pubkey': '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
           'kind': 34236,
           'tags': tags,

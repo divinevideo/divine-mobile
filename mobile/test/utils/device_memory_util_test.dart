@@ -2,6 +2,7 @@
 // ABOUTME: Tests memory tier detection and resolution scaling logic
 
 import 'dart:ui' show Size;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/device_memory_util.dart';
 

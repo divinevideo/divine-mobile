@@ -155,8 +155,7 @@ void main() {
         expect(
           receivedEvents.length,
           equals(2),
-          reason:
-              'SubscriptionManager should forward events from stream to callback - THIS WILL FAIL FIRST (TDD Red phase)',
+          reason: 'SubscriptionManager should forward events from stream to callback - THIS WILL FAIL FIRST (TDD Red phase)',
         );
       },
     );
@@ -231,8 +230,7 @@ void main() {
         expect(
           receivedEvents.length,
           equals(2),
-          reason:
-              'Direct stream should receive events (proves test setup is correct)',
+          reason: 'Direct stream should receive events (proves test setup is correct)',
         );
       },
     );

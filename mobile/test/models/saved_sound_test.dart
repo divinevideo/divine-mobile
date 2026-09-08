@@ -26,10 +26,8 @@ void main() {
         catalogTags: const ['field recording', 'birds'],
         waveformSamples: const [0.1, 0.5, 0.2],
         sourceContext: const SavedSoundSourceContext(
-          videoEventId:
-              'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
-          creatorPubkey:
-              '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+          videoEventId: 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+          creatorPubkey: '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
           creatorName: 'Maya',
           title: 'Birds at sunrise',
           description: 'The loudest tree on the block.',

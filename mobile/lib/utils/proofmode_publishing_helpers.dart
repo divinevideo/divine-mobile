@@ -2,6 +2,7 @@
 // ABOUTME: Extracts verification levels and creates Nostr tags from NativeProofData
 
 import 'dart:convert';
+
 import 'package:models/models.dart' show NativeProofData;
 
 /// Extract proof-verification-level from NativeProofData

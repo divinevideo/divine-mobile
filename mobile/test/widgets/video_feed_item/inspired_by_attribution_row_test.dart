@@ -116,8 +116,7 @@ void main() {
       ) async {
         final video = VideoEvent(
           id: 'video-id',
-          pubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           createdAt: 1757385263,
           content: 'Test video',
           timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263000),

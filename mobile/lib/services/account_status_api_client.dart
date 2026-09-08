@@ -27,8 +27,10 @@ class AccountStatusApiException implements Exception {
   String toString() => 'AccountStatusApiException($kind): $message';
 }
 
-typedef AccountStatusAuthHeaderProvider =
-    Future<String?> Function({required String url, required HttpMethod method});
+typedef AccountStatusAuthHeaderProvider = Future<String?> Function({
+  required String url,
+  required HttpMethod method,
+});
 
 class AccountStatusApiClient {
   AccountStatusApiClient({

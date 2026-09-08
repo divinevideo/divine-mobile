@@ -5,6 +5,7 @@
 
 import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';

@@ -446,8 +446,7 @@ void main() {
         expect(
           factory.callCount,
           equals(2),
-          reason:
-              'C must wait for the in-flight B transition instead of interleaving.',
+          reason: 'C must wait for the in-flight B transition instead of interleaving.',
         );
 
         bInitialize.complete();
@@ -822,8 +821,7 @@ void main() {
         expect(
           container.read(nostrSessionProvider).phase,
           equals(NostrSessionPhase.nostrReady),
-          reason:
-              'the successful restore init records _lastPubkey and marks ready.',
+          reason: 'the successful restore init records _lastPubkey and marks ready.',
         );
 
         // RPC-upgrade nudge: same pubkey re-emitted after the background
@@ -1099,8 +1097,7 @@ void main() {
         expect(
           container.read(nostrServiceProvider),
           same(initialClient),
-          reason:
-              'A retry candidate should not rebuild consumers until it is ready.',
+          reason: 'A retry candidate should not rebuild consumers until it is ready.',
         );
 
         secondFailure.completeError(StateError('second initialize failed'));

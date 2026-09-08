@@ -16,8 +16,10 @@ typedef RepostTagRefs = ({String? eventId, String? addressableId});
 typedef AddressableIdParts = ({int kind, String pubkey, String dTag});
 
 /// Callback to lookup cached videos by addressable reference
-typedef VideoByAddressableLookup =
-    VideoEvent? Function(String pubkey, String dTag);
+typedef VideoByAddressableLookup = VideoEvent? Function(
+  String pubkey,
+  String dTag,
+);
 
 /// Callback to lookup cached videos by event ID
 typedef VideoByIdLookup = VideoEvent? Function(String eventId);

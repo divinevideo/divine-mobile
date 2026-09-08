@@ -2,6 +2,7 @@
 // ABOUTME: Provides authentication without persistent storage
 
 import 'dart:async';
+
 import '../builders/auth_state_builder.dart';
 
 class InMemoryAuthService {

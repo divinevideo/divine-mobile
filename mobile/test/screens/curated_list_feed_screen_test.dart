@@ -935,11 +935,9 @@ void main() {
         // would keep publishing after close() with their completion dropped.
         await tester.tap(find.byTooltip('Back'));
         await tester.pump();
-        final popScope =
-            tester.widget(
-                  find.byWidgetPredicate((widget) => widget is PopScope).first,
-                )
-                as PopScope;
+        final popScope = tester.widget(
+          find.byWidgetPredicate((widget) => widget is PopScope).first,
+        ) as PopScope;
         popScope.onPopInvokedWithResult!(false, null);
         await tester.pump();
         expect(find.text('Owned List'), findsOneWidget);

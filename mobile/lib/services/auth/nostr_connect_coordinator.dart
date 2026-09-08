@@ -13,23 +13,24 @@ import 'package:unified_logger/unified_logger.dart';
 /// Builds a [NostrConnectSession] for a set of [relays]. Injectable so tests
 /// can supply a fake session that completes `waitForConnection` without opening
 /// real relay sockets (closes the deferred nostrconnect happy-path gap #5713).
-typedef NostrConnectSessionFactory =
-    NostrConnectSession Function(List<String> relays);
+typedef NostrConnectSessionFactory = NostrConnectSession Function(
+  List<String> relays,
+);
 
 /// Applies a successful nostrconnect connection on the facade: builds the
 /// bunker signer from [result], persists its info, and sets up the user
 /// session. Returns the [AuthResult] to surface to the caller.
-typedef NostrConnectApply =
-    Future<AuthResult> Function(NostrConnectResult result);
+typedef NostrConnectApply = Future<AuthResult> Function(
+  NostrConnectResult result,
+);
 
 /// Reports an error to Crashlytics — mirrors `AuthService._reportAuthError`.
-typedef NostrConnectErrorReporter =
-    void Function(
-      Object error,
-      StackTrace stack, {
-      required String reason,
-      required String logMessage,
-    });
+typedef NostrConnectErrorReporter = void Function(
+  Object error,
+  StackTrace stack, {
+  required String reason,
+  required String logMessage,
+});
 
 /// Coordinates the client-initiated `nostrconnect://` connection flow.
 ///
@@ -209,8 +210,7 @@ class NostrConnectCoordinator {
             ),
             StackTrace.current,
             reason: 'NostrConnect.noExpectedSecret',
-            logMessage:
-                'nostrconnect invariant violated: no expected secret to validate',
+            logMessage: 'nostrconnect invariant violated: no expected secret to validate',
           );
         }
         return AuthResult.nostrConnectFailure(reason);

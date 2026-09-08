@@ -97,15 +97,14 @@ void main() {
     );
 
     test('bakes the edits in rather than carrying them on the clip', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => '/documents/divine_1.mp4';
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/divine_1.mp4';
 
       final result =
           await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
@@ -134,15 +133,14 @@ void main() {
     test(
       'sizes the library clip to the trimmed section, not the source',
       () async {
-        VideoEditorRenderService.renderVideoOverride =
-            ({
-              required clips,
-              required usePersistentStorage,
-              aspectRatio,
-              parameters,
-              taskId,
-              maxOutputDuration,
-            }) async => '/documents/divine_1.mp4';
+        VideoEditorRenderService.renderVideoOverride = ({
+          required clips,
+          required usePersistentStorage,
+          aspectRatio,
+          parameters,
+          taskId,
+          maxOutputDuration,
+        }) async => '/documents/divine_1.mp4';
 
         // A 10s source trimmed to its middle 5s.
         final result =
@@ -160,15 +158,14 @@ void main() {
     );
 
     test('accounts for playback speed in the saved duration', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => '/documents/divine_1.mp4';
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/divine_1.mp4';
 
       // 8s of source at 2x plays back in 4s, which is what lands on disk.
       final result =
@@ -214,15 +211,14 @@ void main() {
     });
 
     test('keeps the source thumbnail when extraction yields nothing', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => '/documents/divine_1.mp4';
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/divine_1.mp4';
 
       // The rendered file does not exist here, so extraction returns null —
       // the library card must still get a frame rather than none.
@@ -340,15 +336,14 @@ void main() {
     );
 
     test('returns null when the render fails or is cancelled', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => null;
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => null;
 
       final result =
           await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
@@ -362,15 +357,14 @@ void main() {
     test(
       'carries the imported-source attribution onto the saved clip',
       () async {
-        VideoEditorRenderService.renderVideoOverride =
-            ({
-              required clips,
-              required usePersistentStorage,
-              aspectRatio,
-              parameters,
-              taskId,
-              maxOutputDuration,
-            }) async => '/documents/divine_1.mp4';
+        VideoEditorRenderService.renderVideoOverride = ({
+          required clips,
+          required usePersistentStorage,
+          aspectRatio,
+          parameters,
+          taskId,
+          maxOutputDuration,
+        }) async => '/documents/divine_1.mp4';
 
         final result =
             await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
@@ -398,15 +392,14 @@ void main() {
     );
 
     test('carries every credit of a merged clip onto the saved clip', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => '/documents/divine_1.mp4';
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/divine_1.mp4';
 
       final result =
           await VideoEditorClipLibrarySaveService.flattenClipForLibrary(

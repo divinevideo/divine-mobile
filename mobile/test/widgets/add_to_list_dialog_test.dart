@@ -71,8 +71,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: 'list0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'My Test List',
           description: 'A test list',
           videoEventIds: const [],
@@ -93,8 +92,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: 'list0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'Contains Video',
           videoEventIds: const [
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -114,8 +112,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: 'list0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'Empty List',
           videoEventIds: const [],
           createdAt: DateTime.now(),
@@ -133,8 +130,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: 'list0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'Three Videos',
           videoEventIds: const ['vid1', 'vid2', 'vid3'],
           createdAt: DateTime.now(),
@@ -156,8 +152,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: listId,
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'My List',
           videoEventIds: const [],
           createdAt: DateTime.now(),
@@ -189,8 +184,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: listId,
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'My List',
           videoEventIds: [testVideo.id],
           createdAt: DateTime.now(),
@@ -224,8 +218,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: listId,
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'My List',
           isPublic: false,
           // Enough references that one more cannot fit in a single NIP-44
@@ -261,8 +254,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: listId,
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'My List',
           videoEventIds: const [],
           createdAt: DateTime.now(),
@@ -297,8 +289,7 @@ void main() {
       _fakeLists = [
         CuratedList(
           id: 'list_a_23456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'Favorites',
           videoEventIds: const [],
           createdAt: DateTime.now(),
@@ -306,8 +297,7 @@ void main() {
         ),
         CuratedList(
           id: 'list_b_23456789abcdef0123456789abcdef0123456789abcdef0123456789',
-          pubkey:
-              'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           name: 'Watch Later',
           isPublic: false,
           videoEventIds: const [],

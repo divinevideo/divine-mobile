@@ -121,8 +121,7 @@ void main() {
       expect(
         newStallMs,
         lessThan(frameBudgetMs),
-        reason:
-            'compute() offload should keep the UI isolate under one frame budget',
+        reason: 'compute() offload should keep the UI isolate under one frame budget',
       );
     });
   });

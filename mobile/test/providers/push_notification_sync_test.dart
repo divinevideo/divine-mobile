@@ -1510,9 +1510,9 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,
@@ -1596,9 +1596,9 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,
@@ -3009,9 +3009,9 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,

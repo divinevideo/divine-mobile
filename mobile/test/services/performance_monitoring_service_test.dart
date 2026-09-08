@@ -124,8 +124,7 @@ void main() {
           r'baseConfigurationReference = [0-9A-F]+ /\* Profile\.xcconfig \*/;',
         ).hasMatch(pbxproj),
         isTrue,
-        reason:
-            'Runner target Profile configuration must point at Profile.xcconfig.',
+        reason: 'Runner target Profile configuration must point at Profile.xcconfig.',
       );
     });
   });

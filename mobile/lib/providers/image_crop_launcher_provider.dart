@@ -7,13 +7,12 @@ import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
 
 /// Signature of the function that launches the crop editor and resolves to the
 /// cropped JPEG bytes (or `null` when cancelled).
-typedef ImageCropLauncher =
-    Future<Uint8List?> Function(
-      BuildContext context, {
-      required ImageCropKind kind,
-      File? file,
-      Uint8List? bytes,
-    });
+typedef ImageCropLauncher = Future<Uint8List?> Function(
+  BuildContext context, {
+  required ImageCropKind kind,
+  File? file,
+  Uint8List? bytes,
+});
 
 /// Injectable seam for [showImageCropEditor].
 ///

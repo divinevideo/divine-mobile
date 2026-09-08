@@ -9,12 +9,11 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-typedef ClassicVinerAvatarCacheWriter =
-    Future<void> Function({
-      required String cacheKey,
-      required Uint8List bytes,
-      required String fileExtension,
-    });
+typedef ClassicVinerAvatarCacheWriter = Future<void> Function({
+  required String cacheKey,
+  required Uint8List bytes,
+  required String fileExtension,
+});
 
 class ClassicVinerSeedPreloadService {
   ClassicVinerSeedPreloadService({

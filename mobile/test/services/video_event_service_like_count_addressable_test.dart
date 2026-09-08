@@ -94,8 +94,7 @@ void main() {
         expect(
           addressableIds,
           isNotNull,
-          reason:
-              'addressableIds should be non-null for a batch containing a kind 34236 video',
+          reason: 'addressableIds should be non-null for a batch containing a kind 34236 video',
         );
 
         final targetVideo = VideoEvent.fromNostrEvent(targetEvent);
@@ -108,8 +107,7 @@ void main() {
         expect(
           addressableIds[targetVideo.id],
           equals(targetVideo.addressableId),
-          reason:
-              'The addressable ID should be the kind:pubkey:d-tag string from the video',
+          reason: 'The addressable ID should be the kind:pubkey:d-tag string from the video',
         );
       },
     );

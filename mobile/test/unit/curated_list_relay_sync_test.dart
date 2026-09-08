@@ -332,8 +332,7 @@ void main() {
         stubListPublishing(
           client: freshMockNostrService,
           auth: freshMockAuthService,
-          pubkey:
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          pubkey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         );
 
         // Create local list without initializing (to avoid initial relay sync)

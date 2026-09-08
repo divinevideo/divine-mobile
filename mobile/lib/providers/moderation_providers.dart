@@ -2,6 +2,7 @@
 // ABOUTME: Policy engine, host/age/content filters, NIP-32 labels, blocklist + sync bridge
 
 import 'dart:async';
+
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

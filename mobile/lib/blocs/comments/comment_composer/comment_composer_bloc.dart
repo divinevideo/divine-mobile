@@ -25,12 +25,11 @@ part 'comment_composer_state.dart';
 /// #5854: replies rendered off-screen led posters to re-send the same reply,
 /// spawning duplicates. The scroll-into-view fix stops that at the source; this
 /// checker is the defense-in-depth net for stray double-submits.
-typedef DuplicateCommentChecker =
-    bool Function({
-      required String content,
-      required String authorPubkey,
-      String? parentCommentId,
-    });
+typedef DuplicateCommentChecker = bool Function({
+  required String content,
+  required String authorPubkey,
+  String? parentCommentId,
+});
 
 /// BLoC owning composer input state for one video's comments: main / reply /
 /// edit text buffers, mention search (`restartable()`), publish + edit flows

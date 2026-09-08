@@ -113,16 +113,15 @@ void main() {
             ({required clip, required duration, required onComplete}) async {
               completeTrim = onComplete;
             };
-        NativeProofModeService.proofFileOverride =
-            (
-              _, {
-              required enableAdvancedCawgEmbedding,
-              creatorBindingAssertion,
-              cawgIdentityAssertion,
-              verifiedIdentityBundle,
-              clips,
-              editorStateHistory,
-            }) async => null;
+        NativeProofModeService.proofFileOverride = (
+          _, {
+          required enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+        }) async => null;
       });
 
       tearDown(() {

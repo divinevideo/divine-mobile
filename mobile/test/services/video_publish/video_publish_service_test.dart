@@ -165,9 +165,10 @@ void main() {
       collaboratorInviteService: mockCollaboratorInviteService,
       mentionResolutionService: mockMentionResolutionService,
       performanceMonitor: fakePerformanceMonitor,
-      onProgressChanged:
-          ({required double progress, required String draftId}) =>
-              progressChanges.add(progress),
+      onProgressChanged: ({
+        required double progress,
+        required String draftId,
+      }) => progressChanges.add(progress),
     );
   });
 
@@ -615,9 +616,10 @@ void main() {
               collaboratorInviteService: mockCollaboratorInviteService,
               mentionResolutionService: mockMentionResolutionService,
               subtitlePublishTimeout: const Duration(milliseconds: 20),
-              onProgressChanged:
-                  ({required double progress, required String draftId}) =>
-                      progressChanges.add(progress),
+              onProgressChanged: ({
+                required double progress,
+                required String draftId,
+              }) => progressChanges.add(progress),
             );
 
             final result = await boundedService.publishVideo(
@@ -684,9 +686,10 @@ void main() {
               collaboratorInviteService: mockCollaboratorInviteService,
               mentionResolutionService: mockMentionResolutionService,
               subtitlePublishTimeout: const Duration(milliseconds: 20),
-              onProgressChanged:
-                  ({required double progress, required String draftId}) =>
-                      progressChanges.add(progress),
+              onProgressChanged: ({
+                required double progress,
+                required String draftId,
+              }) => progressChanges.add(progress),
             );
 
             final result = await boundedService.publishVideo(
@@ -2756,8 +2759,10 @@ void main() {
         mentionResolutionService: mockMentionResolutionService,
         performanceMonitor: fakePerformanceMonitor,
         languagePreferenceService: languageService,
-        onProgressChanged:
-            ({required double progress, required String draftId}) {},
+        onProgressChanged: ({
+          required double progress,
+          required String draftId,
+        }) {},
       );
 
       test('omits the language tag when the user never declared one', () async {

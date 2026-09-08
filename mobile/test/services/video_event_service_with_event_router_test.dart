@@ -144,8 +144,7 @@ void main() {
       );
       videoEvent.id =
           'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-      videoEvent.sig =
-          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      videoEvent.sig = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
       // Subscribe to discovery feed
       await videoEventService.subscribeToVideoFeed(
@@ -184,8 +183,7 @@ void main() {
         );
         profileEvent.id =
             'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-        profileEvent.sig =
-            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        profileEvent.sig = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
         // Subscribe to discovery feed
         await videoEventService.subscribeToVideoFeed(
@@ -236,8 +234,7 @@ void main() {
       );
       contactsEvent.id =
           '2222222222222222222222222222222222222222222222222222222222222222';
-      contactsEvent.sig =
-          '3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333';
+      contactsEvent.sig = '3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333';
 
       // Subscribe to discovery feed
       await videoEventService.subscribeToVideoFeed(
@@ -274,8 +271,7 @@ void main() {
       );
       reactionEvent.id =
           '5555555555555555555555555555555555555555555555555555555555555555';
-      reactionEvent.sig =
-          '6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666';
+      reactionEvent.sig = '6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666';
 
       // Subscribe to discovery feed
       await videoEventService.subscribeToVideoFeed(
@@ -307,8 +303,7 @@ void main() {
       );
       unknownEvent.id =
           '8888888888888888888888888888888888888888888888888888888888888888';
-      unknownEvent.sig =
-          '9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999';
+      unknownEvent.sig = '9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999';
 
       // Subscribe to discovery feed
       await videoEventService.subscribeToVideoFeed(

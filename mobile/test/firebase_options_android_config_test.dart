@@ -11,11 +11,9 @@ import 'package:openvine/firebase_options.dart';
 void main() {
   group(DefaultFirebaseOptions, () {
     test('Android Firebase options match each registered app', () {
-      final config =
-          jsonDecode(
-                File('android/app/google-services.json').readAsStringSync(),
-              )
-              as Map<String, dynamic>;
+      final config = jsonDecode(
+        File('android/app/google-services.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
       final projectInfo = config['project_info'] as Map<String, dynamic>;
       final clients = config['client'] as List<dynamic>;
 

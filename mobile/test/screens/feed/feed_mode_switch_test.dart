@@ -94,8 +94,7 @@ void main() {
     VideoEvent video({required String id}) {
       return VideoEvent(
         id: id,
-        pubkey:
-            'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2c3',
+        pubkey: 'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2c3',
         createdAt: 1700000000,
         content: 'Test video',
         timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),

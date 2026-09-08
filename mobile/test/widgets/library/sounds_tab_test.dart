@@ -111,8 +111,7 @@ AudioEvent _sound({
 }) {
   return AudioEvent(
     id: id,
-    pubkey:
-        'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     createdAt: createdAt,
     title: title,
     duration: 6,

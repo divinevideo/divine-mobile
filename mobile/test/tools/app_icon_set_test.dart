@@ -423,9 +423,9 @@ void main() {
     });
 
     test('$_webManifestPath carries the configured theme colour', () {
-      final manifest =
-          jsonDecode(File(_webManifestPath).readAsStringSync())
-              as Map<String, dynamic>;
+      final manifest = jsonDecode(
+        File(_webManifestPath).readAsStringSync(),
+      ) as Map<String, dynamic>;
       expect(
         manifest['theme_color'],
         _brandGreenHex,

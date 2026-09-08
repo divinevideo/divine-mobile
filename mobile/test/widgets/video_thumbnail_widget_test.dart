@@ -173,38 +173,40 @@ void main() {
       expect(find.byType(VineCachedImage), findsOneWidget);
     });
 
-    testWidgets('renders blurhash without image load for dead media thumbnail', (
-      tester,
-    ) async {
-      const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
-      final videoWithDeadThumbnail = createTestVideoEvent(
-        id: 'test-dead-thumbnail',
-        thumbnailUrl:
-            'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/thumbnail.jpg',
-        blurhash: blurhash,
-      );
+    testWidgets(
+      'renders blurhash without image load for dead media thumbnail',
+      (
+        tester,
+      ) async {
+        const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+        final videoWithDeadThumbnail = createTestVideoEvent(
+          id: 'test-dead-thumbnail',
+          thumbnailUrl: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/thumbnail.jpg',
+          blurhash: blurhash,
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: videoWithDeadThumbnail,
-              width: 200,
-              height: 200,
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoThumbnailWidget(
+                video: videoWithDeadThumbnail,
+                width: 200,
+                height: 200,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
-      expect(find.byType(VineCachedImage), findsNothing);
-      expect(
-        tester.widget<BlurhashDisplay>(find.byType(BlurhashDisplay)).blurhash,
-        blurhash,
-      );
-    });
+        expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        expect(find.byType(VineCachedImage), findsNothing);
+        expect(
+          tester.widget<BlurhashDisplay>(find.byType(BlurhashDisplay)).blurhash,
+          blurhash,
+        );
+      },
+    );
 
     testWidgets(
       'updates missing metadata aspect ratio from the displayed cached image',
@@ -321,8 +323,7 @@ void main() {
       (tester) async {
         final divineHostedVideo = createTestVideoEvent(
           id: 'test-divine',
-          thumbnailUrl:
-              'https://media.divine.video/72d7eda61074b17e077fb9f4a8b48166cdeb65cb07e053aafa6e69d5fa165995.jpg',
+          thumbnailUrl: 'https://media.divine.video/72d7eda61074b17e077fb9f4a8b48166cdeb65cb07e053aafa6e69d5fa165995.jpg',
         );
 
         await tester.pumpWidget(
@@ -349,8 +350,7 @@ void main() {
       (tester) async {
         final divineHostedVideo = createTestVideoEvent(
           id: 'test-divine-dims',
-          thumbnailUrl:
-              'https://media.divine.video/72d7eda61074b17e077fb9f4a8b48166cdeb65cb07e053aafa6e69d5fa165995.jpg',
+          thumbnailUrl: 'https://media.divine.video/72d7eda61074b17e077fb9f4a8b48166cdeb65cb07e053aafa6e69d5fa165995.jpg',
         );
 
         await tester.pumpWidget(

@@ -257,13 +257,11 @@ void main() {
           setUp: () {
             final cachedProfile = createTestProfile(
               nip05: '_@alice.divine.video',
-              eventId:
-                  'cached12345678901234567890123456789012345678901234567890123456',
+              eventId: 'cached12345678901234567890123456789012345678901234567890123456',
             );
             final freshProfile = createTestProfile(
               nip05: '_@alice.divine.video',
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -734,13 +732,11 @@ void main() {
         setUp: () {
           final cachedProfile = createTestProfile(
             displayName: 'Cached Name',
-            eventId:
-                'cached12345678901234567890123456789012345678901234567890123456',
+            eventId: 'cached12345678901234567890123456789012345678901234567890123456',
           );
           final streamProfile = createTestProfile(
             displayName: 'Stream Name',
-            eventId:
-                'stream12345678901234567890123456789012345678901234567890123456',
+            eventId: 'stream12345678901234567890123456789012345678901234567890123456',
           );
           when(
             () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -818,18 +814,15 @@ void main() {
         setUp: () {
           final cachedProfile = createTestProfile(
             displayName: 'Cached Name',
-            eventId:
-                'cached12345678901234567890123456789012345678901234567890123456',
+            eventId: 'cached12345678901234567890123456789012345678901234567890123456',
           );
           final oldName = createTestProfile(
             displayName: 'Old Name',
-            eventId:
-                'oldnam12345678901234567890123456789012345678901234567890123456',
+            eventId: 'oldnam12345678901234567890123456789012345678901234567890123456',
           );
           final newName = createTestProfile(
             displayName: 'New Name',
-            eventId:
-                'fresh123456789012345678901234567890123456789012345678901234567',
+            eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
           );
           when(
             () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -1216,8 +1209,7 @@ void main() {
         'does not preserve a stale profile for a different pubkey',
         seed: () => MyProfileUpdated(
           profile: createTestProfile(
-            pubkey:
-                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             displayName: 'Wrong User',
           ),
         ),

@@ -120,12 +120,11 @@ void main() {
     test('reports a dismissed session as null', () async {
       final uri = await launchAppOAuth(
         Uri.parse('https://verifier.divine.video/auth/twitter/start'),
-        authenticate:
-            ({
-              required String url,
-              required String callbackUrlScheme,
-              required FlutterWebAuth2Options options,
-            }) async => throw PlatformException(code: 'CANCELED'),
+        authenticate: ({
+          required String url,
+          required String callbackUrlScheme,
+          required FlutterWebAuth2Options options,
+        }) async => throw PlatformException(code: 'CANCELED'),
       );
 
       expect(uri, isNull);
@@ -135,12 +134,11 @@ void main() {
       await expectLater(
         () => launchAppOAuth(
           Uri.parse('https://verifier.divine.video/auth/twitter/start'),
-          authenticate:
-              ({
-                required String url,
-                required String callbackUrlScheme,
-                required FlutterWebAuth2Options options,
-              }) async => throw PlatformException(code: 'BOOM'),
+          authenticate: ({
+            required String url,
+            required String callbackUrlScheme,
+            required FlutterWebAuth2Options options,
+          }) async => throw PlatformException(code: 'BOOM'),
         ),
         throwsA(isA<PlatformException>()),
       );

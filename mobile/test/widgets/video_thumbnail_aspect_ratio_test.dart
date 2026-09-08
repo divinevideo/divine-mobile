@@ -62,8 +62,7 @@ void main() {
       expect(
         aspectRatioWidget.aspectRatio,
         equals(2 / 3),
-        reason:
-            'Thumbnail aspect ratio should be 2:3 portrait fallback when no dimensions metadata',
+        reason: 'Thumbnail aspect ratio should be 2:3 portrait fallback when no dimensions metadata',
       );
     });
 
@@ -305,8 +304,7 @@ void main() {
           expect(
             aspectRatioWidget.aspectRatio,
             equals(1280 / 720),
-            reason:
-                'Thumbnail aspect ratio should match video dimensions (landscape)',
+            reason: 'Thumbnail aspect ratio should match video dimensions (landscape)',
           );
         },
       );
@@ -349,8 +347,7 @@ void main() {
           expect(
             aspectRatioWidget.aspectRatio,
             equals(2 / 3),
-            reason:
-                'Thumbnail should fallback to 2:3 portrait aspect ratio when dimensions are missing',
+            reason: 'Thumbnail should fallback to 2:3 portrait aspect ratio when dimensions are missing',
           );
         },
       );

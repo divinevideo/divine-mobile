@@ -67,8 +67,7 @@ void main() {
       expect(
         result.length,
         equals(2),
-        reason:
-            'Current implementation returns duplicates when same video exists in multiple lists',
+        reason: 'Current implementation returns duplicates when same video exists in multiple lists',
       );
 
       // Both results are the same video

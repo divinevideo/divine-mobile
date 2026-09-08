@@ -33,8 +33,7 @@ void main() {
     testWidgets('renders Auto action in the home web overlay', (tester) async {
       final video = createTestVideoEvent(
         id: 'a1b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234',
-        pubkey:
-            'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2c3',
+        pubkey: 'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2c3',
         videoUrl: 'https://example.com/video1.mp4',
       );
       final state = VideoFeedBlocState(

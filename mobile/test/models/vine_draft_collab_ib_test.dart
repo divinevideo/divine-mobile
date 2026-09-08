@@ -53,8 +53,7 @@ void main() {
 
       test('accepts inspiredByVideo', () {
         const ib = InspiredByInfo(
-          addressableId:
-              '34236:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc:my-video',
+          addressableId: '34236:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc:my-video',
           relayUrl: 'wss://relay.divine.video',
         );
 

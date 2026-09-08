@@ -32,8 +32,10 @@ abstract class AccountDeletionRecoveryPolling {
       tickIndex < schedule.length ? schedule[tickIndex] : cap;
 }
 
-typedef RecoveryTimerFactory =
-    Timer Function(Duration duration, void Function() callback);
+typedef RecoveryTimerFactory = Timer Function(
+  Duration duration,
+  void Function() callback,
+);
 
 class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     with CloseGuardedEmit<AccountDeletionRecoveryState> {

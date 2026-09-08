@@ -14,11 +14,10 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-typedef JwtIdentityRefresh =
-    Future<bool> Function({
-      required Nip98AuthService nip98Service,
-      required String relayManagerUrl,
-    });
+typedef JwtIdentityRefresh = Future<bool> Function({
+  required Nip98AuthService nip98Service,
+  required String relayManagerUrl,
+});
 
 class ZendeskAttachmentUploadException implements Exception {
   const ZendeskAttachmentUploadException();

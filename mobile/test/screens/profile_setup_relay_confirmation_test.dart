@@ -208,100 +208,102 @@ void main() {
       },
     );
 
-    test('should fail gracefully if relay never returns updated profile', () async {
-      // BEHAVIOR: If relay doesn't return updated profile after max retries,
-      // should throw an error instead of navigating with stale data
+    test(
+      'should fail gracefully if relay never returns updated profile',
+      () async {
+        // BEHAVIOR: If relay doesn't return updated profile after max retries,
+        // should throw an error instead of navigating with stale data
 
-      // Arrange
-      final publishedEvent = Event(
-        testPubkey,
-        0,
-        [],
-        '{"name":"New Name"}',
-        createdAt: testTimestamp,
-      );
-
-      // Capture the auto-generated event ID
-      testEventId = publishedEvent.id;
-
-      when(
-        () => mockAuthService.createAndSignEvent(
-          kind: 0,
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        ),
-      ).thenAnswer((_) async => publishedEvent);
-
-      when(
-        () => mockNostrService.publishEvent(any()),
-      ).thenAnswer((_) async => PublishSuccess(event: publishedEvent));
-
-      // Mock profile repository to ALWAYS return stale profile
-      final staleProfile = UserProfile(
-        pubkey: testPubkey,
-        name: 'Old Name',
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          (testTimestamp - 60) * 1000,
-        ),
-        eventId: 'old-event-id',
-        rawData: const {'name': 'Old Name'},
-      );
-
-      when(
-        () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
-      ).thenAnswer((_) async => staleProfile);
-      when(
-        () => mockProfileRepository.deleteCachedProfile(pubkey: testPubkey),
-      ).thenAnswer((_) async => 1);
-
-      // Act
-      final event = await mockAuthService.createAndSignEvent(
-        kind: 0,
-        content: '{"name":"New Name"}',
-        tags: [],
-      );
-
-      await mockNostrService.publishEvent(event!);
-
-      // Try to get updated profile with retries
-      UserProfile? confirmedProfile;
-      var attempts = 0;
-      const maxAttempts = 3;
-
-      while (attempts < maxAttempts) {
-        attempts++;
-        await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
-        final fetchedProfile = await mockProfileRepository.fetchFreshProfile(
-          pubkey: testPubkey,
+        // Arrange
+        final publishedEvent = Event(
+          testPubkey,
+          0,
+          [],
+          '{"name":"New Name"}',
+          createdAt: testTimestamp,
         );
 
-        final eventIdMatches = fetchedProfile?.eventId == testEventId;
-        final timestampMatches =
-            fetchedProfile?.createdAt != null &&
-            fetchedProfile!.createdAt.millisecondsSinceEpoch >=
-                (testTimestamp * 1000 - 1000);
+        // Capture the auto-generated event ID
+        testEventId = publishedEvent.id;
 
-        if (eventIdMatches || timestampMatches) {
-          confirmedProfile = fetchedProfile;
-          break;
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: 0,
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => publishedEvent);
+
+        when(
+          () => mockNostrService.publishEvent(any()),
+        ).thenAnswer((_) async => PublishSuccess(event: publishedEvent));
+
+        // Mock profile repository to ALWAYS return stale profile
+        final staleProfile = UserProfile(
+          pubkey: testPubkey,
+          name: 'Old Name',
+          createdAt: DateTime.fromMillisecondsSinceEpoch(
+            (testTimestamp - 60) * 1000,
+          ),
+          eventId: 'old-event-id',
+          rawData: const {'name': 'Old Name'},
+        );
+
+        when(
+          () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
+        ).thenAnswer((_) async => staleProfile);
+        when(
+          () => mockProfileRepository.deleteCachedProfile(pubkey: testPubkey),
+        ).thenAnswer((_) async => 1);
+
+        // Act
+        final event = await mockAuthService.createAndSignEvent(
+          kind: 0,
+          content: '{"name":"New Name"}',
+          tags: [],
+        );
+
+        await mockNostrService.publishEvent(event!);
+
+        // Try to get updated profile with retries
+        UserProfile? confirmedProfile;
+        var attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+          attempts++;
+          await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+          final fetchedProfile = await mockProfileRepository.fetchFreshProfile(
+            pubkey: testPubkey,
+          );
+
+          final eventIdMatches = fetchedProfile?.eventId == testEventId;
+          final timestampMatches =
+              fetchedProfile?.createdAt != null &&
+              fetchedProfile!.createdAt.millisecondsSinceEpoch >=
+                  (testTimestamp * 1000 - 1000);
+
+          if (eventIdMatches || timestampMatches) {
+            confirmedProfile = fetchedProfile;
+            break;
+          }
         }
-      }
 
-      // Assert
-      expect(
-        confirmedProfile,
-        isNull,
-        reason:
-            'Should not have confirmed profile after max retries with stale data',
-      );
-      expect(
-        attempts,
-        equals(maxAttempts),
-        reason: 'Should exhaust all retry attempts',
-      );
+        // Assert
+        expect(
+          confirmedProfile,
+          isNull,
+          reason: 'Should not have confirmed profile after max retries with stale data',
+        );
+        expect(
+          attempts,
+          equals(maxAttempts),
+          reason: 'Should exhaust all retry attempts',
+        );
 
-      // In real code, this should throw an error to prevent navigation with bad state
-    });
+        // In real code, this should throw an error to prevent navigation with bad state
+      },
+    );
 
     test(
       'should succeed immediately if first fetch returns updated profile',

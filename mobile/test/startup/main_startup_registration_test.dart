@@ -79,8 +79,10 @@ void main() {
           updaterCreations++;
           return shared ??= _FakeUpdater();
         },
-        updateSubscribedTrack:
-            ({required updater, required preferences}) async {},
+        updateSubscribedTrack: ({
+          required updater,
+          required preferences,
+        }) async {},
       );
 
       // The synchronous FFI probe in the real constructor is the cost of moving

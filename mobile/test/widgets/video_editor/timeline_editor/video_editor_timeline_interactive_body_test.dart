@@ -97,33 +97,32 @@ void main() {
                         onReorder: (_) {},
                         onReorderChanged: (_) {},
                         trimmingClipId: null,
-                        onTrimChanged:
-                            ({
-                              required clipId,
-                              required isStart,
-                              required trimStart,
-                              required trimEnd,
-                            }) {},
+                        onTrimChanged: ({
+                          required clipId,
+                          required isStart,
+                          required trimStart,
+                          required trimEnd,
+                        }) {},
                         onTrimDragChanged: (_) {},
                         onClipTapped: (_) {},
                         isMultiSelectMode: false,
                         selectedClipIds: const <String>{},
-                        onOverlayItemMoved:
-                            ({
-                              required item,
-                              required startTime,
-                              required row,
-                              required insertAbove,
-                            }) {},
-                        onOverlayItemMoving:
-                            ({required item, required startTime}) {},
-                        onOverlayItemTrimmed:
-                            ({
-                              required item,
-                              required startTime,
-                              required endTime,
-                              required isStart,
-                            }) {},
+                        onOverlayItemMoved: ({
+                          required item,
+                          required startTime,
+                          required row,
+                          required insertAbove,
+                        }) {},
+                        onOverlayItemMoving: ({
+                          required item,
+                          required startTime,
+                        }) {},
+                        onOverlayItemTrimmed: ({
+                          required item,
+                          required startTime,
+                          required endTime,
+                          required isStart,
+                        }) {},
                         onOverlayTrimDragChanged: (_) {},
                         onOverlayItemTapped: (_) {},
                         onOverlayDragStarted: (_) {},

@@ -226,13 +226,12 @@ void main() {
       test(
         'keeps the single-pass duration when already >= min output',
         () async {
-          StopMotionRenderService.assembleOverride =
-              ({
-                required frames,
-                required aspectRatio,
-                frameRate = StopMotionRenderService.defaultFrameRate,
-                String? taskId,
-              }) async => '/rendered.mp4';
+          StopMotionRenderService.assembleOverride = ({
+            required frames,
+            required aspectRatio,
+            frameRate = StopMotionRenderService.defaultFrameRate,
+            String? taskId,
+          }) async => '/rendered.mp4';
 
           final clip = DivineVideoClip(
             id: 'sm-long',
@@ -258,13 +257,12 @@ void main() {
       test(
         'uses the probed encoded mp4 duration over the frame-hold estimate',
         () async {
-          StopMotionRenderService.assembleOverride =
-              ({
-                required frames,
-                required aspectRatio,
-                frameRate = StopMotionRenderService.defaultFrameRate,
-                String? taskId,
-              }) async => '/rendered.mp4';
+          StopMotionRenderService.assembleOverride = ({
+            required frames,
+            required aspectRatio,
+            frameRate = StopMotionRenderService.defaultFrameRate,
+            String? taskId,
+          }) async => '/rendered.mp4';
           // The real encoder lands a hair short of the 1332ms hold estimate;
           // the muxed-audio clamp keys off the clip duration, so the probed
           // length must win or audio outlives the video (the iOS freeze).
@@ -281,13 +279,12 @@ void main() {
       );
 
       test('falls back to the estimate when the probe returns null', () async {
-        StopMotionRenderService.assembleOverride =
-            ({
-              required frames,
-              required aspectRatio,
-              frameRate = StopMotionRenderService.defaultFrameRate,
-              String? taskId,
-            }) async => '/rendered.mp4';
+        StopMotionRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          frameRate = StopMotionRenderService.defaultFrameRate,
+          String? taskId,
+        }) async => '/rendered.mp4';
         StopMotionRenderService.probeDurationOverride = (_) async => null;
 
         final result = await StopMotionRenderService.materialize(
@@ -299,13 +296,12 @@ void main() {
       });
 
       test('returns null when the render fails', () async {
-        StopMotionRenderService.assembleOverride =
-            ({
-              required frames,
-              required aspectRatio,
-              frameRate = StopMotionRenderService.defaultFrameRate,
-              String? taskId,
-            }) async => null;
+        StopMotionRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          frameRate = StopMotionRenderService.defaultFrameRate,
+          String? taskId,
+        }) async => null;
 
         final result = await StopMotionRenderService.materialize(
           stopMotionClip(),

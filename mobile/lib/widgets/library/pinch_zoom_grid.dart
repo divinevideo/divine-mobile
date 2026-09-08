@@ -14,12 +14,11 @@ import 'package:flutter/rendering.dart';
 /// The [controller] must be handed to the built scroll view — [PinchZoomGrid]
 /// uses it to keep the same region of the grid on screen when the column
 /// count changes.
-typedef PinchZoomGridBuilder =
-    Widget Function(
-      BuildContext context,
-      int columnCount,
-      ScrollController controller,
-    );
+typedef PinchZoomGridBuilder = Widget Function(
+  BuildContext context,
+  int columnCount,
+  ScrollController controller,
+);
 
 /// Dispatched when a pinch on a [PinchZoomGrid] starts and ends.
 ///

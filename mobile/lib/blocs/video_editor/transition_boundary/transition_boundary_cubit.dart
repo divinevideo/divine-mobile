@@ -19,8 +19,10 @@ const _boundaryFrameEpsilon = Duration(milliseconds: 50);
 /// path or `null` when it can't be produced. Injectable so the emit-on-extract
 /// and keep-placeholder-on-null paths can be tested without the real thumbnail
 /// pipeline / file system.
-typedef BoundaryFrameExtractor =
-    Future<String?> Function(DivineVideoClip clip, {required bool tail});
+typedef BoundaryFrameExtractor = Future<String?> Function(
+  DivineVideoClip clip, {
+  required bool tail,
+});
 
 /// Resolves the two frames a transition preview shows either side of the
 /// boundary: the outgoing clip's last visible frame and the incoming clip's

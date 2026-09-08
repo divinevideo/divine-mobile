@@ -348,16 +348,15 @@ void main() {
               return '${Directory.systemTemp.path}/rendered-sm.mp4';
             };
 
-        NativeProofModeService.proofFileOverride =
-            (
-              File videoFile, {
-              required bool enableAdvancedCawgEmbedding,
-              creatorBindingAssertion,
-              cawgIdentityAssertion,
-              verifiedIdentityBundle,
-              clips,
-              editorStateHistory,
-            }) async => const model.NativeProofData(videoHash: 'proof');
+        NativeProofModeService.proofFileOverride = (
+          File videoFile, {
+          required bool enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+        }) async => const model.NativeProofData(videoHash: 'proof');
 
         final stopMotionClip = DivineVideoClip(
           id: 'sm-clip',

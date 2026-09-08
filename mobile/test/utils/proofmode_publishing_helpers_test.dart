@@ -2,6 +2,7 @@
 // ABOUTME: Tests verification level detection and Nostr tag creation from NativeProofData
 
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/utils/proofmode_publishing_helpers.dart';

@@ -267,8 +267,7 @@ void main() {
       );
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
-          pubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           tags: const [
             ['content-warning', 'profanity'],
           ],
@@ -282,8 +281,7 @@ void main() {
     test('relay ingest still hides an owner violence label', () {
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
-          pubkey:
-              '1111111111111111111111111111111111111111111111111111111111111111',
+          pubkey: '1111111111111111111111111111111111111111111111111111111111111111',
           tags: const [
             ['content-warning', 'violence'],
           ],

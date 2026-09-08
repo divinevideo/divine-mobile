@@ -512,8 +512,7 @@ void main() {
               senderPubkey: recipientPubkey,
               content: 'Reply message',
               createdAt: 1700000100,
-              giftWrapId:
-                  '8888888888888888888888888888888888888888888888888888888888888888',
+              giftWrapId: '8888888888888888888888888888888888888888888888888888888888888888',
             );
             controller.add([testMessage, secondMessage]);
             controller.close();
@@ -600,8 +599,7 @@ void main() {
             senderPubkey: recipientPubkey,
             content: 'Reply message',
             createdAt: 1700000100,
-            giftWrapId:
-                '8888888888888888888888888888888888888888888888888888888888888888',
+            giftWrapId: '8888888888888888888888888888888888888888888888888888888888888888',
           );
           messagesController.add([testMessage, secondMessage]);
           await _waitForConversationState(
@@ -1700,8 +1698,7 @@ void main() {
                   senderPubkey: senderPubkey,
                   content: 'Should be ignored',
                   createdAt: 1700000200,
-                  giftWrapId:
-                      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                  giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
                 ),
               ]);
               controller1.close();
@@ -1714,8 +1711,7 @@ void main() {
                   senderPubkey: recipientPubkey,
                   content: 'New subscription message',
                   createdAt: 1700000300,
-                  giftWrapId:
-                      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                  giftWrapId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
                 ),
               ]);
               controller2.close();

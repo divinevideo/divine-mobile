@@ -171,8 +171,7 @@ void main() {
       // adds no triage value worth the risk of a partial leak.
       const cases = <String, ({String input, String forbidden})>{
         'macos home account name': (
-          input:
-              "PathNotFoundException: path = '/Users/mjbradley/Library/Preferences/app.plist'",
+          input: "PathNotFoundException: path = '/Users/mjbradley/Library/Preferences/app.plist'",
           forbidden: 'mjbradley',
         ),
         'macos home directory terminal': (
@@ -183,23 +182,19 @@ void main() {
         // space must redact whole. Stopping at the space would leave the
         // filename fragment beside the marker, a partial leak.
         'macos home spaced filename quoted': (
-          input:
-              "FileSystemException: path = '/Users/mjbradley/Music/My Song.m4a'",
+          input: "FileSystemException: path = '/Users/mjbradley/Music/My Song.m4a'",
           forbidden: 'Song',
         ),
         'ios container spaced filename quoted': (
-          input:
-              "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/tmp/My Song.m4a'",
+          input: "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/tmp/My Song.m4a'",
           forbidden: 'Song',
         ),
         'macos external volume spaced filename quoted': (
-          input:
-              "FileSystemException: path = '/Volumes/Backup Drive/Music/My Song.m4a'",
+          input: "FileSystemException: path = '/Volumes/Backup Drive/Music/My Song.m4a'",
           forbidden: 'My Song',
         ),
         'linux home account name': (
-          input:
-              "FileSystemException: Cannot open, path = '/home/mbradley/notes.txt'",
+          input: "FileSystemException: Cannot open, path = '/home/mbradley/notes.txt'",
           forbidden: 'mbradley',
         ),
         'windows home account name': (
@@ -207,18 +202,15 @@ void main() {
           forbidden: 'mbradley',
         ),
         'ios container user filename': (
-          input:
-              "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/Documents/draft_audio_imports/d1/1699999999000_My_Song.m4a'",
+          input: "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/Documents/draft_audio_imports/d1/1699999999000_My_Song.m4a'",
           forbidden: 'My_Song',
         ),
         'ios container install uuid': (
-          input:
-              "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/Documents/x.m4a'",
+          input: "FileSystemException: path = '/var/mobile/Containers/Data/Application/1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D/Documents/x.m4a'",
           forbidden: '1A2B3C4D',
         ),
         'android app-data user filename': (
-          input:
-              '/data/user/0/video.divine.app/cache/1699999999000_My_Song.m4a (No such file)',
+          input: '/data/user/0/video.divine.app/cache/1699999999000_My_Song.m4a (No such file)',
           forbidden: 'My_Song',
         ),
         'android shared-storage user filename': (
@@ -226,8 +218,7 @@ void main() {
           forbidden: 'My_Song',
         ),
         'macos container user filename via home root': (
-          input:
-              "path = '/Users/mjbradley/Library/Containers/video.divine.app/Data/Documents/draft_audio_imports/d1/1699999999000_My_Song.m4a'",
+          input: "path = '/Users/mjbradley/Library/Containers/video.divine.app/Data/Documents/draft_audio_imports/d1/1699999999000_My_Song.m4a'",
           forbidden: 'My_Song',
         ),
       };

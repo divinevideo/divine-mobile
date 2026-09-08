@@ -453,26 +453,28 @@ void main() {
       expect(requestedDelays, hasLength(3));
     });
 
-    test('prefers embedded textTrackContent over Blossom sha256 fetch', () async {
-      final container = createContainer();
-      addTearDown(container.dispose);
+    test(
+      'prefers embedded textTrackContent over Blossom sha256 fetch',
+      () async {
+        final container = createContainer();
+        addTearDown(container.dispose);
 
-      const embeddedVtt =
-          'WEBVTT\n\n1\n00:00:00.500 --> 00:00:01.000\n'
-          'Embedded\n';
+        const embeddedVtt =
+            'WEBVTT\n\n1\n00:00:00.500 --> 00:00:01.000\n'
+            'Embedded\n';
 
-      final cues = await container.read(
-        subtitleCuesProvider(
-          videoId: 'test-id',
-          textTrackContent: embeddedVtt,
-          sha256:
-              'abc123def456abc123def456abc123def456abc123def456abc123def456abcd',
-        ).future,
-      );
+        final cues = await container.read(
+          subtitleCuesProvider(
+            videoId: 'test-id',
+            textTrackContent: embeddedVtt,
+            sha256: 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd',
+          ).future,
+        );
 
-      expect(cues, hasLength(1));
-      expect(cues[0].text, equals('Embedded'));
-    });
+        expect(cues, hasLength(1));
+        expect(cues[0].text, equals('Embedded'));
+      },
+    );
 
     test('returns empty list when sha256 is empty string', () async {
       final container = createContainer();

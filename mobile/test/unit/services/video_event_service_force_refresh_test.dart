@@ -60,8 +60,7 @@ Event createVideoEvent({
     createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
   );
   event.id = id;
-  event.sig =
-      'sig_aaaabbbbccccddddeeeeffff1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff11112222333344445555666677778888';
+  event.sig = 'sig_aaaabbbbccccddddeeeeffff1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff11112222333344445555666677778888';
   event.sources.add('wss://relay.divine.video');
   return event;
 }

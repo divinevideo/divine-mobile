@@ -13,8 +13,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Callback invoked when NIP-65 relay discovery completes with a non-empty
 /// list. NostrService uses this to add discovered relays to the current
 /// client without blocking app startup.
-typedef UserRelaysDiscoveredCallback =
-    void Function(String pubkey, List<String> relayUrls);
+typedef UserRelaysDiscoveredCallback = void Function(
+  String pubkey,
+  List<String> relayUrls,
+);
 
 /// Callback invoked when AuthService wants to publish a bootstrap kind:10002
 /// relay list on behalf of the user (because indexer discovery returned empty).
@@ -22,8 +24,10 @@ typedef UserRelaysDiscoveredCallback =
 /// The event is already signed. The implementer publishes it through the
 /// active [NostrClient] to [targetRelays] and reports success/failure via the
 /// returned future.
-typedef BootstrapRelayListCallback =
-    Future<bool> Function(Event event, List<String> targetRelays);
+typedef BootstrapRelayListCallback = Future<bool> Function(
+  Event event,
+  List<String> targetRelays,
+);
 
 /// SharedPreferences key prefix for the per-pubkey one-shot flag that records
 /// whether we have already published a bootstrap kind:10002 on this device.

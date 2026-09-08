@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -455,8 +456,7 @@ void main() {
           audioFilePath: audioPath,
           duration: 6,
           fileSize: 12345,
-          sha256Hash:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          sha256Hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           mimeType: 'audio/m4a',
         ),
       );

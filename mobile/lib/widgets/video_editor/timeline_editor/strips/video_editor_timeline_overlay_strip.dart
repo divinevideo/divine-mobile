@@ -22,32 +22,29 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 /// [startTime] and [duration] are non-null when the resize extends
 /// beyond the original item boundary (overlays have no fixed content
 /// length so they can grow in either direction).
-typedef OverlayTrimCallback =
-    void Function({
-      required TimelineOverlayItem item,
-      required Duration startTime,
-      required Duration endTime,
-      required bool isStart,
-    });
+typedef OverlayTrimCallback = void Function({
+  required TimelineOverlayItem item,
+  required Duration startTime,
+  required Duration endTime,
+  required bool isStart,
+});
 
 /// Callback reporting an item was moved to a new start time and row.
 ///
 /// When [insertAbove] is `true`, the item should keep the target row
 /// and existing overlapping items shift down.
-typedef OverlayMoveCallback =
-    void Function({
-      required TimelineOverlayItem item,
-      required Duration startTime,
-      required int row,
-      required bool insertAbove,
-    });
+typedef OverlayMoveCallback = void Function({
+  required TimelineOverlayItem item,
+  required Duration startTime,
+  required int row,
+  required bool insertAbove,
+});
 
 /// Called on every drag-move frame with the live (snapped) start time.
-typedef OverlayMovingCallback =
-    void Function({
-      required TimelineOverlayItem item,
-      required Duration startTime,
-    });
+typedef OverlayMovingCallback = void Function({
+  required TimelineOverlayItem item,
+  required Duration startTime,
+});
 
 /// A generic strip that displays [TimelineOverlayItem]s in rows.
 ///

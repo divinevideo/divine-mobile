@@ -50,19 +50,17 @@ void main() {
       late OtherProfileScreenRouter screen;
 
       await _buildWithContext(tester, (context) {
-        screen =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/profile/npub1test',
-                    pathParameters: const {'npub': 'npub1test'},
-                    extra: const <Object?, Object?>{
-                      'displayName': 'Ada',
-                      'avatarUrl': 42,
-                    },
-                  ),
-                )
-                as OtherProfileScreenRouter;
+        screen = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/profile/npub1test',
+            pathParameters: const {'npub': 'npub1test'},
+            extra: const <Object?, Object?>{
+              'displayName': 'Ada',
+              'avatarUrl': 42,
+            },
+          ),
+        ) as OtherProfileScreenRouter;
       });
 
       expect(screen.npub, 'npub1test');
@@ -80,16 +78,14 @@ void main() {
       late SoundDetailScreen screen;
 
       await _buildWithContext(tester, (context) {
-        screen =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/sound/sound-1',
-                    pathParameters: const {'id': 'sound-1'},
-                    extra: <Object?, Object?>{'sound': sound},
-                  ),
-                )
-                as SoundDetailScreen;
+        screen = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/sound/sound-1',
+            pathParameters: const {'id': 'sound-1'},
+            extra: <Object?, Object?>{'sound': sound},
+          ),
+        ) as SoundDetailScreen;
       });
 
       expect(screen.sound, same(sound));
@@ -138,48 +134,40 @@ void main() {
       late VideoEditorScreen draft;
 
       await _buildWithContext(tester, (context) {
-        fromLibrary =
-            editorRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoEditorScreen.pathFor(fromLibrary: true),
-                    pathParameters: const {},
-                  ),
-                )
-                as VideoEditorScreen;
-        fromRecorder =
-            editorRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoEditorScreen.pathFor(),
-                    pathParameters: const {},
-                  ),
-                )
-                as VideoEditorScreen;
+        fromLibrary = editorRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoEditorScreen.pathFor(fromLibrary: true),
+            pathParameters: const {},
+          ),
+        ) as VideoEditorScreen;
+        fromRecorder = editorRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoEditorScreen.pathFor(),
+            pathParameters: const {},
+          ),
+        ) as VideoEditorScreen;
         // The map extra this route used to read is no longer consulted, so a
         // restored session cannot resurrect a half-migrated origin (#3335).
-        legacyExtra =
-            editorRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoEditorScreen.path,
-                    pathParameters: const {},
-                    extra: const <Object?, Object?>{'fromLibrary': true},
-                  ),
-                )
-                as VideoEditorScreen;
-        draft =
-            draftRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoEditorScreen.pathFor(
-                      draftId: 'draft-1',
-                      fromLibrary: true,
-                    ),
-                    pathParameters: const {'draftId': 'draft-1'},
-                  ),
-                )
-                as VideoEditorScreen;
+        legacyExtra = editorRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoEditorScreen.path,
+            pathParameters: const {},
+            extra: const <Object?, Object?>{'fromLibrary': true},
+          ),
+        ) as VideoEditorScreen;
+        draft = draftRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoEditorScreen.pathFor(
+              draftId: 'draft-1',
+              fromLibrary: true,
+            ),
+            pathParameters: const {'draftId': 'draft-1'},
+          ),
+        ) as VideoEditorScreen;
       });
 
       expect(fromLibrary.fromLibrary, isTrue);
@@ -216,37 +204,31 @@ void main() {
       late VideoMetadataScreen unsupported;
 
       await _buildWithContext(tester, (context) {
-        capture =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoMetadataScreen.pathForDraft(
-                      isStopMotion: false,
-                    ),
-                    pathParameters: const {},
-                  ),
-                )
-                as VideoMetadataScreen;
-        stopMotion =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: VideoMetadataScreen.pathForDraft(
-                      isStopMotion: true,
-                    ),
-                    pathParameters: const {},
-                  ),
-                )
-                as VideoMetadataScreen;
-        unsupported =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '${VideoMetadataScreen.path}?mode=upload',
-                    pathParameters: const {},
-                  ),
-                )
-                as VideoMetadataScreen;
+        capture = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoMetadataScreen.pathForDraft(
+              isStopMotion: false,
+            ),
+            pathParameters: const {},
+          ),
+        ) as VideoMetadataScreen;
+        stopMotion = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: VideoMetadataScreen.pathForDraft(
+              isStopMotion: true,
+            ),
+            pathParameters: const {},
+          ),
+        ) as VideoMetadataScreen;
+        unsupported = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '${VideoMetadataScreen.path}?mode=upload',
+            pathParameters: const {},
+          ),
+        ) as VideoMetadataScreen;
       });
 
       expect(capture.draftMode, VideoRecorderMode.capture);
@@ -269,44 +251,36 @@ void main() {
       late SubtitleEditorScreen subtitleNoExtra;
 
       await _buildWithContext(tester, (context) {
-        metadata =
-            metadataRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/video-edit/video-1',
-                    pathParameters: const {'videoId': 'video-1'},
-                    extra: const <Object?, Object?>{'id': 'video-1'},
-                  ),
-                )
-                as VideoMetadataEditScreen;
-        subtitle =
-            subtitleRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/subtitle-edit/video-1',
-                    pathParameters: const {'videoId': 'video-1'},
-                    extra: const <Object?, Object?>{'id': 'video-1'},
-                  ),
-                )
-                as SubtitleEditorScreen;
-        metadataNoExtra =
-            metadataRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/video-edit/video-1',
-                    pathParameters: const {'videoId': 'video-1'},
-                  ),
-                )
-                as VideoMetadataEditScreen;
-        subtitleNoExtra =
-            subtitleRoute.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/subtitle-edit/video-1',
-                    pathParameters: const {'videoId': 'video-1'},
-                  ),
-                )
-                as SubtitleEditorScreen;
+        metadata = metadataRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/video-edit/video-1',
+            pathParameters: const {'videoId': 'video-1'},
+            extra: const <Object?, Object?>{'id': 'video-1'},
+          ),
+        ) as VideoMetadataEditScreen;
+        subtitle = subtitleRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/subtitle-edit/video-1',
+            pathParameters: const {'videoId': 'video-1'},
+            extra: const <Object?, Object?>{'id': 'video-1'},
+          ),
+        ) as SubtitleEditorScreen;
+        metadataNoExtra = metadataRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/video-edit/video-1',
+            pathParameters: const {'videoId': 'video-1'},
+          ),
+        ) as VideoMetadataEditScreen;
+        subtitleNoExtra = subtitleRoute.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/subtitle-edit/video-1',
+            pathParameters: const {'videoId': 'video-1'},
+          ),
+        ) as SubtitleEditorScreen;
       });
 
       expect(metadata.videoId, 'video-1');

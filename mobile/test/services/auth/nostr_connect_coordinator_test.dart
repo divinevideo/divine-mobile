@@ -56,13 +56,12 @@ void main() {
       onConnectFailed: connectFailedErrors.add,
       onWaitStarted: () => waitStartedCalls++,
       onWaitFailed: () => waitFailedCalls++,
-      reportError:
-          (
-            error,
-            stack, {
-            required String reason,
-            required String logMessage,
-          }) => reportedReasons.add(reason),
+      reportError: (
+        error,
+        stack, {
+        required String reason,
+        required String logMessage,
+      }) => reportedReasons.add(reason),
       sessionFactory: (relays) {
         createdRelays = relays;
         return session;

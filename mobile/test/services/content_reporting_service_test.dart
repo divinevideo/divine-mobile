@@ -1603,8 +1603,7 @@ void main() {
 
         final _ = await service.reportContent(
           eventId: 'user_not_a_real_event_id',
-          authorPubkey:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          authorPubkey: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
           reason: ContentFilterReason.other,
           details: 'User-only report preserved for local history',
         );

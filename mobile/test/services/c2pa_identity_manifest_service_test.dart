@@ -61,36 +61,38 @@ void main() {
       },
     );
 
-    test('includes creator binding and final cawg assertions when available', () {
-      final result = service.buildCreatedVideoManifest(
-        claimGenerator: 'DiVine/1.0',
-        title: 'test.mp4',
-        sourceType: DigitalSourceType.digitalCapture,
-        creatorBindingAssertion: const NostrCreatorBindingAssertion(
-          assertionLabel: 'video.divine.nostr.creator_binding',
-          payloadJson:
-              '{"version":1,"pubkey":"abc","sig_alg":"nostr.secp256k1","created_at":"2026-03-29T08:30:00.000Z","claims":{},"referenced_assertions":["c2pa.hash.data"],"hard_binding":{"alg":"sha256","value":"deadbeef"},"signature":"cafebabe"}',
-          signature: 'cafebabe',
-          pubkey: 'abc',
-        ),
-        cawgIdentityAssertion: const <String, dynamic>{
-          'issuer': 'verifyer.divine.video',
-          'verified_claims': <Map<String, String>>[
-            <String, String>{'type': 'nip05', 'value': 'alice@example.com'},
-          ],
-        },
-      );
+    test(
+      'includes creator binding and final cawg assertions when available',
+      () {
+        final result = service.buildCreatedVideoManifest(
+          claimGenerator: 'DiVine/1.0',
+          title: 'test.mp4',
+          sourceType: DigitalSourceType.digitalCapture,
+          creatorBindingAssertion: const NostrCreatorBindingAssertion(
+            assertionLabel: 'video.divine.nostr.creator_binding',
+            payloadJson: '{"version":1,"pubkey":"abc","sig_alg":"nostr.secp256k1","created_at":"2026-03-29T08:30:00.000Z","claims":{},"referenced_assertions":["c2pa.hash.data"],"hard_binding":{"alg":"sha256","value":"deadbeef"},"signature":"cafebabe"}',
+            signature: 'cafebabe',
+            pubkey: 'abc',
+          ),
+          cawgIdentityAssertion: const <String, dynamic>{
+            'issuer': 'verifyer.divine.video',
+            'verified_claims': <Map<String, String>>[
+              <String, String>{'type': 'nip05', 'value': 'alice@example.com'},
+            ],
+          },
+        );
 
-      final json = jsonDecode(result.manifestJson) as Map<String, dynamic>;
-      final assertions = json['assertions'] as List<dynamic>;
-      final labels = assertions
-          .map((assertion) => (assertion as Map<String, dynamic>)['label'])
-          .toList();
+        final json = jsonDecode(result.manifestJson) as Map<String, dynamic>;
+        final assertions = json['assertions'] as List<dynamic>;
+        final labels = assertions
+            .map((assertion) => (assertion as Map<String, dynamic>)['label'])
+            .toList();
 
-      expect(result.requiresAdvancedEmbedding, isFalse);
-      expect(labels, contains('video.divine.nostr.creator_binding'));
-      expect(labels, contains('cawg.identity'));
-    });
+        expect(result.requiresAdvancedEmbedding, isFalse);
+        expect(labels, contains('video.divine.nostr.creator_binding'));
+        expect(labels, contains('cawg.identity'));
+      },
+    );
 
     test(
       'omits cawg overlay when verifier output is absent and flags advanced path '
@@ -102,8 +104,7 @@ void main() {
           sourceType: DigitalSourceType.digitalCapture,
           creatorBindingAssertion: const NostrCreatorBindingAssertion(
             assertionLabel: 'video.divine.nostr.creator_binding',
-            payloadJson:
-                '{"version":1,"pubkey":"abc","sig_alg":"nostr.secp256k1","created_at":"2026-03-29T08:30:00.000Z","claims":{},"referenced_assertions":["c2pa.hash.data"],"hard_binding":{"alg":"sha256","value":"deadbeef"},"signature":"cafebabe"}',
+            payloadJson: '{"version":1,"pubkey":"abc","sig_alg":"nostr.secp256k1","created_at":"2026-03-29T08:30:00.000Z","claims":{},"referenced_assertions":["c2pa.hash.data"],"hard_binding":{"alg":"sha256","value":"deadbeef"},"signature":"cafebabe"}',
             signature: 'cafebabe',
             pubkey: 'abc',
           ),

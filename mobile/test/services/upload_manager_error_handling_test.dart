@@ -942,14 +942,12 @@ void main() {
         expect(
           failedUpload.retryCount,
           equals(0),
-          reason:
-              'auto-attempts must not mutate retryCount — it is the manual-retry budget',
+          reason: 'auto-attempts must not mutate retryCount — it is the manual-retry budget',
         );
         expect(
           failedUpload.canRetry,
           isTrue,
-          reason:
-              'user must still be able to manually retry after auto-retry exhaustion',
+          reason: 'user must still be able to manually retry after auto-retry exhaustion',
         );
 
         // Verify retryUpload() actually re-activates the upload and does not

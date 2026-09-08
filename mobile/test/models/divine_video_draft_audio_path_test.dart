@@ -191,8 +191,7 @@ void main() {
       final draft = _draft().copyWith(
         selectedSound: AudioEvent(
           id: 'sound-id-1234567890123456789012345678901234567890123456789012',
-          pubkey:
-              'abc123def456789012345678901234567890123456789012345678901234abcd',
+          pubkey: 'abc123def456789012345678901234567890123456789012345678901234abcd',
           createdAt: 1700000000,
           url: 'https://blossom.example/audio.aac',
         ),

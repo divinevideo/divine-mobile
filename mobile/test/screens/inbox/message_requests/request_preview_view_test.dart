@@ -66,8 +66,7 @@ void main() {
   const fallbackInvite = CollaboratorInvite(
     messageId:
         'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-    videoAddress:
-        '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
+    videoAddress: '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
     videoKind: 34236,
     creatorPubkey: otherPubkey,
     videoDTag: 'skate-loop',
@@ -782,8 +781,7 @@ void main() {
           senderPubkey: otherPubkey,
           content: 'You were invited to collaborate.',
           createdAt: 1700000000,
-          giftWrapId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          giftWrapId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           tags: [
             ['divine', 'collab-invite'],
             [
@@ -853,8 +851,7 @@ void main() {
           senderPubkey: currentPubkey,
           content: 'You were invited to collaborate.',
           createdAt: 1700000000,
-          giftWrapId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          giftWrapId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           tags: [
             ['divine', 'collab-invite'],
             [

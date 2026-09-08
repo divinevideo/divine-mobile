@@ -782,9 +782,9 @@ void main() {
           }
 
           final prefs = await SharedPreferences.getInstance();
-          final persisted =
-              jsonDecode(prefs.getString('content_filter_prefs')!)
-                  as Map<String, dynamic>;
+          final persisted = jsonDecode(
+            prefs.getString('content_filter_prefs')!,
+          ) as Map<String, dynamic>;
           expect(persisted['drugs'], equals('hide'));
           expect(persisted['violence'], equals('hide'));
           expect(persisted['ai-generated'], equals('hide'));

@@ -2,6 +2,7 @@
 // ABOUTME: Supports all event types used in OpenVine with proper tag structures
 
 import 'dart:convert';
+
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// Builder class for creating test Nostr events

@@ -437,8 +437,7 @@ void main() {
           eventId: 'viewer-event',
         );
         final mutual = UserProfile(
-          pubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           name: 'Mutual',
           rawData: const {'name': 'Mutual'},
           createdAt: DateTime.now(),
@@ -536,8 +535,7 @@ void main() {
           eventId: 'viewer-event',
         );
         final mutual = UserProfile(
-          pubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           name: 'Mutual',
           rawData: const {'name': 'Mutual'},
           createdAt: DateTime.now(),
@@ -1343,8 +1341,7 @@ void main() {
           eventId: 'viewer-event',
         );
         final other = UserProfile(
-          pubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           name: 'Other',
           rawData: const {'name': 'Other'},
           createdAt: DateTime.now(),

@@ -2,6 +2,7 @@
 // ABOUTME: Uses Firebase Crashlytics to capture and report crashes from TestFlight/production
 
 import 'dart:async';
+
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -11,8 +12,9 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// One call against Crashlytics, held until [CrashReportingService.initialize]
 /// has decided whether Crashlytics exists.
-typedef _CrashlyticsCall =
-    Future<void> Function(FirebaseCrashlytics crashlytics);
+typedef _CrashlyticsCall = Future<void> Function(
+  FirebaseCrashlytics crashlytics,
+);
 
 /// Whether Crashlytics can take a call right now.
 enum _Readiness {

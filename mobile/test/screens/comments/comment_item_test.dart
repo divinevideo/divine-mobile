@@ -272,10 +272,8 @@ void main() {
         .withContent('Ferns')
         .build()
         .copyWith(
-          videoUrl:
-              'https://media.divine.video/6ab6f26428369761ff7fda84166f5dc4981d93d43370c30171d74b036286b020',
-          thumbnailUrl:
-              'https://media.divine.video/748855341e45388bc6a2aeacccc68161b8da4a817b11b1e7527423582ec6d42b',
+          videoUrl: 'https://media.divine.video/6ab6f26428369761ff7fda84166f5dc4981d93d43370c30171d74b036286b020',
+          thumbnailUrl: 'https://media.divine.video/748855341e45388bc6a2aeacccc68161b8da4a817b11b1e7527423582ec6d42b',
           videoDimensions: '1080x1920',
           videoDuration: 6,
           videoBlurhash:

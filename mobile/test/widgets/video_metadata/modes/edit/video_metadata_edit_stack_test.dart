@@ -50,8 +50,7 @@ Widget _buildSubject(SharedPreferences preferences) {
       home: VideoMetadataEditStack(
         video: VideoEvent(
           id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          pubkey:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           createdAt: 1757385263,
           content: 'Description',
           timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),

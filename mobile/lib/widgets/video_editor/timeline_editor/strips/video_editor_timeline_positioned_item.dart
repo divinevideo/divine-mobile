@@ -395,15 +395,13 @@ class _TrimmableOverlayTileState extends State<_TrimmableOverlayTile> {
         : null;
     final posMs = _leftSnap.update(rawStartMs, snapPoints);
 
-    final clampedMs =
-        posMs.clamp(
-              0,
-              math.max(
-                widget.totalDuration.inMilliseconds,
-                _rightSnap.originMs,
-              ),
-            )
-            as int;
+    final clampedMs = posMs.clamp(
+      0,
+      math.max(
+        widget.totalDuration.inMilliseconds,
+        _rightSnap.originMs,
+      ),
+    ) as int;
 
     final atMinTrim =
         (_rightSnap.originMs - clampedMs) <
