@@ -19,7 +19,8 @@ part 'chroma_key_editor_state.dart';
 ///
 /// Injected so tests can supply a measurement without decoding a frame; in the
 /// app it is [ChromaKey.detect], which samples a ring around the frame border
-/// through the thumbnail pipeline — one decode, no render.
+/// through the thumbnail pipeline — a metadata call, three thumbnails from a
+/// quarter, half and three quarters through, and a decode each. No render.
 typedef ChromaKeyDetectFn =
     Future<ChromaKeyDetection> Function(EditorVideo video);
 
@@ -57,10 +58,11 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
        super(
          ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey),
        ) {
-    // Measuring beats guessing and costs one thumbnail decode, so the screen
-    // opens on a real cutout — or on the reason there isn't one — instead of
-    // an inert panel the user has to know to poke. A clip that already has a
-    // key keeps it: re-measuring would throw the user's tuning away.
+    // Measuring beats guessing, at a metadata round trip and three decoded
+    // thumbnails, so the screen opens on a real cutout — or on the reason
+    // there isn't one — instead of an inert panel the user has to know to
+    // poke. A clip that already has a key keeps it: re-measuring would throw
+    // the user's tuning away.
     if (detectOnOpen && initialChromaKey == null) {
       unawaited(detectFromFootage());
     }
