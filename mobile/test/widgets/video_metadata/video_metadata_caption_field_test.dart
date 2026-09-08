@@ -73,6 +73,7 @@ void main() {
   Future<ProviderContainer> pumpField(
     WidgetTester tester, {
     bool enableMentionAutocomplete = true,
+    bool dismissKeyboardOnDrag = false,
   }) async {
     final container = ProviderContainer(
       overrides: [
@@ -83,6 +84,17 @@ void main() {
     );
     addTearDown(container.dispose);
 
+    final form = Column(
+      children: [
+        VideoMetadataCaptionField(
+          controller: controller,
+          focusNode: focusNode,
+          enableMentionAutocomplete: enableMentionAutocomplete,
+        ),
+        const TextField(key: Key('other-field')),
+      ],
+    );
+
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -90,16 +102,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: Column(
-              children: [
-                VideoMetadataCaptionField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  enableMentionAutocomplete: enableMentionAutocomplete,
-                ),
-                const TextField(key: Key('other-field')),
-              ],
-            ),
+            // The capture and classic stacks host this field inside a
+            // dismiss-on-drag scroll view.
+            body: dismissKeyboardOnDrag
+                ? SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: form,
+                  )
+                : form,
           ),
         ),
       ),
@@ -207,6 +218,55 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(MentionOverlay), findsNothing);
+        await flushAutosaveDebounce(tester);
+      });
+
+      testWidgets('keeps the list open while its suggestions are scrolled', (
+        tester,
+      ) async {
+        // Enough followed accounts to overflow the overlay's 240px cap, so
+        // the inner list can actually scroll.
+        final pubkeys = [for (var i = 0; i < 8; i++) '$i' * 64];
+        when(() => followRepository.followingPubkeys).thenReturn(pubkeys);
+        when(
+          () => profileRepository.getCachedProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            for (var i = 0; i < pubkeys.length; i++)
+              _profile(pubkeys[i], 'OG-AB$i'),
+          ],
+        );
+
+        await pumpField(tester, dismissKeyboardOnDrag: true);
+
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(MentionOverlay), findsOneWidget);
+
+        ScrollPosition suggestionScroll() => tester
+            .state<ScrollableState>(
+              find.descendant(
+                of: find.byType(MentionOverlay),
+                matching: find.byType(Scrollable),
+              ),
+            )
+            .position;
+
+        // Positive control: without room to scroll, the drag below would
+        // prove nothing.
+        expect(suggestionScroll().maxScrollExtent, greaterThan(0));
+
+        await tester.drag(find.byType(ListView), const Offset(0, -60));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MentionOverlay), findsOneWidget);
+        expect(suggestionScroll().pixels, greaterThan(0));
+
         await flushAutosaveDebounce(tester);
       });
 

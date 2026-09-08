@@ -34,34 +34,43 @@ class MentionOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (suggestions.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 240),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: context.vineColors.card,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: VineTheme.backgroundColor.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+    // The capture and classic metadata stacks host this overlay inside a
+    // SingleChildScrollView using ScrollViewKeyboardDismissBehavior.onDrag,
+    // whose listener unfocuses on any ScrollUpdateNotification without
+    // checking notification.depth. Absorbing the inner list's updates keeps
+    // a drag on the suggestions from unfocusing the caption field, which
+    // would clear the list mid-drag.
+    return NotificationListener<ScrollUpdateNotification>(
+      onNotification: (_) => true,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 240),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: context.vineColors.card,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: VineTheme.backgroundColor.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            itemCount: suggestions.length,
+            itemBuilder: (context, index) {
+              return _MentionSuggestionItem(
+                suggestion: suggestions[index],
+                canSelect: canSelect,
+                onSelect: (displayName) =>
+                    onSelect(suggestions[index].pubkey, displayName),
+              );
+            },
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: ListView.builder(
-          shrinkWrap: true,
-          padding: EdgeInsets.zero,
-          itemCount: suggestions.length,
-          itemBuilder: (context, index) {
-            return _MentionSuggestionItem(
-              suggestion: suggestions[index],
-              canSelect: canSelect,
-              onSelect: (displayName) =>
-                  onSelect(suggestions[index].pubkey, displayName),
-            );
-          },
         ),
       ),
     );
