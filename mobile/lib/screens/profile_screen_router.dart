@@ -400,15 +400,6 @@ class _MeProfileRedirect extends ConsumerWidget {
       videoIndex: videoIndex,
     );
 
-    if (!authService.isAuthenticated ||
-        authService.currentPublicKeyHex == null) {
-      // Not authenticated - redirect to home
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go(redirectPath);
-      });
-      return const Center(child: DivineCircularProgressIndicator());
-    }
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.go(redirectPath);
     });
