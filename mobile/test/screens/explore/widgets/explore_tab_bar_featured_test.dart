@@ -45,10 +45,11 @@ void main() {
       WidgetTester tester,
       ExploreTabsState tabsState, {
       Locale? locale,
+      ThemeData? theme,
     }) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: VineTheme.theme,
+          theme: theme ?? VineTheme.theme,
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -167,6 +168,29 @@ void main() {
         );
       },
     );
+
+    testWidgets('tints the pill from the active appearance, not the dark one', (
+      tester,
+    ) async {
+      // The pill reads adaptive context.vineColors, so pinning only the dark
+      // values would stay green if it were switched to VineTheme.darkColors —
+      // pixel-identical in dark, and dark-on-dark in light.
+      await pumpBar(
+        tester,
+        ExploreTabsState(featuredTab: _featured()),
+        theme: VineTheme.lightTheme,
+      );
+
+      expect(
+        VineTheme.lightColors.accentChipYellow.onContainer,
+        isNot(VineTheme.darkColors.accentChipYellow.onContainer),
+        reason: 'the appearances must differ for this test to mean anything',
+      );
+      expect(
+        _pillTextColor(tester, 'Skate Week'),
+        equals(VineTheme.lightColors.accentChipYellow.onContainer),
+      );
+    });
 
     testWidgets('tints the pill pink when a sponsor is configured', (
       tester,
