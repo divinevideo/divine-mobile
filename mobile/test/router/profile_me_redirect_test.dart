@@ -8,7 +8,7 @@ import '../helpers/test_pubkeys.dart';
 
 void main() {
   group('Profile /me/ redirect', () {
-    test('resolves the feed index to the current user npub', () {
+    test('resolves index 0 to the first video of the profile feed', () {
       expect(
         ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
@@ -19,7 +19,7 @@ void main() {
       );
     });
 
-    test('resolves the grid index to the current user npub', () {
+    test('preserves a non-zero video index', () {
       expect(
         ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
@@ -30,7 +30,7 @@ void main() {
       );
     });
 
-    test('preserves the profile route when no video index is present', () {
+    test('resolves a null video index to the profile grid', () {
       expect(
         ProfileScreenRouter.meProfileRedirectPath(
           isAuthenticated: true,
