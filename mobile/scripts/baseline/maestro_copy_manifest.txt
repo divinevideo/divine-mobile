@@ -31,8 +31,6 @@ authSignInButton	e2e/maestro/asserts/assertSignIn.yaml	bound:Sign in
 authSignInButton	e2e/maestro/flows/loginEmailPwd.yaml	bound:Sign in
 authSignInWithAmber	e2e/maestro/asserts/assertSignIn.yaml	bound:Sign in with Amber
 authTermsOfService	e2e/maestro/asserts/assertLogin.yaml	bound:Terms of Service
-authUseDivineNoBackup	e2e/maestro/tests/loginFreshInstall.yaml	bound:Use Divine with no backup
-authUseThisDeviceOnly	e2e/maestro/tests/loginFreshInstall.yaml	bound:Use this device only
 blossomSaveTooltip	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Save
 blossomSaveTooltip	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Save
 commentOptionsTitle	e2e/maestro/asserts/assertCommentsOptions.yaml	bound:Options

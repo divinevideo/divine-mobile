@@ -22,8 +22,10 @@ tags:
 # written. The id is the same on both branches.
 - tapOn:
     id: "create_account_button"
-- tapOn: Use Divine with no backup
-- tapOn: Use this device only
+- tapOn:
+    id: "use_without_backup_button"
+- tapOn:
+    id: "use_device_only_button"
 
 # 3. Wait for the authenticated shell without waiting for every loading
 # animation. The empty-following redirect normally lands on Explore, but it is

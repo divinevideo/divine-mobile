@@ -1,0 +1,24 @@
+appId: co.openvine.app.staging
+name: PR smoke - seeded video playback
+tags:
+  - pr-smoke
+  - video
+---
+- assertTrue: ${typeof QA_VIDEO_EVENT_ID !== 'undefined' && QA_VIDEO_EVENT_ID !== ''}
+- openLink: "divine:///video/${QA_VIDEO_EVENT_ID}"
+- extendedWaitUntil:
+    notVisible:
+      id: "video_detail_loading"
+    timeout: 30000
+- runFlow: ../asserts/assertVideoPlayback.yaml
+
+# Leave the app back on the tab shell. `/video/:id` is a top-level route
+# outside the StatefulShellRoute, so while this takeover is open the bottom
+# nav is not on screen -- and removeKeys, which Codemagic runs straight after
+# this file, opens Settings by tapping profile_tab.
+- tapOn:
+    id: "back_button"
+- extendedWaitUntil:
+    visible:
+      id: "profile_tab"
+    timeout: 30000

@@ -18,6 +18,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -141,10 +142,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          inviteAccessGrant: grant,
-          analyticsService: analytics,
-        ),
+        createTestWidget(inviteAccessGrant: grant, analyticsService: analytics),
       );
       await tester.pump();
 
@@ -242,6 +240,22 @@ void main() {
           find.widgetWithText(TextButton, 'Use Divine with no backup'),
           findsOneWidget,
         );
+        // The identifier has to sit on the node that also announces and
+        // activates the button. A bare Semantics wrapper over a TextButton
+        // yields a separate, non-focusable node that iOS never exposes as an
+        // accessibility element, so `find.bySemanticsIdentifier` alone would
+        // stay green while Maestro's `tapOn: id:` found nothing on device.
+        expect(
+          tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.authUseWithoutBackupButton),
+          ),
+          isSemantics(
+            identifier: SemanticIds.authUseWithoutBackupButton,
+            label: 'Use Divine with no backup',
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
       });
 
       testWidgets('displays dog sticker', (tester) async {
@@ -276,6 +290,17 @@ void main() {
         expect(
           find.widgetWithText(TextButton, 'Use this device only'),
           findsOneWidget,
+        );
+        expect(
+          tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.authUseDeviceOnlyButton),
+          ),
+          isSemantics(
+            identifier: SemanticIds.authUseDeviceOnlyButton,
+            label: 'Use this device only',
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
       });
 
@@ -431,10 +456,7 @@ void main() {
           );
           await tester.enterText(
             find.descendant(
-              of: find.widgetWithText(
-                DivineAuthTextField,
-                'Confirm password',
-              ),
+              of: find.widgetWithText(DivineAuthTextField, 'Confirm password'),
               matching: find.byType(TextField),
             ),
             'SecurePass123!',
@@ -534,10 +556,7 @@ void main() {
           );
           await tester.enterText(
             find.descendant(
-              of: find.widgetWithText(
-                DivineAuthTextField,
-                'Confirm password',
-              ),
+              of: find.widgetWithText(DivineAuthTextField, 'Confirm password'),
               matching: find.byType(TextField),
             ),
             'SecurePass123!',

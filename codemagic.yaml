@@ -847,7 +847,10 @@ definitions:
         maestro "$@" test \
           --format junit \
           --output report.xml \
-          e2e/maestro/tests/loginFreshInstall.yaml \
+          -e QA_VIDEO_EVENT_ID="$QA_VIDEO_EVENT_ID" \
+          e2e/maestro/tests/prLaunchReady.yaml \
+          e2e/maestro/tests/prAuthenticateHome.yaml \
+          e2e/maestro/tests/prSeededVideoPlayback.yaml \
           e2e/maestro/tests/removeKeys.yaml
       # Script-level, not workflow-level: Codemagic rejects `test_report` as an
       # unknown workflow field ("extra fields not permitted").
@@ -1392,11 +1395,17 @@ workflows:
   e2e-smoke-ios:
     name: E2E Smoke Tests (iOS)
     working_directory: mobile
-    # Two green runs measured 12 min and 15m42s end to end (builds 6a7bb0d4
-    # and 6a7d30c1); the spread is cache warmth. 25 covers the slower one with
-    # room to spare while still stopping a hung Maestro driver from billing the
-    # hour the previous 60 allowed — a hang is what 60 actually cost us
-    # (build 6a7d2a83).
+    # A hang-stopper, not a performance gate — those are separate numbers and
+    # only one of them belongs here. Two green runs of the PREVIOUS lane
+    # measured 12 min and 15m42s end to end (builds 6a7bb0d4 and 6a7d30c1),
+    # and this lane does strictly more than that one: prAuthenticateHome still
+    # runs the whole of loginFreshInstall, on top of an extra clean launch and
+    # the video journey. A cap near the slow measurement would turn cache
+    # warmth into a red PR, which is the infrastructure noise this lane exists
+    # to remove. 25 leaves that headroom while still stopping a hung Maestro
+    # driver from billing the hour the previous 60 allowed (build 6a7d2a83).
+    # Speed is governed by the promotion bar instead: p95 below 15 minutes
+    # over the observation window before this becomes a required check.
     max_build_duration: 25
     instance_type: mac_mini_m2
     environment:
@@ -1416,6 +1425,10 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Immutable public Nostr event used only to prove the detail route can
+        # resolve and render playback chrome. Never replace this with a private
+        # account credential or mutable search result.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1441,6 +1454,8 @@ workflows:
       changeset:
         includes:
           - mobile/
+        excludes:
+          - mobile/**/*.md
     scripts:
       - *check_signing_endpoint
       - *check_supporters_config
@@ -1481,6 +1496,13 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Same fixture as the iOS lane, and it has to be: both workflows run
+        # the shared *run_maestro_smoke_tests script, which passes
+        # `-e QA_VIDEO_EVENT_ID`. Leaving it unset here expands to an empty
+        # string under `set -e` (no `set -u`), which fails prSeededVideoPlayback
+        # on every dispatched Android run. The contract test pins the two
+        # values as equal so they cannot drift.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/.gradle/caches
