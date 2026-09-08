@@ -6,6 +6,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+/// One detector invocation: its process result, the parsed $GITHUB_OUTPUT,
+/// and the argument line of every `gh` call it made.
+typedef DetectorRun = ({
+  ProcessResult result,
+  Map<String, String> outputs,
+  List<String> ghCalls,
+});
+
 void main() {
   group('detect_mobile_ci_scope.sh', () {
     late Directory sandbox;
@@ -31,6 +39,10 @@ void main() {
           r'''
 set -euo pipefail
 
+if [ -n "${FAKE_GH_LOG:-}" ]; then
+  printf '%s\n' "$*" >> "$FAKE_GH_LOG"
+fi
+
 emit_files() {
   if [ -n "${FAKE_CHANGED_FILES:-}" ]; then
     printf '%s\n' "$FAKE_CHANGED_FILES"
@@ -52,17 +64,19 @@ esac
       if (sandbox.existsSync()) sandbox.deleteSync(recursive: true);
     });
 
-    ({ProcessResult result, Map<String, String> outputs}) runDetector({
+    DetectorRun runDetector({
       required String event,
       List<String> changedFiles = const [],
       int changedTotal = 0,
       String pushBeforeSha = 'push-before',
       String pushAfterSha = 'push-after',
     }) {
+      final ghLogPath = p.join(sandbox.path, 'gh-calls');
       final result = Process.runSync(
         'bash',
         [scriptPath],
         environment: {
+          'FAKE_GH_LOG': ghLogPath,
           'PATH':
               '${p.join(sandbox.path, 'bin')}:${Platform.environment['PATH']}',
           'GITHUB_EVENT_NAME': event,
@@ -90,11 +104,18 @@ esac
           }
         }
       }
-      return (result: result, outputs: outputs);
+      final ghLog = File(ghLogPath);
+      return (
+        result: result,
+        outputs: outputs,
+        ghCalls: ghLog.existsSync()
+            ? ghLog.readAsLinesSync()
+            : const <String>[],
+      );
     }
 
     void expectScope(
-      ({ProcessResult result, Map<String, String> outputs}) run, {
+      DetectorRun run, {
       required bool app,
       required bool native,
       Map<String, bool> also = const {},
@@ -332,7 +353,38 @@ esac
       );
     });
 
-    test('push classifies the actual before/after comparison', () {
+    test('push compares github.event.before against github.sha', () {
+      // The compared range is the whole point of the push path, and nothing
+      // else observes it: the fake gh answers any /compare/ URL, so swapping
+      // the two SHAs, or passing the merge-group pair instead, produces an
+      // identical $GITHUB_OUTPUT. In production a reversed range three-dot
+      // resolves to before-vs-before, returns 0 files, and falls open to
+      // every scope on every merge to main — green, and silently the
+      // opposite of what this PR is for.
+      final run = runDetector(
+        event: 'push',
+        changedFiles: ['mobile/lib/main.dart'],
+      );
+
+      expect(
+        run.ghCalls.singleWhere((call) => call.contains('/compare/')),
+        contains('/compare/push-before...push-after'),
+      );
+      expectScope(
+        run,
+        app: true,
+        native: false,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'service': true,
+          'smoke': true,
+        },
+      );
+    });
+
+    test('push classifies a docs-only merge as docs-only', () {
       expectScope(
         runDetector(event: 'push', changedFiles: ['docs/release-notes.md']),
         app: false,
