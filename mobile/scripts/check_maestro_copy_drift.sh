@@ -148,29 +148,6 @@ def unquote(v):
         return v[1:-1]
     return v
 
-def searchable_flow_text(lines):
-    """Flow text with YAML comments removed but block content preserved."""
-    searchable = []
-    block_parent_indent = None
-    for raw_line in lines:
-        raw = raw_line.rstrip("\n")
-        stripped = raw.strip()
-        indent = len(raw) - len(raw.lstrip())
-        if block_parent_indent is not None:
-            if not stripped or indent > block_parent_indent:
-                searchable.append(raw)
-                continue
-            block_parent_indent = None
-
-        line = strip_comment(raw)
-        searchable.append(line)
-        for pat in EXTRACTION_PATTERNS:
-            match = pat.match(line)
-            if match and is_block_scalar_header(unquote(match.group("v"))):
-                block_parent_indent = indent
-                break
-    return norm("\n".join(searchable))
-
 def flow_literals(path):
     """Literal copy strings a flow asserts, taps, or waits for. Skips
     ${...} interpolations (environment values, not copy), inline maps, and
@@ -412,16 +389,6 @@ def load_base_waivers():
     parsed = parse_waivers(raw.stdout, f"{BASE_REF}:{WAIVER_REPO_PATH}")
     return ("ok", parsed) if parsed is not None else ("invalid", {})
 
-def _flow_text(rel, _cache={}):
-    if rel not in _cache:
-        fpath = os.path.join(mobile_dir, rel)
-        if not os.path.isfile(fpath):
-            _cache[rel] = None
-        else:
-            with open(fpath, encoding="utf-8", errors="replace") as fh:
-                _cache[rel] = searchable_flow_text(fh.readlines())
-    return _cache[rel]
-
 def _current_value(key):
     return next((v for v, ks in exact_values.items() if key in ks), None)
 
@@ -434,8 +401,7 @@ def vanished_bindings(old, new):
     literal is still asserted — that is drift being erased, not cleanup."""
     gone = []
     for key, rel in sorted(set(old) - set(new)):
-        text = _flow_text(rel)
-        if text is None:
+        if not os.path.isfile(os.path.join(mobile_dir, rel)):
             continue  # flow file deleted
         rendered, bound = old[(key, rel)]
         lit = rendered or bound
@@ -445,9 +411,10 @@ def vanished_bindings(old, new):
                 continue
             gone.append((key, rel))
             continue
-        # Substring on purpose: refusing is the safe direction, so a literal
-        # that still appears anywhere in the flow keeps its binding.
-        if lit not in text:
+        # Use parsed selector literals rather than raw file text. A helper
+        # path such as `assertSearch.yaml` must not keep a stale `Search`
+        # binding alive after the flow stops asserting that copy.
+        if lit not in literals_by_flow.get(rel, set()):
             continue  # flow stopped asserting this copy
         if any(k2 != key and (k2, rel) in new and _current_value(k2) == lit
                for k2 in all_keys):

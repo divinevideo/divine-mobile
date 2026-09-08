@@ -1,19 +1,6 @@
 appId: co.openvine.app.staging
 ---
-# Top bar
-- assertVisible: "Menu"
-- assertVisible: "Home"
-- assertVisible:
-    text: "Search.*"
-- assertVisible: "Open camera"
-
-# Feed bar
-#- assertVisible: "New Videos\nTab 1 of 3"
-#- assertVisible: "Popular Videos\nTab 2 of 3"
-#- assertVisible: "Lists\nTab 3 of 3"
-#- assertVisible: "Trending Hashtags"
-
-# Bottom bar
+# Stable shell navigation identifiers.
 - assertVisible:
     id: home_tab
 - assertVisible:

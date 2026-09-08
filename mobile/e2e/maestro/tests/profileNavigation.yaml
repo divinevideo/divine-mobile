@@ -1,60 +1,25 @@
 appId: co.openvine.app.staging
-env:
-  DISPLAY_NAME: "AutomationUser"
-  BIO: "AutomationUser bio"
-  USERNAME: "Automation User"
 ---
-#TC to browse the user profile,
-# given the user is logged in in the app with existing keys,
-# the profile navigation is verified
-#Steps:
-# 1. Tap on the profile icon: Validate profile page is displayed
-# 2. Tap on Edit profile: Edit modal is displayed
-# 3. Tap on anywhere on the screen: Validate modal is closed
-# 4. Tap on Library: The Library modal is displayed
-# 5. Tap on the back arrow: Profile screen is displayed
-# 6. Tap on More - the 3 dots: modal is displayed
-# 7. Tap on Share profile: OS modal is displayed
-# 8. Tap on close: Profile screen is displayed
-# 9. Tap on More, copy public key: "Public key copied to clipboard" is displayed
+# Verify the maintained own-profile and edit-profile journey. The previous
+# library labels, top-bar labels, and iOS-only share-sheet selectors described
+# surfaces that no longer exist consistently across platforms.
 
-# 1. Tap on the profile icon: Validate profile page is displayed
-- doubleTapOn:
+# Wait for a relaunch to restore the authenticated shell, then open profile.
+- extendedWaitUntil:
+    visible:
+      id: profile_tab
+    timeout: 30000
+- tapOn:
     id: profile_tab
-    delay: 100
 - runFlow: ../asserts/assertProfile.yaml
 
-# 2. Tap on Edit profile: Edit modal is displayed
-- tapOn: Edit
+# Open the profile editor through its stable action identifier.
+- tapOn:
+    id: edit_profile_button
 - runFlow: ../asserts/assertEditProfileModal.yaml
 
-# 3. Tap on Back: Validate modal is closed
-- tapOn: Back
-- assertNotVisible: "Edit Profile"
-
-# 4. Tap on Library: The Library modal is displayed
-- tapOn: Library
-- runFlow: ../asserts/assertLibraryScreen.yaml
-
-# 5. Tap on the back arrow: Profile screen is displayed
-- tapOn: Back
-- assertVisible: My Profile
-
-# 6. Tap on More - the 3 dots: modal is displayed
-- tapOn: More
-- assertVisible: Share profile
-- assertVisible: Copy public key (npub)
-
-# 7. Tap on Share profile: OS modal is displayed
-- tapOn: Share profile
-- assertVisible: User on Divine #To improve once tested on Android. For now it only validates the iOS menu
-
-# 8. Tap on close: Profile screen is displayed
+# Return to the own profile and prove the shell is restored.
 - tapOn:
-    id: UICloseButtonBackground
-- assertVisible: Refresh
-
-# 9. Tap on More, copy public key: "Public key copied to clipboard" is displayed
-- tapOn: More
-- tapOn: Copy public key (npub)
-- assertVisible: Public key copied to clipboard
+    id: back_button
+- assertVisible:
+    id: settings_button

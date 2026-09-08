@@ -137,15 +137,24 @@ abstract class SemanticIds {
   static String searchSectionHeader(String section) =>
       'search_section_header_$section';
 
+  /// Stable handle for a hashtag result without binding to localized copy.
+  static String searchTag(String tag) => 'search_tag_$tag';
+
   /// Ordinal handle for a People result row, alongside the pubkey-keyed
   /// `search_user_tile_<pubkey>` that the row itself carries.
   static String searchUserTileAt(int index) => 'search_user_tile_$index';
+
+  /// Ordinal handle for a video result in the search grid.
+  static String searchVideoTileAt(int index) => 'search_video_tile_$index';
 
   /// Comments sheet title. Doubles as the drag anchor: the sheet has no
   /// close button, so dismissing it means dragging the header down.
   static const String commentsSheetTitle = 'comments_sheet_title';
 
   static const String profileStatsRow = 'profile_stats_row';
+
+  /// Opens the sheet for the highest-priority incomplete profile action.
+  static const String profilePendingAction = 'profile_pending_action';
 
   /// Opens Settings from the own-profile header. This is the only entry
   /// point to Settings in the app, so it gates every E2E flow that ends in

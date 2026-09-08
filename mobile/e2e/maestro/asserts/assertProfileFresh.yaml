@@ -1,12 +1,19 @@
 appId: co.openvine.app.staging
 ---
-- assertVisible: Complete Your Profile
-- assertVisible: Add your name, bio, and picture to get started
-- assertVisible: Set up
-
+- assertVisible:
+    id: profile_pending_action
+- tapOn:
+    id: profile_pending_action
 - assertVisible: Secure Your Account
 - assertVisible: Add email & password to recover your account on any device
-- assertVisible: Register
+- assertVisible: Add Email & Password
+- tapOn: Maybe Later
+
+- assertVisible: Complete Your Profile
+- assertVisible: Add your name, bio, and picture to get started
+- assertVisible: Update Your Profile
+- tapOn: Maybe Later
+
 #assert other profile items:
 - runFlow: assertProfile.yaml
 
@@ -15,4 +22,4 @@ appId: co.openvine.app.staging
     optional: true
 - assertVisible: No videos yet
 - scroll
-- assertVisible: Share your first video to see it here
+- assertVisible: Your stage is set. Start posting and your videos will live here.

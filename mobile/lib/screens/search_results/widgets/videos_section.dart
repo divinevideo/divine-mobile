@@ -159,6 +159,7 @@ class _VideosGrid extends StatelessWidget {
         itemBuilder: (context, index) {
           return SearchVideoTile(
             video: videos[index],
+            index: index,
             onTap: () => onVideoTap(videos, index),
           );
         },
@@ -171,58 +172,68 @@ class _VideosGrid extends StatelessWidget {
 ///
 /// Used by [VideosSection] to render each result in the videos grid.
 class SearchVideoTile extends StatelessWidget {
-  const SearchVideoTile({required this.video, required this.onTap, super.key});
+  const SearchVideoTile({
+    required this.video,
+    required this.index,
+    required this.onTap,
+    super.key,
+  });
 
   final VideoEvent video;
+  final int index;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: Stack(
-          children: [
-            VideoThumbnailWidget(video: video),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.only(
-                  left: 8,
-                  right: 8,
-                  bottom: 6,
-                  top: 24,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [VineTheme.transparent, VineTheme.scrim80],
+    return Semantics(
+      identifier: SemanticIds.searchVideoTileAt(index),
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Stack(
+            children: [
+              VideoThumbnailWidget(video: video),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.only(
+                    left: 8,
+                    right: 8,
+                    bottom: 6,
+                    top: 24,
                   ),
-                ),
-                child: UserName.fromPubKey(
-                  video.pubkey,
-                  embeddedName: video.authorName,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: VineTheme.primaryText,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 3,
-                        color: VineTheme.scrim50,
-                      ),
-                    ],
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [VineTheme.transparent, VineTheme.scrim80],
+                    ),
+                  ),
+                  child: UserName.fromPubKey(
+                    video.pubkey,
+                    embeddedName: video.authorName,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: VineTheme.primaryText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 3,
+                          color: VineTheme.scrim50,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

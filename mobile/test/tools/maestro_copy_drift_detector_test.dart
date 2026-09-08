@@ -531,6 +531,61 @@ void main() {
       expect(res.stderr, contains('ERODED'));
     });
 
+    test('base-ref ratchet ignores literals found only in helper paths', () {
+      writeArb({'emojiPickerSearchHint': 'Search'});
+      writeFlow('tests/searchTags.yaml', '- tapOn: Search\n');
+      writeManifest(
+        'emojiPickerSearchHint\te2e/maestro/tests/searchTags.yaml'
+        '\tbound:Search\n',
+      );
+
+      expect(
+        Process.runSync('git', [
+          'init',
+          '-b',
+          'main',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          'add',
+          '.',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          '-c',
+          'user.name=test',
+          '-c',
+          'user.email=test@example.com',
+          'commit',
+          '-m',
+          'base',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+      expect(
+        Process.runSync('git', [
+          'switch',
+          '-c',
+          'branch',
+        ], workingDirectory: tmp.path).exitCode,
+        0,
+      );
+
+      writeFlow(
+        'tests/searchTags.yaml',
+        '- runFlow: ../asserts/assertSearch.yaml\n',
+      );
+      writeManifest('# branch removed the obsolete copy binding\n');
+
+      final res = run(baseRef: 'main', allowNoBase: false);
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+    });
+
     test('fails closed when the base ref cannot be loaded', () {
       writeArb({'settingsTitle': 'Settings'});
       writeFlow('asserts/menu.yaml', '- assertVisible: Settings\n');

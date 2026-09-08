@@ -1,12 +1,10 @@
 appId: co.openvine.app.staging
 ---
-- assertVisible: Import Identity
-- assertVisible: Enter your private key
-- assertVisible: Import your existing Nostr identity using your private key (nsec or hex format)
-- assertVisible: Private Key
-- assertVisible: Keep your private key secure! Never share it with anyone. This key gives full access to your Nostr identity.
-- assertVisible:
-    text: Import Identity
-    index: 1
-- assertVisible: Don't have a Nostr identity yet?
-- assertVisible: Go back and create a new identity. We'll generate a secure key pair for you.
+- assertVisible: |-
+    Import your
+    Nostr identity
+- assertVisible: Import your existing Nostr identity using your private key or a bunker URL.
+- assertVisible: Private key or bunker URL
+- assertVisible: Import Nostr key
+- assertVisible: Keep your private key secure!
+- assertVisible: Never share your private key with anyone. This key gives full access to your Nostr identity.
