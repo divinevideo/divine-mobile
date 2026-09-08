@@ -222,9 +222,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
 
     def test_shorebird_install_reuses_only_the_expected_cached_version(self) -> None:
-        self.assertIn('EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.117"', self.contents)
+        self.assertIn('EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"', self.contents)
         self.assertIn(
-            'EXPECTED_SHOREBIRD_REVISION="45facdd4e4b3c39e0d260107977584f0b7c66bec"',
+            'EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"',
             self.contents,
         )
         self.assertIn('if [ -x "$SHOREBIRD_BIN" ]; then', self.contents)
@@ -242,6 +242,14 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('checkout --quiet --detach FETCH_HEAD', self.contents)
         self.assertNotIn("raw.githubusercontent.com/shorebirdtech/install", self.contents)
         self.assertNotRegex(self.contents, r"git clone .* (?:stable|v[0-9])")
+
+    def test_ios_spm_floor_uses_the_shared_version_aware_repair(self) -> None:
+        definition = self._definition_block("prepare_ios_spm_packages")
+
+        self.assertIn("ruby scripts/ensure_ios_swift_package_floor.rb", definition)
+        self.assertIn("FlutterGeneratedPluginSwiftPackage/Package.swift", definition)
+        self.assertIn("FlutterFramework/Package.swift", definition)
+        self.assertNotIn('.gsub(\'.iOS("13.0")\'', definition)
 
     def test_shorebird_release_commands_are_signed_and_preflighted(self) -> None:
         self.assertIn("*preflight_shorebird_ios_release", self.contents)

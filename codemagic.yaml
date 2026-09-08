@@ -109,43 +109,9 @@ definitions:
       script: |
         flutter build ios --config-only
 
-        ruby <<'RUBY'
-        files = [
-          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift',
-          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift',
-        ]
-
-        files.each do |path|
-          contents = File.read(path)
-          updated = contents
-            .gsub('.iOS("13.0")', '.iOS("16.0")')
-            .gsub('.iOS(.v13)', '.iOS("16.0")')
-          has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-
-          unless has_ios_16_target
-            if updated.match?(/^\s*platforms:\s*\[/)
-              abort("expected #{path} platforms block to declare iOS 16.0")
-            end
-
-            updated = updated.sub(
-              /(let package = Package\(\n\s*name: "[^"]+",\n)/,
-              "\\1    platforms: [\n        .iOS(\"16.0\")\n    ],\n",
-            )
-            has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-          end
-
-          unless has_ios_16_target
-            abort("expected #{path} to declare iOS 16.0")
-          end
-
-          if updated != contents
-            File.write(path, updated)
-            puts "patched #{path} to iOS 16.0"
-          else
-            puts "#{path} already targets iOS 16.0"
-          end
-        end
-        RUBY
+        ruby scripts/ensure_ios_swift_package_floor.rb \
+          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift' \
+          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift'
     - &flutter_pub_get
       name: Get Flutter dependencies
       script: flutter pub get
@@ -202,8 +168,8 @@ definitions:
       script: |
         set -euo pipefail
         SHOREBIRD_BIN="$HOME/.shorebird/bin/shorebird"
-        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.117"
-        EXPECTED_SHOREBIRD_REVISION="45facdd4e4b3c39e0d260107977584f0b7c66bec"
+        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"
+        EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"
         SHOREBIRD_VERSION_OUTPUT=""
         SHOREBIRD_REVISION=""
         if [ -x "$SHOREBIRD_BIN" ]; then

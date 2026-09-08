@@ -11,10 +11,10 @@ import 'package:path/path.dart' as p;
 /// The shared Runner scheme runs this script as a pre-action of every Xcode
 /// build. Any Flutter command it runs there re-injects plugins, which rewrites
 /// `ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/
-/// Package.swift` at Flutter's default `.iOS("13.0")` floor. Nothing on the
+/// Package.swift` at Flutter's default iOS floor. Nothing on the
 /// Xcode-driven build path raises that floor back to the project's 16.0, so
 /// the build then fails with "requires minimum platform version 16.0 ... but
-/// this target supports 13.0" for every plugin with a higher floor. The
+/// this target supports an older version" for every plugin with a higher floor. The
 /// script must therefore never invoke `flutter`; that property is pinned here.
 void main() {
   group('pre_build_ios.sh', () {
@@ -99,6 +99,16 @@ void main() {
             .replaceAll('/opt/homebrew/bin/pod', '/nonexistent/homebrew/pod')
             .replaceAll('/usr/local/bin/pod', '/nonexistent/local/pod'),
       );
+      final helperSource = File(
+        p.join(
+          Directory.current.path,
+          'scripts/ensure_ios_swift_package_floor.rb',
+        ),
+      );
+      final helperDestination = File(
+        p.join(sandbox.path, 'scripts/ensure_ios_swift_package_floor.rb'),
+      )..parent.createSync(recursive: true);
+      helperDestination.writeAsStringSync(helperSource.readAsStringSync());
       stubBin = Directory(p.join(sandbox.path, 'bin'))..createSync();
       stubLogs = Directory(p.join(sandbox.path, 'logs'))..createSync();
       Directory(p.join(sandbox.path, 'home')).createSync();
@@ -110,16 +120,18 @@ void main() {
       sandbox.deleteSync(recursive: true);
     });
 
-    test('never invokes flutter, which would reset the Swift package floor '
-        'to iOS 13.0', () {
-      final now = DateTime.now();
-      writeFile('ios/Podfile.lock', now.subtract(const Duration(hours: 1)));
-      writeFile('ios/Pods/Manifest.lock', now);
+    test(
+      'never invokes flutter, which could reset the Swift package floor',
+      () {
+        final now = DateTime.now();
+        writeFile('ios/Podfile.lock', now.subtract(const Duration(hours: 1)));
+        writeFile('ios/Pods/Manifest.lock', now);
 
-      expectSuccess(runScript());
+        expectSuccess(runScript());
 
-      expect(stubLog('flutter').existsSync(), isFalse);
-    });
+        expect(stubLog('flutter').existsSync(), isFalse);
+      },
+    );
 
     test('skips pod install when Pods/Manifest.lock is as new as '
         'Podfile.lock', () {
@@ -156,7 +168,38 @@ void main() {
       expect(stubLog('pod').readAsStringSync(), contains('install'));
     });
 
-    test('raises the generated Swift package floor without Flutter', () {
+    test(
+      'raises Flutter 3.47 generated Swift package floor without Flutter',
+      () {
+        final now = DateTime.now();
+        writeFile('ios/Podfile.lock', now);
+        writeFile('ios/Pods/Manifest.lock', now);
+        swiftPackageManifest()
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync(
+            'let package = Package(\n'
+            '    name: "FlutterGeneratedPluginSwiftPackage",\n'
+            '    platforms: [\n'
+            '        .iOS("15.0")\n'
+            '    ]\n'
+            ')\n',
+          );
+
+        expectSuccess(runScript());
+        expectSuccess(runScript());
+
+        expect(
+          swiftPackageManifest().readAsStringSync(),
+          contains('.iOS("16.0")'),
+        );
+        expect(
+          swiftPackageManifest().readAsStringSync(),
+          isNot(contains('.iOS("15.0")')),
+        );
+      },
+    );
+
+    test('accepts a generated Swift package floor newer than iOS 16', () {
       final now = DateTime.now();
       writeFile('ios/Podfile.lock', now);
       writeFile('ios/Pods/Manifest.lock', now);
@@ -166,21 +209,16 @@ void main() {
           'let package = Package(\n'
           '    name: "FlutterGeneratedPluginSwiftPackage",\n'
           '    platforms: [\n'
-          '        .iOS("13.0")\n'
+          '        .iOS("17.0")\n'
           '    ]\n'
           ')\n',
         );
 
       expectSuccess(runScript());
-      expectSuccess(runScript());
 
       expect(
         swiftPackageManifest().readAsStringSync(),
-        contains('.iOS("16.0")'),
-      );
-      expect(
-        swiftPackageManifest().readAsStringSync(),
-        isNot(contains('.iOS("13.0")')),
+        contains('.iOS("17.0")'),
       );
     });
 

@@ -130,6 +130,12 @@ duplicates the workflow's `flutter:` setting and is passed to
 bumping Flutter, confirm the target is in `shorebird flutter versions list`
 first — Shorebird supports a subset.
 
+The Codemagic installer also pins the Shorebird CLI version and its full source
+revision. That CLI must be the release that introduced support for the selected
+Flutter version or newer. Flutter 3.47.2 is paired with Shorebird 1.6.120 at
+revision `5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb`; update the pin and its
+configuration test together when either side moves.
+
 The pin moves as one unit across the repo, every CI workflow, and every
 Codemagic workflow. The rule is not cosmetic: while the repo ran Flutter 3.44,
 Shorebird's 3.44.0 engine crashed at launch in the Dart async FFI path used by
