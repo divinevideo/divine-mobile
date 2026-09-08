@@ -1224,6 +1224,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             isLoadCurrent: ownsInit,
             maxPlaybackDuration: widget.maxPlaybackDuration,
             trimToCommonTrackEnd: true,
+            // A typed error the ladder cannot fix means every rendition of this
+            // file is broken; stop rather than walk the whole ladder.
+            applyTypedFailoverPolicy: true,
             onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
             onSourceLoadFailure: rememberFailedSource,
           );
@@ -1249,6 +1252,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           isLoadCurrent: ownsInit,
           maxPlaybackDuration: widget.maxPlaybackDuration,
           trimToCommonTrackEnd: true,
+          // A typed error the ladder cannot fix means every rendition of this
+          // file is broken; stop rather than walk the whole ladder.
+          applyTypedFailoverPolicy: true,
           onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
           onSourceLoadFailure: rememberFailedSource,
         );
