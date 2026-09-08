@@ -40,6 +40,14 @@ validate_hook_configs() {
   local repo_root=$3
   local config_name config_path hook_cmd hook_path missing_timeouts bad_timeouts
   local claude_timeout codex_timeout claude_format_timeout claude_analyze_timeout
+  local hook_name registered_hooks expected_hooks
+  local parity_hooks=(
+    pre-edit-nostr-id-guard.sh
+    pre-edit-vinetheme-guard.sh
+    check-git-hooks.sh
+    pre-commit-build-runner.sh
+  )
+  local client_hooks
 
   # A registration pointing at a missing file must fail loudly here rather
   # than being silently skipped when a hook event fires.
@@ -91,27 +99,42 @@ validate_hook_configs() {
   # The clients register hooks differently, so parity is an explicit policy,
   # not blanket config equality. Codex combines Claude's independently budgeted
   # format and analyze hooks, hence the sum for post-edit-dart.
-  for hook_name in \
-    pre-edit-nostr-id-guard.sh \
-    pre-edit-vinetheme-guard.sh \
-    check-git-hooks.sh \
-    pre-commit-build-runner.sh; do
-    claude_timeout=$(hook_timeout "$claude_settings" "$hook_name")
-    codex_timeout=$(hook_timeout "$codex_hooks" "$hook_name")
+  for hook_name in "${parity_hooks[@]}"; do
+    claude_timeout=$(hook_timeout "$claude_settings" "$hook_name") || return 1
+    codex_timeout=$(hook_timeout "$codex_hooks" "$hook_name") || return 1
     if [ "$codex_timeout" -ne "$claude_timeout" ]; then
       echo "Hook timeout diverged for $hook_name: Claude=$claude_timeout Codex=$codex_timeout" >&2
       return 1
     fi
   done
 
-  claude_format_timeout=$(hook_timeout "$claude_settings" post-edit-format.sh)
-  claude_analyze_timeout=$(hook_timeout "$claude_settings" post-edit-analyze.sh)
-  codex_timeout=$(hook_timeout "$codex_hooks" post-edit-dart.sh)
+  claude_format_timeout=$(hook_timeout "$claude_settings" post-edit-format.sh) || return 1
+  claude_analyze_timeout=$(hook_timeout "$claude_settings" post-edit-analyze.sh) || return 1
+  codex_timeout=$(hook_timeout "$codex_hooks" post-edit-dart.sh) || return 1
   claude_timeout=$((claude_format_timeout + claude_analyze_timeout))
   if [ "$codex_timeout" -ne "$claude_timeout" ]; then
     echo "Combined post-edit timeout diverged: Claude=$claude_timeout Codex=$codex_timeout" >&2
     return 1
   fi
+
+  # Every new registration needs an explicit parity or client-only decision.
+  # Claude's cleanup hook deliberately has no Codex counterpart.
+  for config_name in Claude Codex; do
+    if [ "$config_name" = Claude ]; then
+      config_path=$claude_settings
+      client_hooks=(post-edit-format.sh post-edit-analyze.sh session-end-purge-build-artifacts.sh)
+    else
+      config_path=$codex_hooks
+      client_hooks=(post-edit-dart.sh)
+    fi
+    registered_hooks=$(jq -r '.hooks | .[] | .[] | .hooks[]
+      | .command | split("/")[-1] | rtrimstr("\"")' "$config_path" | LC_ALL=C sort)
+    expected_hooks=$(printf '%s\n' "${parity_hooks[@]}" "${client_hooks[@]}" | LC_ALL=C sort)
+    if [ "$registered_hooks" != "$expected_hooks" ]; then
+      echo "$config_name hook registrations changed; update the timeout parity policy." >&2
+      return 1
+    fi
+  done
 }
 
 validate_hook_configs "$CLAUDE_SETTINGS" "$CODEX_HOOKS" "$REPO_ROOT"
@@ -129,16 +152,16 @@ jq -e '.hooks.SessionEnd[]
 # registration instead of merely passing the checked-in configuration.
 CONFIG_TEST_DIR="$SCRATCH_DIR/config"
 mkdir -p "$CONFIG_TEST_DIR"
-cp "$CLAUDE_SETTINGS" "$CONFIG_TEST_DIR/claude-settings.json"
 
-expect_invalid_codex_config() {
+expect_invalid_hook_config() {
   local description=$1
-  local fixture=$2
+  local claude_fixture=$2
+  local codex_fixture=$3
 
   if validate_hook_configs \
-    "$CONFIG_TEST_DIR/claude-settings.json" "$fixture" "$REPO_ROOT" \
+    "$claude_fixture" "$codex_fixture" "$REPO_ROOT" \
     >/dev/null 2>&1; then
-    echo "Codex hook validation accepted $description." >&2
+    echo "Hook validation accepted $description." >&2
     exit 1
   fi
 }
@@ -146,24 +169,74 @@ expect_invalid_codex_config() {
 jq '(.hooks.PreToolUse[].hooks[]
   | select(.command | endswith("/pre-commit-build-runner.sh\""))
   | .timeout) = 120' "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/build-timeout.json"
-expect_invalid_codex_config \
+expect_invalid_hook_config \
   "the historical 120s build-runner timeout" \
+  "$CLAUDE_SETTINGS" \
   "$CONFIG_TEST_DIR/build-timeout.json"
 
 jq '(.hooks.PostToolUse[].hooks[]
   | select(.command | endswith("/post-edit-dart.sh\""))
   | .timeout) = 60' "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/post-edit-timeout.json"
-expect_invalid_codex_config \
+expect_invalid_hook_config \
   "the historical 60s post-edit timeout" \
+  "$CLAUDE_SETTINGS" \
   "$CONFIG_TEST_DIR/post-edit-timeout.json"
 
 jq '(.hooks.PostToolUse[].hooks[]
   | select(.command | endswith("/post-edit-dart.sh\""))
   | .command) |= sub("post-edit-dart\\.sh"; "missing-post-edit-dart.sh")' \
   "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/missing-hook.json"
-expect_invalid_codex_config \
+expect_invalid_hook_config \
   "a registration whose script is missing" \
+  "$CLAUDE_SETTINGS" \
   "$CONFIG_TEST_DIR/missing-hook.json"
+
+for config_name in Claude Codex; do
+  if [ "$config_name" = Claude ]; then
+    config_path=$CLAUDE_SETTINGS
+  else
+    config_path=$CODEX_HOOKS
+  fi
+  for mutation in \
+    '.hooks.PreToolUse[0].hooks[0].timeout = 0' \
+    '.hooks.PreToolUse[0].hooks[0].timeout = 601' \
+    'del(.hooks.PostToolUse)' \
+    '.hooks.PreToolUse[0].hooks[0].command |= sub("pre-edit-nostr-id-guard"; "missing-hook")'; do
+    jq "$mutation" "$config_path" > "$CONFIG_TEST_DIR/invalid.json"
+    if [ "$config_name" = Claude ]; then
+      expect_invalid_hook_config "$config_name $mutation" \
+        "$CONFIG_TEST_DIR/invalid.json" "$CODEX_HOOKS"
+    else
+      expect_invalid_hook_config "$config_name $mutation" \
+        "$CLAUDE_SETTINGS" "$CONFIG_TEST_DIR/invalid.json"
+    fi
+  done
+done
+
+# Keep parity satisfied so only the positive-timeout rule rejects zero.
+jq '(.hooks | .[] | .[] | .hooks[].timeout) = 0' \
+  "$CLAUDE_SETTINGS" > "$CONFIG_TEST_DIR/zero-claude.json"
+jq '(.hooks | .[] | .[] | .hooks[].timeout) = 0' \
+  "$CODEX_HOOKS" > "$CONFIG_TEST_DIR/zero-codex.json"
+expect_invalid_hook_config "zero timeouts despite matching budgets" \
+  "$CONFIG_TEST_DIR/zero-claude.json" "$CONFIG_TEST_DIR/zero-codex.json"
+
+# Use an existing executable that is not a registered hook. A new pair must
+# require an explicit parity decision even when both paths are executable.
+for config_path in "$CLAUDE_SETTINGS" "$CODEX_HOOKS"; do
+  jq '.hooks.PreToolUse[0].hooks += [
+    (.hooks.PreToolUse[0].hooks[0]
+      | .command |= sub("hooks/pre-edit-nostr-id-guard.sh"; "scripts/sync-agent-skills.sh")
+      | .command |= sub(".claude/"; ".codex/")
+      | .timeout = 10)
+    ]' "$config_path" > "$CONFIG_TEST_DIR/$(basename "$config_path")"
+done
+jq '.hooks.PreToolUse[0].hooks[-1].timeout = 599' \
+  "$CONFIG_TEST_DIR/hooks.json" > "$CONFIG_TEST_DIR/new-codex-hook.json"
+expect_invalid_hook_config "a new hook pair without a parity policy" \
+  "$CONFIG_TEST_DIR/settings.json" "$CONFIG_TEST_DIR/new-codex-hook.json"
+expect_invalid_hook_config "a new Codex-only hook without a parity policy" \
+  "$CLAUDE_SETTINGS" "$CONFIG_TEST_DIR/new-codex-hook.json"
 
 # shellcheck disable=SC2016
 grep -Fq 'Read and apply ALL rules from `AGENTS.md`' \
