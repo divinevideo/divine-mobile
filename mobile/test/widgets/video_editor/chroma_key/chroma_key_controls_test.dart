@@ -99,15 +99,20 @@ void main() {
             'do not know an ordinary wall keys. Epic #8543 ratified that '
             'framing.',
       );
-      expect(
-        find.text(
-          lookupAppLocalizations(
-            const Locale('de'),
-          ).videoEditorChromaKeySurfaceHint,
-        ),
-        findsNothing,
-        reason: 'Proves the widget resolves the string through l10n.',
-      );
+    });
+
+    testWidgets('resolves the hint through l10n rather than a literal', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme, locale: const Locale('de'));
+
+      // Asserting only that the German string is absent from an English
+      // render is satisfied by a hardcoded English literal too. Rendering
+      // German is the half that a literal cannot fake.
+      final de = lookupAppLocalizations(const Locale('de'));
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(de.videoEditorChromaKeySurfaceHint), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
     });
 
     testWidgets('holds at the largest system text scale', (tester) async {
