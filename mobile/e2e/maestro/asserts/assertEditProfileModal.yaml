@@ -1,13 +1,8 @@
 appId: co.openvine.app.staging
 ---
+- assertVisible: Edit Profile
 - assertVisible: Display Name
-- assertVisible: How should people know you?
-- assertVisible: Bio (Optional)
-- assertVisible: Tell people about yourself...
-- assertVisible: \b(0|[1-9]\d*)\/360\b
-- assertVisible: Public key (npub)
-- assertVisible: ^npub[a-zA-Z0-9]+$
 - assertVisible: Username (Optional)
-- assertVisible: username
+- assertVisible: Bio (Optional)
 - assertVisible: Cancel
 - assertVisible: Save

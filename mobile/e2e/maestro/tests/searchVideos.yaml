@@ -4,32 +4,25 @@ appId: co.openvine.app.staging
 # given the user is logged in in the app,
 # based on its description and validate its playback
 #Steps:
-# 1. Tap on Search: Validate search screen
-# 2. Input text VIDEO_TITLE: Validate video and a user is found
-# 3. Tap on the 1st video returned: Validate playback
-# 4. Tap on the back arrow: Validate user is on the search screen
+# 1. Open the current search screen.
+# 2. Enter VIDEO_TITLE and wait for a video result.
+# 3. Open the first video and validate playback.
 
-# 1. Tap on Search: Validate search screen
-- tapOn: Search
+# 1. Open search from Explore and validate the current search chrome.
+- tapOn:
+    id: explore_search_bar
 - runFlow: ../asserts/assertSearch.yaml
 
-# 2. Input text VIDEO_TITLE: Validate video and a user is found
-- tapOn: Find something cool...
+# 2. Enter VIDEO_TITLE and wait for a video result.
+- tapOn:
+    id: search_field
 - inputText: ${VIDEO_TITLE}
-- runFlow: ../utils/searchWorkaround.yaml
-#Assert Videos and Users result
-- assertVisible: |-
-    Videos \((?!0)\d+\)
-    Tab 1 of 3
 
-# 3. Tap on the 1st video returned and validate playback
-- assertVisible:
-    id: video_thumbnail_0
-- tapOn: Video thumbnail 1
+# 3. Open the first video result and validate playback.
+- extendedWaitUntil:
+    visible:
+      id: search_video_tile_0
+    timeout: 30000
+- tapOn:
+    id: search_video_tile_0
 - runFlow: ../asserts/assertVideoPlayback.yaml
-#TO-DO: once ID added to the back arrow on the playback screen change
-# tapping in its label instead of coordinates since by coordinates is not working
-# 4. Tap on the back arrow and validate user is on the explore screen
-#- doubleTapOn:
-#   point: 4%,8%
-#- runFlow: ../asserts/assertExplore.yaml

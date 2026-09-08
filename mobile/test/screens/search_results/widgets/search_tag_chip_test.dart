@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/screens/search_results/widgets/search_tag_chip.dart';
@@ -27,6 +28,10 @@ void main() {
 
       expect(find.text('#'), findsOneWidget);
       expect(find.text('flutter'), findsOneWidget);
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.searchTag('flutter')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('invokes onTap when tapped', (tester) async {

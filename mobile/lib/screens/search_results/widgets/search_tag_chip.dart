@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Hashtag chip used in both the Tags preview section and the full hashtag
@@ -13,6 +14,7 @@ class SearchTagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      identifier: SemanticIds.searchTag(tag),
       label: context.l10n.searchTagChipViewVideosTaggedLabel(tag),
       button: true,
       child: GestureDetector(
