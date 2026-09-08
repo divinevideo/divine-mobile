@@ -258,9 +258,13 @@ CuratedListRepository curatedListRepository(Ref ref) {
   ref.listen(curatedListsStateProvider, (_, next) {
     next.whenData((_) {
       final service = ref.read(curatedListsStateProvider.notifier).service;
-      repository.setSubscribedLists(
-        service == null ? const [] : subscribedListsForHomeBridge(service),
-      );
+      repository
+        ..setSubscribedLists(
+          service == null ? const [] : subscribedListsForHomeBridge(service),
+        )
+        ..setOwnLists(
+          service == null ? const [] : ownListsForSearchBridge(service),
+        );
     });
   });
 
@@ -271,6 +275,12 @@ CuratedListRepository curatedListRepository(Ref ref) {
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
     service.subscribedLists;
+
+/// The viewer's own lists, which the search matches alongside the subscribed
+/// ones; `subscribedLists` never holds them.
+@visibleForTesting
+List<CuratedList> ownListsForSearchBridge(CuratedListService service) =>
+    service.myLists;
 
 /// Provider for HashtagRepository instance.
 ///
