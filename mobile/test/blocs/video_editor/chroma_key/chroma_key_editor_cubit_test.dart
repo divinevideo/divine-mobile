@@ -161,6 +161,7 @@ void main() {
       test('drops a measurement that lands after the screen closed', () async {
         final gate = Completer<ChromaKeyDetection>();
         final cubit = build(detect: (_) => gate.future, detectOnOpen: true);
+        addTearDown(cubit.close);
         expect(cubit.state.isDetecting, isTrue);
 
         // The measurement is in flight while the user backs out. With the emit
