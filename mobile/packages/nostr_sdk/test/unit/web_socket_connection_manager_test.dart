@@ -656,18 +656,20 @@ void main() {
             maxReconnectAttempts: 4,
             baseReconnectDelay: Duration(milliseconds: 1),
             maxReconnectDelay: Duration(milliseconds: 4),
-            reconnectBudget: Duration(milliseconds: 5),
+            reconnectBudget: Duration(milliseconds: 50),
           ),
         );
         addTearDown(boundedManager.dispose);
 
         expect(await boundedManager.send('first'), isFalse);
         final firstSendAttempts = boundedManager.reconnectAttempts;
-        expect(firstSendAttempts, greaterThan(0));
+        expect(firstSendAttempts, 4);
+        expect(mockFactory.createdChannels, hasLength(4));
 
         expect(await boundedManager.send('second'), isFalse);
 
         expect(boundedManager.reconnectAttempts, firstSendAttempts);
+        expect(mockFactory.createdChannels, hasLength(8));
       });
 
       test('manager budget expiry reaches the error stream', () async {
