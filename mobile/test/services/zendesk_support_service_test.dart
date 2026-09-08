@@ -1,5 +1,9 @@
+import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
@@ -1729,6 +1733,47 @@ void main() {
       },
     );
   });
+
+  group('fetchPreAuthToken signed URL', () {
+    // The `u` tag is signed from the composed string while the POST goes to a
+    // Uri built from that same string. NIP-98 binds the two and relay-manager
+    // compares them as raw strings, so a base that Uri.parse would normalize
+    // makes them disagree and the pre-auth call 401s — which downgrades the
+    // Zendesk identity to the raw npub path this token exists to replace.
+    for (final base in const [
+      'https://RELAY.example',
+      'HTTPS://relay.example',
+      'https://relay.example:443',
+      'https://relay.example/.',
+      'https://relay.example/',
+    ]) {
+      test('is canonical for a base of $base', () async {
+        final nip98 = _RecordingUrlNip98AuthService();
+        http.Request? captured;
+
+        await expectLater(
+          ZendeskSupportService.fetchPreAuthToken(
+            nip98Service: nip98,
+            relayManagerUrl: base,
+            httpClient: MockClient(
+              (request) async {
+                captured = request;
+                return http.Response('{"success":true,"token":"t"}', 200);
+              },
+            ),
+          ),
+          completion(equals('t')),
+        );
+
+        expect(nip98.signedUrl, isNotNull);
+        expect(
+          nip98.signedUrl,
+          equals('https://relay.example/api/zendesk/pre-auth'),
+        );
+        expect(nip98.signedUrl, equals(captured!.url.toString()));
+      });
+    }
+  });
 }
 
 /// Fails token creation like [_FakeNip98AuthService], but records whether
@@ -1757,4 +1802,38 @@ class _FakeNip98AuthService implements Nip98AuthService {
     // fetchPreAuthToken to throw, which _ensureFreshJwt catches gracefully.
     return null;
   }
+}
+
+/// Records the URL [ZendeskSupportService.fetchPreAuthToken] signs, and hands
+/// back a usable token so the request is actually attempted.
+class _RecordingUrlNip98AuthService implements Nip98AuthService {
+  String? signedUrl;
+
+  @override
+  Future<Nip98Token?> createAuthToken({
+    required String url,
+    required HttpMethod method,
+    String? payload,
+  }) async {
+    signedUrl = url;
+    final now = clock.now();
+    return Nip98Token(
+      token: 'fake-token',
+      signedEvent: Event(
+        '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+        27235,
+        [
+          ['u', url],
+          ['method', 'POST'],
+        ],
+        '',
+        createdAt: 1700000000,
+      ),
+      createdAt: now,
+      expiresAt: now.add(const Duration(seconds: 45)),
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

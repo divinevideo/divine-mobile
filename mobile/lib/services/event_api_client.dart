@@ -75,17 +75,27 @@ class EventApiClient {
 
   /// The fully-qualified publish URL for the current environment, e.g.
   /// `https://api.divine.video/api/events`.
-  String get publishUrl {
+  ///
+  /// This is the string [publishEvent] signs its NIP-98 `u` tag against, so it
+  /// is the `toString()` of the URI the request goes to rather than a separate
+  /// composition. `Uri.parse` normalizes — host case, default port, dot
+  /// segments — and the API compares the signed URL to the requested one
+  /// exactly, so the two have to come from the same place.
+  String get publishUrl => _publishUri.toString();
+
+  /// The URI [publishEvent] posts to.
+  Uri get _publishUri {
     final base = _apiBaseUrl();
     final trimmed = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
-    return '$trimmed$eventsPath';
+    return Uri.parse('$trimmed$eventsPath');
   }
 
   /// Publishes [event] (already signed) to the events API.
   Future<EventApiPublishResult> publishEvent(Event event) async {
-    final url = publishUrl;
+    final uri = _publishUri;
+    final url = uri.toString();
     final body = jsonEncode(event.toJson());
 
     final token = await _nip98.createAuthToken(
@@ -124,7 +134,7 @@ class EventApiClient {
     try {
       response = await _httpClient
           .post(
-            Uri.parse(url),
+            uri,
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',

@@ -52,12 +52,18 @@ class AnalyticsIngestClient {
   final String Function() _apiBaseUrl;
   final Duration _timeout;
 
-  String _urlFor(String path) {
+  /// The one place a request URI is built.
+  ///
+  /// Signed batches take their NIP-98 `u` tag from this URI's `toString()`, so
+  /// what is signed is what is requested. Composing the string separately
+  /// would skip the normalization `Uri.parse` applies, and the ingest API
+  /// compares the two exactly.
+  Uri _uriFor(String path) {
     final base = _apiBaseUrl();
     final trimmed = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
-    return '$trimmed$path';
+    return Uri.parse('$trimmed$path');
   }
 
   Future<AnalyticsIngestResult> publishBatch(
@@ -66,7 +72,8 @@ class AnalyticsIngestClient {
   }) async {
     if (events.isEmpty) return const AnalyticsIngestAccepted();
 
-    final url = _urlFor(eventsPath);
+    final uri = _uriFor(eventsPath);
+    final url = uri.toString();
     final body = jsonEncode({
       'subject_pubkey': subjectPubkey,
       'events': events,
@@ -81,7 +88,7 @@ class AnalyticsIngestClient {
     }
 
     return _post(
-      url,
+      uri,
       body,
       authorization: token.authorizationHeader,
     );
@@ -92,13 +99,13 @@ class AnalyticsIngestClient {
   ) async {
     if (events.isEmpty) return const AnalyticsIngestAccepted();
     return _post(
-      _urlFor(anonymousEventsPath),
+      _uriFor(anonymousEventsPath),
       jsonEncode({'events': events}),
     );
   }
 
   Future<AnalyticsIngestResult> _post(
-    String url,
+    Uri uri,
     String body, {
     String? authorization,
   }) async {
@@ -106,7 +113,7 @@ class AnalyticsIngestClient {
     try {
       response = await _httpClient
           .post(
-            Uri.parse(url),
+            uri,
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
