@@ -1353,10 +1353,10 @@ class ContentBlocklistRepository {
     // with nothing to stop the relay's surviving `p` tag from being
     // re-adopted as a mute (#8263).
     //
-    // The watermark only ever advances. The stored second is what a later
-    // reconciliation compares a relay list's `created_at` against, so
-    // lowering it on a repeat attempt hands back protection an earlier
-    // attempt already earned.
+    // The recorded second no longer decides retirement -- whether the own
+    // list still carries the `p` tag does -- so it survives as a diagnostic
+    // and as the tiebreak in the legacy-key merge above, which keeps the
+    // later of two copies. Keep it monotonic so both stay meaningful.
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final recordedAt = _pendingUnblocks[pubkey];
     if (recordedAt == null || recordedAt < now) {

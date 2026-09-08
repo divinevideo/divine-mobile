@@ -4665,9 +4665,9 @@ void main() {
 
             await service.unblockUser(target);
 
-            // The stored second is what a later reconciliation compares a
-            // relay list's `created_at` against. Rewriting it down to `now`
-            // hands back protection the earlier attempt already earned.
+            // The recorded second is monotonic so the diagnostic and the
+            // legacy-key merge tiebreak stay meaningful; a repeat attempt
+            // must not rewrite it down to `now`.
             final pending =
                 jsonDecode(prefs.getString('pending_unblocks.$ourPubkey')!)
                     as Map<String, dynamic>;
