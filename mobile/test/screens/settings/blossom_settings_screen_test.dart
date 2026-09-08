@@ -1,7 +1,8 @@
-// ABOUTME: Widget tests for BlossomSettingsScreen URL validation.
-// ABOUTME: Verifies https-only enforcement with loopback carve-outs (#3837).
+// ABOUTME: Widget tests for BlossomSettingsScreen behavior and theming.
+// ABOUTME: Verifies adaptive colors and https-only URL enforcement (#3837).
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,18 +26,17 @@ void main() {
     });
 
     setUp(() {
+      VineThemeColors.debugFallbackCount = 0;
       mockService = _MockBlossomUploadService();
       // Loaded state: blossom enabled, no server configured yet, so the
       // TextField is rendered and the controller starts empty.
       when(() => mockService.isBlossomEnabled()).thenAnswer((_) async => true);
       when(() => mockService.getBlossomServer()).thenAnswer((_) async => null);
-      when(
-        () => mockService.setBlossomEnabled(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockService.setBlossomServer(any()),
-      ).thenAnswer((_) async {});
+      when(() => mockService.setBlossomEnabled(any())).thenAnswer((_) async {});
+      when(() => mockService.setBlossomServer(any())).thenAnswer((_) async {});
     });
+
+    tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
     Widget buildSubject() {
       // Minimal GoRouter so the screen's `context.pop()` on save success
@@ -65,7 +65,7 @@ void main() {
         child: MaterialApp.router(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          theme: ThemeData.dark(),
+          theme: VineTheme.lightTheme,
           routerConfig: router,
         ),
       );
@@ -79,6 +79,22 @@ void main() {
       await tester.tap(find.byTooltip('Save'));
       await tester.pumpAndSettle();
     }
+
+    testWidgets('uses the active theme for its AppBar', (tester) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      final appBarFinder = find.byType(AppBar);
+      expect(appBarFinder, findsOneWidget);
+
+      final appBar = tester.widget<AppBar>(appBarFinder);
+      expect(
+        appBar.backgroundColor,
+        VineTheme.lightColors.nav,
+        reason: 'BlossomSettingsScreen AppBar should use the theme nav token',
+      );
+      expect(VineThemeColors.debugFallbackCount, 0);
+    });
 
     testWidgets('saves valid https:// URL', (tester) async {
       await pumpAndSave(tester, 'https://blossom.band');
@@ -117,25 +133,23 @@ void main() {
       expect(find.text(l10n.blossomServerUrlMustUseHttps), findsNothing);
     });
 
-    testWidgets(
-      'rejects non-loopback http:// URL with localized snackbar',
-      (tester) async {
-        await pumpAndSave(tester, 'http://example.com/blossom');
+    testWidgets('rejects non-loopback http:// URL with localized snackbar', (
+      tester,
+    ) async {
+      await pumpAndSave(tester, 'http://example.com/blossom');
 
-        expect(find.text(l10n.blossomServerUrlMustUseHttps), findsOneWidget);
-        verifyNever(() => mockService.setBlossomServer(any()));
-      },
-    );
+      expect(find.text(l10n.blossomServerUrlMustUseHttps), findsOneWidget);
+      verifyNever(() => mockService.setBlossomServer(any()));
+    });
 
-    testWidgets(
-      'rejects spoofed loopback hostname with localized snackbar',
-      (tester) async {
-        await pumpAndSave(tester, 'http://localhost.evil.com/blossom');
+    testWidgets('rejects spoofed loopback hostname with localized snackbar', (
+      tester,
+    ) async {
+      await pumpAndSave(tester, 'http://localhost.evil.com/blossom');
 
-        expect(find.text(l10n.blossomServerUrlMustUseHttps), findsOneWidget);
-        verifyNever(() => mockService.setBlossomServer(any()));
-      },
-    );
+      expect(find.text(l10n.blossomServerUrlMustUseHttps), findsOneWidget);
+      verifyNever(() => mockService.setBlossomServer(any()));
+    });
 
     testWidgets('rejects unparseable URL with localized snackbar', (
       tester,
@@ -168,40 +182,36 @@ void main() {
       },
     );
 
-    testWidgets(
-      'seeds the server-URL field exactly once; later '
-      'initialServerUrl emissions do not overwrite user input',
-      (tester) async {
-        // First load() seeds the field with the persisted '' (setUp stub).
-        await tester.pumpWidget(buildSubject());
-        await tester.pumpAndSettle();
+    testWidgets('seeds the server-URL field exactly once; later '
+        'initialServerUrl emissions do not overwrite user input', (
+      tester,
+    ) async {
+      // First load() seeds the field with the persisted '' (setUp stub).
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
 
-        // User edits the field — the controller is now the source of truth.
-        const userInput = 'https://typed-by-user.example';
-        await tester.enterText(find.byType(TextField), userInput);
-        await tester.pumpAndSettle();
+      // User edits the field — the controller is now the source of truth.
+      const userInput = 'https://typed-by-user.example';
+      await tester.enterText(find.byType(TextField), userInput);
+      await tester.pumpAndSettle();
 
-        // Re-stub the service so the next load() snapshots a *different*
-        // initialServerUrl, then drive a second load() through the live
-        // cubit to emit a fresh `ready` state with that value.
-        when(
-          () => mockService.getBlossomServer(),
-        ).thenAnswer((_) async => 'https://persisted-elsewhere.example');
-        final cubit = BlocProvider.of<BlossomSettingsCubit>(
-          tester.element(find.byType(BlossomSettingsView)),
-        );
-        await cubit.load();
-        await tester.pumpAndSettle();
+      // Re-stub the service so the next load() snapshots a *different*
+      // initialServerUrl, then drive a second load() through the live
+      // cubit to emit a fresh `ready` state with that value.
+      when(
+        () => mockService.getBlossomServer(),
+      ).thenAnswer((_) async => 'https://persisted-elsewhere.example');
+      final cubit = BlocProvider.of<BlossomSettingsCubit>(
+        tester.element(find.byType(BlossomSettingsView)),
+      );
+      await cubit.load();
+      await tester.pumpAndSettle();
 
-        // The one-shot seed contract: the second emission must NOT clobber
-        // the user's typed value.
-        expect(find.text(userInput), findsOneWidget);
-        expect(
-          find.text('https://persisted-elsewhere.example'),
-          findsNothing,
-        );
-      },
-    );
+      // The one-shot seed contract: the second emission must NOT clobber
+      // the user's typed value.
+      expect(find.text(userInput), findsOneWidget);
+      expect(find.text('https://persisted-elsewhere.example'), findsNothing);
+    });
 
     testWidgets(
       'generic save failure renders complete copy, not a dangling separator',
