@@ -124,7 +124,12 @@ fi
 
 if [[ "$TUNING_RC" -ne 0 ]]; then
   echo "WARNING: refresh-interval tuning failed; local API reads may lag production cadences." >&2
-elif [[ "$SCHEMA_VERSION" =~ ^[0-9]+$ && "$SCHEMA_VERSION" -ge 143 ]]; then
+# The gate and EXPECTED_TUNING_APPLIED are one pair, so move them together.
+# 150 is the migration that creates the last of the four MVs
+# tuning/refresh_intervals.sql alters (trending_videos_snapshot_refresh_mv);
+# the other three arrive at 143, 144 and 145. Below 150 fewer than four
+# statements can ever apply, so the warning would be pure noise.
+elif [[ "$SCHEMA_VERSION" =~ ^[0-9]+$ && "$SCHEMA_VERSION" -ge 150 ]]; then
   TUNING_APPLIED="$(sed -n 's/.*refresh-interval tuning: applied=\([0-9][0-9]*\) skipped=.*/\1/p' <<<"$TUNING_OUTPUT" | tail -n 1)"
   EXPECTED_TUNING_APPLIED=4
   if [[ -z "$TUNING_APPLIED" || "$TUNING_APPLIED" -lt "$EXPECTED_TUNING_APPLIED" ]]; then

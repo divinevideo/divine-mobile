@@ -675,6 +675,37 @@ run_up_sh
 assert_status 0 "$last_status" "partial tuning should not block local_up"
 assert_stderr_contains 'refresh-interval tuning applied 3/4 expected statements on schema 259' "current-schema tuning drift should be visible"
 
+# --- The band below the last tuned MV stays quiet ----------------------------
+#
+# trending_videos_snapshot_refresh_mv is created at migration 150, so on
+# schema 143-149 only three of the four ALTERs can ever apply. Warning there
+# reports drift that the schema makes inevitable.
+
+reset_fixtures
+with_tools lsof
+: >"${FIXTURES}/docker_ps.txt"
+: >"${FIXTURES}/lsof.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 149 >"${FIXTURES}/schema_version.txt"
+echo 'seed ok' >"${FIXTURES}/seed_output.txt"
+run_up_sh
+
+assert_status 0 "$last_status" "a pre-150 schema should not block local_up"
+assert_stderr_lacks 'refresh-interval tuning applied' "schema 149 cannot carry the fourth MV, so it should not warn"
+
+# --- The first schema carrying all four MVs does warn ------------------------
+
+reset_fixtures
+with_tools lsof
+: >"${FIXTURES}/docker_ps.txt"
+: >"${FIXTURES}/lsof.txt"
+echo 'refresh-interval tuning: applied=3 skipped=1' >"${FIXTURES}/tuning_output.txt"
+echo 150 >"${FIXTURES}/schema_version.txt"
+echo 'seed ok' >"${FIXTURES}/seed_output.txt"
+run_up_sh
+
+assert_stderr_contains 'refresh-interval tuning applied 3/4 expected statements on schema 150' "schema 150 carries all four MVs, so drift should be visible"
+
 # --- Legacy schema with skipped tuning stays quiet ---------------------------
 
 reset_fixtures
