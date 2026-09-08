@@ -28,7 +28,6 @@ discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
 discarded_futures|lib/notifications/notification_tap_router.dart	1
 discarded_futures|lib/notifications/view/inbox_notifications_page.dart	5
 discarded_futures|lib/notifications/view/notifications_view.dart	3
-discarded_futures|lib/providers/app_lifecycle_provider.dart	1
 discarded_futures|lib/providers/auth_providers.dart	1
 discarded_futures|lib/providers/curation_providers.dart	2
 discarded_futures|lib/providers/foreground_idle_warmup_provider.dart	1
