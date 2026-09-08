@@ -19,6 +19,10 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockHttpClient extends Mock implements http.Client {}
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(Uri());
+  });
+
   group('crossposterApiClientProvider', () {
     late _MockAuthService auth;
     late _MockHttpClient httpClient;
@@ -26,10 +30,6 @@ void main() {
     const eventId =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         'aaaaaaaaaaaaaaaaaaaaaaaa';
-
-    setUpAll(() {
-      registerFallbackValue(Uri());
-    });
 
     setUp(() {
       auth = _MockAuthService();
