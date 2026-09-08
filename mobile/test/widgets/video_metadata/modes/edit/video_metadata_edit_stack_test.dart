@@ -5,6 +5,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_stack.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -23,6 +24,19 @@ void main() {
         scrollView.keyboardDismissBehavior,
         ScrollViewKeyboardDismissBehavior.onDrag,
       );
+    });
+
+    testWidgets('disables caption mention autocomplete', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(_buildSubject(preferences));
+      await tester.pump();
+
+      final form = tester.widget<VideoMetadataFormFields>(
+        find.byType(VideoMetadataFormFields),
+      );
+      expect(form.enableCaptionMentionAutocomplete, isFalse);
     });
   });
 }

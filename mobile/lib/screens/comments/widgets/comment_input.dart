@@ -3,10 +3,11 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/comments/widgets/mention_overlay.dart';
+import 'package:openvine/mentions/mention_suggestion.dart';
+import 'package:openvine/mentions/mention_text_editing.dart';
+import 'package:openvine/widgets/mentions/mention_overlay.dart';
 
 /// Input widget for posting new top-level comments.
 ///
@@ -160,21 +161,7 @@ class _CommentInputState extends State<CommentInput> {
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0) return;
 
-    // Find the last @ before cursor
-    final textBeforeCursor = text.substring(0, cursorPos);
-    final atIndex = textBeforeCursor.lastIndexOf('@');
-
-    if (atIndex >= 0) {
-      // Check there's no space between @ and cursor (query is continuous)
-      final query = textBeforeCursor.substring(atIndex + 1);
-      if (!query.contains(' ') && !query.contains('\n')) {
-        widget.onMentionQuery?.call(query);
-        return;
-      }
-    }
-
-    // No active mention query
-    widget.onMentionQuery?.call('');
+    widget.onMentionQuery?.call(activeMentionQuery(text, cursorPos) ?? '');
   }
 
   void _handleMentionSelected(String pubkey, String displayName) {
@@ -182,27 +169,27 @@ class _CommentInputState extends State<CommentInput> {
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0) return;
 
-    final textBeforeCursor = text.substring(0, cursorPos);
-    final atIndex = textBeforeCursor.lastIndexOf('@');
-    if (atIndex < 0) return;
-
     // Replace @query with @displayName (human-readable). The BLoC keeps the
     // selected hex pubkey and canonicalizes the text on submit.
-    final mention = '@$displayName ';
-    final newText =
-        text.substring(0, atIndex) + mention + text.substring(cursorPos);
-    widget.controller.text = newText;
+    final insertion = applyMentionSelection(
+      text: text,
+      cursor: cursorPos,
+      display: displayName,
+    );
+    if (insertion == null) return;
+
+    widget.controller.text = insertion.text;
     widget.controller.selection = TextSelection.collapsed(
-      offset: atIndex + mention.length,
+      offset: insertion.selection,
     );
 
     widget.onMentionSelected?.call(
       pubkey,
       displayName,
-      atIndex,
-      atIndex + mention.length - 1,
+      insertion.start,
+      insertion.end,
     );
-    widget.onChanged?.call(newText);
+    widget.onChanged?.call(insertion.text);
   }
 
   @override

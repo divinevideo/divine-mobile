@@ -122,6 +122,40 @@ void main() {
     );
 
     test(
+      'does not resolve a selected handle that became a longer token',
+      () async {
+        when(
+          () => profileRepository.searchUsersLocally(
+            query: 'aliceandra',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const []);
+        when(
+          () => profileRepository.searchUsersFromApi(
+            query: 'aliceandra',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        final result = await service.resolveTextMentions(
+          rawText: 'hi @aliceandra',
+          selectedMentions: const [
+            MentionBinding(
+              display: 'alice',
+              pubkey: _alicePubkey,
+              start: 3,
+              end: 9,
+            ),
+          ],
+        );
+
+        expect(result.canonicalText, equals('hi @aliceandra'));
+        expect(result.resolvedPubkeys, isEmpty);
+        expect(result.unresolvedTokens, equals(['aliceandra']));
+      },
+    );
+
+    test(
       'uses newest selected binding for the same visible token range',
       () async {
         final bobNpub = NostrKeyUtils.encodePubKey(_bobPubkey);

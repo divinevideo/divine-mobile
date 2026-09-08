@@ -25,14 +25,21 @@ Future<({List<MentionMatch> matches, Set<String> seen})> mentionSearchLocal({
   required Iterable<String> candidates,
   required ProfileRepository? profileRepository,
 }) async {
-  final seen = <String>{};
+  final candidatePubkeys = candidates.toSet().toList(growable: false);
+  final seen = candidatePubkeys.toSet();
   final matches = <MentionMatch>[];
+  if (profileRepository == null || candidatePubkeys.isEmpty) {
+    return (matches: matches, seen: seen);
+  }
 
-  for (final pubkey in candidates) {
-    if (seen.contains(pubkey)) continue;
-    seen.add(pubkey);
-
-    final profile = await profileRepository?.getCachedProfile(pubkey: pubkey);
+  final cachedProfiles = await profileRepository.getCachedProfiles(
+    pubkeys: candidatePubkeys,
+  );
+  final cachedByPubkey = {
+    for (final profile in cachedProfiles) profile.pubkey: profile,
+  };
+  for (final pubkey in candidatePubkeys) {
+    final profile = cachedByPubkey[pubkey];
     final displayName = profile?.displayName ?? profile?.name;
     if (displayName != null &&
         displayName.toLowerCase().contains(lowercaseQuery)) {

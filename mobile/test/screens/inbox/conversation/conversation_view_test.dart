@@ -36,7 +36,6 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';

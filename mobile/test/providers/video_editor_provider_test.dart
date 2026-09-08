@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -289,6 +290,86 @@ void main() {
 
         notifier.updateMetadata(description: '   hello world   ');
         expect(container.read(videoEditorProvider).description, 'hello world');
+      });
+    });
+
+    group('caption mentions', () {
+      const alice = CaptionMention(
+        display: 'alice',
+        pubkey:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        start: 3,
+        end: 9,
+      );
+
+      test('recordCaptionMention keeps every pick in order', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice and @OG-AB')
+          ..recordCaptionMention(alice);
+        const ogab = CaptionMention(
+          display: 'OG-AB',
+          pubkey:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        );
+        notifier.recordCaptionMention(ogab);
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice, ogab]),
+        );
+      });
+
+      test('recordCaptionMention ignores an identical pick', () {
+        container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice)
+          ..recordCaptionMention(alice);
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice]),
+        );
+      });
+
+      test('drops a mention once its handle is edited out of the caption', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          isNotEmpty,
+        );
+
+        notifier.updateMetadata(description: 'hi there');
+
+        expect(container.read(videoEditorProvider).captionMentions, isEmpty);
+      });
+
+      test('keeps a mention while its handle is still written', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+
+        notifier.updateMetadata(description: 'hello @alice, welcome');
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice]),
+        );
+      });
+
+      test('carries picks into the draft it builds', () {
+        container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+
+        final draft = container
+            .read(videoEditorProvider.notifier)
+            .getActiveDraft();
+
+        expect(draft.captionMentions, equals([alice]));
       });
     });
 
