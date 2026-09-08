@@ -1,6 +1,4 @@
-// ABOUTME: Simplified tests for VideoEvents provider listener attachment fix
-// ABOUTME: Verifies that listener attachment works correctly after the
-// ABOUTME: idempotent fix
+// ABOUTME: Tests video delivery to initial and late VideoEvents subscribers.
 
 import 'dart:async';
 
@@ -37,7 +35,7 @@ void main() {
     registerFallbackValue(<VideoEvent>[]);
   });
 
-  group('VideoEvents Provider - Listener Attachment Fix', () {
+  group('VideoEvents Provider - Video Delivery', () {
     late _MockVideoEventService mockVideoEventService;
     late _MockNostrClient mockNostrService;
     late SharedPreferences sharedPreferences;
@@ -123,7 +121,12 @@ void main() {
       await pumpEventQueue();
       await pumpEventQueue();
 
-      expect(states, contains(AsyncData<List<VideoEvent>>(testVideos)));
+      expect(
+        states.whereType<AsyncData<List<VideoEvent>>>().map(
+          (state) => state.value,
+        ),
+        contains(testVideos),
+      );
     });
 
     test('late provider subscribers receive existing videos', () async {
