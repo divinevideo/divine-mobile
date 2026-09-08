@@ -221,7 +221,8 @@ void main() {
         initialTabSlug: explorePopularTabName,
       );
 
-      controllerOf(tester).index = 3;
+      const chosenIndex = 3;
+      controllerOf(tester).index = chosenIndex;
       await tester.pumpAndSettle();
       final chosen = selectedTabName(tester);
       expect(chosen, isNot(explorePopularTabName));
@@ -231,6 +232,10 @@ void main() {
 
       expect(repository.refreshCount, greaterThan(1));
       expect(find.text('Spotlight'), findsOneWidget);
+      // Featured slots in above the chosen tab, so staying on it means
+      // following it to a new index. Without this the test also passes when
+      // featured is appended last and no remap happens at all.
+      expect(controllerOf(tester).index, greaterThan(chosenIndex));
       expect(selectedTabName(tester), equals(chosen));
     });
 
