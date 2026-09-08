@@ -109,7 +109,6 @@ void main() {
     });
 
     test('removes its listener and closes the stream on dispose', () async {
-      registerFallbackValue(() {});
       final router = _MockGoRouter();
       final delegate = _MockGoRouterDelegate();
       final routeInformation = GoRouteInformationProvider(
