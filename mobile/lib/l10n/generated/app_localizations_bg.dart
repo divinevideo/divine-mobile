@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9968,8 +9969,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           'Това блокира $count акаунта, които в момента заявяват тази значка. Публикациите им ще излязат от твоите фийдове и няма да получат известие.',
-      one:
-          'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
+      one: 'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
     );
     return '$_temp0';
   }

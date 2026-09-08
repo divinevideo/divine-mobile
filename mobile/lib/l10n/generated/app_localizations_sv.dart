@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9876,8 +9877,7 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det här blockerar de $count konton som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
-      one:
-          'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
+      one: 'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
     );
     return '$_temp0';
   }

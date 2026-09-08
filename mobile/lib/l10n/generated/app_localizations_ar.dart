@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9809,8 +9810,7 @@ class AppLocalizationsAr extends AppLocalizations {
       locale: localeName,
       other:
           'ستُحظر $count حسابات تضع هذه الشارة الآن. لن تظهر منشوراتها في تغذياتك ولن يتم إبلاغها.',
-      one:
-          'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
+      one: 'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
     );
     return '$_temp0';
   }

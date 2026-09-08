@@ -36,7 +36,7 @@ Generated code (Riverpod, Freezed, JSON serialization, Drift, Hive, mocks) is pr
 
 ## Getting started
 
-Requirements: Flutter `^3.44.0` and the Dart SDK `^3.12.0`. The pinned toolchain version is in `mobile/mise.toml` (Flutter 3.44.0). All Flutter commands run from `mobile/`.
+Requirements: Flutter `^3.47.0` and the Dart SDK `^3.13.0`. The pinned toolchain version is in `mobile/mise.toml` (Flutter 3.47.2). All Flutter commands run from `mobile/`.
 
 ```bash
 cd mobile

@@ -24,7 +24,7 @@ jobs:
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
       working_directory: "mobile/packages/bookmarks_repository"
-      flutter_version: "3.44.9"
+      flutter_version: "3.47.2"
       # Stated rather than omitted: 28 package workflows leave this key out and
       # the VeryGood default is 100, so an omitted key gates at 100 silently.
       min_coverage: 100

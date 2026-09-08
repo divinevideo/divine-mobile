@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9975,8 +9976,7 @@ class AppLocalizationsEs extends AppLocalizations {
       locale: localeName,
       other:
           'Esto bloquea las $count cuentas que llevan esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no les vamos a avisar.',
-      one:
-          'Esto bloquea la cuenta que lleva esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no le vamos a avisar.',
+      one: 'Esto bloquea la cuenta que lleva esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no le vamos a avisar.',
     );
     return '$_temp0';
   }

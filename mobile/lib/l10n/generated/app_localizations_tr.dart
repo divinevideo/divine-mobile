@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9790,8 +9791,7 @@ class AppLocalizationsTr extends AppLocalizations {
       locale: localeName,
       other:
           'Bu, şu anda bu rozeti taşıyan $count hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmezler.',
-      one:
-          'Bu, şu anda bu rozeti taşıyan hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmez.',
+      one: 'Bu, şu anda bu rozeti taşıyan hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmez.',
     );
     return '$_temp0';
   }

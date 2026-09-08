@@ -106,7 +106,7 @@ The bundled texts were copied from `shorebirdtech/updater` at commit
 to each local text asset (upstream license blob ids
 `6802bc4b80c0f8df1413d55b16267c0969e352c9` and
 `a7e77cb28d386ec6eddeaabf441f91473ddefa1e`). The store engine paired with the
-current Flutter 3.44.9 pin is `27bc060323bfdfe2f5b6732174d4e499e74eca70`.
+current Flutter 3.47.2 pin is `315ff242617023c1c5549878bf17fad51ffec6f3`.
 
 When Flutter or Shorebird changes, re-check attribution without producing a
 store artifact:
@@ -130,10 +130,11 @@ duplicates the workflow's `flutter:` setting and is passed to
 bumping Flutter, confirm the target is in `shorebird flutter versions list`
 first — Shorebird supports a subset.
 
-The current 3.44.9 pin is deliberate. Shorebird's 3.44.0 engine crashed at
-launch in the Dart async FFI path used by `cupertino_http`, so the repo and all
-CI workflows moved together to the refreshed 3.44.9 Shorebird engine. Do not
-move the pin back independently in one workflow.
+The pin moves as one unit across the repo, every CI workflow, and every
+Codemagic workflow. The rule is not cosmetic: while the repo ran Flutter 3.44,
+Shorebird's 3.44.0 engine crashed at launch in the Dart async FFI path used by
+`cupertino_http`, and recovering meant moving every pin together to the
+refreshed 3.44.9 engine. Do not move the pin in one workflow independently.
 
 Patch commands take no `--flutter-version`. A patch is compiled against
 whatever version its release used, which Shorebird resolves from the release.

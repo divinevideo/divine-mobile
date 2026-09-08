@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9987,8 +9988,7 @@ class AppLocalizationsIt extends AppLocalizations {
       locale: localeName,
       other:
           'Questo blocca i $count account che ora tengono questo badge sul profilo. I loro post non appariranno nei tuoi feed e non verranno avvisati.',
-      one:
-          'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
+      one: 'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
     );
     return '$_temp0';
   }

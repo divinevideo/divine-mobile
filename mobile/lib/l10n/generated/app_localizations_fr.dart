@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -10020,8 +10021,7 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           'Cela bloque les $count comptes qui portent ce badge en ce moment. Leurs posts n\'apparaîtront plus dans tes fils, et ils ne seront pas prévenus.',
-      one:
-          'Cela bloque le compte qui porte ce badge en ce moment. Ses posts n\'apparaîtront plus dans tes fils, et il ne sera pas prévenu.',
+      one: 'Cela bloque le compte qui porte ce badge en ce moment. Ses posts n\'apparaîtront plus dans tes fils, et il ne sera pas prévenu.',
     );
     return '$_temp0';
   }

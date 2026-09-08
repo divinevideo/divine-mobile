@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9794,8 +9795,7 @@ class AppLocalizationsId extends AppLocalizations {
       locale: localeName,
       other:
           'Ini memblokir $count akun yang sedang mengklaim lencana ini. Postingan mereka akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
-      one:
-          'Ini memblokir akun yang sedang mengklaim lencana ini. Postingannya akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
+      one: 'Ini memblokir akun yang sedang mengklaim lencana ini. Postingannya akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
     );
     return '$_temp0';
   }
