@@ -524,5 +524,36 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
         contains('selected_privacy.bundle/PrivacyInfo.xcprivacy'),
       );
     });
+
+    // Every other archive-mode test asserts a failure, so a change that made
+    // the found/expected comparison never match would leave all of them green
+    // while breaking the release workflow. This pins the accepting direction.
+    test('archive mode accepts an app carrying every derived bundle', () {
+      final plist = manifestFor(
+        'NSPrivacyAccessedAPICategorySystemBootTime',
+        '35F9.1',
+      );
+      final root = makeTree(
+        swift: '',
+        manifest: plist,
+        podspec:
+            "s.resource_bundles = {'sample_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      final bundled = File(
+        '${app.path}/sample_privacy.bundle/PrivacyInfo.xcprivacy',
+      );
+      bundled.parent.createSync(recursive: true);
+      bundled.writeAsStringSync(plist);
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(0), reason: result.output);
+      expect(
+        result.output,
+        contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
+    });
   });
 }
