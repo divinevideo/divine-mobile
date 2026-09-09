@@ -78,7 +78,7 @@ class SavedSoundCard extends StatelessWidget {
         if (duration.isNotEmpty) duration,
         if (isMissingFile) unavailableNotice,
       ].join(', '),
-      button: true,
+      button: !isMissingFile,
       container: true,
       child: DecoratedBox(
         decoration: BoxDecoration(

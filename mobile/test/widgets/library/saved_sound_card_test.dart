@@ -110,6 +110,14 @@ void main() {
         findsOneWidget,
         reason: 'Removal is the only action left that changes anything.',
       );
+      expect(
+        tester
+            .getSemantics(find.byType(SavedSoundCard))
+            .flagsCollection
+            .isButton,
+        isFalse,
+        reason: 'A card with no card-level tap must not announce as a button.',
+      );
 
       await tester.tap(find.byType(SavedSoundCard));
       await tester.pump();

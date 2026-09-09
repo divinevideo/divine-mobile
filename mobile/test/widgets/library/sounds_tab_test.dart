@@ -139,6 +139,7 @@ void main() {
       WidgetTester tester, {
       Future<AudioEvent?> Function(BuildContext)? showAudioPicker,
       AudioPlaybackService? audioService,
+      FutureOr<bool> Function(String path)? localFileExists,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -151,6 +152,7 @@ void main() {
           child: SavedSoundsScope(
             service: SavedSoundsService(sharedPreferences),
             mediaProbe: const _NoopSavedSoundMediaProbe(),
+            localFileExists: localFileExists,
             child: MaterialApp.router(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -203,7 +205,10 @@ void main() {
       );
       await service.saveSound(_sound(id: 'here', title: 'Here Sound'));
 
-      await pumpSoundsTab(tester);
+      await pumpSoundsTab(
+        tester,
+        localFileExists: (path) => !path.endsWith('never-written.m4a'),
+      );
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text('Gone Sound'), findsOneWidget);
