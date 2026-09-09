@@ -79,8 +79,8 @@ void main() {
     test('reclaims untracked managed-pattern files, keeps everything '
         'else', () async {
       final (manager, dir) = build();
-      final tracked = writeFile(dir, 'vid_key_100_1.mp4', 10);
-      final orphan = writeFile(dir, 'vid_key_200_2.mp4', 10);
+      final tracked = writeFile(dir, 'vid_key_1723600000000000_1.mp4', 10);
+      final orphan = writeFile(dir, 'vid_key_1723600000000001_2.mp4', 10);
       final seedVideo = writeFile(dir, 'a1b2c3d4e5f6', 10);
       final seedThumb = writeFile(dir, 'thumbnail_a1b2c3.jpg', 10);
       final aliases = writeFile(dir, 'aliases.json', 10);
@@ -88,7 +88,7 @@ void main() {
       final nestedManagedName = writeFile(nested, 'nested_300_3.mp4', 10);
 
       when(repo.getAllObjects).thenAnswer(
-        (_) async => [obj('vid_key_100_1.mp4', id: 1)],
+        (_) async => [obj('vid_key_1723600000000000_1.mp4', id: 1)],
       );
 
       await manager.enforceCacheLimits();
@@ -148,9 +148,9 @@ void main() {
       final aliasesTmp = writeFile(dir, 'aliases.json.tmp', 10);
       final seedThumb = writeFile(dir, 'thumbnail_${'a1b2c3d4' * 8}.jpg', 10);
       final seedMarker = writeFile(dir, '.seed_media_loaded', 10);
-      // Two digit runs and a multi-part tail, but four digits cannot be a
+      // Two digit runs and a simple extension, but four digits cannot be a
       // microsecond epoch, so this is not one of our writes.
-      final shortInfix = writeFile(dir, 'report_2024_01.csv.gz', 10);
+      final shortInfix = writeFile(dir, 'report_2024_01.csv', 10);
 
       when(repo.getAllObjects).thenAnswer((_) async => []);
 
@@ -358,7 +358,7 @@ void main() {
     test('does nothing when the repository fails to open', () async {
       when(repo.open).thenAnswer((_) async => false);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
 
@@ -370,7 +370,7 @@ void main() {
         'open', () async {
       when(repo.open).thenAnswer((_) async => false);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(orphan.existsSync(), isTrue, reason: 'first pass could not run');
@@ -403,7 +403,7 @@ void main() {
           await manager.close();
         } on Object catch (_) {}
       }, (_, _) {});
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
 
@@ -415,7 +415,7 @@ void main() {
       final gate = Completer<List<CacheObject>>();
       when(repo.getAllObjects).thenAnswer((_) => gate.future);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       final first = manager.enforceCacheLimits();
       // Second call sees _sweepInProgress and returns immediately.
@@ -432,12 +432,12 @@ void main() {
     test('skips a second pass within the throttle window', () async {
       when(repo.getAllObjects).thenAnswer((_) async => []);
       final (manager, dir) = build();
-      final firstOrphan = writeFile(dir, 'a_1_1.mp4', 10);
+      final firstOrphan = writeFile(dir, 'a_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(firstOrphan.existsSync(), isFalse, reason: 'first pass ran');
 
-      final secondOrphan = writeFile(dir, 'b_2_2.mp4', 10);
+      final secondOrphan = writeFile(dir, 'b_1723600000000001_2.mp4', 10);
       await manager.enforceCacheLimits();
 
       expect(
@@ -451,12 +451,12 @@ void main() {
     test('force bypasses the throttle window', () async {
       when(repo.getAllObjects).thenAnswer((_) async => []);
       final (manager, dir) = build();
-      final firstOrphan = writeFile(dir, 'a_1_1.mp4', 10);
+      final firstOrphan = writeFile(dir, 'a_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(firstOrphan.existsSync(), isFalse);
 
-      final secondOrphan = writeFile(dir, 'b_2_2.mp4', 10);
+      final secondOrphan = writeFile(dir, 'b_1723600000000001_2.mp4', 10);
       await manager.enforceCacheLimits(force: true);
 
       expect(

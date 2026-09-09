@@ -21,7 +21,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// [_hasLegacyUrlTailName] or [_webHelperCacheFilePattern], so
 /// externally-managed files that share the cache directory — e.g. the alias
 /// manifest or caller-owned sidecar files — are never removed.
-final RegExp _managedCacheFilePattern = RegExp(r'_\d+_\d+\.[A-Za-z0-9]+$');
+final RegExp _managedCacheFilePattern = RegExp(
+  r'_\d{13,19}_\d+\.[A-Za-z0-9]+$',
+);
 
 /// Splits the `_<microseconds>_<seq>.<tail>` suffix this package writes,
 /// capturing `<tail>` so [_hasLegacyUrlTailName] can judge it.
