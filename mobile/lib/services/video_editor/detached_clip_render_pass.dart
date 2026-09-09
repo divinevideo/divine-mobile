@@ -8,6 +8,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
@@ -54,9 +55,16 @@ class DetachedClipRenderPass {
   bool get isActive => partitioned.detached.isNotEmpty;
 
   /// The layers the base render bakes in — those sitting under the lowest
-  /// detached clip. When there is no second pass this is the complete ordinary
-  /// layer stack, including any unreadable detached layer rescued as a raster.
-  List<ExportedLayer> get baseImageLayers => partitioned.below;
+  /// detached clip. An unreadable detached layer also supplies the complete
+  /// stack so its raster fallback is not filtered out. Ordinary exports keep
+  /// returning `null` and stay on the existing render path.
+  List<ExportedLayer>? get baseImageLayers {
+    if (isActive) return partitioned.below;
+    final hasRescuedRaster = partitioned.below.any(
+      (item) => DetachedClipLayerData.isDetachedClipLayer(item.layer),
+    );
+    return hasRescuedRaster ? partitioned.below : null;
+  }
 
   /// Works out whether [capturedLayers] contains detached clips, and where the
   /// base track render should write as a result.
