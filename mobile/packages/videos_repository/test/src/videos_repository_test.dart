@@ -156,6 +156,53 @@ void main() {
       expect(repository, isNotNull);
     });
 
+    group('getAudioReusePolicy', () {
+      const sha256 =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const policy = AudioReusePolicy(
+        allowAudioReuse: true,
+        audioReuseSuppressed: false,
+      );
+
+      test('delegates to an available Funnelcake client', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        when(() => client.getAudioReusePolicy(sha256)).thenAnswer(
+          (_) async => policy,
+        );
+        final repositoryWithClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+
+        await expectLater(
+          repositoryWithClient.getAudioReusePolicy(sha256),
+          completion(same(policy)),
+        );
+        verify(() => client.getAudioReusePolicy(sha256)).called(1);
+      });
+
+      test('fails closed without an available Funnelcake client', () {
+        expect(
+          () => repository.getAudioReusePolicy(sha256),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(false);
+        final repositoryWithUnavailableClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+
+        expect(
+          () => repositoryWithUnavailableClient.getAudioReusePolicy(sha256),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+        verifyNever(() => client.getAudioReusePolicy(any()));
+      });
+    });
+
     test('isVideoKnownDeleted delegates to the injected deletion filter', () {
       final visibleVideo = VideoEvent(
         id: 'visible-video',

@@ -158,7 +158,7 @@ Widget createTestWidget({
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
-List<dynamic> _testAudioReuseOverrides() {
+List<Override> _testAudioReuseOverrides() {
   return [
     audioReuseConsentProvider.overrideWith(
       (ref, sound) async => sound.allowsReuse,
