@@ -1,5 +1,5 @@
-// ABOUTME: The own profile's My Lists tab: create button, bookmarks entry,
-// ABOUTME: and the two-column gallery of the user's video and people lists.
+// ABOUTME: The own profile's My Lists tab: the create button and the
+// ABOUTME: two-column gallery of the user's video and people lists.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +16,6 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
-import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -120,8 +119,6 @@ class _ProfileListsContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        const _BookmarksEntry(),
         const SizedBox(height: 8),
         if (peopleEnabled)
           _OwnListsGallery(videoLists: videoLists)
@@ -230,47 +227,6 @@ class _EmptyListsMessage extends StatelessWidget {
         context.l10n.profileListsEmpty,
         textAlign: TextAlign.center,
         style: VineTheme.bodyLargeFont(color: context.vineColors.secondaryText),
-      ),
-    );
-  }
-}
-
-/// Entry point to the viewer's bookmarks.
-///
-/// Bookmarks are a NIP-51 kind 10003 list rather than a kind 30005 one, so
-/// they can't render as a gallery card — but they are still one of the
-/// viewer's lists, which is why they sit here rather than in a tab of their
-/// own. Without this the share sheet's Save action would be write-only.
-class _BookmarksEntry extends StatelessWidget {
-  const _BookmarksEntry();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    return Semantics(
-      button: true,
-      label: context.l10n.shareMenuBookmarks,
-      child: InkWell(
-        onTap: () => context.push(SavedVideosScreen.path),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            spacing: 12,
-            children: [
-              // Coloured for the same reason the label is: the asset is a
-              // hardcoded white fill, and DivineIcon applies no filter when
-              // color is null, so it disappears on the light palette.
-              DivineIcon(icon: .bookmarkSimple, color: colors.primaryText),
-              Expanded(
-                child: Text(
-                  context.l10n.shareMenuBookmarks,
-                  style: VineTheme.titleSmallFont(color: colors.primaryText),
-                ),
-              ),
-              DivineIcon(icon: .caretRight, color: colors.secondaryText),
-            ],
-          ),
-        ),
       ),
     );
   }
