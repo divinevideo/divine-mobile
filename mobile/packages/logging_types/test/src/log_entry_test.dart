@@ -90,11 +90,48 @@ void main() {
         message: 'Ready',
       );
 
-      expect(first, same(first));
       expect(first, equal);
       expect(first.hashCode, equal.hashCode);
       expect(first, isNot(different));
       expect(first, isNot('Ready'));
+    });
+
+    test('does not collide when two field values are swapped', () {
+      final first = LogEntry(
+        timestamp: timestamp,
+        level: LogLevel.info,
+        message: 'Ready',
+        name: 'a',
+        error: 'b',
+      );
+      final swapped = LogEntry(
+        timestamp: timestamp,
+        level: LogLevel.info,
+        message: 'Ready',
+        name: 'b',
+        error: 'a',
+      );
+
+      expect(first, isNot(swapped));
+      expect(first.hashCode, isNot(swapped.hashCode));
+    });
+
+    test('does not collide when two self-cancelling pairs differ', () {
+      final first = LogEntry(
+        timestamp: timestamp,
+        level: LogLevel.info,
+        message: 'a',
+        error: 'a',
+      );
+      final second = LogEntry(
+        timestamp: timestamp,
+        level: LogLevel.info,
+        message: 'b',
+        error: 'b',
+      );
+
+      expect(first, isNot(second));
+      expect(first.hashCode, isNot(second.hashCode));
     });
   });
 }

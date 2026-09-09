@@ -95,12 +95,13 @@ class LogEntry {
           stackTrace == other.stackTrace;
 
   @override
-  int get hashCode =>
-      timestamp.hashCode ^
-      level.hashCode ^
-      message.hashCode ^
-      category.hashCode ^
-      name.hashCode ^
-      error.hashCode ^
-      stackTrace.hashCode;
+  int get hashCode => Object.hash(
+    timestamp,
+    level,
+    message,
+    category,
+    name,
+    error,
+    stackTrace,
+  );
 }
