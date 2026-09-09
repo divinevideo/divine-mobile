@@ -2,10 +2,16 @@
 // ABOUTME: Provides CRUD with publish-status filtering, timestamp
 // ABOUTME: ordering, and per-account isolation via ownerPubkey.
 
+import 'dart:convert';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 
 part 'drafts_dao.g.dart';
+
+/// Key in a draft's JSON data containing every file the serialized editor
+/// state owns, stored as basenames so iOS container moves remain safe.
+const draftOwnedFileBasenamesKey = 'ownedFileBasenames';
 
 /// Data transfer object for clip insertion within a transaction.
 class DraftClipData {
@@ -298,7 +304,27 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
             drafts.customThumbnailPath.equals(filename),
       );
     final result = await query.getSingle();
-    return (result.read(drafts.id.count()) ?? 0) > 0;
+    if ((result.read(drafts.id.count()) ?? 0) > 0) return true;
+
+    // Layer-owned files (including detached videos) live in the serialized
+    // editor state rather than an indexed clip row. DraftStorageService writes
+    // their explicit ownership manifest into `data`; scan it as the fallback
+    // instead of guessing ownership from arbitrary JSON string values.
+    final dataRows = await (selectOnly(
+      drafts,
+    )..addColumns([drafts.data])).get();
+    for (final row in dataRows) {
+      final Object? decoded;
+      try {
+        decoded = json.decode(row.read(drafts.data)!);
+      } on FormatException {
+        continue;
+      }
+      if (decoded is! Map) continue;
+      final manifest = decoded[draftOwnedFileBasenamesKey];
+      if (manifest is Iterable && manifest.contains(filename)) return true;
+    }
+    return false;
   }
 
   /// Atomically save a draft and its clips in a single transaction.

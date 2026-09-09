@@ -79,13 +79,20 @@ class _LayerOverlayControls extends StatelessWidget {
       onEdit: isTextLayer
           ? () => _editTextLayer(context: context, layer: layer)
           : null,
-      onDuplicated: () => _duplicateLayer(context: context, layer: layer),
+      // A detached clip owns one timed video player. Duplicating or splitting
+      // the generic WidgetLayer would copy its player identity and layer-id
+      // metadata verbatim, making preview timing disagree with export.
+      onDuplicated: isDetachedClip
+          ? null
+          : () => _duplicateLayer(context: context, layer: layer),
       onMultiSelect: canMultiSelect
           ? () => _startLayerMultiSelect(context: context)
           : null,
       multiSelectSemanticLabel:
           context.l10n.videoEditorLayerMultiSelectSemanticLabel,
-      onSplit: () => _splitLayer(context: context, layer: layer),
+      onSplit: isDetachedClip
+          ? null
+          : () => _splitLayer(context: context, layer: layer),
       // Crop / rotate / flip, for a detached clip only. Every other layer is
       // already whatever shape it was drawn or typed at; a detached clip
       // carries a video file that can genuinely be re-rendered.
@@ -394,10 +401,10 @@ class _TuneOverlayControls extends StatelessWidget {
       updated
         ..add(m.copyWith(endTime: splitAt))
         ..add(
-          _reSet(m, newSetId).copyWith(
-            startTime: splitAt,
-            endTime: item.endTime,
-          ),
+          _reSet(
+            m,
+            newSetId,
+          ).copyWith(startTime: splitAt, endTime: item.endTime),
         );
     }
 

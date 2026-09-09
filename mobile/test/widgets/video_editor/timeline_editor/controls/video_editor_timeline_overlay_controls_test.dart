@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
@@ -151,6 +152,39 @@ void main() {
       expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDoneLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorEditLabel), findsNothing);
+    });
+
+    testWidgets('hides duplicate and split for a detached clip layer', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'detached-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      const meta = <String, dynamic>{
+        detachedClipLayerKindKey: detachedClipLayerKind,
+      };
+      final layer = WidgetLayer(
+        id: item.id,
+        widget: const SizedBox.shrink(),
+        meta: meta,
+        exportConfigs: const WidgetLayerExportConfigs(
+          id: 'detached-layer',
+          meta: meta,
+        ),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => editor.activeLayers).thenReturn([layer]);
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+
+      expect(find.text(l10n.videoEditorDuplicateLabel), findsNothing);
+      expect(find.text(l10n.videoEditorSplitLabel), findsNothing);
+      expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
     });
 
     testWidgets('renders $VideoEditorTimelineControls for filter', (

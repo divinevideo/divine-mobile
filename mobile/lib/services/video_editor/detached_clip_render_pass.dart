@@ -54,10 +54,9 @@ class DetachedClipRenderPass {
   bool get isActive => partitioned.detached.isNotEmpty;
 
   /// The layers the base render bakes in — those sitting under the lowest
-  /// detached clip — or `null` when there is no second pass and the base render
-  /// should bake everything.
-  List<ExportedLayer>? get baseImageLayers =>
-      isActive ? partitioned.below : null;
+  /// detached clip. When there is no second pass this is the complete ordinary
+  /// layer stack, including any unreadable detached layer rescued as a raster.
+  List<ExportedLayer> get baseImageLayers => partitioned.below;
 
   /// Works out whether [capturedLayers] contains detached clips, and where the
   /// base track render should write as a result.
@@ -155,6 +154,10 @@ class DetachedClipRenderPass {
         bodySize: bodySize,
         videoSize: videoSize,
         timelineMap: timelineMap,
+        // Valid detached clips were already removed by the partition. Anything
+        // with only the kind marker left here is the deliberately rescued
+        // raster fallback for unreadable media and must stay visible.
+        excludeDetachedClips: false,
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

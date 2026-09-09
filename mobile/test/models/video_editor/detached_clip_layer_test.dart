@@ -6,15 +6,20 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
-DivineVideoClip _clip({String id = 'clip-1'}) => DivineVideoClip(
+DivineVideoClip _clip({
+  String id = 'clip-1',
+  String? filePath,
+  String? thumbnailPath,
+}) => DivineVideoClip(
   id: id,
-  video: EditorVideo.file('/docs/$id.mp4'),
+  video: EditorVideo.file(filePath ?? '/docs/$id.mp4'),
   duration: const Duration(seconds: 6),
   recordedAt: DateTime(2026),
   targetAspectRatio: model.AspectRatio.square,
   originalAspectRatio: 1,
   trimStart: const Duration(seconds: 1),
   volume: 0.5,
+  thumbnailPath: thumbnailPath,
 );
 
 WidgetLayer _widgetLayer({
@@ -28,6 +33,50 @@ WidgetLayer _widgetLayer({
 
 void main() {
   group(DetachedClipLayerData, () {
+    test(
+      'finds every detached clip asset reachable through editor history',
+      () {
+        final first = _clip(
+          id: 'first',
+          filePath: '/old/container/first.mp4',
+          thumbnailPath: '/old/container/first.jpg',
+        );
+        final second = _clip(
+          id: 'second',
+          filePath: '/old/container/second.mp4',
+          thumbnailPath: '/old/container/second.jpg',
+        );
+
+        final history = <String, dynamic>{
+          'history': [
+            {
+              'layers': [
+                DetachedClipLayerData(clip: first, layerId: 'layer-1').toMeta(),
+              ],
+            },
+            {
+              'layers': [
+                DetachedClipLayerData(
+                  clip: second,
+                  layerId: 'layer-2',
+                ).toMeta(),
+              ],
+            },
+          ],
+        };
+
+        expect(
+          DetachedClipLayerData.ownedFilePathsInHistory(history, '/documents'),
+          {
+            '/documents/first.mp4',
+            '/documents/first.jpg',
+            '/documents/second.mp4',
+            '/documents/second.jpg',
+          },
+        );
+      },
+    );
+
     group('toMeta', () {
       test('marks the map as a detached clip and carries the clip', () {
         final meta = DetachedClipLayerData(

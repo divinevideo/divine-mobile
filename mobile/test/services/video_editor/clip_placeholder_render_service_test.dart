@@ -162,6 +162,7 @@ void main() {
         // The caller turns this into "couldn't detach"; a null slot would
         // silently shorten the composition instead.
         expect(placeholder, isNull);
+        expect(imageFile.existsSync(), isFalse);
       });
 
       test('refuses a clip that occupies no time', () async {
@@ -184,6 +185,7 @@ void main() {
         // StopMotionFrame asserts a positive duration, so reaching the render
         // with a zero hold is a crash, not a bad-looking clip.
         expect(called, isFalse);
+        expect(imageFile.existsSync(), isFalse);
       });
     });
 

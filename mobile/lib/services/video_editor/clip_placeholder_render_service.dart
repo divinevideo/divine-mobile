@@ -88,6 +88,9 @@ class ClipPlaceholderRenderService {
         name: _logName,
         category: LogCategory.video,
       );
+      if (fill is ClipPlaceholderImageFill) {
+        await _deleteUnusedSourceImage(fill.imagePath);
+      }
       return null;
     }
 
@@ -103,6 +106,7 @@ class ClipPlaceholderRenderService {
         name: _logName,
         category: LogCategory.video,
       );
+      if (imagePath != null) await _deleteUnusedSourceImage(imagePath);
       return null;
     }
 
@@ -115,17 +119,23 @@ class ClipPlaceholderRenderService {
     ];
 
     final override = assembleOverride;
-    final outputPath = override != null
-        ? await override(
-            frames: frames,
-            aspectRatio: source.targetAspectRatio,
-            taskId: taskId,
-          )
-        : await StopMotionRenderService.assemble(
-            frames: frames,
-            aspectRatio: source.targetAspectRatio,
-            taskId: taskId,
-          );
+    final String? outputPath;
+    try {
+      outputPath = override != null
+          ? await override(
+              frames: frames,
+              aspectRatio: source.targetAspectRatio,
+              taskId: taskId,
+            )
+          : await StopMotionRenderService.assemble(
+              frames: frames,
+              aspectRatio: source.targetAspectRatio,
+              taskId: taskId,
+            );
+    } catch (_) {
+      await _deleteUnusedSourceImage(imagePath);
+      rethrow;
+    }
 
     if (outputPath == null) {
       Log.error(
@@ -133,6 +143,7 @@ class ClipPlaceholderRenderService {
         name: _logName,
         category: LogCategory.video,
       );
+      await _deleteUnusedSourceImage(imagePath);
       return null;
     }
 
@@ -155,6 +166,19 @@ class ClipPlaceholderRenderService {
       // could still hear.
       volume: 0,
     );
+  }
+
+  static Future<void> _deleteUnusedSourceImage(String path) async {
+    try {
+      final file = File(path);
+      if (file.existsSync()) await file.delete();
+    } catch (error) {
+      Log.warning(
+        '⚠️ Failed to delete unused placeholder source image $path: $error',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Writes a solid [color] bitmap into the documents directory and returns its

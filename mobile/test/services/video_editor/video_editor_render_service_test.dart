@@ -123,6 +123,33 @@ void main() {
       expect(layers, hasLength(1));
     });
 
+    test('keeps a partition-rescued detached raster when requested', () {
+      final broken = pie.ExportedLayer(
+        layer: pie.WidgetLayer(
+          widget: const SizedBox.shrink(),
+          exportConfigs: const pie.WidgetLayerExportConfigs(
+            id: 'broken',
+            meta: {
+              detachedClipLayerKindKey: detachedClipLayerKind,
+              detachedClipLayerClipKey: {'id': 'unreadable'},
+            },
+          ),
+        ),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [broken],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        excludeDetachedClips: false,
+      );
+
+      expect(layers, hasLength(1));
+    });
+
     test('returns null when bodySize is null', () {
       expect(
         VideoEditorRenderService.buildImageLayers(

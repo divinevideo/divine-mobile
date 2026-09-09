@@ -1536,7 +1536,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // Leaving the editor mid-render still wrote a documents-dir file; hand it
       // to the reaper rather than orphaning it.
       if (isClosed) {
-        _deferOrphanedPaths([placeholder?.video?.file?.path]);
+        _deferOrphanedPaths(placeholder?.ownedFilePaths ?? const <String?>[]);
         return;
       }
 
@@ -1560,7 +1560,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         name: 'ClipEditorBloc',
         category: LogCategory.video,
       );
-      _deferOrphanedPaths([placeholder?.video?.file?.path]);
+      _deferOrphanedPaths(placeholder?.ownedFilePaths ?? const <String?>[]);
       emit(
         state.copyWith(
           isDetaching: false,

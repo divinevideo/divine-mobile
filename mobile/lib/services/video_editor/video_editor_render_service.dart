@@ -816,11 +816,7 @@ class VideoEditorRenderService {
         name: 'VideoEditorRenderService',
         category: .video,
       );
-      crashReporter.recordError(
-        e,
-        stack,
-        reason: 'limitClipDuration failed',
-      );
+      crashReporter.recordError(e, stack, reason: 'limitClipDuration failed');
       onComplete(false);
     }
   }
@@ -997,9 +993,7 @@ class VideoEditorRenderService {
       }
     }
 
-    return NormalizationResult(
-      segments: segments,
-    );
+    return NormalizationResult(segments: segments);
   }
 
   /// Analyzes all clips to determine their crop parameters.
@@ -1152,6 +1146,10 @@ class VideoEditorRenderService {
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
         timelineMap: timelineMap,
+        // A non-null override came from DetachedClipRenderPass, which already
+        // removed every valid video layer. Keep its unreadable-layer raster
+        // fallback instead of filtering again by the kind marker.
+        excludeDetachedClips: imageLayerOverride == null,
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1316,12 +1314,14 @@ class VideoEditorRenderService {
     required Size? bodySize,
     required Size videoSize,
     required TransitionTimelineMap timelineMap,
+    bool excludeDetachedClips = true,
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
     final scale = videoSize.width / bodySize.width;
     return [
       for (final item in capturedLayers)
-        if (!DetachedClipLayerData.isDetachedClipLayer(item.layer))
+        if (!excludeDetachedClips ||
+            !DetachedClipLayerData.isDetachedClipLayer(item.layer))
           ImageLayer(
             image: EditorLayerImage.memory(item.bytes),
             startTime: timelineMap.editorToOutputOrNull(item.layer.startTime),

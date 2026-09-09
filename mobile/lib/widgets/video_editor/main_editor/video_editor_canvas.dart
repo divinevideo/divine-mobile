@@ -29,6 +29,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -106,6 +107,22 @@ class VideoEditorCanvas extends StatelessWidget {
         !previous.isTrimDragging &&
         previous.clips != current.clips;
   }
+
+  /// Whether this editor session needs the Android legacy texture surface.
+  ///
+  /// The choice is sticky once enabled: changing surface implementations more
+  /// than once in a session would repeatedly tear down playback. Imported
+  /// drafts start in legacy mode only when their history already owns a
+  /// detached clip; ordinary sessions upgrade once, on the first detach.
+  @visibleForTesting
+  static bool shouldUseLegacySurface({
+    required bool alreadyEnabled,
+    required Map<String, dynamic> editorStateHistory,
+    ClipDetachResult? detachResult,
+  }) =>
+      alreadyEnabled ||
+      detachResult is ClipDetachSuccess ||
+      DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
   /// Whether [current] differs from [previous] *only* in clip thumbnail paths.
   ///
@@ -425,6 +442,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool _isInitialized = false;
   bool _isImportingHistory = false;
+  late bool _useLegacySurface;
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
 
@@ -573,6 +591,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     _initializeController();
     _documentsPath = getDocumentsPath();
+    _useLegacySurface = VideoEditorCanvas.shouldUseLegacySurface(
+      alreadyEnabled: false,
+      editorStateHistory: ref.read(videoEditorProvider).editorStateHistory,
+    );
 
     // Initialize the player with the current clips.
     if (_clipPaths.isNotEmpty) {
@@ -1531,7 +1553,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // callback, so it cannot transparently survive an OEM compositor event
       // (a permission dialog, for instance) and the player is re-initialised
       // instead.
-      useLegacySurface: true,
+      useLegacySurface: _useLegacySurface,
       debugLabel: 'editor_canvas',
     );
     _videoPlayer = player;
@@ -2495,6 +2517,37 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             // Sync so subsequent re-emits read the post-seek position.
             if (trimEndPosition != null) {
               bloc.add(VideoEditorPositionChanged(trimEndPosition));
+            }
+
+            final needsLegacyUpgrade =
+                !_useLegacySurface &&
+                VideoEditorCanvas.shouldUseLegacySurface(
+                  alreadyEnabled: _useLegacySurface,
+                  editorStateHistory: const {},
+                  detachResult: state.lastDetachResult,
+                );
+            if (needsLegacyUpgrade) {
+              _useLegacySurface = true;
+              _seekEpoch++;
+              _pendingSeekPosition = null;
+              _isSeeking = true;
+              final ownerEpoch = _seekEpoch;
+              try {
+                await _initializePlayer(
+                  state.clips
+                      .map((clip) => clip.video?.file?.path)
+                      .whereType<String>()
+                      .toList(),
+                  startPosition: startPosition,
+                );
+                if (!mounted) return;
+                _lastReportedPosition = startPosition;
+                _pendingSeekTarget = startPosition;
+                _setLayerPlayTime(startPosition);
+              } finally {
+                if (_seekEpoch == ownerEpoch) _isSeeking = false;
+              }
+              return;
             }
             // Composition swap back — invalidate in-flight single-clip seeks.
             _seekEpoch++;

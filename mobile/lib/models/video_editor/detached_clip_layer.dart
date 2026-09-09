@@ -131,4 +131,64 @@ class DetachedClipLayerData {
     final own = layer.meta;
     return isDetachedClipMeta(own) ? own : null;
   }
+
+  /// Every file owned by a detached clip anywhere in serialized editor state.
+  ///
+  /// The whole history is walked, not only its active position: undo and redo
+  /// entries are durable draft state and their media must survive cleanup too.
+  static Set<String> ownedFilePathsInHistory(
+    Map<String, dynamic> history,
+    String documentsPath,
+  ) {
+    final paths = <String>{};
+
+    void visit(Object? value) {
+      if (value is Map) {
+        final map = Map<String, dynamic>.from(value);
+        if (isDetachedClipMeta(map)) {
+          try {
+            final data = fromMeta(map, documentsPath);
+            if (data != null) {
+              paths.addAll(
+                data.clip.ownedFilePaths.whereType<String>().where(
+                  (path) => path.isNotEmpty,
+                ),
+              );
+            }
+          } on Object {
+            // A corrupt history entry must not prevent the rest of the draft
+            // from saving or its other valid assets from being protected.
+          }
+        }
+        map.values.forEach(visit);
+      } else if (value is Iterable) {
+        value.forEach(visit);
+      }
+    }
+
+    visit(history);
+    return paths;
+  }
+
+  /// Whether serialized editor state contains at least one detached clip.
+  static bool historyContainsDetachedClip(Map<String, dynamic> history) {
+    var found = false;
+
+    void visit(Object? value) {
+      if (found) return;
+      if (value is Map) {
+        final map = Map<String, dynamic>.from(value);
+        if (isDetachedClipMeta(map)) {
+          found = true;
+          return;
+        }
+        map.values.forEach(visit);
+      } else if (value is Iterable) {
+        value.forEach(visit);
+      }
+    }
+
+    visit(history);
+    return found;
+  }
 }

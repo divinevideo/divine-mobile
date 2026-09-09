@@ -249,11 +249,12 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     // A dismissed colour picker or camera cancels the whole detach: the user
     // chose to keep the slot and then did not say with what.
     if (choice != DetachClipChoice.removeSlot && fill == null) return;
-    if (bloc.isClosed) return;
+    if (bloc.isClosed) {
+      await _deleteUnusedImageFill(fill);
+      return;
+    }
 
-    bloc.add(
-      ClipEditorClipDetachRequested(clipId: clip.id, replacement: fill),
-    );
+    bloc.add(ClipEditorClipDetachRequested(clipId: clip.id, replacement: fill));
   }
 
   Future<ClipPlaceholderFill?> _pickColorFill() async {
@@ -305,6 +306,21 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         );
       }
       return null;
+    }
+  }
+
+  Future<void> _deleteUnusedImageFill(ClipPlaceholderFill? fill) async {
+    if (fill is! ClipPlaceholderImageFill) return;
+    try {
+      final file = File(fill.imagePath);
+      if (file.existsSync()) await file.delete();
+    } catch (error) {
+      Log.warning(
+        '⚠️ Failed to delete unused detach placeholder ${fill.imagePath}: '
+        '$error',
+        name: 'TimelineClipControls',
+        category: LogCategory.video,
+      );
     }
   }
 
