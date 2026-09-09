@@ -211,6 +211,19 @@ void main() {
       expect(runGuard().exitCode, 0);
     });
 
+    test('raw print in nostr_sdk is rejected', () {
+      writeMobileFile(
+        'packages/nostr_sdk/lib/logging.dart',
+        "void log() { print('bypass'); }\n",
+      );
+
+      final result = runGuard();
+
+      expect(result.exitCode, 1);
+      expect(result.stdout, contains('FAIL [avoid_print]'));
+      expect(result.stdout, contains('packages/nostr_sdk/lib/logging.dart'));
+    });
+
     test('package test imports are outside the library ratchet', () {
       writeMobileFile(
         'packages/example/test/logging_test.dart',

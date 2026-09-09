@@ -52,15 +52,9 @@ GENERATED_EXCLUDES=(
   -not -name "*.mocks.dart"
 )
 
-# print/debugPrint retain their existing package exemptions. This issue
-# ratchets dart:developer imports; migrating raw call sites is separate work.
 PRINT_EXCLUDES=(
   "${GENERATED_EXCLUDES[@]}"
   -not -path "*/unified_logger/*"
-  -not -path "*/nostr_sdk/*"
-  -not -path "*/nostr_client/*"
-  -not -path "*/packages/models/*"
-  -not -name "migrate_logging.dart"
 )
 
 fail=0
@@ -105,7 +99,7 @@ fi
 # App code has no migration baseline: a direct import is always forbidden.
 APP_DEVELOPER_IMPORTS="$(
   find "$LIB_DIR" "${GENERATED_EXCLUDES[@]}" \
-    -not -name "migrate_logging.dart" -name "*.dart" -print0 2>/dev/null \
+    -name "*.dart" -print0 2>/dev/null \
   | while IFS= read -r -d '' file; do
       if grep -qE "$DEVELOPER_IMPORT_RE" "$file"; then
         printf '%s\n' "${file#"$PATH_PREFIX"/}"
@@ -136,6 +130,8 @@ print_baseline_header() {
 # growth fails CI against origin/main. unified_logger is excluded because its
 # developer.log call is the output sink rather than migration debt. A trailing
 # '# reason' documents why each existing import remains.
+# nostr_client and nostr_sdk migrations are tracked by #8967; the models
+# dependency-cycle blocker is tracked separately by #8934.
 EOF
 }
 

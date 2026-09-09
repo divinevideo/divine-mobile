@@ -3,6 +3,8 @@
 # growth fails CI against origin/main. unified_logger is excluded because its
 # developer.log call is the output sink rather than migration debt. A trailing
 # '# reason' documents why each existing import remains.
+# nostr_client and nostr_sdk migrations are tracked by #8967; the models
+# dependency-cycle blocker is tracked separately by #8934.
 packages/models/lib/src/pending_upload.dart # models: unified_logger depends on models, so importing it would create a cycle until #8934 removes that dependency
 packages/nostr_client/lib/src/nostr_client.dart # nostr_client: legacy direct logging; migrate to its existing unified_logger dependency
 packages/nostr_client/lib/src/relay_manager.dart # nostr_client: legacy direct logging; migrate to its existing unified_logger dependency
