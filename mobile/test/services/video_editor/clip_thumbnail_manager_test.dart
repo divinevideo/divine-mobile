@@ -1104,16 +1104,15 @@ void main() {
           onResume: () => resumes++,
         );
         fakeStreamManager = ClipThumbnailManager(
-          stripThumbnailStreamFactory:
-              ({
-                required String videoPath,
-                required String clipId,
-                required Duration duration,
-                required Size outputSize,
-                required int thumbsPerSecond,
-                Duration startOffset = Duration.zero,
-                List<Duration>? priorityTimestamps,
-              }) => streamController.stream,
+          stripThumbnailStreamFactory: ({
+            required String videoPath,
+            required String clipId,
+            required Duration duration,
+            required Size outputSize,
+            required int thumbsPerSecond,
+            Duration startOffset = Duration.zero,
+            List<Duration>? priorityTimestamps,
+          }) => streamController.stream,
         );
       });
 

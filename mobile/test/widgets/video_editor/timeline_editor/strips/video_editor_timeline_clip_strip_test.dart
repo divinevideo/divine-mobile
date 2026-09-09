@@ -334,16 +334,15 @@ void main() {
         'swaps from source-timed preview to rebased rendered geometry',
         (tester) async {
           final manager = ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required String videoPath,
-                  required String clipId,
-                  required Duration duration,
-                  required Size outputSize,
-                  required int thumbsPerSecond,
-                  Duration startOffset = Duration.zero,
-                  List<Duration>? priorityTimestamps,
-                }) => const Stream.empty(),
+            stripThumbnailStreamFactory: ({
+              required String videoPath,
+              required String clipId,
+              required Duration duration,
+              required Size outputSize,
+              required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
+              List<Duration>? priorityTimestamps,
+            }) => const Stream.empty(),
           );
           addTearDown(manager.dispose);
 
@@ -439,16 +438,15 @@ void main() {
         'stays file-anchored',
         (tester) async {
           final manager = ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required String videoPath,
-                  required String clipId,
-                  required Duration duration,
-                  required Size outputSize,
-                  required int thumbsPerSecond,
-                  Duration startOffset = Duration.zero,
-                  List<Duration>? priorityTimestamps,
-                }) => const Stream.empty(),
+            stripThumbnailStreamFactory: ({
+              required String videoPath,
+              required String clipId,
+              required Duration duration,
+              required Size outputSize,
+              required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
+              List<Duration>? priorityTimestamps,
+            }) => const Stream.empty(),
           );
           addTearDown(manager.dispose);
 
@@ -1017,16 +1015,15 @@ void main() {
       setUp(() {
         clipBloc = _MockClipEditorBloc();
         manager = ClipThumbnailManager(
-          stripThumbnailStreamFactory:
-              ({
-                required String videoPath,
-                required String clipId,
-                required Duration duration,
-                required Size outputSize,
-                required int thumbsPerSecond,
-                Duration startOffset = Duration.zero,
-                List<Duration>? priorityTimestamps,
-              }) => const Stream<List<StripThumbnail>>.empty(),
+          stripThumbnailStreamFactory: ({
+            required String videoPath,
+            required String clipId,
+            required Duration duration,
+            required Size outputSize,
+            required int thumbsPerSecond,
+            Duration startOffset = Duration.zero,
+            List<Duration>? priorityTimestamps,
+          }) => const Stream<List<StripThumbnail>>.empty(),
         );
       });
 
