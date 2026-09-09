@@ -124,6 +124,29 @@ void main() {
       expect(position, const Duration(seconds: 4));
     });
 
+    test('starts a split tail where the head stopped', () {
+      final position = detachedClipPlayerPosition(
+        Duration.zero,
+        _clip(),
+        sourceOffset: const Duration(seconds: 2),
+      );
+
+      // Without the offset the tail would rewind to the clip's first frame at
+      // its own start, replaying what the head just showed.
+      expect(position, const Duration(seconds: 2));
+    });
+
+    test('advances a split tail from its offset', () {
+      final position = detachedClipPlayerPosition(
+        const Duration(seconds: 5),
+        _clip(),
+        layerStart: const Duration(seconds: 4),
+        sourceOffset: const Duration(seconds: 2),
+      );
+
+      expect(position, const Duration(seconds: 3));
+    });
+
     test('parks at the sped-up length, not the source length', () {
       final position = detachedClipPlayerPosition(
         const Duration(seconds: 30),
@@ -132,6 +155,34 @@ void main() {
 
       // A six-second clip at 2x is on screen for three.
       expect(position, const Duration(seconds: 3));
+    });
+  });
+
+  group('detachedClipPlayerKey', () {
+    Map<String, dynamic> meta(String layerId) =>
+        DetachedClipLayerData(clip: _clip(), layerId: layerId).toMeta();
+
+    test('gives two layers of one clip their own player', () {
+      // A player carries one position and one time window, so two layers can
+      // only share it while they sit at the same moment — where a duplicate
+      // starts, and never again once it is moved or split.
+      expect(
+        detachedClipPlayerKey(meta('layer-1')),
+        isNot(detachedClipPlayerKey(meta('layer-2'))),
+      );
+    });
+
+    test('is stable across a meta rebuild for the same layer', () {
+      // A history write hands the layer an equal but distinct map; a key that
+      // changed there would drop the pooled player on every undo.
+      expect(
+        detachedClipPlayerKey(meta('layer-1')),
+        detachedClipPlayerKey(meta('layer-1')),
+      );
+    });
+
+    test('is null for meta that names no clip', () {
+      expect(detachedClipPlayerKey({'kind': 'sticker'}), isNull);
     });
   });
 

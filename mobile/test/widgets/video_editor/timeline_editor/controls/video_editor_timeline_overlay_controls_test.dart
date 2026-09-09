@@ -154,7 +154,7 @@ void main() {
       expect(find.text(l10n.videoEditorEditLabel), findsNothing);
     });
 
-    testWidgets('hides duplicate and split for a detached clip layer', (
+    testWidgets('offers duplicate, split and crop for a detached clip', (
       tester,
     ) async {
       const item = TimelineOverlayItem(
@@ -182,9 +182,13 @@ void main() {
 
       await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
 
-      expect(find.text(l10n.videoEditorDuplicateLabel), findsNothing);
-      expect(find.text(l10n.videoEditorSplitLabel), findsNothing);
+      expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
+      // A detached clip is composited as a VideoLayer, which carries no
+      // animations field — offering the action would animate it in the editor
+      // and drop it silently from the file.
+      expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
     });
 
     testWidgets('renders $VideoEditorTimelineControls for filter', (
@@ -267,6 +271,113 @@ void main() {
             meta: any(named: 'meta'),
           ),
         ).thenAnswer((_) {});
+      });
+
+      WidgetLayer detachedLayer({
+        required String id,
+        Duration start = Duration.zero,
+        Duration end = const Duration(seconds: 6),
+      }) {
+        final meta = <String, dynamic>{
+          detachedClipLayerKindKey: detachedClipLayerKind,
+          detachedClipLayerIdKey: id,
+          detachedClipLayerDurationKey: const Duration(
+            seconds: 6,
+          ).inMicroseconds,
+        };
+        return WidgetLayer(
+          id: id,
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          startTime: start,
+          endTime: end,
+          exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
+        );
+      }
+
+      testWidgets('duplicating a detached clip re-points its meta', (
+        tester,
+      ) async {
+        final layer = detachedLayer(id: 'detached-1');
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+        const item = TimelineOverlayItem(
+          id: 'detached-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 6),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(item, mockEditor, mainBloc),
+        );
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+          ),
+        );
+        await tester.pump();
+
+        final written =
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                  ),
+                ).captured.last
+                as List<Layer>;
+        final copy = written.last;
+
+        // The copy carries its own layer id in the meta too. Leaving the
+        // original's there makes the preview read that layer's window off the
+        // timeline while the export uses the copy's — they agree only while
+        // the copy has not been moved, which is where a duplicate starts.
+        expect(copy.id, isNot('detached-1'));
+        expect(
+          DetachedClipLayerData.layerIdOf(DetachedClipLayerData.metaOf(copy)),
+          copy.id,
+        );
+      });
+
+      testWidgets('splitting a detached clip offsets the tail into the clip', (
+        tester,
+      ) async {
+        final layer = detachedLayer(id: 'detached-1');
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(
+          const VideoEditorMainState(currentPosition: Duration(seconds: 2)),
+        );
+
+        const item = TimelineOverlayItem(
+          id: 'detached-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 6),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(item, mockEditor, mainBloc),
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorSplitSelectedClipSemanticLabel),
+        );
+        await tester.pump();
+
+        final written =
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                  ),
+                ).captured.last
+                as List<Layer>;
+        final tail = written.last;
+
+        // The tail plays on from the cut. Without the offset it would rewind
+        // to the clip's first frame at its own start and replay the head.
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(
+            DetachedClipLayerData.metaOf(tail),
+          ),
+          const Duration(seconds: 2),
+        );
       });
 
       testWidgets(

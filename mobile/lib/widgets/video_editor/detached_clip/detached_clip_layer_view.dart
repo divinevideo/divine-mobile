@@ -44,6 +44,21 @@ String? detachedClipSourceKey(Map<String, dynamic>? meta) {
       '|${raw['trimEndMs']}|${raw['playbackSpeed']}|${raw['volume']}';
 }
 
+/// Identifies the player a detached-clip [meta] needs.
+///
+/// The media alone is not enough: a player carries one position and one time
+/// window, so two layers of the same clip can only share it while they sit at
+/// the same moment. That is where a duplicate starts, which is why sharing
+/// looked right — but move one and the shared player can only be in one of the
+/// two places. Splitting makes them differ by construction. So the layer is
+/// part of the key, and each layer drives its own decoder.
+String? detachedClipPlayerKey(Map<String, dynamic>? meta) {
+  final source = detachedClipSourceKey(meta);
+  if (source == null) return null;
+  final layerId = DetachedClipLayerData.layerIdOf(meta);
+  return layerId == null ? source : '$source|$layerId';
+}
+
 /// Renders a detached clip inside its `WidgetLayer` on the editor canvas.
 ///
 /// The clip no longer sits on the timeline track, so the canvas' single
@@ -105,7 +120,7 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // awaiting the load first would leave the layer blank for those frames.
     // When the player is already open the clip is known synchronously, so the
     // first frame after the remount draws the video and nothing flashes.
-    final key = detachedClipSourceKey(widget.meta);
+    final key = detachedClipPlayerKey(widget.meta);
     final ready = key == null ? null : detachedClipPlayers.acquireIfReady(key);
     if (ready != null) {
       _heldKey = key;
@@ -131,8 +146,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // Compared by source, not by map identity: a history write can hand the
     // layer a fresh meta instance describing the same clip, and reloading on
     // that would restart the player.
-    if (detachedClipSourceKey(oldWidget.meta) !=
-        detachedClipSourceKey(widget.meta)) {
+    if (detachedClipPlayerKey(oldWidget.meta) !=
+        detachedClipPlayerKey(widget.meta)) {
       unawaited(_load());
     }
   }
@@ -155,6 +170,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
       advancing: scope?.playheadAdvancingNotifier,
       windowStart: window?.start ?? Duration.zero,
       windowEnd: window?.end,
+      sourceOffset:
+          DetachedClipLayerData.sourceOffsetOf(widget.meta) ?? Duration.zero,
     );
   }
 
@@ -201,7 +218,7 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     _player?.detach();
     _heldKey = null;
 
-    final key = detachedClipSourceKey(widget.meta);
+    final key = detachedClipPlayerKey(widget.meta);
     final documentsPath = await getDocumentsPath();
     if (superseded()) return;
 

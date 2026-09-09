@@ -169,6 +169,110 @@ void main() {
       });
     });
 
+    group('rebase', () {
+      test('re-points a copy at its own layer', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        final copy = DetachedClipLayerData.rebase(
+          meta,
+          layerId: 'layer-1_copy',
+        );
+
+        // Without this the copy reads the original's window off the timeline
+        // while the export uses its own, and the two only agree while the copy
+        // has not been moved.
+        expect(DetachedClipLayerData.layerIdOf(copy), 'layer-1_copy');
+        expect(copy![detachedClipLayerClipKey], meta[detachedClipLayerClipKey]);
+      });
+
+      test('keeps the existing offset when none is given', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+        ).toMeta();
+
+        final copy = DetachedClipLayerData.rebase(meta, layerId: 'copy');
+
+        // A duplicate shows the same stretch of footage as its source.
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(copy),
+          const Duration(seconds: 2),
+        );
+      });
+
+      test('carries a new offset for a split tail', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        final tail = DetachedClipLayerData.rebase(
+          meta,
+          layerId: 'tail',
+          sourceOffset: const Duration(seconds: 3),
+        );
+
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(tail),
+          const Duration(seconds: 3),
+        );
+      });
+
+      test('leaves a sticker alone', () {
+        expect(
+          DetachedClipLayerData.rebase({'kind': 'sticker'}, layerId: 'x'),
+          isNull,
+        );
+      });
+    });
+
+    group('remainingPlaybackOf', () {
+      test('is the whole clip for a layer that starts at its head', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        // Six seconds of source less the one-second trim.
+        expect(
+          DetachedClipLayerData.remainingPlaybackOf(meta),
+          const Duration(seconds: 5),
+        );
+      });
+
+      test('is what is left after a split', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'tail',
+          sourceOffset: const Duration(seconds: 4),
+        ).toMeta();
+
+        // The timeline caps the bar at this, so a tail cannot be stretched
+        // back over footage that is behind its own start.
+        expect(
+          DetachedClipLayerData.remainingPlaybackOf(meta),
+          const Duration(seconds: 1),
+        );
+      });
+
+      test('never goes negative', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'tail',
+          sourceOffset: const Duration(seconds: 9),
+        ).toMeta();
+
+        expect(
+          DetachedClipLayerData.remainingPlaybackOf(meta),
+          Duration.zero,
+        );
+      });
+    });
+
     group('isDetachedClipLayer', () {
       test('is true for a layer whose export meta carries the marker', () {
         final meta = DetachedClipLayerData(

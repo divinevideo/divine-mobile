@@ -107,6 +107,7 @@ class DetachedClipPlayer {
 
   ValueNotifier<Duration>? _playhead;
   ValueNotifier<bool>? _advancing;
+  Duration _sourceOffset = Duration.zero;
   Duration _windowStart = Duration.zero;
   Duration? _windowEnd;
   Duration? _lastPlayTime;
@@ -138,8 +139,12 @@ class DetachedClipPlayer {
     ValueNotifier<bool>? advancing,
     Duration windowStart = Duration.zero,
     Duration? windowEnd,
+    Duration sourceOffset = Duration.zero,
   }) {
-    final sameWindow = windowStart == _windowStart && windowEnd == _windowEnd;
+    final sameWindow =
+        windowStart == _windowStart &&
+        windowEnd == _windowEnd &&
+        sourceOffset == _sourceOffset;
     if (identical(playhead, _playhead) &&
         identical(advancing, _advancing) &&
         sameWindow) {
@@ -148,6 +153,7 @@ class DetachedClipPlayer {
 
     _windowStart = windowStart;
     _windowEnd = windowEnd;
+    _sourceOffset = sourceOffset;
 
     if (!identical(playhead, _playhead)) {
       _playhead?.removeListener(_onTick);
@@ -280,6 +286,7 @@ class DetachedClipPlayer {
       now,
       _clip,
       layerStart: _windowStart,
+      sourceOffset: _sourceOffset,
     );
     // Compared against where the player actually is, not against the last
     // position asked for. The two part company whenever a seek is dropped or
@@ -317,6 +324,9 @@ class DetachedClipPlayer {
 /// and the speed is applied on the far side — which makes this simply how long
 /// the layer has been on screen.
 ///
+/// [sourceOffset] is where this layer starts inside the clip — zero for a whole
+/// detached clip, the cut point for the tail half of a split.
+///
 /// Clamped to the clip's playback span at both ends: outside its window the
 /// editor hides the layer anyway, and a companion parked on the last frame is
 /// the right thing to reveal if it does not.
@@ -324,9 +334,10 @@ Duration detachedClipPlayerPosition(
   Duration playTime,
   DivineVideoClip clip, {
   Duration layerStart = Duration.zero,
+  Duration sourceOffset = Duration.zero,
 }) {
   final elapsed = playTime - layerStart;
-  if (elapsed.isNegative) return Duration.zero;
+  final at = (elapsed.isNegative ? Duration.zero : elapsed) + sourceOffset;
   final end = clip.playbackDuration;
-  return elapsed > end ? end : elapsed;
+  return at > end ? end : at;
 }

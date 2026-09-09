@@ -192,7 +192,7 @@ class TimelineOverlayBloc
             // bar past that would promise frames the file does not have. Every
             // other layer is a drawing that can be held for as long as the user
             // likes, so it stays unbounded.
-            maxDuration: DetachedClipLayerData.playbackDurationOf(
+            maxDuration: DetachedClipLayerData.remainingPlaybackOf(
               DetachedClipLayerData.metaOf(layer),
             ),
           ),

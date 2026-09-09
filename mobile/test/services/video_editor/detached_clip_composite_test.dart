@@ -152,6 +152,7 @@ void main() {
       Size logicalSize = const Size(90, 90),
       Duration? startTime,
       Duration? endTime,
+      Duration sourceOffset = Duration.zero,
     }) => DetachedClipExportLayer(
       clip: clip,
       layer: _detachedLayer(
@@ -161,7 +162,65 @@ void main() {
         endTime: endTime,
       ),
       logicalSize: logicalSize,
+      sourceOffset: sourceOffset,
     );
+
+    test('starts a split tail partway into the clip', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(
+          _clip(trimStart: const Duration(seconds: 1)),
+          sourceOffset: const Duration(seconds: 2),
+        ),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // The tail of a split shows what came after the cut, so its segment
+      // begins at the trim point plus the cut — not back at the first frame.
+      final segment = layer.clips.single;
+      expect(segment.startTime, const Duration(seconds: 3));
+      // Six seconds of source, one trimmed off the head, two already played.
+      expect(segment.endTime, const Duration(seconds: 6));
+    });
+
+    test('converts the offset into source time on a sped-up clip', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(
+          _clip(playbackSpeed: 2),
+          sourceOffset: const Duration(seconds: 1),
+        ),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // The offset is wall clock; one second of a 2x clip is two of its
+      // source, and the segment indexes the source file.
+      expect(layer.clips.single.startTime, const Duration(seconds: 2));
+    });
+
+    test('leaves a flattened file in its own playback time', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(
+          _clip(playbackSpeed: 2),
+          sourceOffset: const Duration(seconds: 1),
+        ),
+        resolvedVideo: EditorVideo.file('/docs/flattened.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: true,
+      );
+
+      // A flattened render already *is* the sped-up section, so the offset
+      // needs no conversion — converting it would seek twice as far.
+      expect(layer.clips.single.startTime, const Duration(seconds: 1));
+    });
 
     test('places a centred layer at the middle of the canvas', () {
       final layer = buildDetachedClipVideoLayer(

@@ -28,6 +28,15 @@ const String detachedClipLayerDurationKey = 'playbackDurationUs';
 /// play and where in the clip to be.
 const String detachedClipLayerIdKey = 'layerId';
 
+/// Key under which the layer's start inside the clip is written, in
+/// microseconds of playback time.
+///
+/// Zero for a freshly detached clip and for a duplicate, which shows the same
+/// stretch of footage. Splitting is what makes it non-zero: the tail half
+/// starts where the head stopped, and without this it would rewind to the
+/// clip's first frame at its own start.
+const String detachedClipLayerSourceOffsetKey = 'sourceOffsetUs';
+
 /// A clip lifted out of the timeline and turned into a freely placeable layer
 /// on the editor canvas.
 ///
@@ -37,13 +46,20 @@ const String detachedClipLayerIdKey = 'layerId';
 /// trim, volume and speed with it, which both the canvas preview and the
 /// export composition need.
 class DetachedClipLayerData {
-  const DetachedClipLayerData({required this.clip, required this.layerId});
+  const DetachedClipLayerData({
+    required this.clip,
+    required this.layerId,
+    this.sourceOffset = Duration.zero,
+  });
 
   /// The detached clip.
   final DivineVideoClip clip;
 
   /// Id of the layer this clip was placed on.
   final String layerId;
+
+  /// Where this layer starts inside the clip, in playback time.
+  final Duration sourceOffset;
 
   /// Serializes to the map stored in `WidgetLayer.exportConfigs.meta`.
   ///
@@ -54,6 +70,7 @@ class DetachedClipLayerData {
     detachedClipLayerClipKey: clip.toJson(),
     detachedClipLayerDurationKey: clip.playbackDuration.inMicroseconds,
     detachedClipLayerIdKey: layerId,
+    detachedClipLayerSourceOffsetKey: sourceOffset.inMicroseconds,
   };
 
   /// Whether [meta] describes a detached clip rather than a sticker.
@@ -83,6 +100,7 @@ class DetachedClipLayerData {
           useOriginalPath: useOriginalPath,
         ),
         layerId: meta[detachedClipLayerIdKey] as String? ?? '',
+        sourceOffset: sourceOffsetOf(meta) ?? Duration.zero,
       );
     } on FormatException {
       return null;
@@ -102,6 +120,54 @@ class DetachedClipLayerData {
     if (!isDetachedClipMeta(meta)) return null;
     final raw = meta![detachedClipLayerDurationKey];
     return raw is int && raw > 0 ? Duration(microseconds: raw) : null;
+  }
+
+  /// Where the layer starts inside the clip, or `null` when [meta] is not a
+  /// detached clip. Absent (a layer written before splitting existed) reads as
+  /// zero, which is what an unsplit layer means.
+  static Duration? sourceOffsetOf(Map<String, dynamic>? meta) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final raw = meta![detachedClipLayerSourceOffsetKey];
+    return raw is int && raw > 0 ? Duration(microseconds: raw) : Duration.zero;
+  }
+
+  /// How much of the clip is still ahead of this layer's start.
+  ///
+  /// What the timeline caps the bar at: the head of a split has the whole clip
+  /// behind it but only plays up to the cut, and the tail has only what is
+  /// left. Stretching either past that would promise frames the file does not
+  /// have there.
+  static Duration? remainingPlaybackOf(Map<String, dynamic>? meta) {
+    final total = playbackDurationOf(meta);
+    if (total == null) return null;
+    final offset = sourceOffsetOf(meta) ?? Duration.zero;
+    final remaining = total - offset;
+    return remaining > Duration.zero ? remaining : Duration.zero;
+  }
+
+  /// [meta] re-pointed at a new layer, for a copy of a detached clip.
+  ///
+  /// A copied `WidgetLayer` gets a fresh `Layer.id` but carries its meta
+  /// verbatim, so without this the copy still names the *original* layer — and
+  /// then reads the original's window off the timeline while the export uses
+  /// its own. The two agree only while the copy sits at the same time as the
+  /// original, which is exactly where a duplicate starts and why the mismatch
+  /// only surfaces once it is moved.
+  ///
+  /// Edits the map rather than rebuilding through [fromMeta]: the clip payload
+  /// is opaque here and needs no documents path to be carried across.
+  static Map<String, dynamic>? rebase(
+    Map<String, dynamic>? meta, {
+    required String layerId,
+    Duration? sourceOffset,
+  }) {
+    if (!isDetachedClipMeta(meta)) return null;
+    return {
+      ...meta!,
+      detachedClipLayerIdKey: layerId,
+      if (sourceOffset != null)
+        detachedClipLayerSourceOffsetKey: sourceOffset.inMicroseconds,
+    };
   }
 
   /// The id of the layer [meta] belongs to, or `null` when it predates the key.

@@ -17,6 +17,7 @@ class DetachedClipExportLayer {
     required this.clip,
     required this.layer,
     required this.logicalSize,
+    this.sourceOffset = Duration.zero,
   });
 
   /// The clip's own media, with its trim, volume and speed.
@@ -27,6 +28,10 @@ class DetachedClipExportLayer {
 
   /// The layer's laid-out size in editor body space, scale already folded in.
   final Size logicalSize;
+
+  /// Where this layer starts inside the clip, in playback time — non-zero for
+  /// the tail half of a split.
+  final Duration sourceOffset;
 }
 
 /// The captured layers sorted into what renders under the detached clips, the
@@ -62,9 +67,10 @@ PartitionedLayers partitionDetachedClipLayers(
 
   for (final item in layers) {
     final meta = DetachedClipLayerData.metaOf(item.layer);
-    final clip = meta == null
+    final data = meta == null
         ? null
-        : DetachedClipLayerData.fromMeta(meta, documentsPath)?.clip;
+        : DetachedClipLayerData.fromMeta(meta, documentsPath);
+    final clip = data?.clip;
 
     if (clip == null || clip.video == null) {
       (detached.isEmpty ? below : above).add(item);
@@ -75,6 +81,7 @@ PartitionedLayers partitionDetachedClipLayers(
         clip: clip,
         layer: item.layer,
         logicalSize: item.logicalSize,
+        sourceOffset: data!.sourceOffset,
       ),
     );
   }
@@ -123,10 +130,17 @@ VideoLayer buildDetachedClipVideoLayer({
 
   // A speed-flattened file already *is* the trimmed, sped-up section, so it
   // plays from its own zero. The clip's own file still needs its trim window.
-  final trimStart = speedFlattened ? Duration.zero : clip.trimStart;
-  final available = speedFlattened
-      ? clip.playbackDuration
-      : clip.trimmedDuration;
+  //
+  // A split tail starts partway in, and its offset is playback time — the same
+  // units the flattened file is already in, but source time has to be derived
+  // for the clip's own file.
+  final offsetIntoSource = speedFlattened
+      ? item.sourceOffset
+      : _sourceSpanFor(clip, item.sourceOffset, speedFlattened: false);
+  final trimStart =
+      (speedFlattened ? Duration.zero : clip.trimStart) + offsetIntoSource;
+  final whole = speedFlattened ? clip.playbackDuration : clip.trimmedDuration;
+  final available = whole - offsetIntoSource;
 
   // A layer window shorter than the clip cuts the clip; a longer one leaves it
   // to end on its own last frame rather than freezing.

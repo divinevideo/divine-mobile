@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
@@ -79,20 +80,13 @@ class _LayerOverlayControls extends StatelessWidget {
       onEdit: isTextLayer
           ? () => _editTextLayer(context: context, layer: layer)
           : null,
-      // A detached clip owns one timed video player. Duplicating or splitting
-      // the generic WidgetLayer would copy its player identity and layer-id
-      // metadata verbatim, making preview timing disagree with export.
-      onDuplicated: isDetachedClip
-          ? null
-          : () => _duplicateLayer(context: context, layer: layer),
+      onDuplicated: () => _duplicateLayer(context: context, layer: layer),
       onMultiSelect: canMultiSelect
           ? () => _startLayerMultiSelect(context: context)
           : null,
       multiSelectSemanticLabel:
           context.l10n.videoEditorLayerMultiSelectSemanticLabel,
-      onSplit: isDetachedClip
-          ? null
-          : () => _splitLayer(context: context, layer: layer),
+      onSplit: () => _splitLayer(context: context, layer: layer),
       // Crop / rotate / flip, for a detached clip only. Every other layer is
       // already whatever shape it was drawn or typed at; a detached clip
       // carries a video file that can genuinely be re-rendered.
@@ -163,9 +157,10 @@ class _LayerOverlayControls extends StatelessWidget {
     final layerIdx = layers.indexWhere((l) => l.id == item.id);
     if (layerIdx < 0) return;
 
-    final copy = layer.copyWith(
-      id: _copyId(layer.id),
-      offset: layer.offset + const Offset(24, 24),
+    final copyId = _copyId(layer.id);
+    final copy = _reownDetachedClip(
+      layer.copyWith(id: copyId, offset: layer.offset + const Offset(24, 24)),
+      layerId: copyId,
     );
 
     layers.insert(layerIdx + 1, copy);
@@ -186,10 +181,23 @@ class _LayerOverlayControls extends StatelessWidget {
     final layerIdx = layers.indexWhere((l) => l.id == item.id);
     if (layerIdx < 0) return;
 
-    final second = layer.copyWith(
-      id: _copyId(layer.id),
-      startTime: splitAt,
-      endTime: item.endTime,
+    final secondId = _copyId(layer.id);
+    // The tail plays on from where the head stopped, so it starts that much
+    // further into the clip. Measured from the layer's own start rather than
+    // from zero, so splitting a tail again keeps accumulating.
+    final headOffset =
+        DetachedClipLayerData.sourceOffsetOf(
+          DetachedClipLayerData.metaOf(layer),
+        ) ??
+        Duration.zero;
+    final second = _reownDetachedClip(
+      layer.copyWith(
+        id: secondId,
+        startTime: splitAt,
+        endTime: item.endTime,
+      ),
+      layerId: secondId,
+      sourceOffset: headOffset + (splitAt - item.startTime),
     );
 
     layers[layerIdx] = layer.copyWith(endTime: splitAt);
@@ -560,6 +568,35 @@ class _SoundOverlayControls extends StatelessWidget {
       TimelineOverlayItemSelected(second.id),
     );
   }
+}
+
+/// Re-points a copied detached clip's meta at [copy]'s own layer id, and at
+/// [sourceOffset] when the copy starts partway into the clip.
+///
+/// `copyWith` gives the copy a fresh `Layer.id` but carries the meta verbatim,
+/// so without this the copy still names the layer it came from — and then reads
+/// that layer's window off the timeline while the export uses its own. The two
+/// agree only while the copy sits at the same time as the original, which is
+/// where a duplicate starts and why the mismatch surfaces only once it moves.
+///
+/// Returns [copy] unchanged for every other kind of layer.
+Layer _reownDetachedClip(
+  Layer copy, {
+  required String layerId,
+  Duration? sourceOffset,
+}) {
+  if (copy is! WidgetLayer) return copy;
+  final meta = DetachedClipLayerData.rebase(
+    DetachedClipLayerData.metaOf(copy),
+    layerId: layerId,
+    sourceOffset: sourceOffset,
+  );
+  if (meta == null) return copy;
+  return copy.copyWith(
+    widget: DetachedClipLayerView(meta: meta),
+    meta: meta,
+    exportConfigs: copy.exportConfigs.copyWith(id: layerId, meta: meta),
+  );
 }
 
 String _copyId(String id) =>
