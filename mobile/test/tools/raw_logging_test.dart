@@ -114,6 +114,23 @@ void main() {
       expect(runGuard().exitCode, 0);
     });
 
+    test(
+      'a block comment around an import line does not invent a violation',
+      () {
+        // A per-line check matched the `import` line inside the block comment.
+        // The directive scanner strips the comment, so this must stay clean.
+        writeMobileFile(
+          'packages/example/lib/logging.dart',
+          '/*\n'
+              "import 'dart:developer';\n"
+              '*/\n'
+              'void log() {}\n',
+        );
+
+        expect(runGuard().exitCode, 0);
+      },
+    );
+
     test('a baselined package import passes', () {
       writeMobileFile(
         'packages/example/lib/logging.dart',
