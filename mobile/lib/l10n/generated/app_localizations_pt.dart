@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9947,8 +9948,7 @@ class AppLocalizationsPt extends AppLocalizations {
       locale: localeName,
       other:
           'Isso bloqueia as $count contas que estão usando este selo agora. Os posts delas não vão aparecer no seu feed e elas não serão notificadas.',
-      one:
-          'Isso bloqueia a conta que está usando este selo agora. Os posts dessa pessoa não vão aparecer no seu feed e ela não será notificada.',
+      one: 'Isso bloqueia a conta que está usando este selo agora. Os posts dessa pessoa não vão aparecer no seu feed e ela não será notificada.',
     );
     return '$_temp0';
   }

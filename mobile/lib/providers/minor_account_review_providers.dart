@@ -14,13 +14,12 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:openvine/services/support_email_composer.dart';
 
-typedef MinorAccountReviewComposeEmail =
-    Future<void> Function({
-      required String toEmail,
-      required String subject,
-      required String body,
-      Rect? sharePositionOrigin,
-    });
+typedef MinorAccountReviewComposeEmail = Future<void> Function({
+  required String toEmail,
+  required String subject,
+  required String body,
+  Rect? sharePositionOrigin,
+});
 
 /// Support-email composer used by minor-account review screens.
 final minorAccountReviewSupportEmailComposerProvider =

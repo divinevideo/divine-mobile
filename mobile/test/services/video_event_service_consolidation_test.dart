@@ -268,72 +268,73 @@ void main() {
       expect(
         video.reposterPubkey,
         'bob',
-        reason:
-            'Backward compatibility: reposterPubkey should work for single reposter',
+        reason: 'Backward compatibility: reposterPubkey should work for single reposter',
       );
 
       // Verify: reposterPubkeys (plural) should contain bob
       expect(video.reposterPubkeys, contains('bob'));
     });
 
-    test('reposterPubkey is set when original video exists and repost arrives', () {
-      // This test verifies the fix for the bug where the repost header would
-      // disappear. When original video is in the list first and a repost
-      // arrives, consolidation must set BOTH reposterPubkey (singular) and
-      // reposterPubkeys (plural) for the UI header to display correctly.
+    test(
+      'reposterPubkey is set when original video exists and repost arrives',
+      () {
+        // This test verifies the fix for the bug where the repost header would
+        // disappear. When original video is in the list first and a repost
+        // arrives, consolidation must set BOTH reposterPubkey (singular) and
+        // reposterPubkeys (plural) for the UI header to display correctly.
 
-      // Add original video (non-repost) first
-      final originalVideo = TestVideoEventBuilder.create(
-        id: 'original999',
-        pubkey: 'alice',
-        videoUrl: 'https://example.com/video.mp4',
-        title: 'Original Video',
-      );
-      service.addVideoEventForTesting(
-        originalVideo,
-        SubscriptionType.discovery,
-        isHistorical: false,
-      );
+        // Add original video (non-repost) first
+        final originalVideo = TestVideoEventBuilder.create(
+          id: 'original999',
+          pubkey: 'alice',
+          videoUrl: 'https://example.com/video.mp4',
+          title: 'Original Video',
+        );
+        service.addVideoEventForTesting(
+          originalVideo,
+          SubscriptionType.discovery,
+          isHistorical: false,
+        );
 
-      // Verify: Original video should NOT be marked as repost
-      var videos = service.getVideos(SubscriptionType.discovery);
-      expect(videos.length, 1);
-      expect(videos.first.isRepost, false);
-      expect(videos.first.reposterPubkey, isNull);
+        // Verify: Original video should NOT be marked as repost
+        var videos = service.getVideos(SubscriptionType.discovery);
+        expect(videos.length, 1);
+        expect(videos.first.isRepost, false);
+        expect(videos.first.reposterPubkey, isNull);
 
-      // Now a repost arrives for the same video
-      final bobRepost = VideoEvent.createRepostEvent(
-        originalEvent: originalVideo,
-        repostEventId: 'repost999',
-        reposterPubkey: 'bob',
-        repostedAt: DateTime.now(),
-      );
-      service.addVideoEventForTesting(
-        bobRepost,
-        SubscriptionType.discovery,
-        isHistorical: false,
-      );
+        // Now a repost arrives for the same video
+        final bobRepost = VideoEvent.createRepostEvent(
+          originalEvent: originalVideo,
+          repostEventId: 'repost999',
+          reposterPubkey: 'bob',
+          repostedAt: DateTime.now(),
+        );
+        service.addVideoEventForTesting(
+          bobRepost,
+          SubscriptionType.discovery,
+          isHistorical: false,
+        );
 
-      // Verify: Should still have only ONE video (consolidated)
-      videos = service.getVideos(SubscriptionType.discovery);
-      expect(videos.length, 1);
+        // Verify: Should still have only ONE video (consolidated)
+        videos = service.getVideos(SubscriptionType.discovery);
+        expect(videos.length, 1);
 
-      // Verify: The consolidated video should be marked as repost
-      final consolidatedVideo = videos.first;
-      expect(consolidatedVideo.isRepost, true);
+        // Verify: The consolidated video should be marked as repost
+        final consolidatedVideo = videos.first;
+        expect(consolidatedVideo.isRepost, true);
 
-      // CRITICAL: reposterPubkey (singular) must be set for UI header
-      // This was the bug - UI checks: video.isRepost && video.reposterPubkey != null
-      expect(
-        consolidatedVideo.reposterPubkey,
-        'bob',
-        reason:
-            'reposterPubkey (singular) must be set during consolidation for UI header',
-      );
+        // CRITICAL: reposterPubkey (singular) must be set for UI header
+        // This was the bug - UI checks: video.isRepost && video.reposterPubkey != null
+        expect(
+          consolidatedVideo.reposterPubkey,
+          'bob',
+          reason: 'reposterPubkey (singular) must be set during consolidation for UI header',
+        );
 
-      // Verify: reposterPubkeys (plural) should also be set
-      expect(consolidatedVideo.reposterPubkeys, isNotNull);
-      expect(consolidatedVideo.reposterPubkeys, contains('bob'));
-    });
+        // Verify: reposterPubkeys (plural) should also be set
+        expect(consolidatedVideo.reposterPubkeys, isNotNull);
+        expect(consolidatedVideo.reposterPubkeys, contains('bob'));
+      },
+    );
   });
 }

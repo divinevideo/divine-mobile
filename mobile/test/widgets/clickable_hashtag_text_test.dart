@@ -431,8 +431,7 @@ void main() {
           name: mention,
           rawData: const {'name': mention},
           createdAt: DateTime.utc(2026, 6, 21),
-          eventId:
-              'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+          eventId: 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         );
         final profileRepository = _MockProfileRepository();
         when(

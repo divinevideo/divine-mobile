@@ -540,8 +540,7 @@ void main() {
       test('does not emit inspired-by p-tags on a video reply', () async {
         stubSignAndPublish();
         const replyContext = VideoReplyContext(
-          rootEventId:
-              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          rootEventId: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
           rootEventKind: 34236,
           rootAuthorPubkey: rootAuthorPubkey,
         );

@@ -359,7 +359,7 @@ class CounterView extends StatelessWidget {
   `pubspec.yaml` by specifying `sdk: flutter`.
 * **Mocks:** Prefer fakes or stubs over mocks. If mocks are absolutely
   necessary, use `mockito` or `mocktail` to create mocks for dependencies. While
-  code generation is common for state management (e.g., with `freezed`), try to
+  code generation is common for state management (for example Riverpod), try to
   avoid it for mocks.
 * **Coverage:** Aim for high test coverage.
 

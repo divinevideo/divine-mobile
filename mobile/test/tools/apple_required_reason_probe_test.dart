@@ -10,13 +10,11 @@ void main() {
   final probe = File(
     'scripts/lib/apple_required_reason_probe.py',
   ).absolute.path;
-  final catalogue =
-      jsonDecode(
-            File(
-              'scripts/data/apple_required_reason_catalogue.json',
-            ).readAsStringSync(),
-          )
-          as Map<String, dynamic>;
+  final catalogue = jsonDecode(
+    File(
+      'scripts/data/apple_required_reason_catalogue.json',
+    ).readAsStringSync(),
+  ) as Map<String, dynamic>;
 
   Map<String, dynamic> payloadForCatalogue() {
     final references = <String, dynamic>{};

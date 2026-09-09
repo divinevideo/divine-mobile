@@ -423,38 +423,25 @@ void main() {
       );
 
       final invalidCallbacks = <String, String>{
-        'custom scheme':
-            'divine://divine.video/app/callback?connection=connected&platform=instagram',
-        'http scheme':
-            'http://divine.video/app/callback?connection=connected&platform=instagram',
-        'lookalike host':
-            'https://divine.video.evil.test/app/callback?connection=connected&platform=instagram',
-        'subdomain host':
-            'https://www.divine.video/app/callback?connection=connected&platform=instagram',
-        'wrong path':
-            'https://divine.video/app/callback/extra?connection=connected&platform=instagram',
-        'unknown platform':
-            'https://divine.video/app/callback?connection=connected&platform=bluesky',
+        'custom scheme': 'divine://divine.video/app/callback?connection=connected&platform=instagram',
+        'http scheme': 'http://divine.video/app/callback?connection=connected&platform=instagram',
+        'lookalike host': 'https://divine.video.evil.test/app/callback?connection=connected&platform=instagram',
+        'subdomain host': 'https://www.divine.video/app/callback?connection=connected&platform=instagram',
+        'wrong path': 'https://divine.video/app/callback/extra?connection=connected&platform=instagram',
+        'unknown platform': 'https://divine.video/app/callback?connection=connected&platform=bluesky',
         'mismatched supported platform':
             'https://divine.video/app/callback?connection=connected&platform=x',
-        'unknown connection':
-            'https://divine.video/app/callback?connection=pending&platform=instagram',
+        'unknown connection': 'https://divine.video/app/callback?connection=pending&platform=instagram',
         'missing connection':
             'https://divine.video/app/callback?platform=instagram',
         'missing platform':
             'https://divine.video/app/callback?connection=connected',
-        'duplicate connection':
-            'https://divine.video/app/callback?connection=connected&connection=failed&platform=instagram',
-        'duplicate platform':
-            'https://divine.video/app/callback?connection=connected&platform=instagram&platform=x',
-        'explicit port':
-            'https://divine.video:8443/app/callback?connection=connected&platform=instagram',
-        'user info':
-            'https://oauth-user@divine.video/app/callback?connection=connected&platform=instagram',
-        'fragment':
-            'https://divine.video/app/callback?connection=connected&platform=instagram#unexpected',
-        'duplicate reason':
-            'https://divine.video/app/callback?connection=failed&platform=instagram&reason=provider_denied&reason=other',
+        'duplicate connection': 'https://divine.video/app/callback?connection=connected&connection=failed&platform=instagram',
+        'duplicate platform': 'https://divine.video/app/callback?connection=connected&platform=instagram&platform=x',
+        'explicit port': 'https://divine.video:8443/app/callback?connection=connected&platform=instagram',
+        'user info': 'https://oauth-user@divine.video/app/callback?connection=connected&platform=instagram',
+        'fragment': 'https://divine.video/app/callback?connection=connected&platform=instagram#unexpected',
+        'duplicate reason': 'https://divine.video/app/callback?connection=failed&platform=instagram&reason=provider_denied&reason=other',
       };
 
       for (final invalid in invalidCallbacks.entries) {

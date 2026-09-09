@@ -83,8 +83,7 @@ void main() {
             }),
           ).fetchStatus(
             attemptId: 'attempt-1',
-            pubkeyHex:
-                '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+            pubkeyHex: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
           );
 
       expect(result.status, AccountDeletionAttemptStatus.completed);
@@ -118,8 +117,7 @@ void main() {
               ),
             ).fetchStatus(
               attemptId: 'attempt-1',
-              pubkeyHex:
-                  '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+              pubkeyHex: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
             ),
         throwsA(
           isA<AccountDeletionRecoveryException>()
@@ -142,8 +140,7 @@ void main() {
               delay: (_) async {},
             ).fetchStatus(
               attemptId: 'attempt-1',
-              pubkeyHex:
-                  '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+              pubkeyHex: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
             ),
         throwsA(
           isA<AccountDeletionRecoveryException>()

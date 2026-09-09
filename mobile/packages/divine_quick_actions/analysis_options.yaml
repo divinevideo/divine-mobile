@@ -1,1 +1,6 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
 include: package:very_good_analysis/analysis_options.yaml

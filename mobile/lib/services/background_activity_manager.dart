@@ -2,6 +2,7 @@
 // ABOUTME: Suspends non-critical services when app goes to background to conserve resources
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:unified_logger/unified_logger.dart';
 

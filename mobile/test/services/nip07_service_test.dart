@@ -129,8 +129,7 @@ void main() {
           await service.loadUserRelays();
           expect(service.userRelays, isNotNull);
 
-          extension.publicKey =
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+          extension.publicKey = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
           await service.connect();
 
           expect(service.userRelays, isNull);

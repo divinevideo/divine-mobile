@@ -242,9 +242,9 @@ void main() {
     test(
       'sizes every scale from one ${_iosWidthPt}x${_iosHeightPt}pt box',
       () async {
-        final contents =
-            jsonDecode(File('$_imagesetDir/Contents.json').readAsStringSync())
-                as Map<String, dynamic>;
+        final contents = jsonDecode(
+          File('$_imagesetDir/Contents.json').readAsStringSync(),
+        ) as Map<String, dynamic>;
         final declared = {
           for (final image in contents['images']! as List<dynamic>)
             (image as Map<String, dynamic>)['filename'] as String:

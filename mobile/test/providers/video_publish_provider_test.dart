@@ -644,13 +644,12 @@ void main() {
       ) async {
         final container = await pumpHarness(tester);
         final hung = Completer<(DivineVideoClip, String?)>();
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) => hung.future;
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) => hung.future;
         VideoEditorRenderService.crashReporterOverride = (_, _) {};
 
         final context = tester.element(find.byType(SizedBox));

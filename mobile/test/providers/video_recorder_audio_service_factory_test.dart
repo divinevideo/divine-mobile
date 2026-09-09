@@ -62,8 +62,7 @@ void main() {
 
         final selectedSound = AudioEvent(
           id: 'sound_123',
-          pubkey:
-              'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           createdAt: 1700000000,
           title: 'Test Sound',
           duration: 6.0,

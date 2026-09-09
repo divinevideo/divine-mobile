@@ -64,8 +64,7 @@ void main() {
             playbackUrls: playbackUrls,
             initializePreviewController: initializePreviewController,
             loadPreviewSources: loadPreviewSources,
-            videoId:
-                '0000000000000000000000000000000000000000000000000000000000000000',
+            videoId: '0000000000000000000000000000000000000000000000000000000000000000',
             cues: cues,
             totalDuration: const Duration(seconds: 8),
             selectedCue: selectedCue,
@@ -187,13 +186,12 @@ void main() {
       await tester.pumpWidget(
         pump(
           cues: const [EditableCue(start: 0, end: 1000, text: 'one')],
-          loadFrames:
-              ({
-                required String videoUrl,
-                required String videoId,
-                required Duration duration,
-                required double devicePixelRatio,
-              }) => controller.stream,
+          loadFrames: ({
+            required String videoUrl,
+            required String videoId,
+            required Duration duration,
+            required double devicePixelRatio,
+          }) => controller.stream,
         ),
       );
       controller.add([

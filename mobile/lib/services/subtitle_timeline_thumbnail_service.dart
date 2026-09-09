@@ -12,8 +12,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Downloads a video and hands back a local file, or `null` when it could not
 /// be fetched.
-typedef TimelineVideoDownloader =
-    Future<File?> Function({required String url, required String cacheKey});
+typedef TimelineVideoDownloader = Future<File?> Function({
+  required String url,
+  required String cacheKey,
+});
 
 /// Resolves the event URL into a single file that can be cached and decoded.
 typedef TimelineVideoUrlResolver = Future<String?> Function(String? videoUrl);

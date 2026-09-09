@@ -124,9 +124,11 @@ packages:
       expect(run().exitCode, 0);
     });
 
-    test('flags a pinned git dependency repointed to a different repository', () {
-      const sha = '847d0c0183c9c09946ce321c107decd3fd9f56b2';
-      writeLock('''
+    test(
+      'flags a pinned git dependency repointed to a different repository',
+      () {
+        const sha = '847d0c0183c9c09946ce321c107decd3fd9f56b2';
+        writeLock('''
 packages:
   c2pa_flutter:
     dependency: "direct main"
@@ -138,9 +140,9 @@ packages:
     source: git
     version: "0.0.3"
 ''');
-      expect(run(update: true).exitCode, 0);
+        expect(run(update: true).exitCode, 0);
 
-      writeLock('''
+        writeLock('''
 packages:
   c2pa_flutter:
     dependency: "direct main"
@@ -153,16 +155,17 @@ packages:
     version: "0.0.3"
 ''');
 
-      final res = run();
+        final res = run();
 
-      expect(res.exitCode, 1, reason: outputOf(res));
-      expect(
-        res.stdout,
-        contains(
-          'git:c2pa_flutter:https://github.com/attacker/c2pa-flutter-fork.git:PINNED',
-        ),
-      );
-    });
+        expect(res.exitCode, 1, reason: outputOf(res));
+        expect(
+          res.stdout,
+          contains(
+            'git:c2pa_flutter:https://github.com/attacker/c2pa-flutter-fork.git:PINNED',
+          ),
+        );
+      },
+    );
 
     test('a movable ref cannot be silenced by baselining it', () {
       // The allowlist sanctions WHICH deps may be non-hosted, never that a ref

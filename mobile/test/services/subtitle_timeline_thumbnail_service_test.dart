@@ -65,21 +65,21 @@ void main() {
 
     test('unresolved HLS manifests are not cached or extracted', () async {
       final service = SubtitleTimelineThumbnailService(
-        downloadVideo:
-            ({required String url, required String cacheKey}) async =>
-                fail('HLS manifests must not be cached under the video id'),
+        downloadVideo: ({
+          required String url,
+          required String cacheKey,
+        }) async => fail('HLS manifests must not be cached under the video id'),
         resolveVideoUrl: (url) async =>
             'https://media.divine.video/video/hls/master.m3u8',
-        stripThumbnailStreamFactory:
-            ({
-              required String videoPath,
-              required String clipId,
-              required Duration duration,
-              required Size outputSize,
-              required int thumbsPerSecond,
-              Duration startOffset = Duration.zero,
-              List<Duration>? priorityTimestamps,
-            }) => fail('extraction must not start for an HLS manifest'),
+        stripThumbnailStreamFactory: ({
+          required String videoPath,
+          required String clipId,
+          required Duration duration,
+          required Size outputSize,
+          required int thumbsPerSecond,
+          Duration startOffset = Duration.zero,
+          List<Duration>? priorityTimestamps,
+        }) => fail('extraction must not start for an HLS manifest'),
       );
 
       final batches = await service
@@ -96,18 +96,19 @@ void main() {
 
     test('yields nothing when the video cannot be cached', () async {
       final service = SubtitleTimelineThumbnailService(
-        downloadVideo:
-            ({required String url, required String cacheKey}) async => null,
-        stripThumbnailStreamFactory:
-            ({
-              required String videoPath,
-              required String clipId,
-              required Duration duration,
-              required Size outputSize,
-              required int thumbsPerSecond,
-              Duration startOffset = Duration.zero,
-              List<Duration>? priorityTimestamps,
-            }) => fail('extraction must not start without a file'),
+        downloadVideo: ({
+          required String url,
+          required String cacheKey,
+        }) async => null,
+        stripThumbnailStreamFactory: ({
+          required String videoPath,
+          required String clipId,
+          required Duration duration,
+          required Size outputSize,
+          required int thumbsPerSecond,
+          Duration startOffset = Duration.zero,
+          List<Duration>? priorityTimestamps,
+        }) => fail('extraction must not start without a file'),
       );
 
       final batches = await service
@@ -124,19 +125,19 @@ void main() {
 
     test('a failed download leaves the timeline without frames', () async {
       final service = SubtitleTimelineThumbnailService(
-        downloadVideo:
-            ({required String url, required String cacheKey}) async =>
-                throw const SocketException('offline'),
-        stripThumbnailStreamFactory:
-            ({
-              required String videoPath,
-              required String clipId,
-              required Duration duration,
-              required Size outputSize,
-              required int thumbsPerSecond,
-              Duration startOffset = Duration.zero,
-              List<Duration>? priorityTimestamps,
-            }) => fail('extraction must not start without a file'),
+        downloadVideo: ({
+          required String url,
+          required String cacheKey,
+        }) async => throw const SocketException('offline'),
+        stripThumbnailStreamFactory: ({
+          required String videoPath,
+          required String clipId,
+          required Duration duration,
+          required Size outputSize,
+          required int thumbsPerSecond,
+          Duration startOffset = Duration.zero,
+          List<Duration>? priorityTimestamps,
+        }) => fail('extraction must not start without a file'),
       );
 
       final batches = await service
@@ -153,8 +154,10 @@ void main() {
 
     test('a failed extraction keeps the frames that arrived', () async {
       final service = SubtitleTimelineThumbnailService(
-        downloadVideo:
-            ({required String url, required String cacheKey}) async => video,
+        downloadVideo: ({
+          required String url,
+          required String cacheKey,
+        }) async => video,
         stripThumbnailStreamFactory:
             ({
               required String videoPath,
@@ -192,9 +195,10 @@ void main() {
 
     test('an unknown duration skips extraction entirely', () async {
       final service = SubtitleTimelineThumbnailService(
-        downloadVideo:
-            ({required String url, required String cacheKey}) async =>
-                fail('nothing to extract from, so nothing to download'),
+        downloadVideo: ({
+          required String url,
+          required String cacheKey,
+        }) async => fail('nothing to extract from, so nothing to download'),
       );
 
       final batches = await service

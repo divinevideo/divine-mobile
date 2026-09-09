@@ -26,13 +26,12 @@ import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_tr
 part 'video_editor_timeline_clip_strip_tiles.dart';
 
 /// Callback reporting a trim change for a clip.
-typedef ClipTrimCallback =
-    void Function({
-      required String clipId,
-      required bool isStart,
-      required Duration trimStart,
-      required Duration trimEnd,
-    });
+typedef ClipTrimCallback = void Function({
+  required String clipId,
+  required bool isStart,
+  required Duration trimStart,
+  required Duration trimEnd,
+});
 
 /// Callback reporting a reorder change — from index and to index.
 typedef ClipReorderCallback = void Function(int from, int to);

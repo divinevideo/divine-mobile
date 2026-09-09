@@ -98,36 +98,39 @@ void main() {
         expect(sizedBox.width, equals(expectedWidth));
       });
 
-      testWidgets('keeps the box on the editor axis with an overlap transition', (
-        tester,
-      ) async {
-        // 2×3s clips with a 1s dissolve: the rendered output is 5s, but the box
-        // must stay 6s wide so the ruler aligns with the full-length clip strip.
-        const pps = 100.0;
-        const dissolve1s = ClipTransition(
-          type: ClipTransitionType.dissolve,
-          duration: Duration(seconds: 1),
-        );
-        final clips = [
-          clip('a', const Duration(seconds: 3), transition: dissolve1s),
-          clip('b', const Duration(seconds: 3)),
-        ];
+      testWidgets(
+        'keeps the box on the editor axis with an overlap transition',
+        (
+          tester,
+        ) async {
+          // 2×3s clips with a 1s dissolve: the rendered output is 5s, but the box
+          // must stay 6s wide so the ruler aligns with the full-length clip strip.
+          const pps = 100.0;
+          const dissolve1s = ClipTransition(
+            type: ClipTransitionType.dissolve,
+            duration: Duration(seconds: 1),
+          );
+          final clips = [
+            clip('a', const Duration(seconds: 3), transition: dissolve1s),
+            clip('b', const Duration(seconds: 3)),
+          ];
 
-        await tester.pumpWidget(
-          buildWidget(
-            totalDuration: const Duration(seconds: 6),
-            pixelsPerSecond: pps,
-            clips: clips,
-          ),
-        );
+          await tester.pumpWidget(
+            buildWidget(
+              totalDuration: const Duration(seconds: 6),
+              pixelsPerSecond: pps,
+              clips: clips,
+            ),
+          );
 
-        final sizedBox = tester.widget<SizedBox>(
-          find.byWidgetPredicate(
-            (w) => w is SizedBox && w.height == TimelineConstants.rulerHeight,
-          ),
-        );
-        expect(sizedBox.width, equals(6.0 * pps));
-      });
+          final sizedBox = tester.widget<SizedBox>(
+            find.byWidgetPredicate(
+              (w) => w is SizedBox && w.height == TimelineConstants.rulerHeight,
+            ),
+          );
+          expect(sizedBox.width, equals(6.0 * pps));
+        },
+      );
     });
 
     group('layout', () {

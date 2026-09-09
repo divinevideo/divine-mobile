@@ -852,8 +852,7 @@ void main() {
               if (call.method == 'createTicket') {
                 throw PlatformException(
                   code: 'UPLOAD_FAILED',
-                  message:
-                      'File not found: /private/var/mobile/Containers/Data/Application/foo.jpg',
+                  message: 'File not found: /private/var/mobile/Containers/Data/Application/foo.jpg',
                 );
               }
               return null;

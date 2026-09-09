@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -10094,8 +10095,7 @@ class AppLocalizationsRo extends AppLocalizations {
           'Asta blochează cele $count de conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
       few:
           'Asta blochează cele $count conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
-      one:
-          'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
+      one: 'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
     );
     return '$_temp0';
   }

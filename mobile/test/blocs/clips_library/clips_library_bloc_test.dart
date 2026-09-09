@@ -1589,13 +1589,12 @@ void main() {
           });
           final output = File('${tempDir.path}/rendered.mp4')
             ..writeAsStringSync('rendered');
-          StopMotionRenderService.assembleOverride =
-              ({
-                required frames,
-                required aspectRatio,
-                frameRate = StopMotionRenderService.defaultFrameRate,
-                String? taskId,
-              }) async => output.path;
+          StopMotionRenderService.assembleOverride = ({
+            required frames,
+            required aspectRatio,
+            frameRate = StopMotionRenderService.defaultFrameRate,
+            String? taskId,
+          }) async => output.path;
           StopMotionRenderService.probeDurationOverride = (_) async => null;
           when(
             () => mockGallerySaveService.saveVideoToGallery(any()),

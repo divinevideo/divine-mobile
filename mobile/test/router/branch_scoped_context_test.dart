@@ -265,8 +265,7 @@ void main() {
     ) async {
       RouteContext? captured;
       final router = GoRouter(
-        initialLocation:
-            '/profile/npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqlz5yt?utm_source=test',
+        initialLocation: '/profile/npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqlz5yt?utm_source=test',
         routes: [
           StatefulShellRoute(
             builder: (context, state, shell) => shell,

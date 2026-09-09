@@ -5,8 +5,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:openvine/firebase_options.dart';
 
 typedef FirebaseAppsProvider = List<FirebaseApp> Function();
-typedef FirebaseInitializer =
-    Future<FirebaseApp> Function({FirebaseOptions? options});
+typedef FirebaseInitializer = Future<FirebaseApp> Function({
+  FirebaseOptions? options,
+});
 
 /// Ensures the default Firebase app exists exactly once.
 ///

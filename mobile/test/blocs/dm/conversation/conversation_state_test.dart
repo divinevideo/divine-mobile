@@ -212,8 +212,7 @@ void main() {
           final failedSibling = _outgoingDm(
             id: 'rumor-d',
             content: 'trio',
-            recipientPubkey:
-                '4444444444444444444444444444444444444444444444444444444444444444',
+            recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
             recipientWrap: OutgoingWrapStatus.failed,
           );
           final persistedWinner = _message(id: 'rumor-b', content: 'trio');
@@ -325,8 +324,7 @@ void main() {
             _outgoingDm(id: 'rumor-c', recipientPubkey: _recipientC),
             _outgoingDm(
               id: 'rumor-d',
-              recipientPubkey:
-                  '4444444444444444444444444444444444444444444444444444444444444444',
+              recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
               recipientWrap: OutgoingWrapStatus.failed,
             ),
           ],
@@ -395,14 +393,12 @@ void main() {
           _outgoingDm(id: 'rumor-c', recipientPubkey: _recipientC),
           _outgoingDm(
             id: 'rumor-d',
-            recipientPubkey:
-                '4444444444444444444444444444444444444444444444444444444444444444',
+            recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
             recipientWrap: OutgoingWrapStatus.failed,
           ),
           _outgoingDm(
             id: 'rumor-e',
-            recipientPubkey:
-                '5555555555555555555555555555555555555555555555555555555555555555',
+            recipientPubkey: '5555555555555555555555555555555555555555555555555555555555555555',
             recipientWrap: OutgoingWrapStatus.sent,
             selfWrap: OutgoingWrapStatus.failed,
           ),

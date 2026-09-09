@@ -98,8 +98,7 @@ void main() {
                     displayName: 'Alice',
                     rawData: const {},
                     createdAt: DateTime(2026),
-                    eventId:
-                        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                    eventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
                   ),
                 ),
               ),

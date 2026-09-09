@@ -233,7 +233,7 @@ class VideoEventPublisher {
 
     try {
       return await checker(sound);
-    } catch (error, _) {
+    } catch (error) {
       Log.warning(
         'Unable to verify selected audio reuse consent; blocking reuse: '
         '$error',
@@ -1816,8 +1816,7 @@ class VideoEventPublisher {
         }
 
         event = await _authService.createAndSignEvent(
-          kind:
-              NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
+          kind: NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
           content: content,
           tags: tags,
         );

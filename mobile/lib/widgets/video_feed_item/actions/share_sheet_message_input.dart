@@ -49,13 +49,12 @@ class _MessageInput extends StatelessWidget {
               maxLines: 4,
               minLines: 1,
               maxLength: 500,
-              buildCounter:
-                  (
-                    context, {
-                    required currentLength,
-                    required isFocused,
-                    required maxLength,
-                  }) => null,
+              buildCounter: (
+                context, {
+                required currentLength,
+                required isFocused,
+                required maxLength,
+              }) => null,
             ),
           ),
           _SendButton(isSending: isSending, onTap: onSend),

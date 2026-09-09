@@ -2,6 +2,7 @@
 // ABOUTME: Provides clean Dart interface for one-click Nostr login via browser extensions
 
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/nip07_interop.dart' as nip07;

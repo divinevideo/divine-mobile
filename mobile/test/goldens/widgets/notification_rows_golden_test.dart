@@ -155,8 +155,7 @@ Widget _scenarioColumn({required double textScaleFactor}) {
     timestamp: _notificationTimestamp,
     videoTitle: 'A vine that found a new shelf',
     listTitle: 'Literature',
-    listCoordinate:
-        '30005:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:literature',
+    listCoordinate: '30005:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:literature',
   );
 
   return Column(

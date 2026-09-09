@@ -119,8 +119,7 @@ void main() {
 
         final bundle = await client.verifyClaims(
           const VerifierClaimRequest(
-            pubkey:
-                '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+            pubkey: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
             socialHandles: <VerifierSocialHandleClaim>[
               VerifierSocialHandleClaim(
                 platform: 'github',
@@ -166,8 +165,7 @@ void main() {
 
       final bundle = await client.verifyClaims(
         const VerifierClaimRequest(
-          pubkey:
-              '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+          pubkey: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
         ),
       );
 

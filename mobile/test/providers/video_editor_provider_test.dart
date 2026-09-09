@@ -661,13 +661,12 @@ void main() {
           originalAspectRatio: 9 / 16,
         );
 
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => (renderedClip, null);
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (renderedClip, null);
 
         await notifier.startRenderVideo();
 
@@ -729,13 +728,12 @@ void main() {
               duration: const Duration(seconds: 2),
             );
 
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw Exception('C2PA network failure'); // hung proof
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw Exception('C2PA network failure'); // hung proof
 
         await notifier.startRenderVideo();
 
@@ -757,13 +755,12 @@ void main() {
           targetAspectRatio: .vertical,
           originalAspectRatio: 9 / 16,
         );
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => (renderedClip, null);
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (renderedClip, null);
 
         await notifier.startRenderVideo();
 
@@ -1011,13 +1008,12 @@ void main() {
 
           // Never completes and never throws — a hung native call.
           final hung = Completer<(DivineVideoClip, String?)>();
-          VideoEditorRenderService.renderVideoToClipOverride =
-              ({
-                required clips,
-                required editorStateHistory,
-                parameters,
-                taskId,
-              }) => hung.future;
+          VideoEditorRenderService.renderVideoToClipOverride = ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) => hung.future;
 
           unawaited(notifier.startRenderVideo());
           async.flushMicrotasks();
@@ -1315,16 +1311,15 @@ void main() {
           );
 
           // Network still down on retry — the re-sign throws.
-          NativeProofModeService.proofFileOverride =
-              (
-                file, {
-                required enableAdvancedCawgEmbedding,
-                creatorBindingAssertion,
-                cawgIdentityAssertion,
-                verifiedIdentityBundle,
-                clips,
-                editorStateHistory,
-              }) async => throw Exception('still offline');
+          NativeProofModeService.proofFileOverride = (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) async => throw Exception('still offline');
 
           await notifier.retryC2paSigning();
 
@@ -1561,13 +1556,12 @@ void main() {
       );
 
       void failRenderWith(VideoRenderFailedException failure) {
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw failure;
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw failure;
       }
 
       test('tags outcome=failed with the reason behind a render that produced '
@@ -1633,13 +1627,12 @@ void main() {
       test('tags outcome=error with the type when the render throws', () async {
         final notifier = container.read(videoEditorProvider.notifier);
         addOneClip();
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw StateError('render boom');
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw StateError('render boom');
 
         await notifier.startRenderVideo();
         final trace = performanceMonitor.traces.single;
@@ -1738,13 +1731,12 @@ void main() {
               );
 
           final renderCompleter = Completer<(DivineVideoClip, String?)>();
-          VideoEditorRenderService.renderVideoToClipOverride =
-              ({
-                required clips,
-                required editorStateHistory,
-                parameters,
-                taskId,
-              }) => renderCompleter.future;
+          VideoEditorRenderService.renderVideoToClipOverride = ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) => renderCompleter.future;
 
           final render = notifier.startRenderVideo();
 
@@ -3756,16 +3748,15 @@ void main() {
           NativeProofModeService.proofFileOverride;
       restoreProofFileOverride = () =>
           NativeProofModeService.proofFileOverride = originalProofFileOverride;
-      NativeProofModeService.proofFileOverride =
-          (
-            file, {
-            required enableAdvancedCawgEmbedding,
-            creatorBindingAssertion,
-            cawgIdentityAssertion,
-            verifiedIdentityBundle,
-            clips,
-            editorStateHistory,
-          }) async => null;
+      NativeProofModeService.proofFileOverride = (
+        file, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+      }) async => null;
       when(
         () => mockDraftStorage.draftExists(any()),
       ).thenAnswer((_) async => false);

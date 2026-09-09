@@ -44,10 +44,11 @@ void main() {
       );
     }
 
-    List<String> baselineRows() => File(baselinePath)
-        .readAsLinesSync()
-        .where((l) => l.isNotEmpty && !l.startsWith('#'))
-        .toList();
+    List<String> baselineRows() =>
+        File(baselinePath)
+            .readAsLinesSync()
+            .where((l) => l.isNotEmpty && !l.startsWith('#'))
+            .toList();
 
     setUp(() {
       tmp = Directory.systemTemp.createTempSync('service_god_file_test');

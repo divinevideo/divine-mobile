@@ -114,16 +114,14 @@ void main() {
       late CategoryGalleryScreen screen;
 
       await _buildWithContext(tester, (context) {
-        screen =
-            route.builder!(
-                  context,
-                  _FakeGoRouterState(
-                    location: '/categories/animals',
-                    pathParameters: const {'categoryName': 'animals'},
-                    extra: const VideoCategory(name: 'animals', videoCount: 1),
-                  ),
-                )
-                as CategoryGalleryScreen;
+        screen = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: '/categories/animals',
+            pathParameters: const {'categoryName': 'animals'},
+            extra: const VideoCategory(name: 'animals', videoCount: 1),
+          ),
+        ) as CategoryGalleryScreen;
       });
 
       expect(screen.category.name, 'animals');

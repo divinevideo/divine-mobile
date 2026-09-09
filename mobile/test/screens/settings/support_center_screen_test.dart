@@ -444,13 +444,12 @@ void main() {
         tester,
         authState: AuthState.unauthenticated,
         openZendeskSupport: () async => false,
-        composeEmail:
-            ({
-              required String toEmail,
-              required String subject,
-              required String body,
-              Rect? sharePositionOrigin,
-            }) async => throw Exception('compose failed'),
+        composeEmail: ({
+          required String toEmail,
+          required String subject,
+          required String body,
+          Rect? sharePositionOrigin,
+        }) async => throw Exception('compose failed'),
       );
 
       await tester.tap(find.text(en.supportContactSupport));

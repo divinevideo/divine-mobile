@@ -2,6 +2,7 @@
 // ABOUTME: Provides reusable methods for completing operations as soon as relevant data arrives
 
 import 'dart:async';
+
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';

@@ -109,43 +109,9 @@ definitions:
       script: |
         flutter build ios --config-only
 
-        ruby <<'RUBY'
-        files = [
-          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift',
-          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift',
-        ]
-
-        files.each do |path|
-          contents = File.read(path)
-          updated = contents
-            .gsub('.iOS("13.0")', '.iOS("16.0")')
-            .gsub('.iOS(.v13)', '.iOS("16.0")')
-          has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-
-          unless has_ios_16_target
-            if updated.match?(/^\s*platforms:\s*\[/)
-              abort("expected #{path} platforms block to declare iOS 16.0")
-            end
-
-            updated = updated.sub(
-              /(let package = Package\(\n\s*name: "[^"]+",\n)/,
-              "\\1    platforms: [\n        .iOS(\"16.0\")\n    ],\n",
-            )
-            has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-          end
-
-          unless has_ios_16_target
-            abort("expected #{path} to declare iOS 16.0")
-          end
-
-          if updated != contents
-            File.write(path, updated)
-            puts "patched #{path} to iOS 16.0"
-          else
-            puts "#{path} already targets iOS 16.0"
-          end
-        end
-        RUBY
+        ruby scripts/ensure_ios_swift_package_floor.rb \
+          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift' \
+          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift'
     - &flutter_pub_get
       name: Get Flutter dependencies
       script: flutter pub get
@@ -202,8 +168,8 @@ definitions:
       script: |
         set -euo pipefail
         SHOREBIRD_BIN="$HOME/.shorebird/bin/shorebird"
-        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.117"
-        EXPECTED_SHOREBIRD_REVISION="45facdd4e4b3c39e0d260107977584f0b7c66bec"
+        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"
+        EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"
         SHOREBIRD_VERSION_OUTPUT=""
         SHOREBIRD_REVISION=""
         if [ -x "$SHOREBIRD_BIN" ]; then
@@ -988,7 +954,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1000,7 +966,7 @@ workflows:
         # Must match `flutter:` above. Shorebird ships its own Flutter, so the
         # release is only reproducible if we pin it to the same version
         # Codemagic provisioned.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1062,7 +1028,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1110,7 +1076,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials
@@ -1120,7 +1086,7 @@ workflows:
         - shorebird_credentials
       vars:
         # Must match `flutter:` above — see the iOS workflow for why.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1216,7 +1182,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1227,7 +1193,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1307,7 +1273,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials
@@ -1317,7 +1283,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1365,7 +1331,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1409,7 +1375,7 @@ workflows:
     max_build_duration: 25
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       # Pinned alongside MAESTRO_VERSION. The compatibility contract has two
       # sides: 2.1.0 cannot drive Xcode 26.x, and `latest` floating means a
       # Codemagic image bump can break the suite with no commit on our side —
@@ -1488,7 +1454,7 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9953,8 +9954,7 @@ class AppLocalizationsFil extends AppLocalizations {
       locale: localeName,
       other:
           'Iba-block nito ang $count account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
-      one:
-          'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
+      one: 'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
     );
     return '$_temp0';
   }

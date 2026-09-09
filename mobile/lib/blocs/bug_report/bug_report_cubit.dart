@@ -11,21 +11,20 @@ import 'package:unified_logger/unified_logger.dart';
 /// Cubit doesn't reach into the static `ZendeskSupportService` surface
 /// directly. Tests inject a fake; production wires
 /// `ZendeskSupportService.createStructuredBugReport`.
-typedef SubmitBugReportAction =
-    Future<bool> Function({
-      required String subject,
-      required String description,
-      required String reportId,
-      required String appVersion,
-      required Map<String, dynamic> deviceInfo,
-      String? stepsToReproduce,
-      String? expectedBehavior,
-      String? currentScreen,
-      String? userPubkey,
-      Map<String, int>? errorCounts,
-      String? logsSummary,
-      List<String>? attachmentPaths,
-    });
+typedef SubmitBugReportAction = Future<bool> Function({
+  required String subject,
+  required String description,
+  required String reportId,
+  required String appVersion,
+  required Map<String, dynamic> deviceInfo,
+  String? stepsToReproduce,
+  String? expectedBehavior,
+  String? currentScreen,
+  String? userPubkey,
+  Map<String, int>? errorCounts,
+  String? logsSummary,
+  List<String>? attachmentPaths,
+});
 
 /// Builds the logs summary string the cubit passes to Zendesk.
 typedef BuildLogsSummary = Future<String?> Function(List<LogEntry> logs);

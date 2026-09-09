@@ -48,8 +48,7 @@ void main() {
         _stubSignEvent(mockAuthService);
 
         final token = await service.createAuthToken(
-          url:
-              'https://relay.example.com/api/notifications?limit=50&types=reaction',
+          url: 'https://relay.example.com/api/notifications?limit=50&types=reaction',
           method: HttpMethod.get,
         );
 
@@ -81,8 +80,7 @@ void main() {
         _stubSignEvent(mockAuthService);
 
         final token = await service.createAuthToken(
-          url:
-              'https://relay.example.com/api/users/pubkey123/notifications/read',
+          url: 'https://relay.example.com/api/users/pubkey123/notifications/read',
           method: HttpMethod.post,
         );
 
@@ -348,8 +346,7 @@ void main() {
             method: HttpMethod.get,
           );
 
-          activePubkey =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          activePubkey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
           final accountBToken = await service.createAuthToken(
             url: 'https://invites.divine.video/v1/invite-status',
             method: HttpMethod.get,

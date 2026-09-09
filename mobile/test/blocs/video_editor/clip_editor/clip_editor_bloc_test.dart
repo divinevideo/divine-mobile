@@ -2444,12 +2444,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'keeps the original clip when the render fails',
         build: () => buildBloc(
-          bakeChromaKey:
-              ({
-                required sourceClip,
-                required chromaKey,
-                required renderId,
-              }) async => throw Exception('render failed'),
+          bakeChromaKey: ({
+            required sourceClip,
+            required chromaKey,
+            required renderId,
+          }) async => throw Exception('render failed'),
         ),
         seed: () => ClipEditorState(clips: [_createClip()]),
         act: (bloc) => bloc.add(
@@ -2562,12 +2561,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'restores the pre-key footage without rendering',
         build: () => buildBloc(
-          bakeChromaKey:
-              ({
-                required sourceClip,
-                required chromaKey,
-                required renderId,
-              }) async => throw StateError('removal must not render'),
+          bakeChromaKey: ({
+            required sourceClip,
+            required chromaKey,
+            required renderId,
+          }) async => throw StateError('removal must not render'),
           deferFileCleanup: (paths) =>
               removeCleanupPaths.addAll(paths.whereType<String>()),
         ),
@@ -3078,12 +3076,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'emits failure and reports a Reportable on a render error',
         build: () => buildBloc(
-          transformClip:
-              ({
-                required sourceClip,
-                required transform,
-                required renderId,
-              }) async => throw StateError('transform render failed'),
+          transformClip: ({
+            required sourceClip,
+            required transform,
+            required renderId,
+          }) async => throw StateError('transform render failed'),
         ),
         seed: () => ClipEditorState(clips: [_createClipWithFile()]),
         act: (bloc) => bloc.add(
@@ -3121,12 +3118,11 @@ void main() {
           final queued = <String>[];
           final clip = _createClipWithFile();
           final bloc = buildBloc(
-            transformClip:
-                ({
-                  required sourceClip,
-                  required transform,
-                  required renderId,
-                }) => completer.future,
+            transformClip: ({
+              required sourceClip,
+              required transform,
+              required renderId,
+            }) => completer.future,
             deferFileCleanup: (paths) =>
                 queued.addAll(paths.whereType<String>()),
           );
@@ -3169,12 +3165,11 @@ void main() {
           final completer = Completer<EditorVideo>();
           final queued = <String>[];
           final bloc = buildBloc(
-            transformClip:
-                ({
-                  required sourceClip,
-                  required transform,
-                  required renderId,
-                }) => completer.future,
+            transformClip: ({
+              required sourceClip,
+              required transform,
+              required renderId,
+            }) => completer.future,
             deferFileCleanup: (paths) =>
                 queued.addAll(paths.whereType<String>()),
           );
@@ -4283,9 +4278,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'discards the result when the source clip is removed mid-render',
         build: () => buildBloc(
-          flattenClipForLibrary:
-              ({required clip, required renderId, overlays}) =>
-                  flattenCompleter.future,
+          flattenClipForLibrary: ({
+            required clip,
+            required renderId,
+            overlays,
+          }) => flattenCompleter.future,
           saveClipToLibrary: recordSave,
         ),
         seed: () => ClipEditorState(clips: twoClips),
@@ -4313,9 +4310,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'drops a second request while one is in flight (no duplicate copy)',
         build: () => buildBloc(
-          flattenClipForLibrary:
-              ({required clip, required renderId, overlays}) =>
-                  flattenCompleter.future,
+          flattenClipForLibrary: ({
+            required clip,
+            required renderId,
+            overlays,
+          }) => flattenCompleter.future,
           saveClipToLibrary: recordSave,
         ),
         seed: () => ClipEditorState(clips: twoClips),
@@ -4337,9 +4336,11 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'marks the in-flight clip while the re-encode runs',
         build: () => buildBloc(
-          flattenClipForLibrary:
-              ({required clip, required renderId, overlays}) =>
-                  flattenCompleter.future,
+          flattenClipForLibrary: ({
+            required clip,
+            required renderId,
+            overlays,
+          }) => flattenCompleter.future,
           saveClipToLibrary: recordSave,
         ),
         seed: () => ClipEditorState(clips: twoClips),
@@ -4417,9 +4418,11 @@ void main() {
         blocTest<ClipEditorBloc, ClipEditorState>(
           'deletes the flattened file when the source clip was removed',
           build: () => buildBloc(
-            flattenClipForLibrary:
-                ({required clip, required renderId, overlays}) =>
-                    flattenCompleter.future,
+            flattenClipForLibrary: ({
+              required clip,
+              required renderId,
+              overlays,
+            }) => flattenCompleter.future,
             cleanupFlattenedClip: recordCleanup,
             saveClipToLibrary: recordSave,
           ),

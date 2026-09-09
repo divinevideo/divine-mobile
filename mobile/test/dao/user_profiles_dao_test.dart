@@ -2,6 +2,7 @@
 // ABOUTME: Tests database operations, upsert behavior, and stream reactivity
 
 import 'dart:io';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';

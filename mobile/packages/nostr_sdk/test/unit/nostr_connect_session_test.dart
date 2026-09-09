@@ -485,35 +485,31 @@ void main() {
       );
     });
 
-    test(
-      'addRelay excludes relays whose connect times out',
-      () async {
-        final primaryRelay = await TestRelayServer.start();
-        final blackhole = await _BlackholeServer.start();
-        final callbackUrl = blackhole.url;
-        addTearDown(primaryRelay.close);
-        addTearDown(blackhole.close);
+    test('addRelay excludes relays whose connect times out', () async {
+      final primaryRelay = await TestRelayServer.start();
+      final blackhole = await _BlackholeServer.start();
+      final callbackUrl = blackhole.url;
+      addTearDown(primaryRelay.close);
+      addTearDown(blackhole.close);
 
-        final session = NostrConnectSession(relays: [primaryRelay.url]);
-        addTearDown(session.dispose);
+      final session = NostrConnectSession(relays: [primaryRelay.url]);
+      addTearDown(session.dispose);
 
-        await session.start();
-        await session.addRelay(callbackUrl);
+      await session.start();
+      await session.addRelay(callbackUrl);
 
-        final failedPort = blackhole.port;
-        await blackhole.close();
-        final callbackRelay = await TestRelayServer.start(port: failedPort);
-        addTearDown(callbackRelay.close);
+      final failedPort = blackhole.port;
+      await blackhole.close();
+      final callbackRelay = await TestRelayServer.start(port: failedPort);
+      addTearDown(callbackRelay.close);
 
-        await session.addRelay(callbackUrl);
-        expect(
-          callbackRelay.connectionCount,
-          equals(1),
-          reason: 'timed-out relay attempts must not be retained as connected',
-        );
-      },
-      timeout: const Timeout(Duration(seconds: 20)),
-    );
+      await session.addRelay(callbackUrl);
+      expect(
+        callbackRelay.connectionCount,
+        equals(1),
+        reason: 'timed-out relay attempts must not be retained as connected',
+      );
+    }, timeout: const Timeout(Duration(seconds: 20)));
 
     test(
       'addRelay disconnects a relay that connects after the session timeout',

@@ -284,7 +284,7 @@ cat > "$TEST_REPO/mobile/lib/info only.dart" <<'EOF'
 void main() {}
 EOF
 cat > "$TEST_REPO/mobile/lib/with space.dart" <<'EOF'
-@freezed
+@JsonSerializable()
 class GeneratedInput {}
 EOF
 

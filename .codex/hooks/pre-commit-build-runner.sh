@@ -2,7 +2,7 @@
 # Git pre-commit hook component
 # Runs build_runner if any staged Dart files contain code generation annotations
 #
-# Annotations: @freezed, @riverpod, @Riverpod, @JsonSerializable,
+# Annotations: @riverpod, @Riverpod, @JsonSerializable,
 #   @GenerateMocks, @HiveType, @DriftDatabase, @DriftAccessor
 
 set -e
@@ -35,7 +35,7 @@ PACKAGE_ROOTS=()
 
 while IFS= read -r -d '' FILE; do
   case "$FILE" in
-    *.g.dart|*.freezed.dart|*.mocks.dart)
+    *.g.dart|*.mocks.dart)
       continue
       ;;
     *.dart)
@@ -48,7 +48,7 @@ while IFS= read -r -d '' FILE; do
   STAGED_FILES[${#STAGED_FILES[@]}]="$FILE"
   [ -f "$FILE" ] || continue
 
-  if grep -qE '@(freezed|riverpod|Riverpod|JsonSerializable|GenerateMocks|HiveType|DriftDatabase|DriftAccessor)' "$FILE"; then
+  if grep -qE '@(riverpod|Riverpod|JsonSerializable|GenerateMocks|HiveType|DriftDatabase|DriftAccessor)' "$FILE"; then
     PACKAGE_DIR=$(dirname "$FILE")
     while [ "$PACKAGE_DIR" != "." ] && [ "$PACKAGE_DIR" != "/" ]; do
       if [ -f "$PACKAGE_DIR/pubspec.yaml" ]; then
@@ -87,13 +87,9 @@ if [ ${#PACKAGE_ROOTS[@]} -gt 0 ]; then
   # Stage any regenerated files
   for FILE in "${STAGED_FILES[@]}"; do
     GENERATED="${FILE%.dart}.g.dart"
-    FREEZED="${FILE%.dart}.freezed.dart"
     MOCKS="${FILE%.dart}.mocks.dart"
     if [ -f "$GENERATED" ]; then
       git add "$GENERATED"
-    fi
-    if [ -f "$FREEZED" ]; then
-      git add "$FREEZED"
     fi
     if [ -f "$MOCKS" ]; then
       git add "$MOCKS"

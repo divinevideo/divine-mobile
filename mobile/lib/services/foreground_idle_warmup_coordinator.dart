@@ -18,8 +18,9 @@ enum ForegroundIdleWarmupTrigger {
 }
 
 /// Function used by the scheduler to request a warmup pass.
-typedef ForegroundIdleWarmupRequest =
-    Future<void> Function(ForegroundIdleWarmupTrigger trigger);
+typedef ForegroundIdleWarmupRequest = Future<void> Function(
+  ForegroundIdleWarmupTrigger trigger,
+);
 
 /// Starts delayed and periodic foreground-idle warmup requests.
 class ForegroundIdleWarmupScheduler {

@@ -7,12 +7,17 @@ export 'package:openvine/utils/open_vine_image_cache.dart'
     show clearOpenVineImageCache, openVineImageCache;
 
 /// Signature used to build a loading placeholder.
-typedef PlaceholderWidgetBuilder =
-    Widget Function(BuildContext context, String imageUrl);
+typedef PlaceholderWidgetBuilder = Widget Function(
+  BuildContext context,
+  String imageUrl,
+);
 
 /// Signature used to build an error widget.
-typedef LoadingErrorWidgetBuilder =
-    Widget Function(BuildContext context, String imageUrl, Object error);
+typedef LoadingErrorWidgetBuilder = Widget Function(
+  BuildContext context,
+  String imageUrl,
+  Object error,
+);
 
 typedef ImageDimensionsResolved = void Function(int width, int height);
 

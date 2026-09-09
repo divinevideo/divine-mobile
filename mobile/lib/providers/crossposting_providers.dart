@@ -21,10 +21,9 @@ final crosspostingEligibleProvider = Provider<bool>((ref) {
       authService.isRegistered;
 });
 
-typedef CrosspostingApiClientFactory =
-    CrosspostingApiClient Function(
-      CrosspostingAccessTokenReader accessTokenReader,
-    );
+typedef CrosspostingApiClientFactory = CrosspostingApiClient Function(
+  CrosspostingAccessTokenReader accessTokenReader,
+);
 
 final crosspostingApiClientFactoryProvider =
     Provider<CrosspostingApiClientFactory>((ref) {

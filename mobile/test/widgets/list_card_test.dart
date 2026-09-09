@@ -58,8 +58,7 @@ void main() {
       await tester.pumpWidget(
         buildSubject(
           isPublic: true,
-          pubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         ),
       );
 

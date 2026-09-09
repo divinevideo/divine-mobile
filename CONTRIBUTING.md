@@ -142,8 +142,8 @@ effort or intent.
 
 Prerequisites:
 
-- Flutter `^3.44.0`
-- Dart `^3.12.0`
+- Flutter `^3.47.0`
+- Dart `^3.13.0`
 - Xcode for iOS work
 - Android Studio and Android SDK for Android work
 - CocoaPods for Apple platform dependencies

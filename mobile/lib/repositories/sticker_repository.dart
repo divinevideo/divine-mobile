@@ -65,11 +65,9 @@ class StickerRepository {
   }
 
   Future<Map<String, String>> _loadStrings(String localeCode) async {
-    final raw =
-        json.decode(
-              await _bundle.loadString('$_i18nDirectory/$localeCode.json'),
-            )
-            as Map<String, dynamic>;
+    final raw = json.decode(
+      await _bundle.loadString('$_i18nDirectory/$localeCode.json'),
+    ) as Map<String, dynamic>;
     return raw.map((key, value) => MapEntry(key, value as String));
   }
 

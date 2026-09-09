@@ -58,5 +58,5 @@ Generic Flutter and Dart standards live in `.claude/rules/`:
 
 - Run Flutter commands from `mobile/`.
 - If dependencies change, run `flutter pub get`.
-- If you touch generated-code inputs such as Riverpod, Freezed, JSON, Mockito, or Drift, run `dart run build_runner build --delete-conflicting-outputs` and commit the generated files.
+- If you touch generated-code inputs such as Riverpod, JSON, Mockito, or Drift, run `dart run build_runner build --delete-conflicting-outputs` and commit the generated files.
 - Add or update tests with the change. For UI changes, update goldens when appropriate.

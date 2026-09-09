@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';

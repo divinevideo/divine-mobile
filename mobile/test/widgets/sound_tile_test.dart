@@ -18,8 +18,7 @@ void main() {
     setUp(() {
       testSound = AudioEvent(
         id: 'test-audio-event-id-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        pubkey:
-            'test-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        pubkey: 'test-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         createdAt: 1704067200,
         title: 'Original sound - @testuser',
         duration: 6.2,
@@ -279,8 +278,7 @@ void main() {
       testWidgets('handles null duration', (tester) async {
         final nullDurationSound = AudioEvent(
           id: 'null-duration-id-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-          pubkey:
-              'null-duration-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef0123',
+          pubkey: 'null-duration-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef0123',
           createdAt: 1704067200,
           title: 'No duration sound',
         );
@@ -295,14 +293,12 @@ void main() {
       ) async {
         final legacyOriginalSound = AudioEvent(
           id: 'video_legacy-original-id-0123456789abcdef0123456789abcdef0123456789abcdef',
-          pubkey:
-              'legacy-original-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef',
+          pubkey: 'legacy-original-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef',
           createdAt: 1704067200,
           title: 'Original sound - Kenya',
           url: 'https://example.com/video.mp4',
           source: 'Original Sound',
-          sourceVideoReference:
-              '34236:legacy-original-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef:legacy-vine',
+          sourceVideoReference: '34236:legacy-original-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef:legacy-vine',
         );
 
         await tester.pumpWidget(buildTestWidget(sound: legacyOriginalSound));
@@ -324,8 +320,7 @@ void main() {
       testWidgets('displays fallback for null title', (tester) async {
         final noTitleSound = AudioEvent(
           id: 'no-title-id-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-          pubkey:
-              'no-title-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef01234567',
+          pubkey: 'no-title-pubkey-0123456789abcdef0123456789abcdef0123456789abcdef01234567',
           createdAt: 1704067200,
           duration: 5.0,
         );
@@ -337,8 +332,7 @@ void main() {
 
       testWidgets('truncates long title with ellipsis', (tester) async {
         final longTitleSound = testSound.copyWith(
-          title:
-              'This is a very long title that should be truncated with ellipsis',
+          title: 'This is a very long title that should be truncated with ellipsis',
         );
 
         await tester.pumpWidget(buildTestWidget(sound: longTitleSound));

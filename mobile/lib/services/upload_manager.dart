@@ -67,12 +67,11 @@ typedef ThumbnailLegResult = ({String? cdnUrl, String? blurhash});
 ///
 /// Mirrors [VideoThumbnailService.extractThumbnail]; exists so [UploadManager]
 /// can be handed a stand-in that does not need a decodable video.
-typedef ThumbnailExtractor =
-    Future<ThumbnailFileResult?> Function({
-      required String videoPath,
-      required Duration targetTimestamp,
-      required int quality,
-    });
+typedef ThumbnailExtractor = Future<ThumbnailFileResult?> Function({
+  required String videoPath,
+  required Duration targetTimestamp,
+  required int quality,
+});
 
 /// App-layer adapter forwarding the upload pipeline's [TransientRenderCleaner]
 /// port to [StopMotionRenderService].

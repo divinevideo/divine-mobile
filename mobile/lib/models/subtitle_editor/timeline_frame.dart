@@ -23,10 +23,9 @@ class TimelineFrame extends Equatable {
 /// Each event is the full set extracted so far. Injected as a function rather
 /// than the service itself so the widgets that render frames stay out of the
 /// service layer.
-typedef TimelineFrameLoader =
-    Stream<List<TimelineFrame>> Function({
-      required String videoUrl,
-      required String videoId,
-      required Duration duration,
-      required double devicePixelRatio,
-    });
+typedef TimelineFrameLoader = Stream<List<TimelineFrame>> Function({
+  required String videoUrl,
+  required String videoId,
+  required Duration duration,
+  required double devicePixelRatio,
+});

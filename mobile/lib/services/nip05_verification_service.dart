@@ -2,6 +2,7 @@
 // ABOUTME: Uses Drift SQLite for persistence and in-memory cache for fast access.
 
 import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nostr_sdk/nip05/nip05_validor.dart';

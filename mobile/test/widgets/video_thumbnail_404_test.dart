@@ -20,8 +20,7 @@ void main() {
         timestamp: DateTime.now(),
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         videoUrl: 'https://example.com/video.mp4',
-        thumbnailUrl:
-            'https://cdn.divine.video/99657957e77a1d27c7c850c3ea35fd2b/thumbnails/thumbnail.jpg', // This is the 404 URL from the crash
+        thumbnailUrl: 'https://cdn.divine.video/99657957e77a1d27c7c850c3ea35fd2b/thumbnails/thumbnail.jpg', // This is the 404 URL from the crash
         blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', // Valid blurhash for fallback
         title: 'Test Video',
       );

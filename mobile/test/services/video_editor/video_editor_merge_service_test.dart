@@ -136,15 +136,14 @@ void main() {
     });
 
     test('accounts for playback speed when summing duration', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => '/documents/merged.mp4';
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
 
       // 4s at 2x = 2s playback; 2s at 1x = 2s → 4s total.
       final result = await VideoEditorMergeService.mergeClips(
@@ -163,15 +162,14 @@ void main() {
     });
 
     test('returns null when the render fails or is cancelled', () async {
-      VideoEditorRenderService.renderVideoOverride =
-          ({
-            required clips,
-            required usePersistentStorage,
-            aspectRatio,
-            parameters,
-            taskId,
-            maxOutputDuration,
-          }) async => null;
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => null;
 
       final result = await VideoEditorMergeService.mergeClips(
         clips: [
@@ -187,15 +185,14 @@ void main() {
     test(
       'preserves provenance when every clip shares the same source',
       () async {
-        VideoEditorRenderService.renderVideoOverride =
-            ({
-              required clips,
-              required usePersistentStorage,
-              aspectRatio,
-              parameters,
-              taskId,
-              maxOutputDuration,
-            }) async => '/documents/merged.mp4';
+        VideoEditorRenderService.renderVideoOverride = ({
+          required clips,
+          required usePersistentStorage,
+          aspectRatio,
+          parameters,
+          taskId,
+          maxOutputDuration,
+        }) async => '/documents/merged.mp4';
 
         DivineVideoClip sameSourceClip(String id) =>
             _createClip(id: id).copyWith(
@@ -227,15 +224,14 @@ void main() {
     test(
       'preserves provenance union when clips come from different sources',
       () async {
-        VideoEditorRenderService.renderVideoOverride =
-            ({
-              required clips,
-              required usePersistentStorage,
-              aspectRatio,
-              parameters,
-              taskId,
-              maxOutputDuration,
-            }) async => '/documents/merged.mp4';
+        VideoEditorRenderService.renderVideoOverride = ({
+          required clips,
+          required usePersistentStorage,
+          aspectRatio,
+          parameters,
+          taskId,
+          maxOutputDuration,
+        }) async => '/documents/merged.mp4';
 
         final result = await VideoEditorMergeService.mergeClips(
           clips: [

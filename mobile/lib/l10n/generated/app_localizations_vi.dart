@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9832,8 +9833,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Thao tác này chặn $count tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
-      one:
-          'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
+      one: 'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
     );
     return '$_temp0';
   }

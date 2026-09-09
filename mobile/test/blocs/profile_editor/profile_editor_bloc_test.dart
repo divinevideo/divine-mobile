@@ -106,8 +106,7 @@ void main() {
           displayName: testDisplayName,
           rawData: const {},
           createdAt: DateTime.now(),
-          eventId:
-              'fallback12345678901234567890123456789012345678901234567890123456',
+          eventId: 'fallback12345678901234567890123456789012345678901234567890123456',
         ),
       );
       registerFallbackValue(_FakeFile());
@@ -1183,8 +1182,7 @@ void main() {
               picture: testPicture,
               rawData: const {},
               createdAt: DateTime.now(),
-              eventId:
-                  'nip05evt567890123456789012345678901234567890123456789012345678',
+              eventId: 'nip05evt567890123456789012345678901234567890123456789012345678',
             ),
           ),
         ),

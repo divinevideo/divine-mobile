@@ -4,8 +4,10 @@
 import 'package:models/models.dart';
 
 /// Combines the cached and the incoming version of the same video.
-typedef VideoMerge =
-    VideoEvent Function(VideoEvent existing, VideoEvent updated);
+typedef VideoMerge = VideoEvent Function(
+  VideoEvent existing,
+  VideoEvent updated,
+);
 
 /// Reports how many videos [AuthorVideoBuckets.removeWhere] dropped from one
 /// author's bucket.

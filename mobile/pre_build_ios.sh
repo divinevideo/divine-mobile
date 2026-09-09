@@ -1,6 +1,6 @@
 #!/bin/bash
 # ABOUTME: Pre-action of the shared Runner scheme: repairs the generated Swift package floor, syncs CocoaPods.
-# ABOUTME: Runs no Flutter command; plugin injection would reset that floor to iOS 13.
+# ABOUTME: Runs no Flutter command; plugin injection can reset that floor below iOS 16.
 
 set -e
 
@@ -12,33 +12,18 @@ cd "$SCRIPT_DIR"
 
 # Never run a Flutter command here. Plugin injection rewrites
 # ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift
-# at Flutter's default .iOS("13.0"), which every plugin needing 15/16 then
-# fails against. Repair it in place, without invoking Flutter.
+# at Flutter's default iOS floor, which can be lower than plugins require.
+# Repair it in place, without invoking Flutter.
 #
 # This cannot rescue the build it runs in. Xcode emits "Resolve Package Graph"
-# before it runs scheme pre-actions, so a build that starts at 13.0 still fails;
+# before it runs scheme pre-actions, so a build that starts too low still fails;
 # measured 2026-09-06. What this buys is that the failure stops repeating: the
 # next build reads 16.0 and succeeds. Run `flutter build ios --config-only`
 # after a terminal Flutter command to skip the wasted first build.
 # See .claude/rules/ios_build_troubleshooting.md, Cause 3.
 SWIFT_PACKAGE_MANIFEST="ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift"
 if [ -f "$SWIFT_PACKAGE_MANIFEST" ]; then
-    if grep -Eq '\.iOS\(("13\.0"|\.v13)\)' "$SWIFT_PACKAGE_MANIFEST"; then
-        SWIFT_PACKAGE_TMP="$(mktemp "${SWIFT_PACKAGE_MANIFEST}.XXXXXX")"
-        trap 'rm -f "$SWIFT_PACKAGE_TMP"' EXIT
-        sed \
-            -e 's/\.iOS("13\.0")/.iOS("16.0")/g' \
-            -e 's/\.iOS(\.v13)/.iOS("16.0")/g' \
-            "$SWIFT_PACKAGE_MANIFEST" > "$SWIFT_PACKAGE_TMP"
-        mv "$SWIFT_PACKAGE_TMP" "$SWIFT_PACKAGE_MANIFEST"
-        trap - EXIT
-        echo "✅ Raised generated Swift package deployment target to iOS 16.0"
-    fi
-
-    if ! grep -Eq '\.iOS\(("16\.0"|\.v16)\)' "$SWIFT_PACKAGE_MANIFEST"; then
-        echo "❌ ERROR: Generated Swift package does not target iOS 16.0"
-        exit 1
-    fi
+    ruby scripts/ensure_ios_swift_package_floor.rb "$SWIFT_PACKAGE_MANIFEST"
 fi
 
 # Navigate to iOS directory

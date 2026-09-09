@@ -33,8 +33,9 @@ const _defaultAutoRefreshMinInterval = Duration(minutes: 10);
 ///
 /// Injected so [VideoFeedBloc] stays decoupled from relay clients while still
 /// letting home feeds repair compact REST rows that omit ProofMode/C2PA tags.
-typedef EnrichVideos =
-    Future<List<VideoEvent>> Function(List<VideoEvent> videos);
+typedef EnrichVideos = Future<List<VideoEvent>> Function(
+  List<VideoEvent> videos,
+);
 
 /// BLoC for managing the unified video feed.
 ///

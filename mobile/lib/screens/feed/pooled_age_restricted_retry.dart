@@ -21,8 +21,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 const _logName = 'PooledAgeRestrictedRetry';
 
-typedef PooledAgeRestrictedSha256Resolver =
-    String? Function({String? explicitSha256, String? videoUrl});
+typedef PooledAgeRestrictedSha256Resolver = String? Function({
+  String? explicitSha256,
+  String? videoUrl,
+});
 
 /// Outcome of a viewer-auth playback retry.
 ///
@@ -33,8 +35,9 @@ typedef PooledAgeRestrictedSha256Resolver =
 typedef PooledRetryOutcome = ({bool succeeded, VideoErrorType? errorType});
 
 /// Reloads playback for the retried item with signed viewer-auth headers.
-typedef PooledRetryPlayback =
-    FutureOr<PooledRetryOutcome> Function(Map<String, String> httpHeaders);
+typedef PooledRetryPlayback = FutureOr<PooledRetryOutcome> Function(
+  Map<String, String> httpHeaders,
+);
 
 /// Verifies access to an age-restricted pooled video, then retries playback
 /// with viewer auth headers on the active pooled controller item.

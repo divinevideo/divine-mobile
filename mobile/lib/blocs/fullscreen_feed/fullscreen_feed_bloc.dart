@@ -44,12 +44,11 @@ typedef OnVideoConfirmedUnavailable = void Function(VideoEvent video);
 /// verdict is persisted. Quarantined and age-restricted blobs also 404 but
 /// are reversible, so they keep their error tile. Tests may inject a smaller
 /// predicate.
-typedef ConfirmVideoUnavailable =
-    Future<FeedUnavailability> Function({
-      required String videoId,
-      required String? videoUrl,
-      String? explicitSha256,
-    });
+typedef ConfirmVideoUnavailable = Future<FeedUnavailability> Function({
+  required String videoId,
+  required String? videoUrl,
+  String? explicitSha256,
+});
 
 /// Returns `true` when [video] must be hidden (blocked / muted / blocked-us /
 /// muted-us authors or reposters, plus shared feed policy). Injected so the

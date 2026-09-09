@@ -30,26 +30,24 @@ part 'clip_editor_state.dart';
 /// Function signature matching [VideoEditorSplitService.splitClip], used as
 /// an injectable seam so tests can swap in a pure-Dart fake that does not
 /// touch `path_provider` or `pro_video_editor` plugins.
-typedef SplitClipFn =
-    Future<void> Function({
-      required DivineVideoClip sourceClip,
-      required Duration splitPosition,
-      required void Function(
-        DivineVideoClip startClip,
-        DivineVideoClip endClip,
-      )?
-      onClipsCreated,
-      required void Function(DivineVideoClip clip, String thumbnailPath)?
-      onThumbnailExtracted,
-    });
+typedef SplitClipFn = Future<void> Function({
+  required DivineVideoClip sourceClip,
+  required Duration splitPosition,
+  required void Function(
+    DivineVideoClip startClip,
+    DivineVideoClip endClip,
+  )?
+  onClipsCreated,
+  required void Function(DivineVideoClip clip, String thumbnailPath)?
+  onThumbnailExtracted,
+});
 
 /// Function signature matching [VideoEditorReverseService.reverseClip], used as
 /// an injectable seam so tests can swap in a pure-Dart fake.
-typedef ReverseClipFn =
-    Future<EditorVideo> Function({
-      required DivineVideoClip sourceClip,
-      required String renderId,
-    });
+typedef ReverseClipFn = Future<EditorVideo> Function({
+  required DivineVideoClip sourceClip,
+  required String renderId,
+});
 
 /// Function signature matching
 /// [StopMotionFrameTransformService.writeTransformedFrame], injectable so tests
@@ -58,43 +56,39 @@ typedef WriteStopMotionFrameFn = Future<String> Function(Uint8List bytes);
 
 /// Function signature matching [VideoEditorTransformService.transformClip],
 /// used as an injectable seam so tests can swap in a pure-Dart fake.
-typedef TransformClipFn =
-    Future<EditorVideo> Function({
-      required DivineVideoClip sourceClip,
-      required ExportTransform transform,
-      required String renderId,
-    });
+typedef TransformClipFn = Future<EditorVideo> Function({
+  required DivineVideoClip sourceClip,
+  required ExportTransform transform,
+  required String renderId,
+});
 
 /// Function signature matching [VideoEditorMergeService.mergeClips], used as an
 /// injectable seam so tests can swap in a pure-Dart fake that does not touch
 /// the render pipeline.
-typedef MergeClipsFn =
-    Future<DivineVideoClip?> Function({
-      required List<DivineVideoClip> clips,
-      required String renderId,
-    });
+typedef MergeClipsFn = Future<DivineVideoClip?> Function({
+  required List<DivineVideoClip> clips,
+  required String renderId,
+});
 
 /// Function signature matching
 /// [VideoEditorClipLibrarySaveService.flattenClipForLibrary], used as an
 /// injectable seam so tests can swap in a pure-Dart fake that does not touch
 /// `path_provider` or `pro_video_editor` plugins.
-typedef FlattenClipForLibraryFn =
-    Future<DivineVideoClip?> Function({
-      required DivineVideoClip clip,
-      required String renderId,
-      EditorOverlaySnapshot? overlays,
-    });
+typedef FlattenClipForLibraryFn = Future<DivineVideoClip?> Function({
+  required DivineVideoClip clip,
+  required String renderId,
+  EditorOverlaySnapshot? overlays,
+});
 
 /// Function signature matching
 /// [VideoEditorClipLibrarySaveService.cleanupFlattenedClip], the injectable
 /// seam that deletes a flattened clip's documents-dir files when the save
 /// doesn't reach the library, so tests can assert cleanup without touching the
 /// file system.
-typedef CleanupFlattenedClipFn =
-    Future<void> Function(
-      DivineVideoClip flattened, {
-      String? keepThumbnailPath,
-    });
+typedef CleanupFlattenedClipFn = Future<void> Function(
+  DivineVideoClip flattened, {
+  String? keepThumbnailPath,
+});
 
 /// Queues files that became unreachable when a clip's file references were
 /// rewritten — a transform's pre-transform render, a bake's previous output,
@@ -115,8 +109,9 @@ void _noopDeferFileCleanup(Iterable<String?> paths) {}
 /// library lives behind a Riverpod provider this BLoC cannot reach, so the
 /// dependency arrives as a callback — the same transition seam that already
 /// brings the clip list in (see [ClipEditorBloc]).
-typedef SaveClipToLibraryFn =
-    Future<bool> Function({required DivineVideoClip clip});
+typedef SaveClipToLibraryFn = Future<bool> Function({
+  required DivineVideoClip clip,
+});
 
 /// BLoC for managing video clip editor state.
 ///

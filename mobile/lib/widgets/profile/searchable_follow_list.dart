@@ -10,8 +10,11 @@ import 'package:openvine/blocs/follow_list_search/follow_list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Builds the row rendered for [pubkey] at [index] in a follow list.
-typedef FollowListItemBuilder =
-    Widget Function(BuildContext context, String pubkey, int index);
+typedef FollowListItemBuilder = Widget Function(
+  BuildContext context,
+  String pubkey,
+  int index,
+);
 
 /// A pull-to-refresh user list with the design's search field pinned above it.
 ///

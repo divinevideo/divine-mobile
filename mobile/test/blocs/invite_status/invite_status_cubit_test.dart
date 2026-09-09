@@ -28,8 +28,7 @@ void main() {
         InviteCode(
           code: 'HN4P-QR56',
           claimed: true,
-          claimedBy:
-              'aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa1',
+          claimedBy: 'aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa1',
         ),
       ],
     );
@@ -349,39 +348,40 @@ void main() {
       },
     );
 
-    test('Keycast status loads when delayed RPC signer becomes ready', () async {
-      final authSessions = StreamController<InviteStatusAuthSession>();
-      addTearDown(authSessions.close);
-      when(
-        () => mockInviteApiClient.getInviteStatus(),
-      ).thenAnswer((_) async => testStatus);
+    test(
+      'Keycast status loads when delayed RPC signer becomes ready',
+      () async {
+        final authSessions = StreamController<InviteStatusAuthSession>();
+        addTearDown(authSessions.close);
+        when(
+          () => mockInviteApiClient.getInviteStatus(),
+        ).thenAnswer((_) async => testStatus);
 
-      final cubit = buildCubit(
-        initialAuthSession: const InviteStatusAuthSession(
-          accountId:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          isSignerReady: false,
-        ),
-        authSessionStream: authSessions.stream,
-      )..start();
-      addTearDown(cubit.close);
+        final cubit = buildCubit(
+          initialAuthSession: const InviteStatusAuthSession(
+            accountId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            isSignerReady: false,
+          ),
+          authSessionStream: authSessions.stream,
+        )..start();
+        addTearDown(cubit.close);
 
-      verifyNever(() => mockInviteApiClient.getInviteStatus());
+        verifyNever(() => mockInviteApiClient.getInviteStatus());
 
-      authSessions.add(
-        const InviteStatusAuthSession(
-          accountId:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          isSignerReady: true,
-        ),
-      );
-      await cubit.stream.firstWhere(
-        (state) => state.status == InviteStatusLoadingStatus.loaded,
-      );
+        authSessions.add(
+          const InviteStatusAuthSession(
+            accountId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            isSignerReady: true,
+          ),
+        );
+        await cubit.stream.firstWhere(
+          (state) => state.status == InviteStatusLoadingStatus.loaded,
+        );
 
-      verify(() => mockInviteApiClient.getInviteStatus()).called(1);
-      expect(cubit.state.inviteStatus, equals(testStatus));
-    });
+        verify(() => mockInviteApiClient.getInviteStatus()).called(1);
+        expect(cubit.state.inviteStatus, equals(testStatus));
+      },
+    );
 
     test('waiting for auth falls through to error after timeout', () {
       fakeAsync((async) {
@@ -538,8 +538,7 @@ void main() {
 
         authSessions.add(
           const InviteStatusAuthSession(
-            accountId:
-                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            accountId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             isSignerReady: true,
           ),
         );
@@ -589,8 +588,7 @@ void main() {
       );
       authSessions.add(
         const InviteStatusAuthSession(
-          accountId:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          accountId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           isSignerReady: true,
         ),
       );
@@ -640,8 +638,7 @@ void main() {
 
       authSessions.add(
         const InviteStatusAuthSession(
-          accountId:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          accountId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           isSignerReady: true,
         ),
       );

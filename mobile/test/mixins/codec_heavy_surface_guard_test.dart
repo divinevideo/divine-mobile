@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,10 +60,8 @@ void main() {
         'completes', (tester) async {
       await pumpHost(tester);
 
-      unawaited(
-        navKey.currentState!.push(
-          MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
-        ),
+      navKey.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
       );
 
       // Mid-transition: the screen is animating in, the signal must stay off so
@@ -83,11 +79,9 @@ void main() {
         'disabled', (tester) async {
       await pumpHost(tester);
 
-      unawaited(
-        navKey.currentState!.push(
-          MaterialPageRoute<void>(
-            builder: (_) => const _ImmediateGuardedScreen(),
-          ),
+      navKey.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _ImmediateGuardedScreen(),
         ),
       );
 
@@ -106,10 +100,8 @@ void main() {
     testWidgets('releases the signal on pop', (tester) async {
       await pumpHost(tester);
 
-      unawaited(
-        navKey.currentState!.push(
-          MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
-        ),
+      navKey.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
       );
       await tester.pumpAndSettle();
       expect(cubit.state.isActive, isTrue);
@@ -124,10 +116,8 @@ void main() {
     ) async {
       await pumpHost(tester);
 
-      unawaited(
-        navKey.currentState!.push(
-          MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
-        ),
+      navKey.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const _GuardedScreen()),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));

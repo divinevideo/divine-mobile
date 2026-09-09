@@ -70,8 +70,7 @@ void main() {
             'code': 'HN4P-QR56',
             'claimed': true,
             'claimedAt': '2025-01-15T10:30:00Z',
-            'claimedBy':
-                'aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa1',
+            'claimedBy': 'aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa111aaa1',
           },
         ],
       };

@@ -2,6 +2,7 @@
 // ABOUTME: Ensures coverage, analysis options, and test helpers are properly configured
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
 
@@ -59,8 +60,7 @@ void main() {
       expect(
         content,
         contains('git rev-parse --git-common-dir'),
-        reason:
-            'Hook installer should work from worktrees as well as the main checkout',
+        reason: 'Hook installer should work from worktrees as well as the main checkout',
       );
       expect(
         content,

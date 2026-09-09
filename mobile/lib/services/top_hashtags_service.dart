@@ -2,6 +2,7 @@
 // ABOUTME: Provides popular hashtag suggestions for discovery and exploration.
 
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:unified_logger/unified_logger.dart';

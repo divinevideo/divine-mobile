@@ -136,20 +136,23 @@ void main() {
           expect(repository.load(url), completion(isNull));
         });
 
-        test('rejects an end element after the root with a shape left open', () {
-          // A `rect` is a shape, not a group, so flutter_svg never pushes it onto
-          // `_parentDrawables`. Any guard that mirrors that stack instead of the
-          // document desynchronises here and lets the payload through.
-          final repository = repositoryFor(
-            http.Response(
-              '$svgOpenTag<rect width="4" height="4"></svg></rect>',
-              200,
-              headers: {'content-type': 'image/svg+xml'},
-            ),
-          );
+        test(
+          'rejects an end element after the root with a shape left open',
+          () {
+            // A `rect` is a shape, not a group, so flutter_svg never pushes it onto
+            // `_parentDrawables`. Any guard that mirrors that stack instead of the
+            // document desynchronises here and lets the payload through.
+            final repository = repositoryFor(
+              http.Response(
+                '$svgOpenTag<rect width="4" height="4"></svg></rect>',
+                200,
+                headers: {'content-type': 'image/svg+xml'},
+              ),
+            );
 
-          expect(repository.load(url), completion(isNull));
-        });
+            expect(repository.load(url), completion(isNull));
+          },
+        );
 
         test('accepts a nested svg element', () async {
           // `SvgParser` supports a nested `<svg>` and pushes its own group for it,

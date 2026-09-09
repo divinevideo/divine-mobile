@@ -370,8 +370,7 @@ class _FailingC2paSigningService extends C2paSigningService {
     return C2paSigningResult(
       signedFilePath: this.videoPath,
       success: false,
-      error:
-          'PlatformException(C2PA_ERROR, A TLS error caused the secure connection to fail., null, null)',
+      error: 'PlatformException(C2PA_ERROR, A TLS error caused the secure connection to fail., null, null)',
       failureReason: C2paSigningFailureReason.tls,
     );
   }

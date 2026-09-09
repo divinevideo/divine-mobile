@@ -478,16 +478,15 @@ void main() {
           // A re-sign that never resolves keeps isProcessing observably true,
           // which distinguishes retryC2paSigning (sets it) from a mis-wire to
           // acknowledgeC2paSigningFailure (which would not).
-          NativeProofModeService.proofFileOverride =
-              (
-                file, {
-                required enableAdvancedCawgEmbedding,
-                creatorBindingAssertion,
-                cawgIdentityAssertion,
-                verifiedIdentityBundle,
-                clips,
-                editorStateHistory,
-              }) => Completer<models.NativeProofData?>().future;
+          NativeProofModeService.proofFileOverride = (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) => Completer<models.NativeProofData?>().future;
           addTearDown(() => NativeProofModeService.proofFileOverride = null);
 
           final container = ProviderContainer(
@@ -561,16 +560,15 @@ void main() {
         (tester) async {
           // A re-sign that never resolves keeps isProcessing observably true,
           // distinguishing retryC2paSigning from a silent postAnyway.
-          NativeProofModeService.proofFileOverride =
-              (
-                file, {
-                required enableAdvancedCawgEmbedding,
-                creatorBindingAssertion,
-                cawgIdentityAssertion,
-                verifiedIdentityBundle,
-                clips,
-                editorStateHistory,
-              }) => Completer<models.NativeProofData?>().future;
+          NativeProofModeService.proofFileOverride = (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) => Completer<models.NativeProofData?>().future;
           addTearDown(() => NativeProofModeService.proofFileOverride = null);
 
           final container = ProviderContainer(

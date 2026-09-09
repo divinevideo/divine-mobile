@@ -2,6 +2,7 @@
 // ABOUTME: Ensures test generation scripts can create comprehensive test suites
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

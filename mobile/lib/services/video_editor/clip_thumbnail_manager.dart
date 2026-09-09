@@ -9,16 +9,15 @@ import 'package:openvine/services/video_thumbnail_service.dart';
 /// Signature of [VideoThumbnailService.generateStripThumbnails], injectable
 /// so tests can assert pause/resume behaviour on the produced subscriptions
 /// without touching the native extractor.
-typedef StripThumbnailStreamFactory =
-    Stream<List<StripThumbnail>> Function({
-      required String videoPath,
-      required String clipId,
-      required Duration duration,
-      required Size outputSize,
-      required int thumbsPerSecond,
-      Duration startOffset,
-      List<Duration>? priorityTimestamps,
-    });
+typedef StripThumbnailStreamFactory = Stream<List<StripThumbnail>> Function({
+  required String videoPath,
+  required String clipId,
+  required Duration duration,
+  required Size outputSize,
+  required int thumbsPerSecond,
+  Duration startOffset,
+  List<Duration>? priorityTimestamps,
+});
 
 /// Manages thumbnail loading and cleanup for a set of clips.
 ///

@@ -2,6 +2,7 @@
 // ABOUTME: Used to prevent OOM crashes when rendering large images on low-memory devices
 
 import 'dart:ui' show Size;
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:unified_logger/unified_logger.dart';

@@ -14,20 +14,20 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-typedef VideoClipDownloader =
-    Future<File?> Function({required String url, required String cacheKey});
+typedef VideoClipDownloader = Future<File?> Function({
+  required String url,
+  required String cacheKey,
+});
 
-typedef VideoClipThumbnailExtractor =
-    Future<VideoClipThumbnail?> Function({
-      required String videoPath,
-      required Duration targetTimestamp,
-    });
+typedef VideoClipThumbnailExtractor = Future<VideoClipThumbnail?> Function({
+  required String videoPath,
+  required Duration targetTimestamp,
+});
 
-typedef VideoClipLastFrameExtractor =
-    Future<String?> Function({
-      required String videoPath,
-      required Duration videoDuration,
-    });
+typedef VideoClipLastFrameExtractor = Future<String?> Function({
+  required String videoPath,
+  required Duration videoDuration,
+});
 
 typedef DocumentsPathProvider = Future<String> Function();
 typedef Clock = DateTime Function();

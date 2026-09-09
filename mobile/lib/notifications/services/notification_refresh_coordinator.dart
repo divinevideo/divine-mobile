@@ -23,8 +23,11 @@ enum NotificationRefreshReason {
 }
 
 /// Forwards an unexpected refresh failure to the crash reporter.
-typedef NotificationRefreshErrorReporter =
-    void Function(Object error, StackTrace stackTrace, {String? reason});
+typedef NotificationRefreshErrorReporter = void Function(
+  Object error,
+  StackTrace stackTrace, {
+  String? reason,
+});
 
 /// Coalesces notification refresh calls so independent liveness triggers do
 /// not stampede Funnelcake.

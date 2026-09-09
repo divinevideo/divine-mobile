@@ -202,8 +202,7 @@ void main() {
           displayName: 'RequestUser',
           rawData: const {},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         final request = DmConversation(
@@ -396,8 +395,7 @@ void main() {
           displayName: 'RequestUser',
           rawData: const {},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         final request = DmConversation(
@@ -463,8 +461,7 @@ void main() {
           () => mockGoRouter.pushNamed(
             RequestPreviewPage.routeName,
             pathParameters: {
-              'id':
-                  'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              'id': 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
             },
             extra: [otherPubkey],
           ),

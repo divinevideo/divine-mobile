@@ -2,6 +2,7 @@
 // ABOUTME: Fetches video from Nostr and displays it in full-screen player
 
 import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';

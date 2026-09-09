@@ -124,8 +124,7 @@ void main() {
         expect(
           isFeedActive || isExploreActive || isProfileActive,
           isFalse,
-          reason:
-              'No video tabs should be active when on camera tab, preventing profile fetch',
+          reason: 'No video tabs should be active when on camera tab, preventing profile fetch',
         );
       },
     );
@@ -142,28 +141,30 @@ void main() {
       container.dispose();
     });
 
-    test('ExploreScreen.onScreenVisible should set tab visibility to index 2', () {
-      // Arrange - Start with a different tab
-      container.read(tabVisibilityProvider.notifier).setActiveTab(0);
-      expect(container.read(tabVisibilityProvider), equals(0));
+    test(
+      'ExploreScreen.onScreenVisible should set tab visibility to index 2',
+      () {
+        // Arrange - Start with a different tab
+        container.read(tabVisibilityProvider.notifier).setActiveTab(0);
+        expect(container.read(tabVisibilityProvider), equals(0));
 
-      // Act - Simulate ExploreScreen.onScreenVisible()
-      // This is what our fix does: ref.read(tabVisibilityProvider.notifier).setActiveTab(2);
-      container.read(tabVisibilityProvider.notifier).setActiveTab(2);
+        // Act - Simulate ExploreScreen.onScreenVisible()
+        // This is what our fix does: ref.read(tabVisibilityProvider.notifier).setActiveTab(2);
+        container.read(tabVisibilityProvider.notifier).setActiveTab(2);
 
-      // Assert
-      expect(
-        container.read(tabVisibilityProvider),
-        equals(2),
-        reason:
-            'Tab visibility should be set to 2 when ExploreScreen becomes visible',
-      );
-      expect(
-        container.read(isExploreTabActiveProvider),
-        isTrue,
-        reason: 'Explore tab should be marked as active',
-      );
-    });
+        // Assert
+        expect(
+          container.read(tabVisibilityProvider),
+          equals(2),
+          reason: 'Tab visibility should be set to 2 when ExploreScreen becomes visible',
+        );
+        expect(
+          container.read(isExploreTabActiveProvider),
+          isTrue,
+          reason: 'Explore tab should be marked as active',
+        );
+      },
+    );
 
     test(
       'Profile fetching should work immediately after ExploreScreen becomes visible',
@@ -192,8 +193,7 @@ void main() {
         expect(
           canFetch,
           isTrue,
-          reason:
-              'Should be able to fetch profiles after ExploreScreen becomes visible',
+          reason: 'Should be able to fetch profiles after ExploreScreen becomes visible',
         );
       },
     );

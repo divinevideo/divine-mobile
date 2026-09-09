@@ -21,8 +21,9 @@ part 'chroma_key_editor_state.dart';
 /// app it is [ChromaKey.detect], which samples a ring around the frame border
 /// through the thumbnail pipeline — a metadata call, three thumbnails from a
 /// quarter, half and three quarters through, and a decode each. No render.
-typedef ChromaKeyDetectFn =
-    Future<ChromaKeyDetection> Function(EditorVideo video);
+typedef ChromaKeyDetectFn = Future<ChromaKeyDetection> Function(
+  EditorVideo video,
+);
 
 /// The key a clip starts from before anything is measured or adjusted.
 ///
@@ -55,9 +56,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     @visibleForTesting bool detectOnOpen = true,
   }) : _video = video,
        _detect = detect,
-       super(
-         ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey),
-       ) {
+       super(ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey)) {
     // Measuring beats guessing, at a metadata round trip and three decoded
     // thumbnails, so the screen opens on a real cutout — or on the reason
     // there isn't one — instead of an inert panel the user has to know to
@@ -113,15 +112,12 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
       // not.
-      _reportDetectionFailure(
-        switch (error) {
-          StateError() ||
-          TypeError() ||
-          RangeError() => Reportable(error, context: 'detectFromFootage'),
-          _ => error,
-        },
-        stackTrace,
-      );
+      _reportDetectionFailure(switch (error) {
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(error, context: 'detectFromFootage'),
+        _ => error,
+      }, stackTrace);
       return;
     }
 

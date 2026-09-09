@@ -307,12 +307,10 @@ void main() {
           'emits [loading with cache, loaded fresh] when fresh fetch succeeds',
           setUp: () {
             final cachedProfile = createTestProfile(
-              eventId:
-                  'cached12345678901234567890123456789012345678901234567890123456',
+              eventId: 'cached12345678901234567890123456789012345678901234567890123456',
             );
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -558,12 +556,10 @@ void main() {
           'emits [loading with current, loaded fresh] when refresh succeeds',
           setUp: () {
             final cachedProfile = createTestProfile(
-              eventId:
-                  'cached12345678901234567890123456789012345678901234567890123456',
+              eventId: 'cached12345678901234567890123456789012345678901234567890123456',
             );
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -575,8 +571,7 @@ void main() {
           build: createBloc,
           seed: () => OtherProfileLoaded(
             profile: createTestProfile(
-              eventId:
-                  'seed1234567890123456789012345678901234567890123456789012345678',
+              eventId: 'seed1234567890123456789012345678901234567890123456789012345678',
             ),
             isFresh: true,
           ),
@@ -654,8 +649,7 @@ void main() {
           'emits loaded fresh when refresh succeeds',
           setUp: () {
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
@@ -664,8 +658,7 @@ void main() {
           build: createBloc,
           seed: () => OtherProfileLoading(
             profile: createTestProfile(
-              eventId:
-                  'loading12345678901234567890123456789012345678901234567890123456',
+              eventId: 'loading12345678901234567890123456789012345678901234567890123456',
             ),
           ),
           act: (bloc) => bloc.add(const OtherProfileRefreshRequested()),
@@ -686,8 +679,7 @@ void main() {
           'preserves profile from error state during refresh',
           setUp: () {
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
@@ -697,8 +689,7 @@ void main() {
           seed: () => OtherProfileError(
             errorType: OtherProfileErrorType.networkError,
             profile: createTestProfile(
-              eventId:
-                  'error123456789012345678901234567890123456789012345678901234567',
+              eventId: 'error123456789012345678901234567890123456789012345678901234567',
             ),
           ),
           act: (bloc) => bloc.add(const OtherProfileRefreshRequested()),

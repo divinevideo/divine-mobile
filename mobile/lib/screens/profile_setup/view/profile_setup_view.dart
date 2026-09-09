@@ -123,8 +123,7 @@ class _ProfileSetupScreenViewState
                   FocusManager.instance.primaryFocus?.unfocus();
                 },
                 child: SafeArea(
-                  bottom:
-                      false, // Don't add bottom padding - let content extend to bottom
+                  bottom: false, // Don't add bottom padding - let content extend to bottom
                   // Rounds the body's top corners the way the app bar's
                   // `radius 96` pieces do. Outside the scroll view on purpose:
                   // the corners belong to the viewport edge, so they stay put
