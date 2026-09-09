@@ -3130,7 +3130,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get authCreateAccountTitle => 'Hesap oluştur';
 
   @override
-  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+  String get authCreateAccountMarketingOptIn =>
+      'Sign-up for Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Davet koduna geri dön';

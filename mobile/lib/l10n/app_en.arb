@@ -2077,7 +2077,7 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "Create account",
-  "authCreateAccountMarketingOptIn": "Send me Divine inspiration",
+  "authCreateAccountMarketingOptIn": "Sign-up for Divine app updates and news",
   "authBackToInviteCode": "Back to invite code",
   "authUseDivineNoBackup": "Use Divine with no backup",
   "authSkipConfirmTitle": "One last thing...",

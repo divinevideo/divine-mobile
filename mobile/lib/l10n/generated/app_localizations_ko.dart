@@ -2997,7 +2997,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authCreateAccountTitle => '계정 만들기';
 
   @override
-  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+  String get authCreateAccountMarketingOptIn =>
+      'Sign-up for Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '초대 코드로 돌아가기';

@@ -3121,7 +3121,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get authCreateAccountTitle => 'መለያ ይፍጠሩ';
 
   @override
-  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+  String get authCreateAccountMarketingOptIn =>
+      'Sign-up for Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'ወደ ግብዣ ኮድ ተመለስ';

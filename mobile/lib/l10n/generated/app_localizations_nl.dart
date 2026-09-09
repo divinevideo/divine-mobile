@@ -3204,7 +3204,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get authCreateAccountTitle => 'Account aanmaken';
 
   @override
-  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+  String get authCreateAccountMarketingOptIn =>
+      'Sign-up for Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Terug naar invite-code';

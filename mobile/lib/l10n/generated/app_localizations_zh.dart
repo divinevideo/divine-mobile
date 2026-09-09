@@ -2995,7 +2995,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authCreateAccountTitle => '创建账号';
 
   @override
-  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+  String get authCreateAccountMarketingOptIn =>
+      'Sign-up for Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '返回邀请码';

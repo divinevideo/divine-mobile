@@ -5476,7 +5476,7 @@ abstract class AppLocalizations {
   /// No description provided for @authCreateAccountMarketingOptIn.
   ///
   /// In en, this message translates to:
-  /// **'Send me Divine inspiration'**
+  /// **'Sign-up for Divine app updates and news'**
   String get authCreateAccountMarketingOptIn;
 
   /// No description provided for @authBackToInviteCode.
