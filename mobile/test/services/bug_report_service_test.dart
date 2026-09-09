@@ -7,7 +7,7 @@ import 'dart:ui' show Locale;
 import 'package:analytics/analytics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show BugReportData, LogEntry, LogLevel;
+import 'package:models/models.dart' show BugReportData;
 import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/bug_report_service.dart';

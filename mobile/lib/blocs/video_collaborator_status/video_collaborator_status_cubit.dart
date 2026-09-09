@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'video_collaborator_status_state.dart';

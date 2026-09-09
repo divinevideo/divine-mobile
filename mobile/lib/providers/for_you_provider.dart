@@ -1,7 +1,7 @@
 // ABOUTME: For You recommendations provider - ML-powered personalized video feed
 // ABOUTME: Uses Funnelcake REST API for Gorse-based recommendations (staging only)
 
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';

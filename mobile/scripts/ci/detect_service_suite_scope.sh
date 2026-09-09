@@ -72,6 +72,7 @@ while IFS= read -r path; do
     mobile/packages/dm_repository/*|\
     mobile/packages/follow_repository/*|\
     mobile/packages/funnelcake_api_client/*|\
+    mobile/packages/logging_types/*|\
     mobile/packages/models/*|\
     mobile/packages/nostr_client/*|\
     mobile/packages/nostr_sdk/*|\

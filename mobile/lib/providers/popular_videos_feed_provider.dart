@@ -3,7 +3,7 @@
 
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';

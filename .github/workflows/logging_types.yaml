@@ -1,0 +1,28 @@
+# ABOUTME: CI workflow for the logging_types package.
+# ABOUTME: Runs tests, formatting, and analysis when logging types change.
+
+name: Logging Types CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/logging_types/**"
+      - ".github/workflows/logging_types.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/logging_types/**"
+      - ".github/workflows/logging_types.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/logging_types"
+      flutter_version: "3.47.2"
+      min_coverage: 100

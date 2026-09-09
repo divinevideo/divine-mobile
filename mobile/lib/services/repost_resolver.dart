@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:models/models.dart' hide LogCategory, NIP71VideoKinds;
+import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/nip71_migration.dart';

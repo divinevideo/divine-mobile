@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/curated_list_service.dart';

@@ -12,7 +12,7 @@ import 'package:equatable/equatable.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_cache/media_cache.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/utils/video_identity.dart';

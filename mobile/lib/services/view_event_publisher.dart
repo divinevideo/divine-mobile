@@ -1,7 +1,7 @@
 // ABOUTME: Service for publishing video view events (Kind 22236) to Nostr
 // ABOUTME: Tracks video watch time and publishes ephemeral analytics events
 
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/models/view_traffic_source.dart';

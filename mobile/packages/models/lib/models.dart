@@ -1,6 +1,9 @@
 /// A package containing data models used across the application.
 library;
 
+export 'package:logging_types/logging_types.dart'
+    show LogCategory, LogEntry, LogLevel;
+
 export 'src/actor_info.dart';
 export 'src/aspect_ratio.dart';
 export 'src/audio_event.dart';
@@ -22,8 +25,6 @@ export 'src/feed_type.dart';
 export 'src/hashtag_search_result.dart';
 export 'src/home_feed_response.dart';
 export 'src/live_engagement_counts.dart';
-export 'src/log_entry.dart';
-export 'src/logging_types.dart';
 export 'src/monetization_link.dart';
 export 'src/native_proof_data.dart';
 export 'src/nip17_send_result.dart';

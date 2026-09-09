@@ -2,7 +2,7 @@
 // ABOUTME: Tests the actual VideoEventService method after implementing the fix
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 void main() {

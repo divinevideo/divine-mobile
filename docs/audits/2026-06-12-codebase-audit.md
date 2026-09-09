@@ -5,10 +5,10 @@ Validated against: `mobile/` as of 2026-06-12. Line numbers and "still
 present" claims have drifted — re-verify any finding against current
 `origin/main` before acting on it.
 
-Seven findings from this audit have shipped and are closed: SEC-01
+Eight findings from this audit have shipped and are closed: SEC-01
 (#5894, #5934), SEC-02 (#5055), COR-03 (#5056), COR-05 (#5057),
-COR-04 (#5059), COR-12 (#5060), and COR-11 (#5080). Everything else in
-the table below is unverified since the audit date.
+COR-04 (#5059), COR-12 (#5060), COR-11 (#5080), and ARC-11 (#8946).
+Everything else in the table below is unverified since the audit date.
 
 Open security findings are intentionally summarized without precise locations
 or exploit instructions. Track those details in the private security tracker;
@@ -95,7 +95,7 @@ Verified clean: no committed secrets or `.env`; transport security properly lock
 | ARC-08 | medium | `lib/services/curated_list_service.dart` (1,738 lines) | Repository + client + publisher + local store in one ChangeNotifier; a `curated_list_repository` package already exists to migrate into | M |
 | ARC-09 | medium | `lib/services/zendesk_support_service.dart` (1,168 lines) | All-static class with static state + test hooks — the exact singleton-to-DI shape epic #4338-C2 targets | M |
 | ARC-10 | medium | `packages/curation_repository/pubspec.yaml`, `src/curation_repository.dart:9` | Repository→repository dependency on `likes_repository` (rules forbid); graph is otherwise a clean DAG | S |
-| ARC-11 | low | `packages/unified_logger/pubspec.yaml` | Leaf logging package depends on `models` — inverts direction, couples every consumer's rebuilds to the domain models | S |
+| ARC-11 | ~~low~~ **fixed (#8946)** | `packages/logging_types/`, `packages/unified_logger/pubspec.yaml` | Leaf logging package depends on `models` — inverts direction, couples every consumer's rebuilds to the domain models. **Shipped in #8946:** `LogEntry`, `LogLevel` and `LogCategory` moved to a pure-Dart `logging_types` leaf, and `unified_logger` no longer depends on `models` | — |
 | ARC-12 | low | `packages/content_blocklist_repository/.../blocklist_change.dart:4`, `packages/dm_repository/.../dm_repository.dart:19` | Repositories import `flutter/foundation.dart` (`@immutable` → use `meta`; `compute()` → inject an isolate runner) | S |
 | ARC-13 | low | `lib/providers/relay_discovery_provider.dart`, `lib/router/providers/redirect_provider.dart` | Import `package:riverpod/src/...` internals — break on any Riverpod patch release | S |
 | ARC-14 | medium | `lib/screens/explore_screen.dart:241,877,1005,1041`; `lib/widgets/classic_vines_tab.dart:318`; `lib/widgets/new_videos_tab.dart:85` | Business logic in widgets: filtering in `build`, UI reaching *through* a notifier to a service, direct singleton fetch from a screen, platform-policy filtering in UI | S each |

@@ -5,12 +5,14 @@
 
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
-import 'package:models/models.dart' show LogCategory, LogEntry, LogLevel;
+import 'package:logging_types/logging_types.dart'
+    show LogCategory, LogEntry, LogLevel;
 import 'package:unified_logger/src/log_capture_service.dart';
 
-// Re-export enums so existing consumers of unified_logger.dart
-// continue to resolve LogLevel and LogCategory without import changes.
-export 'package:models/models.dart' show LogCategory, LogEntry, LogLevel;
+// Re-export logging values so existing unified_logger consumers keep their
+// public imports while the types remain owned by the pure-Dart leaf package.
+export 'package:logging_types/logging_types.dart'
+    show LogCategory, LogEntry, LogLevel;
 
 /// Unified logger that outputs to both Flutter tool console
 /// and browser DevTools.

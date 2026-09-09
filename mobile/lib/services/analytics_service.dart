@@ -8,7 +8,7 @@ import 'package:analytics/analytics.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/background_activity_manager.dart';

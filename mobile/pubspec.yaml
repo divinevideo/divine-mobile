@@ -62,6 +62,7 @@ workspace:
   - packages/invite_api_client
   - packages/keycast_flutter
   - packages/likes_repository
+  - packages/logging_types
   - packages/media_cache
   - packages/models
   - packages/notification_repository
@@ -408,6 +409,11 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
 
   very_good_analysis: ^10.2.0
+
+  # Test-only. Nothing under lib/ imports package:logging_types -- the app
+  # reaches LogEntry/LogLevel/LogCategory through the models and unified_logger
+  # re-exports. Only test/ names the package directly.
+  logging_types:
 
   # Powers scripts/check_post_close_emit_ceiling.sh, which needs a real Dart
   # AST to tell Cubit.emit (throws after close) from an event handler's

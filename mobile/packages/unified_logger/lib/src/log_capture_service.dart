@@ -4,7 +4,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:models/models.dart' show LogEntry, LogLevel;
+import 'package:logging_types/logging_types.dart' show LogEntry, LogLevel;
 
 /// Service for capturing and storing log entries in memory for bug reports
 class LogCaptureService {
