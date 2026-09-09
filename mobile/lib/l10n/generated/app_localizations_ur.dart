@@ -10126,7 +10126,7 @@ class AppLocalizationsUr extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'مدد کا مرکز کھولیں';
+  String get appealOpenSupportCenter => 'مدد کا مرکز کھولیں';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'موڈریشن پیغام کھولیں';
@@ -12085,9 +12085,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

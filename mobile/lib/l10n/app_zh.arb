@@ -5486,7 +5486,7 @@
   "minorAccountReviewRestrictionEngagement": "评论、点赞、转发和关注已暂停",
   "minorAccountReviewRestrictionMessaging": "发起或回复普通消息已暂停",
   "minorAccountReviewRestrictionSupport": "客服和管理消息仍然可用",
-  "minorAccountReviewOpenSupportCenter": "打开帮助中心",
+  "appealOpenSupportCenter": "打开帮助中心",
   "minorAccountReviewOpenModerationMessage": "打开管理消息",
   "minorAccountReviewOpenReviewPage": "打开审核页面",
   "minorAccountReviewCheckAgain": "再查一次",

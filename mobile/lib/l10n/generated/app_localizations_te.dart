@@ -10424,8 +10424,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter =>
-      'మద్దతు కేంద్రాన్ని తెరవండి';
+  String get appealOpenSupportCenter => 'మద్దతు కేంద్రాన్ని తెరవండి';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12440,9 +12439,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine నియంత్రణ నిర్ణయాన్ని పునఃపరిశీలించడానికి అభ్యర్థనలను సమీక్షించవచ్చు, కానీ బాధ్యత వహించదు. మీరు దీన్ని పెంచాలనుకుంటే, మద్దతును సంప్రదించండి మరియు ఏమి జరిగిందో మాకు చెప్పండి.';
-
-  @override
-  String get accountStatusContactSupport => 'మద్దతును సంప్రదించండి';
 
   @override
   String get accountStatusMoveAccount => 'మీ ఖాతాను తరలించండి';

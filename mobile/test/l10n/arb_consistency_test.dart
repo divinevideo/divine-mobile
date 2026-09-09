@@ -584,7 +584,6 @@ const _knownUntranslatedDebt = <String>{
   'accountStatusKeysUnaffectedBody',
   'accountStatusAppealHeading',
   'accountStatusAppealBody',
-  'accountStatusContactSupport',
   'accountStatusMoveAccount',
   'accountStatusRetry',
   // Restricted-minor age/deletion copy (#8238). This is load-bearing copy,

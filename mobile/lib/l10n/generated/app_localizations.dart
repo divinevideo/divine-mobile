@@ -17154,11 +17154,11 @@ abstract class AppLocalizations {
   /// **'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealUnder13Body;
 
-  /// No description provided for @minorAccountReviewOpenSupportCenter.
+  /// No description provided for @appealOpenSupportCenter.
   ///
   /// In en, this message translates to:
   /// **'Open Support Center'**
-  String get minorAccountReviewOpenSupportCenter;
+  String get appealOpenSupportCenter;
 
   /// No description provided for @minorAccountReviewOpenModerationMessage.
   ///
@@ -20351,12 +20351,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.'**
   String get accountStatusAppealBody;
-
-  /// Button opening the in-app support center.
-  ///
-  /// In en, this message translates to:
-  /// **'Contact support'**
-  String get accountStatusContactSupport;
 
   /// Button opening the account portability page.
   ///

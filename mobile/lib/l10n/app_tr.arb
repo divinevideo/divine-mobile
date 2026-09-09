@@ -3763,7 +3763,7 @@
     "minorAccountReviewRestrictionEngagement": "Yorumlar, beğeniler, repostlar ve takipler duraklatıldı",
     "minorAccountReviewRestrictionMessaging": "Normal mesaj başlatma ve yanıtlama duraklatıldı",
     "minorAccountReviewRestrictionSupport": "Destek ve moderasyon mesajın kullanılabilir durumda",
-    "minorAccountReviewOpenSupportCenter": "Destek merkezini aç",
+    "appealOpenSupportCenter": "Destek merkezini aç",
     "minorAccountReviewOpenModerationMessage": "Moderasyon mesajını aç",
     "minorAccountReviewOpenReviewPage": "İnceleme sayfasını aç",
     "minorAccountReviewCheckAgain": "Tekrar kontrol et",

@@ -6530,7 +6530,7 @@
   "@minorAccountReviewAppealUnder13Body": {
     "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
   },
-  "minorAccountReviewOpenSupportCenter": "మద్దతు కేంద్రాన్ని తెరవండి",
+  "appealOpenSupportCenter": "మద్దతు కేంద్రాన్ని తెరవండి",
   "minorAccountReviewOpenModerationMessage": "మోడరేషన్ సందేశాన్ని తెరవండి",
   "minorAccountReviewOpenReviewPage": "సమీక్ష పేజీని తెరవండి",
   "minorAccountReviewCheckAgain": "మళ్లీ తనిఖీ చేయండి",
@@ -8284,10 +8284,6 @@
   "accountStatusAppealBody": "Divine నియంత్రణ నిర్ణయాన్ని పునఃపరిశీలించడానికి అభ్యర్థనలను సమీక్షించవచ్చు, కానీ బాధ్యత వహించదు. మీరు దీన్ని పెంచాలనుకుంటే, మద్దతును సంప్రదించండి మరియు ఏమి జరిగిందో మాకు చెప్పండి.",
   "@accountStatusAppealBody": {
     "description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."
-  },
-  "accountStatusContactSupport": "మద్దతును సంప్రదించండి",
-  "@accountStatusContactSupport": {
-    "description": "Button opening the in-app support center."
   },
   "accountStatusMoveAccount": "మీ ఖాతాను తరలించండి",
   "@accountStatusMoveAccount": {

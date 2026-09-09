@@ -359,6 +359,10 @@ void main() {
 
         await tester.pumpAndSettle();
 
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MinorAccountReviewScreen)),
+        );
+
         await tester.scrollUntilVisible(
           find.text('Review in progress'),
           200,
@@ -372,12 +376,12 @@ void main() {
           findsNothing,
         );
         await tester.scrollUntilVisible(
-          find.text('Open Support Center'),
+          find.text(l10n.appealOpenSupportCenter),
           200,
           scrollable: find.byType(Scrollable),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Open Support Center'), findsOneWidget);
+        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
       },
     );
 
@@ -562,10 +566,7 @@ void main() {
         expect(find.text(l10n.minorAccountReviewAppealTitle), findsOneWidget);
         expect(find.text(expectedBody), findsOneWidget);
         expect(find.text(otherBody), findsNothing);
-        expect(
-          find.text(l10n.minorAccountReviewOpenSupportCenter),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
       }
     });
 
@@ -611,16 +612,13 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text(l10n.minorAccountReviewOpenSupportCenter),
+        find.text(l10n.appealOpenSupportCenter),
         200,
         scrollable: find.byType(Scrollable),
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(l10n.minorAccountReviewOpenSupportCenter),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
       expect(find.text(l10n.minorAccountReviewAppealTitle), findsOneWidget);
     });
 

@@ -3763,7 +3763,7 @@
     "minorAccountReviewRestrictionEngagement": "Commentaires, j'aime, reposts et abonnements sont en pause",
     "minorAccountReviewRestrictionMessaging": "Démarrer ou répondre à des messages classiques est en pause",
     "minorAccountReviewRestrictionSupport": "Le support et ton message de modération restent accessibles",
-    "minorAccountReviewOpenSupportCenter": "Ouvrir le centre d'aide",
+    "appealOpenSupportCenter": "Ouvrir le centre d'aide",
     "minorAccountReviewOpenModerationMessage": "Ouvrir le message de modération",
     "minorAccountReviewOpenReviewPage": "Ouvrir la page d'examen",
     "minorAccountReviewCheckAgain": "Vérifier à nouveau",
