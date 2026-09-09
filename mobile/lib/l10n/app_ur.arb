@@ -2568,24 +2568,6 @@
   "soundPreview": "پیش منظر",
   "soundStop": "روکیں",
   "soundUseSound": "آواز استعمال کریں",
-  "soundUntitled": "بلا عنوان آواز",
-  "soundStopPreview": "پیش منظر روکیں",
-  "soundPreviewSemanticLabel": "{title} کا پیش منظر",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "{title} کی تفصیلات دیکھیں",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "ابھی کوئی ویڈیو نہیں",
   "soundOneVideo": "1 ویڈیو",
   "soundVideoCount": "{count} ویڈیوز",

@@ -81,7 +81,7 @@ class TrendingSounds extends _$TrendingSounds {
 /// ```dart
 /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
 /// soundAsync.when(
-///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
 ///   loading: () => LoadingSpinner(),
 ///   error: (e, s) => ErrorWidget(message: e.toString()),
 /// );
@@ -139,6 +139,36 @@ Future<int> soundUsageCount(Ref ref, String audioEventId) async {
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.fetchVideosUsingSoundCount(audioEventId);
+}
+
+/// Batched reuse counts for the trending sounds list, keyed by the event id a
+/// reusing video references (`AudioEvent.attributionEventId`).
+///
+/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
+/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
+/// in a single query through
+/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
+/// round trip however many sounds it shows.
+///
+/// Sounds with no referenceable Nostr event — bundled assets, unpublished
+/// imports — carry no id and are absent from the map, and a list made only of
+/// those never reaches the repository at all.
+///
+/// Usage:
+/// ```dart
+/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
+/// final count = counts?[sound.attributionEventId];
+/// ```
+@riverpod
+Future<Map<String, int>> trendingSoundUsageCounts(Ref ref) async {
+  final sounds = await ref.watch(trendingSoundsProvider.future);
+  final ids = <String>{
+    for (final sound in sounds) ?sound.attributionEventId,
+  };
+  if (ids.isEmpty) return const {};
+
+  final repository = ref.watch(soundsRepositoryProvider);
+  return repository.fetchVideosUsingSoundCounts(ids);
 }
 
 /// Viewer-independent public reuse terms for sounds.

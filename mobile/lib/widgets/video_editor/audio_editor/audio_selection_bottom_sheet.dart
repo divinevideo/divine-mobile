@@ -427,6 +427,10 @@ class _AudioSelectionBottomSheetState
   Widget build(BuildContext context) {
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     final nostrSoundsAsync = ref.watch(trendingSoundsProvider);
+    // One batched query for the whole community list rather than a count
+    // provider per row. Absent while it resolves, and absent for good if it
+    // fails: the counts are supplementary, so the list never waits on them.
+    final usageCounts = ref.watch(trendingSoundUsageCountsProvider).value;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
     final savedSounds = savedSoundsState.sounds
         .map((sound) => sound.audio)
@@ -485,6 +489,7 @@ class _AudioSelectionBottomSheetState
                         selectedSound: _selectedItem,
                         audioService: _audioService,
                         onSelect: _selectSound,
+                        usageCounts: usageCounts,
                         emptyState: _searchQuery.isNotEmpty
                             ? searchEmptyState
                             : const _EmptyState(),
@@ -635,6 +640,7 @@ class _SoundsContent extends StatelessWidget {
     required this.audioService,
     required this.onSelect,
     this.unavailableSoundIds = const {},
+    this.usageCounts,
     this.emptyState = const _EmptyState(),
   });
 
@@ -647,7 +653,18 @@ class _SoundsContent extends StatelessWidget {
   /// Sounds listed here but not selectable, because their device-local audio
   /// file is gone.
   final Set<String> unavailableSoundIds;
+
+  /// Reuse counts keyed by `AudioEvent.attributionEventId`, or `null` when this
+  /// list has no counts to show (bundled and saved tabs, or the community list
+  /// before its batched query resolves).
+  final Map<String, int>? usageCounts;
+
   final Widget emptyState;
+
+  int? _videoCountFor(AudioEvent audio) {
+    final id = audio.attributionEventId;
+    return id == null ? null : usageCounts?[id];
+  }
 
   static const _bottomSpace = 120.0;
 
@@ -677,6 +694,7 @@ class _SoundsContent extends StatelessWidget {
                 audio: audio,
                 isSelected: false,
                 isUnavailable: isUnavailable,
+                videoCount: _videoCountFor(audio),
                 semanticIdentifier: SemanticIds.audioSoundTile(index),
                 onTap: () => onSelect(audio),
               );
@@ -693,6 +711,7 @@ class _SoundsContent extends StatelessWidget {
                   audio: displayAudio,
                   isSelected: true,
                   isPlaying: snapshot.data ?? false,
+                  videoCount: _videoCountFor(displayAudio),
                   semanticIdentifier: SemanticIds.audioSoundTile(index),
                   onTap: () => onSelect(displayAudio),
                 );

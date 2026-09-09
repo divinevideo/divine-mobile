@@ -8857,30 +8857,6 @@ abstract class AppLocalizations {
   /// **'Use Sound'**
   String get soundUseSound;
 
-  /// No description provided for @soundUntitled.
-  ///
-  /// In en, this message translates to:
-  /// **'Untitled sound'**
-  String get soundUntitled;
-
-  /// No description provided for @soundStopPreview.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop preview'**
-  String get soundStopPreview;
-
-  /// No description provided for @soundPreviewSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Preview {title}'**
-  String soundPreviewSemanticLabel(String title);
-
-  /// No description provided for @soundViewDetailsSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'View details for {title}'**
-  String soundViewDetailsSemanticLabel(String title);
-
   /// No description provided for @soundNoVideoCount.
   ///
   /// In en, this message translates to:

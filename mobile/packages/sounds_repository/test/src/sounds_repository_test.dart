@@ -460,6 +460,183 @@ void main() {
       });
     });
 
+    group('fetchVideosUsingSoundCounts', () {
+      const otherAudioId =
+          'f6789012345678901234567890abcdef1234567890123456789012abcd1234ef';
+      const secondVideoEventId =
+          '789012345678901234567890abcdef1234567890123456789012abcd1234ef56';
+
+      Event createVideoEvent({
+        required String id,
+        required List<List<dynamic>> tags,
+      }) {
+        return Event.fromJson({
+          'id': id,
+          'pubkey': testPubkey1,
+          'kind': 34236,
+          'tags': tags,
+          'content': '',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'sig': '',
+        });
+      }
+
+      test(
+        'returns an empty map without querying when no id is usable',
+        () async {
+          final counts = await repository.fetchVideosUsingSoundCounts(
+            const ['', ''],
+          );
+
+          expect(counts, isEmpty);
+          verifyNever(() => mockNostrClient.queryEvents(any()));
+        },
+      );
+
+      test('resolves the whole batch with a single query', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createVideoEvent(
+              id: testVideoEventId,
+              tags: [
+                ['e', testEventId1, '', 'audio'],
+              ],
+            ),
+          ],
+        );
+
+        await repository.fetchVideosUsingSoundCounts(
+          const [testEventId1, testEventId2],
+          limit: 120,
+        );
+
+        final captured = verify(
+          () => mockNostrClient.queryEvents(captureAny()),
+        ).captured;
+
+        expect(captured, hasLength(1));
+        final filters = captured.single as List<Filter>;
+        expect(filters, hasLength(1));
+        expect(filters.single.kinds, contains(34236));
+        expect(filters.single.e, containsAll([testEventId1, testEventId2]));
+        expect(filters.single.limit, 120);
+        verifyNever(
+          () => mockNostrClient.countEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+
+      test('tallies each sound and reports 0 for unreferenced ones', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createVideoEvent(
+              id: testVideoEventId,
+              tags: [
+                ['e', testEventId1, '', 'audio'],
+              ],
+            ),
+            createVideoEvent(
+              id: secondVideoEventId,
+              tags: [
+                ['e', testEventId1, '', 'audio'],
+              ],
+            ),
+          ],
+        );
+
+        final counts = await repository.fetchVideosUsingSoundCounts(
+          const [testEventId1, testEventId2],
+        );
+
+        expect(counts[testEventId1], 2);
+        expect(counts[testEventId2], 0);
+      });
+
+      test(
+        'counts one video toward every batched sound it references',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              createVideoEvent(
+                id: testVideoEventId,
+                tags: [
+                  ['e', testEventId1, '', 'audio'],
+                  ['e', testEventId2, '', 'audio'],
+                ],
+              ),
+            ],
+          );
+
+          final counts = await repository.fetchVideosUsingSoundCounts(
+            const [testEventId1, testEventId2],
+          );
+
+          expect(counts[testEventId1], 1);
+          expect(counts[testEventId2], 1);
+        },
+      );
+
+      test('counts a repeated reference once', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createVideoEvent(
+              id: testVideoEventId,
+              tags: [
+                ['e', testEventId1, '', 'audio'],
+                ['e', testEventId1, 'wss://relay.example', 'audio'],
+              ],
+            ),
+          ],
+        );
+
+        final counts = await repository.fetchVideosUsingSoundCounts(
+          const [testEventId1],
+        );
+
+        expect(counts[testEventId1], 1);
+      });
+
+      test(
+        'ignores tags that are not a reference to a batched sound',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              createVideoEvent(
+                id: testVideoEventId,
+                tags: [
+                  ['e'],
+                  ['p', testPubkey2],
+                  ['e', otherAudioId, '', 'audio'],
+                ],
+              ),
+            ],
+          );
+
+          final counts = await repository.fetchVideosUsingSoundCounts(
+            const [testEventId1],
+          );
+
+          expect(counts, {testEventId1: 0});
+        },
+      );
+
+      test('rethrows when the query fails', () async {
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenThrow(Exception('Network error'));
+
+        await expectLater(
+          repository.fetchVideosUsingSoundCounts(const [testEventId1]),
+          throwsException,
+        );
+      });
+    });
+
     group('fetchVideosUsingSound', () {
       test('returns empty list for empty audioEventId', () async {
         final videos = await repository.fetchVideosUsingSound('');

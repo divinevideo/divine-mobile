@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Geluid zonder titel",
-    "soundStopPreview": "Preview stoppen",
-    "soundPreviewSemanticLabel": "Voorbeeld van {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Details bekijken voor {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Zoeken...",
     "categoryVideoCount": "{count} video's",
     "@categoryVideoCount": {

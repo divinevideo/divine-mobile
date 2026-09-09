@@ -3341,24 +3341,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Звук без заглавие",
-    "soundStopPreview": "Спри прегледа",
-    "soundPreviewSemanticLabel": "Прегледай {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Виж подробности за {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Търсене...",
     "categoryVideoCount": "{count} видеа",
     "@categoryVideoCount": {

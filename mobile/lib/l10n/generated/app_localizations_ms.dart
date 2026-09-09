@@ -5190,22 +5190,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundUseSound => 'Guna Bunyi';
 
   @override
-  String get soundUntitled => 'Bunyi tanpa tajuk';
-
-  @override
-  String get soundStopPreview => 'Hentikan pratonton';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Pratonton $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Lihat butiran untuk $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Belum ada video';
 
   @override

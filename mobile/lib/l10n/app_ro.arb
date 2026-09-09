@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Sunet fără titlu",
-    "soundStopPreview": "Oprește previzualizarea",
-    "soundPreviewSemanticLabel": "Previzualizează {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Vezi detalii pentru {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Caută...",
     "categoryVideoCount": "{count} videoclipuri",
     "@categoryVideoCount": {

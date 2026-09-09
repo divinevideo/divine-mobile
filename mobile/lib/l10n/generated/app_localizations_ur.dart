@@ -5191,22 +5191,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundUseSound => 'آواز استعمال کریں';
 
   @override
-  String get soundUntitled => 'بلا عنوان آواز';
-
-  @override
-  String get soundStopPreview => 'پیش منظر روکیں';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title کا پیش منظر';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title کی تفصیلات دیکھیں';
-  }
-
-  @override
   String get soundNoVideoCount => 'ابھی کوئی ویڈیو نہیں';
 
   @override

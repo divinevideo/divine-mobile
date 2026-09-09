@@ -5118,22 +5118,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundUseSound => 'Pakai Suara';
 
   @override
-  String get soundUntitled => 'Suara tanpa judul';
-
-  @override
-  String get soundStopPreview => 'Hentikan pratinjau';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Pratinjau $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Lihat detail untuk $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Belum ada video';
 
   @override

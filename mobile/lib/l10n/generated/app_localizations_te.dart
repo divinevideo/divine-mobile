@@ -5368,22 +5368,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundUseSound => 'సౌండ్ ఉపయోగించండి';
 
   @override
-  String get soundUntitled => 'శీర్షికలేని ధ్వని';
-
-  @override
-  String get soundStopPreview => 'ప్రివ్యూను ఆపు';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'ప్రివ్యూ $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'దీని కోసం వివరాలను వీక్షించండి $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'ఇంకా వీడియోలు లేవు';
 
   @override

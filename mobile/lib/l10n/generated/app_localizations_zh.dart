@@ -4851,22 +4851,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundUseSound => '使用声音';
 
   @override
-  String get soundUntitled => '未命名声音';
-
-  @override
-  String get soundStopPreview => '停止预览';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '预览 $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '查看 $title 的详情';
-  }
-
-  @override
   String get soundNoVideoCount => '还没有视频';
 
   @override

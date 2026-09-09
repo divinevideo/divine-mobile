@@ -4898,22 +4898,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundUseSound => '사운드 사용';
 
   @override
-  String get soundUntitled => '제목 없는 사운드';
-
-  @override
-  String get soundStopPreview => '미리 듣기 중지';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title 미리 듣기';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title 세부 정보 보기';
-  }
-
-  @override
   String get soundNoVideoCount => '아직 영상이 없어요';
 
   @override

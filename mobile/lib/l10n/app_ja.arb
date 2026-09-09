@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "無題のサウンド",
-    "soundStopPreview": "プレビューを停止",
-    "soundPreviewSemanticLabel": "{title}をプレビュー",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "{title}の詳細を表示",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "検索...",
     "categoryVideoCount": "{count}本の動画",
     "@categoryVideoCount": {

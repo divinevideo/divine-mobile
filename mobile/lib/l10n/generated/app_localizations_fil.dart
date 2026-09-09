@@ -5222,22 +5222,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundUseSound => 'Gamitin ang Sound';
 
   @override
-  String get soundUntitled => 'Sound na walang pamagat';
-
-  @override
-  String get soundStopPreview => 'Itigil ang preview';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'I-preview ang $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Tingnan ang details para sa $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Wala pang video';
 
   @override

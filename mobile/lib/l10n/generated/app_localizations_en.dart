@@ -5276,22 +5276,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundUseSound => 'Use Sound';
 
   @override
-  String get soundUntitled => 'Untitled sound';
-
-  @override
-  String get soundStopPreview => 'Stop preview';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Preview $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'View details for $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'No videos yet';
 
   @override

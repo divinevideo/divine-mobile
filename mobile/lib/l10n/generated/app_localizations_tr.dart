@@ -5124,22 +5124,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundUseSound => 'Sesi Kullan';
 
   @override
-  String get soundUntitled => 'Adsız ses';
-
-  @override
-  String get soundStopPreview => 'Ön izlemeyi durdur';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title ön izle';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title detaylarını görüntüle';
-  }
-
-  @override
   String get soundNoVideoCount => 'Henüz video yok';
 
   @override

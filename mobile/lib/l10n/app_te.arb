@@ -3127,24 +3127,6 @@
   "soundPreview": "ప్రివ్యూ",
   "soundStop": "ఆపు",
   "soundUseSound": "సౌండ్ ఉపయోగించండి",
-  "soundUntitled": "శీర్షికలేని ధ్వని",
-  "soundStopPreview": "ప్రివ్యూను ఆపు",
-  "soundPreviewSemanticLabel": "ప్రివ్యూ {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "దీని కోసం వివరాలను వీక్షించండి {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "ఇంకా వీడియోలు లేవు",
   "soundOneVideo": "1 వీడియో",
   "soundVideoCount": "{count, plural, =1{{count}వీడియో} other{{count}వీడియోలు}}",

@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "صوت بلا عنوان",
-    "soundStopPreview": "إيقاف المعاينة",
-    "soundPreviewSemanticLabel": "معاينة {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "عرض تفاصيل {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "بحث...",
     "categoryVideoCount": "{count} فيديو",
     "@categoryVideoCount": {

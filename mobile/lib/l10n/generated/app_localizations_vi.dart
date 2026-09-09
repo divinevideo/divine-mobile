@@ -5154,22 +5154,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundUseSound => 'Dùng âm thanh';
 
   @override
-  String get soundUntitled => 'Âm thanh chưa đặt tên';
-
-  @override
-  String get soundStopPreview => 'Dừng nghe thử';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Nghe thử $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Xem chi tiết của $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Chưa có video nào';
 
   @override

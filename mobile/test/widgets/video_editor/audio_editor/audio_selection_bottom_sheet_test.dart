@@ -103,6 +103,7 @@ void main() {
       List<VineSound> bundledSounds = const [],
       AudioPlaybackService? audioService,
       String? viewerPubkey,
+      Map<String, int>? usageCounts,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -136,6 +137,10 @@ void main() {
             if (trendingSoundsAsync != null)
               trendingSoundsProvider.overrideWith(
                 () => _FakeTrendingSounds(trendingSoundsAsync),
+              ),
+            if (usageCounts != null)
+              trendingSoundUsageCountsProvider.overrideWith(
+                (_) async => usageCounts,
               ),
           ],
           child: MaterialApp(
@@ -192,6 +197,56 @@ void main() {
         expect(find.text(l10n.videoEditorAudioCategoryCommunity), findsWidgets);
         expect(find.text(l10n.videoEditorAudioCategoryFeatured), findsWidgets);
         expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsWidgets);
+      });
+    });
+
+    group('Reuse counts', () {
+      // A picker row's count has to come from the one batched query the sheet
+      // runs for the whole community list; a per-row provider watch would fan
+      // out one relay COUNT per row.
+      const communitySoundId =
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
+
+      testWidgets('shows the batched count on a community sound', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([
+              _createTestAudioEvent(id: communitySoundId, title: 'Alpha Track'),
+            ]),
+            usageCounts: const {communitySoundId: 9},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Alpha Track'), findsOneWidget);
+        expect(find.textContaining(l10n.soundVideoCount(9)), findsOneWidget);
+      });
+
+      testWidgets('lists community sounds before any count resolves', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([
+              _createTestAudioEvent(id: communitySoundId, title: 'Alpha Track'),
+            ]),
+            usageCounts: const {},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Alpha Track'), findsOneWidget);
+        expect(find.textContaining(l10n.soundVideoCount(9)), findsNothing);
       });
     });
 

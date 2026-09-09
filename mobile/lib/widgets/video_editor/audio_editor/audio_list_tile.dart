@@ -13,6 +13,7 @@ class AudioListTile extends StatelessWidget {
     required this.onTap,
     this.isPlaying = false,
     this.isUnavailable = false,
+    this.videoCount,
     this.semanticIdentifier,
     super.key,
   });
@@ -30,6 +31,12 @@ class AudioListTile extends StatelessWidget {
   /// because attaching it would put a dead source on the draft (#8023).
   final bool isUnavailable;
 
+  /// How many published videos reuse this sound, or `null` when the count is
+  /// unknown — still loading, unavailable, or a sound that has no relay event
+  /// to count against. Zero and `null` both render nothing, so an empty sound
+  /// never advertises its emptiness in a picker.
+  final int? videoCount;
+
   /// Stable `Semantics(identifier:)` anchor for E2E tests. Never announced, so
   /// it carries no meaning for a screen-reader user — that is the title below.
   final String? semanticIdentifier;
@@ -43,6 +50,7 @@ class AudioListTile extends StatelessWidget {
         isSelected: isSelected,
         isPlaying: isPlaying,
         isUnavailable: isUnavailable,
+        videoCount: videoCount,
         onTap: onTap,
       ),
     );
@@ -55,6 +63,7 @@ class _Tile extends StatelessWidget {
     required this.isSelected,
     required this.isPlaying,
     required this.isUnavailable,
+    required this.videoCount,
     required this.onTap,
   });
 
@@ -62,6 +71,7 @@ class _Tile extends StatelessWidget {
   final bool isSelected;
   final bool isPlaying;
   final bool isUnavailable;
+  final int? videoCount;
   final VoidCallback onTap;
 
   @override
@@ -101,6 +111,10 @@ class _Tile extends StatelessWidget {
                     if (audio.source != null) ...[
                       const TextSpan(text: ' ∙ '),
                       TextSpan(text: audio.source),
+                    ],
+                    if (videoCount case final count? when count > 0) ...[
+                      const TextSpan(text: ' ∙ '),
+                      TextSpan(text: context.l10n.soundVideoCount(count)),
                     ],
                   ],
                 ),

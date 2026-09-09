@@ -5142,22 +5142,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundUseSound => 'استخدام الصوت';
 
   @override
-  String get soundUntitled => 'صوت بلا عنوان';
-
-  @override
-  String get soundStopPreview => 'إيقاف المعاينة';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'معاينة $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'عرض تفاصيل $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'لا توجد مقاطع فيديو بعد';
 
   @override
