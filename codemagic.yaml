@@ -605,6 +605,11 @@ definitions:
           --dart-define-from-file=build/shorebird/dart_defines.json \
           --public-key-path=build/shorebird/patch_public_key.pem \
           --export-options-plist=/Users/builder/export_options.plist
+
+        # Prove CocoaPods and Xcode copied each manifest into the exact
+        # Shorebird archive before later steps can promote its artifacts.
+        bash scripts/check_privacy_manifest_coverage.sh \
+          --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |

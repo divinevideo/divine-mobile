@@ -471,28 +471,58 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
       });
     });
 
-    test('archive mode requires the quick-actions privacy bundle', () {
-      final root = Directory.systemTemp.createTempSync('privacy_archive_test');
-      addTearDown(() => root.deleteSync(recursive: true));
-      final app = Directory('${root.path}/Runner.app')..createSync();
-      final plist = manifestFor(
-        'NSPrivacyAccessedAPICategorySystemBootTime',
-        '35F9.1',
+    test('archive mode requires every discovered privacy bundle', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        podspec:
+            "s.resource_bundles = {'sample_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
       );
-      for (final path in [
-        'PrivacyInfo.xcprivacy',
-        'divine_camera_privacy.bundle/PrivacyInfo.xcprivacy',
-        'LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy',
-      ]) {
-        final file = File('${app.path}/$path');
-        file.parent.createSync(recursive: true);
-        file.writeAsStringSync(plist);
-      }
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File('${app.path}/PrivacyInfo.xcprivacy').writeAsStringSync(
+        manifestFor('NSPrivacyAccessedAPICategorySystemBootTime', '35F9.1'),
+      );
 
       final result = run(root: root, args: ['--archive', app.path]);
 
       expect(result.exitCode, equals(1));
-      expect(result.output, contains('divine_quick_actions'));
+      expect(result.output, contains('package:sample'));
+      expect(
+        result.output,
+        contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
+    });
+
+    test('archive mode uses the selected subspec privacy bundle name', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        selectedSubspec: 'PrivacyProtected',
+        podspec:
+            "s.subspec 'PrivacyProtected' do |ss|\n"
+            "  ss.resource_bundles = {'selected_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}\n"
+            'end\n',
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File('${app.path}/PrivacyInfo.xcprivacy').writeAsStringSync(
+        manifestFor('NSPrivacyAccessedAPICategorySystemBootTime', '35F9.1'),
+      );
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(
+        result.output,
+        contains('selected_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
     });
   });
 }

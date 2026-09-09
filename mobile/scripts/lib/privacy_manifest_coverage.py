@@ -414,8 +414,8 @@ def xcode_manifest_is_runner_resource(project: str) -> bool:
     return False
 
 
-def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
-    """Return whether the selected pod specification bundles the manifest."""
+def podspec_manifest_bundle(spec: str, selected_subspec: str | None) -> str | None:
+    """Return the selected pod specification's privacy resource-bundle name."""
     uncommented = "\n".join(
         line for line in spec.splitlines() if not line.lstrip().startswith("#")
     )
@@ -427,23 +427,57 @@ def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
             re.M | re.S,
         )
         if not subspec:
-            return False
-        variable = re.escape(subspec.group("var"))
-        return bool(
-            re.search(
-                rf"\b{variable}\.resource_bundles\s*=\s*"
-                r"\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
-                subspec.group("body"),
-                re.S,
-            )
-        )
-    return bool(
-        re.search(
-            r"\b\w+\.resource_bundles\s*=\s*\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
-            uncommented,
-            re.S,
-        )
+            return None
+        variable = subspec.group("var")
+        scope = subspec.group("body")
+    else:
+        variable = r"\w+"
+        scope = uncommented
+
+    bundles = re.search(
+        rf"\b{variable}\.resource_bundles\s*=\s*\{{(?P<body>[^}}]*)\}}",
+        scope,
+        re.S,
     )
+    if not bundles:
+        return None
+    for bundle_name, resources in re.findall(
+        r"['\"]([^'\"]+)['\"]\s*=>\s*(\[[^]]*\]|['\"][^'\"]*['\"])",
+        bundles.group("body"),
+        re.S,
+    ):
+        if "PrivacyInfo.xcprivacy" in resources:
+            return bundle_name
+    return None
+
+
+def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
+    """Return whether the selected pod specification bundles the manifest."""
+    return podspec_manifest_bundle(spec, selected_subspec) is not None
+
+
+def expected_archive_manifests(mobile: str) -> dict[str, str]:
+    """Derive archive expectations from manifests wired into source targets."""
+    expected: dict[str, str] = {}
+    for unit in discover(mobile):
+        if not os.path.exists(unit.manifest):
+            continue
+        if unit.xcodeproj:
+            expected[unit.name] = os.path.basename(unit.manifest)
+            continue
+        if not unit.podspec:
+            continue
+        try:
+            with open(unit.podspec, "r", encoding="utf-8") as handle:
+                spec = handle.read()
+        except OSError:
+            continue
+        bundle = podspec_manifest_bundle(spec, unit.selected_subspec)
+        if bundle:
+            expected[unit.name] = os.path.join(
+                f"{bundle}.bundle", "PrivacyInfo.xcprivacy"
+            )
+    return expected
 
 
 def check_sources(mobile: str) -> int:
@@ -544,14 +578,8 @@ def check_archive(app: str, mobile: str) -> int:
                 found.add(os.path.relpath(os.path.join(dirpath, filename), app))
     print(f"ℹ️  {len(found)} privacy manifest(s) in {os.path.basename(app)}")
 
-    expected = {
-        "app manifest": "PrivacyInfo.xcprivacy",
-        "divine_camera": "divine_camera_privacy.bundle/PrivacyInfo.xcprivacy",
-        "divine_quick_actions": "divine_quick_actions_privacy.bundle/PrivacyInfo.xcprivacy",
-        "LibProofMode": "LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy",
-    }
     failures = []
-    for label, rel in expected.items():
+    for label, rel in expected_archive_manifests(mobile).items():
         if rel in found:
             print(f"  ✅ {label}: {rel}")
         else:
