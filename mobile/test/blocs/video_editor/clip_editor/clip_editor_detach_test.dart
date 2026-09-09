@@ -150,9 +150,11 @@ void main() {
     group('with a replacement fill', () {
       test('swaps the clip for the rendered still', () async {
         final bloc = seeded(
-          renderClipPlaceholder:
-              ({required fill, required source, taskId}) async =>
-                  _placeholderClip(),
+          renderClipPlaceholder: ({
+            required fill,
+            required source,
+            taskId,
+          }) async => _placeholderClip(),
         );
         await bloc.stream.first;
 
@@ -196,9 +198,11 @@ void main() {
 
       test('reports the placeholder alongside the detached clip', () async {
         final bloc = seeded(
-          renderClipPlaceholder:
-              ({required fill, required source, taskId}) async =>
-                  _placeholderClip(),
+          renderClipPlaceholder: ({
+            required fill,
+            required source,
+            taskId,
+          }) async => _placeholderClip(),
         );
         await bloc.stream.first;
 
@@ -244,8 +248,11 @@ void main() {
 
       test('leaves the timeline untouched when the render fails', () async {
         final bloc = seeded(
-          renderClipPlaceholder:
-              ({required fill, required source, taskId}) async => null,
+          renderClipPlaceholder: ({
+            required fill,
+            required source,
+            taskId,
+          }) async => null,
         );
         await bloc.stream.first;
 
@@ -268,9 +275,11 @@ void main() {
 
       test('surfaces a thrown render as a failure, not a crash', () async {
         final bloc = seeded(
-          renderClipPlaceholder:
-              ({required fill, required source, taskId}) async =>
-                  throw StateError('encoder gone'),
+          renderClipPlaceholder: ({
+            required fill,
+            required source,
+            taskId,
+          }) async => throw StateError('encoder gone'),
         );
         await bloc.stream.first;
 
@@ -318,9 +327,11 @@ void main() {
       test('does detach a lone clip when something replaces it', () async {
         final bloc = seeded(
           withClips: [_clip('only')],
-          renderClipPlaceholder:
-              ({required fill, required source, taskId}) async =>
-                  _placeholderClip(),
+          renderClipPlaceholder: ({
+            required fill,
+            required source,
+            taskId,
+          }) async => _placeholderClip(),
         );
         await bloc.stream.first;
 

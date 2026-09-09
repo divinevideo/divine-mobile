@@ -111,12 +111,11 @@ void _noopDeferFileCleanup(Iterable<String?> paths) {}
 /// Function signature matching [ClipPlaceholderRenderService.render], the
 /// injectable seam that turns a colour or photo into the still filling a
 /// detached clip's slot, so tests can exercise detach without a renderer.
-typedef RenderClipPlaceholderFn =
-    Future<DivineVideoClip?> Function({
-      required ClipPlaceholderFill fill,
-      required DivineVideoClip source,
-      String? taskId,
-    });
+typedef RenderClipPlaceholderFn = Future<DivineVideoClip?> Function({
+  required ClipPlaceholderFill fill,
+  required DivineVideoClip source,
+  String? taskId,
+});
 
 /// Persists an already-flattened clip to the device's clip library, returning
 /// whether it was stored.

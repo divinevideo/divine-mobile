@@ -55,9 +55,11 @@ void main() {
 
     test('swaps in the rendered file and the shape it came out', () async {
       final bloc = buildBloc(
-        transformClip:
-            ({required sourceClip, required transform, required renderId}) =>
-                Future.value(EditorVideo.file('/documents/cropped.mp4')),
+        transformClip: ({
+          required sourceClip,
+          required transform,
+          required renderId,
+        }) => Future.value(EditorVideo.file('/documents/cropped.mp4')),
         measureAspectRatio: (_) async => 1,
       );
       final result = resultOf(bloc);
@@ -82,9 +84,11 @@ void main() {
       'keeps the old shape when the rendered file cannot be measured',
       () async {
         final bloc = buildBloc(
-          transformClip:
-              ({required sourceClip, required transform, required renderId}) =>
-                  Future.value(EditorVideo.file('/documents/cropped.mp4')),
+          transformClip: ({
+            required sourceClip,
+            required transform,
+            required renderId,
+          }) => Future.value(EditorVideo.file('/documents/cropped.mp4')),
           measureAspectRatio: (_) async => null,
         );
         final result = resultOf(bloc);
@@ -106,9 +110,11 @@ void main() {
 
     test('drops the caches that describe the pre-crop footage', () async {
       final bloc = buildBloc(
-        transformClip:
-            ({required sourceClip, required transform, required renderId}) =>
-                Future.value(EditorVideo.file('/documents/cropped.mp4')),
+        transformClip: ({
+          required sourceClip,
+          required transform,
+          required renderId,
+        }) => Future.value(EditorVideo.file('/documents/cropped.mp4')),
       );
       final result = resultOf(bloc);
 

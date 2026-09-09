@@ -81,9 +81,11 @@ void main() {
       });
 
       test('scales the hold by the clip playback speed', () async {
-        ClipPlaceholderRenderService.assembleOverride =
-            ({required frames, required aspectRatio, taskId}) async =>
-                '${tempDir.path}/out.mp4';
+        ClipPlaceholderRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          taskId,
+        }) async => '${tempDir.path}/out.mp4';
 
         final placeholder = await ClipPlaceholderRenderService.render(
           fill: ClipPlaceholderImageFill(imageFile.path),
@@ -118,9 +120,11 @@ void main() {
       });
 
       test('gives the placeholder its own id, not the detached clip', () async {
-        ClipPlaceholderRenderService.assembleOverride =
-            ({required frames, required aspectRatio, taskId}) async =>
-                '${tempDir.path}/out.mp4';
+        ClipPlaceholderRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          taskId,
+        }) async => '${tempDir.path}/out.mp4';
 
         final placeholder = await ClipPlaceholderRenderService.render(
           fill: ClipPlaceholderImageFill(imageFile.path),
@@ -151,8 +155,11 @@ void main() {
       });
 
       test('returns null when the render produces no file', () async {
-        ClipPlaceholderRenderService.assembleOverride =
-            ({required frames, required aspectRatio, taskId}) async => null;
+        ClipPlaceholderRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          taskId,
+        }) async => null;
 
         final placeholder = await ClipPlaceholderRenderService.render(
           fill: ClipPlaceholderImageFill(imageFile.path),
