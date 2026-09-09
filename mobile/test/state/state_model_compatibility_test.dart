@@ -2,6 +2,7 @@
 // ABOUTME: Prevents handwritten Equatable models from weakening immutability.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/state/curation_state.dart';
 import 'package:openvine/state/seen_videos_state.dart';
 import 'package:openvine/state/user_profile_state.dart';
@@ -58,17 +59,23 @@ void main() {
   });
 
   group('state collections', () {
+    // Every collection here is built through a mutable local rather than a
+    // `const` literal on purpose: a const collection already throws on
+    // `clear()`, so a const fixture would keep these tests green even if the
+    // getters stopped wrapping at all.
     test('remain deeply comparable across distinct collection instances', () {
       expect(
-        const SeenVideosState(seenVideoIds: {'one'}),
-        const SeenVideosState(seenVideoIds: {'one'}),
+        SeenVideosState(seenVideoIds: mutableSet(['one'])),
+        SeenVideosState(seenVideoIds: mutableSet(['one'])),
       );
     });
 
     test('curation lists remain unmodifiable', () {
-      const state = CurationState(
-        editorsPicks: [],
+      final state = CurationState(
+        editorsPicks: mutableList<VideoEvent>([]),
         isLoading: false,
+        trending: mutableList<VideoEvent>([]),
+        curationSets: mutableList<CurationSet>([]),
       );
 
       expect(state.editorsPicks.clear, throwsUnsupportedError);
@@ -77,17 +84,17 @@ void main() {
     });
 
     test('seen-video sets remain unmodifiable', () {
-      const state = SeenVideosState(seenVideoIds: {'one'});
+      final state = SeenVideosState(seenVideoIds: mutableSet(['one']));
 
       expect(state.seenVideoIds.clear, throwsUnsupportedError);
     });
 
     test('profile cache collections remain unmodifiable', () {
       final state = UserProfileState(
-        pendingRequests: const {'one'},
-        knownMissingProfiles: const {'two'},
-        missingProfileRetryAfter: {'two': DateTime(2026, 9, 8)},
-        pendingBatchPubkeys: const {'three'},
+        pendingRequests: mutableSet(['one']),
+        knownMissingProfiles: mutableSet(['two']),
+        missingProfileRetryAfter: mutableMap({'two': DateTime(2026, 9, 8)}),
+        pendingBatchPubkeys: mutableSet(['three']),
       );
 
       expect(state.pendingRequests.clear, throwsUnsupportedError);
@@ -97,13 +104,13 @@ void main() {
     });
 
     test('video-feed collections remain unmodifiable', () {
-      const state = VideoFeedState(
-        videos: [],
+      final state = VideoFeedState(
+        videos: mutableList<VideoEvent>([]),
         hasMoreContent: false,
-        videoListSources: {
-          'video': {'list'},
-        },
-        listOnlyVideoIds: {'video'},
+        videoListSources: mutableMap({
+          'video': mutableSet(['list']),
+        }),
+        listOnlyVideoIds: mutableSet(['video']),
       );
 
       expect(state.videos.clear, throwsUnsupportedError);
@@ -111,4 +118,67 @@ void main() {
       expect(state.listOnlyVideoIds.clear, throwsUnsupportedError);
     });
   });
+
+  group('collection getter equality', () {
+    // Freezed handed out views that compare equal when they wrap the same
+    // source, which is what lets `fooProvider.select((s) => s.items)` skip a
+    // rebuild. A plain `dart:collection` view has identity `==`, so a getter
+    // allocating one per read never compares equal to itself and every
+    // selector over it fires on every unrelated state change.
+    test('holds across two reads of the same field', () {
+      final state = VideoFeedState(
+        videos: mutableList<VideoEvent>([]),
+        hasMoreContent: false,
+        videoListSources: mutableMap({
+          'video': mutableSet(['list']),
+        }),
+        listOnlyVideoIds: mutableSet(['video']),
+      );
+
+      expect(state.videos == state.videos, isTrue);
+      expect(state.videoListSources == state.videoListSources, isTrue);
+      expect(state.listOnlyVideoIds == state.listOnlyVideoIds, isTrue);
+    });
+
+    test('survives a copyWith that does not touch the collection', () {
+      final state = CurationState(
+        editorsPicks: mutableList<VideoEvent>([]),
+        isLoading: false,
+        trending: mutableList<VideoEvent>([]),
+      );
+
+      final copied = state.copyWith(isLoading: true);
+
+      expect(copied.editorsPicks == state.editorsPicks, isTrue);
+      expect(copied.trending == state.trending, isTrue);
+    });
+
+    test('stays flat instead of nesting one view per copyWith', () {
+      var state = SeenVideosState(seenVideoIds: mutableSet(['one']));
+      final first = state.seenVideoIds;
+
+      for (var i = 0; i < 5; i++) {
+        state = state.copyWith(isInitialized: true);
+      }
+
+      expect(state.seenVideoIds == first, isTrue);
+    });
+
+    test('breaks when the collection is replaced', () {
+      final state = SeenVideosState(seenVideoIds: mutableSet(['one']));
+
+      final copied = state.copyWith(seenVideoIds: mutableSet(['one', 'two']));
+
+      expect(copied.seenVideoIds == state.seenVideoIds, isFalse);
+    });
+  });
 }
+
+/// A growable list the analyzer cannot fold into a `const` literal.
+List<T> mutableList<T>(Iterable<T> items) => List<T>.of(items);
+
+/// A mutable set the analyzer cannot fold into a `const` literal.
+Set<T> mutableSet<T>(Iterable<T> items) => Set<T>.of(items);
+
+/// A mutable map the analyzer cannot fold into a `const` literal.
+Map<K, V> mutableMap<K, V>(Map<K, V> items) => Map<K, V>.of(items);
