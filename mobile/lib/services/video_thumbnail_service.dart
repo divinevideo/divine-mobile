@@ -544,6 +544,17 @@ class VideoThumbnailService {
   /// Generates thumbnails for a timeline strip, yielded in batches so the
   /// UI can update progressively.
   ///
+  /// Covers the source range `[startOffset, startOffset + duration]` — the
+  /// window a caller actually shows, not necessarily the whole file. A
+  /// timeline clip only ever renders its trimmed window, so sizing the
+  /// request off the untrimmed source duration extracts frames nothing can
+  /// display: a 60 s import trimmed to 6 s asked for the 500-frame cap
+  /// instead of ~80.
+  ///
+  /// Emitted [StripThumbnail.timestamp]s stay absolute positions in the file,
+  /// so a caller that later widens its window can merge frames from two
+  /// requests without rebasing them.
+  ///
   /// [thumbsPerSecond] controls how many frames are extracted per second of
   /// video. Pass `ceil(maxPixelsPerSecond / thumbnailWidth)` to ensure every
   /// visual slot has a distinct frame at maximum zoom.
@@ -567,6 +578,7 @@ class VideoThumbnailService {
     int thumbsPerSecond = 1,
     int quality = _thumbnailQuality,
     int batchSize = 6,
+    Duration startOffset = Duration.zero,
     List<Duration>? priorityTimestamps,
   }) async* {
     if (duration <= Duration.zero) return;
@@ -579,6 +591,7 @@ class VideoThumbnailService {
       thumbsPerSecond: thumbsPerSecond,
       quality: quality,
       batchSize: batchSize,
+      startOffset: startOffset,
       priorityTimestamps: priorityTimestamps,
     );
   }
@@ -606,6 +619,7 @@ class VideoThumbnailService {
     required int thumbsPerSecond,
     required int quality,
     required int batchSize,
+    required Duration startOffset,
     List<Duration>? priorityTimestamps,
   }) async* {
     final durationMs = duration.inMilliseconds;
@@ -616,6 +630,7 @@ class VideoThumbnailService {
     final densityTimestamps = _buildProgressiveStripTimestamps(
       durationMs: durationMs,
       count: count,
+      startMs: startOffset.inMilliseconds,
     );
 
     // Priority timestamps go first (the exact frames the visible slots
@@ -691,14 +706,18 @@ class VideoThumbnailService {
     }
   }
 
-  /// Builds a center-first timestamp sequence (midpoint refinement).
+  /// Builds a center-first timestamp sequence (midpoint refinement) covering
+  /// `[startMs, startMs + durationMs]`.
   ///
   /// Example progression for ~10s: 5.0s, 2.5s, 7.5s, 1.25s, 3.75s...
   /// This improves perceived loading because early batches cover the full
-  /// timeline instead of only the beginning.
+  /// requested window instead of only the beginning. The refinement runs in
+  /// window-local time and every result is shifted by [startMs], so the
+  /// returned timestamps are absolute positions in the source file.
   static List<Duration> _buildProgressiveStripTimestamps({
     required int durationMs,
     required int count,
+    int startMs = 0,
   }) {
     final timestamps = <Duration>[];
     final seenMs = <int>{};
@@ -717,7 +736,7 @@ class VideoThumbnailService {
       final midMs = ((start + end) / 2).round().clamp(minMs, maxMs);
 
       if (seenMs.add(midMs)) {
-        timestamps.add(Duration(milliseconds: midMs));
+        timestamps.add(Duration(milliseconds: startMs + midMs));
       }
 
       if (width > 1) {
@@ -732,7 +751,7 @@ class VideoThumbnailService {
       for (var i = 0; i < count && timestamps.length < count; i++) {
         final fraction = (i + 0.5) / count;
         final ms = (durationMs * fraction).round().clamp(minMs, maxMs);
-        timestamps.add(Duration(milliseconds: ms));
+        timestamps.add(Duration(milliseconds: startMs + ms));
       }
     }
 

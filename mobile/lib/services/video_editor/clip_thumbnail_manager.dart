@@ -16,6 +16,7 @@ typedef StripThumbnailStreamFactory =
       required Duration duration,
       required Size outputSize,
       required int thumbsPerSecond,
+      Duration startOffset,
       List<Duration>? priorityTimestamps,
     });
 
@@ -40,6 +41,10 @@ class ClipThumbnailManager {
   // split renders the trimmed segment to a new file) and restart
   // thumbnail generation against the new file.
   final Map<String, String> _videoPaths = {};
+  // Source range each clip's frames were generated for. A clip only ever
+  // renders its trimmed window, so that is all we extract; this records what
+  // was asked for so a later trim that reaches outside it can re-extract.
+  final Map<String, _StripWindow> _windows = {};
   // IDs whose notifier has been pre-populated from another clip's
   // thumbnails (a trim-based split borrows the source clip's frames so the
   // new halves show correct content immediately). Cleared on the next
@@ -58,6 +63,12 @@ class ClipThumbnailManager {
   // eviction.
   final Map<String, _RetiredStrip> _retired = {};
   static const _maxRetiredStrips = 8;
+
+  // Slack extracted on each side of the visible window so ordinary trim-handle
+  // nudges do not cancel and restart extraction. One second is ~600 px of drag
+  // at maximum zoom and ~52 px at 1x, and costs 13 frames per side — cheap
+  // next to the 500-frame cap a full-source request hits.
+  static const _windowPadding = Duration(seconds: 1);
 
   /// When true, newly started subscriptions begin paused and existing ones are
   /// held. See [pauseAll].
@@ -89,6 +100,7 @@ class ClipThumbnailManager {
     for (final id in staleIds) {
       _subscriptions.remove(id)?.cancel();
       final videoPath = _videoPaths.remove(id);
+      final window = _windows.remove(id);
       final wasSeeded = _seeded.remove(id);
       final wasComplete = _complete.remove(id);
       final notifier = _notifiers.remove(id);
@@ -100,7 +112,7 @@ class ClipThumbnailManager {
       // here — restoring them later would misalign timestamps. The
       // unreferenced check keeps the borrowed files alive through the
       // source's retired entry.
-      if (frames.isEmpty || videoPath == null || wasSeeded) {
+      if (frames.isEmpty || videoPath == null || window == null || wasSeeded) {
         _deleteUnreferencedFiles(frames);
         continue;
       }
@@ -108,6 +120,7 @@ class ClipThumbnailManager {
         id,
         _RetiredStrip(
           videoPath: videoPath,
+          window: window,
           frames: frames,
           complete: wasComplete,
         ),
@@ -123,6 +136,9 @@ class ClipThumbnailManager {
       final newPath = clip.video?.file?.path;
       final hasSubscription = _subscriptions.containsKey(clip.id);
       final isSeeded = _seeded.contains(clip.id);
+      // Everything the strip can currently show. Frames outside it are
+      // clipped away by the tile, so they are not worth extracting.
+      final visibleWindow = _visibleWindow(clip);
 
       // Instant restore for a returning clip id (undo/redo): reuse the
       // retired strip instead of flashing posters and re-extracting.
@@ -132,7 +148,8 @@ class ClipThumbnailManager {
           if (newPath != null && newPath == retired.videoPath) {
             notifier.value = retired.frames;
             _videoPaths[clip.id] = newPath;
-            if (retired.complete) {
+            _windows[clip.id] = retired.window;
+            if (retired.complete && retired.window.covers(visibleWindow)) {
               _complete.add(clip.id);
               continue;
             }
@@ -148,6 +165,11 @@ class ClipThumbnailManager {
       }
 
       final currentPath = _videoPaths[clip.id];
+      // False once a trim reaches outside the range the frames on hand were
+      // generated for — the newly exposed footage has no frames at all.
+      final currentWindow = _windows[clip.id];
+      final windowCovered =
+          currentWindow != null && currentWindow.covers(visibleWindow);
 
       if (!hasSubscription) {
         if (isSeeded) {
@@ -161,8 +183,10 @@ class ClipThumbnailManager {
           _seeded.remove(clip.id);
         } else if (_complete.contains(clip.id)) {
           // Restored from the retired cache at full density — only a
-          // source-file change warrants re-extraction.
-          if (newPath == null || newPath == currentPath) continue;
+          // source-file change or a widened window warrants re-extraction.
+          if ((newPath == null || newPath == currentPath) && windowCovered) {
+            continue;
+          }
           _complete.remove(clip.id);
         }
         _loadThumbnails(
@@ -170,9 +194,11 @@ class ClipThumbnailManager {
           devicePixelRatio,
           priorityTimestamps: priorityTimestamps[clip.id],
         );
-      } else if (newPath != null && newPath != currentPath) {
+      } else if ((newPath != null && newPath != currentPath) ||
+          !windowCovered) {
         // Source file of an already-subscribed clip changed (e.g. it was
-        // re-rendered to a trimmed file). Restart against the new file
+        // re-rendered to a trimmed file), or the trim window grew past what
+        // the current request covers. Restart against the new file / window
         // but keep the current frames on screen — clearing them here
         // would flash black until the first fresh batch arrives. The old
         // frames are merged out progressively as fresh batches cover
@@ -248,7 +274,9 @@ class ClipThumbnailManager {
     final videoPath = clip.video?.file?.path;
     if (videoPath == null) return;
 
+    final window = _generationWindow(clip);
     _videoPaths[clip.id] = videoPath;
+    _windows[clip.id] = window;
     _complete.remove(clip.id);
 
     final outputSize = Size(
@@ -283,7 +311,8 @@ class ClipThumbnailManager {
         _generateStripThumbnails(
           videoPath: videoPath,
           clipId: clip.id,
-          duration: clip.duration,
+          duration: window.end - window.start,
+          startOffset: window.start,
           outputSize: outputSize,
           thumbsPerSecond: thumbsPerSecond,
           priorityTimestamps: priorityTimestamps,
@@ -343,6 +372,31 @@ class ClipThumbnailManager {
     // subscription paused too so it doesn't start extracting off-screen.
     if (_paused) subscription.pause();
     _subscriptions[clip.id] = subscription;
+  }
+
+  /// The source range [clip]'s strip can currently display — its trim
+  /// window, clamped into the file.
+  static _StripWindow _visibleWindow(DivineVideoClip clip) {
+    final duration = clip.duration.isNegative ? Duration.zero : clip.duration;
+    var start = clip.trimStart;
+    if (start < Duration.zero) start = Duration.zero;
+    if (start > duration) start = duration;
+    var end = duration - clip.trimEnd;
+    if (end > duration) end = duration;
+    if (end < start) end = start;
+    return _StripWindow(start: start, end: end);
+  }
+
+  /// The source range to extract for [clip] — its visible window plus
+  /// [_windowPadding] of trim slack on each side, clamped into the file.
+  static _StripWindow _generationWindow(DivineVideoClip clip) {
+    final duration = clip.duration.isNegative ? Duration.zero : clip.duration;
+    final visible = _visibleWindow(clip);
+    var start = visible.start - _windowPadding;
+    if (start < Duration.zero) start = Duration.zero;
+    var end = visible.end + _windowPadding;
+    if (end > duration) end = duration;
+    return _StripWindow(start: start, end: end);
   }
 
   /// Merges carried-over frames into a fresh accumulated batch.
@@ -480,6 +534,7 @@ class ClipThumbnailManager {
     _subscriptions.clear();
     _notifiers.clear();
     _videoPaths.clear();
+    _windows.clear();
     _seeded.clear();
     _complete.clear();
     _retired.clear();
@@ -491,12 +546,18 @@ class ClipThumbnailManager {
 class _RetiredStrip {
   const _RetiredStrip({
     required this.videoPath,
+    required this.window,
     required this.frames,
     required this.complete,
   });
 
   /// Source video path the frames were extracted from (or borrowed for).
   final String videoPath;
+
+  /// Source range the frames were generated for. A clip that returns with a
+  /// wider trim than it left with needs a fresh subscription even when
+  /// [complete] is set.
+  final _StripWindow window;
 
   final List<StripThumbnail> frames;
 
@@ -511,4 +572,15 @@ class DurationRange {
 
   final Duration start;
   final Duration end;
+}
+
+/// A source-time range of a clip's file, in `[start, end]`.
+class _StripWindow {
+  const _StripWindow({required this.start, required this.end});
+
+  final Duration start;
+  final Duration end;
+
+  /// Whether this range contains all of [other].
+  bool covers(_StripWindow other) => start <= other.start && end >= other.end;
 }

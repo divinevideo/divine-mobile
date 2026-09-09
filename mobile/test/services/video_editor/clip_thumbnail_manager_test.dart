@@ -289,6 +289,7 @@ void main() {
                   required Duration duration,
                   required Size outputSize,
                   required int thumbsPerSecond,
+                  Duration startOffset = Duration.zero,
                   List<Duration>? priorityTimestamps,
                 }) {
                   final controller = StreamController<List<StripThumbnail>>();
@@ -406,6 +407,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) {
                 final controller = StreamController<List<StripThumbnail>>();
@@ -899,6 +901,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) {
                 final controller = StreamController<List<StripThumbnail>>();
@@ -969,6 +972,50 @@ void main() {
           // Subsequent syncs must not re-subscribe either.
           fakeStreamManager.sync(clips: [clipA, clipB], devicePixelRatio: 1);
           expect(controllers, hasLength(2));
+        },
+      );
+
+      test(
+        're-extracts a restored complete strip when the clip returns with a '
+        'wider trim than its frames were generated for',
+        () async {
+          final frame = writeFrame('widened_frame');
+          final trimmed = _createFileClip(
+            id: 'a',
+            videoPath: '${tempDir.path}/a.mp4',
+            seconds: 60,
+            trimStart: const Duration(seconds: 20),
+            trimEnd: const Duration(milliseconds: 33700),
+          );
+
+          fakeStreamManager.sync(clips: [trimmed], devicePixelRatio: 1);
+          controllers.single.add([
+            StripThumbnail(
+              path: frame.path,
+              timestamp: const Duration(seconds: 22),
+            ),
+          ]);
+          await pumpEventQueue();
+          await controllers.single.close();
+          await pumpEventQueue();
+
+          // 'a' leaves the timeline and returns with the trim dragged wide
+          // open. Its retired frames only cover the old window, so being
+          // "complete" is not enough to skip re-extraction.
+          fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
+          fakeStreamManager.sync(
+            clips: [
+              _createFileClip(
+                id: 'a',
+                videoPath: '${tempDir.path}/a.mp4',
+                seconds: 60,
+              ),
+            ],
+            devicePixelRatio: 1,
+          );
+
+          expect(controllers, hasLength(2));
+          expect(fakeStreamManager['a'].value.single.path, equals(frame.path));
         },
       );
 
@@ -1097,6 +1144,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) => streamController.stream,
         );
@@ -1225,6 +1273,185 @@ void main() {
         },
       );
     });
+
+    // =========================================================
+    // Trim window sizing
+    // =========================================================
+
+    group('trim window', () {
+      late List<_StripRequest> requests;
+      late List<StreamController<List<StripThumbnail>>> controllers;
+      late ClipThumbnailManager windowManager;
+      late Directory tempDir;
+
+      setUp(() {
+        requests = [];
+        controllers = [];
+        windowManager = ClipThumbnailManager(
+          stripThumbnailStreamFactory:
+              ({
+                required String videoPath,
+                required String clipId,
+                required Duration duration,
+                required Size outputSize,
+                required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
+                List<Duration>? priorityTimestamps,
+              }) {
+                requests.add(
+                  _StripRequest(startOffset: startOffset, duration: duration),
+                );
+                final controller = StreamController<List<StripThumbnail>>();
+                controllers.add(controller);
+                return controller.stream;
+              },
+        );
+        tempDir = Directory.systemTemp.createTempSync(
+          'clip_thumbnail_window_test_',
+        );
+      });
+
+      tearDown(() {
+        windowManager.dispose();
+        for (final controller in controllers) {
+          unawaited(controller.close());
+        }
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
+
+      /// A 60 s library import seeded with a trim down to the 6.3 s
+      /// recording budget: visible source range `[20 s, 26.3 s]`.
+      DivineVideoClip importClip({
+        Duration trimStart = const Duration(seconds: 20),
+        Duration trimEnd = const Duration(milliseconds: 33700),
+      }) => _createFileClip(
+        id: 'import',
+        videoPath: '${tempDir.path}/import.mp4',
+        seconds: 60,
+        trimStart: trimStart,
+        trimEnd: trimEnd,
+      );
+
+      test('asks only for the trimmed window plus a second of slack', () {
+        final clip = importClip();
+
+        windowManager.sync(clips: [clip], devicePixelRatio: 1);
+
+        // Not the untrimmed 60 s source: at 13 thumbs/s that hit the
+        // generator's 500-frame cap for footage the strip cannot show.
+        expect(requests, hasLength(1));
+        expect(
+          requests.single.startOffset,
+          equals(const Duration(seconds: 19)),
+        );
+        expect(
+          requests.single.end,
+          equals(const Duration(milliseconds: 27300)),
+        );
+        expect(requests.single.duration, lessThan(clip.duration));
+      });
+
+      test('covers the whole source when the clip is untrimmed', () {
+        final clip = _createFileClip(
+          id: 'import',
+          videoPath: '${tempDir.path}/import.mp4',
+          seconds: 6,
+        );
+
+        windowManager.sync(clips: [clip], devicePixelRatio: 1);
+
+        expect(requests.single.startOffset, equals(Duration.zero));
+        expect(requests.single.duration, equals(clip.duration));
+      });
+
+      test('does not restart while the trim stays inside the slack', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        // Half a second of handle drag outwards on each side — still inside
+        // the padded window, so the in-flight extraction is left alone.
+        windowManager.sync(
+          clips: [
+            importClip(
+              trimStart: const Duration(milliseconds: 19500),
+              trimEnd: const Duration(milliseconds: 33200),
+            ),
+          ],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(1));
+      });
+
+      test('restarts against the widened window when the trim reaches past '
+          'the generated range', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        windowManager.sync(
+          clips: [importClip(trimStart: const Duration(seconds: 10))],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(2));
+        expect(requests.last.startOffset, equals(const Duration(seconds: 9)));
+        expect(requests.last.end, equals(const Duration(milliseconds: 27300)));
+      });
+
+      test('restarts when the trim window moves to a different part of the '
+          'source', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        // Same 6.3 s length, shifted 20 s later in the source.
+        windowManager.sync(
+          clips: [
+            importClip(
+              trimStart: const Duration(seconds: 40),
+              trimEnd: const Duration(milliseconds: 13700),
+            ),
+          ],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(2));
+        expect(requests.last.startOffset, equals(const Duration(seconds: 39)));
+        expect(
+          requests.last.end,
+          equals(const Duration(milliseconds: 47300)),
+        );
+      });
+
+      test(
+        'keeps the frames it already has while the wider window loads',
+        () async {
+          final frame = File('${tempDir.path}/loaded.jpg')
+            ..writeAsStringSync('loaded');
+          windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+          controllers.single.add([
+            StripThumbnail(
+              path: frame.path,
+              timestamp: const Duration(seconds: 22),
+            ),
+          ]);
+          await pumpEventQueue();
+          expect(windowManager['import'].value, hasLength(1));
+
+          windowManager.sync(
+            clips: [importClip(trimStart: const Duration(seconds: 10))],
+            devicePixelRatio: 1,
+          );
+
+          // The restart must not blank the strip — the already-extracted
+          // frame stays on screen until fresh batches cover its slot.
+          expect(requests, hasLength(2));
+          expect(
+            windowManager['import'].value.single.path,
+            equals(frame.path),
+          );
+          expect(frame.existsSync(), isTrue);
+        },
+      );
+    });
   });
 
   // =========================================================
@@ -1271,6 +1498,8 @@ DivineVideoClip _createFileClip({
   required String id,
   required String videoPath,
   int seconds = 3,
+  Duration trimStart = Duration.zero,
+  Duration trimEnd = Duration.zero,
 }) {
   return DivineVideoClip(
     id: id,
@@ -1279,5 +1508,18 @@ DivineVideoClip _createFileClip({
     recordedAt: DateTime(2025),
     originalAspectRatio: 9 / 16,
     targetAspectRatio: .vertical,
+    trimStart: trimStart,
+    trimEnd: trimEnd,
   );
+}
+
+/// One [StripThumbnailStreamFactory] invocation, so tests can assert what
+/// range the manager actually asked the extractor for.
+class _StripRequest {
+  const _StripRequest({required this.startOffset, required this.duration});
+
+  final Duration startOffset;
+  final Duration duration;
+
+  Duration get end => startOffset + duration;
 }

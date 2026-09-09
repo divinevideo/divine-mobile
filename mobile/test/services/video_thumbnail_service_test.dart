@@ -349,6 +349,59 @@ void main() {
           }
         },
       );
+
+      test(
+        'extracts only inside the requested window, timestamped in absolute '
+        'source time',
+        () async {
+          VideoThumbnailService.resetStripBatchQueueForTesting();
+
+          final fakeJpegBytes = Uint8List.fromList(
+            List<int>.generate(16, (i) => i),
+          );
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, (call) async {
+                if (call.method == 'getThumbnails') {
+                  return List<Uint8List>.generate(6, (_) => fakeJpegBytes);
+                }
+                return null;
+              });
+
+          // A 3 s window starting 20 s into the file: 3 s at 2 thumbs/s is
+          // exactly one batch of 6.
+          final batches = <List<StripThumbnail>>[];
+          final done = Completer<void>();
+          VideoThumbnailService.generateStripThumbnails(
+            videoPath: testVideoPath,
+            clipId: 'clip-windowed',
+            duration: const Duration(seconds: 3),
+            startOffset: const Duration(seconds: 20),
+            outputSize: const Size(48, 64),
+            thumbsPerSecond: 2,
+          ).listen(batches.add, onDone: done.complete);
+          await done.future;
+
+          expect(batches, hasLength(1));
+          final thumbnails = batches.single;
+          expect(thumbnails, hasLength(6));
+          for (final thumbnail in thumbnails) {
+            expect(
+              thumbnail.timestamp.inMilliseconds,
+              inInclusiveRange(20000, 23000),
+            );
+          }
+          // Center-first refinement still spreads across the window rather
+          // than clustering at one edge.
+          expect(
+            thumbnails.first.timestamp,
+            isNot(equals(thumbnails.last.timestamp)),
+          );
+
+          for (final thumbnail in thumbnails) {
+            File(thumbnail.path).deleteSync();
+          }
+        },
+      );
     });
   });
 
