@@ -348,6 +348,69 @@ void main() {
       expect(bloc.state.missingFileSoundIds, isEmpty);
     });
 
+    test('rescans when saving a sound reloads the library', () async {
+      await service.saveSavedSound(localSound('gone', '/imports/gone.m4a'));
+
+      // Present on load, deleted before the save reloads the library.
+      var goneExists = true;
+      bloc = buildBloc(
+        localFileExists: (path) => goneExists || !path.endsWith('gone.m4a'),
+      );
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+      expect(bloc.state.missingFileSoundIds, isEmpty);
+
+      goneExists = false;
+      final completer = Completer<SavedSoundSaveResult>();
+      bloc.add(
+        SavedSoundSaveRequested(
+          sound: _sound(id: 'new'),
+          completer: completer,
+        ),
+      );
+      await completer.future;
+      await pumpEventQueue();
+
+      expect(
+        bloc.state.sounds.map((s) => s.audio.id),
+        containsAll(<String>['gone', 'new']),
+      );
+      expect(
+        bloc.state.missingFileSoundIds,
+        equals({'gone'}),
+        reason:
+            'A set computed at load time describes a library that no longer '
+            'exists once saving reloads it.',
+      );
+    });
+
+    test('forgets a removed sound', () async {
+      await service.saveSavedSound(localSound('gone', '/imports/gone.m4a'));
+
+      bloc = buildBloc(localFileExists: (_) => false);
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+      expect(bloc.state.missingFileSoundIds, equals({'gone'}));
+
+      final completer = Completer<void>();
+      bloc.add(
+        SavedSoundRemoveRequested('gone', completer: completer),
+      );
+      await completer.future;
+      await pumpEventQueue();
+
+      expect(bloc.state.sounds, isEmpty);
+      expect(bloc.state.missingFileSoundIds, isEmpty);
+    });
+
     test('treats an unreadable path the same as an absent file', () async {
       await service.saveSavedSound(localSound('broken', '/imports/broken.m4a'));
 

@@ -53,6 +53,35 @@ Finder _divineIcon(DivineIconName name) =>
 
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 
+/// A playback service that answers every call the selection overlay makes,
+/// so a test can assert on selection rather than on playback plumbing.
+_MockAudioPlaybackService _stubbedAudioService() {
+  final service = _MockAudioPlaybackService();
+  when(() => service.positionStream).thenAnswer(
+    (_) => const Stream<Duration>.empty(),
+  );
+  when(() => service.durationStream).thenAnswer(
+    (_) => const Stream<Duration?>.empty(),
+  );
+  when(() => service.headphonesConnectedStream).thenAnswer(
+    (_) => const Stream<bool>.empty(),
+  );
+  when(() => service.duration).thenReturn(null);
+  when(() => service.isPlaying).thenReturn(false);
+  when(() => service.playingStream).thenAnswer(
+    (_) => const Stream<bool>.empty(),
+  );
+  when(() => service.loadAudio(any())).thenAnswer(
+    (_) async => const Duration(seconds: 5),
+  );
+  when(() => service.seek(Duration.zero)).thenAnswer((_) async {});
+  when(service.play).thenAnswer((_) async {});
+  when(service.pause).thenAnswer((_) async {});
+  when(service.stop).thenAnswer((_) async {});
+  when(service.dispose).thenAnswer((_) async {});
+  return service;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -70,6 +99,7 @@ void main() {
     Widget buildWidget({
       AsyncValue<List<AudioEvent>>? trendingSoundsAsync,
       List<AudioEvent> savedSounds = const [],
+      Set<String> missingFileSoundIds = const {},
       List<VineSound> bundledSounds = const [],
       AudioPlaybackService? audioService,
       String? viewerPubkey,
@@ -88,6 +118,7 @@ void main() {
                 ),
               )
               .toList(growable: false),
+          missingFileSoundIds: missingFileSoundIds,
         ),
       );
       return BlocProvider<SavedSoundsBloc>.value(
@@ -626,6 +657,62 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AudioListTile), findsNothing);
+      });
+
+      testWidgets('says a saved sound whose file is gone cannot be used', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            savedSounds: [
+              _createTestAudioEvent(
+                id: 'local_import_gone',
+                title: 'Gone Sound',
+                url: '/imports/gone.m4a',
+              ),
+              _createTestAudioEvent(
+                id: 'local_import_here',
+                title: 'Here Sound',
+                url: '/imports/here.m4a',
+              ),
+            ],
+            missingFileSoundIds: const {'local_import_gone'},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Gone Sound'),
+          findsOneWidget,
+          reason:
+              'Dropping the row would hide a sound the user knows they '
+              'saved; the picker says why instead (#8023).',
+        );
+        expect(find.text(l10n.videoEditorAudioFileMissing), findsOneWidget);
+
+        await tester.tap(find.text('Gone Sound'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(AudioEditorSelectionOverlay),
+          findsNothing,
+          reason:
+              'Attaching it would put a source that plays nothing on the '
+              'draft.',
+        );
+
+        // Positive control: the sibling with a file still selects, so the
+        // assertion above is about the missing file and not about taps
+        // never landing in this harness.
+        await tester.tap(find.text('Here Sound'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
       });
 
       testWidgets('renders saved sounds on My Sounds tab', (tester) async {

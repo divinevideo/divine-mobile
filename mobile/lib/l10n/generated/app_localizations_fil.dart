@@ -9280,6 +9280,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Walang pamagat na sound';
 
   @override
+  String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
+
+  @override
   String get videoEditorAudioUntitled => 'Walang Pamagat';
 
   @override
@@ -11426,7 +11429,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get savedSoundFileMissing =>
-      'Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog. I-remove na lang para malinis ang library mo.';
+      'Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog.';
 
   @override
   String get savedSoundClearHashtagFilter => 'I-clear ang hashtag filter';

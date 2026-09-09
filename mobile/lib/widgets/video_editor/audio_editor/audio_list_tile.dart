@@ -12,6 +12,7 @@ class AudioListTile extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.isPlaying = false,
+    this.isUnavailable = false,
     this.semanticIdentifier,
     super.key,
   });
@@ -20,6 +21,14 @@ class AudioListTile extends StatelessWidget {
   final bool isSelected;
   final bool isPlaying;
   final VoidCallback onTap;
+
+  /// Whether this sound cannot be attached because its device-local audio
+  /// file is gone.
+  ///
+  /// The row stays listed and says why, rather than disappearing from a
+  /// library the user knows they saved to — but it cannot be selected,
+  /// because attaching it would put a dead source on the draft (#8023).
+  final bool isUnavailable;
 
   /// Stable `Semantics(identifier:)` anchor for E2E tests. Never announced, so
   /// it carries no meaning for a screen-reader user — that is the title below.
@@ -33,6 +42,7 @@ class AudioListTile extends StatelessWidget {
         audio: audio,
         isSelected: isSelected,
         isPlaying: isPlaying,
+        isUnavailable: isUnavailable,
         onTap: onTap,
       ),
     );
@@ -44,12 +54,14 @@ class _Tile extends StatelessWidget {
     required this.audio,
     required this.isSelected,
     required this.isPlaying,
+    required this.isUnavailable,
     required this.onTap,
   });
 
   final AudioEvent audio;
   final bool isSelected;
   final bool isPlaying;
+  final bool isUnavailable;
   final VoidCallback onTap;
 
   @override
@@ -58,40 +70,77 @@ class _Tile extends StatelessWidget {
       padding: const .symmetric(vertical: 20.0),
       child: ListTile(
         onTap: onTap,
+        enabled: !isUnavailable,
         minTileHeight: 48,
         title: Text(
           audio.title ?? context.l10n.videoEditorAudioUntitledSound,
           style: VineTheme.titleMediumFont(
-            color: isSelected
+            color: isUnavailable
+                ? context.vineColors.onSurfaceVariant
+                : isSelected
                 ? context.vineColors.accentPositive
                 : context.vineColors.onSurface,
           ),
           maxLines: 1,
           overflow: .ellipsis,
         ),
-        subtitle: Text.rich(
-          TextSpan(
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.onSurfaceVariant,
-            ),
-            children: [
-              TextSpan(
-                text: Duration(
-                  seconds: max((audio.duration ?? 0).toInt(), 1),
-                ).toMmSs(),
-                style: const TextStyle(fontFeatures: [.tabularFigures()]),
+        subtitle: isUnavailable
+            ? const _UnavailableSubtitle()
+            : Text.rich(
+                TextSpan(
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: Duration(
+                        seconds: max((audio.duration ?? 0).toInt(), 1),
+                      ).toMmSs(),
+                      style: const TextStyle(fontFeatures: [.tabularFigures()]),
+                    ),
+                    if (audio.source != null) ...[
+                      const TextSpan(text: ' ∙ '),
+                      TextSpan(text: audio.source),
+                    ],
+                  ],
+                ),
               ),
-              if (audio.source != null) ...[
-                const TextSpan(text: ' ∙ '),
-                TextSpan(text: audio.source),
-              ],
-            ],
-          ),
-        ),
-        trailing: isSelected
+        trailing: isSelected && !isUnavailable
             ? _AudioPlayingIndicator(isPlaying: isPlaying)
             : null,
       ),
+    );
+  }
+}
+
+/// Says why a saved sound in the picker cannot be chosen.
+///
+/// Mirrors the My Sounds card so the same condition reads the same way in
+/// both places.
+class _UnavailableSubtitle extends StatelessWidget {
+  const _UnavailableSubtitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      spacing: 6,
+      children: [
+        DivineIcon(
+          icon: .warning,
+          size: 14,
+          color: context.vineColors.onErrorContainer,
+        ),
+        Expanded(
+          child: Text(
+            context.l10n.videoEditorAudioFileMissing,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onErrorContainer,
+            ),
+            maxLines: 2,
+            overflow: .ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

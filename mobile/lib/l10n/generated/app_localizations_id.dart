@@ -9125,6 +9125,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Suara tanpa judul';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'File audio sudah tidak ada di perangkat';
+
+  @override
   String get videoEditorAudioUntitled => 'Tanpa judul';
 
   @override
@@ -11241,7 +11245,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get savedSoundFileMissing =>
-      'File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar. Hapus saja biar rapi.';
+      'File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Bersihkan filter tagar';

@@ -9291,6 +9291,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Звук без заглавие';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Аудиофайлът вече го няма на устройството';
+
+  @override
   String get videoEditorAudioUntitled => 'Без заглавие';
 
   @override
@@ -11437,7 +11441,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get savedSoundFileMissing =>
-      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе. Премахни го, за да разчистиш библиотеката.';
+      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Изчисти филтъра по хаштаг';

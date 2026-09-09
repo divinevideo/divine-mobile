@@ -143,9 +143,10 @@ class SavedSoundCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     spacing: 8,
                     children: [
-                      // No preview button at all rather than a disabled one:
-                      // there is nothing to wait for, and removing the entry
-                      // is the only action left that changes anything.
+                      // No preview button at all rather than a disabled
+                      // one: there is nothing to wait for. Edit and remove
+                      // stay, so the entry is still the user's to keep or
+                      // drop.
                       if (!isMissingFile)
                         DivineIconButton(
                           key: const Key('saved_sound_preview'),

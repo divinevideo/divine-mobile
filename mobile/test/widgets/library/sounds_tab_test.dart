@@ -192,6 +192,32 @@ void main() {
       expect(find.text('Trending Sounds'), findsNothing);
     });
 
+    testWidgets('says which saved sound lost its audio file', (tester) async {
+      // The real bloc probes the filesystem here, so nothing but the wiring
+      // in _SavedSoundsSection decides which card carries the notice.
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(
+        _sound(id: 'gone', title: 'Gone Sound').copyWith(
+          url: '/imports/never-written.m4a',
+        ),
+      );
+      await service.saveSound(_sound(id: 'here', title: 'Here Sound'));
+
+      await pumpSoundsTab(tester);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text('Gone Sound'), findsOneWidget);
+      expect(find.text('Here Sound'), findsOneWidget);
+      expect(find.text(l10n.savedSoundFileMissing), findsOneWidget);
+      expect(
+        find.byKey(const Key('saved_sound_preview')),
+        findsOneWidget,
+        reason:
+            'Only the card whose file is gone loses its preview — a wiring '
+            'hardcoded either way would give both cards the same answer.',
+      );
+    });
+
     testWidgets('opens saved sound details from the card', (tester) async {
       await SavedSoundsService(
         sharedPreferences,

@@ -25,9 +25,13 @@ class SavedSoundsState extends Equatable {
   /// Sounds whose device-local audio file is no longer on disk.
   ///
   /// Such an entry stays in the library and used to play silence, with nothing
-  /// telling the user why or offering a way out (#8023). Only device-local
-  /// sounds can land here; a network or asset source is not something this
-  /// library can lose.
+  /// telling the user why (#8023). Only device-local sounds can land here; a
+  /// network or asset source is not something this library can lose.
+  ///
+  /// "Missing" is a statement about *this* device only. The record syncs
+  /// across a creator's devices but the audio file does not, so an entry can
+  /// be unplayable here and fine on the phone it was imported on — which is
+  /// why nothing built on this set advises removing the entry.
   final Set<String> missingFileSoundIds;
 
   /// Whether [sound]'s audio file has gone missing from the device.

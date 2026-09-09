@@ -9252,6 +9252,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Naamloos geluid';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Audiobestand staat niet meer op dit apparaat';
+
+  @override
   String get videoEditorAudioUntitled => 'Naamloos';
 
   @override
@@ -11381,7 +11385,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get savedSoundFileMissing =>
-      'Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen. Verwijder het om op te ruimen.';
+      'Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Hashtagfilter wissen';

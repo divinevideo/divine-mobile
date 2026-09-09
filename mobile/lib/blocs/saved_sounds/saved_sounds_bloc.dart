@@ -205,10 +205,15 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       // sequentially — before the sound appeared in the library.
       if (!event.completer.isCompleted) event.completer.complete(result);
       if (!emit.isDone) {
+        final sounds = _service.loadSavedSounds();
         emit(
           state.copyWith(
             status: SavedSoundsStatus.loaded,
-            sounds: _service.loadSavedSounds(),
+            sounds: sounds,
+            // Rescanning here, not only on load: this list is the one that
+            // gains entries, and a set left over from the last load would
+            // describe a library that no longer exists.
+            missingFileSoundIds: _findMissingFiles(sounds),
           ),
         );
       }
@@ -297,6 +302,8 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
               .where((sound) => sound.id != event.soundId)
               .toList(growable: false),
           unsavedSoundIds: {...state.unsavedSoundIds}..remove(event.soundId),
+          missingFileSoundIds: {...state.missingFileSoundIds}
+            ..remove(event.soundId),
         ),
       );
     }

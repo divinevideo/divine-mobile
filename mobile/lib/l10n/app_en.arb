@@ -6069,6 +6069,10 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",
   "videoEditorAudioUntitledSound": "Untitled sound",
+  "videoEditorAudioFileMissing": "Audio file is gone from this device",
+  "@videoEditorAudioFileMissing": {
+    "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
+  },
   "videoEditorAudioUntitled": "Untitled",
   "videoEditorAudioAddAudio": "Add audio",
   "videoEditorAudioNoSoundsAvailableTitle": "No sounds available",
@@ -7520,9 +7524,9 @@
   "savedSoundPreviewAction": "Preview sound",
   "savedSoundEditAction": "Edit sound details",
   "savedSoundRemoveAction": "Remove saved sound",
-  "savedSoundFileMissing": "This sound's audio file is gone from this device, so it can't play. Remove it to tidy up your library.",
+  "savedSoundFileMissing": "This sound's audio file is gone from this device, so it can't play.",
   "@savedSoundFileMissing": {
-    "description": "Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped — but it cannot play, and removal is the only action left that changes anything."
+    "description": "Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
   },
   "savedSoundClearHashtagFilter": "Clear hashtag filter",
   "soundAllowRemix": "Allow others to remix this sound",

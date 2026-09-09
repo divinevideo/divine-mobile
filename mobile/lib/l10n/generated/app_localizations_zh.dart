@@ -8672,6 +8672,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '未命名声音';
 
   @override
+  String get videoEditorAudioFileMissing => '音频文件已经不在这台设备上了';
+
+  @override
   String get videoEditorAudioUntitled => '未命名';
 
   @override
@@ -10628,7 +10631,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedSoundRemoveAction => '移除已保存的声音';
 
   @override
-  String get savedSoundFileMissing => '这个声音的音频文件已经不在这台设备上了，没法播放。删掉它，把音库整理干净。';
+  String get savedSoundFileMissing => '这个声音的音频文件已经不在这台设备上了，没法播放。';
 
   @override
   String get savedSoundClearHashtagFilter => '清除话题标签筛选';

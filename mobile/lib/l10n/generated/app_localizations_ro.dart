@@ -9416,6 +9416,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sunet fără titlu';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Fișierul audio nu mai este pe dispozitiv';
+
+  @override
   String get videoEditorAudioUntitled => 'Fără titlu';
 
   @override
@@ -11570,7 +11574,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get savedSoundFileMissing =>
-      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat. Șterge-l ca să faci ordine în bibliotecă.';
+      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Șterge filtrul de hashtaguri';

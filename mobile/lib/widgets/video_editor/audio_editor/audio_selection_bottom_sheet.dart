@@ -427,10 +427,8 @@ class _AudioSelectionBottomSheetState
   Widget build(BuildContext context) {
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     final nostrSoundsAsync = ref.watch(trendingSoundsProvider);
-    final savedSounds = context
-        .watch<SavedSoundsBloc>()
-        .state
-        .sounds
+    final savedSoundsState = context.watch<SavedSoundsBloc>().state;
+    final savedSounds = savedSoundsState.sounds
         .map((sound) => sound.audio)
         .toList(growable: false);
 
@@ -512,6 +510,10 @@ class _AudioSelectionBottomSheetState
                     selectedSound: _selectedItem,
                     audioService: _audioService,
                     onSelect: _selectSound,
+                    // A saved entry whose file is gone stays listed but
+                    // cannot be chosen: selecting it would attach a source
+                    // that plays nothing to the draft (#8023).
+                    unavailableSoundIds: savedSoundsState.missingFileSoundIds,
                     emptyState: _searchQuery.isNotEmpty
                         ? searchEmptyState
                         : _EmptyState(
@@ -632,6 +634,7 @@ class _SoundsContent extends StatelessWidget {
     required this.selectedSound,
     required this.audioService,
     required this.onSelect,
+    this.unavailableSoundIds = const {},
     this.emptyState = const _EmptyState(),
   });
 
@@ -640,6 +643,10 @@ class _SoundsContent extends StatelessWidget {
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
   final ValueChanged<AudioEvent> onSelect;
+
+  /// Sounds listed here but not selectable, because their device-local audio
+  /// file is gone.
+  final Set<String> unavailableSoundIds;
   final Widget emptyState;
 
   static const _bottomSpace = 120.0;
@@ -663,11 +670,13 @@ class _SoundsContent extends StatelessWidget {
               Divider(height: 1, color: context.vineColors.outlineDisabled),
           itemBuilder: (context, index) {
             final audio = sounds[index];
-            final isSelected = audio.id == selectedSound?.id;
+            final isUnavailable = unavailableSoundIds.contains(audio.id);
+            final isSelected = !isUnavailable && audio.id == selectedSound?.id;
             if (!isSelected) {
               return AudioListTile(
                 audio: audio,
                 isSelected: false,
+                isUnavailable: isUnavailable,
                 semanticIdentifier: SemanticIds.audioSoundTile(index),
                 onTap: () => onSelect(audio),
               );
