@@ -41,6 +41,16 @@ const Set<String> _draftLocalMarkers = {
 /// returned unchanged.
 String toPortableAudioPath(String path) => _belowAudioRoot(path) ?? path;
 
+/// Whether [path] names a file inside one of the three directories this app
+/// writes draft-local audio into.
+///
+/// Bounds what an audio-reclaim path is allowed to delete. Every producer —
+/// `LocalAudioImportService`, the voice-over cubit, clip audio extraction —
+/// writes below one of those roots, so a stored `localFilePath` pointing
+/// anywhere else did not come from this app's own audio storage and must not
+/// be deleted on its behalf.
+bool isDraftLocalAudioPath(String path) => _belowAudioRoot(path) != null;
+
 /// Absolute path for a persisted audio [path], rooted at [documentsPath].
 ///
 /// Accepts the portable form as well as an absolute path from a previous

@@ -10,16 +10,28 @@ import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 enum SavedSoundSaveResult { saved, alreadySaved }
+
+/// Reclaims the draft-local audio file at [audioFilePath] once nothing else
+/// on the device references it.
+///
+/// A port rather than a direct dependency: proving a file is unreferenced
+/// needs the draft and clip tables, and this service owns nothing but
+/// `SharedPreferences`. `LocalAudioCleanupService.reclaimUnreferencedAudio`
+/// is the production implementation, wired in `savedSoundsServiceProvider`.
+typedef LocalAudioReclaimer = Future<void> Function(String audioFilePath);
 
 class SavedSoundsService {
   SavedSoundsService(
     this._preferences, {
     String? pubkeyHex,
     String documentsPath = '',
+    LocalAudioReclaimer? audioReclaimer,
   }) : _pubkeyHex = pubkeyHex,
-       _documentsPath = documentsPath;
+       _documentsPath = documentsPath,
+       _audioReclaimer = audioReclaimer;
 
   /// Prefix for the per-account storage keys.
   static const _keyPrefix = 'saved_reusable_sounds';
@@ -51,6 +63,11 @@ class SavedSoundsService {
   /// Application documents directory that draft-local audio paths are stored
   /// relative to. Empty on web, and in tests that never persist a local file.
   final String _documentsPath;
+
+  /// Reclaims a removed sound's audio file, or `null` when this instance
+  /// cannot reach the stores that would prove the file unreferenced — in
+  /// which case removal leaves the file in place, as it did before #8025.
+  final LocalAudioReclaimer? _audioReclaimer;
 
   /// SharedPreferences key for a specific account's saved sounds.
   ///
@@ -143,11 +160,46 @@ class SavedSoundsService {
     return SavedSoundSaveResult.saved;
   }
 
+  /// Removes [soundId] from this account's library and reclaims the audio file
+  /// it owned when nothing else still references it.
+  ///
+  /// The reclaim runs *after* the write, so the entry being removed cannot
+  /// count as a reference to its own file, and the surviving buckets that
+  /// [localAudioReferences] scans are the real survivors.
   Future<void> removeSound(String soundId) async {
-    final sounds = loadSavedSounds()
-        .where((savedSound) => savedSound.id != soundId)
+    final sounds = loadSavedSounds();
+    final removed = sounds
+        .where((savedSound) => savedSound.id == soundId)
         .toList();
-    await _writeSavedSounds(sounds);
+    await _writeSavedSounds(
+      sounds.where((savedSound) => savedSound.id != soundId).toList(),
+    );
+    for (final sound in removed) {
+      await _reclaimAudio(sound.audio.localFilePath);
+    }
+  }
+
+  /// Hands [audioFilePath] to the reclaimer, absorbing any failure.
+  ///
+  /// The library write has already succeeded by the time this runs, so a
+  /// failed reclaim must not fail [removeSound]: the caller reads a throw as
+  /// "the entry is still saved" and would leave a deleted sound on screen.
+  /// Nothing retries — the file is simply left where it is.
+  Future<void> _reclaimAudio(String? audioFilePath) async {
+    final reclaimer = _audioReclaimer;
+    if (reclaimer == null || audioFilePath == null || audioFilePath.isEmpty) {
+      return;
+    }
+    try {
+      await reclaimer(audioFilePath);
+    } catch (error) {
+      Log.warning(
+        '⚠️ Failed to reclaim audio for a removed saved sound: '
+        '$audioFilePath - $error',
+        name: 'SavedSoundsService',
+        category: LogCategory.video,
+      );
+    }
   }
 
   Future<void> replaceSavedSound(SavedSound sound) async {
@@ -221,50 +273,78 @@ class SavedSoundsService {
   /// All accounts, not just the signed-in one — draft cleanup already scans
   /// drafts device-wide, and a saved sound outlives the account switch that
   /// hides it. Never throws: an undecodable bucket contributes nothing.
+  ///
+  /// Callers that *delete* on the absence of a reference want
+  /// [localAudioReferences] instead, which additionally reports whether every
+  /// bucket was readable.
   static Set<String> referencedLocalAudioFilenames(
+    SharedPreferences preferences,
+  ) => localAudioReferences(preferences).filenames;
+
+  /// [referencedLocalAudioFilenames] plus whether the scan could read every
+  /// bucket and entry it found.
+  ///
+  /// `isComplete` is false when a bucket does not decode, is not one of the
+  /// two recognized shapes (a payload from a newer build reaches this), or
+  /// holds an entry that will not parse as an `AudioEvent`. The reference such
+  /// an entry might have carried is unknown, so the filename set is a lower
+  /// bound rather than the whole truth — see `LocalAudioReferences`.
+  static ({Set<String> filenames, bool isComplete}) localAudioReferences(
     SharedPreferences preferences,
   ) {
     final filenames = <String>{};
+    var isComplete = true;
     for (final key in preferences.getKeys()) {
       if (!key.startsWith(_keyPrefix)) continue;
       final raw = preferences.getString(key);
       if (raw == null || raw.isEmpty) continue;
-      for (final audioJson in _storedAudioJson(raw)) {
+      final bucket = _storedAudioJson(raw);
+      if (!bucket.isComplete) isComplete = false;
+      for (final audioJson in bucket.entries) {
         try {
           final path = AudioEvent.fromJson(audioJson).localFilePath;
           if (path != null && path.isNotEmpty) {
             filenames.add(p.basename(path));
           }
         } catch (_) {
-          continue;
+          isComplete = false;
         }
       }
     }
-    return filenames;
+    return (filenames: filenames, isComplete: isComplete);
   }
 
   /// The `AudioEvent` json of every entry in a stored bucket [raw], in either
-  /// the legacy list shape or the versioned `{schemaVersion, sounds}` shape.
-  static Iterable<Map<String, dynamic>> _storedAudioJson(String raw) sync* {
+  /// the legacy list shape or the versioned `{schemaVersion, sounds}` shape,
+  /// and whether the whole bucket was readable in one of those two shapes.
+  static ({List<Map<String, dynamic>> entries, bool isComplete})
+  _storedAudioJson(String raw) {
     final Object? decoded;
     try {
       decoded = jsonDecode(raw);
     } catch (_) {
-      return;
+      return (entries: const [], isComplete: false);
     }
-    final List<dynamic> entries;
+    final List<dynamic> rawEntries;
     if (decoded is List) {
-      entries = decoded;
+      rawEntries = decoded;
     } else if (decoded is Map && decoded['sounds'] is List) {
-      entries = decoded['sounds'] as List<dynamic>;
+      rawEntries = decoded['sounds'] as List<dynamic>;
     } else {
-      return;
+      return (entries: const [], isComplete: false);
     }
-    for (final entry in entries.whereType<Map>()) {
+    final entries = <Map<String, dynamic>>[];
+    var isComplete = true;
+    for (final entry in rawEntries) {
+      if (entry is! Map) {
+        isComplete = false;
+        continue;
+      }
       // Legacy entries are the AudioEvent itself; versioned ones nest it.
       final audio = entry['audio'];
-      yield Map<String, dynamic>.from(audio is Map ? audio : entry);
+      entries.add(Map<String, dynamic>.from(audio is Map ? audio : entry));
     }
+    return (entries: entries, isComplete: isComplete);
   }
 
   static bool _isNewerSchema(Map<String, dynamic> decoded) {

@@ -236,4 +236,32 @@ void main() {
       expect(identical(toPortableAudioPaths(json), json), isTrue);
     });
   });
+
+  group('isDraftLocalAudioPath', () {
+    test('accepts a file under each audio root', () {
+      expect(
+        isDraftLocalAudioPath('$_newDocs/draft_audio_imports/d1/song.m4a'),
+        isTrue,
+      );
+      expect(
+        isDraftLocalAudioPath('$_newDocs/voice_over_recordings/take_1.m4a'),
+        isTrue,
+      );
+      expect(
+        isDraftLocalAudioPath('$_newDocs/extracted_clip_audio/clip_1.m4a'),
+        isTrue,
+      );
+      expect(isDraftLocalAudioPath('draft_audio_imports/d1/song.m4a'), isTrue);
+    });
+
+    test('rejects a path outside the audio roots', () {
+      expect(isDraftLocalAudioPath('$_newDocs/picker_cache/song.m4a'), isFalse);
+      expect(isDraftLocalAudioPath('$_newDocs/song.m4a'), isFalse);
+      expect(isDraftLocalAudioPath(''), isFalse);
+    });
+
+    test('rejects the audio root directory itself', () {
+      expect(isDraftLocalAudioPath('$_newDocs/draft_audio_imports'), isFalse);
+    });
+  });
 }
