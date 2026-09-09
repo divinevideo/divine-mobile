@@ -49,7 +49,15 @@ String toPortableAudioPath(String path) => _belowAudioRoot(path) ?? path;
 /// writes below one of those roots, so a stored `localFilePath` pointing
 /// anywhere else did not come from this app's own audio storage and must not
 /// be deleted on its behalf.
-bool isDraftLocalAudioPath(String path) => _belowAudioRoot(path) != null;
+///
+/// A `..` segment below the root is rejected: the root name matches, but the
+/// path escapes upward out of app audio storage, and reclaim deletes the raw
+/// path. Nothing writes such a path today, so this only keeps the delete
+/// bound honest if one ever reaches the stored `localFilePath`.
+bool isDraftLocalAudioPath(String path) {
+  final relative = _belowAudioRoot(path);
+  return relative != null && !p.split(relative).contains('..');
+}
 
 /// Absolute path for a persisted audio [path], rooted at [documentsPath].
 ///

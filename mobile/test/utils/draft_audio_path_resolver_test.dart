@@ -263,5 +263,16 @@ void main() {
     test('rejects the audio root directory itself', () {
       expect(isDraftLocalAudioPath('$_newDocs/draft_audio_imports'), isFalse);
     });
+
+    test('rejects a path that escapes the root with ..', () {
+      expect(
+        isDraftLocalAudioPath('$_newDocs/draft_audio_imports/../../etc/x'),
+        isFalse,
+      );
+      expect(
+        isDraftLocalAudioPath('$_newDocs/voice_over_recordings/../secret.key'),
+        isFalse,
+      );
+    });
   });
 }
