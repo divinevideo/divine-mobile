@@ -288,7 +288,7 @@ class CuratedListRepository {
   /// 3. Local + relay matches merged (relay items without thumbnails)
   /// 4. Fully enriched (relay thumbnails resolved)
   ///
-  /// Deduplicates by list ID.
+  /// Deduplicates by author-qualified list coordinate (pubkey + d-tag).
   Stream<List<CuratedList>> searchAllLists(
     String query, {
     int maxThumbnails = 5,

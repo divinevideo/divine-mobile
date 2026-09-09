@@ -711,8 +711,8 @@ void main() {
           createList(id: 'shared-id', name: 'Dance Local'),
         ]);
 
-        // Relay returns a list with the same ID — but excludeIds
-        // should prevent it. Return a different one instead.
+        // Relay returns a list with the same author-qualified coordinate — but
+        // excludeCoordinates should prevent it. Return a different one instead.
         when(() => nostrClient.queryEvents(any())).thenAnswer(
           (_) async => [
             _makeEvent(
