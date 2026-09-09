@@ -22,7 +22,6 @@ packages/nostr_sdk/lib/nip59/gift_wrap_util.dart # nostr_sdk: publishable packag
 packages/nostr_sdk/lib/nostr.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/relay/relay.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/relay/relay_base.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
-packages/nostr_sdk/lib/relay/relay_diagnostics.dart # nostr_sdk: developer.log is the fallback when no RelayDiagnosticsSink is injected (#8930)
 packages/nostr_sdk/lib/relay/relay_info_util.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/relay/relay_isolate_worker.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/relay/relay_pool.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
