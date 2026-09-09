@@ -8757,6 +8757,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'タイトルなしのサウンド';
 
   @override
+  String get videoEditorAudioFileMissing => '音声ファイルは端末に残っていません';
+
+  @override
   String get videoEditorAudioUntitled => 'タイトルなし';
 
   @override
@@ -10749,6 +10752,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => '保存したサウンドを削除';
+
+  @override
+  String get savedSoundFileMissing => 'このサウンドの音声ファイルは端末に残っていないため再生できません。';
 
   @override
   String get savedSoundClearHashtagFilter => 'ハッシュタグの絞り込みを解除';

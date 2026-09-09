@@ -8772,6 +8772,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '제목 없는 사운드';
 
   @override
+  String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
+
+  @override
   String get videoEditorAudioUntitled => '제목 없음';
 
   @override
@@ -10763,6 +10766,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => '저장한 사운드 삭제';
+
+  @override
+  String get savedSoundFileMissing => '이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요.';
 
   @override
   String get savedSoundClearHashtagFilter => '해시태그 필터 지우기';

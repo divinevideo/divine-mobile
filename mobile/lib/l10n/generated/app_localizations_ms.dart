@@ -9219,6 +9219,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Bunyi tanpa tajuk';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Fail audio sudah tiada pada peranti ini';
+
+  @override
   String get videoEditorAudioUntitled => 'Tanpa tajuk';
 
   @override
@@ -11327,6 +11331,10 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Buang bunyi tersimpan';
+
+  @override
+  String get savedSoundFileMissing =>
+      'Fail audio bunyi ini sudah tiada pada peranti anda, jadi ia tidak boleh dimainkan.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Kosongkan penapis hashtag';

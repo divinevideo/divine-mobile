@@ -9158,6 +9158,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'صوت بدون عنوان';
 
   @override
+  String get videoEditorAudioFileMissing => 'ملف الصوت لم يعد على هذا الجهاز';
+
+  @override
   String get videoEditorAudioUntitled => 'بدون عنوان';
 
   @override
@@ -11242,6 +11245,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'إزالة الصوت المحفوظ';
+
+  @override
+  String get savedSoundFileMissing =>
+      'ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله.';
 
   @override
   String get savedSoundClearHashtagFilter => 'مسح تصفية الوسوم';

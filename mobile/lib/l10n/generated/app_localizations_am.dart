@@ -8991,6 +8991,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'ርዕስ አልባ ድምጽ';
 
   @override
+  String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
+
+  @override
   String get videoEditorAudioUntitled => 'ርዕስ አልባ';
 
   @override
@@ -11020,6 +11023,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'የተቀመጠውን ድምፅ አስወግድ';
+
+  @override
+  String get savedSoundFileMissing =>
+      'የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም።';
 
   @override
   String get savedSoundClearHashtagFilter => 'የሃሽታግ ማጣሪያን አጽዳ';

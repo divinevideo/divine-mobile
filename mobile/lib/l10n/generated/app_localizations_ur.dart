@@ -9206,6 +9206,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'بلا عنوان آواز';
 
   @override
+  String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
+
+  @override
   String get videoEditorAudioUntitled => 'بلا عنوان';
 
   @override
@@ -11305,6 +11308,10 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'محفوظ شدہ ساؤنڈ ہٹائیں';
+
+  @override
+  String get savedSoundFileMissing =>
+      'اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔';
 
   @override
   String get savedSoundClearHashtagFilter => 'ہیش ٹیگ فلٹر صاف کریں';

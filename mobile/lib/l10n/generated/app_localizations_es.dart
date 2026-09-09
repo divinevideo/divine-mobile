@@ -9300,6 +9300,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sonido sin título';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'El archivo de audio ya no está en el dispositivo';
+
+  @override
   String get videoEditorAudioUntitled => 'Sin título';
 
   @override
@@ -11444,6 +11448,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Quitar el sonido guardado';
+
+  @override
+  String get savedSoundFileMissing =>
+      'El archivo de audio de este sonido ya no está en el dispositivo, así que no se puede reproducir.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Borrar el filtro de hashtags';

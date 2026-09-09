@@ -15704,6 +15704,12 @@ abstract class AppLocalizations {
   /// **'Untitled sound'**
   String get videoEditorAudioUntitledSound;
 
+  /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio file is gone from this device'**
+  String get videoEditorAudioFileMissing;
+
   /// No description provided for @videoEditorAudioUntitled.
   ///
   /// In en, this message translates to:
@@ -19145,6 +19151,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove saved sound'**
   String get savedSoundRemoveAction;
+
+  /// Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
+  ///
+  /// In en, this message translates to:
+  /// **'This sound\'s audio file is gone from this device, so it can\'t play.'**
+  String get savedSoundFileMissing;
 
   /// No description provided for @savedSoundClearHashtagFilter.
   ///

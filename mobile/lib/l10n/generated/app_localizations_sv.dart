@@ -9209,6 +9209,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Namnlöst ljud';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Ljudfilen finns inte kvar på enheten';
+
+  @override
   String get videoEditorAudioUntitled => 'Namnlös';
 
   @override
@@ -11319,6 +11323,10 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Ta bort sparat ljud';
+
+  @override
+  String get savedSoundFileMissing =>
+      'Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Rensa hashtaggfiltret';

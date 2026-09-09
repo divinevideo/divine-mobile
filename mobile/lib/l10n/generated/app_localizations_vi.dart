@@ -9170,6 +9170,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Âm thanh chưa đặt tên';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Tệp âm thanh không còn trên thiết bị';
+
+  @override
   String get videoEditorAudioUntitled => 'Chưa đặt tên';
 
   @override
@@ -11271,6 +11275,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Gỡ âm thanh đã lưu';
+
+  @override
+  String get savedSoundFileMissing =>
+      'Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Xóa bộ lọc hashtag';

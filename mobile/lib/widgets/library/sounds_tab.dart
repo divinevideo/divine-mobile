@@ -647,6 +647,7 @@ class _SavedSoundsSection extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: SavedSoundCard(
                   sound: sound,
+                  isMissingFile: state.isMissingFile(sound),
                   isPlaying: isPreviewing && !playingPaused,
                   progress: isPreviewing ? playingProgress : null,
                   progressValue: isPreviewing ? playingProgressValue : 0,

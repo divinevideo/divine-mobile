@@ -9488,6 +9488,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'శీర్షికలేని ధ్వని';
 
   @override
+  String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
+
+  @override
   String get videoEditorAudioUntitled => 'శీర్షిక లేదు';
 
   @override
@@ -11649,6 +11652,10 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'సేవ్ చేయబడిన ధ్వనిని తీసివేయండి';
+
+  @override
+  String get savedSoundFileMissing =>
+      'ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.';
 
   @override
   String get savedSoundClearHashtagFilter =>

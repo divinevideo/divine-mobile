@@ -42,6 +42,7 @@ void main() {
       required AudioEvent audio,
       bool isSelected = false,
       bool isPlaying = false,
+      bool isUnavailable = false,
       String? semanticIdentifier,
     }) {
       return MaterialApp(
@@ -52,6 +53,7 @@ void main() {
             audio: audio,
             isSelected: isSelected,
             isPlaying: isPlaying,
+            isUnavailable: isUnavailable,
             semanticIdentifier: semanticIdentifier,
             onTap: () => tapped = true,
           ),
@@ -98,6 +100,48 @@ void main() {
         );
 
         handle.dispose();
+      });
+    });
+
+    group('unavailable', () {
+      testWidgets('says the file is gone and cannot be chosen', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Gone Sound', duration: 6),
+            isUnavailable: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text('Gone Sound'), findsOneWidget);
+        expect(find.text(l10n.videoEditorAudioFileMissing), findsOneWidget);
+
+        await tester.tap(find.text('Gone Sound'));
+        await tester.pumpAndSettle();
+        expect(
+          tapped,
+          isFalse,
+          reason:
+              'Selecting it would attach a source that plays nothing to the '
+              'draft (#8023).',
+        );
+      });
+
+      testWidgets('leaves a playable sound tappable', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Here Sound', duration: 6),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorAudioFileMissing), findsNothing);
+
+        await tester.tap(find.text('Here Sound'));
+        await tester.pumpAndSettle();
+        expect(tapped, isTrue);
       });
     });
 

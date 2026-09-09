@@ -9397,6 +9397,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Nienazwany dźwięk';
 
   @override
+  String get videoEditorAudioFileMissing =>
+      'Pliku audio już nie ma na tym urządzeniu';
+
+  @override
   String get videoEditorAudioUntitled => 'Bez tytułu';
 
   @override
@@ -11539,6 +11543,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Usuń zapisany dźwięk';
+
+  @override
+  String get savedSoundFileMissing =>
+      'Pliku audio tego dźwięku już nie ma na tym urządzeniu, więc nie da się go odtworzyć.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Wyczyść filtr hashtagów';

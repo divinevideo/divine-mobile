@@ -9124,6 +9124,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Başlıksız ses';
 
   @override
+  String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
+
+  @override
   String get videoEditorAudioUntitled => 'Başlıksız';
 
   @override
@@ -11248,6 +11251,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get savedSoundRemoveAction => 'Kaydedilen sesi kaldır';
+
+  @override
+  String get savedSoundFileMissing =>
+      'Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor.';
 
   @override
   String get savedSoundClearHashtagFilter => 'Hashtag filtresini temizle';
