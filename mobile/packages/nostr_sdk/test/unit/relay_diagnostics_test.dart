@@ -76,14 +76,12 @@ void main() {
       );
       await relay.deliver(['EOSE', subscription.id]);
 
-      expect(
-        diagnostics.map((entry) => entry.site),
-        containsAll([
-          RelayDiagnosticSite.connectionLifecycle,
-          RelayDiagnosticSite.queryDispatch,
-          RelayDiagnosticSite.requestSettlement,
-        ]),
-      );
+      expect(diagnostics.map((entry) => entry.site).toList(), [
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticSite.requestSettlement,
+      ]);
       expect(
         diagnostics.map((entry) => entry.message),
         contains(contains('full-subscription-id')),
@@ -160,6 +158,42 @@ void main() {
         isTrue,
       );
     });
+
+    test(
+      'a null sink disables structured diagnostics without affecting I/O',
+      () async {
+        final noSinkNostr = Nostr(
+          LocalNostrSigner(
+            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+          ),
+          [],
+          (url) => _DiagnosticRelay(url),
+        );
+
+        final relay = _DiagnosticRelay('wss://relay.example');
+        expect(await noSinkNostr.relayPool.add(relay), isTrue);
+
+        final subscription = Subscription(
+          const [
+            {
+              'kinds': [1],
+            },
+          ],
+          (_) {},
+          id: 'no-sink-subscription-id',
+        );
+        expect(
+          await noSinkNostr.relayPool.relayDoQuery(relay, subscription, false),
+          isTrue,
+        );
+        await relay.deliver(['EOSE', subscription.id]);
+
+        expect(relay.sent, [
+          ['REQ', subscription.id, ...subscription.filters],
+          ['CLOSE', subscription.id],
+        ]);
+      },
+    );
   });
 
   group('connectionDiagnosticLevelFor', () {

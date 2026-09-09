@@ -24,11 +24,15 @@ void main() {
       RelayDiagnosticSite site = RelayDiagnosticSite.connectionLifecycle,
       String message = 'Relay connection succeeded',
       RelayDiagnosticLevel level = RelayDiagnosticLevel.info,
+      Object? error,
+      StackTrace? stackTrace,
     }) => RelayDiagnostic(
       site: site,
       level: level,
       relayUrl: relayUrl,
       message: message,
+      error: error,
+      stackTrace: stackTrace,
     );
 
     test('writes relay diagnostics to the support-log buffer', () {
@@ -54,14 +58,18 @@ void main() {
       adapter(diagnostic(message: 'second'));
       adapter(diagnostic(message: 'third'));
 
-      expect(capture.getRecentLogs(), hasLength(2));
+      expect(capture.getRecentLogs(), hasLength(3));
+      expect(
+        capture.getRecentLogs().last.message,
+        contains('Further connectionLifecycle info diagnostics suppressed'),
+      );
 
       now = now.add(const Duration(minutes: 1));
       adapter(diagnostic(message: 'after rollover'));
 
       final messages = capture.getRecentLogs().map((entry) => entry.message);
-      expect(messages, hasLength(4));
-      expect(messages.elementAt(2), contains('Suppressed 1 repeated'));
+      expect(messages, hasLength(5));
+      expect(messages.elementAt(3), contains('Suppressed 1 repeated'));
       expect(messages.last, contains('after rollover'));
     });
 
@@ -75,15 +83,23 @@ void main() {
       adapter(diagnostic(message: 'emitted'));
       adapter(diagnostic(message: 'suppressed'));
 
-      // The storm stops, and the next diagnostic for this key only arrives
-      // ten minutes later. Its summary is timestamped now, so it has to name
-      // when the suppressed traffic actually happened.
+      final marker = capture.getRecentLogs().elementAt(1).message;
+      expect(marker, contains('Further connectionLifecycle info diagnostics'));
+      expect(
+        marker,
+        contains(
+          windowStart.add(const Duration(minutes: 1)).toUtc().toIso8601String(),
+        ),
+      );
+
+      // The next diagnostic arrives much later, but the summary still names
+      // the fixed limiter window rather than implying a ten-minute storm.
       now = now.add(const Duration(minutes: 10));
       adapter(diagnostic(message: 'much later'));
 
-      final summary = capture.getRecentLogs().elementAt(1).message;
+      final summary = capture.getRecentLogs().elementAt(2).message;
       expect(summary, contains('Suppressed 1 repeated'));
-      expect(summary, contains('in the 600 seconds'));
+      expect(summary, contains('during the 60-second window'));
       expect(summary, contains(windowStart.toUtc().toIso8601String()));
     });
 
@@ -105,9 +121,65 @@ void main() {
       );
       adapter(diagnostic(message: 'first key after eviction'));
 
-      final messages = capture.getRecentLogs().map((entry) => entry.message);
-      expect(messages, hasLength(3));
+      final logs = capture.getRecentLogs().toList();
+      final messages = logs.map((entry) => entry.message);
+      expect(messages, hasLength(5));
+
+      // The eviction summary must be attributed to the EVICTED key, not the
+      // incoming one that triggered the eviction.
+      final eviction = logs.elementAt(2);
+      expect(eviction.message, contains('Suppressed 1 repeated'));
+      expect(eviction.message, contains('wss://relay.example'));
+      expect(eviction.message, contains('connectionLifecycle'));
+      expect(eviction.message, contains('info'));
+      expect(eviction.message, isNot(contains('wss://other.example')));
+      expect(eviction.message, isNot(contains('queryDispatch')));
+      expect(eviction.level, LogLevel.info);
+
       expect(messages.last, contains('first key after eviction'));
+    });
+
+    test('severity has an independent budget for a relay and site', () {
+      final adapter = RelayDiagnosticsAdapter(
+        maxEventsPerWindow: 1,
+        clock: () => now,
+      );
+
+      adapter(diagnostic(message: 'info emitted'));
+      adapter(diagnostic(message: 'info suppressed'));
+      adapter(
+        diagnostic(
+          level: RelayDiagnosticLevel.warning,
+          message: 'terminal warning',
+        ),
+      );
+      adapter(
+        diagnostic(
+          level: RelayDiagnosticLevel.error,
+          message: 'terminal error',
+        ),
+      );
+
+      final messages = capture.getRecentLogs().map((entry) => entry.message);
+      expect(messages, hasLength(4));
+      expect(messages, contains(contains('terminal warning')));
+      expect(messages, contains(contains('terminal error')));
+    });
+
+    test('bounds a reconnect storm to one marker per severity budget', () {
+      final adapter = RelayDiagnosticsAdapter(
+        maxEventsPerWindow: 1,
+        clock: () => now,
+      );
+
+      for (final level in RelayDiagnosticLevel.values) {
+        for (var i = 0; i < 20; i++) {
+          adapter(diagnostic(level: level, message: '${level.name} $i'));
+        }
+      }
+
+      // One original plus one suppression marker for each of four levels.
+      expect(capture.getRecentLogs(), hasLength(8));
     });
 
     test(
@@ -126,6 +198,8 @@ void main() {
             site: RelayDiagnosticSite.authentication,
             level: RelayDiagnosticLevel.error,
             message: 'authentication failed',
+            error: StateError('private failure detail'),
+            stackTrace: StackTrace.fromString('private stack frame'),
           ),
         );
 
@@ -135,6 +209,10 @@ void main() {
           LogLevel.error,
         ]);
         expect(entries.every((entry) => entry.error == null), isTrue);
+        expect(entries.every((entry) => entry.stackTrace == null), isTrue);
+        expect(entries.last.message, contains('error type: StateError'));
+        expect(entries.last.message, isNot(contains('private failure detail')));
+        expect(entries.last.message, isNot(contains('private stack frame')));
       },
     );
   });

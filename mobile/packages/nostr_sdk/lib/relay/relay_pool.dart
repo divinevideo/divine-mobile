@@ -646,6 +646,7 @@ class RelayPool {
     _observeRelayStatus(relay);
 
     if (await relay.connect()) {
+      log('Relay connection succeeded: ${relay.url}');
       _diagnose(
         RelayDiagnosticSite.connectionLifecycle,
         RelayDiagnosticLevel.info,
@@ -816,6 +817,10 @@ class RelayPool {
 
     try {
       var message = subscription.toJson();
+      log(
+        'Dispatching one-shot query ${subscription.id} to ${relay.url} '
+        '(filters=${subscription.filters.length})',
+      );
       _diagnose(
         RelayDiagnosticSite.queryDispatch,
         RelayDiagnosticLevel.info,
@@ -843,6 +848,9 @@ class RelayPool {
           relay.url,
           'One-shot query ${subscription.id} trigger sent=$result',
         );
+        if (result) {
+          log('One-shot query ${subscription.id} trigger sent to ${relay.url}');
+        }
         return true;
       } else {
         // Skip reconnect during query fan-out to avoid blocking
@@ -853,6 +861,10 @@ class RelayPool {
         if (result) {
           relay.saveQuery(subscription);
         }
+        log(
+          'One-shot query ${subscription.id} dispatch to ${relay.url} '
+          'succeeded=$result',
+        );
         _diagnose(
           RelayDiagnosticSite.queryDispatch,
           result ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
@@ -1511,6 +1523,7 @@ class RelayPool {
   Future<void> _reconnectDroppedRelay(Relay relay) async {
     if (_closed) return;
     try {
+      log('Reconnecting dropped relay ${relay.url}');
       _diagnose(
         RelayDiagnosticSite.connectionLifecycle,
         RelayDiagnosticLevel.info,
@@ -1726,6 +1739,14 @@ class RelayPool {
     } else if (messageType == 'EOSE') {
       final subId = _stringAt(relay, json, 1, 'EOSE subscription id');
       if (subId == null) return;
+      // Debug-only: EOSE is a per-settlement frame, and logging it
+      // unconditionally cost ~6% of main-isolate CPU in on-device profiling
+      // (#5957). The assert closure never runs in profile/release; the
+      // structured diagnostic below carries the settlement to injected sinks.
+      assert(() {
+        log('Relay ${relay.url} settled request $subId with EOSE');
+        return true;
+      }());
       _diagnose(
         RelayDiagnosticSite.requestSettlement,
         RelayDiagnosticLevel.info,
@@ -2233,6 +2254,7 @@ class RelayPool {
             .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (result) {
+          log('Request ${subscription.id} dispatch to ${relay.url} succeeded');
           _diagnose(
             RelayDiagnosticSite.queryDispatch,
             RelayDiagnosticLevel.info,
@@ -2962,6 +2984,7 @@ class RelayPool {
     if (_closed) return;
     try {
       await relay.forceReconnect();
+      log('Silent-relay reconnect completed for ${relay.url}');
       _diagnose(
         RelayDiagnosticSite.connectionLifecycle,
         RelayDiagnosticLevel.info,

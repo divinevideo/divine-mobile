@@ -307,25 +307,36 @@ class RelayManager {
     final normalizedUrl = normalizeRelayUrl(url);
 
     if (normalizedUrl == null) {
-      _log('Invalid relay URL: $url');
+      _log('Invalid relay URL: $url', level: RelayDiagnosticLevel.warning);
       return false;
     }
 
     // Block known-dead relays
     if (_isBlockedRelay(normalizedUrl)) {
-      _log('Blocked dead relay: $normalizedUrl');
+      _log(
+        'Blocked dead relay: $normalizedUrl',
+        relayUrl: normalizedUrl,
+        level: RelayDiagnosticLevel.warning,
+      );
       return false;
     }
 
     // Reject relays outside the configured environment host.
     if (!isRelayAllowed(normalizedUrl)) {
-      _log('Relay not allowed in this environment: $normalizedUrl');
+      _log(
+        'Relay not allowed in this environment: $normalizedUrl',
+        relayUrl: normalizedUrl,
+        level: RelayDiagnosticLevel.warning,
+      );
       return false;
     }
 
     if (source == RelayAddSource.automatic &&
         _userRemovedRelays.contains(normalizedUrl)) {
-      _log('Skipping user-removed automatic relay: $normalizedUrl');
+      _log(
+        'Skipping user-removed automatic relay: $normalizedUrl',
+        relayUrl: normalizedUrl,
+      );
       return false;
     }
 
@@ -334,11 +345,14 @@ class RelayManager {
     }
 
     if (_configuredRelays.contains(normalizedUrl)) {
-      _log('Relay already configured: $normalizedUrl');
+      _log(
+        'Relay already configured: $normalizedUrl',
+        relayUrl: normalizedUrl,
+      );
       return false;
     }
 
-    _log('Adding relay: $normalizedUrl');
+    _log('Adding relay: $normalizedUrl', relayUrl: normalizedUrl);
 
     // Add to configured list
     _configuredRelays.add(normalizedUrl);
@@ -383,16 +397,20 @@ class RelayManager {
     final normalizedUrl = normalizeRelayUrl(url);
 
     if (normalizedUrl == null) {
-      _log('Invalid relay URL: $url');
+      _log('Invalid relay URL: $url', level: RelayDiagnosticLevel.warning);
       return false;
     }
 
     if (!_configuredRelays.contains(normalizedUrl)) {
-      _log('Relay not configured: $normalizedUrl');
+      _log(
+        'Relay not configured: $normalizedUrl',
+        relayUrl: normalizedUrl,
+        level: RelayDiagnosticLevel.warning,
+      );
       return false;
     }
 
-    _log('Removing relay: $normalizedUrl');
+    _log('Removing relay: $normalizedUrl', relayUrl: normalizedUrl);
 
     // Disconnect from the relay
     _relayPool.remove(normalizedUrl);
@@ -575,7 +593,11 @@ class RelayManager {
       if (relay is RelayBase) {
         final healthy = relay.checkHealth();
         if (!healthy) {
-          _log('Relay $url failed health check, marking as disconnected');
+          _log(
+            'Relay failed health check, marking as disconnected',
+            relayUrl: url,
+            level: RelayDiagnosticLevel.warning,
+          );
           _updateRelayStatus(url, RelayState.disconnected);
         }
       }
@@ -604,14 +626,18 @@ class RelayManager {
       final success = await _connectToRelay(url);
       if (success) {
         _updateRelayStatus(url, RelayState.connected);
-        _log('Force reconnected to $url');
+        _log('Force reconnected', relayUrl: url);
       } else {
         _updateRelayStatus(
           url,
           RelayState.error,
           errorMessage: 'Force reconnection failed',
         );
-        _log('Force reconnection failed for $url');
+        _log(
+          'Force reconnection failed',
+          relayUrl: url,
+          level: RelayDiagnosticLevel.warning,
+        );
       }
     }
 
@@ -625,7 +651,7 @@ class RelayManager {
       return false;
     }
 
-    _log('Reconnecting to relay: $normalizedUrl');
+    _log('Reconnecting to relay', relayUrl: normalizedUrl);
     _updateRelayStatus(normalizedUrl, RelayState.connecting);
     _notifyStatusChange();
 
@@ -723,10 +749,27 @@ class RelayManager {
       // subscriptions are resent to the newly connected relay so that
       // queries (e.g. follower counts) don't silently miss data.
       final success = await _relayPool.add(relay, autoSubscribe: true);
-      _log('Connect to $url: ${success ? 'success' : 'failed'}');
+      _log(
+        'Connect ${success ? 'succeeded' : 'failed'}',
+        relayUrl: url,
+        level: success
+            ? RelayDiagnosticLevel.info
+            : RelayDiagnosticLevel.warning,
+      );
       return success;
-    } on Exception catch (e) {
-      _log('Error connecting to $url: $e');
+    } on Exception catch (e, stackTrace) {
+      developer.log(
+        '[RelayManager] Error connecting to $url',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _diagnose(
+        message: 'Relay connection threw',
+        relayUrl: url,
+        level: RelayDiagnosticLevel.error,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -882,16 +925,39 @@ class RelayManager {
     }
   }
 
-  void _log(String message) {
-    developer.log('[RelayManager] $message');
-    if (_diagnosticsSink == null) return;
+  void _log(
+    String message, {
+    String relayUrl = 'relay-manager',
+    RelayDiagnosticSite site = RelayDiagnosticSite.connectionLifecycle,
+    RelayDiagnosticLevel level = RelayDiagnosticLevel.info,
+  }) {
+    final relayContext = relayUrl == 'relay-manager' ? '' : ' [$relayUrl]';
+    developer.log('[RelayManager]$relayContext $message');
+    _diagnose(
+      message: message,
+      relayUrl: relayUrl,
+      site: site,
+      level: level,
+    );
+  }
+
+  void _diagnose({
+    required String message,
+    String relayUrl = 'relay-manager',
+    RelayDiagnosticSite site = RelayDiagnosticSite.connectionLifecycle,
+    RelayDiagnosticLevel level = RelayDiagnosticLevel.info,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     emitRelayDiagnostic(
       _diagnosticsSink,
       RelayDiagnostic(
-        site: RelayDiagnosticSite.connectionLifecycle,
-        level: RelayDiagnosticLevel.info,
-        relayUrl: 'relay-manager',
+        site: site,
+        level: level,
+        relayUrl: relayUrl,
         message: message,
+        error: error,
+        stackTrace: stackTrace,
       ),
     );
   }
