@@ -67,15 +67,15 @@ void main() {
       opens++;
       return DetachedClipThumbnails.withManager(
         ClipThumbnailManager(
-          stripThumbnailStreamFactory:
-              ({
-                required videoPath,
-                required clipId,
-                required duration,
-                required outputSize,
-                required thumbsPerSecond,
-                priorityTimestamps,
-              }) => frames.stream,
+          stripThumbnailStreamFactory: ({
+            required videoPath,
+            required clipId,
+            required duration,
+            required outputSize,
+            required thumbsPerSecond,
+            startOffset = Duration.zero,
+            priorityTimestamps,
+          }) => frames.stream,
         )..sync(clips: [clip], devicePixelRatio: 1),
         clip.id,
       );

@@ -65,15 +65,15 @@ void main() {
     DetachedClipThumbnails.openOverride = (clip, _) async =>
         DetachedClipThumbnails.withManager(
           ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required videoPath,
-                  required clipId,
-                  required duration,
-                  required outputSize,
-                  required thumbsPerSecond,
-                  priorityTimestamps,
-                }) => const Stream.empty(),
+            stripThumbnailStreamFactory: ({
+              required videoPath,
+              required clipId,
+              required duration,
+              required outputSize,
+              required thumbsPerSecond,
+              startOffset = Duration.zero,
+              priorityTimestamps,
+            }) => const Stream.empty(),
           )..sync(clips: [clip], devicePixelRatio: 1),
           clip.id,
         );
