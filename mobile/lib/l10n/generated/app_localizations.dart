@@ -15044,6 +15044,90 @@ abstract class AppLocalizations {
   /// **'Slide to adjust'**
   String get videoEditorTimelineSlideToAdjust;
 
+  /// Clip action-bar button that lifts the selected clip off the timeline and onto the canvas, where it can be moved and resized freely.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach'**
+  String get videoEditorDetachLabel;
+
+  /// No description provided for @videoEditorDetachSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach the selected clip from the timeline'**
+  String get videoEditorDetachSemanticLabel;
+
+  /// No description provided for @videoEditorDetachTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach clip'**
+  String get videoEditorDetachTitle;
+
+  /// No description provided for @videoEditorDetachDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The clip moves onto the canvas, where you can place it anywhere. What takes its place on the timeline?'**
+  String get videoEditorDetachDescription;
+
+  /// No description provided for @videoEditorDetachReplaceRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing'**
+  String get videoEditorDetachReplaceRemove;
+
+  /// No description provided for @videoEditorDetachReplaceRemoveDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Close the gap — everything after it starts earlier.'**
+  String get videoEditorDetachReplaceRemoveDetail;
+
+  /// No description provided for @videoEditorDetachReplaceColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get videoEditorDetachReplaceColor;
+
+  /// No description provided for @videoEditorDetachReplaceColorDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a solid color for as long as the clip ran.'**
+  String get videoEditorDetachReplaceColorDetail;
+
+  /// No description provided for @videoEditorDetachReplaceImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get videoEditorDetachReplaceImage;
+
+  /// No description provided for @videoEditorDetachReplaceImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Shoot a still to hold in its place.'**
+  String get videoEditorDetachReplaceImageDetail;
+
+  /// Name shown on the timeline's layer strip for a clip that was detached onto the canvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Detached clip'**
+  String get videoEditorDetachedClipLabel;
+
+  /// Shown under the progress spinner while the still that replaces a detached clip is being rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Detaching your clip…'**
+  String get videoEditorDetachProgressLabel;
+
+  /// No description provided for @videoEditorDetachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t detach that clip. Your timeline is unchanged.'**
+  String get videoEditorDetachFailed;
+
+  /// No description provided for @videoEditorDetachImagePickFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load that photo.'**
+  String get videoEditorDetachImagePickFailed;
+
   /// No description provided for @videoEditorChromaKeyLabel.
   ///
   /// In en, this message translates to:

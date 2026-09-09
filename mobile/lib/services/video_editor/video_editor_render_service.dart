@@ -12,10 +12,12 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
+import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -674,14 +676,37 @@ class VideoEditorRenderService {
         tempFilePaths: tempFilePaths,
       );
 
-      final outputPath = await _concatenateSegments(
+      // Clips the user lifted onto the canvas are composited over the finished
+      // track in a second pass: the track itself needs the single-segment path
+      // (transitions, per-clip speed and reverse all live there, and a
+      // composition layer takes none of them), so the two cannot be one render.
+      // Nothing detached means nothing changes — the base render writes
+      // straight to the final path and there is no second encode.
+      final detachedPass = await DetachedClipRenderPass.prepare(
+        capturedLayers: parameters?.capturedLayers ?? const [],
+        cacheDir: cacheDir,
+        finalOutputPath: resolvedOutputPath,
+      );
+      if (detachedPass.isActive) tempFilePaths.add(detachedPass.basePath);
+
+      await _concatenateSegments(
         clips: clips,
         segments: result.segments,
         taskId: effectiveTaskId,
-        outputPath: resolvedOutputPath,
+        outputPath: detachedPass.basePath,
         globalTransform: result.globalTransform,
         aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
         parameters: parameters,
+        maxOutputDuration: maxOutputDuration,
+        imageLayerOverride: detachedPass.baseImageLayers,
+      );
+
+      final outputPath = await detachedPass.composite(
+        clips: clips,
+        bodySize: parameters?.bodySize,
+        aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
+        taskId: effectiveTaskId,
+        tempFilePaths: tempFilePaths,
         maxOutputDuration: maxOutputDuration,
       );
 
@@ -791,11 +816,7 @@ class VideoEditorRenderService {
         name: 'VideoEditorRenderService',
         category: .video,
       );
-      crashReporter.recordError(
-        e,
-        stack,
-        reason: 'limitClipDuration failed',
-      );
+      crashReporter.recordError(e, stack, reason: 'limitClipDuration failed');
       onComplete(false);
     }
   }
@@ -972,9 +993,7 @@ class VideoEditorRenderService {
       }
     }
 
-    return NormalizationResult(
-      segments: segments,
-    );
+    return NormalizationResult(segments: segments);
   }
 
   /// Analyzes all clips to determine their crop parameters.
@@ -1069,6 +1088,7 @@ class VideoEditorRenderService {
     required model.AspectRatio aspectRatio,
     required Duration? maxOutputDuration,
     CropParameters? globalTransform,
+    List<ExportedLayer>? imageLayerOverride,
   }) async {
     // Overlap transitions shorten the rendered output, so the true video
     // length is the transition-mapped output duration, capped by
@@ -1093,9 +1113,11 @@ class VideoEditorRenderService {
         .map((s) => s.copyWith(volume: s.volume))
         .toList();
 
+    final capturedLayers =
+        imageLayerOverride ?? parameters?.capturedLayers ?? const [];
+
     Size? renderResolution;
-    if (parameters?.capturedLayers.isNotEmpty == true &&
-        volumeSegments.isNotEmpty) {
+    if (capturedLayers.isNotEmpty && volumeSegments.isNotEmpty) {
       final metadata = await ProVideoEditor.instance.getMetadata(
         volumeSegments.first.video,
       );
@@ -1120,10 +1142,14 @@ class VideoEditorRenderService {
       shouldOptimizeForNetworkUse: true,
       audioTracks: audioTracks,
       imageLayers: buildImageLayers(
-        capturedLayers: parameters?.capturedLayers ?? const [],
+        capturedLayers: capturedLayers,
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
         timelineMap: timelineMap,
+        // A non-null override came from DetachedClipRenderPass, which already
+        // removed every valid video layer. Keep its unreadable-layer raster
+        // fallback instead of filtering again by the kind marker.
+        excludeDetachedClips: imageLayerOverride == null,
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1185,7 +1211,9 @@ class VideoEditorRenderService {
   /// render under an id of their own. A user cancel targets the export's id,
   /// so without it a retry fires after the settle and finishes work nobody is
   /// waiting for any more (#7833).
-  @visibleForTesting
+  ///
+  /// Public because every export encode goes through it, including the
+  /// detached-clip composition pass, which runs outside this class.
   static Future<void> renderWithEncoderFallback({
     required VideoRenderData baseTask,
     required Future<void> Function(VideoRenderData task) encode,
@@ -1273,37 +1301,47 @@ class VideoEditorRenderService {
   /// editor timeline onto the output axis via [timelineMap] — so an overlap
   /// transition can't push a layer (or its leave animation) past the real video
   /// end. Returns `null` when there is nothing to overlay.
-  @visibleForTesting
+  ///
+  /// Detached clips are skipped: their raster is a single frame of a video, and
+  /// [_compositeDetachedClips] composites the moving picture instead. A render
+  /// path that does not run that pass — saving one clip to the library —
+  /// therefore leaves them out rather than freezing them into the file.
+  ///
+  /// Public because the detached-clip pass builds the layers that go over its
+  /// composition with the same geometry, and both have to agree exactly.
   static List<ImageLayer>? buildImageLayers({
     required List<ExportedLayer> capturedLayers,
     required Size? bodySize,
     required Size videoSize,
     required TransitionTimelineMap timelineMap,
+    bool excludeDetachedClips = true,
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
     final scale = videoSize.width / bodySize.width;
     return [
       for (final item in capturedLayers)
-        ImageLayer(
-          image: EditorLayerImage.memory(item.bytes),
-          startTime: timelineMap.editorToOutputOrNull(item.layer.startTime),
-          endTime: timelineMap.editorToOutputOrNull(item.layer.endTime),
-          offset: Offset(
-            (bodySize.width / 2 +
-                    item.layer.offset.dx -
-                    item.logicalSize.width / 2) *
-                scale,
-            (bodySize.height / 2 +
-                    item.layer.offset.dy -
-                    item.logicalSize.height / 2) *
-                scale,
+        if (!excludeDetachedClips ||
+            !DetachedClipLayerData.isDetachedClipLayer(item.layer))
+          ImageLayer(
+            image: EditorLayerImage.memory(item.bytes),
+            startTime: timelineMap.editorToOutputOrNull(item.layer.startTime),
+            endTime: timelineMap.editorToOutputOrNull(item.layer.endTime),
+            offset: Offset(
+              (bodySize.width / 2 +
+                      item.layer.offset.dx -
+                      item.logicalSize.width / 2) *
+                  scale,
+              (bodySize.height / 2 +
+                      item.layer.offset.dy -
+                      item.logicalSize.height / 2) *
+                  scale,
+            ),
+            size: Size(
+              item.logicalSize.width * scale,
+              item.logicalSize.height * scale,
+            ),
+            animations: item.layer.divineAnimations,
           ),
-          size: Size(
-            item.logicalSize.width * scale,
-            item.logicalSize.height * scale,
-          ),
-          animations: item.layer.divineAnimations,
-        ),
     ];
   }
 

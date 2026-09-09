@@ -96,4 +96,27 @@ class VideoEditorTransformService {
 
     return EditorVideo.file(outputPath);
   }
+
+  /// The pixel aspect ratio of [video], or `null` when it cannot be read.
+  ///
+  /// Measured off the finished file rather than derived from the crop rect the
+  /// editor returned. The renderer decides the final ordering of crop, rotate
+  /// and flip and rounds to even pixel dimensions, so the only dependable
+  /// answer to "what shape did this come out" is the file itself.
+  static Future<double?> aspectRatioOf(EditorVideo video) async {
+    try {
+      final resolution = (await ProVideoEditor.instance.getMetadata(
+        video,
+      )).resolution;
+      if (resolution.width <= 0 || resolution.height <= 0) return null;
+      return resolution.width / resolution.height;
+    } catch (e) {
+      Log.warning(
+        '⚠️ Could not read the transformed clip resolution: $e',
+        name: 'VideoEditorTransformService',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+  }
 }

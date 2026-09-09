@@ -8775,6 +8775,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'اسحب للضبط';
 
   @override
+  String get videoEditorDetachLabel => 'فصل';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'فصل المقطع المحدد عن الجدول الزمني';
+
+  @override
+  String get videoEditorDetachTitle => 'فصل المقطع';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'ينتقل المقطع إلى اللوحة ويمكن وضعه في أي مكان. ما الذي يشغل مكانه على الجدول الزمني؟';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'لا شيء';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'سد الفجوة: كل ما بعده يبدأ أبكر.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'لون';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'إظهار لون ثابت طوال مدة المقطع.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'صورة';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'التقاط صورة ثابتة تشغل مكانه.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'مقطع مفصول';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'جارٍ فصل مقطعك…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'تعذّر فصل هذا المقطع. الجدول الزمني كما هو دون تغيير.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'تعذّر تحميل هذه الصورة.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'الشاشة الخضراء';
 
   @override

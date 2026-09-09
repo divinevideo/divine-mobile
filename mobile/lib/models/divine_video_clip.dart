@@ -36,6 +36,7 @@ class DivineVideoClip {
     this.volume = 1,
     this.playbackSpeed,
     this.reversed = false,
+    this.isPlaceholder = false,
     this.forwardVideoPath,
     this.reversedVideoPath,
     this.proofManifestJson,
@@ -130,6 +131,17 @@ class DivineVideoClip {
 
   /// Whether this clip plays in reverse.
   final bool reversed;
+
+  /// Whether this clip is the still that fills the slot a detached clip left
+  /// behind — a solid colour or a photographed frame, rendered to video.
+  ///
+  /// It is an ordinary video clip in every other respect, on purpose: the
+  /// timeline gives a frames-based clip a frame-first action bar, which makes
+  /// no sense for a one-image backdrop. This flag exists only to keep actions
+  /// that are meaningless on a still off it — detaching a placeholder would
+  /// put a frozen frame on the canvas and ask for a second placeholder to fill
+  /// the slot it just vacated.
+  final bool isPlaceholder;
 
   /// Cached forward file path used to restore the clip after a reverse toggle.
   final String? forwardVideoPath;
@@ -390,6 +402,7 @@ class DivineVideoClip {
     double? playbackSpeed,
     bool clearPlaybackSpeed = false,
     bool? reversed,
+    bool? isPlaceholder,
     String? forwardVideoPath,
     bool clearForwardVideoPath = false,
     String? reversedVideoPath,
@@ -443,6 +456,7 @@ class DivineVideoClip {
           ? null
           : (playbackSpeed ?? this.playbackSpeed),
       reversed: reversed ?? this.reversed,
+      isPlaceholder: isPlaceholder ?? this.isPlaceholder,
       forwardVideoPath: isNewLogicalClip
           ? null
           : clearForwardVideoPath
@@ -503,6 +517,7 @@ class DivineVideoClip {
       'volume': volume,
       if (playbackSpeed != null) 'playbackSpeed': playbackSpeed,
       if (reversed) 'reversed': true,
+      if (isPlaceholder) 'isPlaceholder': true,
       if (forwardVideoPath != null)
         'forwardVideoPath': p.basename(forwardVideoPath!),
       if (reversedVideoPath != null)
@@ -623,6 +638,7 @@ class DivineVideoClip {
       volume: (json['volume'] as num?)?.toDouble() ?? 1,
       playbackSpeed: (json['playbackSpeed'] as num?)?.toDouble(),
       reversed: (json['reversed'] as bool?) ?? false,
+      isPlaceholder: (json['isPlaceholder'] as bool?) ?? false,
       forwardVideoPath: resolvePath(
         json['forwardVideoPath'] as String?,
         documentsPath,

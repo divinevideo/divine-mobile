@@ -9030,6 +9030,55 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Glisează pentru ajustare';
 
   @override
+  String get videoEditorDetachLabel => 'Desprinde';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Desprinde clipul selectat de pe cronologie';
+
+  @override
+  String get videoEditorDetachTitle => 'Desprinde clipul';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Clipul trece pe pânză, unde îl poți așeza oriunde. Ce îi ia locul pe cronologie?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nimic';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Închide golul – tot ce urmează începe mai devreme.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Culoare';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Ține o culoare plină cât a durat clipul.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Fotografie';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Fă o fotografie care să îi țină locul.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip desprins';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Se detașează clipul…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Clipul nu a putut fi desprins. Cronologia ta rămâne neschimbată.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Fotografia nu a putut fi încărcată.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Ecran verde';
 
   @override

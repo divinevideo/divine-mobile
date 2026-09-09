@@ -10,6 +10,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onEdit,
     this.onDuplicated,
     this.onSplit,
+    this.onDetach,
+    this.isDetaching = false,
     this.onAnimate,
     this.onSpeed,
     this.onTransform,
@@ -39,6 +41,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
+
+  /// Lifts the active clip off the timeline and onto the canvas as a layer.
+  final VoidCallback? onDetach;
+
+  /// Whether the active clip's replacement still is currently rendering. Shows
+  /// the action as a spinner, matching the other render actions.
+  final bool isDetaching;
 
   /// Opens the layer enter/leave animation picker. Layer overlays only.
   final VoidCallback? onAnimate;
@@ -152,6 +161,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
                           .l10n
                           .videoEditorSplitSelectedClipSemanticLabel,
                       onPressed: isSplitting ? null : onSplit,
+                    ),
+                  if (onDetach != null)
+                    _ControlButton(
+                      icon: .stackSimple,
+                      label: context.l10n.videoEditorDetachLabel,
+                      semanticLabel:
+                          context.l10n.videoEditorDetachSemanticLabel,
+                      onPressed: isDetaching ? null : onDetach,
+                      isLoading: isDetaching,
                     ),
                   if (onAnimate != null)
                     _ControlButton(

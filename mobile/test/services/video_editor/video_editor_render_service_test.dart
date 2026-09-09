@@ -10,12 +10,14 @@ import 'dart:ui' show Offset, Size;
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -90,6 +92,62 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('skips a detached clip, which the composition pass renders', () {
+      final detachedMeta = DetachedClipLayerData(
+        clip: clip('detached', const Duration(seconds: 2)),
+        layerId: 'layer-1',
+      ).toMeta();
+      final detached = pie.ExportedLayer(
+        layer: pie.WidgetLayer(
+          widget: const SizedBox.shrink(),
+          exportConfigs: pie.WidgetLayerExportConfigs(
+            id: 'l1',
+            meta: detachedMeta,
+          ),
+        ),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(), detached],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      );
+
+      // Its raster is one frame of a video. Baking it here would freeze the
+      // clip *and* double it with the composition pass that plays it.
+      expect(layers, hasLength(1));
+    });
+
+    test('keeps a partition-rescued detached raster when requested', () {
+      final broken = pie.ExportedLayer(
+        layer: pie.WidgetLayer(
+          widget: const SizedBox.shrink(),
+          exportConfigs: const pie.WidgetLayerExportConfigs(
+            id: 'broken',
+            meta: {
+              detachedClipLayerKindKey: detachedClipLayerKind,
+              detachedClipLayerClipKey: {'id': 'unreadable'},
+            },
+          ),
+        ),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [broken],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        excludeDetachedClips: false,
+      );
+
+      expect(layers, hasLength(1));
     });
 
     test('returns null when bodySize is null', () {

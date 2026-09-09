@@ -8788,6 +8788,54 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Trượt để điều chỉnh';
 
   @override
+  String get videoEditorDetachLabel => 'Tách rời';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Tách clip đã chọn khỏi timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Tách rời clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Clip chuyển sang khung nền, bạn đặt nó ở đâu cũng được. Cái gì sẽ thay chỗ nó trên timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Không gì cả';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Khép khoảng trống – mọi thứ phía sau bắt đầu sớm hơn.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Màu';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Giữ một màu đặc đúng bằng thời lượng clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Ảnh';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Chụp một tấm ảnh để giữ chỗ.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip đã tách rời';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Đang tách clip của bạn…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Không tách được clip đó. Timeline của bạn vẫn nguyên.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Không tải được ảnh đó.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Phông xanh';
 
   @override

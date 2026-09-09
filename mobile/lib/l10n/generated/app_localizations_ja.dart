@@ -8397,6 +8397,50 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'スライドして調整';
 
   @override
+  String get videoEditorDetachLabel => '切り離す';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '選択したクリップをタイムラインから切り離す';
+
+  @override
+  String get videoEditorDetachTitle => 'クリップを切り離す';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'クリップはキャンバスに移り、好きな位置に置けます。タイムラインでは何がその場所を埋めますか？';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'なし';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'すき間を詰める。後ろのものはすべて早く始まります。';
+
+  @override
+  String get videoEditorDetachReplaceColor => '色';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => 'クリップと同じ長さだけ単色を表示します。';
+
+  @override
+  String get videoEditorDetachReplaceImage => '写真';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => 'その場所を埋める静止画を撮ります。';
+
+  @override
+  String get videoEditorDetachedClipLabel => '切り離したクリップ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'クリップを切り離しています…';
+
+  @override
+  String get videoEditorDetachFailed => 'そのクリップを切り離せませんでした。タイムラインは変更されていません。';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'その写真を読み込めませんでした。';
+
+  @override
   String get videoEditorChromaKeyLabel => 'グリーンバック';
 
   @override

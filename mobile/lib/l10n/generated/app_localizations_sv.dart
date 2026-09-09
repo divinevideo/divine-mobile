@@ -8821,6 +8821,55 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Dra för att justera';
 
   @override
+  String get videoEditorDetachLabel => 'Lossa';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Lossa valt klipp från tidslinjen';
+
+  @override
+  String get videoEditorDetachTitle => 'Lossa klipp';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klippet flyttas till ytan, där du kan placera det var du vill. Vad tar dess plats på tidslinjen?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Inget';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Slut luckan – allt efter börjar tidigare.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Färg';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Håller en enfärgad yta lika länge som klippet varade.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Ta ett foto som håller platsen.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Lossat klipp';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Kopplar loss klippet …';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Det gick inte att lossa klippet. Din tidslinje är oförändrad.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Det gick inte att läsa in fotot.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

@@ -8409,6 +8409,50 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => '슬라이드하여 조절';
 
   @override
+  String get videoEditorDetachLabel => '분리';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '선택한 클립을 타임라인에서 분리';
+
+  @override
+  String get videoEditorDetachTitle => '클립 분리';
+
+  @override
+  String get videoEditorDetachDescription =>
+      '클립이 캔버스로 옮겨져서 원하는 자리에 놓을 수 있어요. 타임라인에서는 무엇이 그 자리를 채울까요?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => '없음';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      '빈자리를 메워요. 뒤에 있는 건 모두 더 일찍 시작해요.';
+
+  @override
+  String get videoEditorDetachReplaceColor => '색';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => '클립이 재생되던 만큼 단색을 유지해요.';
+
+  @override
+  String get videoEditorDetachReplaceImage => '사진';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => '그 자리를 채울 사진을 찍어요.';
+
+  @override
+  String get videoEditorDetachedClipLabel => '분리한 클립';
+
+  @override
+  String get videoEditorDetachProgressLabel => '클립을 분리하는 중…';
+
+  @override
+  String get videoEditorDetachFailed => '그 클립을 분리하지 못했어요. 타임라인은 그대로예요.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => '그 사진을 불러오지 못했어요.';
+
+  @override
   String get videoEditorChromaKeyLabel => '크로마키';
 
   @override

@@ -8893,6 +8893,55 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'I-slide para i-adjust';
 
   @override
+  String get videoEditorDetachLabel => 'I-detach';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'I-detach ang napiling clip mula sa timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'I-detach ang clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Lilipat ang clip sa canvas, kung saan mo siya puwedeng ilagay kahit saan. Ano ang papalit sa puwesto niya sa timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Wala';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Isara ang puwang – mas maaga na magsisimula ang lahat pagkatapos niyan.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Kulay';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Nagpapakita ng solidong kulay hangga\'t tumagal ang clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Larawan';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Kumuha ng larawan na hahawak sa puwesto niya.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Na-detach na clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Inaalis ang clip mo…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Hindi ma-detach ang clip na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Hindi ma-load ang larawang iyon.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

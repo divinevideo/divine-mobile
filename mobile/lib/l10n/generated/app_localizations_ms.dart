@@ -8834,6 +8834,55 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Luncur untuk melaras';
 
   @override
+  String get videoEditorDetachLabel => 'Tanggalkan';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Tanggalkan klip dipilih daripada garis masa';
+
+  @override
+  String get videoEditorDetachTitle => 'Tanggalkan klip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip berpindah ke kanvas, dan anda boleh meletakkannya di mana-mana. Apa yang mengambil tempatnya pada garis masa?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Tiada';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Tutup ruang itu – semua selepasnya bermula lebih awal.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Warna';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Menahan satu warna selama klip itu berjalan.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Ambil foto untuk menahan tempatnya.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Klip ditanggalkan';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Meleraikan klip anda…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Klip itu tidak dapat ditanggalkan. Garis masa anda tidak berubah.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Foto itu tidak dapat dimuatkan.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Skrin hijau';
 
   @override

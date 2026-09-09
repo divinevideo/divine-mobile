@@ -8954,6 +8954,55 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Faites glisser pour ajuster';
 
   @override
+  String get videoEditorDetachLabel => 'Détacher';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Détacher le clip sélectionné de la timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Détacher le clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Le clip passe sur le canevas, où tu peux le placer où tu veux. Qu\'est-ce qui prend sa place sur la timeline ?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Rien';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Refermer le trou : tout ce qui suit commence plus tôt.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Couleur';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Tient une couleur unie aussi longtemps que durait le clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Photo';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Prends une photo pour tenir sa place.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip détaché';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Détachement de votre clip…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Impossible de détacher ce clip. Ta timeline est inchangée.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Impossible de charger cette photo.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Fond vert';
 
   @override

@@ -8937,6 +8937,55 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Zum Anpassen schieben';
 
   @override
+  String get videoEditorDetachLabel => 'Ablösen';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Ausgewählten Clip von der Timeline ablösen';
+
+  @override
+  String get videoEditorDetachTitle => 'Clip ablösen';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Der Clip wandert auf die Leinwand, wo du ihn frei platzieren kannst. Was nimmt seinen Platz auf der Timeline ein?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nichts';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Lücke schließen – alles danach startet früher.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Farbe';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Hält eine Farbfläche so lange, wie der Clip lief.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Nimm ein Standbild auf, das seinen Platz hält.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Abgelöster Clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Clip wird losgelöst …';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Der Clip konnte nicht abgelöst werden. Deine Timeline bleibt unverändert.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Das Foto konnte nicht geladen werden.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Greenscreen';
 
   @override

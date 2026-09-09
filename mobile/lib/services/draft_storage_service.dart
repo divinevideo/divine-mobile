@@ -10,6 +10,7 @@ import 'package:openvine/extensions/draft_local_audio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/local_audio_cleanup_service.dart';
@@ -195,35 +196,36 @@ class DraftStorageService {
     // upsert below is keyed on `id` alone and destroys whatever row is there,
     // so an owner-scoped read here would skip the cleanup for the very files
     // it just orphaned.
+    final documentsPath = await getDocumentsPath();
     final existingDraft = await _loadDraftAcrossAccounts(draft.id);
+    final newOwnedFilePaths = _ownedFilePaths(draft, documentsPath);
+    final detachedOwnedFilePaths = _detachedOwnedFilePaths(
+      draft,
+      documentsPath,
+    );
     var orphanedFiles = const <String?>[];
     if (existingDraft != null) {
       // Both halves diff [DivineVideoClip.ownedFilePaths]. The local list this
       // replaced had fallen behind the model — no reverse caches, no ghost
       // frame — so a render a transform dropped was invisible to this sweep.
-      final newFilePaths = <String?>{
-        for (final clip in draft.clips) ...clip.ownedFilePaths,
-        if (draft.finalRenderedClip != null)
-          ...draft.finalRenderedClip!.ownedFilePaths,
-        draft.customThumbnailPath,
-      };
-
       orphanedFiles = <String?>[
-        for (final clip in existingDraft.clips) ...[
-          ...clip.ownedFilePaths.where((path) => !newFilePaths.contains(path)),
-        ],
-        if (existingDraft.finalRenderedClip != null) ...[
-          ...existingDraft.finalRenderedClip!.ownedFilePaths.where(
-            (path) => !newFilePaths.contains(path),
-          ),
-        ],
-        if (!newFilePaths.contains(existingDraft.customThumbnailPath))
-          existingDraft.customThumbnailPath,
+        ..._ownedFilePaths(
+          existingDraft,
+          documentsPath,
+        ).where((path) => !newOwnedFilePaths.contains(path)),
       ];
     }
 
     // Upsert draft and clips atomically in a single transaction
     final draftJson = draft.toJson();
+    // Indexed draft and clip columns already own ordinary timeline media.
+    // Only layer-owned assets need the JSON manifest; including indexed clip
+    // media here would keep it alive after its clip rows are deliberately
+    // removed (for example by a library hard-delete).
+    draftJson[draftOwnedFileBasenamesKey] = detachedOwnedFilePaths
+        .map(p.basename)
+        .toSet()
+        .toList();
     // Remove clips from JSON blob – they live in their own table
     draftJson.remove('clips');
 
@@ -286,6 +288,30 @@ class DraftStorageService {
       );
     }
   }
+
+  Set<String> _ownedFilePaths(DivineVideoDraft draft, String documentsPath) => {
+    for (final clip in draft.clips)
+      ...clip.ownedFilePaths.whereType<String>().where(
+        (path) => path.isNotEmpty,
+      ),
+    if (draft.finalRenderedClip != null)
+      ...draft.finalRenderedClip!.ownedFilePaths.whereType<String>().where(
+        (path) => path.isNotEmpty,
+      ),
+    if (draft.customThumbnailPath case final path? when path.isNotEmpty) path,
+    ...DetachedClipLayerData.ownedFilePathsInHistory(
+      draft.editorStateHistory,
+      documentsPath,
+    ),
+  };
+
+  Set<String> _detachedOwnedFilePaths(
+    DivineVideoDraft draft,
+    String documentsPath,
+  ) => DetachedClipLayerData.ownedFilePathsInHistory(
+    draft.editorStateHistory,
+    documentsPath,
+  );
 
   /// Get total count of drafts without loading their data.
   Future<int> getDraftCount() => _draftsDao.getCount(ownerPubkey: ownerPubkey);
@@ -607,6 +633,11 @@ class DraftStorageService {
     // service whose ownerPubkey no longer matches the row into a silent no-op.
     final draft = await _loadDraftAcrossAccounts(id);
     if (draft == null) return;
+    final documentsPath = await getDocumentsPath();
+    final detachedClipPaths = DetachedClipLayerData.ownedFilePathsInHistory(
+      draft.editorStateHistory,
+      documentsPath,
+    );
 
     Log.debug(
       '🗑️ Deleting draft: $id',
@@ -647,6 +678,12 @@ class DraftStorageService {
     // Delete the user-selected cover, which lives outside the clips.
     await FileCleanupService.deleteFileIfUnreferenced(
       draft.customThumbnailPath,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+    );
+
+    await FileCleanupService.deleteFilesIfUnreferenced(
+      detachedClipPaths.toList(),
       draftsDao: _draftsDao,
       clipsDao: _clipsDao,
     );

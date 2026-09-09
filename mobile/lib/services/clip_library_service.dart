@@ -178,6 +178,13 @@ class ClipLibraryService {
       for (final row in rows) {
         final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
         if (clip == null) continue;
+        // A placeholder is the colour or still holding the slot a detached
+        // clip left behind. It is part of the composition, so the autosave
+        // draft has to carry it — but it is a backdrop the editor generated,
+        // not footage the user shot, and it has no meaning outside the
+        // composition it stands in. Listing it would put a flat colour in the
+        // library next to real recordings.
+        if (clip.isPlaceholder) continue;
         final existing = byClipId[clip.id];
         if (existing == null ||
             (existing.draftId != null && row.draftId == null)) {
@@ -501,6 +508,10 @@ class ClipLibraryService {
           label: 'trashed clip',
         );
         if (clip == null) continue;
+        // Kept out of the trash for the same reason it is kept out of the
+        // library: a backdrop the editor generated is not something the user
+        // can restore into a composition on its own.
+        if (clip.isPlaceholder) continue;
         byClipId.putIfAbsent(
           clip.id,
           () => clip.copyWith(deletedAt: row.deletedAt),

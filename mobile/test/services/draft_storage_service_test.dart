@@ -13,6 +13,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -649,15 +650,15 @@ void main() {
         ).updatePublishStatus(draftId: 'draft_a', status: PublishStatus.draft);
 
         expect(
-          await serviceFor(pubkeyA).getDraftsByPublishStatuses({
-            PublishStatus.draft,
-          }),
+          await serviceFor(
+            pubkeyA,
+          ).getDraftsByPublishStatuses({PublishStatus.draft}),
           hasLength(1),
         );
         expect(
-          await serviceFor(pubkeyB).getDraftsByPublishStatuses({
-            PublishStatus.draft,
-          }),
+          await serviceFor(
+            pubkeyB,
+          ).getDraftsByPublishStatuses({PublishStatus.draft}),
           isEmpty,
         );
       });
@@ -1899,6 +1900,66 @@ void main() {
           newVideo.existsSync(),
           isTrue,
           reason: 'the currently-referenced clip file must be kept',
+        );
+      });
+
+      test('keeps detached clip media across a draft save', () async {
+        final detachedVideo = writeVideo('detached.mp4');
+        final detachedThumbnail = writeVideo('detached.jpg');
+        final timelineVideo = writeVideo('timeline.mp4');
+        final detachedClip = DivineVideoClip(
+          id: 'detached',
+          video: EditorVideo.file(detachedVideo.path),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 1,
+          thumbnailPath: detachedThumbnail.path,
+        );
+        final timelineClip = DivineVideoClip(
+          id: 'timeline',
+          video: EditorVideo.file(timelineVideo.path),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 1,
+        );
+        final original = DivineVideoDraft.create(
+          id: 'draft_defer',
+          clips: [detachedClip, timelineClip],
+          title: 'Detach draft',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+        );
+        await service.saveDraft(original);
+
+        final meta = DetachedClipLayerData(
+          clip: detachedClip,
+          layerId: 'detached-layer',
+        ).toMeta();
+        await service.saveDraft(
+          original.copyWith(
+            clips: [timelineClip],
+            editorStateHistory: {
+              'history': [
+                {
+                  'layers': [meta],
+                },
+              ],
+            },
+          ),
+        );
+
+        expect(detachedVideo.existsSync(), isTrue);
+        expect(detachedThumbnail.existsSync(), isTrue);
+        expect(
+          await database.draftsDao.isDraftFileReferenced('detached.mp4'),
+          isTrue,
+        );
+        expect(
+          await database.draftsDao.isDraftFileReferenced('detached.jpg'),
+          isTrue,
         );
       });
 

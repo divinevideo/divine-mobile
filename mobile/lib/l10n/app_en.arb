@@ -5741,6 +5741,29 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "Slide to adjust",
+  "videoEditorDetachLabel": "Detach",
+  "@videoEditorDetachLabel": {
+    "description": "Clip action-bar button that lifts the selected clip off the timeline and onto the canvas, where it can be moved and resized freely."
+  },
+  "videoEditorDetachSemanticLabel": "Detach the selected clip from the timeline",
+  "videoEditorDetachTitle": "Detach clip",
+  "videoEditorDetachDescription": "The clip moves onto the canvas, where you can place it anywhere. What takes its place on the timeline?",
+  "videoEditorDetachReplaceRemove": "Nothing",
+  "videoEditorDetachReplaceRemoveDetail": "Close the gap — everything after it starts earlier.",
+  "videoEditorDetachReplaceColor": "Color",
+  "videoEditorDetachReplaceColorDetail": "Hold a solid color for as long as the clip ran.",
+  "videoEditorDetachReplaceImage": "Photo",
+  "videoEditorDetachReplaceImageDetail": "Shoot a still to hold in its place.",
+  "videoEditorDetachedClipLabel": "Detached clip",
+  "@videoEditorDetachedClipLabel": {
+    "description": "Name shown on the timeline's layer strip for a clip that was detached onto the canvas."
+  },
+  "videoEditorDetachProgressLabel": "Detaching your clip…",
+  "@videoEditorDetachProgressLabel": {
+    "description": "Shown under the progress spinner while the still that replaces a detached clip is being rendered."
+  },
+  "videoEditorDetachFailed": "Couldn't detach that clip. Your timeline is unchanged.",
+  "videoEditorDetachImagePickFailed": "Couldn't load that photo.",
   "videoEditorChromaKeyLabel": "Green screen",
   "videoEditorChromaKeyTitle": "Green screen",
   "videoEditorChromaKeySemanticLabel": "Set up the green screen for this clip",

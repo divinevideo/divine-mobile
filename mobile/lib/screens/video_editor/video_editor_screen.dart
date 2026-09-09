@@ -146,6 +146,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// Fine-grained editor play time (timeline space), updated by the canvas on
   /// every playhead tick so canvas overlays track playback smoothly.
   final _playTimeNotifier = ValueNotifier<Duration>(Duration.zero);
+  final _playheadAdvancingNotifier = ValueNotifier<bool>(false);
 
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
@@ -318,6 +319,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _bodySizeNotifier.dispose();
     _zoomMatrixNotifier.dispose();
     _playTimeNotifier.dispose();
+    _playheadAdvancingNotifier.dispose();
     super.dispose();
   }
 
@@ -1041,6 +1043,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               bodySizeNotifier: _bodySizeNotifier,
               zoomMatrixNotifier: _zoomMatrixNotifier,
               playTimeNotifier: _playTimeNotifier,
+              playheadAdvancingNotifier: _playheadAdvancingNotifier,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _openCamera(
                 clipEditorBloc: context.read<ClipEditorBloc>(),

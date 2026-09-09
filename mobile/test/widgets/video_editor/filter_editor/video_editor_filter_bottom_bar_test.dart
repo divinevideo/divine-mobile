@@ -77,6 +77,7 @@ void main() {
                 bodySizeNotifier: bodySizeNotifier,
                 zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                 playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
                 fromLibrary: false,
                 child: const Scaffold(body: VideoEditorFilterBottomBar()),
               ),
