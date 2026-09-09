@@ -1,7 +1,8 @@
 /// A package containing data models used across the application.
 library;
 
-export 'package:logging_types/logging_types.dart';
+export 'package:logging_types/logging_types.dart'
+    show LogCategory, LogEntry, LogLevel;
 
 export 'src/actor_info.dart';
 export 'src/aspect_ratio.dart';
