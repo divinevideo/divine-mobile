@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rejects cycles formed by path dependencies between workspace packages.
+# Rejects dependency cycles between workspace packages.
 
 set -euo pipefail
 

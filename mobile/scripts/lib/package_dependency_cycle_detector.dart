@@ -1,4 +1,4 @@
-// ABOUTME: Detects cycles formed by path dependencies among workspace packages.
+// ABOUTME: Detects dependency cycles among Dart workspace packages.
 // ABOUTME: Powers check_package_dependency_cycles.sh and its fixture tests.
 
 import 'dart:io';
@@ -7,10 +7,10 @@ import 'package:yaml/yaml.dart';
 
 /// Returns the first dependency cycle under [packagesDirectory], if any.
 ///
-/// Only path dependencies participate because they are the edges between local
-/// workspace packages. The returned path repeats its first package at the end.
+/// Dependencies participate when their package name belongs to the workspace,
+/// regardless of whether the pubspec uses path, shorthand, or version syntax.
+/// The returned path repeats its first package at the end.
 List<String>? findPackageDependencyCycle(Directory packagesDirectory) {
-  final packageNamesByPath = <String, String>{};
   final pubspecsByName = <String, File>{};
 
   final pubspecs =
@@ -25,8 +25,6 @@ List<String>? findPackageDependencyCycle(Directory packagesDirectory) {
   for (final pubspec in pubspecs) {
     final document = loadYaml(pubspec.readAsStringSync()) as YamlMap;
     final name = document['name'] as String;
-    final packageDirectory = pubspec.parent.resolveSymbolicLinksSync();
-    packageNamesByPath[packageDirectory] = name;
     pubspecsByName[name] = pubspec;
   }
 
@@ -38,17 +36,11 @@ List<String>? findPackageDependencyCycle(Directory packagesDirectory) {
       final section = document[sectionName];
       if (section is! YamlMap) continue;
       for (final dependency in section.entries) {
-        final specification = dependency.value;
-        if (specification is! YamlMap || specification['path'] is! String) {
-          continue;
+        final dependencyName = dependency.key;
+        if (dependencyName is String &&
+            pubspecsByName.containsKey(dependencyName)) {
+          dependencies.add(dependencyName);
         }
-        final targetDirectory = Directory(
-          '${entry.value.parent.path}/${specification['path']}',
-        );
-        if (!targetDirectory.existsSync()) continue;
-        final targetName =
-            packageNamesByPath[targetDirectory.resolveSymbolicLinksSync()];
-        if (targetName != null) dependencies.add(targetName);
       }
     }
     graph[entry.key] = dependencies.toList()..sort();
