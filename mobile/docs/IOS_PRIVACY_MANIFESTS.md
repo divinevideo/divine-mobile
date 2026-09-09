@@ -144,6 +144,9 @@ Archive mode derives its expected resource-bundle names from those same
 podspec declarations, so adding a first-party plugin manifest automatically
 adds a corresponding product check. Codemagic runs archive mode against the
 `.app` inside the Shorebird-produced release archive.
+Because Shorebird records the release before this check runs, a failure requires
+deleting that failed Shorebird release or advancing the store build number before
+retrying; the release preflight deliberately rejects reuse of the recorded version.
 
 Behaviour is pinned by
 `mobile/test/tools/privacy_manifest_coverage_detector_test.dart`.

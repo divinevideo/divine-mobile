@@ -434,20 +434,18 @@ def podspec_manifest_bundle(spec: str, selected_subspec: str | None) -> str | No
         variable = r"\w+"
         scope = uncommented
 
-    bundles = re.search(
+    for bundles in re.finditer(
         rf"\b{variable}\.resource_bundles\s*=\s*\{{(?P<body>[^}}]*)\}}",
         scope,
         re.S,
-    )
-    if not bundles:
-        return None
-    for bundle_name, resources in re.findall(
-        r"['\"]([^'\"]+)['\"]\s*=>\s*(\[[^]]*\]|['\"][^'\"]*['\"])",
-        bundles.group("body"),
-        re.S,
     ):
-        if "PrivacyInfo.xcprivacy" in resources:
-            return bundle_name
+        for bundle_name, resources in re.findall(
+            r"['\"]([^'\"]+)['\"]\s*=>\s*(\[[^]]*\]|['\"][^'\"]*['\"])",
+            bundles.group("body"),
+            re.S,
+        ):
+            if "PrivacyInfo.xcprivacy" in resources:
+                return bundle_name
     return None
 
 
@@ -579,15 +577,14 @@ def check_archive(app: str, mobile: str) -> int:
     print(f"ℹ️  {len(found)} privacy manifest(s) in {os.path.basename(app)}")
 
     failures = []
-    for label, rel in expected_archive_manifests(mobile).items():
+    expected = expected_archive_manifests(mobile)
+    for label, rel in expected.items():
         if rel in found:
             print(f"  ✅ {label}: {rel}")
         else:
             failures.append(f"{label}: expected {rel} in the built app, not found")
 
-    for rel in sorted(found):
-        if not rel.startswith(("divine_", "LibProofMode_")) and rel != "PrivacyInfo.xcprivacy":
-            continue
+    for rel in sorted(found & set(expected.values())):
         try:
             with open(os.path.join(app, rel), "rb") as handle:
                 plistlib.load(handle)

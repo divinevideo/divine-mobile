@@ -469,6 +469,24 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
 
         expect(result.exitCode, equals(0), reason: result.output);
       });
+
+      test('accepts a privacy bundle after another resource assignment', () {
+        final root = makeTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          podspec:
+              "s.resource_bundles = {'sample_assets' => ['Assets/*']}\n"
+              "s.resource_bundles = {'sample_privacy' => "
+              "['Resources/PrivacyInfo.xcprivacy']}",
+        );
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+      });
     });
 
     test('archive mode requires every discovered privacy bundle', () {
@@ -523,6 +541,30 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
         result.output,
         contains('selected_privacy.bundle/PrivacyInfo.xcprivacy'),
       );
+    });
+
+    test('archive mode validates a derived bundle with any name', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        podspec:
+            "s.resource_bundles = {'custom_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      final bundled = File(
+        '${app.path}/custom_privacy.bundle/PrivacyInfo.xcprivacy',
+      );
+      bundled.parent.createSync(recursive: true);
+      bundled.writeAsStringSync('not a plist');
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(result.output, contains('bundled manifest is unreadable'));
     });
 
     // Every other archive-mode test asserts a failure, so a change that made
