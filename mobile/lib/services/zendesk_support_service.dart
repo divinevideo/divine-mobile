@@ -957,6 +957,7 @@ class ZendeskSupportService {
     String? stepsToReproduce,
     String? expectedBehavior,
     String? currentScreen,
+    List<String>? recentScreens,
     String? userPubkey,
     Map<String, int>? errorCounts,
     String? logsSummary,
@@ -1022,6 +1023,14 @@ class ZendeskSupportService {
       buffer.writeln();
       buffer.writeln(
         '**Current Screen:** ${sanitizeDiagnosticText(currentScreen)}',
+      );
+    }
+    if (recentScreens != null && recentScreens.isNotEmpty) {
+      final sanitizedScreens = recentScreens
+          .take(5)
+          .map(sanitizeDiagnosticText);
+      buffer.writeln(
+        '**Recent Screens:** ${sanitizedScreens.join(' → ')}',
       );
     }
     final effectivePubkey = userPubkey ?? _userNpub;

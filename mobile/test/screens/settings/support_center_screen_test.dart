@@ -12,6 +12,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/router/providers/providers.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -29,6 +30,11 @@ class _MockBugReportService extends Mock implements BugReportService {}
 
 class _MockAccountDeletionService extends Mock
     implements AccountDeletionService {}
+
+class _TestSupportRouteTrail extends SupportRouteTrail {
+  @override
+  List<RouteType> build() => const [RouteType.home, RouteType.settings];
+}
 
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
@@ -70,6 +76,7 @@ void main() {
             accountDeletionServiceProvider.overrideWithValue(
               accountDeletionService,
             ),
+            supportRouteTrailProvider.overrideWith(_TestSupportRouteTrail.new),
             // Null repository: the profile lookup and the burnable-handle
             // lookup behind the confirmation gate both resolve to null
             // without touching the network.
@@ -106,6 +113,7 @@ void main() {
         when(
           () => bugReportService.exportLogsToFile(
             currentScreen: any(named: 'currentScreen'),
+            recentScreens: any(named: 'recentScreens'),
             userPubkey: any(named: 'userPubkey'),
             sharePositionOrigin: any(named: 'sharePositionOrigin'),
           ),
@@ -123,14 +131,15 @@ void main() {
         expect(find.text(en.supportSaveLogsSubtitle), findsOneWidget);
       });
 
-      testWidgets('exports with the signed-in pubkey and this screen', (
+      testWidgets('exports with the signed-in pubkey and retained routes', (
         tester,
       ) async {
         await tapSaveLogs(tester, const LogExportResult.shared());
 
         verify(
           () => bugReportService.exportLogsToFile(
-            currentScreen: 'SupportCenterScreen',
+            currentScreen: 'settings',
+            recentScreens: const ['home', 'settings'],
             userPubkey: _pubkeyHex,
             sharePositionOrigin: any(named: 'sharePositionOrigin'),
           ),
@@ -144,6 +153,7 @@ void main() {
         when(
           () => bugReportService.exportLogsToFile(
             currentScreen: any(named: 'currentScreen'),
+            recentScreens: any(named: 'recentScreens'),
             userPubkey: any(named: 'userPubkey'),
             sharePositionOrigin: any(named: 'sharePositionOrigin'),
           ),
@@ -163,6 +173,7 @@ void main() {
         verify(
           () => bugReportService.exportLogsToFile(
             currentScreen: any(named: 'currentScreen'),
+            recentScreens: any(named: 'recentScreens'),
             userPubkey: any(named: 'userPubkey'),
             sharePositionOrigin: any(named: 'sharePositionOrigin'),
           ),

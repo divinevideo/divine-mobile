@@ -20,6 +20,7 @@ typedef SubmitBugReportAction = Future<bool> Function({
   String? stepsToReproduce,
   String? expectedBehavior,
   String? currentScreen,
+  List<String>? recentScreens,
   String? userPubkey,
   Map<String, int>? errorCounts,
   String? logsSummary,
@@ -60,6 +61,7 @@ class BugReportCubit extends Cubit<BugReportState> {
     required String expectedBehavior,
     required List<XFile> attachments,
     String? currentScreen,
+    List<String> recentScreens = const [],
     String? userPubkey,
   }) async {
     final trimmedSubject = subject.trim();
@@ -84,6 +86,7 @@ class BugReportCubit extends Cubit<BugReportState> {
         appVersion: reportData.appVersion,
         deviceInfo: reportData.deviceInfo,
         currentScreen: currentScreen,
+        recentScreens: recentScreens,
         userPubkey: userPubkey,
         errorCounts: reportData.errorCounts,
         logsSummary: await _buildLogsSummary(reportData.recentLogs),

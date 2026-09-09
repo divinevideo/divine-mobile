@@ -14,6 +14,7 @@ import 'package:openvine/providers/invite_availability_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/invite_availability_redirects.dart';
+import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -123,11 +124,17 @@ List<RouteBase> settingsRoutes(Ref ref) {
     GoRoute(
       path: BugReportScreen.path,
       name: BugReportScreen.routeName,
-      builder: (_, _) => BugReportScreen(
-        bugReportService: ref.read(bugReportServiceProvider),
-        currentScreen: 'SupportCenterScreen',
-        userPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
-      ),
+      builder: (_, _) {
+        final routeSnapshot = ref
+            .read(supportRouteTrailProvider.notifier)
+            .snapshot;
+        return BugReportScreen(
+          bugReportService: ref.read(bugReportServiceProvider),
+          currentScreen: routeSnapshot.currentScreen,
+          recentScreens: routeSnapshot.recentScreens,
+          userPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
+        );
+      },
     ),
     GoRoute(
       path: FeatureRequestScreen.path,

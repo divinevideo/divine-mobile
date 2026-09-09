@@ -13,6 +13,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -339,11 +340,20 @@ class _ExportLogsTile extends ConsumerWidget {
     final bugReportService = ref.watch(bugReportServiceProvider);
     final authService = ref.watch(authServiceProvider);
     final authState = ref.watch(currentAuthStateProvider);
+    ref.watch(supportRouteTrailProvider);
+    final routeSnapshot = ref.read(supportRouteTrailProvider.notifier).snapshot;
     return BlocProvider<ExportLogsCubit>(
-      key: ValueKey((bugReportService, authService, authState)),
+      key: ValueKey((
+        bugReportService,
+        authService,
+        authState,
+        routeSnapshot.currentScreen,
+        routeSnapshot.recentScreens.join('|'),
+      )),
       create: (_) => ExportLogsCubit(
         bugReportService: bugReportService,
-        currentScreen: 'SupportCenterScreen',
+        currentScreen: routeSnapshot.currentScreen,
+        recentScreens: routeSnapshot.recentScreens,
         userPubkey: authService.currentPublicKeyHex,
       ),
       child: const _ExportLogsTileView(),
