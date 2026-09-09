@@ -1,5 +1,6 @@
 // ABOUTME: Regression tests for the curated-list repository provider bridge.
-// ABOUTME: Keeps Home feed list selection scoped to followed/subscribed lists.
+// ABOUTME: Keeps Home feed list selection scoped to subscribed lists and feeds
+// ABOUTME: the list search the viewer's own lists.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -23,6 +24,17 @@ void main() {
         subscribedListsForHomeBridge(service),
         [subscribedList],
       );
+    });
+
+    test("hands the list search the viewer's own lists", () {
+      final service = _MockCuratedListService();
+      final ownList = _curatedList(id: 'own-list');
+      final subscribedList = _curatedList(id: 'subscribed-list');
+
+      when(() => service.myLists).thenReturn([ownList]);
+      when(() => service.subscribedLists).thenReturn([subscribedList]);
+
+      expect(ownListsForSearchBridge(service), [ownList]);
     });
   });
 }
