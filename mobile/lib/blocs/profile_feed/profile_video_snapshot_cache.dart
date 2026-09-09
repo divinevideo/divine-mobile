@@ -5,7 +5,7 @@
 import 'dart:async';
 
 import 'package:cache_sync/cache_sync.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:unified_logger/unified_logger.dart';
 

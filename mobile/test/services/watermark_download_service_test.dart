@@ -7,7 +7,7 @@ import 'dart:ui' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';

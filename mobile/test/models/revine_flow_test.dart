@@ -2,7 +2,7 @@
 // ABOUTME: Exercises model logic in memory; no network or real services involved
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 void main() {

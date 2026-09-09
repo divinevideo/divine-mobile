@@ -12,7 +12,7 @@ import 'package:creator_sync/creator_sync.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
-    hide LogCategory, NIP71VideoKinds, PendingUpload, UploadStatus;
+    hide NIP71VideoKinds, PendingUpload, UploadStatus;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';

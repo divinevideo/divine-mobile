@@ -19,9 +19,20 @@ void main() {
   });
 
   group('LogCategory.fromString', () {
-    for (final category in LogCategory.values) {
-      test('parses ${category.name} case-insensitively', () {
-        expect(LogCategory.fromString(category.name.toLowerCase()), category);
+    const serializedCategories = {
+      'RELAY': LogCategory.relay,
+      'VIDEO': LogCategory.video,
+      'UI': LogCategory.ui,
+      'AUTH': LogCategory.auth,
+      'STORAGE': LogCategory.storage,
+      'API': LogCategory.api,
+      'SYSTEM': LogCategory.system,
+    };
+
+    for (final entry in serializedCategories.entries) {
+      test('parses ${entry.key} case-insensitively', () {
+        expect(LogCategory.fromString(entry.key.toLowerCase()), entry.value);
+        expect(entry.value.name, entry.key);
       });
     }
 

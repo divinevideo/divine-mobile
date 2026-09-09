@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart'
     show HttpExceptionWithStatus;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:models/models.dart' hide AspectRatio, LogCategory;
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/extensions/video_event_content_type_extension.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';

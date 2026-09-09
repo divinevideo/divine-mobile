@@ -2,7 +2,7 @@
 // ABOUTME: Minimal reproduction case showing the deduplication issue
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:unified_logger/unified_logger.dart';
 

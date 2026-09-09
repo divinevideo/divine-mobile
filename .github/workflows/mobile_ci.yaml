@@ -296,6 +296,8 @@ jobs:
           # app's relaxed analyzer config; workflow-less packages get no CI.
           bash scripts/check_package_ci_floor.sh
       - name: 🔄 Verify workspace package dependencies remain acyclic
+        # Issue #8934: runtime package dependencies must remain a directed
+        # acyclic graph; dev-only test-fixture edges are deliberately excluded.
         run: bash scripts/check_package_dependency_cycles.sh
       - name: 🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)
         run: |

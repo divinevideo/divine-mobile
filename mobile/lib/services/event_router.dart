@@ -6,7 +6,7 @@ import 'dart:collection';
 
 import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';

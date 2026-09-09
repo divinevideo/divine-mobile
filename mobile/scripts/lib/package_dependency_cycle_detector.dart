@@ -52,9 +52,8 @@ List<String>? findPackageDependencyCycle(Directory packagesDirectory) {
   for (final entry in pubspecsByName.entries) {
     final document = _readPubspec(entry.value);
     final dependencies = <String>{};
-    for (final sectionName in const ['dependencies', 'dev_dependencies']) {
-      final section = document[sectionName];
-      if (section is! YamlMap) continue;
+    final section = document['dependencies'];
+    if (section is YamlMap) {
       for (final dependency in section.entries) {
         final dependencyName = dependency.key;
         if (dependencyName is String &&

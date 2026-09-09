@@ -17,6 +17,7 @@ void main() {
     void writePackage(
       String name, [
       Map<String, String?> dependencies = const {},
+      Map<String, String?> devDependencies = const {},
     ]) {
       final dependencyBlock = dependencies.isEmpty
           ? ''
@@ -24,9 +25,15 @@ void main() {
 dependencies:
 ${dependencies.entries.map((entry) => entry.value == null ? '  ${entry.key}:' : '  ${entry.key}: ${entry.value}').join('\n')}
 ''';
+      final devDependencyBlock = devDependencies.isEmpty
+          ? ''
+          : '''
+dev_dependencies:
+${devDependencies.entries.map((entry) => entry.value == null ? '  ${entry.key}:' : '  ${entry.key}: ${entry.value}').join('\n')}
+''';
       File('${packagesDirectory.path}/$name/pubspec.yaml')
         ..createSync(recursive: true)
-        ..writeAsStringSync('name: $name\n$dependencyBlock');
+        ..writeAsStringSync('name: $name\n$dependencyBlock$devDependencyBlock');
     }
 
     void writeRawPubspec(String name, String contents) {
@@ -90,6 +97,65 @@ ${dependencies.entries.map((entry) => entry.value == null ? '  ${entry.key}:' : 
         'gamma',
         'alpha',
       ]);
+    });
+
+    test('ignores cycles that exist only through dev dependencies', () {
+      writePackage('core', {'fixtures': null});
+      writePackage('fixtures', const {}, {'core': null});
+
+      expect(findPackageDependencyCycle(packagesDirectory), isNull);
+    });
+
+    group('shell wrapper', () {
+      late String scriptPath;
+
+      ProcessResult runGuard() =>
+          Process.runSync('bash', [scriptPath, packagesDirectory.path]);
+
+      setUp(() {
+        scriptPath =
+            '${Directory.current.path}/scripts/check_package_dependency_cycles.sh';
+      });
+
+      test('returns zero and an operator-facing success message', () {
+        writePackage('logging_types');
+        writePackage('models', {'logging_types': null});
+
+        final result = runGuard();
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(
+          result.stdout,
+          contains(
+            'OK [package_dependency_cycles]: workspace package graph is acyclic.',
+          ),
+        );
+      });
+
+      test('returns one and the cycle path', () {
+        writePackage('models', {'unified_logger': null});
+        writePackage('unified_logger', {'models': null});
+
+        final result = runGuard();
+
+        expect(result.exitCode, 1);
+        expect(
+          result.stderr,
+          contains(
+            'FAIL [package_dependency_cycles]: models -> unified_logger -> models',
+          ),
+        );
+      });
+
+      test('returns two and the offending pubspec path', () {
+        writeRawPubspec('broken', '');
+
+        final result = runGuard();
+
+        expect(result.exitCode, 2);
+        expect(result.stderr, contains('FAIL [package_dependency_cycles]'));
+        expect(result.stderr, contains('broken/pubspec.yaml'));
+      });
     });
 
     group('unparseable pubspecs', () {
