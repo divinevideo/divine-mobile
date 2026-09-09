@@ -36,6 +36,7 @@ void main() {
               required Duration duration,
               required Size outputSize,
               required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
               List<Duration>? priorityTimestamps,
             }) {
               requestedPaths.add(videoPath);
@@ -76,6 +77,7 @@ void main() {
               required Duration duration,
               required Size outputSize,
               required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
               List<Duration>? priorityTimestamps,
             }) => fail('extraction must not start for an HLS manifest'),
       );
@@ -103,6 +105,7 @@ void main() {
               required Duration duration,
               required Size outputSize,
               required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
               List<Duration>? priorityTimestamps,
             }) => fail('extraction must not start without a file'),
       );
@@ -131,6 +134,7 @@ void main() {
               required Duration duration,
               required Size outputSize,
               required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
               List<Duration>? priorityTimestamps,
             }) => fail('extraction must not start without a file'),
       );
@@ -158,6 +162,7 @@ void main() {
               required Duration duration,
               required Size outputSize,
               required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
               List<Duration>? priorityTimestamps,
             }) async* {
               yield [

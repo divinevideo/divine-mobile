@@ -346,6 +346,7 @@ void main() {
                   required Duration duration,
                   required Size outputSize,
                   required int thumbsPerSecond,
+                  Duration startOffset = Duration.zero,
                   List<Duration>? priorityTimestamps,
                 }) => const Stream.empty(),
           );
@@ -449,6 +450,7 @@ void main() {
                   required Duration duration,
                   required Size outputSize,
                   required int thumbsPerSecond,
+                  Duration startOffset = Duration.zero,
                   List<Duration>? priorityTimestamps,
                 }) => const Stream.empty(),
           );
@@ -1025,6 +1027,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) => const Stream<List<StripThumbnail>>.empty(),
         );
