@@ -5043,6 +5043,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "Bawah",
+  "videoEditorTransitionDirectionUpLeft": "Atas kiri",
+  "videoEditorTransitionDirectionUpRight": "Atas kanan",
+  "videoEditorTransitionDirectionDownLeft": "Bawah kiri",
+  "videoEditorTransitionDirectionDownRight": "Bawah kanan",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

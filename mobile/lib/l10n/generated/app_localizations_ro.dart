@@ -9376,6 +9376,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Jos';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Sus stânga';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Sus dreapta';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Jos stânga';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Jos dreapta';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Curbă de animație $number';
   }

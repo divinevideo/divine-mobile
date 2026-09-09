@@ -9258,6 +9258,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Abajo';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Arriba a la izquierda';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Arriba a la derecha';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Abajo a la izquierda';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Abajo a la derecha';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Curva de animación $number';
   }

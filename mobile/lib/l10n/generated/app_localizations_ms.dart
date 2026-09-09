@@ -9178,6 +9178,18 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Bawah';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Atas kiri';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Atas kanan';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Bawah kiri';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Bawah kanan';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Lengkung reda $number';
   }

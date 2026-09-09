@@ -5043,6 +5043,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "Xuống",
+  "videoEditorTransitionDirectionUpLeft": "Lên trái",
+  "videoEditorTransitionDirectionUpRight": "Lên phải",
+  "videoEditorTransitionDirectionDownLeft": "Xuống trái",
+  "videoEditorTransitionDirectionDownRight": "Xuống phải",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

@@ -9285,6 +9285,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Unten';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Oben links';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Oben rechts';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Unten links';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Unten rechts';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Animationskurve $number';
   }

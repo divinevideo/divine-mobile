@@ -9213,6 +9213,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Omlaag';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Linksboven';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Rechtsboven';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Linksonder';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Rechtsonder';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Animatiecurve $number';
   }

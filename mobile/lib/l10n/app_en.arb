@@ -6034,6 +6034,22 @@
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },
+  "videoEditorTransitionDirectionUpLeft": "Up left",
+  "@videoEditorTransitionDirectionUpLeft": {
+    "description": "Accessibility label for the up-and-left diagonal direction option of a layer slide animation."
+  },
+  "videoEditorTransitionDirectionUpRight": "Up right",
+  "@videoEditorTransitionDirectionUpRight": {
+    "description": "Accessibility label for the up-and-right diagonal direction option of a layer slide animation."
+  },
+  "videoEditorTransitionDirectionDownLeft": "Down left",
+  "@videoEditorTransitionDirectionDownLeft": {
+    "description": "Accessibility label for the down-and-left diagonal direction option of a layer slide animation."
+  },
+  "videoEditorTransitionDirectionDownRight": "Down right",
+  "@videoEditorTransitionDirectionDownRight": {
+    "description": "Accessibility label for the down-and-right diagonal direction option of a layer slide animation."
+  },
   "videoEditorTransitionCurveOptionSemanticLabel": "Easing curve {number}",
   "@videoEditorTransitionCurveOptionSemanticLabel": {
     "description": "Accessibility label for an easing-curve option in the transition picker, identified by its position. The curve shape is shown visually as a glyph; screen readers announce the option number instead.",

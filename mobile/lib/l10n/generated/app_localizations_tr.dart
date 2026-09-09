@@ -9083,6 +9083,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Aşağı';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Sol üst';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Sağ üst';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Sol alt';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Sağ alt';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Animasyon eğrisi $number';
   }

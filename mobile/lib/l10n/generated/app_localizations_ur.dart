@@ -9165,6 +9165,18 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'نیچے';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'اوپر بائیں';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'اوپر دائیں';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'نیچے بائیں';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'نیچے دائیں';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'ایزنگ منحنی $number';
   }

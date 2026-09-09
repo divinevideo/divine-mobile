@@ -1,12 +1,14 @@
 // ABOUTME: Bottom-sheet picker for a layer's enter/leave animation (fade,
 // ABOUTME: slide, scale) — twin of the clip-transition sheet, shared controls.
 
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/layer_slide_direction.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
@@ -33,21 +35,41 @@ const _loopMs = 2400;
 const _previewWidth = 56.0;
 const _previewHeight = 72.0;
 
-/// Directions offered for a slide animation, mapped onto [SlideDirection].
-const _slideDirections = <SlideDirection>[
-  SlideDirection.left,
-  SlideDirection.right,
-  SlideDirection.top,
-  SlideDirection.bottom,
+/// Directions offered for a slide animation, laid out as a 3x3 pad: the eight
+/// compass directions around an empty centre. `null` is that empty cell.
+///
+/// A pad rather than a row of chips because eight of them no longer fit one
+/// line, and because the arrangement itself tells you which chip is which —
+/// the arrow glyph and the cell position agree.
+const _slideDirectionPad = <List<LayerSlideDirection?>>[
+  [
+    LayerSlideDirection.upLeft,
+    LayerSlideDirection.up,
+    LayerSlideDirection.upRight,
+  ],
+  [LayerSlideDirection.left, null, LayerSlideDirection.right],
+  [
+    LayerSlideDirection.downLeft,
+    LayerSlideDirection.down,
+    LayerSlideDirection.downRight,
+  ],
 ];
+
+/// Icon side inside a direction chip, and the horizontal padding
+/// [AnimationPickerChip] adds around it. Together they size the pad's empty
+/// centre cell so the columns stay aligned at every text scale.
+const _directionIconSize = 18.0;
+const _directionChipPadding = 28.0;
+const _directionChipMinSide = 48.0;
 
 /// Opens the enter/leave animation picker for [layer] and applies the choice to
 /// that layer through the editor history.
 ///
-/// A layer carries up to one enter animation and one leave animation; both are
-/// editable in the sheet and stored on [Layer.animations], which pro_image_editor
-/// uses to drive the in-editor timeline preview and which the export maps to
-/// pro_video_editor.
+/// A layer carries one enter and one leave *motion*; each is stored on
+/// [Layer.animations] as the effects it composes — a fade, a slide and a scale
+/// can run together, and a diagonal slide contributes one animation per axis
+/// (see [LayerSlideDirection]). pro_image_editor drives the in-editor timeline
+/// preview from that list, and the export maps it to pro_video_editor.
 ///
 /// [totalDuration] is the true total video duration — independent of the
 /// layer's own [Layer.endTime]. It both anchors the leave animation and lets
@@ -276,17 +298,35 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
 
   List<LayerAnimation> _build(_PhaseConfig config, AnimationPhase phase) => [
     for (final type in _composableTypes)
-      if (config.types.contains(type))
+      if (config.types.contains(type)) ..._buildEffect(config, phase, type),
+  ];
+
+  /// The animations one selected effect contributes to [phase].
+  ///
+  /// A slide contributes one animation per axis of its direction, so a diagonal
+  /// yields two — see [LayerSlideDirection]. Every other effect yields one.
+  List<LayerAnimation> _buildEffect(
+    _PhaseConfig config,
+    AnimationPhase phase,
+    LayerAnimationType type,
+  ) => [
+    if (type == LayerAnimationType.slide)
+      for (final component in config.direction.components)
         LayerAnimation(
           type: type,
           phase: phase,
           duration: config.duration,
           curve: config.curve,
-          slideDirection: type == LayerAnimationType.slide
-              ? config.direction
-              : null,
-          scaleFrom: type == LayerAnimationType.scale ? config.scaleFrom : null,
-        ),
+          slideDirection: component,
+        )
+    else
+      LayerAnimation(
+        type: type,
+        phase: phase,
+        duration: config.duration,
+        curve: config.curve,
+        scaleFrom: type == LayerAnimationType.scale ? config.scaleFrom : null,
+      ),
   ];
 
   @override
@@ -397,28 +437,11 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                             const SizedBox(height: 16),
                             SectionLabel(l10n.videoEditorTransitionDirection),
                             const SizedBox(height: 8),
-                            Row(
-                              spacing: 8,
-                              children: [
-                                for (final direction in _slideDirections)
-                                  AnimationPickerChip(
-                                    selected: direction == active.direction,
-                                    onTap: () => _updateActive(
-                                      (c) => c.copyWith(direction: direction),
-                                    ),
-                                    semanticLabel: _directionLabel(
-                                      l10n,
-                                      direction,
-                                    ),
-                                    child: DivineIcon(
-                                      icon: _directionIcon(direction),
-                                      size: 18,
-                                      color: direction == active.direction
-                                          ? context.vineColors.accentBrand
-                                          : context.vineColors.secondaryText,
-                                    ),
-                                  ),
-                              ],
+                            _SlideDirectionPad(
+                              selected: active.direction,
+                              onChanged: (direction) => _updateActive(
+                                (c) => c.copyWith(direction: direction),
+                              ),
                             ),
                           ],
                           if (active.types.contains(
@@ -499,21 +522,27 @@ class _PhaseConfig {
   });
 
   /// Rebuilds the config from a phase's existing animations. [duration] and
-  /// [curve] come from the first animation; [direction] / [scaleFrom] from the
-  /// first slide / scale animation. (The picker edits these as shared values,
-  /// so per-effect differences set externally collapse on edit.)
+  /// [curve] come from the first animation; [scaleFrom] from the first scale
+  /// animation. (The picker edits these as shared values, so per-effect
+  /// differences set externally collapse on edit.)
+  ///
+  /// [direction] is recomposed from *every* slide animation in the phase, not
+  /// just the first: a diagonal is stored as one horizontal plus one vertical
+  /// slide, so reading only the first would reopen it as an edge slide and
+  /// silently drop the other axis on the next save.
   factory _PhaseConfig.fromAnimations(List<LayerAnimation> animations) {
     final types = <LayerAnimationType>{};
+    final slideComponents = <SlideDirection>[];
     Duration? duration;
     AnimationCurve? curve;
-    SlideDirection? direction;
     double? scaleFrom;
     for (final animation in animations) {
       types.add(animation.type);
       duration ??= animation.duration;
       curve ??= animation.curve;
       if (animation.type == LayerAnimationType.slide) {
-        direction ??= animation.slideDirection;
+        final component = animation.slideDirection;
+        if (component != null) slideComponents.add(component);
       }
       if (animation.type == LayerAnimationType.scale) {
         scaleFrom ??= animation.scaleFrom;
@@ -523,7 +552,9 @@ class _PhaseConfig {
       types: types,
       duration: duration ?? _defaultDuration,
       curve: curve ?? AnimationCurve.easeOut,
-      direction: direction ?? SlideDirection.left,
+      direction:
+          LayerSlideDirection.fromComponents(slideComponents) ??
+          LayerSlideDirection.left,
       scaleFrom: scaleFrom ?? 0.0,
     );
   }
@@ -531,7 +562,7 @@ class _PhaseConfig {
   final Set<LayerAnimationType> types;
   final Duration duration;
   final AnimationCurve curve;
-  final SlideDirection direction;
+  final LayerSlideDirection direction;
   final double scaleFrom;
 
   /// Adds or removes [type] from [types]; a `null` [type] clears the set (None).
@@ -546,7 +577,7 @@ class _PhaseConfig {
     Set<LayerAnimationType>? types,
     Duration? duration,
     AnimationCurve? curve,
-    SlideDirection? direction,
+    LayerSlideDirection? direction,
     double? scaleFrom,
   }) => _PhaseConfig(
     types: types ?? this.types,
@@ -660,7 +691,7 @@ class _LayerTypeTile extends StatelessWidget {
   final bool selected;
   final AnimationController controller;
   final AnimationPhase phase;
-  final SlideDirection direction;
+  final LayerSlideDirection direction;
   final double scaleFrom;
   final AnimationCurve curve;
   final int durationMs;
@@ -747,7 +778,7 @@ class _LayerEffect extends StatelessWidget {
 
   final LayerAnimationType? type;
   final AnimationPhase phase;
-  final SlideDirection direction;
+  final LayerSlideDirection direction;
   final double scaleFrom;
   final double progress;
 
@@ -796,13 +827,70 @@ class _LayerEffect extends StatelessWidget {
     );
   }
 
-  Offset _previewSlideOffset(SlideDirection direction, double away) {
-    return switch (direction) {
-      SlideDirection.left => Offset(-away * _previewWidth, 0),
-      SlideDirection.right => Offset(away * _previewWidth, 0),
-      SlideDirection.top => Offset(0, -away * _previewHeight),
-      SlideDirection.bottom => Offset(0, away * _previewHeight),
+  /// The placeholder's displacement at [away] (0 = at rest, 1 = fully out).
+  ///
+  /// Each axis is displaced independently, so a diagonal leaves past the corner
+  /// — which is what the renderers do, since they sum the per-axis offsets of a
+  /// diagonal's two slide animations.
+  Offset _previewSlideOffset(LayerSlideDirection direction, double away) {
+    final dx = switch (direction.horizontal) {
+      SlideDirection.left => -away * _previewWidth,
+      SlideDirection.right => away * _previewWidth,
+      _ => 0.0,
     };
+    final dy = switch (direction.vertical) {
+      SlideDirection.top => -away * _previewHeight,
+      SlideDirection.bottom => away * _previewHeight,
+      _ => 0.0,
+    };
+    return Offset(dx, dy);
+  }
+}
+
+/// The eight slide directions as a 3x3 pad of chips around an empty centre.
+class _SlideDirectionPad extends StatelessWidget {
+  const _SlideDirectionPad({required this.selected, required this.onChanged});
+
+  final LayerSlideDirection selected;
+  final ValueChanged<LayerSlideDirection> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    // The chip sizes itself from its icon plus padding, with a 48dp floor, so
+    // the empty centre has to follow the same formula or the pad's third column
+    // shifts left once the text scale pushes a chip past that floor.
+    final cellWidth = math.max(
+      _directionChipMinSide,
+      _directionChipPadding + DivineIcon.scaleSize(context, _directionIconSize),
+    );
+    return Column(
+      spacing: 8,
+      children: [
+        for (final row in _slideDirectionPad)
+          Row(
+            spacing: 8,
+            mainAxisSize: .min,
+            children: [
+              for (final direction in row)
+                if (direction == null)
+                  SizedBox(width: cellWidth, height: _directionChipMinSide)
+                else
+                  AnimationPickerChip(
+                    selected: direction == selected,
+                    onTap: () => onChanged(direction),
+                    semanticLabel: _directionLabel(context.l10n, direction),
+                    child: DivineIcon(
+                      icon: _directionIcon(direction),
+                      size: _directionIconSize,
+                      color: direction == selected
+                          ? context.vineColors.accentBrand
+                          : context.vineColors.secondaryText,
+                    ),
+                  ),
+            ],
+          ),
+      ],
+    );
   }
 }
 
@@ -842,20 +930,31 @@ double _holdProgress(double value, int durationMs) {
   return (value - start) / (end - start);
 }
 
-String _directionLabel(AppLocalizations l10n, SlideDirection direction) =>
-    switch (direction) {
-      SlideDirection.left => l10n.videoEditorTransitionDirectionLeft,
-      SlideDirection.right => l10n.videoEditorTransitionDirectionRight,
-      SlideDirection.top => l10n.videoEditorTransitionDirectionUp,
-      SlideDirection.bottom => l10n.videoEditorTransitionDirectionDown,
-    };
-
-DivineIconName _directionIcon(SlideDirection direction) => switch (direction) {
-  SlideDirection.left => DivineIconName.arrowLeft,
-  SlideDirection.right => DivineIconName.arrowRight,
-  SlideDirection.top => DivineIconName.arrowUp,
-  SlideDirection.bottom => DivineIconName.arrowDown,
+String _directionLabel(
+  AppLocalizations l10n,
+  LayerSlideDirection direction,
+) => switch (direction) {
+  LayerSlideDirection.left => l10n.videoEditorTransitionDirectionLeft,
+  LayerSlideDirection.right => l10n.videoEditorTransitionDirectionRight,
+  LayerSlideDirection.up => l10n.videoEditorTransitionDirectionUp,
+  LayerSlideDirection.down => l10n.videoEditorTransitionDirectionDown,
+  LayerSlideDirection.upLeft => l10n.videoEditorTransitionDirectionUpLeft,
+  LayerSlideDirection.upRight => l10n.videoEditorTransitionDirectionUpRight,
+  LayerSlideDirection.downLeft => l10n.videoEditorTransitionDirectionDownLeft,
+  LayerSlideDirection.downRight => l10n.videoEditorTransitionDirectionDownRight,
 };
+
+DivineIconName _directionIcon(LayerSlideDirection direction) =>
+    switch (direction) {
+      LayerSlideDirection.left => DivineIconName.arrowLeft,
+      LayerSlideDirection.right => DivineIconName.arrowRight,
+      LayerSlideDirection.up => DivineIconName.arrowUp,
+      LayerSlideDirection.down => DivineIconName.arrowDown,
+      LayerSlideDirection.upLeft => DivineIconName.arrowUpLeft,
+      LayerSlideDirection.upRight => DivineIconName.arrowUpRight,
+      LayerSlideDirection.downLeft => DivineIconName.arrowDownLeft,
+      LayerSlideDirection.downRight => DivineIconName.arrowDownRight,
+    };
 
 String _durationLabel(Duration duration) =>
     '${(duration.inMilliseconds / 1000).toStringAsFixed(2)}s';

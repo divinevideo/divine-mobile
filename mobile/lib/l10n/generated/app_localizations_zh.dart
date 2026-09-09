@@ -8635,6 +8635,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => '向下';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => '左上';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => '右上';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => '左下';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => '右下';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return '缓动曲线 $number';
   }

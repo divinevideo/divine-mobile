@@ -300,6 +300,143 @@ void main() {
       expect(result?.enter.single.slideDirection, editor.SlideDirection.top);
     });
 
+    testWidgets('offers all eight directions, diagonals included', (
+      tester,
+    ) async {
+      await openPicker(tester);
+
+      await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      for (final icon in const [
+        DivineIconName.arrowLeft,
+        DivineIconName.arrowRight,
+        DivineIconName.arrowUp,
+        DivineIconName.arrowDown,
+        DivineIconName.arrowUpLeft,
+        DivineIconName.arrowUpRight,
+        DivineIconName.arrowDownLeft,
+        DivineIconName.arrowDownRight,
+      ]) {
+        expect(
+          find.byWidgetPredicate((w) => w is DivineIcon && w.icon == icon),
+          findsOneWidget,
+          reason: '$icon',
+        );
+      }
+    });
+
+    testWidgets('emits a diagonal as one horizontal plus one vertical slide', (
+      tester,
+    ) async {
+      await openPicker(tester);
+
+      await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is DivineIcon && w.icon == DivineIconName.arrowDownRight,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoEditorDoneLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // Both renderers sum the offsets of every slide animation, so the corner
+      // travel is the pair — not a single animation the plugin cannot name.
+      expect(result?.enter, hasLength(2));
+      expect(
+        result?.enter.map((a) => a.slideDirection),
+        containsAll(<editor.SlideDirection>[
+          editor.SlideDirection.right,
+          editor.SlideDirection.bottom,
+        ]),
+      );
+      expect(
+        result?.enter.every(
+          (a) =>
+              a.type == editor.LayerAnimationType.slide &&
+              a.phase == editor.AnimationPhase.animateIn,
+        ),
+        isTrue,
+      );
+      // One motion, so the components must share timing exactly.
+      expect(result!.enter.first.duration, result!.enter.last.duration);
+      expect(result!.enter.first.curve, result!.enter.last.curve);
+    });
+
+    testWidgets('reopens a stored diagonal without losing an axis', (
+      tester,
+    ) async {
+      const stored = [
+        editor.LayerAnimation(
+          type: editor.LayerAnimationType.slide,
+          phase: editor.AnimationPhase.animateIn,
+          duration: Duration(milliseconds: 300),
+          slideDirection: editor.SlideDirection.left,
+        ),
+        editor.LayerAnimation(
+          type: editor.LayerAnimationType.slide,
+          phase: editor.AnimationPhase.animateIn,
+          duration: Duration(milliseconds: 300),
+          slideDirection: editor.SlideDirection.top,
+        ),
+      ];
+      await openPicker(tester, initialEnter: stored);
+
+      await tester.tap(find.text(l10n.videoEditorDoneLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // Reading only the first slide would reopen this as a plain left slide
+      // and drop the vertical axis on save.
+      expect(result?.enter, hasLength(2));
+      expect(
+        result?.enter.map((a) => a.slideDirection),
+        containsAll(<editor.SlideDirection>[
+          editor.SlideDirection.left,
+          editor.SlideDirection.top,
+        ]),
+      );
+    });
+
+    testWidgets('emits a diagonal slide before the scale of the same phase', (
+      tester,
+    ) async {
+      await openPicker(tester);
+
+      await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationScale));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is DivineIcon && w.icon == DivineIconName.arrowUpLeft,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoEditorDoneLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // iOS composes the export transform by chaining translatedBy on the
+      // running transform, so a slide emitted after a scale would be scaled
+      // with it and land somewhere the preview never shows.
+      expect(
+        result?.enter.map((a) => a.type),
+        containsAllInOrder(<editor.LayerAnimationType>[
+          editor.LayerAnimationType.slide,
+          editor.LayerAnimationType.slide,
+          editor.LayerAnimationType.scale,
+        ]),
+      );
+      expect(result?.enter, hasLength(3));
+    });
+
     testWidgets('combines fade and slide into one phase', (tester) async {
       await openPicker(tester);
 

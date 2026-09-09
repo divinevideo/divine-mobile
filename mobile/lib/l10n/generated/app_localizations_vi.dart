@@ -9130,6 +9130,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Xuống';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Lên trái';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Lên phải';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Xuống trái';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Xuống phải';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Đường cong easing $number';
   }

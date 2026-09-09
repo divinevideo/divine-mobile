@@ -15632,6 +15632,30 @@ abstract class AppLocalizations {
   /// **'Down'**
   String get videoEditorTransitionDirectionDown;
 
+  /// Accessibility label for the up-and-left diagonal direction option of a layer slide animation.
+  ///
+  /// In en, this message translates to:
+  /// **'Up left'**
+  String get videoEditorTransitionDirectionUpLeft;
+
+  /// Accessibility label for the up-and-right diagonal direction option of a layer slide animation.
+  ///
+  /// In en, this message translates to:
+  /// **'Up right'**
+  String get videoEditorTransitionDirectionUpRight;
+
+  /// Accessibility label for the down-and-left diagonal direction option of a layer slide animation.
+  ///
+  /// In en, this message translates to:
+  /// **'Down left'**
+  String get videoEditorTransitionDirectionDownLeft;
+
+  /// Accessibility label for the down-and-right diagonal direction option of a layer slide animation.
+  ///
+  /// In en, this message translates to:
+  /// **'Down right'**
+  String get videoEditorTransitionDirectionDownRight;
+
   /// Accessibility label for an easing-curve option in the transition picker, identified by its position. The curve shape is shown visually as a glyph; screen readers announce the option number instead.
   ///
   /// In en, this message translates to:

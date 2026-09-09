@@ -9251,6 +9251,18 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Надолу';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Нагоре наляво';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Нагоре надясно';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Надолу наляво';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Надолу надясно';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Крива на анимация $number';
   }

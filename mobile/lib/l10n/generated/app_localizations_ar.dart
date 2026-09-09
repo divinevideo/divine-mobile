@@ -9116,6 +9116,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'أسفل';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'أعلى اليسار';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'أعلى اليمين';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'أسفل اليسار';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'أسفل اليمين';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'منحنى الرسوم المتحركة $number';
   }

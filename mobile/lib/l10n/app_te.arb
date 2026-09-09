@@ -5954,6 +5954,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "డౌన్",
+  "videoEditorTransitionDirectionUpLeft": "పై ఎడమ",
+  "videoEditorTransitionDirectionUpRight": "పై కుడి",
+  "videoEditorTransitionDirectionDownLeft": "కింద ఎడమ",
+  "videoEditorTransitionDirectionDownRight": "కింద కుడి",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

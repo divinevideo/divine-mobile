@@ -9445,6 +9445,18 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'డౌన్';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'పై ఎడమ';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'పై కుడి';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'కింద ఎడమ';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'కింద కుడి';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'ఈజింగ్ కర్వ్ $number';
   }

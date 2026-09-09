@@ -9241,6 +9241,18 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTransitionDirectionDown => 'Pababa';
 
   @override
+  String get videoEditorTransitionDirectionUpLeft => 'Pataas pakaliwa';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Pataas pakanan';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Pababa pakaliwa';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Pababa pakanan';
+
+  @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
     return 'Kurba ng animation $number';
   }
