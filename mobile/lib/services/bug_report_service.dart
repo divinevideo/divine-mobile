@@ -344,6 +344,7 @@ class BugReportService {
   /// there.
   Future<LogExportResult> exportLogsToFile({
     String? currentScreen,
+    List<String> recentScreens = const [],
     String? userPubkey,
     ui.Rect? sharePositionOrigin,
   }) async {
@@ -378,6 +379,7 @@ class BugReportService {
         lineCount: allLogLines.length,
         exportTime: exportTime,
         currentScreen: currentScreen,
+        recentScreens: recentScreens,
         userPubkey: userPubkey,
       );
       final export = buildBoundedLogContent(
@@ -717,6 +719,7 @@ class BugReportService {
     required int lineCount,
     required DateTime exportTime,
     String? currentScreen,
+    List<String> recentScreens = const [],
     String? userPubkey,
   }) async {
     final packageInfo = await _packageInfoLoader();
@@ -751,9 +754,12 @@ class BugReportService {
       buffer
         ..write(runtimeDiagnostics)
         ..write(environmentDiagnostics);
-      if (currentScreen != null) {
-        buffer.writeln('Current Screen: $currentScreen');
-      }
+      buffer.write(
+        buildLogRouteDiagnostics(
+          currentScreen: currentScreen,
+          recentScreens: recentScreens,
+        ),
+      );
       if (formattedPubkey != null) {
         buffer.writeln('User Pubkey: $formattedPubkey');
       }
@@ -762,6 +768,21 @@ class BugReportService {
             ..writeln())
           .toString();
     };
+  }
+
+  @visibleForTesting
+  static String buildLogRouteDiagnostics({
+    String? currentScreen,
+    List<String> recentScreens = const [],
+  }) {
+    final buffer = StringBuffer();
+    if (currentScreen != null) {
+      buffer.writeln('Current Screen: $currentScreen');
+    }
+    if (recentScreens.isNotEmpty) {
+      buffer.writeln('Recent Screens: ${recentScreens.take(5).join(' → ')}');
+    }
+    return buffer.toString();
   }
 
   @visibleForTesting

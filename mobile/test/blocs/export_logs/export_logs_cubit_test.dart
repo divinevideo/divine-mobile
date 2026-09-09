@@ -25,6 +25,7 @@ void main() {
     ExportLogsCubit build() => ExportLogsCubit(
       bugReportService: bugReportService,
       currentScreen: 'DeveloperOptionsScreen',
+      recentScreens: const ['home', 'developerOptions'],
       userPubkey: _pubkeyHex,
     );
 
@@ -32,6 +33,7 @@ void main() {
       when(
         () => bugReportService.exportLogsToFile(
           currentScreen: any(named: 'currentScreen'),
+          recentScreens: any(named: 'recentScreens'),
           userPubkey: any(named: 'userPubkey'),
           sharePositionOrigin: any(named: 'sharePositionOrigin'),
         ),
@@ -48,6 +50,7 @@ void main() {
           verify(
             () => bugReportService.exportLogsToFile(
               currentScreen: 'DeveloperOptionsScreen',
+              recentScreens: const ['home', 'developerOptions'],
               userPubkey: _pubkeyHex,
               sharePositionOrigin: any(named: 'sharePositionOrigin'),
             ),
@@ -137,6 +140,7 @@ void main() {
           when(
             () => bugReportService.exportLogsToFile(
               currentScreen: any(named: 'currentScreen'),
+              recentScreens: any(named: 'recentScreens'),
               userPubkey: any(named: 'userPubkey'),
               sharePositionOrigin: any(named: 'sharePositionOrigin'),
             ),
@@ -154,6 +158,7 @@ void main() {
           verify(
             () => bugReportService.exportLogsToFile(
               currentScreen: any(named: 'currentScreen'),
+              recentScreens: any(named: 'recentScreens'),
               userPubkey: any(named: 'userPubkey'),
               sharePositionOrigin: any(named: 'sharePositionOrigin'),
             ),
@@ -168,6 +173,7 @@ void main() {
         when(
           () => bugReportService.exportLogsToFile(
             currentScreen: any(named: 'currentScreen'),
+            recentScreens: any(named: 'recentScreens'),
             userPubkey: any(named: 'userPubkey'),
             sharePositionOrigin: any(named: 'sharePositionOrigin'),
           ),

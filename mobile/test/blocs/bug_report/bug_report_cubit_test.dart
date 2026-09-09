@@ -62,6 +62,7 @@ void main() {
         String? stepsToReproduce,
         String? expectedBehavior,
         String? currentScreen,
+        List<String>? recentScreens,
         String? userPubkey,
         Map<String, int>? errorCounts,
         String? logsSummary,
@@ -121,6 +122,7 @@ void main() {
                 String? stepsToReproduce,
                 String? expectedBehavior,
                 String? currentScreen,
+                List<String>? recentScreens,
                 String? userPubkey,
                 Map<String, int>? errorCounts,
                 String? logsSummary,
@@ -264,6 +266,7 @@ void main() {
                 String? stepsToReproduce,
                 String? expectedBehavior,
                 String? currentScreen,
+                List<String>? recentScreens,
                 String? userPubkey,
                 Map<String, int>? errorCounts,
                 String? logsSummary,
@@ -276,6 +279,8 @@ void main() {
                 expect(subject, 'Crash $_rawNsec');
                 expect(stepsToReproduce, 'Step $_rawNsec');
                 expect(expectedBehavior, 'Expected $_rawEmail');
+                expect(currentScreen, 'settings');
+                expect(recentScreens, ['home', 'profile', 'settings']);
                 return true;
               },
         );
@@ -286,6 +291,8 @@ void main() {
         stepsToReproduce: 'Step $_rawNsec',
         expectedBehavior: 'Expected $_rawEmail',
         attachments: const [],
+        currentScreen: 'settings',
+        recentScreens: const ['home', 'profile', 'settings'],
       ),
       expect: () => [
         const BugReportState(status: BugReportStatus.submitting),

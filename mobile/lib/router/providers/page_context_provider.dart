@@ -920,13 +920,3 @@ final pageContextProvider = StreamProvider<RouteContext>((ref) async* {
     yield ctx;
   }
 });
-
-/// The globally-active route type — the tab actually on screen — independent
-/// of the per-branch [pageContextProvider] scope.
-///
-/// Inside a `StatefulShellRoute` branch, [pageContextProvider] is scoped to
-/// that branch's own route (so a kept-alive inactive branch keeps rendering
-/// its real content). A branch screen that must instead know "is *my* tab the
-/// active one?" — e.g. the home feed pausing playback when backgrounded —
-/// reads this provider, which derives from the un-scoped router location and
-/// therefore always reflects the real active tab.

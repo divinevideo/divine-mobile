@@ -1157,6 +1157,10 @@ void main() {
         stepsToReproduce: '1. paste api_key=STEPSSECRET',
         expectedBehavior: 'no secret=EXPECTEDSECRET in the ticket',
         currentScreen: 'CameraScreen?secret=SCREENSECRET',
+        recentScreens: const [
+          'home',
+          'profile?token=RECENTSCREENSECRET',
+        ],
         errorCounts: {'upload:password=COUNTSSECRET': 3},
         logsSummary: '[10:00] [ERROR] jwt: LOGSSECRET',
       );
@@ -1170,11 +1174,13 @@ void main() {
         'STEPSSECRET',
         'EXPECTEDSECRET',
         'SCREENSECRET',
+        'RECENTSCREENSECRET',
         'COUNTSSECRET',
         'LOGSSECRET',
       ]) {
         expect(payload, isNot(contains(secret)), reason: 'leaked $secret');
       }
+      expect(capturedDescription, contains('**Recent Screens:** home'));
     });
 
     // Each contributed field is sanitized separately, and the containment that

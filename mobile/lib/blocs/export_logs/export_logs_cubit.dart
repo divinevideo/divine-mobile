@@ -14,15 +14,18 @@ class ExportLogsCubit extends Cubit<ExportLogsState>
     with CloseGuardedEmit<ExportLogsState> {
   ExportLogsCubit({
     required BugReportService bugReportService,
-    required String currentScreen,
+    String? currentScreen,
+    List<String> recentScreens = const [],
     String? userPubkey,
   }) : _bugReportService = bugReportService,
        _currentScreen = currentScreen,
+       _recentScreens = List.unmodifiable(recentScreens),
        _userPubkey = userPubkey,
        super(const ExportLogsState());
 
   final BugReportService _bugReportService;
-  final String _currentScreen;
+  final String? _currentScreen;
+  final List<String> _recentScreens;
   final String? _userPubkey;
 
   /// Writes the captured logs to a file and hands it to the platform.
@@ -36,6 +39,7 @@ class ExportLogsCubit extends Cubit<ExportLogsState>
 
     final result = await _bugReportService.exportLogsToFile(
       currentScreen: _currentScreen,
+      recentScreens: _recentScreens,
       userPubkey: _userPubkey,
       sharePositionOrigin: sharePositionOrigin,
     );
