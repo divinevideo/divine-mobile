@@ -75,6 +75,7 @@ void main() {
       "import 'dart:developer';",
       "import 'dart:developer' as developer;",
       'import "dart:developer" as developer;',
+      "import 'stub.dart' if (dart.library.io) 'dart:developer';",
     ]) {
       test('fails NEW for package import: $importLine', () {
         writeMobileFile('packages/example/lib/logging.dart', '$importLine\n');

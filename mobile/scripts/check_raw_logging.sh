@@ -40,7 +40,9 @@ ALLOW_NO_BASE_VAR="RAW_LOGGING_ALLOW_NO_BASE"
 RATCHET_LABEL="raw_logging"
 
 CODE_ONLY_FILTER="$SCRIPT_DIR/lib/dart_code_only.awk"
-DEVELOPER_IMPORT_RE="^import[[:space:]]+['\"]dart:developer['\"]"
+# Match dart:developer in either the primary URI or a conditional URI, while
+# stopping at the directive terminator so a later comment cannot invent one.
+DEVELOPER_IMPORT_RE="^[[:space:]]*import[[:space:]]+[^;]*['\"]dart:developer['\"]"
 
 GENERATED_EXCLUDES=(
   -not -path "*/.dart_tool/*"
