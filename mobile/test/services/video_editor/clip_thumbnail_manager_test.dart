@@ -1208,6 +1208,35 @@ void main() {
         await pumpEventQueue();
         expect(fakeStreamManager['a'].value, hasLength(1));
       });
+
+      test('the route pause and the startup hold are independent', () async {
+        syncFileClip();
+        streamController.add(firstBatch);
+        await pumpEventQueue();
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Two independent hold reasons; the second must not re-pause.
+        fakeStreamManager.pauseAll();
+        fakeStreamManager.holdForPlayerStartup();
+        await pumpEventQueue();
+        expect(pauses, equals(1));
+
+        streamController.add(secondBatch);
+        await pumpEventQueue();
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Releasing one reason while the other still holds must not resume.
+        fakeStreamManager.releasePlayerStartupHold();
+        await pumpEventQueue();
+        expect(resumes, equals(0));
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Only when the last reason clears does delivery resume, losslessly.
+        fakeStreamManager.resumeAll();
+        await pumpEventQueue();
+        expect(resumes, equals(1));
+        expect(fakeStreamManager['a'].value, hasLength(2));
+      });
     });
 
     group('dispose', () {
