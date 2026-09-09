@@ -17,11 +17,22 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Filenames written by [MediaCacheManager] end with
 /// `_<microseconds>_<seq><ext>` (see `_relativePathFor`). Reclamation only
-/// deletes *untracked* files matching this shape or
-/// [_webHelperCacheFilePattern], so externally-managed files that share the
-/// cache directory — e.g. the alias manifest or caller-owned sidecar files —
-/// are never removed.
+/// deletes *untracked* files matching this shape,
+/// [_hasLegacyUrlTailName] or [_webHelperCacheFilePattern], so
+/// externally-managed files that share the cache directory — e.g. the alias
+/// manifest or caller-owned sidecar files — are never removed.
 final RegExp _managedCacheFilePattern = RegExp(r'_\d+_\d+\.[A-Za-z0-9]+$');
+
+/// Splits the `_<microseconds>_<seq>.<tail>` suffix this package writes,
+/// capturing `<tail>` so [_hasLegacyUrlTailName] can judge it.
+///
+/// The timestamp run is pinned to the width of a microsecond epoch (13–19
+/// digits; every write has carried 16 since 2001) rather than `\d+`, so an
+/// externally-owned name that happens to carry a short `_<digits>_<digits>.`
+/// infix — `report_2024_01.csv.gz` — is never a reclamation candidate.
+final RegExp _timestampedCacheFilePattern = RegExp(
+  r'_\d{13,19}_\d+\.([^/\\]*)$',
+);
 
 /// Filenames written by `flutter_cache_manager`'s WebHelper — the path behind
 /// the inherited [CacheManager.downloadFile] / [CacheManager.getSingleFile] —
@@ -55,8 +66,32 @@ const int _keyDigestLength = 16;
 /// segments whose "extension" is an arbitrarily long tail (`.png?v=2`), which
 /// neither describes a container nor matches [_managedCacheFilePattern].
 /// Anything outside this shape falls back to
-/// [MediaCacheConfig.defaultExtension].
+/// [MediaCacheConfig.defaultExtension]. Files already written under the
+/// pre-cap behaviour are reclaimed via [_hasLegacyUrlTailName].
 final RegExp _usableExtensionPattern = RegExp(r'^\.[A-Za-z0-9]{1,10}$');
+
+/// Whether [name] is a file this package wrote before `_extensionFor` gained
+/// [_usableExtensionPattern] — the same `_<microseconds>_<seq>.` infix, but a
+/// tail carried over verbatim from a percent-decoded URL segment rather than
+/// a container extension: `…_1723600000000000_4.png?v=2`, `…_4.jpg (1)`, or
+/// the bare `…_4.` a segment ending in a dot produced.
+///
+/// Reclamation has to recognise these or their bytes are stranded for the
+/// life of the install. Such a file stops being tracked the moment a
+/// re-download writes today's clean name, and it never matched
+/// [_managedCacheFilePattern], whose extension class is `[A-Za-z0-9]+`
+/// anchored at end-of-string. Untracked *and* unmatched means neither
+/// reclamation nor byte eviction could see it, so it sat on top of the
+/// configured budget until `clearCache()`.
+///
+/// The tail is judged with [_usableExtensionPattern] itself rather than a
+/// hand-written negation of it, so the two cannot drift apart: this accepts
+/// exactly the tails today's `_extensionFor` would refuse to write.
+bool _hasLegacyUrlTailName(String name) {
+  final tail = _timestampedCacheFilePattern.firstMatch(name)?.group(1);
+  if (tail == null) return false;
+  return !_usableExtensionPattern.hasMatch('.$tail');
+}
 
 /// Untracked files younger than this are never reclaimed. Covers the window
 /// where a download settled after the sweep's snapshots were taken (its store
@@ -1139,7 +1174,8 @@ class MediaCacheManager extends CacheManager {
   ///
   /// 1. **Reclamation** — deletes top-level files in the cache directory that
   ///    neither the cache store nor the sync manifest still tracks and match
-  ///    [_managedCacheFilePattern] or [_webHelperCacheFilePattern].
+  ///    [_managedCacheFilePattern], [_hasLegacyUrlTailName] or
+  ///    [_webHelperCacheFilePattern].
   ///    `flutter_cache_manager` drops database rows on eviction without
   ///    reliably deleting the underlying file for this on-disk layout, so
   ///    evicted and superseded downloads pile up as untracked orphans; this
@@ -1289,6 +1325,7 @@ class MediaCacheManager extends CacheManager {
       if (manifestNames.contains(name)) continue;
       if (_inFlightRelativePaths.contains(name)) continue;
       if (!_managedCacheFilePattern.hasMatch(name) &&
+          !_hasLegacyUrlTailName(name) &&
           !_webHelperCacheFilePattern.hasMatch(name)) {
         continue;
       }
