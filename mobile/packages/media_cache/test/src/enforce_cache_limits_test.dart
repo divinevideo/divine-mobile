@@ -79,8 +79,8 @@ void main() {
     test('reclaims untracked managed-pattern files, keeps everything '
         'else', () async {
       final (manager, dir) = build();
-      final tracked = writeFile(dir, 'vid_key_100_1.mp4', 10);
-      final orphan = writeFile(dir, 'vid_key_200_2.mp4', 10);
+      final tracked = writeFile(dir, 'vid_key_1723600000000000_1.mp4', 10);
+      final orphan = writeFile(dir, 'vid_key_1723600000000001_2.mp4', 10);
       final seedVideo = writeFile(dir, 'a1b2c3d4e5f6', 10);
       final seedThumb = writeFile(dir, 'thumbnail_a1b2c3.jpg', 10);
       final aliases = writeFile(dir, 'aliases.json', 10);
@@ -88,7 +88,7 @@ void main() {
       final nestedManagedName = writeFile(nested, 'nested_300_3.mp4', 10);
 
       when(repo.getAllObjects).thenAnswer(
-        (_) async => [obj('vid_key_100_1.mp4', id: 1)],
+        (_) async => [obj('vid_key_1723600000000000_1.mp4', id: 1)],
       );
 
       await manager.enforceCacheLimits();
@@ -104,6 +104,105 @@ void main() {
         isTrue,
         reason: 'caller-owned subdirectories are not reclaimed by pattern',
       );
+    });
+
+    // Before `_extensionFor` gained its usable-extension guard (#7364), the
+    // extension was `path.extension` of a percent-decoded URL segment,
+    // verbatim. An image proxied through
+    // `…/https%3A%2F%2Fbucket%2Fx.png%3Fv%3D2` therefore cached as
+    // `…_<micros>_<seq>.png?v=2`. Writes have carried a 16-digit microsecond
+    // epoch since 2001.
+    const legacyMicros = '1723600000000000';
+
+    test('reclaims untracked orphans whose extension came from a pre-cap '
+        'URL tail', () async {
+      final (manager, dir) = build();
+      final query = writeFile(dir, 'img_key_${legacyMicros}_4.png?v=2', 10);
+      final spaced = writeFile(dir, 'img_key_${legacyMicros}_5.jpg (1)', 10);
+      final bareDot = writeFile(dir, 'img_key_${legacyMicros}_6.', 10);
+
+      when(repo.getAllObjects).thenAnswer((_) async => []);
+
+      await manager.enforceCacheLimits();
+
+      expect(
+        query.existsSync(),
+        isFalse,
+        reason: 'a query string after the dot no longer strands the file',
+      );
+      expect(
+        spaced.existsSync(),
+        isFalse,
+        reason: 'any non-extension tail is reclaimable, not just query ones',
+      );
+      expect(
+        bareDot.existsSync(),
+        isFalse,
+        reason: 'a segment ending in a dot wrote an empty extension',
+      );
+    });
+
+    test('keeps externally-owned files that resemble a pre-cap name', () async {
+      final (manager, dir) = build();
+      final aliases = writeFile(dir, 'aliases.json', 10);
+      final aliasesTmp = writeFile(dir, 'aliases.json.tmp', 10);
+      final seedThumb = writeFile(dir, 'thumbnail_${'a1b2c3d4' * 8}.jpg', 10);
+      final seedMarker = writeFile(dir, '.seed_media_loaded', 10);
+      // Two digit runs and a simple extension, but four digits cannot be a
+      // microsecond epoch, so this is not one of our writes.
+      final shortInfix = writeFile(dir, 'report_2024_01.csv', 10);
+
+      when(repo.getAllObjects).thenAnswer((_) async => []);
+
+      await manager.enforceCacheLimits();
+
+      expect(aliases.existsSync(), isTrue, reason: 'alias manifest kept');
+      expect(aliasesTmp.existsSync(), isTrue, reason: 'alias temp file kept');
+      expect(seedThumb.existsSync(), isTrue, reason: 'seed thumbnail kept');
+      expect(
+        seedMarker.existsSync(),
+        isTrue,
+        reason: 'SeedMediaCleanupService retries off this marker',
+      );
+      expect(
+        shortInfix.existsSync(),
+        isTrue,
+        reason: 'a short digit infix is not a microsecond timestamp',
+      );
+    });
+
+    test('keeps a tracked pre-cap file, which is still a live entry', () async {
+      final (manager, dir) = build();
+      const name = 'img_key_${legacyMicros}_4.png?v=2';
+      final tracked = writeFile(dir, name, 10);
+
+      when(repo.getAllObjects).thenAnswer((_) async => [obj(name, id: 1)]);
+
+      await manager.enforceCacheLimits();
+
+      expect(
+        tracked.existsSync(),
+        isTrue,
+        reason: 'the store still serves this file; reclamation is for orphans',
+      );
+    });
+
+    test('evicts a tracked pre-cap file to converge on the byte '
+        'budget', () async {
+      final (manager, dir) = build(maxCacheSizeBytes: 50);
+      const name = 'img_key_${legacyMicros}_4.png?v=2';
+      final tracked = writeFile(dir, name, 60);
+
+      when(repo.getAllObjects).thenAnswer(
+        (_) async => [obj(name, id: 1, touched: DateTime(2020))],
+      );
+
+      await manager.enforceCacheLimits();
+
+      expect(tracked.existsSync(), isFalse);
+      final captured =
+          verify(() => repo.deleteAll(captureAny())).captured.single as List;
+      expect(captured, equals(<int>[1]));
     });
 
     test('releases the repository lease after each sweep', () async {
@@ -259,7 +358,7 @@ void main() {
     test('does nothing when the repository fails to open', () async {
       when(repo.open).thenAnswer((_) async => false);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
 
@@ -271,7 +370,7 @@ void main() {
         'open', () async {
       when(repo.open).thenAnswer((_) async => false);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(orphan.existsSync(), isTrue, reason: 'first pass could not run');
@@ -304,7 +403,7 @@ void main() {
           await manager.close();
         } on Object catch (_) {}
       }, (_, _) {});
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
 
@@ -316,7 +415,7 @@ void main() {
       final gate = Completer<List<CacheObject>>();
       when(repo.getAllObjects).thenAnswer((_) => gate.future);
       final (manager, dir) = build();
-      final orphan = writeFile(dir, 'x_1_1.mp4', 10);
+      final orphan = writeFile(dir, 'x_1723600000000000_1.mp4', 10);
 
       final first = manager.enforceCacheLimits();
       // Second call sees _sweepInProgress and returns immediately.
@@ -333,12 +432,12 @@ void main() {
     test('skips a second pass within the throttle window', () async {
       when(repo.getAllObjects).thenAnswer((_) async => []);
       final (manager, dir) = build();
-      final firstOrphan = writeFile(dir, 'a_1_1.mp4', 10);
+      final firstOrphan = writeFile(dir, 'a_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(firstOrphan.existsSync(), isFalse, reason: 'first pass ran');
 
-      final secondOrphan = writeFile(dir, 'b_2_2.mp4', 10);
+      final secondOrphan = writeFile(dir, 'b_1723600000000001_2.mp4', 10);
       await manager.enforceCacheLimits();
 
       expect(
@@ -352,12 +451,12 @@ void main() {
     test('force bypasses the throttle window', () async {
       when(repo.getAllObjects).thenAnswer((_) async => []);
       final (manager, dir) = build();
-      final firstOrphan = writeFile(dir, 'a_1_1.mp4', 10);
+      final firstOrphan = writeFile(dir, 'a_1723600000000000_1.mp4', 10);
 
       await manager.enforceCacheLimits();
       expect(firstOrphan.existsSync(), isFalse);
 
-      final secondOrphan = writeFile(dir, 'b_2_2.mp4', 10);
+      final secondOrphan = writeFile(dir, 'b_1723600000000001_2.mp4', 10);
       await manager.enforceCacheLimits(force: true);
 
       expect(
