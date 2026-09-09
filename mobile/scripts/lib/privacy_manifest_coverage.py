@@ -578,6 +578,9 @@ def check_archive(app: str, mobile: str) -> int:
 
     failures = []
     expected = expected_archive_manifests(mobile)
+    if not expected:
+        print(f"❌ no first-party privacy manifest discovered under {mobile}")
+        return 1
     for label, rel in expected.items():
         if rel in found:
             print(f"  ✅ {label}: {rel}")

@@ -515,6 +515,24 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
       );
     });
 
+    test('archive mode rejects an empty expectation set', () {
+      final root = Directory.systemTemp.createTempSync('privacy_archive_test');
+      addTearDown(() => root.deleteSync(recursive: true));
+      Directory('${root.path}/ios/Runner').createSync(recursive: true);
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File(
+        '${app.path}/PrivacyInfo.xcprivacy',
+      ).writeAsStringSync('not a plist');
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(
+        result.output,
+        contains('no first-party privacy manifest discovered'),
+      );
+    });
+
     test('archive mode uses the selected subspec privacy bundle name', () {
       final root = makeTree(
         swift: '',
