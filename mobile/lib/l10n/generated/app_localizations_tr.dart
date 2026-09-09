@@ -8826,8 +8826,12 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Perde bulunamadı. Karenin kenarlarına kadar ulaşması gerekir — yoksa rengi elle seç.';
+      'Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';

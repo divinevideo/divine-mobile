@@ -8949,8 +8949,12 @@ class AppLocalizationsNl extends AppLocalizations {
       'Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Geen achtergrond gevonden. Die moet tot aan de rand van het beeld komen — kies anders de kleur met de hand.';
+      'Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';

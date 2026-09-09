@@ -8400,7 +8400,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
-  String get videoEditorChromaKeyDetectFailed => '没找到幕布。幕布得铺到画面边缘——不然就手动选颜色吧。';
+  String get videoEditorChromaKeySurfaceHint => '你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。';
+
+  @override
+  String get videoEditorChromaKeyDetectFailed =>
+      '没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';

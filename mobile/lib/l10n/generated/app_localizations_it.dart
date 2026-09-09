@@ -9006,8 +9006,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il video non supporta la trasparenza, quindi in esportazione diventa nero.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l\'inquadratura.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nessuno sfondo trovato. Deve arrivare ai bordi dell\'inquadratura, altrimenti scegli il colore a mano.';
+      'Nessuno sfondo trovato: deve riempire tutta l\'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Scegli una clip';

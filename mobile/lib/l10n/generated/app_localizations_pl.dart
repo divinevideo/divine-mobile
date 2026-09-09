@@ -9090,8 +9090,12 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wideo nie przechowuje przezroczystości, więc w eksporcie będzie czarne.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nie znaleziono tła. Musi sięgać krawędzi kadru — w przeciwnym razie wybierz kolor ręcznie.';
+      'Nie znaleziono tła — musi wypełniać cały kadr za tobą. Gładka ściana wystarczy. Albo wybierz kolor ręcznie.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Wybierz klip';

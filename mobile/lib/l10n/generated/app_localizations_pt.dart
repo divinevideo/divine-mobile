@@ -8975,8 +8975,12 @@ class AppLocalizationsPt extends AppLocalizations {
       'O vídeo não guarda transparência, por isso isto é exportado a preto.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Qualquer superfície lisa atrás de você funciona — uma parede já serve — desde que preencha todo o quadro.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Não encontrámos nenhum fundo. Tem de chegar às margens da imagem — caso contrário, escolhe a cor à mão.';
+      'Nenhum fundo encontrado: ele precisa preencher todo o quadro atrás de você. Uma parede lisa vale. Ou escolha a cor na mão.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Escolher um clipe';

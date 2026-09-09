@@ -8476,8 +8476,12 @@ class AppLocalizationsJa extends AppLocalizations {
       '動画は透明を保持できないため、書き出すと黒くなります。';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      '後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      '背景が見つかりませんでした。画面の端まで届いている必要があります。届いていない場合は手動で色を選んでください。';
+      '背景が見つかりませんでした。後ろの面が画面いっぱいに広がっている必要があります。無地の壁でも大丈夫です。手動で色を選ぶこともできます。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'クリップを選ぶ';

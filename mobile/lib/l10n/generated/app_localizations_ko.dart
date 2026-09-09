@@ -8488,8 +8488,12 @@ class AppLocalizationsKo extends AppLocalizations {
       '영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      '뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      '배경을 찾지 못했습니다. 화면 가장자리까지 닿아야 해요. 아니면 색을 직접 고르세요.';
+      '배경을 찾지 못했어요. 뒤쪽 면이 화면을 가득 채워야 해요. 단색 벽도 괜찮아요. 색을 직접 골라도 돼요.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '클립 고르기';

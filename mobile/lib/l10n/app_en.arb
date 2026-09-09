@@ -5783,7 +5783,14 @@
   "videoEditorChromaKeyBackgroundImage": "Image",
   "videoEditorChromaKeyBackgroundVideo": "Clip",
   "videoEditorChromaKeyTransparentHint": "Video can't hold transparency, so this exports as black.",
-  "videoEditorChromaKeyDetectFailed": "Couldn't find a screen. It has to reach the edges of the frame — pick the color by hand instead.",
+  "videoEditorChromaKeySurfaceHint": "Any plain surface behind you works — a wall is fine — as long as it fills the frame.",
+  "@videoEditorChromaKeySurfaceHint": {
+    "description": "Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register."
+  },
+  "videoEditorChromaKeyDetectFailed": "Couldn't find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.",
+  "@videoEditorChromaKeyDetectFailed": {
+    "description": "Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background."
+  },
   "videoEditorChromaKeyPickClipTitle": "Pick a clip",
   "videoEditorChromaKeyNoLibraryClips": "Your library is empty. Save a clip first, then use it as a background.",
   "videoEditorChromaKeyImagePickFailed": "Couldn't load that image.",

@@ -27,6 +27,7 @@ class ChromaKeyControls extends StatelessWidget {
         spacing: 20,
         children: [
           const _Gutter(child: _PreviewUnavailableNotice()),
+          const _Gutter(child: _SurfaceRequirementHint()),
           const _Gutter(child: _DetectRow()),
           const _Gutter(child: _ScreenColorRow()),
           const _Gutter(child: _ToleranceSliders()),
@@ -57,6 +58,21 @@ class _Gutter extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: _gutter),
       child: child,
     );
+  }
+}
+
+/// States the feature's one prerequisite on entry to the controls.
+///
+/// The requirement used to surface only as a failed detect, after the clip was
+/// already shot — and it named a screen, which most people do not own. Saying
+/// a wall works is what turns the biggest bounce point into onboarding
+/// (#8547).
+class _SurfaceRequirementHint extends StatelessWidget {
+  const _SurfaceRequirementHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoRow(text: context.l10n.videoEditorChromaKeySurfaceHint);
   }
 }
 
@@ -93,17 +109,54 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
       return const SizedBox.shrink();
     }
 
+    return _InfoRow(text: context.l10n.videoEditorChromaKeyPreviewUnavailable);
+  }
+}
+
+/// The panel's shared info treatment: an info glyph beside one line of
+/// secondary copy.
+///
+/// Carries both the standing surface prerequisite and the conditional
+/// preview-unavailable notice.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.text});
+
+  /// What `DivineIcon` draws at its default size, before text scaling.
+  static const double _glyphSize = 24;
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = VineTheme.bodySmallFont(
+      color: context.vineColors.onSurfaceVariant,
+    );
+
+    // The glyph is taller than one line of the copy it labels — 24 against a
+    // 16dp line box — so aligning both to the top leaves the text riding
+    // above the glyph's optical centre. Same correction `DivineInfoCard`
+    // makes for the same reason.
+    final lineHeight =
+        MediaQuery.textScalerOf(context).scale(style.fontSize ?? 14) *
+        (style.height ?? 1.2);
+    final overhang =
+        (DivineIcon.scaleSize(context, _glyphSize) - lineHeight) / 2;
+
     return Row(
       spacing: 8,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DivineIcon(icon: .info, color: context.vineColors.onSurfaceVariant),
+        Padding(
+          padding: EdgeInsets.only(top: overhang < 0 ? -overhang : 0),
+          child: DivineIcon(
+            icon: .info,
+            color: context.vineColors.onSurfaceVariant,
+          ),
+        ),
         Expanded(
-          child: Text(
-            context.l10n.videoEditorChromaKeyPreviewUnavailable,
-            style: VineTheme.bodySmallFont(
-              color: context.vineColors.onSurfaceVariant,
-            ),
+          child: Padding(
+            padding: EdgeInsets.only(top: overhang > 0 ? overhang : 0),
+            child: Text(text, style: style),
           ),
         ),
       ],

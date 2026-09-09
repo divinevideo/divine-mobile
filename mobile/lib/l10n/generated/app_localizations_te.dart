@@ -9173,8 +9173,12 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'స్క్రీన్‌ని కనుగొనడం సాధ్యపడలేదు. ఇది ఫ్రేమ్ అంచులను చేరుకోవాలి - బదులుగా చేతితో రంగును ఎంచుకోండి.';
+      'స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';
