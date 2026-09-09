@@ -12,7 +12,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
-import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/local_audio_cleanup_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,9 +28,16 @@ class DraftStorageService {
   }) : _crashReporter = crashReporter ?? const SilentCrashReporter(),
        _draftsDao = draftsDao,
        _clipsDao = clipsDao,
-       _preferences = preferences;
+       _localAudioCleanup = LocalAudioCleanupService(
+         draftsDao: draftsDao,
+         clipsDao: clipsDao,
+         preferences: preferences,
+       );
 
   final DraftsDao _draftsDao;
+
+  /// Shared sweep over every store that can name a draft-local audio file.
+  final LocalAudioCleanupService _localAudioCleanup;
 
   final CrashReporter _crashReporter;
 
@@ -38,12 +45,6 @@ class DraftStorageService {
   CrashReporter get crashReporterForTesting => _crashReporter;
 
   final ClipsDao _clipsDao;
-
-  /// Where saved sounds live, consulted before deleting a draft's audio files.
-  ///
-  /// Nullable so tests that never delete a draft need not wire it; a null
-  /// instance simply cannot see My Sounds references.
-  final SharedPreferences? _preferences;
 
   /// Hex pubkey of the current account. When set, new drafts are tagged
   /// with this owner and queries filter by it (plus legacy NULL rows).
@@ -670,9 +671,7 @@ class DraftStorageService {
   /// The same local audio file can be shared by a draft and its publish copy —
   /// `copyWith` carries [DivineVideoDraft.editorStateHistory] and
   /// [DivineVideoDraft.selectedSound] — so this guard keeps shared audio until
-  /// the last referencing draft is deleted. Scans the draft `data` blobs
-  /// directly (audio paths live there, not in an indexed column) and never
-  /// throws: a corrupt blob is logged and skipped.
+  /// the last referencing draft is deleted.
   ///
   /// My Sounds is scanned too. Audio imported from the Library is written
   /// under whichever draft was open at the time, so deleting that draft would
@@ -681,42 +680,13 @@ class DraftStorageService {
   ///
   /// Callers run this *after* deleting the draft they are cleaning up, so
   /// every row it sees is a survivor and there is nothing to exclude.
-  Future<Set<String>> _referencedLocalAudioFilenames() async {
-    final rows = await _draftsDao.getAllDrafts();
-    final documentsPath = await getDocumentsPath();
-    final filenames = <String>{..._savedSoundAudioFilenames()};
-
-    for (final row in rows) {
-      final DivineVideoDraft draft;
-      try {
-        draft = DivineVideoDraft.fromJson(
-          json.decode(row.data) as Map<String, dynamic>,
-          documentsPath,
-        );
-      } catch (e) {
-        Log.error(
-          '🧹 Skipping draft ${row.id} during audio reference scan: $e',
-          name: 'DraftStorageService',
-          category: LogCategory.video,
-        );
-        continue;
-      }
-      for (final path in draft.localAudioFilePaths) {
-        filenames.add(p.basename(path));
-      }
-    }
-
-    return filenames;
-  }
-
-  /// Basenames of draft-local audio files a saved sound points at, or empty
-  /// when this instance was built without access to storage.
-  Set<String> _savedSoundAudioFilenames() {
-    final preferences = _preferences;
-    return preferences == null
-        ? const {}
-        : SavedSoundsService.referencedLocalAudioFilenames(preferences);
-  }
+  ///
+  /// The sweep's completeness flag is deliberately ignored here: an unreadable
+  /// store only ever costs this caller references it would have *kept*, so the
+  /// worst case is the pre-#7977 behaviour for one file. Saved-sound removal
+  /// deletes on the same set and must not ignore it.
+  Future<Set<String>> _referencedLocalAudioFilenames() async =>
+      (await _localAudioCleanup.referencedAudioFilenames()).filenames;
 
   /// Basenames of clip ghost-frame files referenced by any surviving clip,
   /// across all accounts — library clips, whose `draftId` is NULL, included.
@@ -817,7 +787,9 @@ class DraftStorageService {
       allAudioPaths,
       draftsDao: _draftsDao,
       clipsDao: _clipsDao,
-      referencedAudioFilenames: _savedSoundAudioFilenames(),
+      referencedAudioFilenames: _localAudioCleanup
+          .savedSoundReferences()
+          .filenames,
     );
   }
 }

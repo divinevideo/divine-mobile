@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -703,6 +704,242 @@ void main() {
           SavedSoundsService.referencedLocalAudioFilenames(sharedPreferences),
           isEmpty,
         );
+      });
+    });
+
+    group('localAudioReferences', () {
+      test('reports a readable library as complete', () async {
+        await SavedSoundsService(
+          sharedPreferences,
+          documentsPath: '/documents',
+        ).saveSound(
+          _importedSound(
+            id: 'local_import_readable',
+            filePath: '/documents/draft_audio_imports/d1/readable.m4a',
+          ),
+        );
+
+        final references = SavedSoundsService.localAudioReferences(
+          sharedPreferences,
+        );
+
+        expect(references.filenames, {'readable.m4a'});
+        expect(references.isComplete, isTrue);
+      });
+
+      test('reports a bucket that will not decode as incomplete', () async {
+        await sharedPreferences.setString(
+          'saved_reusable_sounds_anon',
+          'not json',
+        );
+
+        final references = SavedSoundsService.localAudioReferences(
+          sharedPreferences,
+        );
+
+        expect(references.filenames, isEmpty);
+        expect(
+          references.isComplete,
+          isFalse,
+          reason: 'the bucket may name a file, so the set is a lower bound',
+        );
+      });
+
+      test('reports a payload from a newer build as incomplete', () async {
+        await sharedPreferences.setString(
+          'saved_reusable_sounds_anon',
+          jsonEncode({'schemaVersion': 99, 'entries': <dynamic>[]}),
+        );
+
+        final references = SavedSoundsService.localAudioReferences(
+          sharedPreferences,
+        );
+
+        expect(references.isComplete, isFalse);
+      });
+
+      test('reports an entry that will not parse as incomplete', () async {
+        await SavedSoundsService(
+          sharedPreferences,
+          documentsPath: '/documents',
+        ).saveSound(
+          _importedSound(
+            id: 'local_import_good',
+            filePath: '/documents/draft_audio_imports/d1/good.m4a',
+          ),
+        );
+        final stored =
+            jsonDecode(
+                  sharedPreferences.getString('saved_reusable_sounds_anon')!,
+                )
+                as Map<String, dynamic>;
+        (stored['sounds'] as List<dynamic>).add({'audio': 'not a map'});
+        await sharedPreferences.setString(
+          'saved_reusable_sounds_anon',
+          jsonEncode(stored),
+        );
+
+        final references = SavedSoundsService.localAudioReferences(
+          sharedPreferences,
+        );
+
+        expect(
+          references.filenames,
+          {'good.m4a'},
+          reason: 'one bad entry must not cost the readable ones',
+        );
+        expect(references.isComplete, isFalse);
+      });
+    });
+
+    group('removeSound', () {
+      const filePath = '/documents/draft_audio_imports/d1/imported.m4a';
+
+      SavedSoundsService createService({
+        LocalAudioReclaimer? audioReclaimer,
+      }) => SavedSoundsService(
+        sharedPreferences,
+        documentsPath: '/documents',
+        audioReclaimer: audioReclaimer,
+      );
+
+      test("hands the removed entry's audio file to the reclaimer", () async {
+        final reclaimed = <String>[];
+        final service = createService(
+          audioReclaimer: (path) async => reclaimed.add(path),
+        );
+        await service.saveSound(
+          _importedSound(id: 'local_import_1', filePath: filePath),
+        );
+
+        await service.removeSound('local_import_1');
+
+        expect(reclaimed, [filePath]);
+      });
+
+      test('reclaims only after the shrunken library is persisted', () async {
+        late List<AudioEvent> soundsDuringReclaim;
+        final service = createService(
+          audioReclaimer: (_) async {
+            soundsDuringReclaim = SavedSoundsService(
+              sharedPreferences,
+              documentsPath: '/documents',
+            ).loadSounds();
+          },
+        );
+        await service.saveSound(
+          _importedSound(id: 'local_import_1', filePath: filePath),
+        );
+
+        await service.removeSound('local_import_1');
+
+        expect(
+          soundsDuringReclaim,
+          isEmpty,
+          reason: 'the entry must not count as a reference to its own file',
+        );
+      });
+
+      test('does not reclaim a published sound', () async {
+        final reclaimed = <String>[];
+        final service = createService(
+          audioReclaimer: (path) async => reclaimed.add(path),
+        );
+        await service.saveSound(_sound(id: 'published'));
+
+        await service.removeSound('published');
+
+        expect(
+          reclaimed,
+          isEmpty,
+          reason: 'a remote url is not a file this device may delete',
+        );
+      });
+
+      test('does not reclaim when the id matches nothing', () async {
+        final reclaimed = <String>[];
+        final service = createService(
+          audioReclaimer: (path) async => reclaimed.add(path),
+        );
+        await service.saveSound(
+          _importedSound(id: 'local_import_1', filePath: filePath),
+        );
+
+        await service.removeSound('local_import_absent');
+
+        expect(reclaimed, isEmpty);
+      });
+
+      test('keeps the file when the library write fails', () async {
+        final reclaimed = <String>[];
+        final failing = _MockSharedPreferences();
+        when(failing.getKeys).thenReturn({'saved_reusable_sounds_anon'});
+        when(() => failing.containsKey(any())).thenReturn(true);
+        when(
+          () => failing.getString('saved_reusable_sounds_anon'),
+        ).thenReturn(
+          jsonEncode({
+            'schemaVersion': 1,
+            'sounds': [
+              {
+                'audio': _importedSound(
+                  id: 'local_import_1',
+                  filePath: filePath,
+                ).toJson(),
+              },
+            ],
+          }),
+        );
+        when(
+          () => failing.setString(any(), any()),
+        ).thenAnswer((_) async => false);
+        final service = SavedSoundsService(
+          failing,
+          documentsPath: '/documents',
+          audioReclaimer: (path) async => reclaimed.add(path),
+        );
+
+        await expectLater(
+          service.removeSound('local_import_1'),
+          throwsA(isA<StateError>()),
+        );
+
+        expect(
+          reclaimed,
+          isEmpty,
+          reason: 'the entry still points at the file, so it must survive',
+        );
+      });
+
+      test('still removes the entry when the reclaimer throws', () async {
+        final service = createService(
+          audioReclaimer: (_) async => throw const FileSystemException('boom'),
+        );
+        await service.saveSound(
+          _importedSound(id: 'local_import_1', filePath: filePath),
+        );
+
+        await service.removeSound('local_import_1');
+
+        expect(
+          SavedSoundsService(
+            sharedPreferences,
+            documentsPath: '/documents',
+          ).loadSounds(),
+          isEmpty,
+          reason: 'a throw here would be read as "the delete did not happen"',
+        );
+      });
+
+      test('removes the entry when no reclaimer is wired', () async {
+        final service = createService();
+        await service.saveSound(
+          _importedSound(id: 'local_import_1', filePath: filePath),
+        );
+
+        await service.removeSound('local_import_1');
+
+        expect(service.loadSounds(), isEmpty);
       });
     });
   });
