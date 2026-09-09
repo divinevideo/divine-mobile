@@ -1,11 +1,10 @@
 // ABOUTME: State model for curation provider containing curated video sets
 // ABOUTME: Manages only editor picks - trending/popular handled by infinite feeds
 
-import 'dart:collection';
-
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:openvine/state/copy_with_sentinel.dart';
+import 'package:openvine/state/equal_unmodifiable_collections.dart';
 
 /// State model for curation provider (only Editor's Picks)
 class CurationState extends Equatable {
@@ -22,18 +21,27 @@ class CurationState extends Equatable {
 
   /// Editor's picks videos (classic vines)
   final List<VideoEvent> _editorsPicks;
-  List<VideoEvent> get editorsPicks => UnmodifiableListView(_editorsPicks);
+  List<VideoEvent> get editorsPicks {
+    if (_editorsPicks is EqualUnmodifiableListView) return _editorsPicks;
+    return EqualUnmodifiableListView(_editorsPicks);
+  }
 
   /// Whether curation data is loading
   final bool isLoading;
 
   /// Trending videos (popular now)
   final List<VideoEvent> _trending;
-  List<VideoEvent> get trending => UnmodifiableListView(_trending);
+  List<VideoEvent> get trending {
+    if (_trending is EqualUnmodifiableListView) return _trending;
+    return EqualUnmodifiableListView(_trending);
+  }
 
   /// All available curation sets
   final List<CurationSet> _curationSets;
-  List<CurationSet> get curationSets => UnmodifiableListView(_curationSets);
+  List<CurationSet> get curationSets {
+    if (_curationSets is EqualUnmodifiableListView) return _curationSets;
+    return EqualUnmodifiableListView(_curationSets);
+  }
 
   /// Last refresh timestamp
   final DateTime? lastRefreshed;
@@ -62,10 +70,10 @@ class CurationState extends Equatable {
     Object? error = unsetCopyWithArgument,
   }) {
     return CurationState(
-      editorsPicks: editorsPicks ?? this.editorsPicks,
+      editorsPicks: editorsPicks ?? _editorsPicks,
       isLoading: isLoading ?? this.isLoading,
-      trending: trending ?? this.trending,
-      curationSets: curationSets ?? this.curationSets,
+      trending: trending ?? _trending,
+      curationSets: curationSets ?? _curationSets,
       lastRefreshed: identical(lastRefreshed, unsetCopyWithArgument)
           ? this.lastRefreshed
           : lastRefreshed as DateTime?,
@@ -77,10 +85,10 @@ class CurationState extends Equatable {
 
   @override
   List<Object?> get props => [
-    editorsPicks,
+    _editorsPicks,
     isLoading,
-    trending,
-    curationSets,
+    _trending,
+    _curationSets,
     lastRefreshed,
     error,
   ];

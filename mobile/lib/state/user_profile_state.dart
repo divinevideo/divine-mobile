@@ -1,11 +1,10 @@
 // ABOUTME: User profile state model for managing profile cache and loading states
 // ABOUTME: Used by Riverpod UserProfileProvider to manage reactive profile state
 
-import 'dart:collection';
-
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:openvine/state/copy_with_sentinel.dart';
+import 'package:openvine/state/equal_unmodifiable_collections.dart';
 
 part 'user_profile_state.g.dart';
 
@@ -33,20 +32,36 @@ class UserProfileState extends Equatable {
 
   // Pending profile requests
   final Set<String> _pendingRequests;
-  Set<String> get pendingRequests => UnmodifiableSetView(_pendingRequests);
+  Set<String> get pendingRequests {
+    if (_pendingRequests is EqualUnmodifiableSetView) return _pendingRequests;
+    return EqualUnmodifiableSetView(_pendingRequests);
+  }
 
   // Missing profiles to avoid spam
   final Set<String> _knownMissingProfiles;
-  Set<String> get knownMissingProfiles =>
-      UnmodifiableSetView(_knownMissingProfiles);
+  Set<String> get knownMissingProfiles {
+    if (_knownMissingProfiles is EqualUnmodifiableSetView) {
+      return _knownMissingProfiles;
+    }
+    return EqualUnmodifiableSetView(_knownMissingProfiles);
+  }
+
   final Map<String, DateTime> _missingProfileRetryAfter;
-  Map<String, DateTime> get missingProfileRetryAfter =>
-      UnmodifiableMapView(_missingProfileRetryAfter);
+  Map<String, DateTime> get missingProfileRetryAfter {
+    if (_missingProfileRetryAfter is EqualUnmodifiableMapView) {
+      return _missingProfileRetryAfter;
+    }
+    return EqualUnmodifiableMapView(_missingProfileRetryAfter);
+  }
 
   // Batch fetching state
   final Set<String> _pendingBatchPubkeys;
-  Set<String> get pendingBatchPubkeys =>
-      UnmodifiableSetView(_pendingBatchPubkeys);
+  Set<String> get pendingBatchPubkeys {
+    if (_pendingBatchPubkeys is EqualUnmodifiableSetView) {
+      return _pendingBatchPubkeys;
+    }
+    return EqualUnmodifiableSetView(_pendingBatchPubkeys);
+  }
 
   // Loading and error state
   final bool isLoading;
@@ -82,11 +97,11 @@ class UserProfileState extends Equatable {
     int? totalProfilesRequested,
   }) {
     return UserProfileState(
-      pendingRequests: pendingRequests ?? this.pendingRequests,
-      knownMissingProfiles: knownMissingProfiles ?? this.knownMissingProfiles,
+      pendingRequests: pendingRequests ?? _pendingRequests,
+      knownMissingProfiles: knownMissingProfiles ?? _knownMissingProfiles,
       missingProfileRetryAfter:
-          missingProfileRetryAfter ?? this.missingProfileRetryAfter,
-      pendingBatchPubkeys: pendingBatchPubkeys ?? this.pendingBatchPubkeys,
+          missingProfileRetryAfter ?? _missingProfileRetryAfter,
+      pendingBatchPubkeys: pendingBatchPubkeys ?? _pendingBatchPubkeys,
       isLoading: isLoading ?? this.isLoading,
       isInitialized: isInitialized ?? this.isInitialized,
       error: identical(error, unsetCopyWithArgument)
@@ -99,10 +114,10 @@ class UserProfileState extends Equatable {
 
   @override
   List<Object?> get props => [
-    pendingRequests,
-    knownMissingProfiles,
-    missingProfileRetryAfter,
-    pendingBatchPubkeys,
+    _pendingRequests,
+    _knownMissingProfiles,
+    _missingProfileRetryAfter,
+    _pendingBatchPubkeys,
     isLoading,
     isInitialized,
     error,

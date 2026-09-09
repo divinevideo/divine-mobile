@@ -1,11 +1,10 @@
 // ABOUTME: Simple state model for video lists without global feed modes
 // ABOUTME: Represents the current state of a video list with basic metadata
 
-import 'dart:collection';
-
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:openvine/state/copy_with_sentinel.dart';
+import 'package:openvine/state/equal_unmodifiable_collections.dart';
 
 /// State model for video lists
 class VideoFeedState extends Equatable {
@@ -27,7 +26,10 @@ class VideoFeedState extends Equatable {
 
   /// List of videos in the feed
   final List<VideoEvent> _videos;
-  List<VideoEvent> get videos => UnmodifiableListView(_videos);
+  List<VideoEvent> get videos {
+    if (_videos is EqualUnmodifiableListView) return _videos;
+    return EqualUnmodifiableListView(_videos);
+  }
 
   /// Whether more content can be loaded
   final bool hasMoreContent;
@@ -52,13 +54,22 @@ class VideoFeedState extends Equatable {
   /// Maps video IDs to the set of curated list IDs they appear in
   /// Used to show "From list: X" attribution chip on videos
   final Map<String, Set<String>> _videoListSources;
-  Map<String, Set<String>> get videoListSources =>
-      UnmodifiableMapView(_videoListSources);
+  Map<String, Set<String>> get videoListSources {
+    if (_videoListSources is EqualUnmodifiableMapView) {
+      return _videoListSources;
+    }
+    return EqualUnmodifiableMapView(_videoListSources);
+  }
 
   /// Set of video IDs that appear ONLY from subscribed lists (not from follows)
   /// These videos should show the list attribution chip in the UI
   final Set<String> _listOnlyVideoIds;
-  Set<String> get listOnlyVideoIds => UnmodifiableSetView(_listOnlyVideoIds);
+  Set<String> get listOnlyVideoIds {
+    if (_listOnlyVideoIds is EqualUnmodifiableSetView) {
+      return _listOnlyVideoIds;
+    }
+    return EqualUnmodifiableSetView(_listOnlyVideoIds);
+  }
 
   /// Total video count from the server's X-Total-Count header.
   /// When available, this is more accurate than `videos.length` which
@@ -87,7 +98,7 @@ class VideoFeedState extends Equatable {
     bool? isFetchingTotalCount,
   }) {
     return VideoFeedState(
-      videos: videos ?? this.videos,
+      videos: videos ?? _videos,
       hasMoreContent: hasMoreContent ?? this.hasMoreContent,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
@@ -98,8 +109,8 @@ class VideoFeedState extends Equatable {
       lastUpdated: identical(lastUpdated, unsetCopyWithArgument)
           ? this.lastUpdated
           : lastUpdated as DateTime?,
-      videoListSources: videoListSources ?? this.videoListSources,
-      listOnlyVideoIds: listOnlyVideoIds ?? this.listOnlyVideoIds,
+      videoListSources: videoListSources ?? _videoListSources,
+      listOnlyVideoIds: listOnlyVideoIds ?? _listOnlyVideoIds,
       totalVideoCount: identical(totalVideoCount, unsetCopyWithArgument)
           ? this.totalVideoCount
           : totalVideoCount as int?,
@@ -109,15 +120,15 @@ class VideoFeedState extends Equatable {
 
   @override
   List<Object?> get props => [
-    videos,
+    _videos,
     hasMoreContent,
     isLoadingMore,
     isRefreshing,
     isInitialLoad,
     error,
     lastUpdated,
-    videoListSources,
-    listOnlyVideoIds,
+    _videoListSources,
+    _listOnlyVideoIds,
     totalVideoCount,
     isFetchingTotalCount,
   ];
