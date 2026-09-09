@@ -29,6 +29,12 @@ ${dependencies.entries.map((entry) => entry.value == null ? '  ${entry.key}:' : 
         ..writeAsStringSync('name: $name\n$dependencyBlock');
     }
 
+    void writeRawPubspec(String name, String contents) {
+      File('${packagesDirectory.path}/$name/pubspec.yaml')
+        ..createSync(recursive: true)
+        ..writeAsStringSync(contents);
+    }
+
     setUp(() {
       temporaryDirectory = Directory.systemTemp.createTempSync(
         'package_dependency_cycle_test_',
@@ -84,6 +90,56 @@ ${dependencies.entries.map((entry) => entry.value == null ? '  ${entry.key}:' : 
         'gamma',
         'alpha',
       ]);
+    });
+
+    group('unparseable pubspecs', () {
+      Matcher throwsFormatExceptionNaming(String path) => throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains(path),
+        ),
+      );
+
+      test('reports an empty pubspec by path', () {
+        writePackage('logging_types');
+        writeRawPubspec('broken', '');
+
+        expect(
+          () => findPackageDependencyCycle(packagesDirectory),
+          throwsFormatExceptionNaming('broken/pubspec.yaml'),
+        );
+      });
+
+      test('reports a comment-only pubspec by path', () {
+        writePackage('logging_types');
+        writeRawPubspec('broken', '# nothing declared yet\n');
+
+        expect(
+          () => findPackageDependencyCycle(packagesDirectory),
+          throwsFormatExceptionNaming('broken/pubspec.yaml'),
+        );
+      });
+
+      test('reports a pubspec with no name by path', () {
+        writePackage('logging_types');
+        writeRawPubspec('broken', 'description: no name key\n');
+
+        expect(
+          () => findPackageDependencyCycle(packagesDirectory),
+          throwsFormatExceptionNaming('broken/pubspec.yaml'),
+        );
+      });
+
+      test('reports malformed YAML by path', () {
+        writePackage('logging_types');
+        writeRawPubspec('broken', 'name: [unterminated\n');
+
+        expect(
+          () => findPackageDependencyCycle(packagesDirectory),
+          throwsFormatExceptionNaming('broken/pubspec.yaml'),
+        );
+      });
     });
   });
 }

@@ -5,6 +5,23 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+/// Parses [pubspec], reporting the offending path rather than a raw cast error.
+///
+/// Throws a [FormatException] naming the file when it is empty, comment-only,
+/// or not valid YAML, so callers can render their own diagnostic.
+YamlMap _readPubspec(File pubspec) {
+  Object? document;
+  try {
+    document = loadYaml(pubspec.readAsStringSync());
+  } on YamlException catch (error) {
+    throw FormatException('${pubspec.path}: ${error.message}');
+  }
+  if (document is! YamlMap) {
+    throw FormatException('${pubspec.path}: expected a YAML map');
+  }
+  return document;
+}
+
 /// Returns the first dependency cycle under [packagesDirectory], if any.
 ///
 /// Dependencies participate when their package name belongs to the workspace,
@@ -23,14 +40,17 @@ List<String>? findPackageDependencyCycle(Directory packagesDirectory) {
         ..sort((first, second) => first.path.compareTo(second.path));
 
   for (final pubspec in pubspecs) {
-    final document = loadYaml(pubspec.readAsStringSync()) as YamlMap;
-    final name = document['name'] as String;
+    final document = _readPubspec(pubspec);
+    final name = document['name'];
+    if (name is! String || name.isEmpty) {
+      throw FormatException('${pubspec.path}: missing a "name:" value');
+    }
     pubspecsByName[name] = pubspec;
   }
 
   final graph = <String, List<String>>{};
   for (final entry in pubspecsByName.entries) {
-    final document = loadYaml(entry.value.readAsStringSync()) as YamlMap;
+    final document = _readPubspec(entry.value);
     final dependencies = <String>{};
     for (final sectionName in const ['dependencies', 'dev_dependencies']) {
       final section = document[sectionName];
@@ -88,7 +108,14 @@ void main(List<String> arguments) {
     return;
   }
 
-  final cycle = findPackageDependencyCycle(packagesDirectory);
+  List<String>? cycle;
+  try {
+    cycle = findPackageDependencyCycle(packagesDirectory);
+  } on FormatException catch (error) {
+    stderr.writeln('FAIL [package_dependency_cycles]: ${error.message}');
+    exitCode = 2;
+    return;
+  }
   if (cycle != null) {
     stderr.writeln('FAIL [package_dependency_cycles]: ${cycle.join(' -> ')}');
     exitCode = 1;
