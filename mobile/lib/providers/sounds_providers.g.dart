@@ -691,7 +691,7 @@ final class TrendingSoundUsageCountsProvider
 }
 
 String _$trendingSoundUsageCountsHash() =>
-    r'a0d83d7e8f110372cbc8c7281b7ba61a037bb7df';
+    r'7d9367cf22ea3fabd8af5b278441ed8bae5afad9';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
