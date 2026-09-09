@@ -5180,22 +5180,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundUseSound => 'Använd ljud';
 
   @override
-  String get soundUntitled => 'Namnlöst ljud';
-
-  @override
-  String get soundStopPreview => 'Stoppa förhandsvisning';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Förhandsvisa $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Visa detaljer för $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Inga videor än';
 
   @override

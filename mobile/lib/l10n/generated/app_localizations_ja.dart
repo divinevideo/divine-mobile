@@ -4881,22 +4881,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundUseSound => 'サウンドを使う';
 
   @override
-  String get soundUntitled => '無題のサウンド';
-
-  @override
-  String get soundStopPreview => 'プレビューを停止';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$titleをプレビュー';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$titleの詳細を表示';
-  }
-
-  @override
   String get soundNoVideoCount => '動画はまだないよ';
 
   @override

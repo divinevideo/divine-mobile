@@ -3209,24 +3209,6 @@
   "soundPreview": "Preview",
   "soundStop": "Stop",
   "soundUseSound": "Use Sound",
-  "soundUntitled": "Untitled sound",
-  "soundStopPreview": "Stop preview",
-  "soundPreviewSemanticLabel": "Preview {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "View details for {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "No videos yet",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",

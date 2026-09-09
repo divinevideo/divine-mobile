@@ -2568,24 +2568,6 @@
   "soundPreview": "Nghe thử",
   "soundStop": "Dừng",
   "soundUseSound": "Dùng âm thanh",
-  "soundUntitled": "Âm thanh chưa đặt tên",
-  "soundStopPreview": "Dừng nghe thử",
-  "soundPreviewSemanticLabel": "Nghe thử {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "Xem chi tiết của {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "Chưa có video nào",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count} video",

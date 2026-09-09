@@ -2568,24 +2568,6 @@
   "soundPreview": "预览",
   "soundStop": "停止",
   "soundUseSound": "使用声音",
-  "soundUntitled": "未命名声音",
-  "soundStopPreview": "停止预览",
-  "soundPreviewSemanticLabel": "预览 {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "查看 {title} 的详情",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "还没有视频",
   "soundOneVideo": "1 个视频",
   "soundVideoCount": "{count} 个视频",

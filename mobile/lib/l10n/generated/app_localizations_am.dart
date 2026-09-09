@@ -5057,22 +5057,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundUseSound => 'ድምጽን ተጠቀም';
 
   @override
-  String get soundUntitled => 'ርዕስ የሌለው ድምፅ';
-
-  @override
-  String get soundStopPreview => 'ቅድመ እይታን አቁም';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$titleን ቀድመው ያጫውቱ';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'የ$title ዝርዝሮችን ይመልከቱ';
-  }
-
-  @override
   String get soundNoVideoCount => 'እስካሁን ምንም ቪዲዮዎች የሉም';
 
   @override

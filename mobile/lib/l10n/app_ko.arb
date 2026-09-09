@@ -2748,24 +2748,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "제목 없는 사운드",
-    "soundStopPreview": "미리 듣기 중지",
-    "soundPreviewSemanticLabel": "{title} 미리 듣기",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "{title} 세부 정보 보기",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "검색...",
     "categoryVideoCount": "영상 {count}개",
     "@categoryVideoCount": {

@@ -2159,24 +2159,6 @@
     "soundPreview": "ቅድመ እይታ",
     "soundStop": "ተወ",
     "soundUseSound": "ድምጽን ተጠቀም",
-    "soundUntitled": "ርዕስ የሌለው ድምፅ",
-    "soundStopPreview": "ቅድመ እይታን አቁም",
-    "soundPreviewSemanticLabel": "{title}ን ቀድመው ያጫውቱ",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "የ{title} ዝርዝሮችን ይመልከቱ",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "soundNoVideoCount": "እስካሁን ምንም ቪዲዮዎች የሉም",
     "soundOneVideo": "1 ቪዲዮ",
     "soundVideoCount": "{count} ቪዲዮዎች",

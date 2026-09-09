@@ -2568,24 +2568,6 @@
   "soundPreview": "Pratonton",
   "soundStop": "Berhenti",
   "soundUseSound": "Guna Bunyi",
-  "soundUntitled": "Bunyi tanpa tajuk",
-  "soundStopPreview": "Hentikan pratonton",
-  "soundPreviewSemanticLabel": "Pratonton {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "Lihat butiran untuk {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "Belum ada video",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count} video",

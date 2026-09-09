@@ -210,7 +210,7 @@ abstract class _$TrendingSounds extends $AsyncNotifier<List<AudioEvent>> {
 /// ```dart
 /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
 /// soundAsync.when(
-///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
 ///   loading: () => LoadingSpinner(),
 ///   error: (e, s) => ErrorWidget(message: e.toString()),
 /// );
@@ -228,7 +228,7 @@ final soundByIdProvider = SoundByIdFamily._();
 /// ```dart
 /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
 /// soundAsync.when(
-///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
 ///   loading: () => LoadingSpinner(),
 ///   error: (e, s) => ErrorWidget(message: e.toString()),
 /// );
@@ -251,7 +251,7 @@ final class SoundByIdProvider
   /// ```dart
   /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
   /// soundAsync.when(
-  ///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+  ///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
   ///   loading: () => LoadingSpinner(),
   ///   error: (e, s) => ErrorWidget(message: e.toString()),
   /// );
@@ -311,7 +311,7 @@ String _$soundByIdHash() => r'78312c13305ba58abbc71565853a0c1fb67725b9';
 /// ```dart
 /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
 /// soundAsync.when(
-///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
 ///   loading: () => LoadingSpinner(),
 ///   error: (e, s) => ErrorWidget(message: e.toString()),
 /// );
@@ -337,7 +337,7 @@ final class SoundByIdFamily extends $Family
   /// ```dart
   /// final soundAsync = ref.watch(soundByIdProvider('event-id-here'));
   /// soundAsync.when(
-  ///   data: (sound) => sound != null ? SoundTile(sound) : NotFoundWidget(),
+  ///   data: (sound) => sound != null ? SoundRow(sound) : NotFoundWidget(),
   ///   loading: () => LoadingSpinner(),
   ///   error: (e, s) => ErrorWidget(message: e.toString()),
   /// );
@@ -596,6 +596,102 @@ final class SoundUsageCountFamily extends $Family
   @override
   String toString() => r'soundUsageCountProvider';
 }
+
+/// Batched reuse counts for the trending sounds list, keyed by the event id a
+/// reusing video references (`AudioEvent.attributionEventId`).
+///
+/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
+/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
+/// in a single query through
+/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
+/// round trip however many sounds it shows.
+///
+/// Sounds with no referenceable Nostr event — bundled assets, unpublished
+/// imports — carry no id and are absent from the map, and a list made only of
+/// those never reaches the repository at all.
+///
+/// Usage:
+/// ```dart
+/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
+/// final count = counts?[sound.attributionEventId];
+/// ```
+
+@ProviderFor(trendingSoundUsageCounts)
+final trendingSoundUsageCountsProvider = TrendingSoundUsageCountsProvider._();
+
+/// Batched reuse counts for the trending sounds list, keyed by the event id a
+/// reusing video references (`AudioEvent.attributionEventId`).
+///
+/// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
+/// per sound, so a 50-row list costs 50 requests. This resolves the whole list
+/// in a single query through
+/// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
+/// round trip however many sounds it shows.
+///
+/// Sounds with no referenceable Nostr event — bundled assets, unpublished
+/// imports — carry no id and are absent from the map, and a list made only of
+/// those never reaches the repository at all.
+///
+/// Usage:
+/// ```dart
+/// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
+/// final count = counts?[sound.attributionEventId];
+/// ```
+
+final class TrendingSoundUsageCountsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, int>>,
+          Map<String, int>,
+          FutureOr<Map<String, int>>
+        >
+    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
+  /// Batched reuse counts for the trending sounds list, keyed by the event id a
+  /// reusing video references (`AudioEvent.attributionEventId`).
+  ///
+  /// Watching [soundUsageCountProvider] once per row would fire one relay COUNT
+  /// per sound, so a 50-row list costs 50 requests. This resolves the whole list
+  /// in a single query through
+  /// [SoundsRepository.fetchVideosUsingSoundCounts], keeping the list at one
+  /// round trip however many sounds it shows.
+  ///
+  /// Sounds with no referenceable Nostr event — bundled assets, unpublished
+  /// imports — carry no id and are absent from the map, and a list made only of
+  /// those never reaches the repository at all.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final counts = ref.watch(trendingSoundUsageCountsProvider).value;
+  /// final count = counts?[sound.attributionEventId];
+  /// ```
+  TrendingSoundUsageCountsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'trendingSoundUsageCountsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$trendingSoundUsageCountsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, int>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, int>> create(Ref ref) {
+    return trendingSoundUsageCounts(ref);
+  }
+}
+
+String _$trendingSoundUsageCountsHash() =>
+    r'7d9367cf22ea3fabd8af5b278441ed8bae5afad9';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 

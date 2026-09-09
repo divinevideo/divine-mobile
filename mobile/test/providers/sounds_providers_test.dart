@@ -68,6 +68,7 @@ void main() {
     late MockSoundsRepository mockRepository;
 
     setUp(() {
+      registerFallbackValue(const <String>[]);
       mockNostrClient = MockNostrClient();
       mockRepository = MockSoundsRepository();
 
@@ -483,6 +484,85 @@ void main() {
 
         expect(count, equals(0));
         verifyNever(() => mockRepository.fetchVideosUsingSoundCount(any()));
+      });
+    });
+
+    group('trendingSoundUsageCountsProvider', () {
+      const audioEventId1 =
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
+      const audioEventId2 =
+          'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+
+      ProviderContainer buildContainer(List<AudioEvent> trending) {
+        when(
+          () => mockRepository.fetchTrendingSounds(),
+        ).thenAnswer((_) async => trending);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      test('resolves the whole list through one repository call', () async {
+        when(
+          () => mockRepository.fetchVideosUsingSoundCounts(any()),
+        ).thenAnswer((_) async => {audioEventId1: 7, audioEventId2: 0});
+
+        final container = buildContainer([
+          createTestAudioEvent(id: audioEventId1),
+          createTestAudioEvent(id: audioEventId2),
+        ]);
+
+        final counts = await container.read(
+          trendingSoundUsageCountsProvider.future,
+        );
+
+        expect(counts, {audioEventId1: 7, audioEventId2: 0});
+        final captured = verify(
+          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
+        ).captured;
+        expect(captured, hasLength(1));
+        expect(
+          (captured.single as Iterable<String>).toSet(),
+          {audioEventId1, audioEventId2},
+        );
+      });
+
+      test('asks for the reused event id behind an original sound', () async {
+        when(
+          () => mockRepository.fetchVideosUsingSoundCounts(any()),
+        ).thenAnswer((_) async => {audioEventId1: 3});
+
+        final container = buildContainer([
+          createTestAudioEvent(id: 'video_$audioEventId1'),
+        ]);
+
+        await container.read(trendingSoundUsageCountsProvider.future);
+
+        final captured = verify(
+          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
+        ).captured;
+        expect((captured.single as Iterable<String>).toSet(), {audioEventId1});
+      });
+
+      test('never queries for sounds with no referenceable event', () async {
+        final container = buildContainer([
+          createTestAudioEvent(id: '${AudioEvent.bundledMarker}_wednesday'),
+          createTestAudioEvent(id: 'local-import-not-published'),
+        ]);
+
+        final counts = await container.read(
+          trendingSoundUsageCountsProvider.future,
+        );
+
+        expect(counts, isEmpty);
+        verifyNever(() => mockRepository.fetchVideosUsingSoundCounts(any()));
       });
     });
 

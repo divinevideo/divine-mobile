@@ -67,7 +67,6 @@ lib/widgets/profile/blocked_user_screen.dart	1
 lib/widgets/profile/nostr_info_sheet_content.dart	5
 lib/widgets/profile/profile_comments_grid.dart	1
 lib/widgets/profile_editor/username_status_indicator.dart	15
-lib/widgets/sound_tile.dart	3
 lib/widgets/trending_hashtags_section.dart	1
 lib/widgets/upload_progress_dialog.dart	2
 lib/widgets/user_name.dart	1

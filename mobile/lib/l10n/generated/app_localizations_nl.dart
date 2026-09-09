@@ -5206,22 +5206,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundUseSound => 'Geluid gebruiken';
 
   @override
-  String get soundUntitled => 'Geluid zonder titel';
-
-  @override
-  String get soundStopPreview => 'Preview stoppen';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Voorbeeld van $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Details bekijken voor $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Nog geen video\'s';
 
   @override

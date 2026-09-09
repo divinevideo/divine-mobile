@@ -5333,22 +5333,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundUseSound => 'Folosește sunetul';
 
   @override
-  String get soundUntitled => 'Sunet fără titlu';
-
-  @override
-  String get soundStopPreview => 'Oprește previzualizarea';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Previzualizează $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Vezi detalii pentru $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Încă niciun videoclip';
 
   @override

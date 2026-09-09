@@ -5239,22 +5239,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundUseSound => 'Използвай звук';
 
   @override
-  String get soundUntitled => 'Звук без заглавие';
-
-  @override
-  String get soundStopPreview => 'Спри прегледа';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Прегледай $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Виж подробности за $title';
-  }
-
-  @override
   String get soundNoVideoCount => 'Още няма видеа';
 
   @override
