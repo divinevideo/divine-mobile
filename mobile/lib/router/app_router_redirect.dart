@@ -27,26 +27,28 @@ bool accountDeletionRecoveryGateActive(
 /// Whether the deletion lookup is still in flight for cold-start routing.
 ///
 /// The router fails open while this is true so it never paints the recovery
-/// screen without evidence of an interrupted deletion. Separately, the native
-/// startup splash is held (via [authenticatedDeletionLookupSettled]) until this
-/// is false, so an authenticated user sees neither a false recovery screen nor
-/// a feed flash before the lookup resolves.
+/// screen without evidence of an interrupted deletion. The native startup
+/// splash uses [authenticatedDeletionLookupSettled] and only waits for this
+/// lookup when a matching durable deletion receipt exists.
 ///
 /// Any in-flight load counts as pending, including the first post-auth refetch:
 /// that re-run retains the pre-auth `AsyncData(null)`, so it is `isLoading`
 /// while `hasValue` is true. Excluding it would settle against the stale null
-/// and release the splash early (#8058: stay fail-closed until the lookup
-/// resolves).
+/// and release a receipt-backed splash early.
 bool accountDeletionRecoveryLookupPending(
   AsyncValue<AccountDeletionAttempt?>? attempt,
 ) => attempt == null || attempt.isLoading;
 
 bool authenticatedDeletionLookupSettled(
   AuthState authState,
-  AsyncValue<AccountDeletionAttempt?>? attempt,
-) =>
+  AsyncValue<AccountDeletionAttempt?>? attempt, {
+  SubmittedAccountDeletionAttempt? submittedAttempt,
+  String? currentPubkeyHex,
+}) =>
     authState == AuthState.authenticated &&
-    !accountDeletionRecoveryLookupPending(attempt);
+    (submittedAttempt == null ||
+        submittedAttempt.pubkeyHex != currentPubkeyHex ||
+        !accountDeletionRecoveryLookupPending(attempt));
 
 /// Prevents the next authenticated auth-route redirect from going home.
 ///

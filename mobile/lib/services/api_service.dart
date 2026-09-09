@@ -27,10 +27,12 @@ class ApiService {
     required String appVersion,
     http.Client? client,
     Nip98AuthService? authService,
+    Duration requestTimeout = _defaultTimeout,
   }) : _relayManagerBaseUrl = relayManagerBaseUrl,
        _client = client ?? http.Client(),
        _authService = authService,
-       _appVersion = appVersion;
+       _appVersion = appVersion,
+       _requestTimeout = requestTimeout;
 
   /// Relay-manager worker base URL (minor-account-review endpoints live
   /// there, not on the main backend — divine-relay-manager#108). Injected
@@ -44,6 +46,7 @@ class ApiService {
   final Nip98AuthService? _authService;
 
   final String _appVersion;
+  final Duration _requestTimeout;
 
   /// Get current account restriction and minor-account review status.
   Future<Map<String, dynamic>> getMinorAccountReviewStatus() async {
@@ -57,9 +60,10 @@ class ApiService {
       final uri = Uri.parse(
         '$_relayManagerBaseUrl/v1/account/moderation-status',
       );
-      final response = await _client
-          .get(uri, headers: await _getHeaders(url: uri.toString()))
-          .timeout(_defaultTimeout);
+      final response = await _request(
+        () async =>
+            _client.get(uri, headers: await _getHeaders(url: uri.toString())),
+      );
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -93,16 +97,16 @@ class ApiService {
       final uri = Uri.parse(
         '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-contact',
       );
-      final response = await _client
-          .post(
-            uri,
-            headers: await _getHeaders(
-              url: uri.toString(),
-              method: HttpMethod.post,
-            ),
-            body: jsonEncode({'email': email}),
-          )
-          .timeout(_defaultTimeout);
+      final response = await _request(
+        () async => _client.post(
+          uri,
+          headers: await _getHeaders(
+            url: uri.toString(),
+            method: HttpMethod.post,
+          ),
+          body: jsonEncode({'email': email}),
+        ),
+      );
 
       if (response.statusCode == 200 ||
           response.statusCode == 201 ||
@@ -122,6 +126,9 @@ class ApiService {
       throw ApiException('Network error during parent contact submission: $e');
     }
   }
+
+  Future<http.Response> _request(Future<http.Response> Function() request) =>
+      request().timeout(_requestTimeout);
 
   /// Get standard headers for API requests
   Future<Map<String, String>> _getHeaders({

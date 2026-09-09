@@ -274,13 +274,10 @@ final currentAccountDeletionAttemptProvider =
         ref.watch(currentAuthRpcCapabilityProvider);
         switch (authService.signerReadiness) {
           case SignerReadiness.pending:
-            final waitingForReadiness = Completer<AccountDeletionAttempt?>();
-            ref.onDispose(
-              () => waitingForReadiness.completeError(
-                const _SignerReadinessWaitCancelled(),
-              ),
-            );
-            return waitingForReadiness.future;
+            // A remote lookup without a durable local receipt is advisory.
+            // Let startup continue while the capability provider causes this
+            // provider to rerun when signer readiness changes.
+            return null;
           case SignerReadiness.unavailable:
             throw const AccountDeletionStatusUnavailable();
           case SignerReadiness.ready:
@@ -299,11 +296,4 @@ class AccountDeletionStatusUnavailable implements Exception {
 
   @override
   String toString() => 'AccountDeletionStatusUnavailable';
-}
-
-class _SignerReadinessWaitCancelled implements Exception {
-  const _SignerReadinessWaitCancelled();
-
-  @override
-  String toString() => '_SignerReadinessWaitCancelled';
 }

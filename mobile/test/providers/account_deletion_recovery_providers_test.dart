@@ -98,7 +98,7 @@ void main() {
       },
     );
 
-    test('lookup stays fail-closed while signing warms up', () async {
+    test('lookup settles without a receipt while signing warms up', () async {
       final repository = _MockDeletionRepository();
       final authService = _MockAuthService();
       when(
@@ -125,11 +125,11 @@ void main() {
         fireImmediately: true,
       );
       addTearDown(subscription.close);
-      await Future<void>.delayed(Duration.zero);
+      await container.read(currentAccountDeletionAttemptProvider.future);
 
       expect(
-        container.read(currentAccountDeletionAttemptProvider).isLoading,
-        true,
+        container.read(currentAccountDeletionAttemptProvider).value,
+        isNull,
       );
       verifyNever(repository.fetchCurrent);
     });

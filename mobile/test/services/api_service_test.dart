@@ -1,22 +1,27 @@
 // ABOUTME: Unit tests for ApiService to verify backend communication functionality
 // ABOUTME: Tests HTTP requests, error handling, and response parsing for API endpoints
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 
 // Mock classes
 class MockHttpClient extends Mock implements http.Client {}
 
 class MockResponse extends Mock implements http.Response {}
 
+class MockNip98AuthService extends Mock implements Nip98AuthService {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(Uri.parse('https://example.com'));
     registerFallbackValue(<String, String>{});
+    registerFallbackValue(HttpMethod.get);
   });
 
   group('ApiService', () {
@@ -51,6 +56,35 @@ void main() {
           final result = await apiService.getMinorAccountReviewStatus();
 
           expect(result['restriction'], isA<Map<String, dynamic>>());
+        },
+      );
+
+      test(
+        'bounds token creation and transport with one request deadline',
+        () async {
+          final authService = MockNip98AuthService();
+          when(() => authService.canCreateTokens).thenReturn(true);
+          when(
+            () => authService.createAuthToken(
+              url: any(named: 'url'),
+              method: any(named: 'method'),
+            ),
+          ).thenAnswer((_) => Completer<Nip98Token?>().future);
+          final service = ApiService(
+            client: mockClient,
+            authService: authService,
+            relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
+            appVersion: 'test',
+            requestTimeout: const Duration(milliseconds: 1),
+          );
+
+          await expectLater(
+            service.getMinorAccountReviewStatus(),
+            throwsA(isA<ApiException>()),
+          );
+          verifyNever(
+            () => mockClient.get(any(), headers: any(named: 'headers')),
+          );
         },
       );
 

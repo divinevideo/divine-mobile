@@ -230,7 +230,7 @@ void main() {
             AuthState.authenticated,
             const AsyncLoading<AccountDeletionAttempt?>(),
           ),
-          isFalse,
+          isTrue,
         );
         // The post-auth refetch that retains the pre-auth null must not settle,
         // or the splash releases against the stale null and a recovery user
@@ -240,6 +240,22 @@ void main() {
           authenticatedDeletionLookupSettled(
             AuthState.authenticated,
             await _retainedNullRefetch(),
+          ),
+          isTrue,
+        );
+        expect(
+          authenticatedDeletionLookupSettled(
+            AuthState.authenticated,
+            const AsyncLoading<AccountDeletionAttempt?>(),
+            submittedAttempt: const SubmittedAccountDeletionAttempt(
+              pubkeyHex: 'user-pubkey',
+              attempt: AccountDeletionAttempt(
+                id: 'attempt-id',
+                status: AccountDeletionAttemptStatus.processing,
+              ),
+              vanishEventId: 'vanish-event-id',
+            ),
+            currentPubkeyHex: 'user-pubkey',
           ),
           isFalse,
         );
