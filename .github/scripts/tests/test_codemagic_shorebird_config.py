@@ -138,14 +138,17 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
     def test_feed_ttff_workflow_is_selective_and_self_contained(self) -> None:
         workflow = self._resolved_config()["workflows"]["perf-feed-ttff"]
+        includes = workflow["when"]["changeset"]["includes"]
 
         self.assertEqual(20, workflow["max_build_duration"])
         self.assertEqual(["pull_request"], workflow["triggering"]["events"])
         self.assertNotIn("groups", workflow["environment"])
         self.assertIn(
             "mobile/packages/infinite_video_feed/",
-            workflow["when"]["changeset"]["includes"],
+            includes,
         )
+        self.assertIn("mobile/scripts/ci/serve_ttff_fixtures.py", includes)
+        self.assertIn("mobile/assets/seed_media/videos/", includes)
         runner = next(
             step["script"]
             for step in workflow["scripts"]

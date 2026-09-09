@@ -26,8 +26,6 @@
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
-#   - Feed TTFF additionally requires GHCR_PULL_TOKEN (read:packages PAT) and
-#     GHCR_PULL_USERNAME in the same group for private local-stack images
 # 9 - Android publishing reads the service account from environment variable
 #     group "google_play_credentials":
 #   - GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
@@ -1456,7 +1454,7 @@ workflows:
     max_build_duration: 20
     instance_type: linux_x2
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
     cache:
       cache_paths:
@@ -1476,11 +1474,13 @@ workflows:
       changeset:
         includes:
           - codemagic.yaml
+          - mobile/assets/seed_media/videos/
           - mobile/integration_test/perf/
           - mobile/lib/widgets/video_feed_item/
           - mobile/packages/divine_video_player/
           - mobile/packages/infinite_video_feed/
           - mobile/packages/media_cache/
+          - mobile/scripts/ci/serve_ttff_fixtures.py
     scripts:
       - *flutter_pub_get
       - *setup_local_properties
