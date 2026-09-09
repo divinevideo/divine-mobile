@@ -167,6 +167,30 @@ class _VideoEditorTimelineClipStripState
   bool _isExitingVolumeMode = false;
   Timer? _volumeExitTimer;
 
+  /// True between a trim handle's drag start and its release. The manager
+  /// leaves the dragged clip's extraction window alone for that span instead
+  /// of restarting on every committed step of the gesture.
+  bool _isTrimDragging = false;
+  Timer? _trimCatchUpTimer;
+
+  /// How long the trim window has to sit still mid-drag before it is requested
+  /// anyway. Without this the newly exposed footage would stay on posters for
+  /// the whole gesture, which is worse than the thrash the hold prevents: the
+  /// user drags a handle out precisely to see what is there. Re-armed on every
+  /// committed step, so a continuous drag never fires it and a pause always
+  /// does.
+  static const _trimCatchUpDelay = Duration(milliseconds: 250);
+
+  /// True until the editor's preview player reports ready, or
+  /// [_playerGateTimeout] elapses. Thumbnail extraction is held meanwhile.
+  bool _awaitingPlayer = true;
+  Timer? _playerGateTimer;
+
+  /// Upper bound on the startup hold. A composition that fails to load
+  /// publishes `isPlayerReady: false` and never corrects itself, so without
+  /// this the strip would stay on posters for the whole session.
+  static const _playerGateTimeout = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
@@ -189,6 +213,7 @@ class _VideoEditorTimelineClipStripState
     if (route is PageRoute) {
       routeObserver.subscribe(this, route);
     }
+    _updatePlayerGate();
     _maybeSeedSplit();
     _syncThumbnails();
   }
@@ -214,13 +239,52 @@ class _VideoEditorTimelineClipStripState
     routeObserver.unsubscribe(this);
     _stopAutoScroll();
     _volumeExitTimer?.cancel();
+    _playerGateTimer?.cancel();
+    _trimCatchUpTimer?.cancel();
     _reorderAnimController.dispose();
     _thumbnails.dispose();
     _waveforms.dispose();
     super.dispose();
   }
 
-  void _syncThumbnails() {
+  /// Holds thumbnail extraction until the editor's preview player has loaded.
+  ///
+  /// Both decode video, and the strip's first request starts on the same frame
+  /// the canvas initialises its player. Once released the gate never re-arms:
+  /// `isPlayerReady` also drops on every later reload (trim, reorder, speed),
+  /// and suspending the strip for those would be a different, unwanted change.
+  void _updatePlayerGate() {
+    if (!_awaitingPlayer) return;
+    final bloc = context.read<VideoEditorMainBloc?>();
+    if (bloc == null || bloc.state.isPlayerReady) {
+      _releasePlayerGate();
+      return;
+    }
+    _thumbnails.holdForPlayerStartup();
+    _playerGateTimer ??= Timer(_playerGateTimeout, _releasePlayerGate);
+  }
+
+  void _releasePlayerGate() {
+    if (!_awaitingPlayer) return;
+    _awaitingPlayer = false;
+    _playerGateTimer?.cancel();
+    _playerGateTimer = null;
+    _thumbnails.releasePlayerStartupHold();
+  }
+
+  void _handleTrimDragChanged(bool isDragging) {
+    _isTrimDragging = isDragging;
+    widget.onTrimDragChanged?.call(isDragging);
+    if (isDragging) return;
+    // Request the window the drag opened up, once. Not left to the parent
+    // rebuild: widget.onTrimDragChanged is nullable, so one is not guaranteed.
+    _trimCatchUpTimer?.cancel();
+    _syncThumbnails();
+  }
+
+  /// [ignoreTrimHold] requests the dragged clip's current window even though
+  /// the gesture is still running — see [_trimCatchUpDelay].
+  void _syncThumbnails({bool ignoreTrimHold = false}) {
     final clips = widget.clips;
     final pps = widget.pixelsPerSecond;
     if (!identical(_prevSlotClips, clips) || _prevSlotPps != pps) {
@@ -228,12 +292,21 @@ class _VideoEditorTimelineClipStripState
       _prevSlotPps = pps;
       _cachedSlotTimestamps = _computeSlotTimestamps();
     }
+    final holdTrimOn = _isTrimDragging && !ignoreTrimHold
+        ? widget.trimmingClipId
+        : null;
     _thumbnails.sync(
       clips: clips,
       devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       priorityTimestamps: _cachedSlotTimestamps,
+      trimmingClipId: holdTrimOn,
     );
     _waveforms.sync(clips: clips);
+    if (holdTrimOn == null) return;
+    _trimCatchUpTimer?.cancel();
+    _trimCatchUpTimer = Timer(_trimCatchUpDelay, () {
+      if (mounted) _syncThumbnails(ignoreTrimHold: true);
+    });
   }
 
   /// Seeds the new clips' thumbnail notifiers from the source clip's
@@ -662,16 +735,24 @@ class _VideoEditorTimelineClipStripState
         : TimelineConstants.thumbnailStripHeight;
     final volumeAnimating = isVolumeEditMode || _isExitingVolumeMode;
 
-    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
-      listenWhen: (prev, curr) =>
-          prev.isVolumeEditMode && !curr.isVolumeEditMode,
-      listener: (_, _) {
-        _volumeExitTimer?.cancel();
-        setState(() => _isExitingVolumeMode = true);
-        _volumeExitTimer = Timer(animDuration, () {
-          if (mounted) setState(() => _isExitingVolumeMode = false);
-        });
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) => !prev.isPlayerReady && curr.isPlayerReady,
+          listener: (_, _) => _releasePlayerGate(),
+        ),
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              prev.isVolumeEditMode && !curr.isVolumeEditMode,
+          listener: (_, _) {
+            _volumeExitTimer?.cancel();
+            setState(() => _isExitingVolumeMode = true);
+            _volumeExitTimer = Timer(animDuration, () {
+              if (mounted) setState(() => _isExitingVolumeMode = false);
+            });
+          },
+        ),
+      ],
       child: Semantics(
         label: context.l10n.videoEditorTimelineLongPressToDragHint,
         button: true,
@@ -739,7 +820,7 @@ class _VideoEditorTimelineClipStripState
                   trimExpand: trimExpand,
                   pixelsPerSecond: widget.pixelsPerSecond,
                   onTrimChanged: widget.onTrimChanged,
-                  onTrimDragChanged: widget.onTrimDragChanged,
+                  onTrimDragChanged: _handleTrimDragChanged,
                   onClipTapped: widget.onClipTapped,
                   reorderSize: _reorderSize,
                   isVolumeEditMode: isVolumeEditMode,

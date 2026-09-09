@@ -64,15 +64,26 @@ class ClipThumbnailManager {
   final Map<String, _RetiredStrip> _retired = {};
   static const _maxRetiredStrips = 8;
 
-  // Slack extracted on each side of the visible window so ordinary trim-handle
-  // nudges do not cancel and restart extraction. One second is ~600 px of drag
-  // at maximum zoom and ~52 px at 1x, and costs 13 frames per side — cheap
-  // next to the 500-frame cap a full-source request hits.
+  // Slack extracted on each side of the visible window so a small trim change
+  // shows real frames immediately instead of waiting for a fresh extraction.
+  // A moving drag holds restarts ([sync]'s trimmingClipId), so this only has
+  // to cover nudges, programmatic edits, and the first moments of a drag:
+  // one second is ~600 px of drag at maximum zoom but only ~52 px at the
+  // default zoom, which is why the slack alone cannot carry a gesture. Costs
+  // 13 frames per side.
   static const _windowPadding = Duration(seconds: 1);
 
+  /// Set while another route covers the editor. See [pauseAll].
+  bool _routePaused = false;
+
+  /// Set while the editor's preview player is still loading. See
+  /// [holdForPlayerStartup].
+  bool _startupHeld = false;
+
   /// When true, newly started subscriptions begin paused and existing ones are
-  /// held. See [pauseAll].
-  bool _paused = false;
+  /// held. The two reasons are independent — releasing one while the other
+  /// still holds must not restart extraction.
+  bool get _paused => _routePaused || _startupHeld;
 
   /// Returns the thumbnail notifier for the given [clipId].
   ValueNotifier<List<StripThumbnail>> operator [](String clipId) =>
@@ -85,10 +96,15 @@ class ClipThumbnailManager {
   /// that the currently visible slots need. New clips whose ID is
   /// in this map will generate those frames first before filling
   /// the full-density set.
+  ///
+  /// [trimmingClipId] is the clip whose trim handle is moving right now, if
+  /// any. Its window is left alone for as long as the caller keeps passing it
+  /// — the caller drops it once the gesture settles or ends.
   void sync({
     required List<DivineVideoClip> clips,
     required double devicePixelRatio,
     Map<String, List<Duration>> priorityTimestamps = const {},
+    String? trimmingClipId,
   }) {
     final currentIds = clips.map((c) => c.id).toSet();
 
@@ -170,6 +186,12 @@ class ClipThumbnailManager {
       final currentWindow = _windows[clip.id];
       final windowCovered =
           currentWindow != null && currentWindow.covers(visibleWindow);
+      // A trim drag commits every step of the gesture, and at the default
+      // zoom one pixel of drag is ~1/52 s of source — a normal handle drag
+      // walks the window past the padding several times over. Restarting on
+      // each step would cancel and re-request extraction throughout the
+      // gesture, so the restart waits for the handle to settle.
+      final windowSatisfied = windowCovered || clip.id == trimmingClipId;
 
       if (!hasSubscription) {
         if (isSeeded) {
@@ -184,7 +206,7 @@ class ClipThumbnailManager {
         } else if (_complete.contains(clip.id)) {
           // Restored from the retired cache at full density — only a
           // source-file change or a widened window warrants re-extraction.
-          if ((newPath == null || newPath == currentPath) && windowCovered) {
+          if ((newPath == null || newPath == currentPath) && windowSatisfied) {
             continue;
           }
           _complete.remove(clip.id);
@@ -195,7 +217,7 @@ class ClipThumbnailManager {
           priorityTimestamps: priorityTimestamps[clip.id],
         );
       } else if ((newPath != null && newPath != currentPath) ||
-          !windowCovered) {
+          !windowSatisfied) {
         // Source file of an already-subscribed clip changed (e.g. it was
         // re-rendered to a trimmed file), or the trim window grew past what
         // the current request covers. Restart against the new file / window
@@ -457,17 +479,43 @@ class ClipThumbnailManager {
   /// contending for hardware decoders and CPU. Lossless: the batch stream
   /// generators suspend at the next batch boundary and continue on [resumeAll].
   void pauseAll() {
-    _paused = true;
-    for (final sub in _subscriptions.values) {
-      if (!sub.isPaused) sub.pause();
-    }
+    _routePaused = true;
+    _applyPause();
   }
 
   /// Resumes thumbnail extraction paused by [pauseAll].
   void resumeAll() {
-    _paused = false;
+    _routePaused = false;
+    _applyPause();
+  }
+
+  /// Holds extraction while the editor's preview player is still loading its
+  /// clips.
+  ///
+  /// Both run native video decoding, and the strip's request starts on the
+  /// same frame the canvas initialises its player — on a device with a small
+  /// decoder budget the strip can starve the preview, which then stays on its
+  /// static poster with no error and no retry. Released by
+  /// [releasePlayerStartupHold] once the player reports ready.
+  void holdForPlayerStartup() {
+    _startupHeld = true;
+    _applyPause();
+  }
+
+  /// Releases the hold taken by [holdForPlayerStartup].
+  void releasePlayerStartupHold() {
+    _startupHeld = false;
+    _applyPause();
+  }
+
+  void _applyPause() {
+    final paused = _paused;
     for (final sub in _subscriptions.values) {
-      if (sub.isPaused) sub.resume();
+      if (paused && !sub.isPaused) {
+        sub.pause();
+      } else if (!paused && sub.isPaused) {
+        sub.resume();
+      }
     }
   }
 
