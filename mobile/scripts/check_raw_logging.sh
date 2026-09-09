@@ -40,6 +40,7 @@ ALLOW_NO_BASE_VAR="RAW_LOGGING_ALLOW_NO_BASE"
 RATCHET_LABEL="raw_logging"
 
 CODE_ONLY_FILTER="$SCRIPT_DIR/lib/dart_code_only.awk"
+IMPORT_DIRECTIVE_FILTER="$SCRIPT_DIR/lib/dart_import_directives.awk"
 # Match dart:developer in either the primary URI or a conditional URI, while
 # stopping at the directive terminator so a later comment cannot invent one.
 DEVELOPER_IMPORT_RE="^[[:space:]]*import[[:space:]]+[^;]*['\"]dart:developer['\"]"
@@ -63,6 +64,16 @@ if [[ ! -f "$CODE_ONLY_FILTER" ]]; then
   echo "FAIL [raw_logging]: Dart code-only filter is unavailable: $CODE_ONLY_FILTER" >&2
   exit 1
 fi
+
+if [[ ! -f "$IMPORT_DIRECTIVE_FILTER" ]]; then
+  echo "FAIL [raw_logging]: Dart import scanner is unavailable: $IMPORT_DIRECTIVE_FILTER" >&2
+  exit 1
+fi
+
+has_developer_import() {
+  awk -f "$IMPORT_DIRECTIVE_FILTER" "$1" 2>/dev/null \
+    | grep -E "$DEVELOPER_IMPORT_RE" >/dev/null
+}
 
 code_call_violations() {
   local pattern="$1" matches
@@ -101,7 +112,7 @@ APP_DEVELOPER_IMPORTS="$(
   find "$LIB_DIR" "${GENERATED_EXCLUDES[@]}" \
     -name "*.dart" -print0 2>/dev/null \
   | while IFS= read -r -d '' file; do
-      if grep -qE "$DEVELOPER_IMPORT_RE" "$file"; then
+      if has_developer_import "$file"; then
         printf '%s\n' "${file#"$PATH_PREFIX"/}"
       fi
     done | LC_ALL=C sort -u || true
@@ -117,7 +128,7 @@ emit_current() {
     -path "*/lib/*" -not -path "*/unified_logger/*" \
     -name "*.dart" -print0 2>/dev/null \
   | while IFS= read -r -d '' file; do
-      if grep -qE "$DEVELOPER_IMPORT_RE" "$file"; then
+      if has_developer_import "$file"; then
         printf '%s\n' "${file#"$PATH_PREFIX"/}"
       fi
     done | LC_ALL=C sort -u || true

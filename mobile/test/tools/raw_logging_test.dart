@@ -88,6 +88,32 @@ void main() {
       });
     }
 
+    test('fails NEW for a formatted multiline conditional import', () {
+      writeMobileFile(
+        'packages/example/lib/logging.dart',
+        "import 'package:example/very_long_developer_logging_stub.dart'\n"
+            "    if (dart.library.io) 'dart:developer'\n"
+            '    as developer;\n',
+      );
+
+      final result = runGuard();
+
+      expect(result.exitCode, 1);
+      expect(result.stdout, contains('NEW entr(y/ies)'));
+      expect(result.stdout, contains('packages/example/lib/logging.dart'));
+    });
+
+    test('comments cannot invent a multiline conditional import', () {
+      writeMobileFile(
+        'packages/example/lib/logging.dart',
+        "/* import 'package:example/logging_stub.dart'\n"
+            "    if (dart.library.io) 'dart:developer'; */\n"
+            'void log() {}\n',
+      );
+
+      expect(runGuard().exitCode, 0);
+    });
+
     test('a baselined package import passes', () {
       writeMobileFile(
         'packages/example/lib/logging.dart',
