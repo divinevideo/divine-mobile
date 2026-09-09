@@ -2998,7 +2998,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authCreateAccountMarketingOptIn =>
-      'Sign-up for Divine app updates and news';
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '초대 코드로 돌아가기';

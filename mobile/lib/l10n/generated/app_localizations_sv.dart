@@ -3188,7 +3188,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get authCreateAccountMarketingOptIn =>
-      'Sign-up for Divine app updates and news';
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Tillbaka till inbjudningskod';

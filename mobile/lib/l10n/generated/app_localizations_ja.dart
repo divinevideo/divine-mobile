@@ -2989,7 +2989,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authCreateAccountMarketingOptIn =>
-      'Sign-up for Divine app updates and news';
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '招待コードに戻る';

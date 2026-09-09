@@ -3240,7 +3240,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get authCreateAccountMarketingOptIn =>
-      'Sign-up for Divine app updates and news';
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Retour au code d\'invitation';
