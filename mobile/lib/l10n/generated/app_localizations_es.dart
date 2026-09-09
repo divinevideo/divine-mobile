@@ -8926,6 +8926,54 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Desliza para ajustar';
 
   @override
+  String get videoEditorDetachLabel => 'Separar';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Separar el clip seleccionado de la línea de tiempo';
+
+  @override
+  String get videoEditorDetachTitle => 'Separar clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'El clip pasa al lienzo, donde podés ubicarlo donde quieras. ¿Qué ocupa su lugar en la línea de tiempo?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nada';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Cerrar el hueco: todo lo que sigue empieza antes.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Color';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Mantiene un color sólido lo que duró el clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Sacá una foto para que ocupe su lugar.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip separado';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Separando tu clip…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'No se pudo separar ese clip. Tu línea de tiempo queda igual.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'No se pudo cargar esa foto.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Croma';
 
   @override

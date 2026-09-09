@@ -33,6 +33,7 @@ void main() {
       bodySizeNotifier: bodySize,
       zoomMatrixNotifier: zoom,
       playTimeNotifier: ValueNotifier(Duration.zero),
+      playheadAdvancingNotifier: ValueNotifier<bool>(false),
       fromLibrary: false,
     );
   }

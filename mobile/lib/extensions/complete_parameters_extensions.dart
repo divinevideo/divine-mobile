@@ -3,21 +3,21 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
-import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
+import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Deserializes [CompleteParameters] from a persisted draft map, rehydrating
-/// sticker [WidgetLayer]s with [videoEditorStickerWidgetLoader].
+/// [WidgetLayer]s with [videoEditorWidgetLayerLoader].
 ///
 /// Without a `widgetLoader`, [CompleteParameters.fromMap] throws "The
 /// `widgetLoader` must be defined when importing the widget layer by id" for
-/// any sticker layer exported with an id, so the loader must be threaded
+/// any widget layer exported with an id, so the loader must be threaded
 /// through here.
 CompleteParameters completeParametersFromDraftMap(Map<String, dynamic> map) =>
     CompleteParameters.fromMap(
       map,
-      widgetLoader: videoEditorStickerWidgetLoader,
+      widgetLoader: videoEditorWidgetLayerLoader,
     );
 
 /// Deep equality extension for [CompleteParameters].

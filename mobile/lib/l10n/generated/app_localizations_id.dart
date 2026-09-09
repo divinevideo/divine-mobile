@@ -8757,6 +8757,54 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Geser untuk menyesuaikan';
 
   @override
+  String get videoEditorDetachLabel => 'Lepas';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Lepas klip yang dipilih dari timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Lepas klip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip pindah ke kanvas, kamu bisa menaruhnya di mana saja. Apa yang menggantikan tempatnya di timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Tidak ada';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Tutup celahnya – semua setelahnya mulai lebih awal.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Warna';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Menahan satu warna selama klip tadi berjalan.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Ambil foto untuk menahan tempatnya.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Klip terlepas';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Melepaskan klip kamu…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Klip itu tidak bisa dilepas. Timeline-mu tidak berubah.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Foto itu tidak bisa dimuat.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Layar hijau';
 
   @override

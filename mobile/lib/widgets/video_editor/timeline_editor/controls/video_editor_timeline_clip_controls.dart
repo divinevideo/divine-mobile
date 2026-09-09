@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -9,15 +13,22 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
+import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
+import 'package:openvine/utils/image_orientation.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart'
     show ProImageEditorState;
 import 'package:pro_video_editor/pro_video_editor.dart' show ExportTransform;
+import 'package:unified_logger/unified_logger.dart';
 
 /// Controls shown when a clip is in editing mode: Delete, Copy, Split, Done.
 class TimelineClipControls extends StatefulWidget {
@@ -54,6 +65,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       isReversed,
       isChromaKeyingCurrentClip,
       hasChromaKey,
+      isDetachingCurrentClip,
+      isPlaceholderClip,
     ) = context.select((ClipEditorBloc b) {
       final state = b.state;
       final index = state.currentClipIndex;
@@ -85,9 +98,26 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
             currentClipId != null &&
             state.chromaKeyingClipId == currentClipId,
         hasClip && state.clips[index].chromaKey != null,
+        state.isDetaching &&
+            currentClipId != null &&
+            state.detachingClipId == currentClipId,
+        hasClip && state.clips[index].isPlaceholder,
       );
     });
     final isLastClip = clipCount <= 1;
+
+    // A colour or photo standing in for a detached clip is a backdrop, not
+    // footage. Splitting, reversing, speeding up or extracting audio from a
+    // still are all no-ops dressed as actions, so the only thing offered is
+    // removing it — and not even that while it is the composition's last clip.
+    if (isPlaceholderClip) {
+      return VideoEditorTimelineControls(
+        onDelete: isLastClip ? null : () => _deleteClip(context),
+        onDone: () => context.read<ClipEditorBloc>().add(
+          const ClipEditorEditingStopped(),
+        ),
+      );
+    }
 
     return VideoEditorTimelineControls(
       onDelete: isLastClip ? null : () => _deleteClip(context),
@@ -95,6 +125,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       // Split/Speed stay mounted and are shown disabled (not removed) while
       // busy, so the control set doesn't visibly reshuffle mid-operation.
       onSplit: () => _splitClip(context),
+      onDetach: () => _detachClip(context),
+      isDetaching: isDetachingCurrentClip,
       onSpeed: () => _setPlaybackSpeed(context),
       isSplitting: isSplittingCurrentClip,
       onTransform: () => _transformClip(context),
@@ -183,6 +215,97 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
             FadeTransition(opacity: animation, child: child),
       ),
     );
+  }
+
+  /// Lifts the selected clip off the timeline and onto the canvas.
+  ///
+  /// Asks first what takes its place, because the answer changes the
+  /// composition either way: closing the gap shortens it, a still keeps its
+  /// length. The bloc does the rest — the placeholder render and the clip-list
+  /// change — and `_ClipDetachResultListener` in the scaffold adds the layer,
+  /// so the work survives these controls unmounting mid-render.
+  Future<void> _detachClip(BuildContext context) async {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    final clip = state.clips[state.currentClipIndex];
+
+    final choice = await showDetachClipSheet(
+      context,
+      // The composition needs a track. Detaching the only clip is fine, but
+      // only if something stays behind in its place.
+      canRemoveSlot: state.clips.length > 1,
+    );
+    if (choice == null || !context.mounted) return;
+
+    final fill = switch (choice) {
+      DetachClipChoice.removeSlot => null,
+      DetachClipChoice.color => await _pickColorFill(),
+      DetachClipChoice.image => await _pickImageFill(),
+    };
+    // A dismissed colour picker or camera cancels the whole detach: the user
+    // chose to keep the slot and then did not say with what.
+    if (choice != DetachClipChoice.removeSlot && fill == null) return;
+    if (bloc.isClosed) return;
+
+    bloc.add(
+      ClipEditorClipDetachRequested(clipId: clip.id, replacement: fill),
+    );
+  }
+
+  Future<ClipPlaceholderFill?> _pickColorFill() async {
+    if (!mounted) return null;
+    final picked = await showFullColorPicker(
+      context,
+      initialColor: VineTheme.surfaceBackground,
+    );
+    return picked == null ? null : ClipPlaceholderColorFill(picked);
+  }
+
+  /// Shoots the still that holds the detached clip's place.
+  ///
+  /// Camera only, matching the green-screen backdrop: the gallery is a route
+  /// for AI-generated imagery to enter a Divine video, and a still the user
+  /// photographs on the spot cannot be one.
+  Future<ClipPlaceholderFill?> _pickImageFill() async {
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+      if (picked == null) return null;
+
+      // Bake the EXIF rotation in off the UI isolate: the renderer reads raw
+      // pixels, so a phone held sideways would otherwise fill the slot with a
+      // rotated still.
+      final bytes = await compute(
+        bakeImageOrientation,
+        await File(picked.path).readAsBytes(),
+      );
+      final documentsPath = await getDocumentsPath();
+      final target = p.join(
+        documentsPath,
+        'clip_placeholder_${DateTime.now().microsecondsSinceEpoch}.png',
+      );
+      await File(target).writeAsBytes(bytes, flush: true);
+      return ClipPlaceholderImageFill(target);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Failed to capture the detach placeholder photo',
+        name: 'TimelineClipControls',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorDetachImagePickFailed,
+          ),
+        );
+      }
+      return null;
+    }
   }
 
   void _reverseClip(BuildContext context) {

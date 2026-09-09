@@ -8338,6 +8338,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => '滑动调节';
 
   @override
+  String get videoEditorDetachLabel => '分离';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '把选中片段从时间线分离';
+
+  @override
+  String get videoEditorDetachTitle => '分离片段';
+
+  @override
+  String get videoEditorDetachDescription => '片段会移到画布上，你可以随意摆放。时间线上由什么来顶替它的位置？';
+
+  @override
+  String get videoEditorDetachReplaceRemove => '无';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail => '合上空档——后面的一切都会提前开始。';
+
+  @override
+  String get videoEditorDetachReplaceColor => '颜色';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => '按片段原来的时长显示一块纯色。';
+
+  @override
+  String get videoEditorDetachReplaceImage => '照片';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => '拍一张照片来顶替它的位置。';
+
+  @override
+  String get videoEditorDetachedClipLabel => '已分离的片段';
+
+  @override
+  String get videoEditorDetachProgressLabel => '正在分离你的片段…';
+
+  @override
+  String get videoEditorDetachFailed => '没能分离那个片段。你的时间线没有改动。';
+
+  @override
+  String get videoEditorDetachImagePickFailed => '这张照片加载不了。';
+
+  @override
   String get videoEditorChromaKeyLabel => '绿幕';
 
   @override

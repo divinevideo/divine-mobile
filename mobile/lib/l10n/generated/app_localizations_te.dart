@@ -9104,6 +9104,55 @@ class AppLocalizationsTe extends AppLocalizations {
       'సర్దుబాటు చేయడానికి స్లయిడ్ చేయండి';
 
   @override
+  String get videoEditorDetachLabel => 'వేరు చేయి';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'ఎంచుకున్న క్లిప్‌ని టైమ్‌లైన్ నుండి వేరు చేయండి';
+
+  @override
+  String get videoEditorDetachTitle => 'క్లిప్‌ని వేరు చేయండి';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'క్లిప్ కాన్వాస్‌కి వెళ్తుంది, అక్కడ మీరు దానిని ఎక్కడైనా ఉంచవచ్చు. టైమ్‌లైన్‌లో దాని స్థానాన్ని ఏది తీసుకుంటుంది?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'ఏమీ లేదు';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'ఖాళీని మూసివేయండి – ఆ తర్వాతివన్నీ ముందుగా మొదలవుతాయి.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'రంగు';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'క్లిప్ నడిచినంత సేపు ఒకే రంగును ఉంచుతుంది.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'ఫోటో';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'దాని స్థానాన్ని నిలిపే ఫోటో తీయండి.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'వేరు చేసిన క్లిప్';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'మీ క్లిప్‌ను వేరు చేస్తోంది…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'ఆ క్లిప్‌ని వేరు చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'గ్రీన్ స్క్రీన్';
 
   @override

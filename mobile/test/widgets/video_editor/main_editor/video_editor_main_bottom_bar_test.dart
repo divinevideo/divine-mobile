@@ -59,6 +59,7 @@ Widget _buildWidget({
       bodySizeNotifier: ValueNotifier(const Size(400, 800)),
       zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
       playTimeNotifier: ValueNotifier(Duration.zero),
+      playheadAdvancingNotifier: ValueNotifier<bool>(false),
       fromLibrary: false,
       child: const Scaffold(body: VideoEditorMainBottomBar()),
     ),

@@ -8938,6 +8938,55 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Scorri per regolare';
 
   @override
+  String get videoEditorDetachLabel => 'Stacca';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Stacca la clip selezionata dalla timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Stacca la clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'La clip passa sulla tela, dove puoi metterla dove vuoi. Cosa prende il suo posto sulla timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Niente';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Chiudi il vuoto: tutto quello che segue inizia prima.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Colore';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Tiene un colore pieno per quanto durava la clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Scatta una foto che ne tenga il posto.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip staccata';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Sto staccando la clip…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Non è stato possibile staccare quella clip. La timeline resta invariata.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Impossibile caricare quella foto.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

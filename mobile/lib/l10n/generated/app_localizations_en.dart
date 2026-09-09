@@ -8940,6 +8940,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Slide to adjust';
 
   @override
+  String get videoEditorDetachLabel => 'Detach';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Detach the selected clip from the timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Detach clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'The clip moves onto the canvas, where you can place it anywhere. What takes its place on the timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nothing';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Close the gap — everything after it starts earlier.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Color';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Hold a solid color for as long as the clip ran.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Photo';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Shoot a still to hold in its place.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Detached clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Detaching your clip…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Couldn\'t detach that clip. Your timeline is unchanged.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Couldn\'t load that photo.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

@@ -8881,6 +8881,54 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Schuif om aan te passen';
 
   @override
+  String get videoEditorDetachLabel => 'Losmaken';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Geselecteerde clip losmaken van de tijdlijn';
+
+  @override
+  String get videoEditorDetachTitle => 'Clip losmaken';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'De clip gaat naar het canvas, waar je hem overal kunt neerzetten. Wat komt er op de tijdlijn voor in de plaats?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Niets';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Gat dichten – alles erna begint eerder.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Kleur';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Houdt een effen kleur vast zolang de clip duurde.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Maak een foto die zijn plek inneemt.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Losgemaakte clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Clip wordt losgemaakt…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Kon die clip niet losmaken. Je tijdlijn blijft ongewijzigd.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Kon die foto niet laden.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Greenscreen';
 
   @override

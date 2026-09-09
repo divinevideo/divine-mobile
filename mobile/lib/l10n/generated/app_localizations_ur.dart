@@ -8836,6 +8836,54 @@ class AppLocalizationsUr extends AppLocalizations {
       'ایڈجسٹ کرنے کے لیے سلائیڈ کریں';
 
   @override
+  String get videoEditorDetachLabel => 'الگ کریں';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'منتخب کلپ کو ٹائم لائن سے الگ کریں';
+
+  @override
+  String get videoEditorDetachTitle => 'کلپ الگ کریں';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'کلپ کینوس پر چلا جاتا ہے، جہاں آپ اسے کہیں بھی رکھ سکتے ہیں۔ ٹائم لائن پر اس کی جگہ کیا لے گا؟';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'کچھ نہیں';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'خلا بند کریں – اس کے بعد کی ہر چیز پہلے شروع ہو گی۔';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'رنگ';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'کلپ جتنی دیر چلا، اتنی دیر ایک ٹھوس رنگ دکھاتا ہے۔';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'تصویر';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'اس کی جگہ رکھنے کے لیے ایک تصویر لیں۔';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'الگ کیا گیا کلپ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'آپ کی کلپ الگ کی جا رہی ہے…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'وہ کلپ الگ نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
+
+  @override
   String get videoEditorChromaKeyLabel => 'گرین اسکرین';
 
   @override

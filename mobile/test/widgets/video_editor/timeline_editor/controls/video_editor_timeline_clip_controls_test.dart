@@ -135,6 +135,7 @@ void main() {
                 bodySizeNotifier: ValueNotifier(const Size(400, 600)),
                 zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                 playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
                 fromLibrary: false,
                 onOpenCamera: () {},
                 onOpenClipsEditor: () {},
@@ -224,6 +225,7 @@ void main() {
                       bodySizeNotifier: ValueNotifier(const Size(400, 600)),
                       zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                       playTimeNotifier: ValueNotifier(Duration.zero),
+                      playheadAdvancingNotifier: ValueNotifier<bool>(false),
                       fromLibrary: false,
                       onOpenCamera: () {},
                       onOpenClipsEditor: () {},
@@ -284,6 +286,38 @@ void main() {
       expect(find.text('Duplicate'), findsOneWidget);
       expect(find.text('Split'), findsOneWidget);
       expect(find.text('Delete'), findsNothing);
+    });
+
+    testWidgets('offers Detach on an ordinary clip', (tester) async {
+      when(
+        () => bloc.state,
+      ).thenReturn(ClipEditorState(clips: [clip('clip-1')]));
+
+      await tester.pumpWidget(build());
+
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onDetach, isNotNull);
+    });
+
+    testWidgets('hides Detach on a placeholder clip', (tester) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1').copyWith(isPlaceholder: true)],
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      // A placeholder is the still that already stands in for a detached clip.
+      // Detaching it would put a frozen frame on the canvas and ask for a
+      // second still to take its place.
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onDetach, isNull);
+      expect(find.text('Detach'), findsNothing);
     });
 
     testWidgets('dispatches ClipEditorEditingStopped when done pressed', (
@@ -730,6 +764,7 @@ void main() {
                   bodySizeNotifier: ValueNotifier(const Size(400, 600)),
                   zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                   playTimeNotifier: ValueNotifier(Duration.zero),
+                  playheadAdvancingNotifier: ValueNotifier<bool>(false),
                   fromLibrary: false,
                   onOpenCamera: () {},
                   onOpenClipsEditor: () {},

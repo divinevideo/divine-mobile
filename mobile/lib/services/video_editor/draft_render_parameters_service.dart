@@ -13,9 +13,11 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -168,6 +170,14 @@ class DraftRenderParametersService {
         configs: ImportEditorConfigs(
           widgetLoader: (id, {meta}) {
             if (meta == null) return const SizedBox.shrink();
+            // A detached clip is composited from its own video file, so its
+            // raster is thrown away — but the rasterizer drops a layer that
+            // produces no image and reports the run as a partial bake, so it
+            // still has to mount as something with a size. Its poster never
+            // opens a decoder, unlike the canvas' live view.
+            if (DetachedClipLayerData.isDetachedClipMeta(meta)) {
+              return DetachedClipPoster(meta: meta);
+            }
             final sticker = StickerData.fromJson(meta);
             stickers.add(sticker);
             return VideoEditorSticker(

@@ -14,6 +14,7 @@ import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
+import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
@@ -62,6 +63,11 @@ typedef TransformClipFn = Future<EditorVideo> Function({
   required String renderId,
 });
 
+/// Function signature matching [VideoEditorTransformService.aspectRatioOf],
+/// used as an injectable seam so tests can state a rendered clip's shape
+/// without a decoder.
+typedef MeasureAspectRatioFn = Future<double?> Function(EditorVideo video);
+
 /// Function signature matching [VideoEditorMergeService.mergeClips], used as an
 /// injectable seam so tests can swap in a pure-Dart fake that does not touch
 /// the render pipeline.
@@ -102,6 +108,16 @@ typedef DeferFileCleanupFn = void Function(Iterable<String?> paths);
 
 void _noopDeferFileCleanup(Iterable<String?> paths) {}
 
+/// Function signature matching [ClipPlaceholderRenderService.render], the
+/// injectable seam that turns a colour or photo into the still filling a
+/// detached clip's slot, so tests can exercise detach without a renderer.
+typedef RenderClipPlaceholderFn =
+    Future<DivineVideoClip?> Function({
+      required ClipPlaceholderFill fill,
+      required DivineVideoClip source,
+      String? taskId,
+    });
+
 /// Persists an already-flattened clip to the device's clip library, returning
 /// whether it was stored.
 ///
@@ -133,18 +149,22 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     SplitClipFn? splitClip,
     ReverseClipFn? reverseClip,
     TransformClipFn? transformClip,
+    MeasureAspectRatioFn? measureAspectRatio,
     WriteStopMotionFrameFn? writeStopMotionFrame,
     ChromaKeyBakeFn? bakeChromaKey,
     MergeClipsFn? mergeClips,
     FlattenClipForLibraryFn? flattenClipForLibrary,
     CleanupFlattenedClipFn? cleanupFlattenedClip,
     DeferFileCleanupFn? deferFileCleanup,
+    RenderClipPlaceholderFn? renderClipPlaceholder,
   }) : _audioExtractionService =
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
        _reverseClip = reverseClip ?? VideoEditorReverseService.reverseClip,
        _transformClip =
            transformClip ?? VideoEditorTransformService.transformClip,
+       _measureAspectRatio =
+           measureAspectRatio ?? VideoEditorTransformService.aspectRatioOf,
        _writeStopMotionFrame =
            writeStopMotionFrame ??
            StopMotionFrameTransformService.writeTransformedFrame,
@@ -157,6 +177,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            cleanupFlattenedClip ??
            VideoEditorClipLibrarySaveService.cleanupFlattenedClip,
        _deferFileCleanup = deferFileCleanup ?? _noopDeferFileCleanup,
+       _renderClipPlaceholder =
+           renderClipPlaceholder ?? ClipPlaceholderRenderService.render,
        _saveClipToLibrary = saveClipToLibrary,
        super(const ClipEditorState()) {
     // Clip data
@@ -223,6 +245,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       _onClipTransformRequested,
       transformer: droppable(),
     );
+    on<ClipEditorDetachedClipTransformRequested>(
+      _onDetachedClipTransformRequested,
+      transformer: droppable(),
+    );
 
     // Burn a green screen into the clip's file
     on<ClipEditorChromaKeyRequested>(
@@ -230,6 +256,14 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: droppable(),
     );
     on<ClipEditorChromaKeyRemoved>(_onChromaKeyRemoved);
+
+    // Lift a clip off the timeline and onto the canvas
+    // sequential (not droppable) so detaching a second clip while the first
+    // one's placeholder renders is queued rather than silently dropped.
+    on<ClipEditorClipDetachRequested>(
+      _onClipDetachRequested,
+      transformer: sequential(),
+    );
 
     // Save a single clip to the persistent clip library
     on<ClipEditorSaveClipToLibraryRequested>(
@@ -253,6 +287,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final SplitClipFn _splitClip;
   final ReverseClipFn _reverseClip;
   final TransformClipFn _transformClip;
+  final MeasureAspectRatioFn _measureAspectRatio;
   final WriteStopMotionFrameFn _writeStopMotionFrame;
   final ChromaKeyBakeFn _bakeChromaKey;
   final MergeClipsFn _mergeClips;
@@ -260,6 +295,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final CleanupFlattenedClipFn _cleanupFlattenedClip;
   final DeferFileCleanupFn _deferFileCleanup;
   final SaveClipToLibraryFn _saveClipToLibrary;
+  final RenderClipPlaceholderFn _renderClipPlaceholder;
 
   // === CLIP DATA ===
 
@@ -1436,6 +1472,133 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     _deferSupersededFiles(clip);
   }
 
+  /// Lifts a clip off the timeline so the widget layer can place it on the
+  /// canvas, and either closes the gap it leaves or fills it with a still.
+  ///
+  /// The clip list mutation happens here; adding the layer and writing both to
+  /// editor history is the widget layer's half, driven by
+  /// [ClipEditorState.lastDetachResult]. Splitting it that way keeps the bloc
+  /// free of the editor, and keeps the two changes in one undo entry.
+  Future<void> _onClipDetachRequested(
+    ClipEditorClipDetachRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final index = state.clips.indexWhere((c) => c.id == event.clipId);
+    if (index == -1) return;
+    final clip = state.clips[index];
+
+    // Closing the gap is the one case a lone clip cannot take: the composition
+    // would be left with no track at all. The action bar already hides it, so
+    // this is the belt-and-braces half.
+    final replacement = event.replacement;
+    if (replacement == null && state.clips.length <= 1) {
+      Log.warning(
+        '⚠️ Refusing to detach the only clip without a replacement',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    DivineVideoClip? placeholder;
+    if (replacement != null) {
+      // Namespaced off the clip id like every other render here, so the
+      // progress overlay keys on this encode and not a concurrent one.
+      final renderId = '${clip.id}_detach';
+      emit(
+        state.copyWith(
+          isDetaching: true,
+          detachingClipId: clip.id,
+          detachingRenderId: renderId,
+        ),
+      );
+      try {
+        placeholder = await _renderClipPlaceholder(
+          fill: replacement,
+          source: clip,
+          taskId: renderId,
+        );
+      } catch (e, stackTrace) {
+        final error = switch (e) {
+          StateError() ||
+          TypeError() ||
+          RangeError() => Reportable(e, context: '_onClipDetachRequested'),
+          _ => e,
+        };
+        addError(error, stackTrace);
+        Log.error(
+          '❌ Failed to render the placeholder for clip ${clip.id}: $e',
+          name: 'ClipEditorBloc',
+          category: LogCategory.video,
+        );
+      }
+
+      // Leaving the editor mid-render still wrote a documents-dir file; hand it
+      // to the reaper rather than orphaning it.
+      if (isClosed) {
+        _deferOrphanedPaths([placeholder?.video?.file?.path]);
+        return;
+      }
+
+      if (placeholder == null) {
+        emit(
+          state.copyWith(
+            isDetaching: false,
+            clearDetachingClipId: true,
+            lastDetachResult: ClipDetachFailure(),
+          ),
+        );
+        return;
+      }
+    }
+
+    final currentClips = state.clips;
+    final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
+    if (currentIndex == -1) {
+      Log.warning(
+        '⚠️ Detach discarded: clip ${clip.id} no longer exists',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths([placeholder?.video?.file?.path]);
+      emit(
+        state.copyWith(
+          isDetaching: false,
+          clearDetachingClipId: true,
+          lastDetachResult: ClipDetachDiscarded(),
+        ),
+      );
+      return;
+    }
+
+    final newClips = List<DivineVideoClip>.of(currentClips);
+    if (placeholder == null) {
+      newClips.removeAt(currentIndex);
+    } else {
+      newClips[currentIndex] = placeholder;
+    }
+
+    // The detached clip's own file is deliberately *not* reaped: the layer
+    // that now carries it plays from exactly that file.
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        currentClipIndex: currentIndex.clamp(
+          0,
+          newClips.isEmpty ? 0 : newClips.length - 1,
+        ),
+        isEditing: false,
+        isDetaching: false,
+        clearDetachingClipId: true,
+        lastDetachResult: ClipDetachSuccess(
+          previousClips: currentClips,
+          detachedClip: clip,
+          placeholder: placeholder,
+        ),
+      ),
+    );
+  }
+
   Future<void> _onChromaKeyRequested(
     ClipEditorChromaKeyRequested event,
     Emitter<ClipEditorState> emit,
@@ -1829,6 +1992,109 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           isTransforming: false,
           clearTransformingClipId: true,
           lastTransformResult: ClipTransformFailure(),
+        ),
+      );
+    }
+  }
+
+  /// Bakes a crop / rotation / flip into a clip that already left the timeline
+  /// and now lives in a canvas layer.
+  ///
+  /// Deliberately not folded into [_onClipTransformRequested]: that one looks
+  /// its clip up in [ClipEditorState.clips] and swaps the rendered file back
+  /// in there, and a detached clip is in neither place. What the two do share
+  /// is the render — same service, same progress-stream id shape — so the
+  /// existing transform overlay covers this one for free.
+  ///
+  /// The layer write-back is the widget layer's half, driven by
+  /// [ClipEditorState.lastDetachedClipTransformResult], for the same reason
+  /// detaching is split that way: the BLoC has no editor to reach into.
+  Future<void> _onDetachedClipTransformRequested(
+    ClipEditorDetachedClipTransformRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final clip = event.clip;
+    if (clip.video?.file?.path == null) {
+      Log.warning(
+        '⚠️ Detached transform skipped: clip ${clip.id} has no local file',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(
+        state.copyWith(
+          lastDetachedClipTransformResult: DetachedClipTransformFailure(),
+        ),
+      );
+      return;
+    }
+
+    final renderId = '${clip.id}_detached_transform';
+    emit(state.copyWith(isTransforming: true, transformingClipId: renderId));
+
+    try {
+      final transformedVideo = await _transformClip(
+        sourceClip: clip,
+        transform: event.transform,
+        renderId: renderId,
+      );
+
+      // Leaving the editor mid-render still wrote a documents-dir file.
+      if (isClosed) {
+        _deferOrphanedPaths([transformedVideo.file?.path]);
+        return;
+      }
+
+      // A detached clip is a free-floating object on the canvas rather than
+      // something bound to the composition's ratio, so a crop changes its
+      // shape and the layer has to be re-proportioned to match. Read off the
+      // rendered file, because only the renderer knows what it produced.
+      final aspectRatio = await _measureAspectRatio(transformedVideo);
+      if (isClosed) return;
+
+      emit(
+        state.copyWith(
+          isTransforming: false,
+          clearTransformingClipId: true,
+          lastDetachedClipTransformResult: DetachedClipTransformSuccess(
+            layerId: event.layerId,
+            clip: clip.copyWith(
+              video: transformedVideo,
+              originalAspectRatio: aspectRatio,
+              // The cached forward/reversed renders describe the pre-crop
+              // footage, and a recorded chroma-key source no longer lines up
+              // with the new geometry — re-keying from it would drop the crop.
+              clearForwardVideoPath: true,
+              clearReversedVideoPath: true,
+              clearChromaKey: true,
+            ),
+          ),
+        ),
+      );
+
+      // The pre-crop file is deliberately left on disk, exactly as the detach
+      // itself leaves the clip's file: the layer's undo history points at it,
+      // a duplicated layer may still play it, and a saved draft records it by
+      // basename. Nothing in [clips] refers to it, so the orphan sweep cannot
+      // tell those apart — reaping here would break all three.
+    } catch (e, stackTrace) {
+      final error = switch (e) {
+        StateError() || TypeError() || RangeError() => Reportable(
+          e,
+          context: '_onDetachedClipTransformRequested',
+        ),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to transform detached clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(
+        state.copyWith(
+          isTransforming: false,
+          clearTransformingClipId: true,
+          lastDetachedClipTransformResult: DetachedClipTransformFailure(),
         ),
       );
     }

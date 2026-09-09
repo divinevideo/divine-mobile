@@ -46,6 +46,11 @@ class ClipEditorState extends Equatable {
     this.lastClipLibrarySave,
     this.selectedFrameIndex,
     this.selectedFrameIndexes = const {},
+    this.isDetaching = false,
+    this.detachingClipId,
+    this.detachingRenderId,
+    this.lastDetachResult,
+    this.lastDetachedClipTransformResult,
   });
 
   /// Local copy of clips managed by this editor session.
@@ -224,6 +229,37 @@ class ClipEditorState extends Equatable {
   /// Consumed by the widget layer to surface a success/failure snackbar.
   final ClipLibrarySaveResult? lastClipLibrarySave;
 
+  /// Whether a clip is currently being detached from the timeline.
+  ///
+  /// Only true while the placeholder still is rendering — a detach that closes
+  /// the gap instead needs no render and completes within the handler.
+  final bool isDetaching;
+
+  /// Id of the clip being detached. Non-`null` while [isDetaching] is `true`,
+  /// so the action bar can show the spinner on the clip it belongs to.
+  final String? detachingClipId;
+
+  /// Render id keying the placeholder encoder's progress stream, namespaced
+  /// from the clip id (`<clipId>_detach`) so it cannot collide with another
+  /// render on the same clip.
+  final String? detachingRenderId;
+
+  /// Last completed detach result.
+  ///
+  /// Consumed by the widget layer, which owns the half the BLoC cannot do:
+  /// adding the clip to the canvas as a layer, and committing the new clip
+  /// list plus that layer to editor history as one undoable entry.
+  final ClipDetachResult? lastDetachResult;
+
+  /// Last completed transform render of a clip that already left the timeline.
+  ///
+  /// Separate from [lastTransformResult] because the two land in different
+  /// places: a timeline clip's new file is swapped into [clips] here, while a
+  /// detached clip lives in a canvas layer this BLoC cannot reach — so the
+  /// result carries the clip out to the widget layer, which writes it back
+  /// onto the layer and into editor history.
+  final DetachedClipTransformResult? lastDetachedClipTransformResult;
+
   /// Index of the currently selected still in a frames-only stop-motion clip,
   /// or `null` when no frame is selected (or the composition is not
   /// stop-motion). Drives the per-frame action bar and tile highlight.
@@ -284,6 +320,12 @@ class ClipEditorState extends Equatable {
     String? savingClipToLibraryClipId,
     bool clearSavingClipToLibraryClipId = false,
     ClipLibrarySaveResult? lastClipLibrarySave,
+    bool? isDetaching,
+    String? detachingClipId,
+    String? detachingRenderId,
+    bool clearDetachingClipId = false,
+    ClipDetachResult? lastDetachResult,
+    DetachedClipTransformResult? lastDetachedClipTransformResult,
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
     Set<int>? selectedFrameIndexes,
@@ -351,6 +393,17 @@ class ClipEditorState extends Equatable {
           ? null
           : (selectedFrameIndex ?? this.selectedFrameIndex),
       selectedFrameIndexes: selectedFrameIndexes ?? this.selectedFrameIndexes,
+      isDetaching: isDetaching ?? this.isDetaching,
+      detachingClipId: clearDetachingClipId
+          ? null
+          : (detachingClipId ?? this.detachingClipId),
+      detachingRenderId: clearDetachingClipId
+          ? null
+          : (detachingRenderId ?? this.detachingRenderId),
+      lastDetachResult: lastDetachResult ?? this.lastDetachResult,
+      lastDetachedClipTransformResult:
+          lastDetachedClipTransformResult ??
+          this.lastDetachedClipTransformResult,
     );
   }
 
@@ -399,6 +452,13 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastClipLibrarySave),
     selectedFrameIndex,
     selectedFrameIndexes,
+    isDetaching,
+    detachingClipId,
+    detachingRenderId,
+    // Identity-only: each ClipDetachResult is a fresh instance per detach.
+    identityHashCode(lastDetachResult),
+    // Identity-only, for the same reason.
+    identityHashCode(lastDetachedClipTransformResult),
   ];
 }
 
@@ -586,3 +646,68 @@ final class ClipLibrarySaveFailure extends ClipLibrarySaveResult {}
 /// Silent by design: the user deleted the clip they asked to save, so neither
 /// a success nor a failure snackbar would make sense.
 final class ClipLibrarySaveDiscarded extends ClipLibrarySaveResult {}
+
+// === DETACH RESULT ===
+
+/// One-shot signal describing the outcome of detaching a clip from the
+/// timeline.
+///
+/// Emitted into [ClipEditorState.lastDetachResult] after each attempt.
+/// Identity-compared so the scaffold [BlocListener] fires exactly once per
+/// attempt even when the same outcome repeats.
+sealed class ClipDetachResult {}
+
+/// The clip left the timeline. [ClipEditorState.clips] already reflects that —
+/// the slot is gone, or filled by [placeholder].
+///
+/// [detachedClip] is the clip that came out, which the widget layer turns into
+/// a canvas layer; [previousClips] is the list as it was immediately before,
+/// so timeline markers can be rebased onto the new composition.
+final class ClipDetachSuccess extends ClipDetachResult {
+  ClipDetachSuccess({
+    required this.previousClips,
+    required this.detachedClip,
+    this.placeholder,
+  });
+
+  final List<DivineVideoClip> previousClips;
+  final DivineVideoClip detachedClip;
+
+  /// The still that took the clip's place, or `null` when the gap was closed.
+  final DivineVideoClip? placeholder;
+}
+
+/// The placeholder render failed, so nothing was detached — the timeline is
+/// untouched and the widget layer shows a failure snackbar.
+///
+/// Detaching without filling the slot would silently change the composition's
+/// length, which is not what the user asked for when they picked a fill.
+final class ClipDetachFailure extends ClipDetachResult {}
+
+/// The render finished but the clip had been removed from the timeline
+/// meanwhile, so the result was dropped.
+///
+/// Silent by design: the user deleted the clip they asked to detach.
+final class ClipDetachDiscarded extends ClipDetachResult {}
+
+// === DETACHED-CLIP TRANSFORM RESULT ===
+
+/// One-shot signal describing the outcome of cropping a detached clip.
+///
+/// Emitted into [ClipEditorState.lastDetachedClipTransformResult] after each
+/// attempt, and identity-compared like every other one-shot result here.
+sealed class DetachedClipTransformResult {}
+
+/// The crop was baked into a new file.
+///
+/// [clip] is the detached clip pointing at that file, for the layer identified
+/// by [layerId]; the widget layer writes both back onto the canvas.
+final class DetachedClipTransformSuccess extends DetachedClipTransformResult {
+  DetachedClipTransformSuccess({required this.layerId, required this.clip});
+
+  final String layerId;
+  final DivineVideoClip clip;
+}
+
+/// The render failed; the layer still carries its pre-crop file.
+final class DetachedClipTransformFailure extends DetachedClipTransformResult {}

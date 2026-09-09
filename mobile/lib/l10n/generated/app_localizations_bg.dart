@@ -8920,6 +8920,55 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Плъзнете за регулиране';
 
   @override
+  String get videoEditorDetachLabel => 'Откачи';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Откачи избрания клип от времевата линия';
+
+  @override
+  String get videoEditorDetachTitle => 'Откачане на клип';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Клипът отива върху платното, където можеш да го сложиш където искаш. Какво заема мястото му на времевата линия?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Нищо';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Затвори празнината – всичко след него започва по-рано.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Цвят';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Задържа плътен цвят толкова, колкото е траел клипът.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Снимка';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Снимай кадър, който да задържи мястото му.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Откачен клип';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Клипът се отделя…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Клипът не можа да се откачи. Времевата ти линия остава непроменена.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Снимката не можа да се зареди.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Зелен екран';
 
   @override

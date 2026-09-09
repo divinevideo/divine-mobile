@@ -13,6 +13,7 @@ import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 part 'timeline_overlay_event.dart';
@@ -181,9 +182,19 @@ class TimelineOverlayBloc
             id: layer.id,
             type: .layer,
             startTime: layer.startTime ?? .zero,
-            endTime: _clampEnd(layer.endTime ?? total, total),
+            endTime: _clampEnd(
+              layer.endTime ?? _defaultLayerEnd(layer, total),
+              total,
+            ),
             label: _labelForLayer(layer),
             layer: layer,
+            // A detached clip is real footage of a fixed length; stretching its
+            // bar past that would promise frames the file does not have. Every
+            // other layer is a drawing that can be held for as long as the user
+            // likes, so it stays unbounded.
+            maxDuration: DetachedClipLayerData.playbackDurationOf(
+              DetachedClipLayerData.metaOf(layer),
+            ),
           ),
     ];
 
@@ -429,6 +440,20 @@ class TimelineOverlayBloc
   }
 
   /// Returns a human-readable label based on the layer type.
+  /// Where a layer with no explicit window ends.
+  ///
+  /// Layers run to the end of the composition by default. A detached clip
+  /// instead ends where its own footage does — beyond that there is nothing to
+  /// show, and the export stops drawing it there too.
+  static Duration _defaultLayerEnd(Layer layer, Duration total) {
+    final clipLength = DetachedClipLayerData.playbackDurationOf(
+      DetachedClipLayerData.metaOf(layer),
+    );
+    if (clipLength == null) return total;
+    final end = (layer.startTime ?? Duration.zero) + clipLength;
+    return end < total ? end : total;
+  }
+
   static String _labelForLayer(Layer layer) => switch (layer) {
     TextLayer(:final text) => text,
     PaintLayer() => 'Drawing',

@@ -8638,6 +8638,52 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'ለማስተካከል ያንሸራትቱ';
 
   @override
+  String get videoEditorDetachLabel => 'ነጥል';
+
+  @override
+  String get videoEditorDetachSemanticLabel => 'የተመረጠውን ቅንጥብ ከጊዜ መስመሩ ይንጠሉ';
+
+  @override
+  String get videoEditorDetachTitle => 'ቅንጥብ መንጠል';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'ቅንጥቡ ወደ ሸራው ይሄዳል፣ እዚያም የፈለጉበት ቦታ ማስቀመጥ ይችላሉ። በጊዜ መስመሩ ላይ ቦታውን ማን ይይዘዋል?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'ምንም';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'ክፍተቱን ይዝጉ – ከዚያ በኋላ ያለው ሁሉ ቀድሞ ይጀምራል።';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'ቀለም';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'ቅንጥቡ በሄደበት ያህል ጊዜ አንድ ሙሉ ቀለም ይይዛል።';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'ፎቶ';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => 'ቦታውን የሚይዝ ፎቶ ያንሱ።';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'የተነጠለ ቅንጥብ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'ቅንጥብዎ እየተለየ ነው…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'ያንን ቅንጥብ መንጠል አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'ያንን ፎቶ መጫን አልተቻለም።';
+
+  @override
   String get videoEditorChromaKeyLabel => 'አረንጓዴ ስክሪን';
 
   @override

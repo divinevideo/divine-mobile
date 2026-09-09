@@ -8758,6 +8758,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Ayarlamak için kaydır';
 
   @override
+  String get videoEditorDetachLabel => 'Ayır';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Seçili klibi zaman çizelgesinden ayır';
+
+  @override
+  String get videoEditorDetachTitle => 'Klibi ayır';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip tuvale geçer, orada istediğin yere koyabilirsin. Zaman çizelgesinde yerini ne alacak?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Hiçbir şey';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Boşluğu kapat – sonrasındaki her şey daha erken başlar.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Renk';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Klip ne kadar sürdüyse o kadar düz renk tutar.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Fotoğraf';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Yerini tutacak bir fotoğraf çek.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Ayrılmış klip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Klibin ayrılıyor…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Bu klip ayrılamadı. Zaman çizelgen değişmedi.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Bu fotoğraf yüklenemedi.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Yeşil perde';
 
   @override

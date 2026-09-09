@@ -6,7 +6,9 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Multi-select visual state for an overlay tile while the timeline is in
@@ -123,6 +125,8 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     leftChannel: item.waveformLeftChannel,
                     rightChannel: item.waveformRightChannel,
                   )
+                : _isDetachedClip(item.layer)
+                ? _DetachedClipContent(item: item)
                 : Align(
                     alignment: .centerLeft,
                     child: Padding(
@@ -254,6 +258,37 @@ class _PaintPreview extends StatelessWidget {
   }
 }
 
+/// Whether [layer] is a clip detached onto the canvas.
+bool _isDetachedClip(Layer? layer) =>
+    layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
+
+/// A detached clip's row: nothing but its own frames.
+///
+/// The layer's widget is a live video player, so it is deliberately *not*
+/// mounted here — that would open a second decoder for a bar a few pixels tall.
+/// The frames come from a strip of their own instead.
+///
+/// No caption over them: the frames say what the clip is, and a label would
+/// only cover the thing it describes. Every other row type is announced by its
+/// visible text though, so the name lives on as a semantic label — without it
+/// this row would be the one a screen reader passes over in silence.
+class _DetachedClipContent extends StatelessWidget {
+  const _DetachedClipContent({required this.item});
+
+  final TimelineOverlayItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = DetachedClipLayerData.metaOf(item.layer!);
+    return Semantics(
+      label: context.l10n.videoEditorDetachedClipLabel,
+      child: meta == null
+          ? const SizedBox.expand()
+          : DetachedClipStripThumbnails(meta: meta),
+    );
+  }
+}
+
 class _StickerPreview extends StatelessWidget {
   const _StickerPreview({required this.item});
 
@@ -262,6 +297,7 @@ class _StickerPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layer = item.layer as WidgetLayer?;
+
     StickerData? sticker;
     if (layer?.meta != null) {
       try {

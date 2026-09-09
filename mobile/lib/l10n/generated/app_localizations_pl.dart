@@ -9023,6 +9023,55 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Przesuń, aby dostosować';
 
   @override
+  String get videoEditorDetachLabel => 'Odłącz';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Odłącz wybrany klip od osi czasu';
+
+  @override
+  String get videoEditorDetachTitle => 'Odłącz klip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip trafia na płótno, gdzie możesz go umieścić gdziekolwiek. Co zajmie jego miejsce na osi czasu?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nic';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Zamknij lukę – wszystko dalej zacznie się wcześniej.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Kolor';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Trzyma jednolity kolor tak długo, jak trwał klip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Zdjęcie';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Zrób zdjęcie, które zajmie jego miejsce.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Odłączony klip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Odłączanie klipu…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Nie udało się odłączyć tego klipu. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Nie udało się wczytać tego zdjęcia.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Zielone tło';
 
   @override
