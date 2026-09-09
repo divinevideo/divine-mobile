@@ -1,9 +1,11 @@
-// ABOUTME: Composition tests for the feed author cluster's follow tap target.
-// ABOUTME: Guards the cluster size in both badge states and the name's place.
+// ABOUTME: Composition tests for the feed author row's follow tap target.
+// ABOUTME: Pins that the 48dp target costs no layout and wins its overlaps.
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
@@ -18,14 +20,14 @@ import '../../helpers/test_provider_overrides.dart';
 class _MockVideoInteractionsBloc extends Mock
     implements VideoInteractionsBloc {}
 
-/// The cluster's floor: the avatar plus the sliver the badge overflows into.
-const double _clusterFloor = 58;
+/// The author cluster's height, mirrored from `video_feed_item.dart`.
+const double _clusterSize = 58;
 
-/// The badge's offset inside the avatar, mirrored from `video_feed_item.dart`.
+/// Where the painted badge sits inside the cluster.
 const double _badgeOffset = 31;
 
-/// What the cluster grows to while the badge holds a tap target.
-const double _clusterWithTarget = _badgeOffset + followButtonTapTargetSize;
+/// The target is bottom-aligned to the cluster, so it fits inside the row.
+const double _targetTop = _clusterSize - followButtonTapTargetSize;
 
 void main() {
   late _MockVideoInteractionsBloc mockInteractionsBloc;
@@ -59,6 +61,13 @@ void main() {
   }) async {
     final follow = createMockFollowRepository();
     when(() => follow.isFollowing(any())).thenReturn(alreadyFollowing);
+    // The badge only paints once MyFollowingBloc reports; the shared mock
+    // yields an empty stream, which would leave it invisible.
+    when(follow.watchMyFollowingCached).thenAnswer(
+      (_) => Stream.value(
+        const CacheResult.live(FollowingSnapshot(pubkeys: [], count: 0)),
+      ),
+    );
 
     await tester.pumpWidget(
       testProviderScope(
@@ -98,108 +107,130 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder clusterFinder() => find
-      .ancestor(of: find.byType(UserAvatar), matching: find.byType(Stack))
+  Finder authorRow() => find
+      .ancestor(of: find.byType(UserAvatar), matching: find.byType(Row))
       .first;
 
   group('VideoOverlayActions follow target', () {
-    testWidgets('grows the cluster to hold a 48dp target', (tester) async {
-      await pumpOverlay(tester, alreadyFollowing: false);
-
-      // Not cosmetic: a positioned target outside the cluster is rejected by
-      // the parent before it reaches the badge, so the cluster has to carry it.
-      expect(
-        tester.getSize(clusterFinder()),
-        const Size(_clusterWithTarget, _clusterWithTarget),
-      );
-    });
-
-    testWidgets('grows away from the avatar rather than into it', (
+    testWidgets('a 48dp target costs the author row no height', (
       tester,
     ) async {
       await pumpOverlay(tester, alreadyFollowing: false);
 
-      final avatar = tester.getRect(find.byType(UserAvatar));
-      final target = tester.getRect(find.byType(VideoFollowButtonView));
-
-      // The cluster size alone does not say which direction the target grew,
-      // and the direction is the whole argument for this geometry: any 48dp
-      // box that stays inside the old 58dp cluster has to start at or before
-      // 10, swallowing most of the avatar's profile tap. Pinning the origin
-      // and the overlap is what makes that regression loud.
       expect(
-        target.topLeft - avatar.topLeft,
-        const Offset(_badgeOffset, _badgeOffset),
+        tester.getSize(find.byType(VideoFollowButton)),
+        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
       );
-      expect(
-        avatar.intersect(target).size,
-        Size(avatar.width - _badgeOffset, avatar.height - _badgeOffset),
-      );
+      // The target is larger than the row's avatar block and still costs
+      // nothing: it is positioned, so it does not size its parent.
+      expect(tester.getSize(authorRow()).height, _clusterSize);
     });
 
-    testWidgets('leaves the cluster at its floor for an author already '
-        'followed', (tester) async {
-      await pumpOverlay(tester, alreadyFollowing: true);
-
-      // The state is known synchronously in initState, so this item never
-      // reserves the target and never pays for it.
-      expect(
-        tester.getSize(clusterFinder()),
-        const Size(_clusterFloor, _clusterFloor),
-      );
-    });
-
-    testWidgets(
-      'keeps the avatar at the top of the row at a large text scale',
-      (
-        tester,
-      ) async {
-        // The author row is not one of the clamped subtrees in
-        // `text_scale_limits.dart`, so it takes the full system scale. Past a
-        // point the text column outgrows the cluster, and the row's alignment
-        // decides where the avatar sits: top-aligned it stays level with the
-        // first line of the name, centred it drifts down the column.
-        await pumpOverlay(
-          tester,
-          alreadyFollowing: true,
-          textScaler: const TextScaler.linear(3),
-        );
-
-        final row = find
-            .ancestor(of: clusterFinder(), matching: find.byType(Row))
-            .first;
-        final rowTop = tester.getTopLeft(row).dy;
-
-        // Guard against a vacuous pass: the case only exists once the column is
-        // taller than the cluster.
-        expect(tester.getSize(row).height, greaterThan(_clusterFloor));
-        expect(tester.getTopLeft(find.byType(UserAvatar)).dy, rowTop);
-      },
-    );
-
-    testWidgets('keeps the author name level with the avatar in both states', (
+    testWidgets('the row is identical whether or not the badge shows', (
       tester,
     ) async {
-      // The cluster is taller than the text column while the target is
-      // reserved. Centred, that would sink the name inside it — so the row is
-      // top-aligned and the name must not move between the two states.
-      await pumpOverlay(tester, alreadyFollowing: true);
-      final floorOffset =
-          tester.getTopLeft(find.text('Alice')).dy -
-          tester.getTopLeft(find.byType(UserAvatar)).dy;
+      await pumpOverlay(tester, alreadyFollowing: false);
+      final withBadge = tester.getSize(authorRow());
+      final nameWithBadge = tester.getTopLeft(find.text('Alice'));
+      expect(find.byType(VideoFollowButton), findsOneWidget);
 
-      // Unmount between the two states. VideoFollowButton decides whether to
-      // reserve a target in initState, and pumping the same tree again reuses
-      // the element, so without this the second half re-measures the first.
+      // Unmount: VideoFollowButton decides in initState, so re-pumping the
+      // same tree would re-measure the first state.
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
-      await pumpOverlay(tester, alreadyFollowing: false);
-      final reservedOffset =
-          tester.getTopLeft(find.text('Alice')).dy -
-          tester.getTopLeft(find.byType(UserAvatar)).dy;
+      await pumpOverlay(tester, alreadyFollowing: true);
 
-      expect(reservedOffset, floorOffset);
+      expect(tester.getSize(authorRow()), withBadge);
+      expect(tester.getTopLeft(find.text('Alice')), nameWithBadge);
+    });
+
+    testWidgets('the painted badge keeps the corner it has always drawn in', (
+      tester,
+    ) async {
+      await pumpOverlay(tester, alreadyFollowing: false);
+
+      final avatar = tester.getTopLeft(find.byType(UserAvatar));
+      final target = tester.getTopLeft(find.byType(VideoFollowButton));
+      // The target is bottom-aligned to the cluster, so it starts above the
+      // badge; the badge itself is inset back down to (31, 31).
+      expect(target - avatar, const Offset(_badgeOffset, _targetTop));
+
+      final circle = tester.getTopLeft(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+        ),
+      );
+      expect(circle - avatar, const Offset(_badgeOffset, _badgeOffset));
+    });
+
+    testWidgets('the target wins the strip it shares with the author name', (
+      tester,
+    ) async {
+      // The target is wider than the avatar block, so it overlaps the name
+      // column. Overlaying it on the row rather than nesting it inside is
+      // what makes it win those taps — nested, the name column is hit-tested
+      // first and swallows them.
+      await pumpOverlay(tester, alreadyFollowing: false);
+
+      final target = tester.getRect(find.byType(VideoFollowButton));
+      final avatarRight = tester.getRect(find.byType(UserAvatar)).right;
+      expect(
+        target.right,
+        greaterThan(avatarRight),
+        reason: 'the overlap this test is about must exist',
+      );
+
+      final badgeRenderObjects = <RenderObject>{};
+      void collect(Element e) {
+        final ro = e.renderObject;
+        if (ro != null) badgeRenderObjects.add(ro);
+        e.visitChildren(collect);
+      }
+
+      collect(find.byType(VideoFollowButton).evaluate().single);
+
+      final viewId = View.of(
+        tester.element(find.byType(VideoOverlayActions)),
+      ).viewId;
+      bool followOwns(Offset point) {
+        final result = HitTestResult();
+        WidgetsBinding.instance.hitTestInView(result, point, viewId);
+        return result.path.any((e) => badgeRenderObjects.contains(e.target));
+      }
+
+      // Past the avatar block, inside the target: the name's strip.
+      expect(followOwns(Offset(avatarRight + 20, target.center.dy)), isTrue);
+      // Outside the target entirely: still the name's.
+      expect(followOwns(Offset(target.right + 20, target.center.dy)), isFalse);
+    });
+
+    testWidgets('the badge stays with the avatar at a large text scale', (
+      tester,
+    ) async {
+      // The author row is not one of the clamped subtrees in
+      // `text_scale_limits.dart`, so it takes the full system scale. The
+      // target is positioned from the row's top, so a row that centred its
+      // avatar would leave the badge floating away from it.
+      await pumpOverlay(
+        tester,
+        alreadyFollowing: false,
+        textScaler: const TextScaler.linear(3),
+      );
+
+      expect(
+        tester.getSize(authorRow()).height,
+        greaterThan(_clusterSize),
+        reason: 'the case only exists once the column outgrows the cluster',
+      );
+      expect(
+        tester.getTopLeft(find.byType(VideoFollowButton)) -
+            tester.getTopLeft(find.byType(UserAvatar)),
+        const Offset(_badgeOffset, _targetTop),
+      );
     });
   });
 }

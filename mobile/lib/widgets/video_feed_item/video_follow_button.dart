@@ -37,10 +37,21 @@ const double followButtonTapTargetSize = kMinInteractiveDimension;
 /// not yet follow. Once the viewer follows the author, the button hides for
 /// good.
 class VideoFollowButton extends ConsumerStatefulWidget {
-  const VideoFollowButton({required this.pubkey, super.key});
+  const VideoFollowButton({
+    required this.pubkey,
+    this.visualInsetTop = 0,
+    super.key,
+  });
 
   /// The public key of the video author to follow.
   final String pubkey;
+
+  /// How far the painted badge sits below the top of its tap target.
+  ///
+  /// The target is larger than the badge and its owner decides where the
+  /// badge lands inside it, so the caller passes the offset rather than the
+  /// button assuming one.
+  final double visualInsetTop;
 
   @override
   ConsumerState<VideoFollowButton> createState() => _VideoFollowButtonState();
@@ -92,29 +103,19 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
       return const SizedBox.shrink();
     }
 
-    // Reserve the tap target as soon as the button *might* render, not when
-    // it does. The guard above resolves in initState, so the author cluster is
-    // laid out at its final size before first paint and never resizes later.
-    // Own-video and already-following authors return above and pay nothing.
-    return SizedBox(
-      width: followButtonTapTargetSize,
-      height: followButtonTapTargetSize,
-      // If the author doesn't accept interactions from us (their published
-      // block/mute list names us), render nothing — absence, never an
-      // explanation (disclosure invariant).
-      //
-      // This sits inside the reservation rather than replacing it, because
-      // canTargetUser watches blocklistVersion and so can flip while the item
-      // is on screen. Collapsing the cluster 79 -> 58 at that moment would
-      // shift the author name 21dp in front of the viewer, which is itself a
-      // tell that correlates with the block. Holding the box keeps the
-      // affordance's disappearance silent.
-      child: ref.watch(canTargetUserProvider(widget.pubkey))
-          ? BlocProvider.value(
-              value: _bloc!,
-              child: VideoFollowButtonView(pubkey: widget.pubkey),
-            )
-          : const SizedBox.shrink(),
+    // If the author doesn't accept interactions from us (their published
+    // block/mute list names us), render nothing — absence, never an
+    // explanation (disclosure invariant).
+    if (!ref.watch(canTargetUserProvider(widget.pubkey))) {
+      return const SizedBox.shrink();
+    }
+
+    return BlocProvider.value(
+      value: _bloc!,
+      child: VideoFollowButtonView(
+        pubkey: widget.pubkey,
+        visualInsetTop: widget.visualInsetTop,
+      ),
     );
   }
 }
@@ -123,9 +124,16 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
 /// button. Hides itself entirely once the viewer is following the author.
 class VideoFollowButtonView extends StatelessWidget {
   @visibleForTesting
-  const VideoFollowButtonView({required this.pubkey, super.key});
+  const VideoFollowButtonView({
+    required this.pubkey,
+    this.visualInsetTop = 0,
+    super.key,
+  });
 
   final String pubkey;
+
+  /// How far the painted badge sits below the top of its tap target.
+  final double visualInsetTop;
 
   @override
   Widget build(BuildContext context) {
@@ -174,22 +182,25 @@ class VideoFollowButtonView extends StatelessWidget {
               width: followButtonTapTargetSize,
               height: followButtonTapTargetSize,
               child: Align(
-                // The badge keeps the corner it has always painted in; the
-                // target grows away from the avatar behind it.
                 alignment: AlignmentDirectional.topStart,
-                child: Container(
-                  width: followButtonVisualSize,
-                  height: followButtonVisualSize,
-                  decoration: const BoxDecoration(
-                    color: VineTheme.cameraButtonGreen,
-                    shape: BoxShape.circle,
-                    boxShadow: VineTheme.buttonBoxShadows,
-                  ),
-                  child: const Center(
-                    child: DivineIcon(
-                      icon: DivineIconName.follow,
-                      size: 13,
-                      color: VineTheme.whiteText,
+                child: Padding(
+                  // The badge keeps the exact corner it has always painted in;
+                  // the target is placed around it by the caller.
+                  padding: EdgeInsetsDirectional.only(top: visualInsetTop),
+                  child: Container(
+                    width: followButtonVisualSize,
+                    height: followButtonVisualSize,
+                    decoration: const BoxDecoration(
+                      color: VineTheme.cameraButtonGreen,
+                      shape: BoxShape.circle,
+                      boxShadow: VineTheme.buttonBoxShadows,
+                    ),
+                    child: const Center(
+                      child: DivineIcon(
+                        icon: DivineIconName.follow,
+                        size: 13,
+                        color: VineTheme.whiteText,
+                      ),
                     ),
                   ),
                 ),

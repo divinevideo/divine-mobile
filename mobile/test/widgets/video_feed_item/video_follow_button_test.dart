@@ -313,93 +313,32 @@ void main() {
       return mock;
     }
 
-    Widget hostWith(_MockContentBlocklistRepository mock, String pubkey) =>
-        testMaterialApp(
-          home: Scaffold(body: VideoFollowButton(pubkey: pubkey)),
-          additionalOverrides: [
-            contentBlocklistRepositoryProvider.overrideWithValue(mock),
-          ],
-        );
-
-    testWidgets('holds the reservation when the author blocks us', (
+    testWidgets('renders nothing and claims no taps when blocked', (
       tester,
     ) async {
+      // The badge is absent for an author whose published block/mute list
+      // names us — absence, never an explanation. Absent has to mean absent to
+      // the hit test too: anything left standing there would take
+      // double-tap-to-like and press-and-hold-to-peek from the video behind
+      // it, in a state the viewer has no way to see.
       final authorPubkey = 'd' * 64;
-
-      await tester.pumpWidget(
-        hostWith(
-          blocklist(authorPubkey: authorPubkey, blocksUs: true),
-          authorPubkey,
-        ),
-      );
-      await tester.pump();
-
-      // The affordance is absent, but the box it lived in is not: collapsing
-      // the author cluster is itself a tell that correlates with the block.
-      expect(find.byType(VideoFollowButtonView), findsNothing);
-      expect(
-        tester.getSize(find.byType(VideoFollowButton)),
-        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
-      );
-    });
-
-    testWidgets('does not resize when the blocklist flips while on screen', (
-      tester,
-    ) async {
-      // canTargetUser watches blocklistVersion, so it can change under a
-      // mounted item. The reservation is decided in initState and must not
-      // follow it — otherwise the row shifts 21dp in front of the viewer.
-      final authorPubkey = 'e' * 64;
-
-      await tester.pumpWidget(
-        hostWith(
-          blocklist(authorPubkey: authorPubkey, blocksUs: false),
-          authorPubkey,
-        ),
-      );
-      await tester.pump();
-      final before = tester.getSize(find.byType(VideoFollowButton));
-      expect(find.byType(VideoFollowButtonView), findsOneWidget);
-
-      // Same tree, new blocklist: the element is reused, so initState does not
-      // re-run and this is the live flip rather than a fresh mount.
-      await tester.pumpWidget(
-        hostWith(
-          blocklist(authorPubkey: authorPubkey, blocksUs: true),
-          authorPubkey,
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byType(VideoFollowButtonView), findsNothing);
-      expect(tester.getSize(find.byType(VideoFollowButton)), before);
-    });
-
-    testWidgets('lets taps through while the reservation is empty', (
-      tester,
-    ) async {
-      // The reservation is laid out before the badge decides whether to
-      // paint, and in the blocked case it never paints at all. It has to stay
-      // invisible to the hit test for as long as that lasts: an opaque 48dp
-      // box with nothing in it would take double-tap-to-like and
-      // press-and-hold-to-peek from the video behind it, in a state the
-      // viewer has no way to see.
-      final authorPubkey = 'f' * 64;
       var reachedTheVideo = false;
 
       await tester.pumpWidget(
         testMaterialApp(
           home: Scaffold(
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => reachedTheVideo = true,
+            body: SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => reachedTheVideo = true,
+                    ),
                   ),
-                ),
-                VideoFollowButton(pubkey: authorPubkey),
-              ],
+                  VideoFollowButton(pubkey: authorPubkey),
+                ],
+              ),
             ),
           ),
           additionalOverrides: [
@@ -411,28 +350,72 @@ void main() {
       );
       await tester.pump();
 
-      // Guard against a vacuous pass: the point only exists while the
-      // reservation is standing and empty.
       expect(find.byType(VideoFollowButtonView), findsNothing);
-      expect(
-        tester.getSize(find.byType(VideoFollowButton)),
-        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
-      );
 
-      await tester.tapAt(tester.getCenter(find.byType(VideoFollowButton)));
+      await tester.tapAt(const Offset(24, 24));
       await tester.pump();
-
       expect(reachedTheVideo, isTrue);
     });
 
-    testWidgets('reserves the tap target before the following list resolves', (
+    testWidgets('claims no taps when the blocklist flips while on screen', (
       tester,
     ) async {
-      // The reservation is what keeps the author cluster from resizing under
-      // the reader a beat after the item appears: it is decided in initState,
-      // so the footprint is already final on the first frame, while the view
-      // inside it is still deciding whether to paint anything.
+      // canTargetUser watches blocklistVersion, so it can change under a
+      // mounted item rather than only at build time.
+      final authorPubkey = 'e' * 64;
+      var reachedTheVideo = false;
+
+      Widget host(bool blocksUs) => testMaterialApp(
+        home: Scaffold(
+          body: SizedBox.expand(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => reachedTheVideo = true,
+                  ),
+                ),
+                VideoFollowButton(pubkey: authorPubkey),
+              ],
+            ),
+          ),
+        ),
+        additionalOverrides: [
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            blocklist(authorPubkey: authorPubkey, blocksUs: blocksUs),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(host(false));
+      await tester.pump();
+      expect(
+        find.byType(VideoFollowButtonView),
+        findsOneWidget,
+        reason: 'the flip this test is about must start from present',
+      );
+
+      // Same tree, new blocklist: the element is reused, so this is the live
+      // flip rather than a fresh mount.
+      await tester.pumpWidget(host(true));
+      await tester.pump();
+
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+      await tester.tapAt(const Offset(24, 24));
+      await tester.pump();
+      expect(reachedTheVideo, isTrue);
+    });
+
+    testWidgets('claims no taps before the following list resolves', (
+      tester,
+    ) async {
+      // MyFollowingBloc reports asynchronously, and isFollowing reads an
+      // in-memory list populated the same way, so on a cold feed this is the
+      // ordinary state rather than a corner. Nothing may stand in for the
+      // badge meanwhile.
       final authorPubkey = 'c' * 64;
+      var reachedTheVideo = false;
       final mockBlocklist = _MockContentBlocklistRepository();
       when(() => mockBlocklist.hasBlockedUs(any())).thenReturn(false);
       when(() => mockBlocklist.isBlocked(any())).thenReturn(false);
@@ -443,7 +426,21 @@ void main() {
 
       await tester.pumpWidget(
         testMaterialApp(
-          home: Scaffold(body: VideoFollowButton(pubkey: authorPubkey)),
+          home: Scaffold(
+            body: SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => reachedTheVideo = true,
+                    ),
+                  ),
+                  VideoFollowButton(pubkey: authorPubkey),
+                ],
+              ),
+            ),
+          ),
           additionalOverrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(
               mockBlocklist,
@@ -454,9 +451,13 @@ void main() {
       await tester.pump();
 
       expect(
-        tester.getSize(find.byType(VideoFollowButton)),
-        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
+        find.byType(VideoFollowButtonView),
+        findsOneWidget,
+        reason: 'the view is mounted; it is the badge inside that is pending',
       );
+      await tester.tapAt(const Offset(24, 24));
+      await tester.pump();
+      expect(reachedTheVideo, isTrue);
     });
   });
 }
