@@ -137,7 +137,11 @@ Widget createTestWidget({
   final mockAuth = createMockAuthService();
   when(() => mockAuth.currentPublicKeyHex).thenReturn(viewerPubkey);
   return ProviderScope(
-    overrides: [authServiceProvider.overrideWithValue(mockAuth), ...?overrides],
+    overrides: [
+      authServiceProvider.overrideWithValue(mockAuth),
+      ..._testAudioReuseOverrides(),
+      ...?overrides,
+    ],
     child: MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -153,6 +157,17 @@ Widget createTestWidget({
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
+
+List<dynamic> _testAudioReuseOverrides() {
+  return [
+    audioReuseConsentProvider.overrideWith(
+      (ref, sound) async => sound.allowsReuse,
+    ),
+    audioReuseTermsProvider.overrideWith(
+      (ref, sound) async => sound.allowsReuse,
+    ),
+  ];
+}
 
 void main() {
   group('SoundDetailScreen', () {
@@ -1334,6 +1349,8 @@ void main() {
           final sharedPreferences = await SharedPreferences.getInstance();
           final container = ProviderContainer(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
               soundUsageCountProvider(
                 testSound.id,
@@ -1393,6 +1410,8 @@ void main() {
             mediaProbe: _NoopSavedSoundMediaProbe(),
             child: ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 sharedPreferencesProvider.overrideWithValue(sharedPreferences),
                 soundUsageCountProvider(
                   testSound.id,
@@ -1851,6 +1870,8 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 soundUsageCountProvider(
                   testSound.id,
                 ).overrideWith((ref) => Future.value(0)),
@@ -1909,6 +1930,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               userProfileReactiveProvider(creatorPubkey).overrideWith((
                 ref,
               ) async* {
@@ -1958,6 +1981,8 @@ void main() {
             mediaProbe: _NoopSavedSoundMediaProbe(),
             child: ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 sharedPreferencesProvider.overrideWithValue(sharedPreferences),
                 soundUsageCountProvider(
                   testSound.id,
@@ -1996,6 +2021,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               soundUsageCountProvider(
                 testSound.id,
               ).overrideWith((ref) => Future.value(0)),

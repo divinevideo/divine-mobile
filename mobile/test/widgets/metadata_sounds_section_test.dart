@@ -97,6 +97,7 @@ void main() {
       String? viewerPubkey,
       Object? audioError,
       ValueNotifier<int>? rebuilds,
+      bool currentPolicyAllowsReuse = true,
     }) {
       return ProviderScope(
         overrides: [
@@ -106,6 +107,12 @@ void main() {
           }),
           authServiceProvider.overrideWithValue(
             _mockAuth(viewerPubkey: viewerPubkey),
+          ),
+          audioReuseConsentProvider.overrideWith(
+            (ref, sound) async => currentPolicyAllowsReuse,
+          ),
+          audioReuseTermsProvider.overrideWith(
+            (ref, sound) async => currentPolicyAllowsReuse,
           ),
         ],
         child: MaterialApp(
@@ -434,6 +441,19 @@ void main() {
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
       });
 
+      testWidgets('suppression removes the classic reuse entry point', (
+        tester,
+      ) async {
+        final video = createVideoWithoutAudio(isVerifiedArchive: true);
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, currentPolicyAllowsReuse: false),
+        );
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+      });
+
       testWidgets('honors an explicit decline on a classic Vine', (
         tester,
       ) async {
@@ -617,6 +637,13 @@ void main() {
                 soundByIdProvider(
                   testAudioEventId,
                 ).overrideWith((ref) async => reusedSynth),
+                authServiceProvider.overrideWithValue(_mockAuth()),
+                audioReuseConsentProvider.overrideWith(
+                  (ref, sound) async => true,
+                ),
+                audioReuseTermsProvider.overrideWith(
+                  (ref, sound) async => true,
+                ),
               ],
               child: MaterialApp.router(
                 localizationsDelegates: appLocalizationsDelegates,

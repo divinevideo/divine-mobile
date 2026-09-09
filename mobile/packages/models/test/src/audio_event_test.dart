@@ -427,6 +427,7 @@ void main() {
           content: 'classic vine',
           timestamp: now,
           videoUrl: 'https://example.com/video.mp4',
+          sha256: testSha256,
           duration: 6,
           vineId: 'vine-123',
           addressableDTag: 'vine-123',
@@ -438,6 +439,7 @@ void main() {
         );
 
         expect(audioEvent.duration, equals(6.0));
+        expect(audioEvent.sha256, equals(testSha256));
         expect(audioEvent.title, equals('Original sound - Kenya'));
         expect(
           audioEvent.sourceVideoReference,
