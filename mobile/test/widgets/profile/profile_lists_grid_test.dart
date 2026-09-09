@@ -1,6 +1,5 @@
 // ABOUTME: Widget tests for the profile My Lists tab: the two-column gallery
-// ABOUTME: of own video and people lists, the create button, and the
-// ABOUTME: bookmarks entry that keeps kind 10003 saves readable.
+// ABOUTME: of own video and people lists and the create button.
 
 import 'dart:async';
 
@@ -167,52 +166,9 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         expect(find.text(l10n.profileListsEmpty), findsOneWidget);
       });
-
-      testWidgets('renders the bookmarks entry when there are no lists', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildSubject());
-        await tester.pumpAndSettle();
-
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
-      });
-
-      testWidgets('gives the bookmarks icon an explicit colour', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildSubject());
-        await tester.pumpAndSettle();
-
-        // The asset is a hardcoded white fill and DivineIcon applies no
-        // filter when color is null, so an uncoloured icon vanishes on
-        // light.
-        final icon = tester.widget<DivineIcon>(
-          find.byWidgetPredicate(
-            (w) => w is DivineIcon && w.icon == DivineIconName.bookmarkSimple,
-          ),
-        );
-        expect(icon.color, isNotNull);
-      });
     });
 
     group('navigation', () {
-      testWidgets('opens the saved videos screen when bookmarks is tapped', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildSubject());
-        await tester.pumpAndSettle();
-
-        await tester.tap(
-          find.byWidgetPredicate(
-            (w) => w is DivineIcon && w.icon == DivineIconName.bookmarkSimple,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(pushedRoute, equals(SavedVideosScreen.path));
-      });
-
       testWidgets('opens the list detail when a video card is tapped', (
         tester,
       ) async {
