@@ -174,8 +174,11 @@ void main() {
       );
     });
 
-    testWidgets('trims the looping clip to the common track end', (
-      tester,
+    /// Loads [clip] into the sheet and returns the single serialized clip the
+    /// controller sent over `setClips`.
+    Future<Map<Object?, Object?>> pumpAndCaptureSetClips(
+      WidgetTester tester,
+      DivineVideoClip Function(String videoPath) clip,
     ) async {
       final tempDir = Directory.systemTemp.createTempSync(
         'clip_preview_track_end',
@@ -193,16 +196,47 @@ void main() {
         },
       );
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          clip: testClip.copyWith(video: EditorVideo.file(videoFile.path)),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget(clip: clip(videoFile.path)));
       await tester.pump(const Duration(milliseconds: 100));
 
       final clips = setClipsArguments!['clips']! as List<Object?>;
-      final clip = clips.single! as Map<Object?, Object?>;
-      expect(clip['trimToCommonTrackEnd'], isTrue);
+      return clips.single! as Map<Object?, Object?>;
+    }
+
+    testWidgets('loops the span the editor and the export play', (
+      tester,
+    ) async {
+      final clip = await pumpAndCaptureSetClips(
+        tester,
+        (path) => testClip.copyWith(
+          video: EditorVideo.file(path),
+          trimStart: const Duration(milliseconds: 400),
+          trimEnd: const Duration(milliseconds: 750),
+          volume: 0.5,
+          playbackSpeed: 2,
+        ),
+      );
+
+      // `duration - trimEnd`, the boundary video_clip_chroma_key_screen and
+      // video_clip_transform_screen pass for the same clip.
+      expect(clip['startMs'], 400);
+      expect(clip['endMs'], 4250);
+      expect(clip['volume'], 0.5);
+      expect(clip['playbackSpeed'], 2.0);
+    });
+
+    testWidgets('does not ask the player to re-derive the track end', (
+      tester,
+    ) async {
+      final clip = await pumpAndCaptureSetClips(
+        tester,
+        (path) => testClip.copyWith(video: EditorVideo.file(path)),
+      );
+
+      // The recorded clip's own `commonTrackEnd` is already in `endMs`. A
+      // second, stricter native rule on top could only disagree with it.
+      expect(clip['endMs'], 5000);
+      expect(clip['trimToCommonTrackEnd'], isNull);
     });
 
     testWidgets('renders delete button when onDelete is provided', (
