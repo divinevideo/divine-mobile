@@ -196,16 +196,6 @@ MockNostrClient createMockNostrService() {
   // type 'Null' is not a subtype of type 'Future<List<String>>'
   when(() => mockNostr.queryEvents(any())).thenAnswer((_) async => <Event>[]);
 
-  // Stub the relay-status surface (never null) so the shell's relay side
-  // effects — AppShellSideEffects watching relay_providers — do not get
-  // type 'Null' is not a subtype of type 'Map<String, RelayConnectionStatus>'
-  when(() => mockNostr.relayStatuses).thenReturn(const {});
-  when(
-    () => mockNostr.relayStatusStream,
-  ).thenAnswer((_) => const Stream<Map<String, RelayConnectionStatus>>.empty());
-  when(mockNostr.getRelayPoolCounters).thenReturn(const {});
-  when(() => mockNostr.defaultRelayUrl).thenReturn('wss://relay.test');
-
   // Stub publicKey with empty string default so tests that access it
   // do not get type 'Null' is not a subtype of type 'String'
   when(() => mockNostr.publicKey).thenReturn('');
@@ -220,6 +210,24 @@ MockNostrClient createMockNostrService() {
   // completer, so it must be false by default. Tests that exercise the
   // "settled but hasKeys still false" path override this to true.
   when(() => mockNostr.isReadyResolved).thenReturn(false);
+  return mockNostr;
+}
+
+/// [createMockNostrService] plus the relay-status surface the app shell reads.
+///
+/// Kept separate from the base factory on purpose. Stubbing these globally
+/// would let `relayStatisticsBridge` succeed in all ~150 suites that use the
+/// standard overrides — and that bridge opens a subscription and starts a 3s
+/// periodic timer, which is not something every suite should inherit. Ask for
+/// it only when the test actually pumps the shell.
+MockNostrClient createMockNostrServiceWithRelayStatus() {
+  final mockNostr = createMockNostrService();
+  when(() => mockNostr.relayStatuses).thenReturn(const {});
+  when(
+    () => mockNostr.relayStatusStream,
+  ).thenAnswer((_) => const Stream<Map<String, RelayConnectionStatus>>.empty());
+  when(mockNostr.getRelayPoolCounters).thenReturn(const {});
+  when(() => mockNostr.defaultRelayUrl).thenReturn('wss://relay.test');
   return mockNostr;
 }
 

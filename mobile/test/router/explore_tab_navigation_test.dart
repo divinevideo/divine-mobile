@@ -99,7 +99,10 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         final container = ProviderContainer(
           overrides: [
-            ...getStandardTestOverrides(mockSharedPreferences: prefs),
+            ...getStandardTestOverrides(
+              mockSharedPreferences: prefs,
+              mockNostrService: createMockNostrServiceWithRelayStatus(),
+            ),
             routerLocationStreamProvider.overrideWith(
               (ref) => Stream.value(ExploreScreen.path),
             ),

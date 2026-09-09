@@ -81,7 +81,10 @@ void main() {
   // AppShellSideEffects before anything renders.
   ProviderContainer container() => ProviderContainer(
     overrides: [
-      ...getStandardTestOverrides(mockAuthService: authenticatedAuth()),
+      ...getStandardTestOverrides(
+        mockAuthService: authenticatedAuth(),
+        mockNostrService: createMockNostrServiceWithRelayStatus(),
+      ),
       currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
       // Both gates redirect off the tab routes while unresolved.
       currentMinorAccountReviewStatusProvider.overrideWith(

@@ -33,7 +33,9 @@ void main() {
       'tapping explore tab navigates to /explore (grid mode), not /explore/0',
       (tester) async {
         final container = ProviderContainer(
-          overrides: getStandardTestOverrides(),
+          overrides: getStandardTestOverrides(
+            mockNostrService: createMockNostrServiceWithRelayStatus(),
+          ),
         );
         addTearDown(container.dispose);
 
