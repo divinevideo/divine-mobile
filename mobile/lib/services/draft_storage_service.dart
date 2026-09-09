@@ -199,6 +199,10 @@ class DraftStorageService {
     final documentsPath = await getDocumentsPath();
     final existingDraft = await _loadDraftAcrossAccounts(draft.id);
     final newOwnedFilePaths = _ownedFilePaths(draft, documentsPath);
+    final detachedOwnedFilePaths = _detachedOwnedFilePaths(
+      draft,
+      documentsPath,
+    );
     var orphanedFiles = const <String?>[];
     if (existingDraft != null) {
       // Both halves diff [DivineVideoClip.ownedFilePaths]. The local list this
@@ -214,7 +218,11 @@ class DraftStorageService {
 
     // Upsert draft and clips atomically in a single transaction
     final draftJson = draft.toJson();
-    draftJson[draftOwnedFileBasenamesKey] = newOwnedFilePaths
+    // Indexed draft and clip columns already own ordinary timeline media.
+    // Only layer-owned assets need the JSON manifest; including indexed clip
+    // media here would keep it alive after its clip rows are deliberately
+    // removed (for example by a library hard-delete).
+    draftJson[draftOwnedFileBasenamesKey] = detachedOwnedFilePaths
         .map(p.basename)
         .toSet()
         .toList();
@@ -296,6 +304,14 @@ class DraftStorageService {
       documentsPath,
     ),
   };
+
+  Set<String> _detachedOwnedFilePaths(
+    DivineVideoDraft draft,
+    String documentsPath,
+  ) => DetachedClipLayerData.ownedFilePathsInHistory(
+    draft.editorStateHistory,
+    documentsPath,
+  );
 
   /// Get total count of drafts without loading their data.
   Future<int> getDraftCount() => _draftsDao.getCount(ownerPubkey: ownerPubkey);
