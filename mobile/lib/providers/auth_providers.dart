@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -153,13 +152,13 @@ AuthService authService(Ref ref) {
       return true;
     },
     preFetchFollowing: (pubkeyHex) async {
-      // Pre-fetch following list from funnelcake REST API during login
-      // setup. This populates SharedPreferences BEFORE auth state is
-      // set, so the router redirect has accurate cache data and sends
-      // user to /home not /explore.
+      // Pre-fetch following from the Funnelcake REST API after authentication
+      // is published. This may seed SharedPreferences for a later startup, but
+      // must not replace a record another authenticated writer creates while
+      // the request is pending.
       final environmentConfig = ref.read(currentEnvironmentProvider);
-      // Instrumented and closed here: this one-shot client blocks the login
-      // redirect, so its latency is worth reporting, and nothing reuses it.
+      // Instrumented and closed here: this one-shot client runs during login,
+      // so its latency is worth reporting, and nothing reuses it.
       final httpClient = ref.read(instrumentedHttpClientFactoryProvider)();
       final client = FunnelcakeApiClient(
         baseUrl: environmentConfig.apiBaseUrl,
@@ -203,7 +202,10 @@ AuthService authService(Ref ref) {
 /// beside a non-zero count is the index contradicting itself — it has not
 /// caught up with the account's published follows — so nothing is recorded and
 /// the next login asks again rather than treating the gap as an answer.
-@visibleForTesting
+///
+/// A non-empty response only seeds an absent cache. Authentication is already
+/// published while this request runs, so any record now present was written by
+/// a newer authenticated operation and must remain unchanged.
 Future<void> persistFollowingPrefetchForAuthRedirect({
   required SharedPreferences prefs,
   required String pubkeyHex,
@@ -220,10 +222,18 @@ Future<void> persistFollowingPrefetchForAuthRedirect({
     return;
   }
   if (pubkeys.isNotEmpty) {
-    await prefs.setString(
-      FollowingCacheRecord.storageKey(pubkeyHex),
-      FollowingCacheRecord(pubkeys: pubkeys).encode(),
+    final seeded = await seedFollowingCacheIfAbsent(
+      prefs: prefs,
+      pubkeyHex: pubkeyHex,
+      pubkeys: pubkeys,
     );
+    if (!seeded) {
+      Log.debug(
+        'Keeping following cache written while auth prefetch was pending',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+    }
   }
   await markFollowingPrefetchComplete(prefs, pubkeyHex);
 }
