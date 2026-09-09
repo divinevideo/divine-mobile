@@ -2,6 +2,7 @@
 // ABOUTME: Ensures only the sound's own source video can grant reuse.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
@@ -13,17 +14,21 @@ const _pubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 const _sourceAddress = '34236:$_pubkey:source-video';
+final String _sha256 = 'b' * 64;
+final String _audioSha256 = 'c' * 64;
 
 AudioEvent _sound({
   bool allowsReuse = false,
   bool hasExplicitReuseConsent = false,
   String? sourceVideoReference = _sourceAddress,
+  String? sha256,
 }) {
   return AudioEvent(
     id: 'audio-event',
     pubkey: _pubkey,
     createdAt: 100,
     sourceVideoReference: sourceVideoReference,
+    sha256: sha256,
     allowsReuse: allowsReuse,
     hasExplicitReuseConsent: hasExplicitReuseConsent,
   );
@@ -54,6 +59,7 @@ VideoEvent _video({
     rawTags: rawTags,
     isVerifiedArchive: isVerifiedArchive,
     archiveAudioReuseEnabled: isVerifiedArchive,
+    sha256: _sha256,
   );
 }
 
@@ -64,6 +70,14 @@ void main() {
   setUp(() {
     videosRepository = _MockVideosRepository();
     resolver = AudioReuseConsentResolver(videosRepository: videosRepository);
+    when(
+      () => videosRepository.getAudioReusePolicy(any()),
+    ).thenAnswer(
+      (_) async => const AudioReusePolicy(
+        allowAudioReuse: true,
+        audioReuseSuppressed: false,
+      ),
+    );
   });
 
   void stubSource(List<VideoEvent> videos) {
@@ -73,9 +87,40 @@ void main() {
   }
 
   group('verify', () {
-    test('accepts explicit true without a legacy lookup', () async {
-      expect(await resolver.verify(_sound(allowsReuse: true)), isTrue);
-      verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+    test(
+      'accepts explicit true after current-source and suppression checks',
+      () async {
+        stubSource([_video()]);
+        expect(
+          await resolver.verify(
+            _sound(allowsReuse: true, sha256: _audioSha256),
+          ),
+          isTrue,
+        );
+        verify(
+          () => videosRepository.getVideosByAddressableIds([_sourceAddress]),
+        ).called(1);
+        verify(() => videosRepository.getAudioReusePolicy(_sha256)).called(1);
+      },
+    );
+
+    test('suppression overrides explicit true', () async {
+      stubSource([_video()]);
+      when(
+        () => videosRepository.getAudioReusePolicy(_sha256),
+      ).thenAnswer(
+        (_) async => const AudioReusePolicy(
+          allowAudioReuse: false,
+          audioReuseSuppressed: true,
+        ),
+      );
+
+      expect(
+        await resolver.verify(
+          _sound(allowsReuse: true, sha256: _audioSha256),
+        ),
+        isFalse,
+      );
     });
 
     test('honors explicit false without a legacy lookup', () async {
@@ -84,6 +129,7 @@ void main() {
         isFalse,
       );
       verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      verifyNever(() => videosRepository.getAudioReusePolicy(any()));
     });
 
     test('grants reuse from the source video the sound points at', () async {
@@ -153,6 +199,15 @@ void main() {
       when(
         () => videosRepository.getVideosByAddressableIds([_sourceAddress]),
       ).thenThrow(StateError('relay unavailable'));
+
+      expect(await resolver.verify(_sound()), isFalse);
+    });
+
+    test('fails closed when the suppression lookup throws', () async {
+      when(
+        () => videosRepository.getAudioReusePolicy(_sha256),
+      ).thenThrow(StateError('policy unavailable'));
+      stubSource([_video()]);
 
       expect(await resolver.verify(_sound()), isFalse);
     });

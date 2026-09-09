@@ -190,7 +190,7 @@ bool? audioReuseTermsFromEvent(AudioEvent sound) {
 @riverpod
 Future<bool> audioReuseTerms(Ref ref, AudioEvent sound) {
   final knownTerms = audioReuseTermsFromEvent(sound);
-  if (knownTerms != null) return Future.value(knownTerms);
+  if (knownTerms == false) return Future.value(false);
   return AudioReuseConsentResolver(
     videosRepository: ref.watch(videosRepositoryProvider),
   ).verify(sound);
@@ -204,7 +204,6 @@ Future<bool> audioReuseTerms(Ref ref, AudioEvent sound) {
 @riverpod
 Future<bool> audioReuseConsent(Ref ref, AudioEvent sound) {
   final knownTerms = audioReuseTermsFromEvent(sound);
-  if (knownTerms == true) return Future.value(true);
   // Re-read on auth transitions so an account switch cannot leave the previous
   // identity's ownership answer cached against this sound.
   ref.watch(currentAuthStateProvider);
@@ -213,9 +212,7 @@ Future<bool> audioReuseConsent(Ref ref, AudioEvent sound) {
     return Future.value(true);
   }
   if (knownTerms == false) return Future.value(false);
-  return AudioReuseConsentResolver(
-    videosRepository: ref.watch(videosRepositoryProvider),
-  ).verify(sound);
+  return ref.watch(audioReuseTermsProvider(sound).future);
 }
 
 /// State provider for the currently selected sound.

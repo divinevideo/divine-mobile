@@ -494,6 +494,7 @@ void main() {
         nostrService: nostrClient,
         authService: authService,
         videoEventService: videoEventService,
+        audioReuseConsentChecker: (_) async => true,
       );
 
       when(() => nostrClient.isInitialized).thenReturn(true);
@@ -748,6 +749,27 @@ void main() {
         expect(classicSound.requiresCurrentReuseVerification, isTrue);
       });
 
+      test('server suppression overrides an explicit reuse grant', () async {
+        stubSignAndPublish();
+        final explicitlyGranted = AudioEvent(
+          id: 'c' * 64,
+          pubkey: sourceCreator,
+          createdAt: 1700000000,
+          sha256: 'd' * 64,
+          sourceVideoReference: '34236:$sourceCreator:vine-xyz',
+          hasExplicitReuseConsent: true,
+        );
+
+        final result = await publisherWithConsent().publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: explicitlyGranted,
+          selectedAudioEventId: explicitlyGranted.id,
+        );
+
+        expect(result, isFalse);
+        expect(capturedTags, isEmpty);
+      });
+
       test(
         'revalidates an archive grant after the saved-sound handoff',
         () async {
@@ -898,6 +920,12 @@ void main() {
       // missing check. `publisher` here is the bare one from setUp.
       test('blocks reuse when no consent checker is wired', () async {
         stubSignAndPublish();
+        final publisherWithoutChecker = VideoEventPublisher(
+          uploadManager: uploadManager,
+          nostrService: nostrClient,
+          authService: authService,
+          videoEventService: videoEventService,
+        );
 
         final legacySound = AudioEvent(
           id: 'f' * 64,
@@ -907,7 +935,7 @@ void main() {
           sourceVideoReference: '34236:$sourceCreator:vine-xyz',
         );
 
-        final result = await publisher.publishVideoEvent(
+        final result = await publisherWithoutChecker.publishVideoEvent(
           upload: createUpload(),
           selectedAudio: legacySound,
           selectedAudioEventId: legacySound.id,

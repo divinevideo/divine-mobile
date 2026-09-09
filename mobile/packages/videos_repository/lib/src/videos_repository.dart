@@ -237,6 +237,15 @@ class VideosRepository {
   bool isVideoKnownDeleted(VideoEvent video) =>
       _deletedFilter?.call(video) ?? false;
 
+  /// Returns the authoritative server-side audio reuse policy for [sha256].
+  Future<AudioReusePolicy> getAudioReusePolicy(String sha256) {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    return client.getAudioReusePolicy(sha256);
+  }
+
   /// Clears the in-memory feed cache.
   ///
   /// When [key] is provided, only that feed mode's cache is removed

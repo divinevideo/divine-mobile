@@ -136,13 +136,14 @@ class _OriginalSoundSection extends ConsumerWidget {
   bool _canReuseSound(WidgetRef ref) {
     if (video.hasAudioReference) return false;
     final knownTerms = originalSoundReuseTerms(video);
-    if (knownTerms == true) return true;
     // Re-evaluate on auth restore/logout/account-switch so the owner exception
     // can't go stale (authServiceProvider alone is a stable instance).
     ref.watch(currentAuthStateProvider);
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
     if (viewerPubkey != null && viewerPubkey == video.pubkey) return true;
-    return knownTerms ?? false;
+    if (knownTerms != true) return false;
+    final sound = AudioEvent.fromVideoOriginalSound(video);
+    return ref.watch(audioReuseConsentProvider(sound)).value ?? false;
   }
 
   void _navigateToSoundDetail(BuildContext context, String creatorName) {
@@ -277,18 +278,28 @@ class _SoundListItem extends ConsumerWidget {
     // Null while legacy terms are still being verified. The badge states the
     // sound's public terms, not the current viewer's permission to reuse it.
     final knownReuseTerms = audioReuseTermsFromEvent(audio);
-    final reuseAllowed =
-        knownReuseTerms ?? ref.watch(audioReuseTermsProvider(audio)).value;
+    final reuseAllowed = knownReuseTerms == false
+        ? false
+        : ref.watch(audioReuseTermsProvider(audio)).value;
+    ref.watch(currentAuthStateProvider);
+    final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+    final isOwner = viewerPubkey != null && viewerPubkey == audio.pubkey;
+    final canReuse =
+        isOwner ||
+        audio.isBundled ||
+        audio.isLocalImport ||
+        (audio.externalSource?.license.allowsDerivatives ?? false) ||
+        (ref.watch(audioReuseConsentProvider(audio)).value ?? false);
 
     return Semantics(
-      button: true,
+      button: canReuse,
       label: context.l10n.metadataSoundsSharedSoundSemantics(
         soundName,
         creditText,
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => _navigateToSoundDetail(context),
+        onTap: canReuse ? () => _navigateToSoundDetail(context) : null,
         child: Row(
           spacing: 16,
           children: [
@@ -357,11 +368,12 @@ class _SoundListItem extends ConsumerWidget {
                 ],
               ),
             ),
-            DivineIcon(
-              icon: DivineIconName.caretRight,
-              color: context.vineColors.onSurfaceVariant,
-              size: 20,
-            ),
+            if (canReuse)
+              DivineIcon(
+                icon: DivineIconName.caretRight,
+                color: context.vineColors.onSurfaceVariant,
+                size: 20,
+              ),
           ],
         ),
       ),

@@ -1794,6 +1794,37 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the current server-side audio reuse decision for [sha256].
+  Future<AudioReusePolicy> getAudioReusePolicy(String sha256) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(sha256)) {
+      throw const FunnelcakeException('SHA-256 must be 64 hexadecimal digits');
+    }
+
+    final normalizedHash = sha256.toLowerCase();
+    final uri = Uri.parse(
+      '$_baseUrl/api/videos/by-sha256/$normalizedHash/audio-reuse',
+    );
+    try {
+      final response = await _get(uri);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return AudioReusePolicy.fromJson(data);
+      }
+      throw FunnelcakeApiException(
+        message: 'Failed to fetch audio reuse policy',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch audio reuse policy: $error');
+    }
+  }
+
   /// Fetches the pubkeys that have liked a video, most recent first.
   ///
   /// [eventId] is the Nostr event ID (or d-tag) for the video.

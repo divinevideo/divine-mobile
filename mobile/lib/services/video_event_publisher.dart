@@ -212,8 +212,7 @@ class VideoEventPublisher {
   Future<bool> _canReuseSelectedAudio(AudioEvent sound) async {
     if (sound.isBundled ||
         sound.isLocalImport ||
-        sound.isExternalProviderSound ||
-        (sound.allowsReuse && !sound.requiresCurrentReuseVerification)) {
+        sound.isExternalProviderSound) {
       return true;
     }
 
@@ -222,7 +221,7 @@ class VideoEventPublisher {
       return true;
     }
 
-    if (sound.hasExplicitReuseConsent) return false;
+    if (sound.hasExplicitReuseConsent && !sound.allowsReuse) return false;
 
     final checker = _audioReuseConsentChecker;
     if (checker == null) return false;

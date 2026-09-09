@@ -133,13 +133,17 @@ void main() {
             authServiceProvider.overrideWithValue(
               _StubAuthService(viewerPubkey),
             ),
+            audioReuseConsentProvider.overrideWith(
+              (ref, sound) async {
+                if (sound.hasExplicitReuseConsent && !sound.allowsReuse) {
+                  return false;
+                }
+                return sound.id != consentSound?.id || (consentResult ?? true);
+              },
+            ),
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
             ),
-            if (consentSound != null && consentResult != null)
-              audioReuseConsentProvider(
-                consentSound,
-              ).overrideWith((ref) => Future.value(consentResult)),
             if (trendingSoundsAsync != null)
               trendingSoundsProvider.overrideWith(
                 () => _FakeTrendingSounds(trendingSoundsAsync),

@@ -259,6 +259,7 @@ class AudioEvent {
       pubkey: video.pubkey,
       createdAt: video.createdAt,
       url: video.videoUrl,
+      sha256: video.sha256,
       duration: video.duration?.toDouble(),
       title: creatorName == null ? null : 'Original sound - $creatorName',
       source: 'Original Sound',

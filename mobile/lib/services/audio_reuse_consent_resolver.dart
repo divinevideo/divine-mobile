@@ -12,12 +12,16 @@ class AudioReuseConsentResolver {
   final VideosRepository _videosRepository;
 
   Future<bool> verify(AudioEvent sound) async {
-    if (sound.allowsReuse) return true;
-    if (sound.hasExplicitReuseConsent) return false;
+    if (sound.isBundled || sound.isLocalImport) return true;
+    if (sound.externalSource case final external?) {
+      return external.license.allowsDerivatives;
+    }
+    if (sound.hasExplicitReuseConsent && !sound.allowsReuse) return false;
 
     final sourceAddress = sound.sourceVideoReference;
     if (sourceAddress == null || sourceAddress.isEmpty) return false;
 
+    String? sha256;
     try {
       // Read the source video straight off the address the sound already
       // carries. Resolving it the other way round — asking which videos
@@ -32,21 +36,34 @@ class AudioReuseConsentResolver {
           .where((video) => video.addressableId == sourceAddress)
           .toList();
       if (matching.isEmpty) return false;
-      // `allow_audio_reuse` is rebuilt on every edit — dropping the tag is how
-      // a creator revokes consent — and an addressable read resolves to the
-      // current revision, so this is the live answer. A revision predating the
+      // `allow_audio_reuse` is rebuilt on every edit and an addressable read
+      // resolves to the current revision, so this is the live answer. A
+      // revision predating the
       // sound cannot speak for it. This does not lock out the legacy population:
       // `VideoEventPublisher` publishes the Kind 1063 before the video event
       // because the video needs the audio id for its `e` tag, so an unedited
       // source is never older than its own sound.
       final source = matching.first;
       if (source.createdAt < sound.createdAt) return false;
-      return originalSoundReuseTerms(source) ?? false;
+      if (originalSoundReuseTerms(source) != true) return false;
+      sha256 = source.sha256;
     } catch (error) {
-      // Fail closed, but leave a trace — otherwise "why is reuse blocked?" is
-      // unanswerable from a bug report.
       Log.warning(
         'Reuse consent lookup failed for source $sourceAddress: $error',
+        name: 'AudioReuseConsentResolver',
+        category: LogCategory.video,
+      );
+      return false;
+    }
+
+    if (sha256 == null || sha256.isEmpty) return false;
+
+    try {
+      final policy = await _videosRepository.getAudioReusePolicy(sha256);
+      return policy.allowAudioReuse && !policy.audioReuseSuppressed;
+    } catch (error) {
+      Log.warning(
+        'Audio reuse policy lookup failed; blocking reuse: $error',
         name: 'AudioReuseConsentResolver',
         category: LogCategory.video,
       );
