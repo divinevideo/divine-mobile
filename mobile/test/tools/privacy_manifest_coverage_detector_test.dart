@@ -469,30 +469,151 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
 
         expect(result.exitCode, equals(0), reason: result.output);
       });
+
+      test('accepts a privacy bundle after another resource assignment', () {
+        final root = makeTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          podspec:
+              "s.resource_bundles = {'sample_assets' => ['Assets/*']}\n"
+              "s.resource_bundles = {'sample_privacy' => "
+              "['Resources/PrivacyInfo.xcprivacy']}",
+        );
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+      });
     });
 
-    test('archive mode requires the quick-actions privacy bundle', () {
-      final root = Directory.systemTemp.createTempSync('privacy_archive_test');
-      addTearDown(() => root.deleteSync(recursive: true));
-      final app = Directory('${root.path}/Runner.app')..createSync();
-      final plist = manifestFor(
-        'NSPrivacyAccessedAPICategorySystemBootTime',
-        '35F9.1',
+    test('archive mode requires every discovered privacy bundle', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        podspec:
+            "s.resource_bundles = {'sample_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
       );
-      for (final path in [
-        'PrivacyInfo.xcprivacy',
-        'divine_camera_privacy.bundle/PrivacyInfo.xcprivacy',
-        'LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy',
-      ]) {
-        final file = File('${app.path}/$path');
-        file.parent.createSync(recursive: true);
-        file.writeAsStringSync(plist);
-      }
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File('${app.path}/PrivacyInfo.xcprivacy').writeAsStringSync(
+        manifestFor('NSPrivacyAccessedAPICategorySystemBootTime', '35F9.1'),
+      );
 
       final result = run(root: root, args: ['--archive', app.path]);
 
       expect(result.exitCode, equals(1));
-      expect(result.output, contains('divine_quick_actions'));
+      expect(result.output, contains('package:sample'));
+      expect(
+        result.output,
+        contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
+    });
+
+    test('archive mode rejects an empty expectation set', () {
+      final root = Directory.systemTemp.createTempSync('privacy_archive_test');
+      addTearDown(() => root.deleteSync(recursive: true));
+      Directory('${root.path}/ios/Runner').createSync(recursive: true);
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File(
+        '${app.path}/PrivacyInfo.xcprivacy',
+      ).writeAsStringSync('not a plist');
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(
+        result.output,
+        contains('no first-party privacy manifest discovered'),
+      );
+    });
+
+    test('archive mode uses the selected subspec privacy bundle name', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        selectedSubspec: 'PrivacyProtected',
+        podspec:
+            "s.subspec 'PrivacyProtected' do |ss|\n"
+            "  ss.resource_bundles = {'selected_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}\n"
+            'end\n',
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      File('${app.path}/PrivacyInfo.xcprivacy').writeAsStringSync(
+        manifestFor('NSPrivacyAccessedAPICategorySystemBootTime', '35F9.1'),
+      );
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(
+        result.output,
+        contains('selected_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
+    });
+
+    test('archive mode validates a derived bundle with any name', () {
+      final root = makeTree(
+        swift: '',
+        manifest: manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        ),
+        podspec:
+            "s.resource_bundles = {'custom_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      final bundled = File(
+        '${app.path}/custom_privacy.bundle/PrivacyInfo.xcprivacy',
+      );
+      bundled.parent.createSync(recursive: true);
+      bundled.writeAsStringSync('not a plist');
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(1));
+      expect(result.output, contains('bundled manifest is unreadable'));
+    });
+
+    // Every other archive-mode test asserts a failure, so a change that made
+    // the found/expected comparison never match would leave all of them green
+    // while breaking the release workflow. This pins the accepting direction.
+    test('archive mode accepts an app carrying every derived bundle', () {
+      final plist = manifestFor(
+        'NSPrivacyAccessedAPICategorySystemBootTime',
+        '35F9.1',
+      );
+      final root = makeTree(
+        swift: '',
+        manifest: plist,
+        podspec:
+            "s.resource_bundles = {'sample_privacy' => "
+            "['Resources/PrivacyInfo.xcprivacy']}",
+      );
+      final app = Directory('${root.path}/Runner.app')..createSync();
+      final bundled = File(
+        '${app.path}/sample_privacy.bundle/PrivacyInfo.xcprivacy',
+      );
+      bundled.parent.createSync(recursive: true);
+      bundled.writeAsStringSync(plist);
+
+      final result = run(root: root, args: ['--archive', app.path]);
+
+      expect(result.exitCode, equals(0), reason: result.output);
+      expect(
+        result.output,
+        contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
+      );
     });
   });
 }

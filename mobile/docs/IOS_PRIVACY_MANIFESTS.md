@@ -33,6 +33,7 @@ macOS is not listed, which is why `mobile/macos` carries no obligation here.
 |---|---|---|
 | App (`Runner`) | `mobile/ios/Runner/PrivacyInfo.xcprivacy` | `Copy Bundle Resources` in `Runner.xcodeproj` |
 | `divine_camera` | `mobile/packages/divine_camera/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` in its podspec |
+| `divine_device_attestation` | `mobile/packages/divine_device_attestation/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` in its podspec |
 | `divine_quick_actions` | `mobile/packages/divine_quick_actions/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
 | `LibProofMode` (vendored) | `mobile/ios/LocalPods/LibProofMode/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
 
@@ -49,7 +50,8 @@ when refreshing it until each change is present upstream:
 - `Classes/MediaItem.swift` imports `UniformTypeIdentifiers` and qualifies the
   movie and audio types as `UTType.movie` and `UTType.audio` for current Xcode.
 - `Resources/PrivacyInfo.xcprivacy` declares the required file-timestamp API,
-  and `LibProofMode.podspec` bundles that manifest.
+  and `LibProofMode.podspec` bundles that manifest. The upstream contribution
+  remains tracked in #8851.
 
 The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
 sets `showDeviceIds: false`, so compiling out `AdSupport` and
@@ -61,6 +63,7 @@ declaration described below.
 | Bundle | Category | Reason | Justification |
 |---|---|---|---|
 | `divine_camera` | `SystemBootTime` | `35F9.1` | `VolumeKeyHandler.swift` reads `ProcessInfo.systemUptime` at two sites purely to measure elapsed time for Bluetooth-trigger cooldown and debounce. Nothing derived from it leaves the device — the file has no method channel or event sink. |
+| `divine_device_attestation` | `UserDefaults` | `CA92.1` | App Attest key handles are cached in `UserDefaults.standard`, the app's own defaults domain, and are accessible only to this app. |
 | `LibProofMode` | `FileTimestamp` | `C617.1` | `MediaItem.withData` reads `URLResourceKey.contentModificationDateKey` / `.creationDateKey`. Every path Divine feeds to `MediaItem(mediaUrl:)` is a file the app wrote in its own container (editor render output or a recorded clip). |
 | App (`Runner`) | *(none)* | — | The Runner target's own Release code calls no required-reason API. Its single `UserDefaults` call is inside `#if DEBUG`. |
 | `divine_quick_actions` | *(none)* | — | No required-reason API detected. |
@@ -137,6 +140,13 @@ bash scripts/check_privacy_manifest_coverage.sh --archive build/ios/iphoneos/Run
 It also fails on an invalid reason code for a category, an unknown category
 string, and a manifest that exists but is not bundled by the selected podspec
 or subspec — a manifest nothing ships is a manifest Apple never reads.
+Archive mode derives its expected resource-bundle names from those same
+podspec declarations, so adding a first-party plugin manifest automatically
+adds a corresponding product check. Codemagic runs archive mode against the
+`.app` inside the Shorebird-produced release archive.
+Because Shorebird records the release before this check runs, a failure requires
+deleting that failed Shorebird release or advancing the store build number before
+retrying; the release preflight deliberately rejects reuse of the recorded version.
 
 Behaviour is pinned by
 `mobile/test/tools/privacy_manifest_coverage_detector_test.dart`.
@@ -199,12 +209,10 @@ document still matches the catalogue.
    bash scripts/check_privacy_manifest_coverage.sh --archive build/ios/iphoneos/Runner.app
    ```
 
-## Known follow-ups
+## Status and follow-ups
 
-- `divine_device_attestation` (PR #8779, not yet merged) caches App Attest key
-  handles in `UserDefaults` and ships no manifest. When that PR lands, add
-  `NSPrivacyAccessedAPICategoryUserDefaults` / `CA92.1` plus a
-  `s.resource_bundles` entry to its podspec. The guard will fail until then,
-  which is the intended behaviour.
-- `NSPrivacyCollectedDataTypes` for the app target needs a product/legal pass
-  against the App Store Connect privacy label.
+- `divine_device_attestation` was resolved in #8779. Its owning package now
+  ships the `UserDefaults` / `CA92.1` declaration described above.
+- App-target `NSPrivacyCollectedDataTypes` reconciliation with the aggregate
+  privacy report and App Store Connect label is tracked in #8850.
+- Upstreaming Divine's LibProofMode manifest is tracked in #8851.
