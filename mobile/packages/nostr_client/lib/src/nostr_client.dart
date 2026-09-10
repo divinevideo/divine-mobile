@@ -1145,12 +1145,17 @@ class NostrClient {
     return result.events;
   }
 
-  /// Counts events matching the given filters using NIP-45.
+  /// Counts events matching the given filters using NIP-45 COUNT.
   ///
   /// This is more efficient than [queryEvents] when you only need the count,
-  /// not the actual events. Uses NIP-45 COUNT requests to relays.
+  /// not the actual events.
   ///
-  /// Falls back to client-side counting if relay doesn't support NIP-45.
+  /// [timeout] bounds the whole call. When no relay took the COUNT, because
+  /// the pool went idle or every relay dropped, the relays are redialled once
+  /// and the COUNT is asked again within what is left of it.
+  ///
+  /// Throws [CountUnavailableException] when no relay answered. The count is
+  /// then unknown, and no number is substituted for it.
   ///
   /// Example - Count followers:
   /// ```dart
@@ -1174,32 +1179,46 @@ class NostrClient {
     List<int> relayTypes = RelayType.all,
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    final deadline = DateTime.now().add(timeout);
+    Duration remainingTimeout() {
+      final remaining = deadline.difference(DateTime.now());
+      return remaining.isNegative ? Duration.zero : remaining;
+    }
+
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final filtersJson = filters.map((f) => f.toJson()).toList();
+    Future<CountResponse> askRelays(Duration budget) => _nostr.countEvents(
+      filtersJson,
+      id: subscriptionId,
+      tempRelays: effectiveTempRelays,
+      relayTypes: relayTypes,
+      timeout: budget,
+    );
 
     try {
-      // Try NIP-45 COUNT first
-      final response = await _nostr.countEvents(
-        filtersJson,
-        id: subscriptionId,
-        tempRelays: effectiveTempRelays,
-        relayTypes: relayTypes,
-        timeout: timeout,
-      );
+      CountResponse response;
+      try {
+        response = await askRelays(timeout);
+      } on CountNotSentException catch (e) {
+        // No relay took the COUNT, so the pool is idle or down. Redial once,
+        // as queries do, and ask again within what is left of the budget.
+        try {
+          await retryDisconnectedRelays().timeout(remainingTimeout());
+        } on TimeoutException {
+          // The redial outlived the budget; nothing is left to ask with.
+        }
+        if (remainingTimeout() == Duration.zero) {
+          throw CountUnavailableException(e.reason);
+        }
+        response = await askRelays(remainingTimeout());
+      }
 
       return CountResult(
         count: _normalizeRelayCount(response.count),
         approximate: response.approximate,
       );
-    } on CountNotSupportedException {
-      // Fall back to fetching events and counting client-side
-      final events = await queryEvents(
-        filters,
-        tempRelays: effectiveTempRelays,
-        relayTypes: relayTypes,
-      );
-
-      return CountResult(count: events.length, source: CountSource.clientSide);
+    } on CountNotSupportedException catch (e) {
+      throw CountUnavailableException(e.reason);
     }
   }
 

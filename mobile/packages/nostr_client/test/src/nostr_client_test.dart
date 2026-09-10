@@ -5349,16 +5349,11 @@ void main() {
         expect(result.source, equals(CountSource.websocket));
       });
 
-      test('falls back to queryEvents when COUNT not supported', () async {
+      test('throws $CountUnavailableException when no relay answers, '
+          'without fetching events', () async {
         final filters = [
           Filter(kinds: [EventKind.textNote]),
         ];
-        final events = [
-          _createTestEvent(),
-          _createTestEvent(),
-          _createTestEvent(),
-        ];
-
         when(
           () => mockNostr.countEvents(
             any(),
@@ -5367,7 +5362,7 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenThrow(CountNotSupportedException('Not supported'));
+        ).thenThrow(CountNotSupportedException('No relay responded to COUNT'));
         when(
           () => mockNostr.queryEvents(
             any(),
@@ -5376,14 +5371,154 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
           ),
-        ).thenAnswer((_) async => events);
+        ).thenAnswer((_) async => [_createTestEvent(), _createTestEvent()]);
 
-        final result = await client.countEvents(filters);
-
-        expect(result.count, equals(3));
-        expect(result.approximate, isFalse);
-        expect(result.source, equals(CountSource.clientSide));
+        await expectLater(
+          client.countEvents(filters),
+          throwsA(isA<CountUnavailableException>()),
+        );
+        verifyNever(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        );
       });
+
+      test(
+        'redials once and asks again when no relay took the COUNT',
+        () async {
+          final calls = <String>[];
+          var attempts = 0;
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async {
+            calls.add('COUNT');
+            attempts++;
+            if (attempts == 1) {
+              throw CountNotSentException('No relay accepted COUNT');
+            }
+            return const CountResponse(count: 7);
+          });
+          when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {
+            calls.add('redial');
+          });
+
+          final result = await client.countEvents([
+            Filter(kinds: [EventKind.textNote]),
+          ]);
+
+          expect(calls, equals(['COUNT', 'redial', 'COUNT']));
+          expect(result.count, equals(7));
+        },
+      );
+
+      test('gives up after one redial when no relay takes the COUNT either '
+          'time', () async {
+        when(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+        when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {});
+
+        await expectLater(
+          client.countEvents([
+            Filter(kinds: [EventKind.textNote]),
+          ]),
+          throwsA(isA<CountUnavailableException>()),
+        );
+        verify(mockRelayManager.retryDisconnectedRelays).called(1);
+        verify(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(2);
+      });
+
+      test(
+        'does not redial when a relay took the COUNT but none answered',
+        () async {
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(
+            CountNotSupportedException('No relay responded to COUNT'),
+          );
+
+          await expectLater(
+            client.countEvents([
+              Filter(kinds: [EventKind.textNote]),
+            ]),
+            throwsA(isA<CountUnavailableException>()),
+          );
+          verifyNever(mockRelayManager.retryDisconnectedRelays);
+        },
+      );
+
+      test(
+        'does not ask again once the redial has spent the whole timeout',
+        () async {
+          final redial = Completer<void>();
+          addTearDown(() {
+            if (!redial.isCompleted) redial.complete();
+          });
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => redial.future);
+
+          await expectLater(
+            client.countEvents(
+              [
+                Filter(kinds: [EventKind.textNote]),
+              ],
+              timeout: const Duration(milliseconds: 200),
+            ),
+            throwsA(isA<CountUnavailableException>()),
+          );
+          verify(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        },
+        timeout: const Timeout(Duration(seconds: 3)),
+      );
 
       test('passes subscriptionId parameter', () async {
         final filters = [

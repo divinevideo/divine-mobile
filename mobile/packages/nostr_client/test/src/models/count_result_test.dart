@@ -18,12 +18,12 @@ void main() {
       const result = CountResult(
         count: 100,
         approximate: true,
-        source: CountSource.clientSide,
+        source: CountSource.cache,
       );
 
       expect(result.count, equals(100));
       expect(result.approximate, isTrue);
-      expect(result.source, equals(CountSource.clientSide));
+      expect(result.source, equals(CountSource.cache));
     });
 
     test('copyWith creates new instance with updated values', () {
@@ -58,22 +58,12 @@ void main() {
     test('equality works correctly', () {
       const result1 = CountResult(count: 42);
       const result2 = CountResult(count: 42);
-      const result3 = CountResult(count: 42, source: CountSource.clientSide);
+      const result3 = CountResult(count: 42, source: CountSource.gateway);
       const result4 = CountResult(count: 100);
 
       expect(result1, equals(result2));
       expect(result1, isNot(equals(result3)));
       expect(result1, isNot(equals(result4)));
-    });
-  });
-
-  group('CountSource', () {
-    test('has all expected values', () {
-      expect(CountSource.values, hasLength(4));
-      expect(CountSource.values, contains(CountSource.cache));
-      expect(CountSource.values, contains(CountSource.gateway));
-      expect(CountSource.values, contains(CountSource.websocket));
-      expect(CountSource.values, contains(CountSource.clientSide));
     });
   });
 }
