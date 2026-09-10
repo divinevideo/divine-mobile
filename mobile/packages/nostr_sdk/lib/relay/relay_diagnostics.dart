@@ -12,6 +12,11 @@ enum RelayDiagnosticSite {
   requestSettlement,
   authentication,
   notice,
+
+  /// A one-shot relay read ended worth surfacing to support triage: it did
+  /// not end cleanly (see `QueryEnd` in `query_result.dart`), or it ended
+  /// cleanly but a relay may have capped the result.
+  queryCompletion,
 }
 
 /// A safe, structured description of relay activity.

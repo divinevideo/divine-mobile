@@ -21,6 +21,11 @@ class RelayInfo {
   /// Relay software version identifier
   final String version;
 
+  /// Maximum number of events the relay returns for a single query, from
+  /// NIP-11 `limitation.max_limit`. `null` when the relay's NIP-11 document
+  /// does not advertise one, or advertises a malformed value.
+  final int? maxLimit;
+
   RelayInfo(
     this.name,
     this.description,
@@ -28,8 +33,9 @@ class RelayInfo {
     this.contact,
     this.nips,
     this.software,
-    this.version,
-  );
+    this.version, {
+    this.maxLimit,
+  });
 
   factory RelayInfo.fromJson(Map<dynamic, dynamic> json) {
     final String name = json["name"] ?? '';
@@ -47,7 +53,17 @@ class RelayInfo {
       nips,
       software,
       version,
+      maxLimit: _parseMaxLimit(json['limitation']),
     );
+  }
+
+  /// Parses NIP-11 `limitation.max_limit`, tolerating an absent or
+  /// malformed `limitation` object rather than throwing.
+  static int? _parseMaxLimit(dynamic limitation) {
+    if (limitation is! Map) return null;
+    final maxLimit = limitation['max_limit'];
+    if (maxLimit is num) return maxLimit.toInt();
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -59,6 +75,10 @@ class RelayInfo {
     data['nips'] = nips;
     data['software'] = software;
     data['version'] = version;
+    final maxLimit = this.maxLimit;
+    if (maxLimit != null) {
+      data['limitation'] = {'max_limit': maxLimit};
+    }
     return data;
   }
 }
