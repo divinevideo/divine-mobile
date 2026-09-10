@@ -215,11 +215,11 @@ class CuratedListRelayGateway {
       final curatedList = _eventToCuratedList(event);
 
       // Track rejected lists for summary (don't log each one)
-      if (curatedList == null || curatedList.videoEventIds.isEmpty) {
+      if (curatedList == null || !curatedList.hasVideos) {
         rejectedCount++;
       }
 
-      if (curatedList != null && curatedList.videoEventIds.isNotEmpty) {
+      if (curatedList != null && curatedList.hasVideos) {
         listsWithVideos++;
         final key = curatedList.authorScopedId;
 
