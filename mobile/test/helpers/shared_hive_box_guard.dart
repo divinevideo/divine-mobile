@@ -52,8 +52,30 @@ final class SharedHiveBoxOpenObserver implements HiveBoxOpenObserver {
 
   @override
   Future<T> observe<T>(String boxName, Future<T> Function() open) {
+    final callerZone = Zone.current;
+    if (identical(callerZone, _realAsyncZone)) {
+      return _track(boxName, open());
+    }
+
+    // Complete synchronously so a fake-async caller cannot trap the proxy's
+    // completion microtask after the real-zone Hive work has settled.
+    final result = Completer<T>.sync();
+    _realAsyncZone.run(() {
+      final hiveOpen = _track(boxName, open());
+      unawaited(
+        hiveOpen.then<void>(
+          (value) => callerZone.run(() => result.complete(value)),
+          onError: (Object error, StackTrace stackTrace) {
+            callerZone.run(() => result.completeError(error, stackTrace));
+          },
+        ),
+      );
+    });
+    return result.future;
+  }
+
+  Future<T> _track<T>(String boxName, Future<T> future) {
     final operation = Object();
-    final future = _realAsyncZone.run(open);
     _pending[operation] = PendingHiveBoxOpen(boxName: boxName, future: future);
     unawaited(
       future.then<void>(

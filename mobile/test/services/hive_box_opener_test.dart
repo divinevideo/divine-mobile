@@ -61,4 +61,20 @@ void main() {
     );
     expect(reopened.isOpen, isTrue);
   });
+
+  test('an open error remains owned by the calling test zone', () async {
+    final observer = SharedHiveBoxOpenObserver(Zone.current);
+    HiveBoxOpener.observerForTesting = observer;
+    final pathBlocker = File('${tempDir.path}/not_a_directory')
+      ..writeAsStringSync('file');
+
+    await expectLater(
+      HiveBoxOpener.open<dynamic>(
+        HiveBoxNames.pendingUploads,
+        path: '${pathBlocker.path}/nested',
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(observer.pending, isEmpty);
+  });
 }
