@@ -104,6 +104,14 @@ void main() {
       expect(find.byType(TextField), findsNWidgets(2));
     });
 
+    testWidgets('does not autocorrect a typed proof link', (tester) async {
+      await pump(tester);
+
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.autocorrect, isFalse);
+      expect(field.keyboardType, TextInputType.url);
+    });
+
     testWidgets('keeps the typed proof when the account field appears', (
       tester,
     ) async {

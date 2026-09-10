@@ -49,5 +49,14 @@ void main() {
         TextInputType.url,
       );
     });
+
+    testWidgets('does not autocorrect a typed web address', (tester) async {
+      await pump(tester);
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).autocorrect,
+        isFalse,
+      );
+    });
   });
 }
