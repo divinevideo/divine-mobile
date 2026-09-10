@@ -49,6 +49,10 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
       picked = await ImageAttachmentPicker.imagePicker.pickMultiImage(
         maxWidth: 1920,
         imageQuality: 80,
+        // Bug-report attachments are uploaded to Zendesk. Without this the
+        // picker reattaches the original photo metadata, so a selected image
+        // can carry GPS EXIF off the device (#8850, decision D3).
+        requestFullMetadata: false,
       );
     } catch (error, stackTrace) {
       Log.error(

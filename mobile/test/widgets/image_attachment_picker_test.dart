@@ -73,6 +73,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => pickedFiles);
 
@@ -92,6 +93,36 @@ void main() {
       }
     });
 
+    testWidgets('strips photo metadata from bug report attachments', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        when(
+          () => mockPicker.pickMultiImage(
+            maxWidth: any(named: 'maxWidth'),
+            imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
+          ),
+        ).thenAnswer((_) async => [XFile('/tmp/img1.jpg')]);
+
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.bySemanticsLabel(l10n.bugReportAttachImages));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockPicker.pickMultiImage(
+            maxWidth: any(named: 'maxWidth'),
+            imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: false,
+          ),
+        ).called(1);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     testWidgets('shows an error snackbar when image picker throws', (
       tester,
     ) async {
@@ -101,6 +132,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenThrow(Exception('picker failed'));
 
@@ -128,6 +160,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => fourFiles);
 
@@ -157,6 +190,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => threeFiles);
 
@@ -179,6 +213,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => twoFiles);
 
@@ -245,6 +280,7 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
+            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => pickedFiles);
 
