@@ -73,9 +73,11 @@ void main() {
         () async {
           final completer = Completer<Box<dynamic>>();
           final observer = SharedHiveBoxOpenObserver(Zone.current);
-          observer.observe<Box<dynamic>>(
-            HiveBoxNames.pendingUploads,
-            () => completer.future,
+          unawaited(
+            observer.observe<Box<dynamic>>(
+              HiveBoxNames.pendingUploads,
+              () => completer.future,
+            ),
           );
           expect(observer.pending, hasLength(1));
 
