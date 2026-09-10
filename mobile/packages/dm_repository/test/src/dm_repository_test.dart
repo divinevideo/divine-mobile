@@ -6050,9 +6050,10 @@ void main() {
           expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
 
           // Next login: the failure was not memoized, so it re-queries,
-          // resolves absent, and publishes.
+          // resolves absent, and publishes. Each read asks the pool and the
+          // advertised relay.
           await repository.ensureDmRelayListPublished();
-          expect(queries, 2);
+          expect(queries, 4);
           verify(
             () => mockNostrClient.publishEventAwaitOk(
               any(),
@@ -6117,8 +6118,9 @@ void main() {
           await repository.startListening();
           await repository.ensureDmRelayListPublished();
 
-          // The live read stays cheap; exactly one read is authoritative.
-          expect(settlementByRead, [false, true]);
+          // The live read stays cheap; only the publish's own read — the pool
+          // leg and the advertised-relay leg — is authoritative.
+          expect(settlementByRead, [false, true, true]);
 
           await repository.stopListening();
           await controller.close();
@@ -6148,6 +6150,29 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
             ),
           ).thenAnswer((_) async => outcome(accepted: true));
+        }
+
+        /// Answers the pool read and the advertised-relay read separately;
+        /// only the latter names a temp relay.
+        void stubOwnInboxByLeg({
+          required ({List<Event> events, bool timedOut, bool noRelays}) pool,
+          required ({List<Event> events, bool timedOut, bool noRelays})
+          advertised,
+        }) {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (invocation) async => invocation.namedArguments[#tempRelays] == null
+                ? pool
+                : advertised,
+          );
         }
 
         test(
@@ -6291,6 +6316,91 @@ void main() {
         );
 
         test(
+          'reads the own kind-10050 from the relay it publishes to as well as '
+          'from the pool (#8433)',
+          () async {
+            stubOwnInbox(answeredList(const <Event>[]));
+            stubAcceptedPublish();
+
+            final repository = createRepository(syncState: _FakeDmSyncState());
+            await repository.ensureDmRelayListPublished();
+
+            final captured = verify(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: captureAny(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).captured;
+            // A user can remove the advertised relay from their pool; a read
+            // that never asks it cannot see the list it holds.
+            expect(
+              captured,
+              unorderedEquals(<Object?>[
+                null,
+                ['wss://relay.divine.video'],
+              ]),
+            );
+          },
+        );
+
+        test(
+          'a list only the advertised relay serves is found — never '
+          'published over (#8433)',
+          () async {
+            stubOwnInboxByLeg(
+              pool: answeredList(const <Event>[]),
+              advertised: answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+            );
+            stubAcceptedPublish();
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            verifyNever(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            );
+            expect(
+              syncState.dmRelayListPublishedPubkeys,
+              contains(_validPubkeyA),
+            );
+          },
+        );
+
+        test(
+          'an advertised-relay read that did not settle is not evidence of '
+          'absence (#8433)',
+          () async {
+            stubOwnInboxByLeg(
+              pool: answeredList(const <Event>[]),
+              advertised: unansweredList(timedOut: true),
+            );
+            stubAcceptedPublish();
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            verifyNever(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            );
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
           'reads a recipient kind-10050 conclusively before reporting absent',
           () async {
             stubOwnInbox(answeredList(const <Event>[]));
@@ -6359,7 +6469,8 @@ void main() {
             await repository.ensureDmRelayListPublished();
             await repository.ensureDmRelayListPublished();
 
-            expect(queries, 2);
+            // Two legs per read: the pool and the advertised relay.
+            expect(queries, 4);
             verify(
               () => mockNostrClient.publishEventAwaitOk(
                 any(),

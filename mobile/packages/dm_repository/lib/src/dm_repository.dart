@@ -4059,6 +4059,9 @@ class DmRepository {
     // Every path here except the signed-in user's own inbox is resolving
     // somebody else's list.
     _DmRelayListSource source = _DmRelayListSource.remote,
+    // Read as its own leg when given. Only the publish passes it — see the
+    // leg comment below.
+    String? advertisedRelay,
   }) async {
     try {
       final filter = [
@@ -4080,7 +4083,10 @@ class DmRepository {
       // The fast read is in front of the receiving subscription, while the
       // authoritative read protects publication (#8212); widening receipt is
       // a separate asynchronous concern and must not add a cold connection to
-      // either synchronous path.
+      // either synchronous path. The publish alone passes [advertisedRelay]:
+      // a user can remove that relay from the pool, and a read that never
+      // asks where the list was written can neither confirm it nor see a
+      // list held only there (#8433).
       final queryFutures = [
         _nostrClient.queryEventsDetailed(
           filter,
@@ -4099,6 +4105,14 @@ class DmRepository {
             tempRelays: _dmInboxLookupRelays,
             requireAllRelaysSettled: true,
             timeout: _dmInboxDiscoveryQueryTimeout,
+          ),
+        if (advertisedRelay != null)
+          _nostrClient.queryEventsDetailed(
+            filter,
+            useCache: false,
+            tempRelays: [advertisedRelay],
+            requireAllRelaysSettled: true,
+            timeout: _ownDmInboxAuthoritativeTimeout,
           ),
       ];
       final results = await Future.wait(queryFutures).timeout(
@@ -4275,11 +4289,13 @@ class DmRepository {
       if (syncState.dmRelayListPublished(pubkey)) return;
 
       // Its own authoritative read, NOT the shared session memo: this is the
-      // one caller that replaces what it read. See #8212.
+      // one caller that replaces what it read. See #8212. It also asks the
+      // relay it publishes to, which the pool may not contain (#8433).
       final resolution = await _queryOwnDmInbox(
         pubkey,
         requireAuthoritative: true,
         source: _DmRelayListSource.selfAuthored,
+        advertisedRelay: relayUrl,
       );
       if (_disposed || _resetGeneration != gen) return;
       if (resolution.state == _OwnDmInboxState.found) {
