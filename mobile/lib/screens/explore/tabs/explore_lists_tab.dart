@@ -16,10 +16,10 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
-import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart'
     show PeopleListSearchResult;
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The Lists tab shown inside `ExploreScreen`: the discovery gallery.
@@ -44,7 +44,7 @@ class ExploreListsTab extends ConsumerWidget {
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
 
     if (service == null) {
-      return const Center(child: BrandedLoadingIndicator(size: 60));
+      return const _LoadingGallery();
     }
 
     return BlocProvider(
@@ -228,10 +228,7 @@ class _DiscoveryColumn extends StatelessWidget {
     if (isColumnEmpty) {
       return switch (status) {
         ListsDiscoveryColumnStatus.initial ||
-        ListsDiscoveryColumnStatus.loading => const Padding(
-          padding: EdgeInsets.only(top: 48),
-          child: Center(child: BrandedLoadingIndicator(size: 40)),
-        ),
+        ListsDiscoveryColumnStatus.loading => const _LoadingColumn(),
         ListsDiscoveryColumnStatus.failure => Padding(
           padding: const EdgeInsets.only(top: 48),
           child: Text(
@@ -250,6 +247,75 @@ class _DiscoveryColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 20,
       children: children,
+    );
+  }
+}
+
+/// Placeholder cards per loading column: enough to fill a phone's height,
+/// so the column reads as "cards are coming" rather than as empty space.
+const _loadingCardCount = 4;
+
+/// A column of card silhouettes, shimmering, announced once as loading.
+///
+/// Stands in for a column whose lists have not arrived yet, in the same
+/// slot and with the same card geometry, so nothing shifts when they do.
+class _LoadingColumn extends StatelessWidget {
+  const _LoadingColumn();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: context.l10n.listsDiscoveryLoadingLabel,
+      child: Skeletonizer(
+        effect: vineSkeletonEffectOf(context),
+        child: const _SkeletonCards(),
+      ),
+    );
+  }
+}
+
+/// Both columns as silhouettes under one shimmer, for the moment before the
+/// curated-list service is ready and there is no cubit to render from.
+class _LoadingGallery extends StatelessWidget {
+  const _LoadingGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: context.vineColors.surfaceContainerHigh,
+      child: Semantics(
+        label: context.l10n.listsDiscoveryLoadingLabel,
+        child: Skeletonizer(
+          effect: vineSkeletonEffectOf(context),
+          child: const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                Expanded(child: _SkeletonCards()),
+                Expanded(child: _SkeletonCards()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonCards extends StatelessWidget {
+  const _SkeletonCards();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 20,
+      children: List.filled(
+        _loadingCardCount,
+        const DivineListThumbnailSkeleton(),
+      ),
     );
   }
 }

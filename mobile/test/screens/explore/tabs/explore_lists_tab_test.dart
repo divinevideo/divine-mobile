@@ -12,7 +12,6 @@ import 'package:models/models.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
-import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
@@ -145,11 +144,20 @@ void main() {
         ),
       );
 
+      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
       expect(find.byType(DivineListThumbnail), findsOneWidget);
-      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+      // The loading column is card silhouettes, announced once, not a
+      // spinner.
+      expect(find.byType(DivineListThumbnailSkeleton), findsNWidgets(4));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.bySemanticsLabel(l10n.listsDiscoveryLoadingLabel),
+        findsOneWidget,
+      );
+      semantics.dispose();
     });
 
     testWidgets('shows a quiet error line for a failed empty column', (
