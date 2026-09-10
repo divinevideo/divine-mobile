@@ -388,6 +388,9 @@ class Nostr {
   /// that oldest event. Cache relays do not count, and events already
   /// collected are dropped by event id.
   ///
+  /// * A relay that sent the previous page an event, and did not take this
+  ///   page's REQ, stops the walk incomplete: the walk was following that
+  ///   relay, and has asked it nothing below the cursor.
   /// * A relay whose oldest event is in the cursor's second, and that may be
   ///   capped, stops the walk incomplete: it may hold more events in that
   ///   second than any `until` can reach.
@@ -401,8 +404,9 @@ class Nostr {
   ///   filter.
   ///
   /// The walk also ends complete on a settled page confirmed exhaustive by
-  /// NIP-67 `finish`, and stops incomplete, keeping what it collected, on the
-  /// first page that does not settle. Whenever a page stops the walk
+  /// NIP-67 `finish`, unless a relay it was following missed that page, and
+  /// stops incomplete, keeping what it collected, on the first page that
+  /// does not settle. Whenever a page stops the walk
   /// incomplete, its [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also
   /// stops incomplete after [maxPages] pages, or once [deadline] has passed.
   /// Each page gets [pageTimeout], cut short by [deadline].
@@ -412,6 +416,11 @@ class Nostr {
   /// page, can lose the rest of that second, since nothing marks its page
   /// capped. A NIP-11 `max_limit` or a NIP-67 `more` hint from the relay
   /// removes that ambiguity.
+  ///
+  /// Like [readEvents], the walk answers for the relays that take part in
+  /// it. A relay that takes no page's REQ is not read, and one that first
+  /// takes a later page's REQ is read only from that page's cursor down;
+  /// neither stops the walk.
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
@@ -435,6 +444,7 @@ class Nostr {
     final collected = <Event>[];
     final seenIds = <String>{};
     var until = filter['until'] as int?;
+    var previousRelays = const <QueryRelaySummary>[];
     var pages = 0;
 
     PagedQueryResult walked({required bool isComplete, QueryEnd? stoppedBy}) =>
@@ -473,12 +483,16 @@ class Nostr {
       switch (nextPagedReadStep(
         cursor: until,
         relays: read.relays,
+        previousRelays: previousRelays,
+        // Unknown only when the deadline ended the page, which never settles.
+        sentTo: read.sentTo ?? const [],
         settled: page.isComplete,
         confirmedExhaustive: page.confirmedExhaustive,
         possiblyCapped: page.possiblyCapped,
       )) {
         case ReadPageAt(until: final next):
           until = next;
+          previousRelays = read.relays;
         case EndPagedRead(isComplete: true):
           return walked(isComplete: true);
         case EndPagedRead():
@@ -557,10 +571,16 @@ class Nostr {
   }
 
   /// Runs one read for [readEvents], its wrappers and [readAllEvents]. It
-  /// says whether the caller's deadline is what ended it, and what each
-  /// relay sent, as the pool counted it.
+  /// says whether the caller's deadline is what ended it, what each relay
+  /// sent, as the pool counted it, and which relays took the REQ: null when
+  /// the deadline ended the read, which may be before the fan-out finished.
   Future<
-    ({QueryResult result, bool endedAtDeadline, List<QueryRelaySummary> relays})
+    ({
+      QueryResult result,
+      bool endedAtDeadline,
+      List<QueryRelaySummary> relays,
+      List<String>? sentTo,
+    })
   >
   _read(
     List<Map<String, dynamic>> filters, {
@@ -596,31 +616,30 @@ class Nostr {
       endAtDeadline,
     );
     try {
+      final fanout = _pool.query(
+        filters,
+        (event) {
+          eventBox.add(event);
+        },
+        id: subscriptionId,
+        tempRelays: tempRelays,
+        relayTypes: relayTypes,
+        sendAfterAuth: sendAfterAuth,
+        requireAllRelaysSettled: requireAllRelaysSettled,
+        onOutcome: (outcome) {
+          if (!ended.isCompleted) ended.complete(outcome);
+        },
+      );
       // Not awaited: the deadline must be able to end the read while the
       // fan-out is still writing the REQ to a slow relay.
       unawaited(
-        _pool
-            .query(
-              filters,
-              (event) {
-                eventBox.add(event);
-              },
-              id: subscriptionId,
-              tempRelays: tempRelays,
-              relayTypes: relayTypes,
-              sendAfterAuth: sendAfterAuth,
-              requireAllRelaysSettled: requireAllRelaysSettled,
-              onOutcome: (outcome) {
-                if (!ended.isCompleted) ended.complete(outcome);
-              },
-            )
-            .then<void>(
-              (_) {},
-              onError: (Object error, StackTrace stackTrace) {
-                // An error after the read ended has no caller left to hear it.
-                if (!ended.isCompleted) ended.completeError(error, stackTrace);
-              },
-            ),
+        fanout.then<void>(
+          (_) {},
+          onError: (Object error, StackTrace stackTrace) {
+            // An error after the read ended has no caller left to hear it.
+            if (!ended.isCompleted) ended.completeError(error, stackTrace);
+          },
+        ),
       );
       final outcome = await ended.future;
       return (
@@ -632,6 +651,9 @@ class Nostr {
         ),
         endedAtDeadline: endedAtDeadline,
         relays: outcome.relays,
+        // The pool completes a read only once its fan-out has finished, so
+        // this does not wait on a relay.
+        sentTo: endedAtDeadline ? null : (await fanout).sentTo,
       );
     } finally {
       deadlineTimer.cancel();

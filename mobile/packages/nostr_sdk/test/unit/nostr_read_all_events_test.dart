@@ -34,6 +34,10 @@ class _StoreRelay extends Relay {
   /// an `EOSE`.
   final Set<int> withholdsEoseFor = {};
 
+  /// The 1-based numbers of the `REQ`s whose write fails, the way a dead
+  /// socket's does, so the relay never answers them.
+  final Set<int> failsReqWrites = {};
+
   /// The filter of every `REQ` this relay was sent, in order.
   final List<Map<String, dynamic>> requests = [];
 
@@ -66,6 +70,7 @@ class _StoreRelay extends Relay {
     if (message.firstOrNull == 'REQ') {
       final filter = Map<String, dynamic>.from(message[2] as Map);
       requests.add(filter);
+      if (failsReqWrites.contains(requests.length)) return false;
       final withEose = !withholdsEoseFor.contains(requests.length);
       final after = answersAfter?._latestAnswer;
       final answered = Completer<void>();
@@ -634,6 +639,73 @@ void main() {
         );
         expect(result.isComplete, isTrue);
       });
+    });
+
+    group("when a relay does not take a page's REQ", () {
+      test('stops incomplete when that relay sent the page before it '
+          'events', () async {
+        final capped = await eventsAt([
+          110,
+          109,
+          108,
+          107,
+          106,
+          105,
+          104,
+          103,
+          102,
+          101,
+        ]);
+        final [early] = await eventsAt([50]);
+        final cappedRelay = await addStore('wss://capped.example', capped)
+          ..failsReqWrites.add(2);
+        await addStore('wss://early.example', [early]);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(_untilsOf(cappedRelay), [null, 109]);
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([capped[0], capped[1], early])),
+        );
+        expect(
+          result.isComplete,
+          isFalse,
+          reason:
+              'the second page never reached the relay that filled the first '
+              "one; following the other relay's 50 from there would skip its "
+              '108 down to 101',
+        );
+        expect(
+          result.stoppedBy,
+          QueryEnd.complete,
+          reason: 'the page settled on the one relay that took its REQ',
+        );
+        expect(result.pages, 2);
+      });
+
+      test(
+        'reads on when that relay sent the page before it nothing',
+        () async {
+          final stored = await eventsAt([110, 109, 108]);
+          final relay = await addStore('wss://relay.example', stored);
+          final empty = await addStore('wss://empty.example', [])
+            ..failsReqWrites.add(2);
+
+          final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+          expect(_idsOf(result.events), unorderedEquals(_idsOf(stored)));
+          expect(_untilsOf(relay), [null, 109, 108, 107]);
+          expect(_untilsOf(empty), [null, 109, 108, 107]);
+          expect(
+            result.isComplete,
+            isTrue,
+            reason:
+                'the relay that missed the second page had answered the first '
+                'with nothing, so it holds nothing the walk has yet to reach',
+          );
+        },
+      );
     });
 
     group('when the walk is done', () {

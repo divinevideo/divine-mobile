@@ -22,14 +22,24 @@ QueryRelaySummary _relay(
   capped: capped,
 );
 
-/// The step after a settled page that no relay confirmed exhaustive.
+/// The step after a settled page that no relay confirmed exhaustive. Unless
+/// [sentTo] says otherwise, every relay in [previousRelays] and [relays] took
+/// the page's REQ.
 PagedReadStep _afterSettledPage(
   int? cursor,
   List<QueryRelaySummary> relays, {
   bool possiblyCapped = false,
+  List<QueryRelaySummary> previousRelays = const [],
+  List<String>? sentTo,
 }) => nextPagedReadStep(
   cursor: cursor,
   relays: relays,
+  previousRelays: previousRelays,
+  sentTo:
+      sentTo ??
+      [
+        for (final relay in [...previousRelays, ...relays]) relay.url,
+      ],
   settled: true,
   confirmedExhaustive: false,
   possiblyCapped: possiblyCapped,
@@ -68,6 +78,7 @@ class _ModelRelay {
     this.maxLimit,
     this.silentCap,
     this.ignoresUntil = false,
+    this.missesPages = const {},
   });
 
   final String url;
@@ -83,6 +94,10 @@ class _ModelRelay {
   /// When true, every page gets the relay's newest events whatever `until`
   /// asked for.
   final bool ignoresUntil;
+
+  /// The 1-based numbers of the pages whose REQ the relay does not take, the
+  /// way a relay whose socket write fails does not.
+  final Set<int> missesPages;
 
   List<_Held> answer(int? until, int limit) {
     final eligible = [
@@ -106,8 +121,9 @@ int _newestFirst(_Held a, _Held b) {
 /// [nextPagedReadStep] choosing where each page starts. Each page is judged
 /// the way the relay pool judges it: events after `until` fall outside the
 /// filter and are not counted, [hidden] events are counted but never
-/// delivered, and a relay may be capped when it answered outside the filter
-/// or filled the page or its published limit.
+/// delivered, a relay may be capped when it answered outside the filter or
+/// filled the page or its published limit, and a relay that misses a page
+/// neither takes its REQ nor answers it.
 ({Set<String> collected, bool isComplete, List<int?> untils}) _walk(
   List<_ModelRelay> relays, {
   required int pageSize,
@@ -117,11 +133,16 @@ int _newestFirst(_Held a, _Held b) {
   final collected = <String>{};
   final untils = <int?>[];
   var cursor = until;
+  var previousSummaries = const <QueryRelaySummary>[];
   while (untils.length < 50) {
     untils.add(cursor);
+    final page = untils.length;
     final summaries = <QueryRelaySummary>[];
+    final sentTo = <String>[];
     var possiblyCapped = false;
     for (final relay in relays) {
+      if (relay.missesPages.contains(page)) continue;
+      sentTo.add(relay.url);
       final sent = relay.answer(cursor, pageSize);
       final counted = [
         for (final event in sent)
@@ -148,12 +169,15 @@ int _newestFirst(_Held a, _Held b) {
     switch (nextPagedReadStep(
       cursor: cursor,
       relays: summaries,
+      previousRelays: previousSummaries,
+      sentTo: sentTo,
       settled: true,
       confirmedExhaustive: false,
       possiblyCapped: possiblyCapped,
     )) {
       case ReadPageAt(until: final next):
         cursor = next;
+        previousSummaries = summaries;
       case EndPagedRead(:final isComplete):
         return (collected: collected, isComplete: isComplete, untils: untils);
     }
@@ -169,6 +193,8 @@ void main() {
           nextPagedReadStep(
             cursor: 110,
             relays: [_relay(_first, oldest: 100)],
+            previousRelays: const [],
+            sentTo: const [_first],
             settled: false,
             confirmedExhaustive: false,
             possiblyCapped: false,
@@ -183,6 +209,8 @@ void main() {
           nextPagedReadStep(
             cursor: 110,
             relays: [_relay(_first, oldest: 100)],
+            previousRelays: const [],
+            sentTo: const [_first],
             settled: false,
             confirmedExhaustive: true,
             possiblyCapped: false,
@@ -199,6 +227,8 @@ void main() {
           nextPagedReadStep(
             cursor: 110,
             relays: [_relay(_first, oldest: 100)],
+            previousRelays: const [],
+            sentTo: const [_first],
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
@@ -264,6 +294,74 @@ void main() {
             _relay(_second, oldest: 110),
           ]),
           _readsAt(109),
+        );
+      });
+    });
+
+    group('when a relay that sent the last page events misses this one', () {
+      test('ends the walk incomplete', () {
+        // Nothing was asked of it below the cursor, where it may hold more.
+        expect(
+          _afterSettledPage(
+            109,
+            [_relay(_second, oldest: 50)],
+            previousRelays: [
+              _relay(_first, oldest: 109, events: 2, capped: true),
+              _relay(_second, oldest: 50),
+            ],
+            sentTo: [_second],
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('ends the walk incomplete even when every relay that answered '
+          'confirmed it exhaustive', () {
+        expect(
+          nextPagedReadStep(
+            cursor: 109,
+            relays: [_relay(_second, oldest: 50)],
+            previousRelays: [
+              _relay(_first, oldest: 109, events: 2, capped: true),
+              _relay(_second, oldest: 50),
+            ],
+            sentTo: const [_second],
+            settled: true,
+            confirmedExhaustive: true,
+            possiblyCapped: false,
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('keeps walking when that relay took the REQ and sent nothing', () {
+        expect(
+          _afterSettledPage(
+            108,
+            [_relay(_second, oldest: 50)],
+            previousRelays: [
+              _relay(_first, oldest: 108, events: 2, capped: true),
+              _relay(_second, oldest: 50),
+            ],
+            sentTo: [_first, _second],
+          ),
+          _readsAt(50),
+        );
+      });
+
+      test('keeps walking when a relay first takes part on a later page', () {
+        expect(
+          _afterSettledPage(
+            108,
+            [
+              _relay(_first, oldest: 106, events: 3, capped: true),
+              _relay(_second, oldest: 107),
+            ],
+            previousRelays: [
+              _relay(_first, oldest: 108, events: 3, capped: true),
+            ],
+          ),
+          _readsAt(107),
         );
       });
     });
@@ -503,6 +601,29 @@ void main() {
         expect(walk.untils, [100]);
         expect(walk.collected, isEmpty);
         expect(walk.isComplete, isFalse);
+      });
+
+      test('stops incomplete at a relay that misses the page after one it '
+          'sent events on', () {
+        final capped = _ModelRelay(
+          _first,
+          _held('x', [110, 109, 108, 107, 106, 105, 104, 103, 102, 101]),
+          missesPages: {2},
+        );
+        final sparse = _ModelRelay(_second, _held('y', [50]));
+
+        final walk = _walk([capped, sparse], pageSize: 2);
+
+        expect(walk.untils, [null, 109]);
+        expect(walk.collected, {'x-0', 'x-1', 'y-0'});
+        expect(
+          walk.isComplete,
+          isFalse,
+          reason:
+              'the capped relay sent the first page 110 and 109, then missed '
+              "the page at 109; following the sparse relay's 50 from there "
+              'would skip its 108 down to 101',
+        );
       });
 
       test("reaches a relay's early event in a bounded number of pages", () {
