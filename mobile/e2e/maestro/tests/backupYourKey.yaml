@@ -1,4 +1,16 @@
 appId: co.openvine.app.staging
+# Step 3 puts the signed-in account's private key on the device clipboard.
+# The copy is the behaviour under test; the key left behind is not. #8777
+# removed the deletion flow that used to consume it, so without this a run
+# ends with a live account's nsec readable by every app on the device.
+#
+# Declared as a hook rather than a trailing command because Maestro runs
+# onFlowComplete from a `finally` — for a direct run and for a subflow reached
+# through `runFlow:` alike. A trailing command runs only when the flow reaches
+# it, and the confirmation assert sitting between the copy and the clear is
+# exactly the step that fails while the key is already on the clipboard.
+onFlowComplete:
+  - setClipboard: "divine-e2e-clipboard-cleared"
 ---
 # Verify that a signed-in user can reach key management and back up their
 # private key to the clipboard.
@@ -6,7 +18,8 @@ appId: co.openvine.app.staging
 # 1. Open Settings, then Nostr Settings
 # 2. Open Key Management and verify the Nostr Keys screen
 # 3. Copy the private key and verify the confirmation
-# 4. Overwrite the copy so the key does not outlive the run
+#
+# The clipboard is overwritten by the onFlowComplete hook above, pass or fail.
 
 # 1. Settings -> Nostr Settings
 - runFlow: ../utils/openSettings.yaml
@@ -32,10 +45,3 @@ appId: co.openvine.app.staging
 - tapOn:
     id: "copy_nsec_button"
 - runFlow: ../asserts/assertPrivKeyCopied.yaml
-
-# 4. Overwrite the key the step above put on the device clipboard.
-#
-# The copy is the behaviour under test; the key left behind is not. #8777
-# removed the deletion flow that used to consume it, so without this a run
-# ends with a live account's nsec readable by every app on the device.
-- setClipboard: "divine-e2e-clipboard-cleared"

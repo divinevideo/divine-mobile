@@ -18,32 +18,54 @@ const _copyPrivateKeyId = 'copy_nsec_button';
 /// Present in the pinned CLI (`MAESTRO_VERSION` in `codemagic.yaml`).
 const _setClipboard = 'setClipboard';
 
+/// The flow-config key whose commands Maestro runs from a `finally`.
+///
+/// A trailing command runs only when the flow reaches it, so a failure
+/// between the copy and the end of the flow leaves the key on the clipboard —
+/// which is the state #8828 is about. The hook runs pass or fail, for a direct
+/// run and for a subflow reached through `runFlow:` alike, so the guard
+/// requires the clear there rather than anywhere in the command list.
+const _onFlowComplete = 'onFlowComplete';
+
 const _maestroDir = 'e2e/maestro';
 
-/// Every command in a flow, in order.
+/// A Maestro flow's optional config header and its command list.
 ///
-/// A Maestro flow is two YAML documents — an `appId`/`tags` header, then the
-/// command list — so the commands are the last document rather than the
-/// first.
-List<Object?> _commandsOf(File flow) {
+/// A flow is two YAML documents — an `appId`/`onFlowComplete` header, then the
+/// commands — so the commands are the last document rather than the first. A
+/// file with a single document declares no header.
+({YamlMap? header, List<Object?> commands}) _documentsOf(File flow) {
   final documents = loadYamlDocuments(flow.readAsStringSync());
-  if (documents.isEmpty) return const [];
+  if (documents.isEmpty) return (header: null, commands: const []);
+  final header = documents.length > 1 ? documents.first.contents.value : null;
   final commands = documents.last.contents.value;
-  return commands is YamlList ? commands.toList() : const [];
+  return (
+    header: header is YamlMap ? header : null,
+    commands: commands is YamlList ? commands.toList() : const [],
+  );
 }
 
-/// Whether [command] is a `tapOn` naming [id].
+/// Whether [node] or anything nested under it taps [id].
 ///
-/// Maestro accepts both the nested (`tapOn:` then `id:`) and inline forms, so
-/// this reads the argument as a map rather than matching source text.
-bool _tapsId(Object? command, String id) {
-  if (command is! YamlMap) return false;
-  final argument = command['tapOn'];
-  return argument is YamlMap && argument['id'] == id;
+/// The walk is recursive because `tapOn` can sit under `repeat:`, `retry:` or
+/// an inline `runFlow:`, and reads the argument as a map rather than matching
+/// source text because Maestro accepts both the nested and inline forms.
+bool _tapsId(Object? node, String id) {
+  if (node is List) return node.any((child) => _tapsId(child, id));
+  if (node is! YamlMap) return false;
+  final argument = node['tapOn'];
+  if (argument is YamlMap && argument['id'] == id) return true;
+  return node.values.any((child) => _tapsId(child, id));
 }
 
 bool _isSetClipboard(Object? command) =>
     command is YamlMap && command.containsKey(_setClipboard);
+
+/// Whether [header] overwrites the clipboard from its `onFlowComplete` hook.
+bool _clearsClipboardOnComplete(YamlMap? header) {
+  final hook = header?[_onFlowComplete];
+  return hook is YamlList && hook.any(_isSetClipboard);
+}
 
 void main() {
   group('Maestro clipboard hygiene', () {
@@ -65,25 +87,70 @@ void main() {
       );
     });
 
-    test('a flow that copies the private key clears the clipboard after', () {
+    test('a flow that copies the private key clears it on completion', () {
       for (final flow in flows) {
-        final commands = _commandsOf(flow);
-        final tapIndex = commands.indexWhere(
-          (command) => _tapsId(command, _copyPrivateKeyId),
-        );
-        if (tapIndex < 0) continue;
+        final (:header, :commands) = _documentsOf(flow);
+        if (!_tapsId(commands, _copyPrivateKeyId)) continue;
 
-        final clearIndex = commands.indexWhere(_isSetClipboard);
         expect(
-          clearIndex,
-          greaterThan(tapIndex),
+          _clearsClipboardOnComplete(header),
+          isTrue,
           reason:
               '${flow.path} taps $_copyPrivateKeyId, which copies a live '
               "account's private key to the device clipboard. The flow must "
-              'overwrite it with `$_setClipboard` before it ends, or the key '
-              'outlives the run on a shared device (#8828).',
+              'overwrite it from an `$_onFlowComplete` hook, which Maestro '
+              'runs pass or fail — a trailing `$_setClipboard` is skipped by '
+              'any failure after the copy and leaves the key on a shared '
+              'device (#8828).',
         );
       }
+    });
+
+    group('detector', () {
+      test('finds a tap nested inside another command', () {
+        final commands = loadYaml('''
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: "$_copyPrivateKeyId"
+''');
+
+        expect(_tapsId(commands, _copyPrivateKeyId), isTrue);
+      });
+
+      test('does not treat a visibility assertion as a tap', () {
+        final commands = loadYaml('''
+- assertVisible:
+    id: "$_copyPrivateKeyId"
+- extendedWaitUntil:
+    visible:
+      id: "$_copyPrivateKeyId"
+    timeout: 30000
+''');
+
+        expect(_tapsId(commands, _copyPrivateKeyId), isFalse);
+      });
+
+      test('rejects a header whose hook does not clear the clipboard', () {
+        final withHook = loadYaml('''
+appId: co.openvine.app.staging
+$_onFlowComplete:
+  - $_setClipboard: "cleared"
+''') as YamlMap;
+        final withoutHook =
+            loadYaml('appId: co.openvine.app.staging') as YamlMap;
+        final emptyHook = loadYaml('''
+appId: co.openvine.app.staging
+$_onFlowComplete:
+  - back
+''') as YamlMap;
+
+        expect(_clearsClipboardOnComplete(withHook), isTrue);
+        expect(_clearsClipboardOnComplete(withoutHook), isFalse);
+        expect(_clearsClipboardOnComplete(emptyHook), isFalse);
+        expect(_clearsClipboardOnComplete(null), isFalse);
+      });
     });
   });
 }
