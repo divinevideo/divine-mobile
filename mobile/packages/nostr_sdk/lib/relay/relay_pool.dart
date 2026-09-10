@@ -3395,6 +3395,10 @@ class RelayPool {
       final relayMessage = ['COUNT', relaySubId, ...filters];
 
       futures.add(() async {
+        // What is left of the budget once the send is done, so the timeout
+        // diagnostic reports the wait the relay actually had rather than the
+        // whole request budget.
+        var answerBudget = timeout;
         try {
           final sent = await relay.send(
             relayMessage,
@@ -3417,7 +3421,8 @@ class RelayPool {
           // Only register after successful send to avoid orphaned completers
           final responseFuture = relay.registerCountQuery(relaySubId);
           log('📊 COUNT request sent to ${relay.url}');
-          return await responseFuture.timeout(remaining());
+          answerBudget = remaining();
+          return await responseFuture.timeout(answerBudget);
         } on TimeoutException {
           log('📊 COUNT timed out on ${relay.url}');
           relay.failCountQuery(relaySubId, 'Timeout');
@@ -3426,7 +3431,7 @@ class RelayPool {
             RelayDiagnosticLevel.warning,
             relay.url,
             'Relay did not answer COUNT $relaySubId within '
-            '${timeout.inMilliseconds} ms',
+            '${answerBudget.inMilliseconds} ms',
           );
           return null;
         } on CountNotSupportedException catch (e) {
