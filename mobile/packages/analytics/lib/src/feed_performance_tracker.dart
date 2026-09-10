@@ -21,6 +21,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// load times (e.g. 27+ hours).
 const _maxSessionAge = Duration(seconds: 60);
 
+/// Why a user-visible feed load began.
+enum FeedLoadReason { appStart, sourceSwitch, refresh, pagination }
+
 /// Service for tracking feed performance and user engagement
 ///
 /// Feed-load sessions are keyed by feed type and shared across consumers — one
@@ -56,19 +59,119 @@ class FeedPerformanceTracker {
   }
 
   /// Start tracking feed load
-  void startFeedLoad(String feedType, {Map<String, dynamic>? params}) {
+  void startFeedLoad(
+    String feedType, {
+    FeedLoadReason reason = FeedLoadReason.appStart,
+    Map<String, dynamic>? params,
+  }) {
+    final session = _startSession(
+      feedType,
+      {'load_reason': reason.name, ...?params},
+    );
+
+    _analytics.logEvent(
+      name: 'feed_load_started',
+      parameters: {'feed_type': feedType, ...session.params},
+    );
+  }
+
+  _FeedLoadSession _startSession(
+    String feedType,
+    Map<String, dynamic> params,
+  ) {
     final session = _FeedLoadSession(
       feedType: feedType,
       startTime: DateTime.now(),
-      params: params ?? {},
+      params: params,
     );
-
     _activeSessions[feedType] = session;
-
     UnifiedLogger.info(
       '📺 Feed load started: $feedType',
       name: 'FeedPerformance',
     );
+    return session;
+  }
+
+  /// Records the first content a person can actually see.
+  ///
+  /// This does not close the session: a cache-first load remains active until
+  /// [markFreshResultCompleted] records the later network result.
+  void markFirstVisibleContent(
+    String feedType,
+    int count, {
+    required bool servedFromCache,
+  }) {
+    final session = _activeSessions[feedType];
+    if (session == null || session.firstVisibleTime != null) return;
+    if (_isStale(session)) {
+      _discardStaleSession(feedType);
+      return;
+    }
+
+    session
+      ..firstVisibleTime = DateTime.now()
+      ..servedFromCache = servedFromCache;
+    final elapsed = session.firstVisibleTime!
+        .difference(session.startTime)
+        .inMilliseconds;
+    _analytics.logEvent(
+      name: 'feed_first_content_visible',
+      parameters: {
+        'feed_type': feedType,
+        'time_to_first_visible_ms': elapsed,
+        'video_count': count,
+        'served_from_cache': servedFromCache ? 1 : 0,
+        ...session.params,
+      },
+    );
+  }
+
+  /// Records the fresh repository result and closes the user-visible load.
+  void markFreshResultCompleted(
+    String feedType,
+    int totalCount, {
+    int recommendationPageCount = 0,
+    int followingPageCount = 0,
+  }) {
+    final session = _activeSessions[feedType];
+    if (session == null) return;
+    if (_isStale(session)) {
+      _discardStaleSession(feedType);
+      return;
+    }
+
+    final now = DateTime.now();
+    final freshResultTimeMs = now.difference(session.startTime).inMilliseconds;
+    final firstVisibleTimeMs = session.firstVisibleTime
+        ?.difference(session.startTime)
+        .inMilliseconds;
+    final parameters = <String, Object>{
+      'feed_type': feedType,
+      'fresh_result_time_ms': freshResultTimeMs,
+      'total_videos': totalCount,
+      'served_from_cache': session.servedFromCache ? 1 : 0,
+      'recommendation_page_count': recommendationPageCount,
+      'following_page_count': followingPageCount,
+      ...session.params,
+    };
+    if (firstVisibleTimeMs != null) {
+      parameters['time_to_first_visible_ms'] = firstVisibleTimeMs;
+    }
+    _analytics.logEvent(
+      name: 'feed_fresh_result_complete',
+      parameters: parameters,
+    );
+    _analytics.logEvent(
+      name: 'feed_load_complete',
+      parameters: {
+        'feed_type': feedType,
+        'total_load_time_ms': freshResultTimeMs,
+        'total_videos': totalCount,
+        'first_batch_count': session.firstBatchCount ?? 0,
+        ...session.params,
+      },
+    );
+    _activeSessions.remove(feedType);
   }
 
   /// Mark when first videos arrive from Nostr
@@ -274,7 +377,7 @@ class FeedPerformanceTracker {
   /// when [markVideoSwipeComplete] is called.
   void startVideoSwipeTracking(String videoId) {
     final feedType = 'video_swipe_$videoId';
-    startFeedLoad(feedType);
+    _startSession(feedType, const {});
   }
 
   /// Mark a video swipe as complete (video is now playing).
@@ -364,4 +467,6 @@ class _FeedLoadSession {
   DateTime? displayedTime;
   int? firstBatchCount;
   int? totalVideosDisplayed;
+  DateTime? firstVisibleTime;
+  bool servedFromCache = false;
 }

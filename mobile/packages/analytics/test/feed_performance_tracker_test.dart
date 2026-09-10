@@ -35,6 +35,73 @@ class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
 
 void main() {
   group(FeedPerformanceTracker, () {
+    group('feed load phases', () {
+      late _RecordingAnalyticsEventSink sink;
+      late FeedPerformanceTracker tracker;
+
+      setUp(() {
+        sink = _RecordingAnalyticsEventSink();
+        tracker = FeedPerformanceTracker(sink: sink);
+      });
+
+      test('records initiation reason and keeps cache-first session open', () {
+        tracker
+          ..startFeedLoad('forYou', reason: FeedLoadReason.sourceSwitch)
+          ..markFirstVisibleContent('forYou', 5, servedFromCache: true);
+
+        expect(tracker.activeSessionCount, 1);
+        expect(sink.events.first.name, 'feed_load_started');
+        expect(sink.events.first.parameters, {
+          'feed_type': 'forYou',
+          'load_reason': 'sourceSwitch',
+        });
+        expect(sink.events[1].parameters, containsPair('served_from_cache', 1));
+      });
+
+      test('records fresh completion separately with traversal counts', () {
+        tracker
+          ..startFeedLoad('forYou')
+          ..markFirstVisibleContent('forYou', 4, servedFromCache: false)
+          ..markFreshResultCompleted(
+            'forYou',
+            12,
+            recommendationPageCount: 3,
+          );
+
+        expect(tracker.activeSessionCount, 0);
+        final completion = sink.events.firstWhere(
+          (event) => event.name == 'feed_fresh_result_complete',
+        );
+        expect(
+          completion.parameters,
+          containsPair('recommendation_page_count', 3),
+        );
+        expect(completion.parameters, containsPair('following_page_count', 0));
+        expect(
+          completion.parameters,
+          containsPair('time_to_first_visible_ms', isA<int>()),
+        );
+        expect(
+          completion.parameters,
+          containsPair('fresh_result_time_ms', isA<int>()),
+        );
+      });
+
+      test('only records the first visible-content milestone', () {
+        tracker
+          ..startFeedLoad('following')
+          ..markFirstVisibleContent('following', 3, servedFromCache: true)
+          ..markFirstVisibleContent('following', 8, servedFromCache: false);
+
+        expect(
+          sink.events.where(
+            (event) => event.name == 'feed_first_content_visible',
+          ),
+          hasLength(1),
+        );
+      });
+    });
+
     group('video swipe tracking', () {
       const videoId =
           'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';

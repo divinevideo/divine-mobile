@@ -21,6 +21,8 @@ void main() {
       expect(result.videoListSources, isEmpty);
       expect(result.listOnlyVideoIds, isEmpty);
       expect(result.consumedItemCount, isNull);
+      expect(result.recommendationPageCount, 0);
+      expect(result.followingPageCount, 0);
     });
 
     test('can be instantiated with all fields', () {
@@ -34,6 +36,8 @@ void main() {
         nextCursor: 1234,
         paginationCursor: 'o:2',
         hasMore: true,
+        recommendationPageCount: 2,
+        followingPageCount: 3,
       );
 
       expect(result.videos, hasLength(1));
@@ -43,6 +47,8 @@ void main() {
       expect(result.nextCursor, 1234);
       expect(result.paginationCursor, 'o:2');
       expect(result.hasMore, isTrue);
+      expect(result.recommendationPageCount, 2);
+      expect(result.followingPageCount, 3);
     });
 
     test('empty constructor defaults', () {
@@ -151,6 +157,20 @@ void main() {
       expect(result1, isNot(equals(result2)));
     });
 
+    test('inequality when traversal counts differ', () {
+      final video = createVideo(id: 'v1');
+      final result1 = HomeFeedResult(
+        videos: [video],
+        recommendationPageCount: 1,
+      );
+      final result2 = HomeFeedResult(
+        videos: [video],
+        followingPageCount: 1,
+      );
+
+      expect(result1, isNot(equals(result2)));
+    });
+
     test('props includes all fields', () {
       final video = createVideo(id: 'v1');
       const sources = {
@@ -166,9 +186,11 @@ void main() {
         nextCursor: 1234,
         paginationCursor: 'o:2',
         hasMore: true,
+        recommendationPageCount: 2,
+        followingPageCount: 3,
       );
 
-      expect(result.props, hasLength(7));
+      expect(result.props, hasLength(9));
       expect(result.props[0], equals([video]));
       expect(result.props[1], equals(sources));
       expect(result.props[2], equals(listOnly));
@@ -176,6 +198,8 @@ void main() {
       expect(result.props[4], 1234);
       expect(result.props[5], 'o:2');
       expect(result.props[6], isTrue);
+      expect(result.props[7], 2);
+      expect(result.props[8], 3);
     });
   });
 }

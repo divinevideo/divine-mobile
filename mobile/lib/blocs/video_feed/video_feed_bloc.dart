@@ -348,6 +348,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
+    _feedTracker?.startFeedLoad(
+      source.mode.name,
+      reason: FeedLoadReason.sourceSwitch,
+    );
+
     await _modePreferences.persist(source);
 
     emit(
@@ -397,6 +402,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     final source = state.source;
+    _feedTracker?.startFeedLoad(
+      source.mode.name,
+      reason: FeedLoadReason.pagination,
+    );
     emit(state.copyWith(isLoadingMore: true));
 
     try {
@@ -470,6 +479,20 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         ),
       );
 
+      if (updatedVideos.isNotEmpty) {
+        _feedTracker?.markFirstVisibleContent(
+          source.mode.name,
+          updatedVideos.length,
+          servedFromCache: false,
+        );
+      }
+      _feedTracker?.markFreshResultCompleted(
+        source.mode.name,
+        updatedVideos.length,
+        recommendationPageCount: result.recommendationPageCount,
+        followingPageCount: result.followingPageCount,
+      );
+
       _scheduleNostrEnrichment(source: source, videos: updatedVideos);
 
       // Batch-fetch profiles for new creators only.
@@ -495,6 +518,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
     emit(
       state.copyWith(
         status: VideoFeedStatus.loading,
@@ -553,6 +580,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
+    _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+
     await _loadVideos(
       state.source,
       emit,
@@ -594,6 +626,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     // Silent refresh — keep current videos visible, replace when done.
+    _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
     await _loadVideos(state.source, emit, skipCache: true);
   }
 
@@ -645,6 +681,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         clearPaginationCursor: true,
         currentIndex: 0,
       ),
+    );
+
+    _feedTracker?.startFeedLoad(
+      nextSource.mode.name,
+      reason: FeedLoadReason.refresh,
     );
 
     await _loadVideos(nextSource, emit, skipCache: true);
@@ -743,7 +784,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         source.mode.name,
         displayedVideos.length,
       );
-
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -765,9 +805,22 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         ),
       );
 
+      if (!servedCache && displayedVideos.isNotEmpty) {
+        _feedTracker?.markFirstVisibleContent(
+          source.mode.name,
+          displayedVideos.length,
+          servedFromCache: false,
+        );
+      }
+
       _scheduleNostrEnrichment(source: source, videos: displayedVideos);
 
-      _feedTracker?.markFeedDisplayed(source.mode.name, displayedVideos.length);
+      _feedTracker?.markFreshResultCompleted(
+        source.mode.name,
+        displayedVideos.length,
+        recommendationPageCount: result.recommendationPageCount,
+        followingPageCount: result.followingPageCount,
+      );
 
       // Batch-fetch creator profiles to warm the Drift cache.
       await _fetchCreatorProfiles(validVideos, source, emit);
@@ -846,8 +899,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         clearError: true,
       ),
     );
-    _feedTracker?.markFeedDisplayed(mode, cachedValid.length);
-
+    _feedTracker?.markFirstVisibleContent(
+      mode,
+      cachedValid.length,
+      servedFromCache: true,
+    );
     // Advance the resume point immediately so a quick reopen (before the fresh
     // fetch lands and the load-time write runs) still opens on the next video
     // rather than this one again.

@@ -10,6 +10,9 @@ takes to reach its first terminal milestone. They cover the cache lookup and
 the relay subscription as one operation. They do not measure only relay
 latency, and they do not necessarily measure time until a video is visible.
 
+For end-to-end cache, first-visible, and fresh-result phases, use
+[FEED_INTERACTIVE_LATENCY.md](FEED_INTERACTIVE_LATENCY.md).
+
 Use this reference when interpreting these traces in Firebase Performance.
 The implementation lives in
 [`VideoEventService`](../lib/services/video_event_service.dart), while

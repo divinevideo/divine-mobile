@@ -27,6 +27,8 @@ class HomeFeedResult extends Equatable {
     this.nextCursor,
     this.paginationCursor,
     this.hasMore,
+    this.recommendationPageCount = 0,
+    this.followingPageCount = 0,
   });
 
   /// All videos (following + list), sorted by createdAt descending.
@@ -59,6 +61,12 @@ class HomeFeedResult extends Equatable {
   /// Whether the upstream feed has more data to fetch.
   final bool? hasMore;
 
+  /// Recommendation pages fetched to produce this result.
+  final int recommendationPageCount;
+
+  /// Following-feed pages fetched across REST or relay fallback.
+  final int followingPageCount;
+
   @override
   List<Object?> get props => [
     videos,
@@ -68,5 +76,7 @@ class HomeFeedResult extends Equatable {
     nextCursor,
     paginationCursor,
     hasMore,
+    recommendationPageCount,
+    followingPageCount,
   ];
 }
