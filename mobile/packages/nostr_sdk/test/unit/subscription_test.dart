@@ -50,6 +50,23 @@ void main() {
       expect(subscription.matchesEvent(event), isFalse);
     });
 
+    test('exposes the filters it parsed, in order and read-only', () {
+      final subscription = Subscription([
+        Filter(kinds: const [1], limit: 5).toJson(),
+        Filter(kinds: const [7]).toJson(),
+      ], (_) {});
+
+      expect(subscription.parsedFilters.map((filter) => filter.kinds), [
+        [1],
+        [7],
+      ]);
+      expect(subscription.parsedFilters.first.limit, 5);
+      expect(
+        () => subscription.parsedFilters.add(Filter()),
+        throwsUnsupportedError,
+      );
+    });
+
     group('id', () {
       Subscription subscriptionWithId(String? id) => Subscription(
         [

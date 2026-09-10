@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'event.dart';
@@ -59,6 +60,12 @@ class Subscription {
   /// means a malformed filter throws at subscribe time rather than being
   /// swallowed per-event by the frame handler's catch-all.
   final List<Filter> _parsedFilters;
+
+  /// [filters] as parsed at construction, in the same order.
+  ///
+  /// Read-only: [matchesEvent] reads these same objects, so a caller that
+  /// needs per-filter matching reuses this parse instead of repeating it.
+  List<Filter> get parsedFilters => UnmodifiableListView(_parsedFilters);
 
   /// Subscription ID
   String get id => _id;

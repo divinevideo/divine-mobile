@@ -2517,7 +2517,7 @@ class RelayPool {
       }
       outcomeTracker = QueryOutcomeTracker(
         subscription.id,
-        filters,
+        subscription.parsedFilters,
         onOutcome: onOutcome,
       );
       _queryOutcomes[subscription.id] = outcomeTracker;

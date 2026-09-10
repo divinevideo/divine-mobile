@@ -59,13 +59,13 @@ class _RelayTally {
 /// [conclude] when the query ends.
 @internal
 class QueryOutcomeTracker {
-  /// Starts the record for query [subscriptionId] over [filters].
+  /// Starts the record for query [subscriptionId] over [filters], as the
+  /// query's `Subscription` parsed them.
   QueryOutcomeTracker(
     this.subscriptionId,
-    List<Map<String, dynamic>> filters, {
+    List<Filter> filters, {
     this.onOutcome,
   }) : _filters = filters,
-       _limits = [for (final filter in filters) _intOrNull(filter['limit'])],
        _startedAt = DateTime.now();
 
   /// The relay url a line is filed under when the fan-out asked no relay,
@@ -82,16 +82,8 @@ class QueryOutcomeTracker {
   /// Receives the outcome when the pool completes the query.
   final void Function(QueryOutcome outcome)? onOutcome;
 
-  final List<Map<String, dynamic>> _filters;
-  final List<int?> _limits;
+  final List<Filter> _filters;
   final DateTime _startedAt;
-
-  /// Parsed on first use, which only a multi-filter query reaches: there an
-  /// event has to be matched against each filter to know whose `limit` it
-  /// used up.
-  late final List<Filter> _parsedFilters = [
-    for (final filter in _filters) Filter.fromJson(filter),
-  ];
 
   /// Keyed by relay url, in the order the relays turned up.
   final Map<String, _RelayTally> _tallies = {};
@@ -122,7 +114,7 @@ class QueryOutcomeTracker {
       return;
     }
     for (var i = 0; i < _filters.length; i++) {
-      if (_parsedFilters[i].checkEvent(event)) tally.eventsPerFilter[i] += 1;
+      if (_filters[i].checkEvent(event)) tally.eventsPerFilter[i] += 1;
     }
   }
 
@@ -234,8 +226,8 @@ class QueryOutcomeTracker {
     if (tally.hints.contains(_moreHint)) return true;
     if (tally.hints.contains(_finishHint)) return false;
     final maxLimit = tally.relay.info?.maxLimit;
-    for (var i = 0; i < _limits.length; i++) {
-      final limit = _limits[i];
+    for (var i = 0; i < _filters.length; i++) {
+      final limit = _filters[i].limit;
       final events = tally.eventsPerFilter[i];
       if (maxLimit != null) {
         if (events >= math.min(limit ?? maxLimit, maxLimit)) return true;
@@ -340,14 +332,9 @@ class QueryOutcomeTracker {
   static String _listOrNone(List<String> entries) =>
       entries.isEmpty ? 'none' : entries.join(', ');
 
-  static String _describeFilter(Map<String, dynamic> filter) {
-    final kinds = filter['kinds'];
-    final limit = _intOrNull(filter['limit']);
-    final kindList = kinds is List
-        ? '[${kinds.whereType<int>().join(', ')}]'
-        : 'any';
-    return '{kinds: $kindList, limit: ${limit ?? 'none'}}';
+  static String _describeFilter(Filter filter) {
+    final kinds = filter.kinds;
+    return '{kinds: ${kinds == null ? 'any' : '[${kinds.join(', ')}]'}, '
+        'limit: ${filter.limit ?? 'none'}}';
   }
-
-  static int? _intOrNull(Object? value) => value is int ? value : null;
 }
