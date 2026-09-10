@@ -638,14 +638,14 @@ class _PlainLinkText extends StatelessWidget {
 
 /// The shimmer every list-card placeholder uses, in the fan placeholder's
 /// own fill so a bone and a flat slot read as the same surface, sweeping
-/// vertically so a tall fan slot, a wide collage tile and a whole loading
-/// column all show the sweep at the same angle.
+/// left to right so a tall fan slot, a wide collage tile and a whole
+/// loading column all show the sweep at the same angle.
 PaintingEffect listSkeletonEffectOf(BuildContext context) =>
     vineSkeletonEffectOf(
       context,
       baseColor: context.vineColors.containerLow,
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
     );
 
 /// The card's silhouette while its list is still on its way.
