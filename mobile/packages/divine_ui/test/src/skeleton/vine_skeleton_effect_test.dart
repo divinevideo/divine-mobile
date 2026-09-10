@@ -12,6 +12,7 @@ void main() {
     Color? baseColor,
     AlignmentGeometry? begin,
     AlignmentGeometry? end,
+    List<double>? stops,
   }) {
     return MaterialApp(
       home: MediaQuery(
@@ -19,12 +20,17 @@ void main() {
         child: Builder(
           builder: (context) => Skeletonizer(
             effect: begin == null || end == null
-                ? vineSkeletonEffectOf(context, baseColor: baseColor)
+                ? vineSkeletonEffectOf(
+                    context,
+                    baseColor: baseColor,
+                    stops: stops,
+                  )
                 : vineSkeletonEffectOf(
                     context,
                     baseColor: baseColor,
                     begin: begin,
                     end: end,
+                    stops: stops,
                   ),
             child: const Text('Loading'),
           ),
@@ -78,6 +84,31 @@ void main() {
               as ShimmerEffect;
       expect(shimmer.begin, Alignment.topCenter);
       expect(shimmer.end, Alignment.bottomCenter);
+    });
+
+    testWidgets('spreads the highlight over the stops the caller gives', (
+      tester,
+    ) async {
+      const base = Color(0xFF123456);
+      await tester.pumpWidget(
+        subject(
+          disableAnimations: false,
+          baseColor: base,
+          stops: const [0, 0.5, 1],
+        ),
+      );
+
+      final shimmer =
+          tester
+                  .widget<Skeletonizer>(
+                    find.byWidgetPredicate((widget) => widget is Skeletonizer),
+                  )
+                  .effect!
+              as ShimmerEffect;
+      expect(shimmer.stops, [0, 0.5, 1]);
+      expect(shimmer.colors.first, base);
+      expect(shimmer.colors.last, base);
+      expect(shimmer.colors[1], base.withValues(alpha: 0.6));
     });
 
     testWidgets('paints a caller-supplied base colour in both modes', (
