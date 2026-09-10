@@ -1,29 +1,68 @@
 // ABOUTME: Tests that tapping explore tab navigates to grid mode, not feed mode
 // ABOUTME: Verifies default explore navigation is /explore (grid) not /explore/0 (feed)
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/app_update/app_update.dart';
+import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
+import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+
+import '../helpers/test_provider_overrides.dart';
+
+class _MockDmUnreadCountCubit extends MockCubit<int>
+    implements DmUnreadCountCubit {}
+
+class _MockNotificationBadgeCubit extends MockCubit<int>
+    implements NotificationBadgeCubit {}
+
+class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
+    implements AppUpdateBloc {}
 
 void main() {
   group('Explore Tab Tap Navigation Test', () {
     testWidgets(
       'tapping explore tab navigates to /explore (grid mode), not /explore/0',
       (tester) async {
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: getStandardTestOverrides(
+            mockNostrService: createMockNostrServiceWithRelayStatus(),
+          ),
+        );
         addTearDown(container.dispose);
 
+        final dmUnreadCubit = _MockDmUnreadCountCubit();
+        whenListen(dmUnreadCubit, const Stream<int>.empty(), initialState: 0);
+        final notifBadgeCubit = _MockNotificationBadgeCubit();
+        whenListen(notifBadgeCubit, const Stream<int>.empty(), initialState: 0);
+        final appUpdateBloc = _MockAppUpdateBloc();
+        when(() => appUpdateBloc.state).thenReturn(const AppUpdateState());
+
         await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: container.read(goRouterProvider),
+          MultiBlocProvider(
+            providers: [
+              BlocProvider<DmUnreadCountCubit>.value(value: dmUnreadCubit),
+              BlocProvider<NotificationBadgeCubit>.value(
+                value: notifBadgeCubit,
+              ),
+              BlocProvider<AppUpdateBloc>.value(value: appUpdateBloc),
+            ],
+            child: UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                locale: const Locale('en'),
+                routerConfig: container.read(goRouterProvider),
+              ),
             ),
           ),
         );
@@ -32,43 +71,43 @@ void main() {
         container.read(goRouterProvider).go(VideoFeedPage.pathForIndex(0));
         await tester.pumpAndSettle();
 
-        // Get current location - should be /home/0
-        final homeLocation = container
-            .read(goRouterProvider)
-            .routeInformationProvider
-            .value
-            .uri
-            .toString();
-        expect(homeLocation, VideoFeedPage.pathForIndex(0));
-
-        // Simulate tapping explore tab (index 1)
-        // This should navigate to /explore (grid mode), NOT /explore/0 (feed mode)
-        // Name the Scaffold that owns the bottom nav rather than taking the
-        // first one in the tree: the shell nests page Scaffolds inside its own.
-        final appShell = tester.widget<Scaffold>(
-          find.byWidgetPredicate(
-            (w) => w is Scaffold && w.bottomNavigationBar != null,
-          ),
+        expect(
+          container
+              .read(goRouterProvider)
+              .routeInformationProvider
+              .value
+              .uri
+              .toString(),
+          equals(VideoFeedPage.pathForIndex(0)),
         );
-        final bottomNav = appShell.bottomNavigationBar! as BottomNavigationBar;
-        bottomNav.onTap!(1); // Tap explore tab
+
+        // Tap the explore tab through its semantics identifier: the shell's
+        // nav is a VineBottomNav inside a Column, not Scaffold.bottomNavigationBar,
+        // so there is no BottomNavigationBar.onTap to invoke.
+        await tester.tap(find.bySemanticsIdentifier(SemanticIds.exploreTab));
         await tester.pumpAndSettle();
 
-        // Verify we're at /explore (grid mode)
         final exploreLocation = container
             .read(goRouterProvider)
             .routeInformationProvider
             .value
             .uri
             .toString();
+
+        // Unmount before asserting: the shell starts a periodic relay-status
+        // timer that outlives the tree and trips the pending-timer check.
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+        await tester.pump(const Duration(milliseconds: 1));
+
         expect(
           exploreLocation,
-          ExploreScreen.path,
-          reason: 'Tapping explore tab should navigate to grid mode (/explore), not feed mode (/explore/0)',
+          equals(ExploreScreen.path),
+          reason:
+              'Tapping explore tab should navigate to grid mode (/explore), '
+              'not feed mode (/explore/0)',
         );
       },
-      // TODO(any): Fix and re-enable these tests
-      skip: true,
     );
   });
 }

@@ -661,7 +661,7 @@ final class HashtagServiceProvider
   }
 }
 
-String _$hashtagServiceHash() => r'5cd38d3c2e8d78a6f7b74a72b650d79e28938fe4';
+String _$hashtagServiceHash() => r'2b0727a4152eee27d7a1cf595cf5fe66050ee145';
 
 /// Content reporting service for NIP-56 compliance
 

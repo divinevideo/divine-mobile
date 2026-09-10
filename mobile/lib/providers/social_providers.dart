@@ -1060,7 +1060,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
 HashtagService hashtagService(Ref ref) {
   final videoEventService = ref.watch(videoEventServiceProvider);
   final cacheService = ref.watch(hashtagCacheServiceProvider);
-  return HashtagService(videoEventService, cacheService);
+  final service = HashtagService(videoEventService, cacheService);
+  // The constructor starts a 1-minute periodic timer and registers a listener
+  // on VideoEventService. This provider watches two other providers, so it
+  // rebuilds whenever either changes — without this, every rebuild strands a
+  // live timer and a listener on the previous instance.
+  ref.onDispose(service.dispose);
+  return service;
 }
 
 /// Content reporting service for NIP-56 compliance

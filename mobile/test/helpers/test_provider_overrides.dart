@@ -213,6 +213,24 @@ MockNostrClient createMockNostrService() {
   return mockNostr;
 }
 
+/// [createMockNostrService] plus the relay-status surface the app shell reads.
+///
+/// Kept separate from the base factory on purpose. Stubbing these globally
+/// would let `relayStatisticsBridge` succeed in all ~150 suites that use the
+/// standard overrides — and that bridge opens a subscription and starts a 3s
+/// periodic timer, which is not something every suite should inherit. Ask for
+/// it only when the test actually pumps the shell.
+MockNostrClient createMockNostrServiceWithRelayStatus() {
+  final mockNostr = createMockNostrService();
+  when(() => mockNostr.relayStatuses).thenReturn(const {});
+  when(
+    () => mockNostr.relayStatusStream,
+  ).thenAnswer((_) => const Stream<Map<String, RelayConnectionStatus>>.empty());
+  when(mockNostr.getRelayPoolCounters).thenReturn(const {});
+  when(() => mockNostr.defaultRelayUrl).thenReturn('wss://relay.test');
+  return mockNostr;
+}
+
 /// Creates a properly stubbed MockSubscriptionManager for testing
 MockSubscriptionManager createMockSubscriptionManager() {
   final mockSub = MockSubscriptionManager();
