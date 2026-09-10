@@ -507,6 +507,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
   }
 
+  /// Activates [index] without waiting for a scroll animation.
+  ///
+  /// Device benchmarks use this hook because a continuously-rendering native
+  /// texture prevents the integration-test binding from settling a synthetic
+  /// drag. Production callers should use [animateToPage].
+  @visibleForTesting
+  void debugActivatePage(int index) {
+    if (!mounted || widget.videos.isEmpty) return;
+    _onPageChanged(index.clamp(0, widget.videos.length - 1));
+  }
+
   void _syncPagePosition() {
     late final double page;
     if (_pageController.hasClients) {

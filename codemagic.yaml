@@ -1510,6 +1510,11 @@ workflows:
             sleep 1
           done
           adb reverse tcp:8765 tcp:8765
+          # A boot-complete emulator can still be behind keyguard. ExoPlayer
+          # will decode there, but no frame reaches the SurfaceTexture and the
+          # benchmark correctly receives no first-frame metric.
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
           DEVICE_ID=$(adb get-serialno)
           flutter test integration_test/perf/feed_ttff_test.dart \
             -d "$DEVICE_ID" \

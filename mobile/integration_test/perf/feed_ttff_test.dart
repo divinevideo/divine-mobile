@@ -1,6 +1,8 @@
 // ABOUTME: Enforces fullscreen-feed first-frame latency on the native player.
 // ABOUTME: Uses local rate-limited video fixtures without auth or backend state.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
@@ -40,20 +42,20 @@ List<VideoEvent> _videos() => List.generate(feedTtffSampleCount, (index) {
   );
 });
 
-Future<void> _waitForSamples(
-  WidgetTester tester,
-  Map<String, FeedFirstFrameMetric> samples,
+Future<FeedFirstFrameMetric> _waitForSample(
+  StreamIterator<FeedFirstFrameMetric> samples,
   int count,
 ) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 15));
-  while (samples.length < count && DateTime.now().isBefore(deadline)) {
-    await tester.pump(const Duration(milliseconds: 100));
-  }
+  final received = await samples.moveNext().timeout(
+    const Duration(seconds: 15),
+    onTimeout: () => false,
+  );
   expect(
-    samples.length,
-    greaterThanOrEqualTo(count),
+    received,
+    isTrue,
     reason: 'No native first-frame metric for sample $count',
   );
+  return samples.current;
 }
 
 void main() {
@@ -78,22 +80,15 @@ void main() {
           () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
         ).thenReturn(cancellable);
 
-        final samples = <String, FeedFirstFrameMetric>{};
-        final subscription = FeedFirstFrameMetrics.events.listen((metric) {
-          samples.putIfAbsent(metric.videoId, () => metric);
-          // Kept machine-readable for the retained Codemagic log artifact.
-          debugPrint(
-            'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
-            'durationMs=${metric.duration.inMilliseconds} '
-            'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
-          );
-        });
-        addTearDown(subscription.cancel);
+        final metrics = StreamIterator(FeedFirstFrameMetrics.events);
+        addTearDown(metrics.cancel);
+        final feedKey = GlobalKey<InfiniteVideoFeedState>();
 
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: InfiniteVideoFeed(
+                key: feedKey,
                 videos: _videos(),
                 cache: cache,
                 prefetchCount: 0,
@@ -105,15 +100,24 @@ void main() {
           ),
         );
 
-        await _waitForSamples(tester, samples, 1);
+        final samples = <FeedFirstFrameMetric>[
+          await _waitForSample(metrics, 1),
+        ];
         for (var expected = 2; expected <= feedTtffSampleCount; expected++) {
-          await tester.fling(find.byType(PageView), const Offset(0, -600), 900);
-          await _waitForSamples(tester, samples, expected);
+          feedKey.currentState!.debugActivatePage(expected - 1);
+          samples.add(await _waitForSample(metrics, expected));
         }
 
-        final measured = samples.values.take(feedTtffSampleCount).toList();
-        final p90 = feedTtffPercentile(measured, percentile: 90);
-        final evidence = formatFeedTtffSamples(measured);
+        for (final metric in samples) {
+          // Kept machine-readable for the retained Codemagic log artifact.
+          debugPrint(
+            'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
+            'durationMs=${metric.duration.inMilliseconds} '
+            'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
+          );
+        }
+        final p90 = feedTtffPercentile(samples, percentile: 90);
+        final evidence = formatFeedTtffSamples(samples);
         debugPrint('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
         expect(
           p90,
