@@ -80,7 +80,8 @@ governing workflow and user authorization allow it; otherwise hand it back and
 name who must merge it. Never push to a pull request you do not own without
 announcing it there in the same session, asking the author to review the changes,
 and re-requesting or naming reviewers whose review the push made stale.
-Reversibility never grants authority.
+Changing visible state does not recall notifications. Reversibility never grants
+authority.
 
 ### Divine Brain
 
