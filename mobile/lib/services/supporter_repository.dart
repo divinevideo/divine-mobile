@@ -283,8 +283,15 @@ class SupporterRepository {
   Future<void> _confirmPurchase(SupporterPurchaseProof proof) async {
     final proofOwnerKey = '$_proofOwnerPrefix${proof.attemptId}';
     final pendingKey = '$_pendingOwnerPrefix${proof.productId}';
+    final proofOwner = _prefs.getString(proofOwnerKey);
+    final pendingOwner = _prefs.getString(pendingKey);
+    // The pending marker is product-scoped, so it is a single slot shared by
+    // every account on the device. It may only authorize this account's own
+    // foreground purchase, never a background or foreign-captured redelivery,
+    // or account B's pending marker would first-time-claim account A's
+    // redelivered receipt under B.
     final owner =
-        _prefs.getString(proofOwnerKey) ?? _prefs.getString(pendingKey);
+        proofOwner ?? (proof.capturedPubkey == _pubkey ? pendingOwner : null);
     final background = proof.silent || proof.capturedPubkey == null;
     final existingOwnerOnly = owner == null && background;
     if (owner != null

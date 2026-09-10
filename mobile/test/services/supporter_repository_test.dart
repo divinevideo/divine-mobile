@@ -1039,5 +1039,63 @@ void main() {
       );
       expect(validator.purchaseCallCount, 0);
     });
+
+    test(
+      'does not claim another account unfinished redelivery under the pending '
+      'account',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final posts = <String>[];
+        final clientB = SupporterApiClient(
+          baseUri: Uri.parse('https://supporters.test'),
+          httpClient: MockClient((request) async {
+            if (request.method == 'POST') posts.add(request.url.path);
+            return http.Response(
+              jsonEncode({
+                'status': 'inactive',
+                'entitlement': {
+                  'source': 'server',
+                  'isActive': false,
+                },
+                'recognition': <String, dynamic>{},
+              }),
+              200,
+            );
+          }),
+          authHeaderProvider:
+              ({required url, required method, payload}) async =>
+                  (authorizationHeader: 'Nostr test-token', pubkey: pubkeyB),
+        );
+        addTearDown(clientB.dispose);
+        final repoB = SupporterRepository(
+          pubkey: pubkeyB,
+          validator: validator,
+          prefs: prefs,
+          apiClient: clientB,
+        );
+        addTearDown(repoB.dispose);
+
+        // B starts a purchase, setting the product-scoped pending marker to B.
+        await repoB.purchase('divine.supporter.monthly');
+        // Account A's paid-but-unclaimed transaction redelivers unsolicited:
+        // no proof-owner marker, no captured pubkey, silent.
+        validator.proofController.add(
+          const SupporterPurchaseProof(
+            attemptId: 'account-a-unfinished',
+            store: 'apple',
+            productId: 'divine.supporter.monthly',
+            serverVerificationData: 'account-a-receipt',
+            localVerificationData: '',
+            silent: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        // The redelivery must not first-time-claim A's receipt under B. It may
+        // only reach the restore endpoint, which the server fails closed.
+        expect(posts, isNot(contains('/v1/purchases/claim')));
+        expect(repoB.isSupporter, isFalse);
+      },
+    );
   });
 }
