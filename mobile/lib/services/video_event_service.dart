@@ -829,7 +829,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   /// Initialize the repost resolver with callbacks to this service
   void _initializeRepostResolver() {
     _repostResolver = RepostResolver(
-      subscribe: _nostrService.subscribe,
+      queryEvents: _nostrService.queryEventsDetailed,
       findByAddressable: _findCachedVideoByAddressable,
       findById: _findCachedVideoById,
     );

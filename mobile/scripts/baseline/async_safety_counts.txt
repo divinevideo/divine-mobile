@@ -137,7 +137,6 @@ discarded_futures|lib/services/outage_diagnosis_service.dart	1
 discarded_futures|lib/services/password_reset_listener.dart	3
 discarded_futures|lib/services/pending_action_service.dart	2
 discarded_futures|lib/services/push_notification_session_coordinator.dart	1
-discarded_futures|lib/services/repost_resolver.dart	3
 discarded_futures|lib/services/shake_detector_service.dart	3
 discarded_futures|lib/services/startup_performance_service.dart	4
 discarded_futures|lib/services/subscription_manager.dart	2
