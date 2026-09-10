@@ -21,6 +21,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/library_screen.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -378,6 +379,19 @@ class _ProfileContentView extends ConsumerWidget {
       // safePop: a deep link to a profile whose owner blocked or muted the
       // viewer lands here with a one-entry stack, where a raw pop throws.
       return BlockedUserScreen(onBack: context.safePop, userIdHex: userIdHex);
+    }
+
+    // Other users' profiles belong on the dedicated fullscreen viewer, which
+    // carries the full Report/Block/Unfollow/Message menu. The tab wrapper is
+    // the own-profile screen; rendering another user here yields the own-profile
+    // menu with no way to report or block them (#9013). Scope to grid mode only:
+    // feed mode (/profile/:npub/:index) is the video swiper and stays here.
+    if (!isOwnProfile && routeContext.videoIndex == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.pushReplacement(OtherProfileScreen.pathForNpub(npub));
+      });
+      return const Center(child: CircularProgressIndicator());
     }
 
     // Fetch profile data if needed (post-frame to avoid build mutations)
