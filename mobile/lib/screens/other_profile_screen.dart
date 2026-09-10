@@ -11,6 +11,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -84,7 +85,7 @@ class OtherProfileScreen extends ConsumerWidget {
     if (pubkey == null) {
       return _ProfileErrorScreen(
         message: context.l10n.profileInvalidId,
-        onBack: context.pop,
+        onBack: context.safePop,
       );
     }
 
@@ -340,7 +341,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
           ScaffoldMessenger.of(context).showSnackBar(
             DivineSnackbarContainer.snackBar(l10n.profileBlockedUser(name)),
           );
-          context.pop();
+          context.safePop();
         }
       case MoreSheetResult.unblockConfirmed:
         context.read<OtherProfileBloc>().add(
@@ -503,7 +504,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
                         feedState.status != ProfileFeedStatus.ready ||
                         feedState.isInitialLoad,
                     scrollController: _scrollController,
-                    onBack: context.pop,
+                    onBack: context.safePop,
                     onMore: _more,
                     onMessageUser: _messageUser,
                     isMessageRestricted: isMessageRestricted,

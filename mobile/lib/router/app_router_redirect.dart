@@ -7,6 +7,34 @@ part of 'app_router.dart';
 bool _hasNavigated = false;
 bool _suppressNextAuthenticatedAuthRouteRedirect = false;
 
+/// Sends profile routes to the wrapper that owns their action surface.
+@visibleForTesting
+String? profileOwnerRedirectTarget({
+  required String location,
+  required String? currentPublicKeyHex,
+}) {
+  if (currentPublicKeyHex == null || currentPublicKeyHex.isEmpty) return null;
+
+  final route = parseKnownRoute(location);
+  final npub = route?.npub;
+  if (npub == null || npub.isEmpty) return null;
+  final targetHex = npubToHexOrNull(npub);
+  if (npub != 'me' && (targetHex == null || targetHex.length != 64)) {
+    return null;
+  }
+
+  final isOwnProfile = routeIdentifiesUser(npub, currentPublicKeyHex);
+  return switch (route?.type) {
+    RouteType.profile when !isOwnProfile => OtherProfileScreen.pathForNpub(
+      npub,
+    ),
+    RouteType.profileView when isOwnProfile => ProfileScreenRouter.pathForNpub(
+      npub,
+    ),
+    _ => null,
+  };
+}
+
 @visibleForTesting
 bool accountDeletionRecoveryGateActive(
   AsyncValue<AccountDeletionAttempt?>? attempt, {
@@ -554,6 +582,14 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       category: LogCategory.auth,
     );
     return WelcomeScreen.path;
+  }
+
+  if (authState == AuthState.authenticated) {
+    final profileRedirect = profileOwnerRedirectTarget(
+      location: location,
+      currentPublicKeyHex: authService.currentPublicKeyHex,
+    );
+    if (profileRedirect != null) return profileRedirect;
   }
 
   return deepLinkRewrite;

@@ -220,8 +220,6 @@ class _MoreSheetContentState extends State<MoreSheetContent>
       onReport: widget.showReport
           ? () => Navigator.of(context).pop(MoreSheetResult.report)
           : null,
-      showBlock: widget.showBlock,
-      showEmbedCode: widget.showEmbedCode,
       onEmbedCode: widget.showEmbedCode
           ? () => Navigator.of(context).pop(MoreSheetResult.embedCode)
           : null,

@@ -93,7 +93,7 @@ discarded_futures|lib/screens/library_screen.dart	1
 discarded_futures|lib/screens/minor_account_review_screen.dart	5
 discarded_futures|lib/screens/notification_settings_screen.dart	1
 discarded_futures|lib/screens/other_profile_screen.dart	1
-discarded_futures|lib/screens/profile_screen_router.dart	2
+discarded_futures|lib/screens/profile_screen_router.dart	1
 discarded_futures|lib/screens/profile_setup/view/profile_setup_view.dart	2
 discarded_futures|lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
 discarded_futures|lib/screens/relay_diagnostic_screen.dart	1

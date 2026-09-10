@@ -21,7 +21,6 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/library_screen.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -96,17 +95,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   /// Notifier to trigger refresh of profile BLoCs (likes, reposts).
   final _refreshNotifier = ValueNotifier<int>(0);
 
-  void _fetchProfileIfNeeded(String userIdHex, bool isOwnProfile) {
-    if (isOwnProfile) return; // Own profile loads automatically
-
-    // Trigger a background fetch via the read-only handle.
-    ref
-        .read(profileReadRepositoryProvider)
-        ?.fetchFreshProfile(
-          pubkey: userIdHex,
-        );
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -139,7 +127,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     final content = _ProfileContentView(
       routeContext: routeContext,
       scrollController: _scrollController,
-      onFetchProfile: _fetchProfileIfNeeded,
       onEditProfile: _editProfile,
       onOpenClips: _openClips,
       onMore: _more,
@@ -272,7 +259,11 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
       case MoreSheetResult.embedCode:
         await _copyEmbedCode(userIdHex);
       case null:
-      default:
+      case MoreSheetResult.unfollow:
+      case MoreSheetResult.report:
+      case MoreSheetResult.blockConfirmed:
+      case MoreSheetResult.unblockConfirmed:
+      case MoreSheetResult.addToList:
         break;
     }
   }
@@ -337,7 +328,6 @@ class _ProfileContentView extends ConsumerWidget {
   const _ProfileContentView({
     required this.routeContext,
     required this.scrollController,
-    required this.onFetchProfile,
     required this.onEditProfile,
     required this.onOpenClips,
     required this.onMore,
@@ -347,7 +337,6 @@ class _ProfileContentView extends ConsumerWidget {
 
   final RouteContext routeContext;
   final ScrollController scrollController;
-  final void Function(String userIdHex, bool isOwnProfile) onFetchProfile;
   final VoidCallback onEditProfile;
   final VoidCallback onOpenClips;
   final void Function(String userIdHex) onMore;
@@ -379,7 +368,16 @@ class _ProfileContentView extends ConsumerWidget {
     // Get current user for comparison
     final authService = ref.watch(authServiceProvider);
     final currentUserHex = authService.currentPublicKeyHex;
-    final isOwnProfile = userIdHex == currentUserHex;
+    if (currentUserHex == null || currentUserHex.isEmpty) {
+      return const Center(child: DivineCircularProgressIndicator());
+    }
+
+    // The top-level router redirects every other-user visit before this
+    // branch builds. During an account switch, fail closed until that redirect
+    // settles instead of briefly exposing own-profile actions for another user.
+    if (!routeIdentifiesUser(npub, currentUserHex)) {
+      return const Center(child: DivineCircularProgressIndicator());
+    }
 
     // Check if this user has muted us (mutual mute blocking)
     // Note: We only block profile viewing for users who muted US, not users WE blocked.
@@ -393,41 +391,12 @@ class _ProfileContentView extends ConsumerWidget {
       return BlockedUserScreen(onBack: context.safePop, userIdHex: userIdHex);
     }
 
-    // Other users' profiles belong on the dedicated fullscreen viewer, which
-    // carries the full Report/Block/Unfollow/Message menu. The tab wrapper is
-    // the own-profile screen; rendering another user here yields the own-profile
-    // menu with no way to report or block them (#9013). Not scoped to grid mode:
-    // ProfileViewSwitcher falls back to the grid whenever videos is empty (a
-    // zero-video account, or a cold-loading feed), so a feed-mode URL
-    // (/profile/:npub/:index) can land on that same actionless menu too.
-    if (!isOwnProfile) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        context.pushReplacement(OtherProfileScreen.pathForNpub(npub));
-      });
-      return const Center(child: DivineCircularProgressIndicator());
-    }
-
-    // Fetch profile data if needed (post-frame to avoid build mutations)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      onFetchProfile(userIdHex, isOwnProfile);
-    });
-
-    // Get display name for unfollow confirmation (only needed for other profiles)
-    final displayName = isOwnProfile
-        ? null
-        : ref
-              .watch(userProfileReactiveProvider(userIdHex))
-              .value
-              ?.bestDisplayName;
-
     return ProfileFeedScope(
       userIdHex: userIdHex,
       child: _ProfileDataView(
         npub: npub,
         userIdHex: userIdHex,
-        isOwnProfile: isOwnProfile,
-        displayName: displayName,
+        isOwnProfile: true,
         videoIndex: routeContext.videoIndex,
         scrollController: scrollController,
         onEditProfile: onEditProfile,
@@ -481,13 +450,11 @@ class _ProfileDataView extends ConsumerWidget {
     required this.onMore,
     required this.onShareProfile,
     required this.refreshNotifier,
-    this.displayName,
   });
 
   final String npub;
   final String userIdHex;
   final bool isOwnProfile;
-  final String? displayName;
   final int? videoIndex;
   final ScrollController scrollController;
   final VoidCallback onEditProfile;
@@ -536,7 +503,6 @@ class _ProfileDataView extends ConsumerWidget {
           npub: npub,
           userIdHex: userIdHex,
           isOwnProfile: isOwnProfile,
-          displayName: displayName,
           profile: profile,
           profileStats: profileStats,
           videos: feedState.videos,

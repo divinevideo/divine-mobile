@@ -22,8 +22,7 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
-import 'package:openvine/router/providers/router_location_provider.dart';
-import 'package:openvine/router/widgets/other_profile_screen_router.dart';
+import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
@@ -142,7 +141,7 @@ void main() {
     registerFallbackValue(const <IdentityClaim>[]);
   });
 
-  setUp(() {
+  void arrangeProfileDependencies({bool emptyAuthorFeed = false}) {
     videosRepository = _MockVideosRepository();
     videoEventService = _MockVideoEventService();
     blocklistRepository = _MockContentBlocklistRepository();
@@ -167,7 +166,9 @@ void main() {
       final pubkey = invocation.namedArguments[#authorPubkey] as String;
       return AuthorFeedResult(
         authorPubkey: pubkey,
-        videos: [videoFor('$pubkey-video-0', pubkey)],
+        videos: emptyAuthorFeed
+            ? const []
+            : [videoFor('$pubkey-video-0', pubkey)],
         hasMore: false,
       );
     });
@@ -259,7 +260,7 @@ void main() {
     when(
       repostsRepository.watchRepostedAddressableIds,
     ).thenAnswer((_) => const Stream<Set<String>>.empty());
-  });
+  }
 
   List<Override> profileOverrides() => [
     videosRepositoryProvider.overrideWithValue(videosRepository),
@@ -293,6 +294,10 @@ void main() {
   /// for the same purpose in profile_screen_router_test.dart).
   GoRouter buildRouter(String initialLocation) => GoRouter(
     initialLocation: initialLocation,
+    redirect: (_, state) => profileOwnerRedirectTarget(
+      location: state.matchedLocation,
+      currentPublicKeyHex: meHex,
+    ),
     routes: [
       GoRoute(
         path: VideoFeedPage.pathForIndex(0),
@@ -318,11 +323,57 @@ void main() {
     ],
   );
 
+  GoRouter buildShellRouter(String initialLocation) => GoRouter(
+    initialLocation: initialLocation,
+    redirect: (_, state) => profileOwnerRedirectTarget(
+      location: state.matchedLocation,
+      currentPublicKeyHex: meHex,
+    ),
+    routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (_, _, navigationShell) => navigationShell,
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: VideoFeedPage.pathForIndex(0),
+                builder: (_, _) => const Scaffold(body: Text('feed')),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            initialLocation: ProfileScreenRouter.path,
+            routes: [
+              GoRoute(
+                path: ProfileScreenRouter.path,
+                builder: (_, _) => const ProfileScreenRouter(),
+              ),
+              GoRoute(
+                path: ProfileScreenRouter.pathWithNpub,
+                builder: (_, _) => const ProfileScreenRouter(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: OtherProfileScreen.pathWithNpub,
+        builder: (_, state) =>
+            OtherProfileScreenRouter(npub: state.pathParameters['npub']!),
+      ),
+    ],
+  );
+
   /// Pumps [router] (already at its initial location) with every provider
   /// this suite's screens need to build cleanly, and settles it with bounded
   /// pumps (never `pumpAndSettle`: `ProfileFeedCubit` owns a hard-timeout
   /// [Timer] that only some states cancel, so an unbounded settle can hang).
-  Future<void> pumpRouter(WidgetTester tester, GoRouter router) async {
+  Future<void> pumpRouter(
+    WidgetTester tester,
+    GoRouter router, {
+    bool emptyAuthorFeed = false,
+  }) async {
+    arrangeProfileDependencies(emptyAuthorFeed: emptyAuthorFeed);
     addTearDown(router.dispose);
 
     final nostrClient = createMockNostrService();
@@ -401,6 +452,37 @@ void main() {
   group(
     'Other-user profile grid redirects to the fullscreen viewer (#9013)',
     () {
+      test('both profile wrappers use one resolved identity', () {
+        expect(
+          profileOwnerRedirectTarget(
+            location: ProfileScreenRouter.pathForNpub(otherNpub),
+            currentPublicKeyHex: meHex,
+          ),
+          OtherProfileScreen.pathForNpub(otherNpub),
+        );
+        expect(
+          profileOwnerRedirectTarget(
+            location: OtherProfileScreen.pathForNpub(meNpub),
+            currentPublicKeyHex: meHex,
+          ),
+          ProfileScreenRouter.pathForNpub(meNpub),
+        );
+        expect(
+          profileOwnerRedirectTarget(
+            location: ProfileScreenRouter.pathForNpub(otherNpub),
+            currentPublicKeyHex: null,
+          ),
+          isNull,
+        );
+        expect(
+          profileOwnerRedirectTarget(
+            location: ProfileScreenRouter.pathForNpub('invalid'),
+            currentPublicKeyHex: meHex,
+          ),
+          isNull,
+        );
+      });
+
       testWidgets(
         'other-user grid visit lands on the fullscreen viewer',
         (tester) async {
@@ -456,24 +538,10 @@ void main() {
           // ProfileVideoFeedView when videoIndex != null AND videos is
           // non-empty; otherwise it falls back to ProfileGridView. A
           // grid-mode-only redirect guard missed this fallback, so a feed
-          // URL to a zero-video account leaked the actionless own-profile
-          // menu. Re-stub every author to zero videos to force that
-          // fallback path if the guard did not also cover feed mode.
-          when(
-            () => videosRepository.getAuthorFeed(
-              authorPubkey: any(named: 'authorPubkey'),
-              offset: any(named: 'offset'),
-              relaySeed: any(named: 'relaySeed'),
-              skipCache: any(named: 'skipCache'),
-            ),
-          ).thenAnswer((invocation) async {
-            final pubkey = invocation.namedArguments[#authorPubkey] as String;
-            return AuthorFeedResult(authorPubkey: pubkey, hasMore: false);
-          });
-
           await pumpRouter(
             tester,
             buildRouter(ProfileScreenRouter.pathForIndex(otherNpub, 0)),
+            emptyAuthorFeed: true,
           );
 
           expect(find.byType(OtherProfileView), findsOneWidget);
@@ -491,6 +559,25 @@ void main() {
       );
 
       testWidgets(
+        'cold shell visit has a working back button after redirect',
+        (tester) async {
+          final router = buildShellRouter(
+            ProfileScreenRouter.pathForNpub(otherNpub),
+          );
+          await pumpRouter(tester, router);
+
+          expect(find.byType(OtherProfileView), findsOneWidget);
+          expect(router.canPop(), isFalse);
+
+          await tester.tap(find.bySemanticsLabel('Back'));
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.text('feed'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
         'system back after the redirect returns to the feed, not a dead end',
         (tester) async {
           final router = buildRouter(VideoFeedPage.pathForIndex(0));
@@ -499,7 +586,7 @@ void main() {
           expect(find.text('feed'), findsOneWidget);
 
           // Deep-link-style push onto the other user's profile grid.
-          router.push(ProfileScreenRouter.pathForNpub(otherNpub));
+          unawaited(router.push(ProfileScreenRouter.pathForNpub(otherNpub)));
           await tester.pump();
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 50));
