@@ -189,8 +189,10 @@ server log plus emulator CPU, rendering, and codec diagnostics. Each sample
 reports the controller-initialized, source-ready, playback-requested, and
 first-frame boundaries; each HTTP request reports bytes, elapsed time, range,
 and whether the player cancelled it. Assertion failures also print the
-per-video table and p90. The harness has no account, backend, Docker, or secret
-dependency.
+per-video table and p90. Before collecting the ten scored samples, the harness
+activates each of the three fixture layouts once so one-time emulator renderer,
+decoder, and container initialization do not pollute the steady-state feed
+scroll SLO. The harness has no account, backend, Docker, or secret dependency.
 
 Run the same protocol locally from `mobile/`:
 
