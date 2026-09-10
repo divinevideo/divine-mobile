@@ -71,6 +71,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
   late final FeedPerformanceTracker _feedTracker;
   late final ErrorAnalyticsTracker _errorTracker;
   DateTime? _feedLoadStartTime;
+  FeedLoadHandle? _feedLoad;
   bool _slowFeedLoadReported = false;
 
   /// Page currently painted, together with the variant it belongs to.
@@ -111,7 +112,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     if (feedAsync.isLoading && _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
       _slowFeedLoadReported = false;
-      _feedTracker.startFeedLoad('popular');
+      _feedLoad = _feedTracker.startFeedLoad('popular');
     }
 
     // A held page outranks an in-flight load. A hard error outranks both.
@@ -182,8 +183,12 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
 
     // Track feed loaded with videos
     if (_feedLoadStartTime != null) {
-      _feedTracker.markFirstVideosReceived('popular', videos.length);
-      _feedTracker.markFeedDisplayed('popular', videos.length);
+      final feedLoad = _feedLoad;
+      if (feedLoad != null) {
+        _feedTracker.markFirstVideosReceived(feedLoad, videos.length);
+        _feedTracker.markFeedDisplayed(feedLoad, videos.length);
+      }
+      _feedLoad = null;
       _screenAnalytics.markDataLoaded(
         'explore_screen',
         dataMetrics: {'tab': 'popular', 'video_count': videos.length},
@@ -218,6 +223,9 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
       errorMessage: error.toString(),
       loadTimeMs: loadTime,
     );
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker.abandonFeedLoad(feedLoad);
+    _feedLoad = null;
     _feedLoadStartTime = null;
   }
 
@@ -255,6 +263,13 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
       thresholdMs: widget.slowLoadThresholdMs,
       location: 'explore_popular',
     );
+  }
+
+  @override
+  void dispose() {
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker.abandonFeedLoad(feedLoad);
+    super.dispose();
   }
 }
 

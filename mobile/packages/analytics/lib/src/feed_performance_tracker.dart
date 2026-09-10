@@ -24,21 +24,39 @@ const _maxSessionAge = Duration(seconds: 60);
 /// Why a user-visible feed load began.
 enum FeedLoadReason { appStart, sourceSwitch, refresh, pagination }
 
+/// Opaque identity for one feed-load telemetry session.
+///
+/// Keep this handle with the asynchronous operation that started the load and
+/// pass it to every milestone or terminal call for that operation.
+class FeedLoadHandle {
+  const FeedLoadHandle._({required int id, required this.feedType}) : _id = id;
+
+  final int _id;
+
+  /// Destination whose load is being measured.
+  final String feedType;
+}
+
 /// Service for tracking feed performance and user engagement
 ///
-/// Feed-load sessions are keyed by feed type and shared across consumers — one
-/// widget starts a load that another completes — so the app resolves one
+/// Feed-load sessions are shared across consumers, so the app resolves one
 /// instance through `feedPerformanceTrackerProvider` rather than constructing
-/// this per widget.
+/// this per widget. Each load is identified by its returned [FeedLoadHandle].
 class FeedPerformanceTracker {
   /// Creates a tracker. Defaults to the Firebase analytics sink in production;
   /// pass a [sink] (e.g. [NoOpAnalyticsEventSink]) in tests.
-  FeedPerformanceTracker({AnalyticsEventSink? sink})
-    : _analytics = sink ?? FirebaseAnalyticsEventSink();
+  FeedPerformanceTracker({
+    AnalyticsEventSink? sink,
+    DateTime Function()? now,
+  }) : _analytics = sink ?? FirebaseAnalyticsEventSink(),
+       _now = now ?? DateTime.now;
 
   final AnalyticsEventSink _analytics;
+  final DateTime Function() _now;
 
-  final Map<String, _FeedLoadSession> _activeSessions = {};
+  final Map<int, _FeedLoadSession> _activeSessions = {};
+  final Map<String, FeedLoadHandle> _activeSwipeSessions = {};
+  static int _nextSessionId = 0;
 
   /// Number of active tracking sessions (exposed for testing).
   int get activeSessionCount => _activeSessions.length;
@@ -55,11 +73,12 @@ class FeedPerformanceTracker {
         name: 'FeedPerformance',
       );
       _activeSessions.clear();
+      _activeSwipeSessions.clear();
     }
   }
 
   /// Start tracking feed load
-  void startFeedLoad(
+  FeedLoadHandle startFeedLoad(
     String feedType, {
     FeedLoadReason reason = FeedLoadReason.appStart,
     Map<String, dynamic>? params,
@@ -73,18 +92,23 @@ class FeedPerformanceTracker {
       name: 'feed_load_started',
       parameters: {'feed_type': feedType, ...session.params},
     );
+    return session.handle;
   }
 
   _FeedLoadSession _startSession(
     String feedType,
     Map<String, dynamic> params,
   ) {
-    final session = _FeedLoadSession(
+    final handle = FeedLoadHandle._(
+      id: _nextSessionId++,
       feedType: feedType,
-      startTime: DateTime.now(),
+    );
+    final session = _FeedLoadSession(
+      handle: handle,
+      startTime: _now(),
       params: params,
     );
-    _activeSessions[feedType] = session;
+    _activeSessions[handle._id] = session;
     UnifiedLogger.info(
       '📺 Feed load started: $feedType',
       name: 'FeedPerformance',
@@ -97,19 +121,19 @@ class FeedPerformanceTracker {
   /// This does not close the session: a cache-first load remains active until
   /// [markFreshResultCompleted] records the later network result.
   void markFirstVisibleContent(
-    String feedType,
+    FeedLoadHandle handle,
     int count, {
     required bool servedFromCache,
   }) {
-    final session = _activeSessions[feedType];
+    final session = _activeSessions[handle._id];
     if (session == null || session.firstVisibleTime != null) return;
     if (_isStale(session)) {
-      _discardStaleSession(feedType);
+      _discardStaleSession(handle);
       return;
     }
 
     session
-      ..firstVisibleTime = DateTime.now()
+      ..firstVisibleTime = _now()
       ..servedFromCache = servedFromCache;
     final elapsed = session.firstVisibleTime!
         .difference(session.startTime)
@@ -117,7 +141,7 @@ class FeedPerformanceTracker {
     _analytics.logEvent(
       name: 'feed_first_content_visible',
       parameters: {
-        'feed_type': feedType,
+        'feed_type': handle.feedType,
         'time_to_first_visible_ms': elapsed,
         'video_count': count,
         'served_from_cache': servedFromCache ? 1 : 0,
@@ -128,25 +152,25 @@ class FeedPerformanceTracker {
 
   /// Records the fresh repository result and closes the user-visible load.
   void markFreshResultCompleted(
-    String feedType,
+    FeedLoadHandle handle,
     int totalCount, {
     int recommendationPageCount = 0,
     int followingPageCount = 0,
   }) {
-    final session = _activeSessions[feedType];
+    final session = _activeSessions[handle._id];
     if (session == null) return;
     if (_isStale(session)) {
-      _discardStaleSession(feedType);
+      _discardStaleSession(handle);
       return;
     }
 
-    final now = DateTime.now();
+    final now = _now();
     final freshResultTimeMs = now.difference(session.startTime).inMilliseconds;
     final firstVisibleTimeMs = session.firstVisibleTime
         ?.difference(session.startTime)
         .inMilliseconds;
     final parameters = <String, Object>{
-      'feed_type': feedType,
+      'feed_type': handle.feedType,
       'fresh_result_time_ms': freshResultTimeMs,
       'total_videos': totalCount,
       'served_from_cache': session.servedFromCache ? 1 : 0,
@@ -164,27 +188,27 @@ class FeedPerformanceTracker {
     _analytics.logEvent(
       name: 'feed_load_complete',
       parameters: {
-        'feed_type': feedType,
+        'feed_type': handle.feedType,
         'total_load_time_ms': freshResultTimeMs,
         'total_videos': totalCount,
         'first_batch_count': session.firstBatchCount ?? 0,
         ...session.params,
       },
     );
-    _activeSessions.remove(feedType);
+    _activeSessions.remove(handle._id);
   }
 
   /// Mark when first videos arrive from Nostr
-  void markFirstVideosReceived(String feedType, int count) {
-    final session = _activeSessions[feedType];
+  void markFirstVideosReceived(FeedLoadHandle handle, int count) {
+    final session = _activeSessions[handle._id];
     if (session == null) return;
 
     if (_isStale(session)) {
-      _discardStaleSession(feedType);
+      _discardStaleSession(handle);
       return;
     }
 
-    session.firstVideosReceivedTime = DateTime.now();
+    session.firstVideosReceivedTime = _now();
     session.firstBatchCount = count;
 
     final timeToFirstVideos = session.firstVideosReceivedTime!
@@ -192,14 +216,14 @@ class FeedPerformanceTracker {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      '📬 First $count videos received for $feedType in ${timeToFirstVideos}ms',
+      '📬 First $count videos received for ${handle.feedType} in ${timeToFirstVideos}ms',
       name: 'FeedPerformance',
     );
 
     _analytics.logEvent(
       name: 'feed_first_batch_received',
       parameters: {
-        'feed_type': feedType,
+        'feed_type': handle.feedType,
         'time_to_first_ms': timeToFirstVideos,
         'video_count': count,
         ...session.params,
@@ -208,16 +232,16 @@ class FeedPerformanceTracker {
   }
 
   /// Mark when feed is fully loaded and displayed
-  void markFeedDisplayed(String feedType, int totalCount) {
-    final session = _activeSessions[feedType];
+  void markFeedDisplayed(FeedLoadHandle handle, int totalCount) {
+    final session = _activeSessions[handle._id];
     if (session == null) return;
 
     if (_isStale(session)) {
-      _discardStaleSession(feedType);
+      _discardStaleSession(handle);
       return;
     }
 
-    session.displayedTime = DateTime.now();
+    session.displayedTime = _now();
     session.totalVideosDisplayed = totalCount;
 
     final totalLoadTime = session.displayedTime!
@@ -225,14 +249,14 @@ class FeedPerformanceTracker {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      '✅ Feed displayed: $feedType with $totalCount videos in ${totalLoadTime}ms',
+      '✅ Feed displayed: ${handle.feedType} with $totalCount videos in ${totalLoadTime}ms',
       name: 'FeedPerformance',
     );
 
     _analytics.logEvent(
       name: 'feed_load_complete',
       parameters: {
-        'feed_type': feedType,
+        'feed_type': handle.feedType,
         'total_load_time_ms': totalLoadTime,
         'total_videos': totalCount,
         'first_batch_count': session.firstBatchCount ?? 0,
@@ -241,7 +265,15 @@ class FeedPerformanceTracker {
     );
 
     // Clean up session
-    _activeSessions.remove(feedType);
+    _activeSessions.remove(handle._id);
+  }
+
+  /// Stop tracking a load that can no longer produce a visible completion.
+  ///
+  /// Abandonment is intentionally silent and idempotent. A completed, stale,
+  /// reset, or already-abandoned handle is a no-op.
+  void abandonFeedLoad(FeedLoadHandle handle) {
+    _activeSessions.remove(handle._id);
   }
 
   /// Track feed refresh action
@@ -377,15 +409,20 @@ class FeedPerformanceTracker {
   /// when [markVideoSwipeComplete] is called.
   void startVideoSwipeTracking(String videoId) {
     final feedType = 'video_swipe_$videoId';
-    _startSession(feedType, const {});
+    final previous = _activeSwipeSessions.remove(videoId);
+    if (previous != null) abandonFeedLoad(previous);
+    _activeSwipeSessions[videoId] = _startSession(
+      feedType,
+      const {},
+    ).handle;
   }
 
   /// Mark a video swipe as complete (video is now playing).
   ///
   /// Closes the session started by [startVideoSwipeTracking].
   void markVideoSwipeComplete(String videoId) {
-    final feedType = 'video_swipe_$videoId';
-    markFeedDisplayed(feedType, 1);
+    final handle = _activeSwipeSessions.remove(videoId);
+    if (handle != null) markFeedDisplayed(handle, 1);
   }
 
   /// Track terminal outcome of one source in user-profile search.
@@ -433,17 +470,17 @@ class FeedPerformanceTracker {
 
   /// Whether a session's start time is older than [_maxSessionAge].
   bool _isStale(_FeedLoadSession session) {
-    return DateTime.now().difference(session.startTime) > _maxSessionAge;
+    return _now().difference(session.startTime) > _maxSessionAge;
   }
 
   /// Remove a stale session and log a warning instead of recording garbage
   /// data.
-  void _discardStaleSession(String feedType) {
-    final session = _activeSessions.remove(feedType);
+  void _discardStaleSession(FeedLoadHandle handle) {
+    final session = _activeSessions.remove(handle._id);
     if (session != null) {
-      final age = DateTime.now().difference(session.startTime);
+      final age = _now().difference(session.startTime);
       UnifiedLogger.warning(
-        'Discarding stale feed session "$feedType" '
+        'Discarding stale feed session "${handle.feedType}" '
         '(started ${age.inSeconds}s ago)',
         name: 'FeedPerformance',
       );
@@ -454,12 +491,12 @@ class FeedPerformanceTracker {
 /// Internal session tracking for feed loading
 class _FeedLoadSession {
   _FeedLoadSession({
-    required this.feedType,
+    required this.handle,
     required this.startTime,
     required this.params,
   });
 
-  final String feedType;
+  final FeedLoadHandle handle;
   final DateTime startTime;
   final Map<String, dynamic> params;
 

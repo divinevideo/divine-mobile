@@ -98,7 +98,7 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
       ),
     );
 
-    _feedTracker?.startFeedLoad('hashtag_search');
+    final feedLoad = _feedTracker?.startFeedLoad('hashtag_search');
 
     try {
       final results = await _hashtagRepository.searchHashtags(
@@ -106,7 +106,9 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         limit: _pageSize,
       );
 
-      _feedTracker?.markFirstVideosReceived('hashtag_search', results.length);
+      if (feedLoad != null) {
+        _feedTracker?.markFirstVideosReceived(feedLoad, results.length);
+      }
 
       emit(
         state.copyWith(
@@ -119,7 +121,9 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         ),
       );
 
-      _feedTracker?.markFeedDisplayed('hashtag_search', results.length);
+      if (feedLoad != null) {
+        _feedTracker?.markFeedDisplayed(feedLoad, results.length);
+      }
     } on Exception catch (e) {
       // Defensive: repository.searchHashtags should never throw per its
       // contract, but we guard against unexpected violations to avoid
@@ -130,6 +134,8 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         errorMessage: e.toString(),
       );
       emit(state.copyWith(status: HashtagSearchStatus.failure));
+    } finally {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
     }
   }
 

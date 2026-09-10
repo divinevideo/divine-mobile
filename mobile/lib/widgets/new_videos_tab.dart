@@ -49,6 +49,7 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
   late final FeedPerformanceTracker _feedTracker;
   late final ErrorAnalyticsTracker _errorTracker;
   DateTime? _feedLoadStartTime;
+  FeedLoadHandle? _feedLoad;
 
   @override
   void initState() {
@@ -75,7 +76,7 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
     // Track feed loading start
     if (newVideosAsync.isLoading && _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
-      _feedTracker.startFeedLoad('new_vines');
+      _feedLoad = _feedTracker.startFeedLoad('new_vines');
     }
 
     // CRITICAL: Check hasValue FIRST before isLoading
@@ -96,8 +97,12 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
 
       // Track feed loaded with videos
       if (_feedLoadStartTime != null) {
-        _feedTracker.markFirstVideosReceived('new_vines', videos.length);
-        _feedTracker.markFeedDisplayed('new_vines', videos.length);
+        final feedLoad = _feedLoad;
+        if (feedLoad != null) {
+          _feedTracker.markFirstVideosReceived(feedLoad, videos.length);
+          _feedTracker.markFeedDisplayed(feedLoad, videos.length);
+        }
+        _feedLoad = null;
         _screenAnalytics.markDataLoaded(
           'explore_screen',
           dataMetrics: {'tab': 'new_vines', 'video_count': videos.length},
@@ -181,7 +186,17 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
       errorMessage: error.toString(),
       loadTimeMs: loadTime,
     );
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker.abandonFeedLoad(feedLoad);
+    _feedLoad = null;
     _feedLoadStartTime = null;
+  }
+
+  @override
+  void dispose() {
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker.abandonFeedLoad(feedLoad);
+    super.dispose();
   }
 }
 

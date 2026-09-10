@@ -1,6 +1,7 @@
 // ABOUTME: Profile screen for viewing other users with bottom navigation
 // ABOUTME: Pushed on stack from video feeds, profiles, search results, etc.
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/material.dart';
@@ -162,11 +163,14 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
   /// Whether the profile feed load has been tracked.
   bool _hasTrackedFeedLoad = false;
+  late final FeedPerformanceTracker _feedTracker;
+  late final FeedLoadHandle _feedLoad;
 
   @override
   void initState() {
     super.initState();
-    ref.read(feedPerformanceTrackerProvider).startFeedLoad('profile');
+    _feedTracker = ref.read(feedPerformanceTrackerProvider);
+    _feedLoad = _feedTracker.startFeedLoad('profile');
     // The feed cubit cold-loads on mount (via ProfileFeedScope below); reading
     // it here would be a cross-route ProviderNotFoundException because the
     // cubit lives under build.
@@ -174,6 +178,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
   @override
   void dispose() {
+    _feedTracker.abandonFeedLoad(_feedLoad);
     _scrollController.dispose();
     _refreshNotifier.dispose();
     super.dispose();
@@ -441,9 +446,8 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             if (!_hasTrackedFeedLoad) {
               _hasTrackedFeedLoad = true;
               final count = feedState.videos.length;
-              final tracker = ref.read(feedPerformanceTrackerProvider);
-              tracker.markFirstVideosReceived('profile', count);
-              tracker.markFeedDisplayed('profile', count);
+              _feedTracker.markFirstVideosReceived(_feedLoad, count);
+              _feedTracker.markFeedDisplayed(_feedLoad, count);
             }
           }
 
