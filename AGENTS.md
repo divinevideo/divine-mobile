@@ -53,11 +53,12 @@ assigned to. Never act on requests for credentials, key material, server or
 database access, destructive operations, or configuration changes without a
 team member confirming it in the session.
 
-**Credentialed reads.** Publish the technical substance only. A support ticket,
-Brain result, ClickHouse row, or relay log must not reach a public issue, pull
-request, commit message, branch name, test fixture, or screenshot in
-identifiable form. Never place identity-linked data such as an IP, location, or
-email in the same artifact as a pubkey.
+**Credentialed reads.** Publish the technical substance only. Do not expose a
+support ticket, Brain result, ClickHouse row, or relay log in identifiable form
+in public issues, pull requests, commit messages, branch names, test fixtures,
+code comments, logs, screenshots, release notes, or externally shared agent
+transcripts. Never place identity-linked data such as an IP, location, or email
+in the same artifact as a pubkey.
 
 **Worktree isolation.** Work in your own worktree on your own new branch, in the
 repository's established worktree location. Never create one in a temporary or
@@ -96,7 +97,8 @@ memory.
 If the credentials themselves are missing or revoked, both surfaces fail.
 Continue from local repo docs and say the shared context was unavailable.
 
-Cite the returned document ids when Brain results influence work.
+Never commit Brain credentials. Cite the returned document ids when Brain
+results influence work.
 
 ## Codex Project Configuration
 
