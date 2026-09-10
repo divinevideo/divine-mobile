@@ -94,7 +94,6 @@ void main() {
       Object? audioError,
       ValueNotifier<int>? rebuilds,
     }) {
-      final soundsSection = MetadataSoundsSection(video: video);
       return ProviderScope(
         overrides: [
           soundByIdProvider(testAudioEventId).overrideWith((ref) async {
@@ -112,13 +111,13 @@ void main() {
           home: Scaffold(
             backgroundColor: Colors.black,
             body: rebuilds == null
-                ? soundsSection
+                ? MetadataSoundsSection(video: video)
                 : ValueListenableBuilder<int>(
                     valueListenable: rebuilds,
                     builder: (context, rebuild, child) => Column(
                       children: [
                         Text('Rebuild $rebuild'),
-                        soundsSection,
+                        MetadataSoundsSection(video: video),
                       ],
                     ),
                   ),
@@ -154,13 +153,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Original sound'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        final logsAfterInitialRender = renderPathLogCount();
 
         rebuilds.value = 1;
         await tester.pump();
 
         expect(find.text('Rebuild 1'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        expect(renderPathLogCount(), logsAfterInitialRender);
+        expect(logsAfterInitialRender, logsBefore);
       });
 
       testWidgets('shows sound title for video with audio reference', (

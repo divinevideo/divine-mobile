@@ -74,7 +74,6 @@ void main() {
       List<Override> additionalOverrides = const [],
       ValueNotifier<int>? rebuilds,
     }) {
-      final attribution = AudioAttributionRow(video: video);
       return ProviderScope(
         overrides: [
           if (video.hasAudioReference)
@@ -91,13 +90,13 @@ void main() {
           home: Scaffold(
             backgroundColor: Colors.black,
             body: rebuilds == null
-                ? attribution
+                ? AudioAttributionRow(video: video)
                 : ValueListenableBuilder<int>(
                     valueListenable: rebuilds,
                     builder: (context, rebuild, child) => Column(
                       children: [
                         Text('Rebuild $rebuild'),
-                        attribution,
+                        AudioAttributionRow(video: video),
                       ],
                     ),
                   ),
@@ -264,13 +263,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Sound unavailable'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        final logsAfterInitialRender = renderPathLogCount();
 
         rebuilds.value = 1;
         await tester.pump();
 
         expect(find.text('Rebuild 1'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        expect(renderPathLogCount(), logsAfterInitialRender);
+        expect(logsAfterInitialRender, logsBefore);
       });
 
       testWidgets('does not log when the error fallback rebuilds', (
@@ -290,13 +290,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Sound unavailable'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        final logsAfterInitialRender = renderPathLogCount();
 
         rebuilds.value = 1;
         await tester.pump();
 
         expect(find.text('Rebuild 1'), findsOneWidget);
-        expect(renderPathLogCount(), logsBefore);
+        expect(renderPathLogCount(), logsAfterInitialRender);
+        expect(logsAfterInitialRender, logsBefore);
       });
 
       testWidgets('shows a neutral label when the audio event is null', (
