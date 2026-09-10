@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:models/models.dart' hide LogCategory, NIP71VideoKinds;
+import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -16,8 +16,10 @@ typedef RepostTagRefs = ({String? eventId, String? addressableId});
 typedef AddressableIdParts = ({int kind, String pubkey, String dTag});
 
 /// Callback to lookup cached videos by addressable reference
-typedef VideoByAddressableLookup =
-    VideoEvent? Function(String pubkey, String dTag);
+typedef VideoByAddressableLookup = VideoEvent? Function(
+  String pubkey,
+  String dTag,
+);
 
 /// Callback to lookup cached videos by event ID
 typedef VideoByIdLookup = VideoEvent? Function(String eventId);

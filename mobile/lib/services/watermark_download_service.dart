@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:media_cache/media_cache.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';

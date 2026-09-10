@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -29,8 +29,7 @@ void main() {
       registerFallbackValue(
         Event.fromJson({
           'id': 'fallback_event_id',
-          'pubkey':
-              'aabbccdd00112233445566778899aabbccdd00112233445566778899aabbccdd',
+          'pubkey': 'aabbccdd00112233445566778899aabbccdd00112233445566778899aabbccdd',
           'created_at': 0,
           'kind': 1,
           'tags': <List<String>>[],

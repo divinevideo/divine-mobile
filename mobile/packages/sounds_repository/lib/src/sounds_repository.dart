@@ -36,6 +36,12 @@ class SoundsRepository {
   }) : _nostrClient = nostrClient,
        _soundLibraryApiClient = soundLibraryApiClient;
 
+  /// Default cap on the video events one batched usage-count query pulls.
+  ///
+  /// Applies to the whole batch, not per sound — see
+  /// [fetchVideosUsingSoundCounts].
+  static const int maxBatchedUsageCountScan = 500;
+
   final NostrClient _nostrClient;
   final SoundLibraryApiClient? _soundLibraryApiClient;
 
@@ -354,6 +360,92 @@ class SoundsRepository {
         category: LogCategory.api,
       );
       return 0;
+    }
+  }
+
+  /// Fetch reuse counts for many sounds in a single relay round trip.
+  ///
+  /// [fetchVideosUsingSoundCount] costs one COUNT request per sound, so a list
+  /// that renders a count per row would fan out one relay request per row. This
+  /// issues a single query filtered on every requested id and tallies the `e`
+  /// tags client-side, so a list costs one round trip no matter how many sounds
+  /// it shows.
+  ///
+  /// A video is counted for an id when it carries an `e` tag holding that id —
+  /// the same match the relay applies to `#e`, so a batched entry equals what
+  /// [fetchVideosUsingSoundCount] would report for the same sound. A video that
+  /// repeats the same reference is still counted once.
+  ///
+  /// The result holds an entry for every non-empty requested id, mapping to 0
+  /// when nothing references it. Returns an empty map without querying when
+  /// [audioEventIds] contains no non-empty id.
+  ///
+  /// Counts saturate at [limit], which caps the video events pulled for the
+  /// whole batch rather than per sound, so a batch whose true total exceeds it
+  /// under-reports. That is the trade for the single round trip; raise it only
+  /// with the extra bandwidth in mind, since these are full video events.
+  ///
+  /// Throws whatever the underlying query throws; callers that would rather
+  /// show no counts than an error should catch it.
+  Future<Map<String, int>> fetchVideosUsingSoundCounts(
+    Iterable<String> audioEventIds, {
+    int limit = maxBatchedUsageCountScan,
+  }) async {
+    final ids = {
+      for (final id in audioEventIds)
+        if (id.isNotEmpty) id,
+    };
+    if (ids.isEmpty) {
+      Log.debug(
+        'No audio event ids provided to fetchVideosUsingSoundCounts',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return const {};
+    }
+
+    Log.debug(
+      'Fetching batched video counts for ${ids.length} sounds',
+      name: 'SoundsRepository',
+      category: LogCategory.api,
+    );
+
+    try {
+      final events = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [NIP71VideoKinds.addressableShortVideo],
+          e: ids.toList(),
+          limit: limit,
+        ),
+      ]);
+
+      final counts = {for (final id in ids) id: 0};
+      for (final event in events) {
+        final referenced = <String>{};
+        for (final tag in event.tags) {
+          if (tag.length >= 2 && tag[0] == 'e' && counts.containsKey(tag[1])) {
+            referenced.add(tag[1]);
+          }
+        }
+        for (final id in referenced) {
+          counts[id] = counts[id]! + 1;
+        }
+      }
+
+      Log.debug(
+        'Batched video counts resolved from ${events.length} video events',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+
+      return counts;
+    } catch (e) {
+      Log.error(
+        'Error fetching batched video counts: $e',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      rethrow;
     }
   }
 

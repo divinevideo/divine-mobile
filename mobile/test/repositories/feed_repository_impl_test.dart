@@ -95,9 +95,9 @@ void main() {
         );
         repository = container.read(feedRepositoryProvider);
 
-        final feed =
-            container.read(newVideosFeedProvider.notifier)
-                as _TestNewVideosFeed;
+        final feed = container.read(
+          newVideosFeedProvider.notifier,
+        ) as _TestNewVideosFeed;
         await container.read(newVideosFeedProvider.future);
         feed.emit([_video('1')], hasMore: true);
 
@@ -137,9 +137,9 @@ void main() {
         );
         repository = container.read(feedRepositoryProvider);
 
-        final feed =
-            container.read(newVideosFeedProvider.notifier)
-                as _TestNewVideosFeed;
+        final feed = container.read(
+          newVideosFeedProvider.notifier,
+        ) as _TestNewVideosFeed;
         await container.read(newVideosFeedProvider.future);
         feed.emit([_video('1')], hasMore: true);
 

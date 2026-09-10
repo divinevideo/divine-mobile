@@ -36,8 +36,23 @@ class ContentFilterService extends ChangeNotifier {
     Future<void> Function()? onAdultMediaAccessRevoked,
   }) : _onAdultMediaAccessRevoked = onAdultMediaAccessRevoked;
 
-  static const String _prefsKey = 'content_filter_prefs';
-  static const String _migratedKey = 'content_filter_migrated';
+  /// Public so `UserDataCleanupService` can clear it by reference.
+  /// A copied literal cannot detect that this key was renamed (#8314).
+  static const String filterPrefsStorageKey = 'content_filter_prefs';
+
+  /// One-shot migration flag for [filterPrefsStorageKey].
+  ///
+  /// Must be cleared *with* the preferences it guards. Clearing the
+  /// preferences alone leaves this set, the migration never re-runs, and
+  /// the next account gets an empty map instead of the defaults.
+  static const String filterMigratedStorageKey = 'content_filter_migrated';
+
+  /// Legacy adult-content preference migrated into [filterPrefsStorageKey].
+  ///
+  /// This must be cleared with the migration flag at an account boundary so
+  /// one account cannot seed the next account's filter defaults.
+  static const String legacyAdultContentPreferenceStorageKey =
+      'adult_content_preference';
 
   final AgeVerificationService ageVerificationService;
   final Future<void> Function()? _onAdultMediaAccessRevoked;
@@ -148,7 +163,7 @@ class ContentFilterService extends ChangeNotifier {
       await _migrateFromOldPreferences(prefs);
 
       // Load saved preferences
-      final json = prefs.getString(_prefsKey);
+      final json = prefs.getString(filterPrefsStorageKey);
       if (json != null) {
         final map = jsonDecode(json) as Map<String, dynamic>;
         for (final entry in map.entries) {
@@ -373,9 +388,11 @@ class ContentFilterService extends ChangeNotifier {
   /// - `2` (neverShow) → adult categories set to hide
   Future<void> _migrateFromOldPreferences(SharedPreferences prefs) async {
     // Only migrate once
-    if (prefs.getBool(_migratedKey) == true) return;
+    if (prefs.getBool(filterMigratedStorageKey) == true) return;
 
-    final oldPreferenceIndex = prefs.getInt('adult_content_preference');
+    final oldPreferenceIndex = prefs.getInt(
+      legacyAdultContentPreferenceStorageKey,
+    );
     final newPref = switch (oldPreferenceIndex) {
       0 => ContentFilterPreference.show,
       1 => ContentFilterPreference.warn,
@@ -385,7 +402,7 @@ class ContentFilterService extends ChangeNotifier {
 
     if (newPref != null) {
       final persistedPreferences = <String, String>{};
-      final savedPreferencesJson = prefs.getString(_prefsKey);
+      final savedPreferencesJson = prefs.getString(filterPrefsStorageKey);
       if (savedPreferencesJson != null) {
         try {
           final savedPreferences =
@@ -413,7 +430,10 @@ class ContentFilterService extends ChangeNotifier {
         persistedPreferences.putIfAbsent(label.value, () => newPref.name);
       }
 
-      await prefs.setString(_prefsKey, jsonEncode(persistedPreferences));
+      await prefs.setString(
+        filterPrefsStorageKey,
+        jsonEncode(persistedPreferences),
+      );
 
       Log.info(
         'Migrated old adult content preference '
@@ -423,7 +443,7 @@ class ContentFilterService extends ChangeNotifier {
       );
     }
 
-    await prefs.setBool(_migratedKey, true);
+    await prefs.setBool(filterMigratedStorageKey, true);
   }
 
   /// Persist current preferences to SharedPreferences.
@@ -434,7 +454,7 @@ class ContentFilterService extends ChangeNotifier {
       for (final entry in _preferences.entries) {
         map[entry.key.value] = entry.value.name;
       }
-      await prefs.setString(_prefsKey, jsonEncode(map));
+      await prefs.setString(filterPrefsStorageKey, jsonEncode(map));
     } catch (e) {
       Log.error(
         'Error saving content filter preferences: $e',

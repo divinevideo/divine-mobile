@@ -2,7 +2,7 @@
 // ABOUTME: Derives active video ID from URL context, feed state, and app foreground state
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';

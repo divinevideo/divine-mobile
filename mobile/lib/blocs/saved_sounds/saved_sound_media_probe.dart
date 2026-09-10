@@ -22,10 +22,12 @@ class SavedSoundMediaResult {
   final List<double> waveformSamples;
 }
 
-typedef SavedSoundWaveformReader =
-    Future<WaveformData> Function(WaveformConfigs configs);
-typedef SavedSoundMetadataReader =
-    Future<VideoMetadata> Function(EditorVideo source);
+typedef SavedSoundWaveformReader = Future<WaveformData> Function(
+  WaveformConfigs configs,
+);
+typedef SavedSoundMetadataReader = Future<VideoMetadata> Function(
+  EditorVideo source,
+);
 
 class ProVideoEditorSavedSoundMediaProbe implements SavedSoundMediaProbe {
   ProVideoEditorSavedSoundMediaProbe({

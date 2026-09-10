@@ -110,13 +110,12 @@ final nip89ClientTagEnabledProvider = FutureProvider<bool>((ref) async {
 /// delegates to [NostrServiceFactory.create]. Tests override
 /// [nostrClientFactoryProvider] to inject fake clients and observe the
 /// arguments NostrService passes.
-typedef NostrClientFactory =
-    NostrClient Function({
-      NostrSigner? signer,
-      RelayStatisticsService? statisticsService,
-      EnvironmentConfig? environmentConfig,
-      AppDbClient? dbClient,
-    });
+typedef NostrClientFactory = NostrClient Function({
+  NostrSigner? signer,
+  RelayStatisticsService? statisticsService,
+  EnvironmentConfig? environmentConfig,
+  AppDbClient? dbClient,
+});
 
 typedef NostrInitRetryDelay = Duration Function(int attempt);
 

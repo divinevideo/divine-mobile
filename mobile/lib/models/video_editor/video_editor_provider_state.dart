@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:models/models.dart' show AudioEvent, InspiredByInfo;
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
@@ -39,6 +40,7 @@ class VideoEditorProviderState {
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
     this.inspiredByNpub,
+    this.captionMentions = const [],
     this.selectedSound,
     this.seedSelectedSoundAsAudioTrack = false,
     this.contentWarnings = const {},
@@ -134,6 +136,9 @@ class VideoEditorProviderState {
 
   /// NIP-27 npub reference for general "Inspired By" a creator.
   final String? inspiredByNpub;
+
+  /// Accounts picked from the caption's mention autocomplete.
+  final List<CaptionMention> captionMentions;
 
   /// Currently selected sound for the video.
   /// Contains the full AudioEvent data including URL, title, and start offset.
@@ -258,6 +263,7 @@ class VideoEditorProviderState {
     InspiredByInfo? inspiredByVideo,
     bool clearInspiredByVideo = false,
     String? inspiredByNpub,
+    List<CaptionMention>? captionMentions,
     bool clearInspiredByNpub = false,
     AudioEvent? selectedSound,
     bool clearSelectedSound = false,
@@ -310,6 +316,7 @@ class VideoEditorProviderState {
       inspiredByVideo: clearInspiredByVideo
           ? null
           : (inspiredByVideo ?? this.inspiredByVideo),
+      captionMentions: captionMentions ?? this.captionMentions,
       inspiredByNpub: clearInspiredByNpub
           ? null
           : (inspiredByNpub ?? this.inspiredByNpub),

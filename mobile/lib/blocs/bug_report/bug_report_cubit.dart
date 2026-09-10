@@ -11,24 +11,24 @@ import 'package:unified_logger/unified_logger.dart';
 /// Cubit doesn't reach into the static `ZendeskSupportService` surface
 /// directly. Tests inject a fake; production wires
 /// `ZendeskSupportService.createStructuredBugReport`.
-typedef SubmitBugReportAction =
-    Future<bool> Function({
-      required String subject,
-      required String description,
-      required String reportId,
-      required String appVersion,
-      required Map<String, dynamic> deviceInfo,
-      String? stepsToReproduce,
-      String? expectedBehavior,
-      String? currentScreen,
-      String? userPubkey,
-      Map<String, int>? errorCounts,
-      String? logsSummary,
-      List<String>? attachmentPaths,
-    });
+typedef SubmitBugReportAction = Future<bool> Function({
+  required String subject,
+  required String description,
+  required String reportId,
+  required String appVersion,
+  required Map<String, dynamic> deviceInfo,
+  String? stepsToReproduce,
+  String? expectedBehavior,
+  String? currentScreen,
+  List<String>? recentScreens,
+  String? userPubkey,
+  Map<String, int>? errorCounts,
+  String? logsSummary,
+  List<String>? attachmentPaths,
+});
 
 /// Builds the logs summary string the cubit passes to Zendesk.
-typedef BuildLogsSummary = String? Function(List<LogEntry> logs);
+typedef BuildLogsSummary = Future<String?> Function(List<LogEntry> logs);
 
 /// Cubit backing the bug report flow. Owns the submission lifecycle plus
 /// the `BugReportFailureKey` that distinguishes attachment-upload
@@ -61,6 +61,7 @@ class BugReportCubit extends Cubit<BugReportState> {
     required String expectedBehavior,
     required List<XFile> attachments,
     String? currentScreen,
+    List<String> recentScreens = const [],
     String? userPubkey,
   }) async {
     final trimmedSubject = subject.trim();
@@ -85,9 +86,10 @@ class BugReportCubit extends Cubit<BugReportState> {
         appVersion: reportData.appVersion,
         deviceInfo: reportData.deviceInfo,
         currentScreen: currentScreen,
+        recentScreens: recentScreens,
         userPubkey: userPubkey,
         errorCounts: reportData.errorCounts,
-        logsSummary: _buildLogsSummary(reportData.recentLogs),
+        logsSummary: await _buildLogsSummary(reportData.recentLogs),
         attachmentPaths: attachments.map((f) => f.path).toList(),
       );
       if (isClosed) return;

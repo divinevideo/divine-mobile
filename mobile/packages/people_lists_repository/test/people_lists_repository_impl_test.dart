@@ -343,6 +343,80 @@ void main() {
       );
 
       test(
+        'caches the tags the relay actually received, not the pre-publish ones',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['alt', 'Keep me'],
+              ['p', _memberA],
+            ],
+            content: 'ciphertext',
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [remote], timedOut: false, noRelays: false),
+          );
+          // NostrClient appends the NIP-89 client tag during publish and
+          // rebinds event.tags to a new list, so the caller's pre-publish
+          // payload never observes it. Model that here.
+          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+            final outgoing = invocation.positionalArguments.first as Event;
+            return PublishSuccess(
+              event: signedEvent(
+                kind: outgoing.kind,
+                tags: [
+                  ...outgoing.tags,
+                  const ['client', 'Divine'],
+                ],
+                content: outgoing.content,
+                createdAt: outgoing.createdAt,
+              ),
+            );
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberB,
+            )).submitted,
+            isTrue,
+          );
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberC,
+            )).submitted,
+            isTrue,
+          );
+
+          final published = verify(
+            () => client.publishEvent(captureAny()),
+          ).captured.cast<Event>();
+          // The second edit is built from the source cached by the first. If
+          // that source were the pre-publish payload, the tag the relay holds
+          // would be missing here and the cached nostrEventId would belong to
+          // an event the cached tags cannot reproduce.
+          expect(
+            published.last.tags,
+            contains(equals(const ['client', 'Divine'])),
+          );
+        },
+      );
+
+      test(
         'publishes a kind 30000 event with a full p tag for new pubkey',
         () async {
           final client = _MockNostrClient();
@@ -528,6 +602,60 @@ void main() {
         final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
         expect(stored.single.pubkeys, equals(const [_memberB]));
       });
+
+      test(
+        'preserves foreign tags, surviving p-tag fields, and content',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['alt', 'Written by another client'],
+              ['p', _memberA, 'wss://relay.example', 'friend'],
+              ['p', _memberB, 'wss://other.example', 'bestie'],
+              ['expiration', '2000000000'],
+            ],
+            content: 'nip44-encrypted-private-members',
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [remote], timedOut: false, noRelays: false),
+          );
+          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+            final event = invocation.positionalArguments.first as Event;
+            return PublishSuccess(event: event);
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          final result = await repository.removePubkey(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            pubkey: _memberA,
+          );
+
+          expect(result.status, PeopleListPublishStatus.submitted);
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          // The removed member loses every matching tag; the foreign tags and
+          // the surviving member's relay hint and petname survive verbatim.
+          expect(published.tags, const [
+            ['d', 'shared-list'],
+            ['alt', 'Written by another client'],
+            ['p', _memberB, 'wss://other.example', 'bestie'],
+            ['expiration', '2000000000'],
+          ]);
+          expect(published.content, 'nip44-encrypted-private-members');
+        },
+      );
     });
 
     group('inconclusive reconcile before a replacement (#8273)', () {
@@ -1446,6 +1574,45 @@ void main() {
           emissions.single.single.list.pubkeys,
           equals(const [_memberA, _memberB]),
         );
+      });
+
+      test('uses the lowest event id when duplicate revisions tie', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+
+        final higherId =
+            peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                title: 'Crew Higher id',
+                pubkeys: const [_memberA],
+                createdAt: 1710000000,
+              )
+              ..id =
+                  'ffffffffffffffffffffffffffffffff'
+                  'ffffffffffffffffffffffffffffffff';
+        final lowerId =
+            peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                title: 'Crew Lower id',
+                pubkeys: const [_memberB],
+                createdAt: 1710000000,
+              )
+              ..id =
+                  '00000000000000000000000000000000'
+                  '00000000000000000000000000000000';
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => [lowerId, higherId]);
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, hasLength(1));
+        expect(emissions.single, hasLength(1));
+        expect(emissions.single.single.list.name, equals('Crew Lower id'));
       });
 
       test('does not yield when no events match the query', () async {

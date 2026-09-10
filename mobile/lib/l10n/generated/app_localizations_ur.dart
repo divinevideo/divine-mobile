@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4636,9 +4637,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get supportRevealLogsAction => 'فولڈر میں دکھائیں';
 
   @override
-  String get supportChatNotAvailable => 'سپورٹ چیٹ دستیاب نہیں';
-
-  @override
   String get supportCouldNotOpenMessages => 'سپورٹ پیغامات نہیں کھل سکے';
 
   @override
@@ -5191,22 +5189,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundUseSound => 'آواز استعمال کریں';
-
-  @override
-  String get soundUntitled => 'بلا عنوان آواز';
-
-  @override
-  String get soundStopPreview => 'پیش منظر روکیں';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title کا پیش منظر';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title کی تفصیلات دیکھیں';
-  }
 
   @override
   String get soundNoVideoCount => 'ابھی کوئی ویڈیو نہیں';
@@ -8838,6 +8820,54 @@ class AppLocalizationsUr extends AppLocalizations {
       'ایڈجسٹ کرنے کے لیے سلائیڈ کریں';
 
   @override
+  String get videoEditorDetachLabel => 'الگ کریں';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'منتخب کلپ کو ٹائم لائن سے الگ کریں';
+
+  @override
+  String get videoEditorDetachTitle => 'کلپ الگ کریں';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'کلپ کینوس پر چلا جاتا ہے، جہاں آپ اسے کہیں بھی رکھ سکتے ہیں۔ ٹائم لائن پر اس کی جگہ کیا لے گا؟';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'کچھ نہیں';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'خلا بند کریں – اس کے بعد کی ہر چیز پہلے شروع ہو گی۔';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'رنگ';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'کلپ جتنی دیر چلا، اتنی دیر ایک ٹھوس رنگ دکھاتا ہے۔';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'تصویر';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'اس کی جگہ رکھنے کے لیے ایک تصویر لیں۔';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'الگ کیا گیا کلپ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'آپ کی کلپ الگ کی جا رہی ہے…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'وہ کلپ الگ نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
+
+  @override
   String get videoEditorChromaKeyLabel => 'گرین اسکرین';
 
   @override
@@ -8906,8 +8936,12 @@ class AppLocalizationsUr extends AppLocalizations {
       'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'کوئی اسکرین نہیں ملی۔ اسے فریم کے کناروں تک پہنچنا چاہیے — ورنہ رنگ خود منتخب کریں۔';
+      'کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';
@@ -9202,6 +9236,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'بلا عنوان آواز';
+
+  @override
+  String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
 
   @override
   String get videoEditorAudioUntitled => 'بلا عنوان';
@@ -9869,8 +9906,7 @@ class AppLocalizationsUr extends AppLocalizations {
       locale: localeName,
       other:
           'اس سے وہ $count اکاؤنٹس بلاک ہو جائیں گے جو ابھی یہ بیج رکھتے ہیں۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
-      one:
-          'اس سے وہ اکاؤنٹ بلاک ہو جائے گا جو ابھی یہ بیج رکھتا ہے۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
+      one: 'اس سے وہ اکاؤنٹ بلاک ہو جائے گا جو ابھی یہ بیج رکھتا ہے۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
     );
     return '$_temp0';
   }
@@ -10138,7 +10174,7 @@ class AppLocalizationsUr extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'مدد کا مرکز کھولیں';
+  String get appealOpenSupportCenter => 'مدد کا مرکز کھولیں';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'موڈریشن پیغام کھولیں';
@@ -11306,6 +11342,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get savedSoundRemoveAction => 'محفوظ شدہ ساؤنڈ ہٹائیں';
 
   @override
+  String get savedSoundFileMissing =>
+      'اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔';
+
+  @override
   String get savedSoundClearHashtagFilter => 'ہیش ٹیگ فلٹر صاف کریں';
 
   @override
@@ -12093,9 +12133,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

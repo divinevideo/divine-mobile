@@ -649,6 +649,7 @@ class _AddRelaySheetState extends State<_AddRelaySheet> {
             labelText: 'wss://relay.example.com',
             keyboardType: TextInputType.url,
             textCapitalization: TextCapitalization.none,
+            autocorrect: false,
             autofocus: true,
             filled: true,
             textInputAction: .done,

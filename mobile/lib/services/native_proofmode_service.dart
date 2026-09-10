@@ -167,7 +167,9 @@ class NativeProofModeService {
         name: 'VideoRecorderProofService',
         category: LogCategory.video,
       );
-      final c2paResult = await c2paSigningService.signVideo(
+      // Replaces videoFile's bytes in place — deliberately, so the ProofMode
+      // hash below covers the credentialed media.
+      final c2paResult = await c2paSigningService.signVideoInPlace(
         videoPath: videoFile.path,
         creatorBindingAssertion: creatorBindingAssertion,
         cawgIdentityAssertion: cawgIdentityAssertion,
@@ -188,19 +190,10 @@ class NativeProofModeService {
         );
       }
 
-      final ManifestStoreInfo? manifestInfo;
-      if (c2paResult.success) {
-        manifestInfo = await c2paSigningService.readManifest(
-          c2paResult.signedFilePath,
-        );
-      } else {
-        manifestInfo = null;
-        Log.info(
-          'Skipping C2PA manifest read after failed signing (${c2paResult.failureReason?.name ?? 'unknown'})',
-          name: 'VideoRecorderProofService',
-          category: LogCategory.video,
-        );
-      }
+      // Signing already read this back off the signed file to decide whether
+      // it was safe to replace the recording, so reuse it rather than reading
+      // the same manifest off the same path again.
+      final ManifestStoreInfo? manifestInfo = c2paResult.manifest;
       if (manifestInfo?.validationStatus != null) {
         Log.debug('C2PA Active Manifest ID: ${manifestInfo?.activeManifest}');
       }

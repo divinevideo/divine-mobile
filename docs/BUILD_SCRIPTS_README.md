@@ -94,7 +94,7 @@ macOS equivalent:
 ## Fast local workflow
 
 - `./build_ios.sh debug` and `./build_macos.sh debug` do not run `build_runner` by default.
-- Use `--codegen` only when generated sources changed (freezed/riverpod/json_serializable/mocks).
+- Use `--codegen` only when generated sources changed (riverpod/json_serializable/mocks).
 - Use `--pod-reset` only when CocoaPods is genuinely out of sync.
 - Use `flutter clean` or full pod removal only for unrecoverable local state issues.
 

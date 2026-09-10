@@ -259,95 +259,93 @@ void main() {
         expect(() => manager['tgt'], throwsA(isA<TypeError>()));
       });
 
-      test(
-        'borrows source files without copying and protects them from '
-        'source cleanup',
-        () async {
-          final tempDir = Directory.systemTemp.createTempSync(
-            'clip_thumbnail_seed_test_',
-          );
-          addTearDown(() {
-            if (tempDir.existsSync()) {
-              tempDir.deleteSync(recursive: true);
-            }
-          });
+      test('borrows source files without copying and protects them from '
+          'source cleanup', () async {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_thumbnail_seed_test_',
+        );
+        addTearDown(() {
+          if (tempDir.existsSync()) {
+            tempDir.deleteSync(recursive: true);
+          }
+        });
 
-          final borrowedThumbnail = File('${tempDir.path}/borrowed.jpg')
-            ..writeAsStringSync('borrowed-thumbnail');
-          final unborrowedThumbnail = File('${tempDir.path}/unborrowed.jpg')
-            ..writeAsStringSync('unborrowed-thumbnail');
-          final sourceVideoPath = '${tempDir.path}/source.mp4';
+        final borrowedThumbnail = File('${tempDir.path}/borrowed.jpg')
+          ..writeAsStringSync('borrowed-thumbnail');
+        final unborrowedThumbnail = File('${tempDir.path}/unborrowed.jpg')
+          ..writeAsStringSync('unborrowed-thumbnail');
+        final sourceVideoPath = '${tempDir.path}/source.mp4';
 
-          // The seeded target starts a real subscription on the next sync, so
-          // use a fake stream factory to keep that off the native extractor.
-          final controllers = <StreamController<List<StripThumbnail>>>[];
-          final manager = ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required String videoPath,
-                  required String clipId,
-                  required Duration duration,
-                  required Size outputSize,
-                  required int thumbsPerSecond,
-                  List<Duration>? priorityTimestamps,
-                }) {
-                  final controller = StreamController<List<StripThumbnail>>();
-                  controllers.add(controller);
-                  return controller.stream;
-                },
-          );
-          addTearDown(() {
-            manager.dispose();
-            for (final controller in controllers) {
-              unawaited(controller.close());
-            }
-          });
+        // The seeded target starts a real subscription on the next sync, so
+        // use a fake stream factory to keep that off the native extractor.
+        final controllers = <StreamController<List<StripThumbnail>>>[];
+        final manager = ClipThumbnailManager(
+          stripThumbnailStreamFactory:
+              ({
+                required String videoPath,
+                required String clipId,
+                required Duration duration,
+                required Size outputSize,
+                required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
+                List<Duration>? priorityTimestamps,
+              }) {
+                final controller = StreamController<List<StripThumbnail>>();
+                controllers.add(controller);
+                return controller.stream;
+              },
+        );
+        addTearDown(() {
+          manager.dispose();
+          for (final controller in controllers) {
+            unawaited(controller.close());
+          }
+        });
 
-          final sourceClip = _createTestClip(id: 'src', seconds: 4);
-          final targetClip = _createFileClip(
-            id: 'tgt',
-            videoPath: sourceVideoPath,
-            seconds: 2,
-          );
-          manager.sync(clips: [sourceClip], devicePixelRatio: 1);
-          manager['src'].value = [
-            StripThumbnail(
-              path: borrowedThumbnail.path,
-              timestamp: const Duration(seconds: 1),
-            ),
-            StripThumbnail(
-              path: unborrowedThumbnail.path,
-              timestamp: const Duration(seconds: 3),
-            ),
-          ];
+        final sourceClip = _createTestClip(id: 'src', seconds: 4);
+        final targetClip = _createFileClip(
+          id: 'tgt',
+          videoPath: sourceVideoPath,
+          seconds: 2,
+        );
+        manager.sync(clips: [sourceClip], devicePixelRatio: 1);
+        manager['src'].value = [
+          StripThumbnail(
+            path: borrowedThumbnail.path,
+            timestamp: const Duration(seconds: 1),
+          ),
+          StripThumbnail(
+            path: unborrowedThumbnail.path,
+            timestamp: const Duration(seconds: 3),
+          ),
+        ];
 
-          manager.seedFromSource(
-            sourceClipId: 'src',
-            targetClipId: 'tgt',
-            sourceRange: const DurationRange(
-              start: Duration.zero,
-              end: Duration(seconds: 2),
-            ),
-            currentSourcePath: sourceVideoPath,
-          );
+        manager.seedFromSource(
+          sourceClipId: 'src',
+          targetClipId: 'tgt',
+          sourceRange: const DurationRange(
+            start: Duration.zero,
+            end: Duration(seconds: 2),
+          ),
+          currentSourcePath: sourceVideoPath,
+        );
 
-          // Borrowed, not copied — the image cache entry decoded for the
-          // source tile stays valid, so the new tile paints instantly
-          // instead of flashing black on a cold decode.
-          final seededPath = manager['tgt'].value.single.path;
-          expect(seededPath, equals(borrowedThumbnail.path));
+        // Borrowed, not copied — the image cache entry decoded for the
+        // source tile stays valid, so the new tile paints instantly
+        // instead of flashing black on a cold decode.
+        final seededPath = manager['tgt'].value.single.path;
+        expect(seededPath, equals(borrowedThumbnail.path));
 
-          // Simulate the split lifecycle: the source clip is removed, but
-          // the seeded target still points at the source video until render
-          // completes. Borrowed files must survive stale source cleanup;
-          // files nobody borrowed are deleted.
-          manager.sync(clips: [targetClip], devicePixelRatio: 1);
-          await Future<void>.delayed(Duration.zero);
+        // Simulate the split lifecycle: the source clip is removed, but
+        // the seeded target still points at the source video until render
+        // completes. Borrowed files must survive stale source cleanup;
+        // files nobody borrowed are deleted.
+        manager.sync(clips: [targetClip], devicePixelRatio: 1);
+        await Future<void>.delayed(Duration.zero);
 
-          expect(borrowedThumbnail.existsSync(), isTrue);
-          expect(unborrowedThumbnail.existsSync(), isFalse);
-        },
-      );
+        expect(borrowedThumbnail.existsSync(), isTrue);
+        expect(unborrowedThumbnail.existsSync(), isFalse);
+      });
 
       test('can preserve source timestamps while filtering a range', () {
         final sourceClip = _createTestClip(id: 'src', seconds: 6);
@@ -406,6 +404,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) {
                 final controller = StreamController<List<StripThumbnail>>();
@@ -576,10 +575,7 @@ void main() {
 
           final afterBatch1 = fakeStreamManager['end'].value;
           expect(afterBatch1, hasLength(7));
-          expect(
-            afterBatch1.map((t) => t.path),
-            contains(fresh1.path),
-          );
+          expect(afterBatch1.map((t) => t.path), contains(fresh1.path));
           // Every borrowed file survives — even the displaced seed's — since
           // the retired source strip still references them for undo.
           expect(borrowedFiles[1].existsSync(), isTrue);
@@ -691,10 +687,7 @@ void main() {
           ]);
           await pumpEventQueue();
 
-          expect(
-            fakeStreamManager['a'].value.single.path,
-            equals(freshA.path),
-          );
+          expect(fakeStreamManager['a'].value.single.path, equals(freshA.path));
           expect(shared.existsSync(), isTrue);
           expect(freshA.existsSync(), isTrue);
         },
@@ -771,117 +764,111 @@ void main() {
         },
       );
 
-      test(
-        'seeds the target empty when the source has no thumbnails yet, then '
-        'still starts the subscription on the next sync',
-        () async {
-          final sourceVideoPath = '${tempDir.path}/empty_source.mp4';
+      test('seeds the target empty when the source has no thumbnails yet, then '
+          'still starts the subscription on the next sync', () async {
+        final sourceVideoPath = '${tempDir.path}/empty_source.mp4';
 
-          final sourceClip = _createFileClip(
-            id: 'src',
-            videoPath: sourceVideoPath,
-            seconds: 10,
-          );
-          fakeStreamManager.sync(clips: [sourceClip], devicePixelRatio: 1);
-          expect(controllers, hasLength(1));
+        final sourceClip = _createFileClip(
+          id: 'src',
+          videoPath: sourceVideoPath,
+          seconds: 10,
+        );
+        fakeStreamManager.sync(clips: [sourceClip], devicePixelRatio: 1);
+        expect(controllers, hasLength(1));
 
-          // Source frames haven't been extracted yet — seeding is
-          // best-effort: the target is created empty but still marked seeded.
-          fakeStreamManager.seedFromSource(
-            sourceClipId: 'src',
-            targetClipId: 'end',
-            sourceRange: const DurationRange(
-              start: Duration(seconds: 3),
-              end: Duration(seconds: 10),
-            ),
-            timestampOffset: Duration.zero,
-            currentSourcePath: sourceVideoPath,
-          );
-          expect(fakeStreamManager['end'].value, isEmpty);
+        // Source frames haven't been extracted yet — seeding is
+        // best-effort: the target is created empty but still marked seeded.
+        fakeStreamManager.seedFromSource(
+          sourceClipId: 'src',
+          targetClipId: 'end',
+          sourceRange: const DurationRange(
+            start: Duration(seconds: 3),
+            end: Duration(seconds: 10),
+          ),
+          timestampOffset: Duration.zero,
+          currentSourcePath: sourceVideoPath,
+        );
+        expect(fakeStreamManager['end'].value, isEmpty);
 
-          // The next sync starts the real subscription against the shared
-          // source file even though the seed was empty.
-          final endClip = _createFileClip(
-            id: 'end',
-            videoPath: sourceVideoPath,
-            seconds: 10,
-          );
-          fakeStreamManager.sync(clips: [endClip], devicePixelRatio: 1);
-          expect(controllers, hasLength(2));
-        },
-      );
+        // The next sync starts the real subscription against the shared
+        // source file even though the seed was empty.
+        final endClip = _createFileClip(
+          id: 'end',
+          videoPath: sourceVideoPath,
+          seconds: 10,
+        );
+        fakeStreamManager.sync(clips: [endClip], devicePixelRatio: 1);
+        expect(controllers, hasLength(2));
+      });
 
       // Regression: a native extraction failure mid-stream errors the
       // subscription with only a partial fresh set delivered. That partial
       // set must not be treated as complete — the carried gap-fillers stay
       // on screen (and on disk), and a later retire/restore starts a fresh
       // subscription instead of parking the truncated strip as final.
-      test(
-        'keeps carried gap-fillers and re-extracts on restore when the '
-        'stream is truncated by an extraction error',
-        () async {
-          final dense = [
-            for (var i = 0; i < 4; i++)
-              File('${tempDir.path}/dense_$i.jpg')..writeAsStringSync('d$i'),
-          ];
-          final clip = _createFileClip(
-            id: 'a',
-            videoPath: '${tempDir.path}/a.mp4',
-            seconds: 4,
-          );
-          fakeStreamManager.sync(clips: [clip], devicePixelRatio: 1);
-          controllers.single.add([
-            for (var i = 0; i < 4; i++)
-              StripThumbnail(
-                path: dense[i].path,
-                timestamp: Duration(milliseconds: 500 + i * 1000),
-              ),
-          ]);
-          await pumpEventQueue();
-
-          // The clip's file is re-rendered — a restart carries the dense
-          // frames as gap-fillers while the new extraction streams in.
-          final rerenderedClip = _createFileClip(
-            id: 'a',
-            videoPath: '${tempDir.path}/a_rerendered.mp4',
-            seconds: 4,
-          );
-          fakeStreamManager.sync(clips: [rerenderedClip], devicePixelRatio: 1);
-          expect(controllers, hasLength(2));
-
-          final fresh = File('${tempDir.path}/fresh.jpg')
-            ..writeAsStringSync('fresh');
-          controllers[1].add([
+      test('keeps carried gap-fillers and re-extracts on restore when the '
+          'stream is truncated by an extraction error', () async {
+        final dense = [
+          for (var i = 0; i < 4; i++)
+            File('${tempDir.path}/dense_$i.jpg')..writeAsStringSync('d$i'),
+        ];
+        final clip = _createFileClip(
+          id: 'a',
+          videoPath: '${tempDir.path}/a.mp4',
+          seconds: 4,
+        );
+        fakeStreamManager.sync(clips: [clip], devicePixelRatio: 1);
+        controllers.single.add([
+          for (var i = 0; i < 4; i++)
             StripThumbnail(
-              path: fresh.path,
-              timestamp: const Duration(milliseconds: 500),
+              path: dense[i].path,
+              timestamp: Duration(milliseconds: 500 + i * 1000),
             ),
-          ]);
-          await pumpEventQueue();
-          expect(fakeStreamManager['a'].value, hasLength(4));
+        ]);
+        await pumpEventQueue();
 
-          // Decoder failure truncates the stream after the sparse batch.
-          controllers[1].addError(StateError('decoder died'));
-          await controllers[1].close();
-          await pumpEventQueue();
+        // The clip's file is re-rendered — a restart carries the dense
+        // frames as gap-fillers while the new extraction streams in.
+        final rerenderedClip = _createFileClip(
+          id: 'a',
+          videoPath: '${tempDir.path}/a_rerendered.mp4',
+          seconds: 4,
+        );
+        fakeStreamManager.sync(clips: [rerenderedClip], devicePixelRatio: 1);
+        expect(controllers, hasLength(2));
 
-          // The carried gap-fillers survive — the strip must not collapse
-          // to the single fresh frame — and their files stay on disk.
-          final afterError = fakeStreamManager['a'].value;
-          expect(afterError, hasLength(4));
-          expect(afterError.map((t) => t.path), contains(fresh.path));
-          for (final file in dense.skip(1)) {
-            expect(file.existsSync(), isTrue);
-          }
+        final fresh = File('${tempDir.path}/fresh.jpg')
+          ..writeAsStringSync('fresh');
+        controllers[1].add([
+          StripThumbnail(
+            path: fresh.path,
+            timestamp: const Duration(milliseconds: 500),
+          ),
+        ]);
+        await pumpEventQueue();
+        expect(fakeStreamManager['a'].value, hasLength(4));
 
-          // Remove and restore: the strip was truncated, not complete, so
-          // a fresh subscription starts to fill the missing frames.
-          fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
-          fakeStreamManager.sync(clips: [rerenderedClip], devicePixelRatio: 1);
-          expect(fakeStreamManager['a'].value, hasLength(4));
-          expect(controllers, hasLength(3));
-        },
-      );
+        // Decoder failure truncates the stream after the sparse batch.
+        controllers[1].addError(StateError('decoder died'));
+        await controllers[1].close();
+        await pumpEventQueue();
+
+        // The carried gap-fillers survive — the strip must not collapse
+        // to the single fresh frame — and their files stay on disk.
+        final afterError = fakeStreamManager['a'].value;
+        expect(afterError, hasLength(4));
+        expect(afterError.map((t) => t.path), contains(fresh.path));
+        for (final file in dense.skip(1)) {
+          expect(file.existsSync(), isTrue);
+        }
+
+        // Remove and restore: the strip was truncated, not complete, so
+        // a fresh subscription starts to fill the missing frames.
+        fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
+        fakeStreamManager.sync(clips: [rerenderedClip], devicePixelRatio: 1);
+        expect(fakeStreamManager['a'].value, hasLength(4));
+        expect(controllers, hasLength(3));
+      });
     });
 
     group('retired strips', () {
@@ -899,6 +886,7 @@ void main() {
                 required Duration duration,
                 required Size outputSize,
                 required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
                 List<Duration>? priorityTimestamps,
               }) {
                 final controller = StreamController<List<StripThumbnail>>();
@@ -924,53 +912,85 @@ void main() {
       File writeFrame(String name) =>
           File('${tempDir.path}/$name.jpg')..writeAsStringSync(name);
 
-      test(
-        'restores a complete strip instantly without re-extraction when the '
-        'clip id returns with the same file (undo)',
-        () async {
-          final frame = writeFrame('a_frame');
-          final clipA = _createFileClip(
-            id: 'a',
-            videoPath: '${tempDir.path}/a.mp4',
-          );
+      test('restores a complete strip instantly without re-extraction when the '
+          'clip id returns with the same file (undo)', () async {
+        final frame = writeFrame('a_frame');
+        final clipA = _createFileClip(
+          id: 'a',
+          videoPath: '${tempDir.path}/a.mp4',
+        );
 
-          fakeStreamManager.sync(clips: [clipA], devicePixelRatio: 1);
-          controllers.single.add([
-            StripThumbnail(
-              path: frame.path,
-              timestamp: const Duration(seconds: 1),
+        fakeStreamManager.sync(clips: [clipA], devicePixelRatio: 1);
+        controllers.single.add([
+          StripThumbnail(
+            path: frame.path,
+            timestamp: const Duration(seconds: 1),
+          ),
+        ]);
+        await pumpEventQueue();
+        // Stream completes — the strip is at full density.
+        await controllers.single.close();
+        await pumpEventQueue();
+
+        // Clip 'a' is replaced (e.g. by split halves) — its strip retires.
+        final clipB = _createFileClip(
+          id: 'b',
+          videoPath: '${tempDir.path}/b.mp4',
+        );
+        fakeStreamManager.sync(clips: [clipB], devicePixelRatio: 1);
+        expect(frame.existsSync(), isTrue);
+
+        // Undo: 'a' returns with the same file. The strip is restored
+        // instantly and — being complete — no new subscription starts.
+        fakeStreamManager.sync(clips: [clipA, clipB], devicePixelRatio: 1);
+        expect(fakeStreamManager['a'].value.single.path, equals(frame.path));
+        expect(controllers, hasLength(2));
+
+        // Subsequent syncs must not re-subscribe either.
+        fakeStreamManager.sync(clips: [clipA, clipB], devicePixelRatio: 1);
+        expect(controllers, hasLength(2));
+      });
+
+      test('re-extracts a restored complete strip when the clip returns with a '
+          'wider trim than its frames were generated for', () async {
+        final frame = writeFrame('widened_frame');
+        final trimmed = _createFileClip(
+          id: 'a',
+          videoPath: '${tempDir.path}/a.mp4',
+          seconds: 60,
+          trimStart: const Duration(seconds: 20),
+          trimEnd: const Duration(milliseconds: 33700),
+        );
+
+        fakeStreamManager.sync(clips: [trimmed], devicePixelRatio: 1);
+        controllers.single.add([
+          StripThumbnail(
+            path: frame.path,
+            timestamp: const Duration(seconds: 22),
+          ),
+        ]);
+        await pumpEventQueue();
+        await controllers.single.close();
+        await pumpEventQueue();
+
+        // 'a' leaves the timeline and returns with the trim dragged wide
+        // open. Its retired frames only cover the old window, so being
+        // "complete" is not enough to skip re-extraction.
+        fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
+        fakeStreamManager.sync(
+          clips: [
+            _createFileClip(
+              id: 'a',
+              videoPath: '${tempDir.path}/a.mp4',
+              seconds: 60,
             ),
-          ]);
-          await pumpEventQueue();
-          // Stream completes — the strip is at full density.
-          await controllers.single.close();
-          await pumpEventQueue();
+          ],
+          devicePixelRatio: 1,
+        );
 
-          // Clip 'a' is replaced (e.g. by split halves) — its strip retires.
-          final clipB = _createFileClip(
-            id: 'b',
-            videoPath: '${tempDir.path}/b.mp4',
-          );
-          fakeStreamManager.sync(clips: [clipB], devicePixelRatio: 1);
-          expect(frame.existsSync(), isTrue);
-
-          // Undo: 'a' returns with the same file. The strip is restored
-          // instantly and — being complete — no new subscription starts.
-          fakeStreamManager.sync(
-            clips: [clipA, clipB],
-            devicePixelRatio: 1,
-          );
-          expect(
-            fakeStreamManager['a'].value.single.path,
-            equals(frame.path),
-          );
-          expect(controllers, hasLength(2));
-
-          // Subsequent syncs must not re-subscribe either.
-          fakeStreamManager.sync(clips: [clipA, clipB], devicePixelRatio: 1);
-          expect(controllers, hasLength(2));
-        },
-      );
+        expect(controllers, hasLength(2));
+        expect(fakeStreamManager['a'].value.single.path, equals(frame.path));
+      });
 
       test(
         'restores a partial strip and starts a gap-filling subscription',
@@ -995,10 +1015,7 @@ void main() {
           fakeStreamManager.sync(clips: [clipA], devicePixelRatio: 1);
 
           // Frames restored instantly, plus a fresh subscription for gaps.
-          expect(
-            fakeStreamManager['a'].value.single.path,
-            equals(frame.path),
-          );
+          expect(fakeStreamManager['a'].value.single.path, equals(frame.path));
           expect(controllers, hasLength(2));
         },
       );
@@ -1038,34 +1055,31 @@ void main() {
         },
       );
 
-      test(
-        'evicts the oldest retired strip beyond the cap and deletes its '
-        'unreferenced files',
-        () async {
-          // Retire 9 strips in sequence — one more than the cap of 8.
-          final frames = <File>[];
-          for (var i = 0; i < 9; i++) {
-            final frame = writeFrame('evict_$i');
-            frames.add(frame);
-            final clip = _createFileClip(
-              id: 'clip_$i',
-              videoPath: '${tempDir.path}/clip_$i.mp4',
-            );
-            fakeStreamManager.sync(clips: [clip], devicePixelRatio: 1);
-            fakeStreamManager['clip_$i'].value = [
-              StripThumbnail(path: frame.path, timestamp: Duration.zero),
-            ];
-          }
-          // Retire the 9th strip too.
-          fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
+      test('evicts the oldest retired strip beyond the cap and deletes its '
+          'unreferenced files', () async {
+        // Retire 9 strips in sequence — one more than the cap of 8.
+        final frames = <File>[];
+        for (var i = 0; i < 9; i++) {
+          final frame = writeFrame('evict_$i');
+          frames.add(frame);
+          final clip = _createFileClip(
+            id: 'clip_$i',
+            videoPath: '${tempDir.path}/clip_$i.mp4',
+          );
+          fakeStreamManager.sync(clips: [clip], devicePixelRatio: 1);
+          fakeStreamManager['clip_$i'].value = [
+            StripThumbnail(path: frame.path, timestamp: Duration.zero),
+          ];
+        }
+        // Retire the 9th strip too.
+        fakeStreamManager.sync(clips: [], devicePixelRatio: 1);
 
-          // The oldest strip fell off the FIFO; the newest 8 survive.
-          expect(frames.first.existsSync(), isFalse);
-          for (final frame in frames.skip(1)) {
-            expect(frame.existsSync(), isTrue);
-          }
-        },
-      );
+        // The oldest strip fell off the FIFO; the newest 8 survive.
+        expect(frames.first.existsSync(), isFalse);
+        for (final frame in frames.skip(1)) {
+          expect(frame.existsSync(), isTrue);
+        }
+      });
     });
 
     group('pauseAll / resumeAll', () {
@@ -1090,15 +1104,15 @@ void main() {
           onResume: () => resumes++,
         );
         fakeStreamManager = ClipThumbnailManager(
-          stripThumbnailStreamFactory:
-              ({
-                required String videoPath,
-                required String clipId,
-                required Duration duration,
-                required Size outputSize,
-                required int thumbsPerSecond,
-                List<Duration>? priorityTimestamps,
-              }) => streamController.stream,
+          stripThumbnailStreamFactory: ({
+            required String videoPath,
+            required String clipId,
+            required Duration duration,
+            required Size outputSize,
+            required int thumbsPerSecond,
+            Duration startOffset = Duration.zero,
+            List<Duration>? priorityTimestamps,
+          }) => streamController.stream,
         );
       });
 
@@ -1160,6 +1174,35 @@ void main() {
         await pumpEventQueue();
         expect(fakeStreamManager['a'].value, hasLength(1));
       });
+
+      test('the route pause and the startup hold are independent', () async {
+        syncFileClip();
+        streamController.add(firstBatch);
+        await pumpEventQueue();
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Two independent hold reasons; the second must not re-pause.
+        fakeStreamManager.pauseAll();
+        fakeStreamManager.holdForPlayerStartup();
+        await pumpEventQueue();
+        expect(pauses, equals(1));
+
+        streamController.add(secondBatch);
+        await pumpEventQueue();
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Releasing one reason while the other still holds must not resume.
+        fakeStreamManager.releasePlayerStartupHold();
+        await pumpEventQueue();
+        expect(resumes, equals(0));
+        expect(fakeStreamManager['a'].value, hasLength(1));
+
+        // Only when the last reason clears does delivery resume, losslessly.
+        fakeStreamManager.resumeAll();
+        await pumpEventQueue();
+        expect(resumes, equals(1));
+        expect(fakeStreamManager['a'].value, hasLength(2));
+      });
     });
 
     group('dispose', () {
@@ -1181,47 +1224,214 @@ void main() {
         localManager.dispose();
       });
 
-      test(
-        'deletes a borrowed seed file once when two notifiers share it',
-        () {
-          final tempDir = Directory.systemTemp.createTempSync(
-            'clip_thumbnail_dispose_test_',
-          );
-          addTearDown(() {
-            if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-          });
-          final borrowed = File('${tempDir.path}/borrowed.jpg')
-            ..writeAsStringSync('borrowed');
+      test('deletes a borrowed seed file once when two notifiers share it', () {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_thumbnail_dispose_test_',
+        );
+        addTearDown(() {
+          if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        });
+        final borrowed = File('${tempDir.path}/borrowed.jpg')
+          ..writeAsStringSync('borrowed');
 
-          final localManager = ClipThumbnailManager();
-          localManager.sync(
-            clips: [
-              _createFileClip(id: 'src', videoPath: '${tempDir.path}/src.mp4'),
-            ],
+        final localManager = ClipThumbnailManager();
+        localManager.sync(
+          clips: [
+            _createFileClip(id: 'src', videoPath: '${tempDir.path}/src.mp4'),
+          ],
+          devicePixelRatio: 1,
+        );
+        localManager['src'].value = [
+          StripThumbnail(path: borrowed.path, timestamp: Duration.zero),
+        ];
+        // The start half borrows the same source frame file, so both
+        // notifiers reference it — dispose must delete it once and
+        // swallow the second (already-gone) deleteSync.
+        localManager.seedFromSource(
+          sourceClipId: 'src',
+          targetClipId: 'start',
+          sourceRange: const DurationRange(
+            start: Duration.zero,
+            end: Duration(seconds: 1),
+          ),
+          currentSourcePath: '${tempDir.path}/src.mp4',
+        );
+        expect(localManager['start'].value.single.path, equals(borrowed.path));
+
+        expect(localManager.dispose, returnsNormally);
+        expect(borrowed.existsSync(), isFalse);
+      });
+    });
+
+    // =========================================================
+    // Trim window sizing
+    // =========================================================
+
+    group('trim window', () {
+      late List<_StripRequest> requests;
+      late List<StreamController<List<StripThumbnail>>> controllers;
+      late ClipThumbnailManager windowManager;
+      late Directory tempDir;
+
+      setUp(() {
+        requests = [];
+        controllers = [];
+        windowManager = ClipThumbnailManager(
+          stripThumbnailStreamFactory:
+              ({
+                required String videoPath,
+                required String clipId,
+                required Duration duration,
+                required Size outputSize,
+                required int thumbsPerSecond,
+                Duration startOffset = Duration.zero,
+                List<Duration>? priorityTimestamps,
+              }) {
+                requests.add(
+                  _StripRequest(startOffset: startOffset, duration: duration),
+                );
+                final controller = StreamController<List<StripThumbnail>>();
+                controllers.add(controller);
+                return controller.stream;
+              },
+        );
+        tempDir = Directory.systemTemp.createTempSync(
+          'clip_thumbnail_window_test_',
+        );
+      });
+
+      tearDown(() {
+        windowManager.dispose();
+        for (final controller in controllers) {
+          unawaited(controller.close());
+        }
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
+
+      /// A 60 s library import seeded with a trim down to the 6.3 s
+      /// recording budget: visible source range `[20 s, 26.3 s]`.
+      DivineVideoClip importClip({
+        Duration trimStart = const Duration(seconds: 20),
+        Duration trimEnd = const Duration(milliseconds: 33700),
+      }) => _createFileClip(
+        id: 'import',
+        videoPath: '${tempDir.path}/import.mp4',
+        seconds: 60,
+        trimStart: trimStart,
+        trimEnd: trimEnd,
+      );
+
+      test('asks only for the trimmed window plus a second of slack', () {
+        final clip = importClip();
+
+        windowManager.sync(clips: [clip], devicePixelRatio: 1);
+
+        // Not the untrimmed 60 s source: at 13 thumbs/s that hit the
+        // generator's 500-frame cap for footage the strip cannot show.
+        expect(requests, hasLength(1));
+        expect(
+          requests.single.startOffset,
+          equals(const Duration(seconds: 19)),
+        );
+        expect(
+          requests.single.end,
+          equals(const Duration(milliseconds: 27300)),
+        );
+        expect(requests.single.duration, lessThan(clip.duration));
+      });
+
+      test('covers the whole source when the clip is untrimmed', () {
+        final clip = _createFileClip(
+          id: 'import',
+          videoPath: '${tempDir.path}/import.mp4',
+          seconds: 6,
+        );
+
+        windowManager.sync(clips: [clip], devicePixelRatio: 1);
+
+        expect(requests.single.startOffset, equals(Duration.zero));
+        expect(requests.single.duration, equals(clip.duration));
+      });
+
+      test('does not restart while the trim stays inside the slack', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        // Half a second of handle drag outwards on each side — still inside
+        // the padded window, so the in-flight extraction is left alone.
+        windowManager.sync(
+          clips: [
+            importClip(
+              trimStart: const Duration(milliseconds: 19500),
+              trimEnd: const Duration(milliseconds: 33200),
+            ),
+          ],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(1));
+      });
+
+      test('restarts against the widened window when the trim reaches past '
+          'the generated range', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        windowManager.sync(
+          clips: [importClip(trimStart: const Duration(seconds: 10))],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(2));
+        expect(requests.last.startOffset, equals(const Duration(seconds: 9)));
+        expect(requests.last.end, equals(const Duration(milliseconds: 27300)));
+      });
+
+      test('restarts when the trim window moves to a different part of the '
+          'source', () {
+        windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+
+        // Same 6.3 s length, shifted 20 s later in the source.
+        windowManager.sync(
+          clips: [
+            importClip(
+              trimStart: const Duration(seconds: 40),
+              trimEnd: const Duration(milliseconds: 13700),
+            ),
+          ],
+          devicePixelRatio: 1,
+        );
+
+        expect(requests, hasLength(2));
+        expect(requests.last.startOffset, equals(const Duration(seconds: 39)));
+        expect(requests.last.end, equals(const Duration(milliseconds: 47300)));
+      });
+
+      test(
+        'keeps the frames it already has while the wider window loads',
+        () async {
+          final frame = File('${tempDir.path}/loaded.jpg')
+            ..writeAsStringSync('loaded');
+          windowManager.sync(clips: [importClip()], devicePixelRatio: 1);
+          controllers.single.add([
+            StripThumbnail(
+              path: frame.path,
+              timestamp: const Duration(seconds: 22),
+            ),
+          ]);
+          await pumpEventQueue();
+          expect(windowManager['import'].value, hasLength(1));
+
+          windowManager.sync(
+            clips: [importClip(trimStart: const Duration(seconds: 10))],
             devicePixelRatio: 1,
           );
-          localManager['src'].value = [
-            StripThumbnail(path: borrowed.path, timestamp: Duration.zero),
-          ];
-          // The start half borrows the same source frame file, so both
-          // notifiers reference it — dispose must delete it once and
-          // swallow the second (already-gone) deleteSync.
-          localManager.seedFromSource(
-            sourceClipId: 'src',
-            targetClipId: 'start',
-            sourceRange: const DurationRange(
-              start: Duration.zero,
-              end: Duration(seconds: 1),
-            ),
-            currentSourcePath: '${tempDir.path}/src.mp4',
-          );
-          expect(
-            localManager['start'].value.single.path,
-            equals(borrowed.path),
-          );
 
-          expect(localManager.dispose, returnsNormally);
-          expect(borrowed.existsSync(), isFalse);
+          // The restart must not blank the strip — the already-extracted
+          // frame stays on screen until fresh batches cover its slot.
+          expect(requests, hasLength(2));
+          expect(windowManager['import'].value.single.path, equals(frame.path));
+          expect(frame.existsSync(), isTrue);
         },
       );
     });
@@ -1271,6 +1481,8 @@ DivineVideoClip _createFileClip({
   required String id,
   required String videoPath,
   int seconds = 3,
+  Duration trimStart = Duration.zero,
+  Duration trimEnd = Duration.zero,
 }) {
   return DivineVideoClip(
     id: id,
@@ -1279,5 +1491,18 @@ DivineVideoClip _createFileClip({
     recordedAt: DateTime(2025),
     originalAspectRatio: 9 / 16,
     targetAspectRatio: .vertical,
+    trimStart: trimStart,
+    trimEnd: trimEnd,
   );
+}
+
+/// One [StripThumbnailStreamFactory] invocation, so tests can assert what
+/// range the manager actually asked the extractor for.
+class _StripRequest {
+  const _StripRequest({required this.startOffset, required this.duration});
+
+  final Duration startOffset;
+  final Duration duration;
+
+  Duration get end => startOffset + duration;
 }

@@ -174,6 +174,33 @@ void main() {
       const ownerB =
           '2222222222222222222222222222222222222222222222222222222222222222';
 
+      test('deleteForOwner removes only that owner rows', () async {
+        await dao.enqueue(makeEvent(id: 'a1', ownerPubkey: ownerA));
+        await dao.enqueue(makeEvent(id: 'a2', ownerPubkey: ownerA));
+        await dao.enqueue(makeEvent(id: 'b1', ownerPubkey: ownerB));
+
+        final deleted = await dao.deleteForOwner(ownerA);
+
+        expect(deleted, 2);
+        expect(await dao.getById('a1'), isNull);
+        expect(await dao.getById('a2'), isNull);
+        expect(
+          await dao.getById('b1'),
+          isNotNull,
+          reason: 'another account queue must survive',
+        );
+      });
+
+      test('deleteForOwner leaves legacy null-owner rows alone', () async {
+        // Rows predating the owner column flush under whoever is active.
+        // Deleting them here would discard events no account claims.
+        await dao.enqueue(makeEvent(id: 'legacy'));
+        await dao.enqueue(makeEvent(id: 'a1', ownerPubkey: ownerA));
+
+        expect(await dao.deleteForOwner(ownerA), 1);
+        expect(await dao.getById('legacy'), isNotNull);
+      });
+
       test('enqueue round-trips ownerPubkey', () async {
         await dao.enqueue(makeEvent(id: 'a', ownerPubkey: ownerA));
         expect((await dao.getById('a'))!.ownerPubkey, equals(ownerA));

@@ -373,6 +373,22 @@ void main() {
       ).called(1);
     });
 
+    testWidgets('does not autocorrect a typed relay address (#8993)', (
+      tester,
+    ) async {
+      await pumpScreen(tester, nostrService: _MockNostrService());
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.relaySettingsAddCustomRelay));
+      await tester.pumpAndSettle();
+
+      // iOS autocorrect rewrote `ws://` to `we://` as soon as `:` was typed,
+      // and the address was then rejected as invalid.
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.autocorrect, isFalse);
+      expect(field.keyboardType, TextInputType.url);
+    });
+
     testWidgets('warns when added relay is saved but not connected', (
       tester,
     ) async {

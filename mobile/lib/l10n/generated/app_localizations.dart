@@ -7933,12 +7933,6 @@ abstract class AppLocalizations {
   /// **'Show in folder'**
   String get supportRevealLogsAction;
 
-  /// No description provided for @supportChatNotAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Support chat not available'**
-  String get supportChatNotAvailable;
-
   /// No description provided for @supportCouldNotOpenMessages.
   ///
   /// In en, this message translates to:
@@ -8862,30 +8856,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use Sound'**
   String get soundUseSound;
-
-  /// No description provided for @soundUntitled.
-  ///
-  /// In en, this message translates to:
-  /// **'Untitled sound'**
-  String get soundUntitled;
-
-  /// No description provided for @soundStopPreview.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop preview'**
-  String get soundStopPreview;
-
-  /// No description provided for @soundPreviewSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Preview {title}'**
-  String soundPreviewSemanticLabel(String title);
-
-  /// No description provided for @soundViewDetailsSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'View details for {title}'**
-  String soundViewDetailsSemanticLabel(String title);
 
   /// No description provided for @soundNoVideoCount.
   ///
@@ -15074,6 +15044,90 @@ abstract class AppLocalizations {
   /// **'Slide to adjust'**
   String get videoEditorTimelineSlideToAdjust;
 
+  /// Clip action-bar button that lifts the selected clip off the timeline and onto the canvas, where it can be moved and resized freely.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach'**
+  String get videoEditorDetachLabel;
+
+  /// No description provided for @videoEditorDetachSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach the selected clip from the timeline'**
+  String get videoEditorDetachSemanticLabel;
+
+  /// No description provided for @videoEditorDetachTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach clip'**
+  String get videoEditorDetachTitle;
+
+  /// No description provided for @videoEditorDetachDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The clip moves onto the canvas, where you can place it anywhere. What takes its place on the timeline?'**
+  String get videoEditorDetachDescription;
+
+  /// No description provided for @videoEditorDetachReplaceRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing'**
+  String get videoEditorDetachReplaceRemove;
+
+  /// No description provided for @videoEditorDetachReplaceRemoveDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Close the gap — everything after it starts earlier.'**
+  String get videoEditorDetachReplaceRemoveDetail;
+
+  /// No description provided for @videoEditorDetachReplaceColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get videoEditorDetachReplaceColor;
+
+  /// No description provided for @videoEditorDetachReplaceColorDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a solid color for as long as the clip ran.'**
+  String get videoEditorDetachReplaceColorDetail;
+
+  /// No description provided for @videoEditorDetachReplaceImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get videoEditorDetachReplaceImage;
+
+  /// No description provided for @videoEditorDetachReplaceImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Shoot a still to hold in its place.'**
+  String get videoEditorDetachReplaceImageDetail;
+
+  /// Name shown on the timeline's layer strip for a clip that was detached onto the canvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Detached clip'**
+  String get videoEditorDetachedClipLabel;
+
+  /// Shown under the progress spinner while the still that replaces a detached clip is being rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Detaching your clip…'**
+  String get videoEditorDetachProgressLabel;
+
+  /// No description provided for @videoEditorDetachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t detach that clip. Your timeline is unchanged.'**
+  String get videoEditorDetachFailed;
+
+  /// No description provided for @videoEditorDetachImagePickFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load that photo.'**
+  String get videoEditorDetachImagePickFailed;
+
   /// No description provided for @videoEditorChromaKeyLabel.
   ///
   /// In en, this message translates to:
@@ -15200,10 +15254,16 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
-  /// No description provided for @videoEditorChromaKeyDetectFailed.
+  /// Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t find a screen. It has to reach the edges of the frame — pick the color by hand instead.'**
+  /// **'Any plain surface behind you works — a wall is fine — as long as it fills the frame.'**
+  String get videoEditorChromaKeySurfaceHint;
+
+  /// Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.'**
   String get videoEditorChromaKeyDetectFailed;
 
   /// No description provided for @videoEditorChromaKeyPickClipTitle.
@@ -15703,6 +15763,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Untitled sound'**
   String get videoEditorAudioUntitledSound;
+
+  /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio file is gone from this device'**
+  String get videoEditorAudioFileMissing;
 
   /// No description provided for @videoEditorAudioUntitled.
   ///
@@ -17172,11 +17238,11 @@ abstract class AppLocalizations {
   /// **'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealUnder13Body;
 
-  /// No description provided for @minorAccountReviewOpenSupportCenter.
+  /// No description provided for @appealOpenSupportCenter.
   ///
   /// In en, this message translates to:
   /// **'Open Support Center'**
-  String get minorAccountReviewOpenSupportCenter;
+  String get appealOpenSupportCenter;
 
   /// No description provided for @minorAccountReviewOpenModerationMessage.
   ///
@@ -19146,6 +19212,12 @@ abstract class AppLocalizations {
   /// **'Remove saved sound'**
   String get savedSoundRemoveAction;
 
+  /// Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
+  ///
+  /// In en, this message translates to:
+  /// **'This sound\'s audio file is gone from this device, so it can\'t play.'**
+  String get savedSoundFileMissing;
+
   /// No description provided for @savedSoundClearHashtagFilter.
   ///
   /// In en, this message translates to:
@@ -20363,12 +20435,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.'**
   String get accountStatusAppealBody;
-
-  /// Button opening the in-app support center.
-  ///
-  /// In en, this message translates to:
-  /// **'Contact support'**
-  String get accountStatusContactSupport;
 
   /// Button opening the account portability page.
   ///

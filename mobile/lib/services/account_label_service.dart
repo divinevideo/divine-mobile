@@ -26,7 +26,9 @@ class AccountLabelService {
   final NostrClient _nostrClient;
 
   /// SharedPreferences key for the account content labels.
-  static const String _prefsKey = 'account_content_label';
+  /// Public so `UserDataCleanupService` can clear it by reference.
+  /// A copied literal cannot detect that this key was renamed (#8314).
+  static const String accountLabelStorageKey = 'account_content_label';
 
   final Completer<void> _initCompleter = Completer<void>();
 
@@ -56,7 +58,7 @@ class AccountLabelService {
   Future<void> initialize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final value = prefs.getString(_prefsKey);
+      final value = prefs.getString(accountLabelStorageKey);
       _accountLabels = ContentLabel.fromCsv(value);
     } catch (e) {
       Log.error(
@@ -81,9 +83,9 @@ class AccountLabelService {
       final prefs = await SharedPreferences.getInstance();
       final csv = ContentLabel.toCsv(labels);
       if (csv != null) {
-        await prefs.setString(_prefsKey, csv);
+        await prefs.setString(accountLabelStorageKey, csv);
       } else {
-        await prefs.remove(_prefsKey);
+        await prefs.remove(accountLabelStorageKey);
       }
     } catch (e) {
       Log.error(

@@ -2910,7 +2910,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "Support chat not available",
   "supportCouldNotOpenMessages": "Could not open support messages",
   "supportCouldNotOpenPage": "Could not open {pageName}",
   "@supportCouldNotOpenPage": {
@@ -3210,24 +3209,6 @@
   "soundPreview": "Preview",
   "soundStop": "Stop",
   "soundUseSound": "Use Sound",
-  "soundUntitled": "Untitled sound",
-  "soundStopPreview": "Stop preview",
-  "soundPreviewSemanticLabel": "Preview {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "View details for {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "No videos yet",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
@@ -5760,6 +5741,29 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "Slide to adjust",
+  "videoEditorDetachLabel": "Detach",
+  "@videoEditorDetachLabel": {
+    "description": "Clip action-bar button that lifts the selected clip off the timeline and onto the canvas, where it can be moved and resized freely."
+  },
+  "videoEditorDetachSemanticLabel": "Detach the selected clip from the timeline",
+  "videoEditorDetachTitle": "Detach clip",
+  "videoEditorDetachDescription": "The clip moves onto the canvas, where you can place it anywhere. What takes its place on the timeline?",
+  "videoEditorDetachReplaceRemove": "Nothing",
+  "videoEditorDetachReplaceRemoveDetail": "Close the gap — everything after it starts earlier.",
+  "videoEditorDetachReplaceColor": "Color",
+  "videoEditorDetachReplaceColorDetail": "Hold a solid color for as long as the clip ran.",
+  "videoEditorDetachReplaceImage": "Photo",
+  "videoEditorDetachReplaceImageDetail": "Shoot a still to hold in its place.",
+  "videoEditorDetachedClipLabel": "Detached clip",
+  "@videoEditorDetachedClipLabel": {
+    "description": "Name shown on the timeline's layer strip for a clip that was detached onto the canvas."
+  },
+  "videoEditorDetachProgressLabel": "Detaching your clip…",
+  "@videoEditorDetachProgressLabel": {
+    "description": "Shown under the progress spinner while the still that replaces a detached clip is being rendered."
+  },
+  "videoEditorDetachFailed": "Couldn't detach that clip. Your timeline is unchanged.",
+  "videoEditorDetachImagePickFailed": "Couldn't load that photo.",
   "videoEditorChromaKeyLabel": "Green screen",
   "videoEditorChromaKeyTitle": "Green screen",
   "videoEditorChromaKeySemanticLabel": "Set up the green screen for this clip",
@@ -5784,7 +5788,14 @@
   "videoEditorChromaKeyBackgroundImage": "Image",
   "videoEditorChromaKeyBackgroundVideo": "Clip",
   "videoEditorChromaKeyTransparentHint": "Video can't hold transparency, so this exports as black.",
-  "videoEditorChromaKeyDetectFailed": "Couldn't find a screen. It has to reach the edges of the frame — pick the color by hand instead.",
+  "videoEditorChromaKeySurfaceHint": "Any plain surface behind you works — a wall is fine — as long as it fills the frame.",
+  "@videoEditorChromaKeySurfaceHint": {
+    "description": "Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register."
+  },
+  "videoEditorChromaKeyDetectFailed": "Couldn't find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.",
+  "@videoEditorChromaKeyDetectFailed": {
+    "description": "Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background."
+  },
   "videoEditorChromaKeyPickClipTitle": "Pick a clip",
   "videoEditorChromaKeyNoLibraryClips": "Your library is empty. Save a clip first, then use it as a background.",
   "videoEditorChromaKeyImagePickFailed": "Couldn't load that image.",
@@ -6069,6 +6080,10 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",
   "videoEditorAudioUntitledSound": "Untitled sound",
+  "videoEditorAudioFileMissing": "Audio file is gone from this device",
+  "@videoEditorAudioFileMissing": {
+    "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
+  },
   "videoEditorAudioUntitled": "Untitled",
   "videoEditorAudioAddAudio": "Add audio",
   "videoEditorAudioNoSoundsAvailableTitle": "No sounds available",
@@ -6584,7 +6599,7 @@
   "@minorAccountReviewAppealTeenBody": {"description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."},
   "minorAccountReviewAppealUnder13Body": "Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
   "@minorAccountReviewAppealUnder13Body": {"description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."},
-  "minorAccountReviewOpenSupportCenter": "Open Support Center",
+  "appealOpenSupportCenter": "Open Support Center",
   "minorAccountReviewOpenModerationMessage": "Open Moderation Message",
   "minorAccountReviewOpenReviewPage": "Open review page",
   "minorAccountReviewCheckAgain": "Check Again",
@@ -7520,6 +7535,10 @@
   "savedSoundPreviewAction": "Preview sound",
   "savedSoundEditAction": "Edit sound details",
   "savedSoundRemoveAction": "Remove saved sound",
+  "savedSoundFileMissing": "This sound's audio file is gone from this device, so it can't play.",
+  "@savedSoundFileMissing": {
+    "description": "Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
+  },
   "savedSoundClearHashtagFilter": "Clear hashtag filter",
   "soundAllowRemix": "Allow others to remix this sound",
   "soundReuseUnavailable": "This sound can't be remixed right now.",
@@ -8331,8 +8350,6 @@
   "@accountStatusAppealHeading": {"description": "Heading for the appeal section."},
   "accountStatusAppealBody": "Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.",
   "@accountStatusAppealBody": {"description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."},
-  "accountStatusContactSupport": "Contact support",
-  "@accountStatusContactSupport": {"description": "Button opening the in-app support center."},
   "accountStatusMoveAccount": "Move your account",
   "@accountStatusMoveAccount": {"description": "Button opening the account portability page."},
   "accountStatusRetry": "Try again",

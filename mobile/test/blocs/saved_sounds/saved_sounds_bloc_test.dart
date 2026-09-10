@@ -2,6 +2,7 @@
 // ABOUTME: Covers durable saves, optional enrichment, edits, search, and removal.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:creator_sync/creator_sync.dart';
@@ -76,15 +77,18 @@ void main() {
   late _ControlledProbe probe;
   late SavedSoundsBloc bloc;
 
-  SavedSoundsBloc buildBloc({SoundSyncRepository? syncRepository}) =>
-      SavedSoundsBloc(
-        service: service,
-        mediaProbe: probe,
-        syncRepositoryStream: syncRepository == null
-            ? const Stream.empty()
-            : Stream.value(syncRepository),
-        now: () => DateTime.utc(2026, 7, 31),
-      );
+  SavedSoundsBloc buildBloc({
+    SoundSyncRepository? syncRepository,
+    bool Function(String path)? localFileExists,
+  }) => SavedSoundsBloc(
+    service: service,
+    mediaProbe: probe,
+    syncRepositoryStream: syncRepository == null
+        ? const Stream.empty()
+        : Stream.value(syncRepository),
+    now: () => DateTime.utc(2026, 7, 31),
+    localFileExists: localFileExists ?? (_) => true,
+  );
 
   /// Builds a synced bloc and waits for [syncRepository] to be applied.
   ///
@@ -273,6 +277,155 @@ void main() {
       hasLength(1),
       reason: 'a delete that did not persist must not clear the row',
     );
+  });
+
+  group('missing local audio files', () {
+    SavedSound localSound(String id, String path) => SavedSound(
+      audio: AudioEvent(
+        id: id,
+        pubkey: 'creator',
+        createdAt: 1,
+        title: 'Imported $id',
+        url: path,
+      ),
+      savedAt: DateTime.utc(2026, 7, 31),
+      personalHashtags: const [],
+      catalogTags: const [],
+      waveformSamples: const [],
+    );
+
+    test('flags a saved sound whose file is gone from the device', () async {
+      await service.saveSavedSound(localSound('gone', '/imports/gone.m4a'));
+      await service.saveSavedSound(localSound('here', '/imports/here.m4a'));
+
+      bloc = buildBloc(localFileExists: (path) => path.endsWith('here.m4a'));
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+
+      expect(
+        bloc.state.sounds.map((s) => s.audio.id),
+        containsAll(<String>['gone', 'here']),
+        reason:
+            'A missing file must not drop the entry — the label, hashtags '
+            'and source context the user wrote are still theirs (#8023).',
+      );
+      expect(bloc.state.missingFileSoundIds, equals({'gone'}));
+      expect(
+        bloc.state.isMissingFile(
+          bloc.state.sounds.firstWhere((s) => s.audio.id == 'here'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('never flags a sound the library does not own the file for', () async {
+      await service.saveSavedSound(
+        SavedSound(
+          audio: _sound(id: 'remote'),
+          savedAt: DateTime.utc(2026, 7, 31),
+          personalHashtags: const [],
+          catalogTags: const [],
+          waveformSamples: const [],
+        ),
+      );
+
+      bloc = buildBloc(
+        localFileExists: (_) =>
+            fail('a network sound must not be probed on disk'),
+      );
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+
+      expect(bloc.state.sounds, hasLength(1));
+      expect(bloc.state.missingFileSoundIds, isEmpty);
+    });
+
+    test('rescans when saving a sound reloads the library', () async {
+      await service.saveSavedSound(localSound('gone', '/imports/gone.m4a'));
+
+      // Present on load, deleted before the save reloads the library.
+      var goneExists = true;
+      bloc = buildBloc(
+        localFileExists: (path) => goneExists || !path.endsWith('gone.m4a'),
+      );
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+      expect(bloc.state.missingFileSoundIds, isEmpty);
+
+      goneExists = false;
+      final completer = Completer<SavedSoundSaveResult>();
+      bloc.add(
+        SavedSoundSaveRequested(
+          sound: _sound(id: 'new'),
+          completer: completer,
+        ),
+      );
+      await completer.future;
+      await pumpEventQueue();
+
+      expect(
+        bloc.state.sounds.map((s) => s.audio.id),
+        containsAll(<String>['gone', 'new']),
+      );
+      expect(
+        bloc.state.missingFileSoundIds,
+        equals({'gone'}),
+        reason:
+            'A set computed at load time describes a library that no longer '
+            'exists once saving reloads it.',
+      );
+    });
+
+    test('forgets a removed sound', () async {
+      await service.saveSavedSound(localSound('gone', '/imports/gone.m4a'));
+
+      bloc = buildBloc(localFileExists: (_) => false);
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+      expect(bloc.state.missingFileSoundIds, equals({'gone'}));
+
+      final completer = Completer<void>();
+      bloc.add(
+        SavedSoundRemoveRequested('gone', completer: completer),
+      );
+      await completer.future;
+      await pumpEventQueue();
+
+      expect(bloc.state.sounds, isEmpty);
+      expect(bloc.state.missingFileSoundIds, isEmpty);
+    });
+
+    test('treats an unreadable path the same as an absent file', () async {
+      await service.saveSavedSound(localSound('broken', '/imports/broken.m4a'));
+
+      bloc = buildBloc(
+        localFileExists: (_) => throw const FileSystemException('denied'),
+      );
+      addTearDown(bloc.close);
+
+      bloc.add(const SavedSoundsLoadRequested());
+      await bloc.stream.firstWhere(
+        (state) => state.status == SavedSoundsStatus.loaded,
+      );
+
+      expect(bloc.state.missingFileSoundIds, equals({'broken'}));
+    });
   });
 
   group('sync triggers', () {

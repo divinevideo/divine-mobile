@@ -134,6 +134,47 @@ every install actually has.
 
 See #6921 for the tracked `db_client` repair-to-migration cleanup.
 
+## Account-Boundary Cleanup
+
+Any store holding one account's data must be cleared when a different account
+signs in. Two rules, both learned the expensive way (#8314 / #6985).
+
+**Name the key by reference, never by copy.** `UserDataCleanupService`
+references the constant each writing service declares. A copied literal has no
+referent, so when a service renames or deletes its key nothing notices — that
+is how eleven entries in the sweep became silent no-ops and how the moderation
+leak survived four days after the list was written.
+
+**Moving a store between layers moves its cleanup too.** `seen_videos`, the
+personal-event cache and the push-notification preferences each migrated from
+SharedPreferences to Drift or Hive and left a `clear` method behind with no
+caller. The sweep kept faithfully clearing the pre-migration keys while the
+live store accumulated the departing account's data.
+
+Classify every new preference key as one of:
+
+| Category | Meaning |
+|---|---|
+| user-scoped | referenced from `userSpecificKeys`; cleared on identity change |
+| device-scoped | declared in a `deviceScopedPrefsKeys` list beside the constant |
+| pubkey-scoped | the key embeds the pubkey, so it cannot leak by construction |
+| prefix-swept | matched by `identityChangePrefixes` |
+| device gate for user data | a migration flag; cleared **with** the data it gates, never alone |
+| scoping key | other key names derive from it; **never swept on its own** |
+
+The last two are not tidiness. Clearing `content_filter_prefs` without
+`content_filter_migrated` gives the next account an empty map instead of
+defaults; sweeping `blocklist_active_pubkey` unscopes every other key in
+`content_blocklist_repository`.
+
+Distinguish a **leak** (the next account inherits data) from **incomplete
+deletion** (a removed account's rows linger). The `Pending*` tables carry owner
+columns and are filtered at flush, so they never leaked — they are cleaned on
+`deleteAccountData`, scoped by owner. An unscoped delete there would destroy a
+still-signed-in account's queued work.
+
+Enforced by `check_prefs_key_classification.sh`; see AGENTS.md.
+
 ## Review Checklist
 
 Before approving a data/storage change, confirm:

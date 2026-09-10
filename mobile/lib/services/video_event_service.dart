@@ -22,7 +22,7 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:likes_repository/likes_repository.dart';
-import 'package:models/models.dart' hide LogCategory, NIP71VideoKinds;
+import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/event.dart';
@@ -4026,8 +4026,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
     // Create filter without restrictive date constraints
     final filter = Filter(
-      kinds:
-          NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
+      kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
       authors: authors, // Use same authors as main subscription if available
       until: until, // Only use 'until' if we have existing events
       limit: limit,

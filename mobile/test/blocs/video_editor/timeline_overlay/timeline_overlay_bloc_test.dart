@@ -8,11 +8,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 TimelineOverlayItem _item({
   required String id,
@@ -123,6 +127,53 @@ void main() {
             ],
           ),
         ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'caps a detached clip at its own length and leaves other layers '
+        'running to the end',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: [
+              TextLayer(id: 'text-1', text: 'Plain text'),
+              WidgetLayer(
+                id: 'detached-1',
+                widget: const SizedBox.shrink(),
+                meta: DetachedClipLayerData(
+                  layerId: 'detached-1',
+                  clip: DivineVideoClip(
+                    id: 'clip-1',
+                    video: EditorVideo.file('/docs/clip-1.mp4'),
+                    duration: const Duration(seconds: 4),
+                    recordedAt: DateTime(2026),
+                    targetAspectRatio: model.AspectRatio.vertical,
+                    originalAspectRatio: 9 / 16,
+                  ),
+                ).toMeta(),
+              ),
+            ],
+            filters: const <FilterState>[],
+            audioTracks: const [],
+            totalVideoDuration: const Duration(seconds: 12),
+          ),
+        ),
+        verify: (bloc) {
+          final detached = bloc.state.items.firstWhere(
+            (i) => i.id == 'detached-1',
+          );
+          final text = bloc.state.items.firstWhere((i) => i.id == 'text-1');
+
+          // The clip has 4 s of footage; a longer bar would promise frames the
+          // file does not have, and the export stops drawing it there anyway.
+          expect(detached.maxDuration, const Duration(seconds: 4));
+          expect(detached.endTime, const Duration(seconds: 4));
+
+          // A drawing can be held for as long as the user likes, so it still
+          // runs to the end of the composition and stays unbounded.
+          expect(text.maxDuration, isNull);
+          expect(text.endTime, const Duration(seconds: 12));
+        },
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(

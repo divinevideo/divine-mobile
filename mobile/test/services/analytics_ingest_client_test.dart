@@ -71,12 +71,14 @@ void main() {
     ).thenAnswer((_) async => token);
   }
 
-  AnalyticsIngestClient buildClient(http.Client client) =>
-      AnalyticsIngestClient(
-        httpClient: client,
-        nip98AuthService: mockNip98,
-        apiBaseUrl: () => 'https://api.divine.video',
-      );
+  AnalyticsIngestClient buildClient(
+    http.Client client, {
+    String apiBaseUrl = 'https://api.divine.video',
+  }) => AnalyticsIngestClient(
+    httpClient: client,
+    nip98AuthService: mockNip98,
+    apiBaseUrl: () => apiBaseUrl,
+  );
 
   group('publishBatch', () {
     test('signed batches put the subject outside version-two events', () async {
@@ -204,5 +206,50 @@ void main() {
       expect(result, isA<AnalyticsIngestTransientFailure>());
       expect(requested, isFalse);
     });
+  });
+
+  group('NIP-98 signed URL equals the requested URL', () {
+    // The `u` tag is signed from the composed string while the POST goes to a
+    // Uri built from the same base. NIP-98 binds the two and the ingest API
+    // compares them as raw strings, so a base that Uri.parse would normalize
+    // makes the signed string and the request disagree, and every signed batch
+    // 401s while anonymous batches to the same host keep succeeding.
+    for (final base in const [
+      'https://API.divine.video',
+      'HTTPS://api.divine.video',
+      'https://api.divine.video:443',
+      'https://api.divine.video/.',
+      'https://api.divine.video/',
+    ]) {
+      test('for a base of $base', () async {
+        stubToken(buildToken());
+        http.Request? captured;
+        final client = buildClient(
+          MockClient((request) async {
+            captured = request;
+            return http.Response('{"accepted":true}', 200);
+          }),
+          apiBaseUrl: base,
+        );
+
+        await client.publishBatch([event], subjectPubkey: testPubkey);
+
+        final signed =
+            verify(
+                  () => mockNip98.createAuthToken(
+                    url: captureAny(named: 'url'),
+                    method: any(named: 'method'),
+                    payload: any(named: 'payload'),
+                  ),
+                ).captured.single
+                as String;
+
+        expect(signed, equals(captured!.url.toString()));
+        // Pins the value as well as the coupling: both operands above come
+        // from the client, so alone they would still agree if the signed URL
+        // and the request went wrong together.
+        expect(signed, equals('https://api.divine.video/api/analytics/events'));
+      });
+    }
   });
 }

@@ -145,6 +145,8 @@ void main() {
         // ── Phase 2: Sign out A, login as B ──
         logPhase('-- Phase 2: Sign out A, login B --');
 
+        // This reproduction intentionally overlaps sign-out with the next
+        // login to exercise the original account-swap race.
         // ignore: unawaited_futures
         authService.signOut();
 
@@ -327,6 +329,8 @@ void main() {
         // ── Phase 2: Sign out A, login B ──
         logPhase('-- Phase 2: Sign out A, login B --');
 
+        // This reproduction intentionally overlaps sign-out with the next
+        // login to exercise the original account-swap race.
         // ignore: unawaited_futures
         authService.signOut();
 

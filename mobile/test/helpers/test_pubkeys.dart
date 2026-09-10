@@ -17,3 +17,14 @@ const syntheticTestPubkey =
 /// tests that need two different fixture identities (e.g. "me" vs "not me").
 const syntheticOtherTestPubkey =
     'cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe';
+
+/// The npub encoding of [syntheticTestPubkey], written out as a literal.
+///
+/// Tests that assert on a route or identifier built from a pubkey compare
+/// against this constant instead of re-running `NostrKeyUtils.encodePubKey`.
+/// Recomputing the encoder on both sides of an `expect` is `f(x) == f(x)`: it
+/// passes for any encoder, including one that returns the raw hex. A literal
+/// makes the assertion independent, so an encoder regression fails the test
+/// rather than moving the expectation with it.
+const syntheticTestNpub =
+    'npub1m6kmam774klwlh4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhslezuz0';

@@ -24,7 +24,7 @@ jobs:
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
       working_directory: "mobile/packages/divine_video_player"
-      flutter_version: "3.44.9"
+      flutter_version: "3.47.2"
 
   android-unit-tests:
     name: Android Unit Tests
@@ -42,7 +42,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: Setup Gradle

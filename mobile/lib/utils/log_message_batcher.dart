@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:collection';
+
 import 'package:unified_logger/unified_logger.dart';
 
 /// Batches similar log messages and outputs summaries instead of individual messages

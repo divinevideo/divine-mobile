@@ -24,8 +24,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// `AuthService` instance, so the sign-in's global-session mutation lands on
 /// the new instance, never the live one. That is what lets the in-place swap
 /// skip the side-effect-free `activate()` refactor (design §8.2 correction).
-typedef AccountSignIn =
-    Future<void> Function(ProviderContainer container, KnownAccount account);
+typedef AccountSignIn = Future<void> Function(
+  ProviderContainer container,
+  KnownAccount account,
+);
 
 const _accountSwitchPushCleanupTimeout = Duration(seconds: 15);
 

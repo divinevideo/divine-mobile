@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4518,9 +4519,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supportRevealLogsAction => 'በአቃፊ ውስጥ አሳይ';
 
   @override
-  String get supportChatNotAvailable => 'የድጋፍ ውይይት አይገኝም';
-
-  @override
   String get supportCouldNotOpenMessages => 'የድጋፍ መልዕክቶችን መክፈት አልተቻለም';
 
   @override
@@ -5057,22 +5055,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundUseSound => 'ድምጽን ተጠቀም';
-
-  @override
-  String get soundUntitled => 'ርዕስ የሌለው ድምፅ';
-
-  @override
-  String get soundStopPreview => 'ቅድመ እይታን አቁም';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$titleን ቀድመው ያጫውቱ';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'የ$title ዝርዝሮችን ይመልከቱ';
-  }
 
   @override
   String get soundNoVideoCount => 'እስካሁን ምንም ቪዲዮዎች የሉም';
@@ -8640,6 +8622,52 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'ለማስተካከል ያንሸራትቱ';
 
   @override
+  String get videoEditorDetachLabel => 'ነጥል';
+
+  @override
+  String get videoEditorDetachSemanticLabel => 'የተመረጠውን ቅንጥብ ከጊዜ መስመሩ ይንጠሉ';
+
+  @override
+  String get videoEditorDetachTitle => 'ቅንጥብ መንጠል';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'ቅንጥቡ ወደ ሸራው ይሄዳል፣ እዚያም የፈለጉበት ቦታ ማስቀመጥ ይችላሉ። በጊዜ መስመሩ ላይ ቦታውን ማን ይይዘዋል?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'ምንም';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'ክፍተቱን ይዝጉ – ከዚያ በኋላ ያለው ሁሉ ቀድሞ ይጀምራል።';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'ቀለም';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'ቅንጥቡ በሄደበት ያህል ጊዜ አንድ ሙሉ ቀለም ይይዛል።';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'ፎቶ';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => 'ቦታውን የሚይዝ ፎቶ ያንሱ።';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'የተነጠለ ቅንጥብ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'ቅንጥብዎ እየተለየ ነው…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'ያንን ቅንጥብ መንጠል አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'ያንን ፎቶ መጫን አልተቻለም።';
+
+  @override
   String get videoEditorChromaKeyLabel => 'አረንጓዴ ስክሪን';
 
   @override
@@ -8704,8 +8732,12 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'ስክሪን አልተገኘም። እስከ ፍሬሙ ጠርዝ መድረስ አለበት — ካልሆነ ቀለሙን በእጅ ምረጥ።';
+      'ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';
@@ -8987,6 +9019,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'ርዕስ አልባ ድምጽ';
+
+  @override
+  String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override
   String get videoEditorAudioUntitled => 'ርዕስ አልባ';
@@ -9887,7 +9922,7 @@ class AppLocalizationsAm extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'የድጋፍ ማዕከልን ክፈት';
+  String get appealOpenSupportCenter => 'የድጋፍ ማዕከልን ክፈት';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'የቁጥጥር መልእክቱን ክፈት';
@@ -11020,6 +11055,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get savedSoundRemoveAction => 'የተቀመጠውን ድምፅ አስወግድ';
 
   @override
+  String get savedSoundFileMissing =>
+      'የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም።';
+
+  @override
   String get savedSoundClearHashtagFilter => 'የሃሽታግ ማጣሪያን አጽዳ';
 
   @override
@@ -11789,9 +11828,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

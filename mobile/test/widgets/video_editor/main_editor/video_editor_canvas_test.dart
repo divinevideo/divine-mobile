@@ -15,6 +15,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show ProVideoController;
@@ -50,6 +51,7 @@ void main() {
               bodySizeNotifier: bodySizeNotifier,
               zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
               playTimeNotifier: ValueNotifier(Duration.zero),
+              playheadAdvancingNotifier: ValueNotifier<bool>(false),
               fromLibrary: false,
               child: const Scaffold(body: VideoEditorCanvas()),
             ),
@@ -226,6 +228,58 @@ void main() {
               ),
             ],
           ),
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('VideoEditorCanvas.shouldUseLegacySurface', () {
+    test('keeps an ordinary editor session on the default surface', () {
+      expect(
+        VideoEditorCanvas.shouldUseLegacySurface(
+          alreadyEnabled: false,
+          editorStateHistory: const {},
+        ),
+        isFalse,
+      );
+    });
+
+    test('starts a restored detached-clip draft on the legacy surface', () {
+      final meta = DetachedClipLayerData(
+        clip: _createClip(id: 'detached'),
+        layerId: 'layer',
+      ).toMeta();
+
+      expect(
+        VideoEditorCanvas.shouldUseLegacySurface(
+          alreadyEnabled: false,
+          editorStateHistory: {
+            'history': [meta],
+          },
+        ),
+        isTrue,
+      );
+    });
+
+    test('upgrades on detach and remains sticky afterward', () {
+      final detach = ClipDetachSuccess(
+        previousClips: [_createClip(id: 'detached')],
+        detachedClip: _createClip(id: 'detached'),
+      );
+
+      expect(
+        VideoEditorCanvas.shouldUseLegacySurface(
+          alreadyEnabled: false,
+          editorStateHistory: const {},
+          detachResult: detach,
+        ),
+        isTrue,
+      );
+      expect(
+        VideoEditorCanvas.shouldUseLegacySurface(
+          alreadyEnabled: true,
+          editorStateHistory: const {},
         ),
         isTrue,
       );

@@ -5,9 +5,11 @@ import 'dart:async';
 
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockRelayPool extends Mock implements RelayPool {}
 
@@ -102,6 +104,77 @@ void main() {
   });
 
   group('RelayManager', () {
+    group('diagnostics', () {
+      test(
+        'reports a throwing connection without exporting its message',
+        () async {
+          final diagnostics = <RelayDiagnostic>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenThrow(FormatException('private relay failure detail'));
+          final diagnosticManager = RelayManager(
+            config: config,
+            relayPool: mockRelayPool,
+            diagnosticsSink: diagnostics.add,
+          );
+
+          await diagnosticManager.initialize();
+
+          final failure = diagnostics.singleWhere(
+            (entry) => entry.level == RelayDiagnosticLevel.error,
+          );
+          expect(failure.relayUrl, testDefaultRelayUrl);
+          expect(failure.message, 'Relay connection threw');
+          expect(
+            failure.message,
+            isNot(contains('private relay failure detail')),
+          );
+          expect(failure.error, isA<FormatException>());
+        },
+      );
+
+      test('pool chatter cannot suppress a per-relay failure', () async {
+        final capture = LogCaptureService();
+        await capture.clearAllLogs();
+        addTearDown(capture.clearAllLogs);
+        final adapter = RelayDiagnosticsAdapter(maxEventsPerWindow: 1);
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) async => false);
+        final diagnosticManager = RelayManager(
+          config: config,
+          relayPool: mockRelayPool,
+          diagnosticsSink: adapter.call,
+        );
+
+        await diagnosticManager.initialize();
+
+        final entries = capture.getRecentLogs();
+        expect(
+          entries.where(
+            (entry) =>
+                entry.message.contains(testDefaultRelayUrl) &&
+                entry.message.contains('Connect failed'),
+          ),
+          hasLength(1),
+        );
+        expect(
+          entries
+              .singleWhere(
+                (entry) => entry.message.contains('Connect failed'),
+              )
+              .level,
+          LogLevel.warning,
+        );
+      });
+    });
+
     group('constructor and properties', () {
       test('defaultRelayUrl returns configured default relay', () {
         expect(manager.defaultRelayUrl, equals(testDefaultRelayUrl));

@@ -32,8 +32,8 @@ void main() {
       final curatedListFeedSource = File(
         'lib/screens/curated_list_feed_screen.dart',
       ).readAsStringSync();
-      final soundTileSource = File(
-        'lib/widgets/sound_tile.dart',
+      final audioListTileSource = File(
+        'lib/widgets/video_editor/audio_editor/audio_list_tile.dart',
       ).readAsStringSync();
       final searchAppBarSource = File(
         'lib/screens/search_results/widgets/search_results_app_bar.dart',
@@ -50,9 +50,9 @@ void main() {
       expect(curatedListFeedSource, isNot(contains("'video' : 'videos'")));
       expect(curatedListFeedSource, contains('context.l10n.listVideoCount'));
 
-      expect(soundTileSource, isNot(contains("'1 video'")));
-      expect(soundTileSource, isNot(contains(r"'$videoCount videos'")));
-      expect(soundTileSource, contains('context.l10n.soundVideoCount'));
+      expect(audioListTileSource, isNot(contains("'1 video'")));
+      expect(audioListTileSource, isNot(contains(r"'$videoCount videos'")));
+      expect(audioListTileSource, contains('context.l10n.soundVideoCount'));
 
       expect(searchAppBarSource, isNot(contains("hintText: 'Search...'")));
       expect(searchAppBarSource, contains('context.l10n.exploreSearchHint'));

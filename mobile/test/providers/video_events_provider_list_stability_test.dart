@@ -11,7 +11,6 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
@@ -73,7 +72,6 @@ void main() {
           ), // Start with gates closed
           isDiscoveryTabActiveProvider.overrideWith((ref) => false),
           isExploreTabActiveProvider.overrideWith((ref) => false),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
     });

@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
@@ -51,6 +51,33 @@ class ProfileScreenRouter extends ConsumerStatefulWidget {
   /// Build path for feed mode with specific npub and index.
   static String pathForIndex(String npub, int index) =>
       RoutePaths.profileForIndex(npub, index);
+
+  /// Resolves the concrete destination for the `/profile/me` placeholder.
+  ///
+  /// A null [videoIndex] means grid mode and resolves to [pathForNpub]; any
+  /// non-null index means fullscreen feed mode at that video and resolves to
+  /// [pathForIndex]. Index 0 is the first video of the feed, not the grid.
+  ///
+  /// [isAuthenticated] and [currentPublicKeyHex] come from two independent
+  /// AuthService fields and can disagree: on a cold start with a restored
+  /// identity the pubkey is already known while the auth state is still
+  /// `checking`. Either one being absent sends the caller to the home feed,
+  /// so a signed-out session never lands on a profile.
+  @visibleForTesting
+  static String meProfileRedirectPath({
+    required bool isAuthenticated,
+    required String? currentPublicKeyHex,
+    required int? videoIndex,
+  }) {
+    if (!isAuthenticated || currentPublicKeyHex == null) {
+      return VideoFeedPage.pathForIndex(0);
+    }
+
+    final currentUserNpub = NostrKeyUtils.encodePubKey(currentPublicKeyHex);
+    return videoIndex == null
+        ? pathForNpub(currentUserNpub)
+        : pathForIndex(currentUserNpub, videoIndex);
+  }
 
   const ProfileScreenRouter({super.key});
 
@@ -394,31 +421,18 @@ class _MeProfileRedirect extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
-
-    if (!authService.isAuthenticated ||
-        authService.currentPublicKeyHex == null) {
-      // Not authenticated - redirect to home
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go(VideoFeedPage.pathForIndex(0));
-      });
-      return const Center(child: DivineCircularProgressIndicator());
-    }
-
-    // Get current user's npub and redirect (preserve grid/feed mode from context)
-    final currentUserNpub = NostrKeyUtils.encodePubKey(
-      authService.currentPublicKeyHex!,
+    final redirectPath = ProfileScreenRouter.meProfileRedirectPath(
+      isAuthenticated: authService.isAuthenticated,
+      currentPublicKeyHex: authService.currentPublicKeyHex,
+      videoIndex: videoIndex,
     );
 
-    // Redirect to actual user profile using GoRouter explicitly
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Use direct GoRouter calls to properly handle null videoIndex (grid mode)
-      if (videoIndex != null) {
-        context.go(
-          ProfileScreenRouter.pathForIndex(currentUserNpub, videoIndex!),
-        );
-      } else {
-        context.go(ProfileScreenRouter.pathForNpub(currentUserNpub));
-      }
+      // The enclosing route body returns SizedBox.shrink() whenever the
+      // location is briefly non-profile during a transition, so this widget
+      // can be unmounted before the frame ends.
+      if (!context.mounted) return;
+      context.go(redirectPath);
     });
 
     // Show loading while redirecting

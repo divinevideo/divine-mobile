@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4764,9 +4765,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get supportRevealLogsAction => 'Arată în dosar';
 
   @override
-  String get supportChatNotAvailable => 'Chatul de asistență nu e disponibil';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'N-am putut deschide mesajele de asistență';
 
@@ -5333,22 +5331,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Folosește sunetul';
-
-  @override
-  String get soundUntitled => 'Sunet fără titlu';
-
-  @override
-  String get soundStopPreview => 'Oprește previzualizarea';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Previzualizează $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Vezi detalii pentru $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Încă niciun videoclip';
@@ -9048,6 +9030,55 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Glisează pentru ajustare';
 
   @override
+  String get videoEditorDetachLabel => 'Desprinde';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Desprinde clipul selectat de pe cronologie';
+
+  @override
+  String get videoEditorDetachTitle => 'Desprinde clipul';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Clipul trece pe pânză, unde îl poți așeza oriunde. Ce îi ia locul pe cronologie?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Nimic';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Închide golul – tot ce urmează începe mai devreme.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Culoare';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Ține o culoare plină cât a durat clipul.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Fotografie';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Fă o fotografie care să îi țină locul.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip desprins';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Se detașează clipul…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Clipul nu a putut fi desprins. Cronologia ta rămâne neschimbată.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Fotografia nu a putut fi încărcată.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Ecran verde';
 
   @override
@@ -9117,8 +9148,12 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nu am găsit niciun fundal. Trebuie să ajungă la marginile cadrului — altfel alege culoarea manual.';
+      'Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';
@@ -9414,6 +9449,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Sunet fără titlu';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Fișierul audio nu mai este pe dispozitiv';
 
   @override
   String get videoEditorAudioUntitled => 'Fără titlu';
@@ -10093,8 +10132,7 @@ class AppLocalizationsRo extends AppLocalizations {
           'Asta blochează cele $count de conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
       few:
           'Asta blochează cele $count conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
-      one:
-          'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
+      one: 'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
     );
     return '$_temp0';
   }
@@ -10363,8 +10401,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter =>
-      'Deschide centrul de asistență';
+  String get appealOpenSupportCenter => 'Deschide centrul de asistență';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11569,6 +11606,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get savedSoundRemoveAction => 'Elimină sunetul salvat';
 
   @override
+  String get savedSoundFileMissing =>
+      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Șterge filtrul de hashtaguri';
 
   @override
@@ -12361,9 +12402,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

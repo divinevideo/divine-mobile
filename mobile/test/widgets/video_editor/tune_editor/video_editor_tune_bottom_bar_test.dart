@@ -43,6 +43,7 @@ void main() {
             bodySizeNotifier: bodySizeNotifier,
             zoomMatrixNotifier: zoomNotifier,
             playTimeNotifier: ValueNotifier(Duration.zero),
+            playheadAdvancingNotifier: ValueNotifier<bool>(false),
             fromLibrary: false,
             child: const Scaffold(body: VideoEditorTuneBottomBar()),
           ),

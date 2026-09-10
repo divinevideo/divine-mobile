@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:meta/meta.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 // `auth_service` exports an unrelated `UserProfile`; hide it so the models
 // one (used by [ShareableUser.fromProfile]) resolves unambiguously.

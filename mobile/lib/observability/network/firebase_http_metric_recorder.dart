@@ -9,8 +9,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Creates the underlying Firebase metric. Injected so the recorder can be
 /// tested without a Firebase app.
-typedef HttpMetricFactory =
-    HttpMetric Function(String url, HttpMethod httpMethod);
+typedef HttpMetricFactory = HttpMetric Function(
+  String url,
+  HttpMethod httpMethod,
+);
 
 const String _logName = 'HttpMetricRecorder';
 

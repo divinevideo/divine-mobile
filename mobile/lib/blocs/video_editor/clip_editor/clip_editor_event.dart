@@ -409,6 +409,52 @@ class ClipEditorChromaKeyRemoved extends ClipEditorEvent {
   List<Object?> get props => [clipId];
 }
 
+// === DETACH ===
+
+/// Lift the clip with [clipId] out of the timeline so it can be placed freely
+/// on the canvas as a layer.
+///
+/// [replacement] decides what happens to the slot it leaves behind: `null`
+/// closes the gap (every later clip moves earlier), a fill renders a still that
+/// keeps the slot open for the clip now floating over it.
+///
+/// The bloc owns the clip-list mutation and the placeholder render; the widget
+/// layer consumes [ClipDetachResult] to add the layer and commit both changes
+/// to editor history as one entry.
+class ClipEditorClipDetachRequested extends ClipEditorEvent {
+  const ClipEditorClipDetachRequested({required this.clipId, this.replacement});
+
+  final String clipId;
+  final ClipPlaceholderFill? replacement;
+
+  @override
+  List<Object?> get props => [clipId, replacement];
+}
+
+/// Bake [transform] into [clip], which already left the timeline and now lives
+/// in the canvas layer [layerId].
+///
+/// A detached clip is not in [ClipEditorState.clips], so it travels with the
+/// event rather than being looked up — and the rendered result goes back out
+/// through [DetachedClipTransformResult] instead of being swapped into the
+/// clip list. Everything else matches [ClipEditorClipTransformRequested]: the
+/// same render, the same progress stream, the same deferred cleanup of the
+/// file it supersedes.
+class ClipEditorDetachedClipTransformRequested extends ClipEditorEvent {
+  const ClipEditorDetachedClipTransformRequested({
+    required this.layerId,
+    required this.clip,
+    required this.transform,
+  });
+
+  final String layerId;
+  final DivineVideoClip clip;
+  final ExportTransform transform;
+
+  @override
+  List<Object?> get props => [layerId, clip, transform];
+}
+
 // === VOLUME ===
 
 /// Update the volume of a clip by its ID.

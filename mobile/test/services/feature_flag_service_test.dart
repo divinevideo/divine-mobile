@@ -184,11 +184,6 @@ void main() {
         },
       );
 
-      test('should notify listeners on flag change', () async {
-        // SKIP: Service refactored to use Riverpod instead of ChangeNotifier
-        // Listener notification is now handled by Riverpod providers
-      }, skip: true);
-
       test('should reset flag to build default', () async {
         when(
           () => mockPrefs.remove('ff_enhancedAnalytics'),
@@ -308,6 +303,53 @@ void main() {
         expect(newState, isNot(equals(initialState)));
         expect(newState.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
       });
+    });
+
+    // featureFlagStateProvider invalidates itself from these notifications, so
+    // a mutation that updates state without notifying leaves every consumer of
+    // isFeatureEnabledProvider showing the previous value.
+    group('change notification', () {
+      late int notifications;
+
+      setUp(() {
+        notifications = 0;
+        service.addListener(() => notifications++);
+      });
+
+      test('notifies listeners when a flag is set', () async {
+        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when a flag is reset', () async {
+        await service.resetFlag(FeatureFlag.enhancedAnalytics);
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when all flags are reset', () async {
+        await service.resetAllFlags();
+
+        expect(notifications, equals(1));
+      });
+
+      test('notifies listeners when persisted overrides are loaded', () async {
+        await service.initialize();
+
+        expect(notifications, equals(1));
+      });
+
+      // The refusal path mutates state too: it resolves the flag back to its
+      // build default, so it owes consumers the same notification.
+      test(
+        'notifies listeners when an internal flag write is refused',
+        () async {
+          await service.setFlag(FeatureFlag.communityContentWarnings, true);
+
+          expect(notifications, equals(1));
+        },
+      );
     });
   });
 }

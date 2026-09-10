@@ -19,18 +19,18 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Loads the preview player's candidate sources into [controller].
 @visibleForTesting
-typedef SubtitlePreviewSourceLoader =
-    Future<void> Function({
-      required DivineVideoPlayerController controller,
-      required List<String> sources,
-      required void Function(String message) log,
-      required bool Function() isLoadCurrent,
-    });
+typedef SubtitlePreviewSourceLoader = Future<void> Function({
+  required DivineVideoPlayerController controller,
+  required List<String> sources,
+  required void Function(String message) log,
+  required bool Function() isLoadCurrent,
+});
 
 /// Initializes the preview player controller before source loading.
 @visibleForTesting
-typedef SubtitlePreviewControllerInitializer =
-    Future<void> Function(DivineVideoPlayerController controller);
+typedef SubtitlePreviewControllerInitializer = Future<void> Function(
+  DivineVideoPlayerController controller,
+);
 
 Future<void> _initializeSubtitlePreviewController(
   DivineVideoPlayerController controller,

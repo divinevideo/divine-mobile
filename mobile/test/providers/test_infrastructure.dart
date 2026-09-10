@@ -2,7 +2,7 @@
 // ABOUTME: Provides minimal container setup and testing utilities for TDD provider development
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// App lifecycle state enum (simplified version for testing)

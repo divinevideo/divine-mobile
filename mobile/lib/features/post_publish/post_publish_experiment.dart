@@ -16,8 +16,9 @@ enum PostPublishVariant {
   final String analyticsName;
 }
 
-typedef RecordPostPublishExposure =
-    Future<void> Function(PostPublishVariant variant);
+typedef RecordPostPublishExposure = Future<void> Function(
+  PostPublishVariant variant,
+);
 
 /// Marks a publish that should get the full confirmation — a sheet offering
 /// View and Share — rather than the bare snackbar the control arm sees.

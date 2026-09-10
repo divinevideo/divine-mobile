@@ -4,51 +4,35 @@ appId: co.openvine.app.staging
 # given the user is logged in in the app,
 # based on the tag name and validate its playback
 #Steps:
-# 1. Tap on Search: Validate search screen
-# 2. Input text SEARCH_TAG: Validate videos, users and a tag is found
-# 3. Tap on the Hashtags tab: Validate tag is listed
-# 4. Tap on the hastag: validate videos are listed
-# 5. Tap on the 1st video listed: Valiate playback
+# 1. Open the current search screen.
+# 2. Enter SEARCH_TAG and validate the matching tag chip.
+# 3. Open the tag and validate its video grid.
+# 4. Open the first video and validate playback.
 
-# 1. Tap on Search: Validate search screen
-- tapOn: Search
+# 1. Open search from Explore and validate the current search chrome.
+- tapOn:
+    id: explore_search_bar
 - runFlow: ../asserts/assertSearch.yaml
 
-# 2. Input text SEARCH_TAG: Validate videos, users and a tag is found
-- tapOn: Find something cool...
+# 2. Enter SEARCH_TAG and wait for the matching tag chip.
+- tapOn:
+    id: search_field
 - inputText: ${SEARCH_TAG}
 
-- runFlow: ../utils/searchWorkaround.yaml
-- eraseText
-- inputText: ${SEARCH_TAG}
+- extendedWaitUntil:
+    visible:
+      id: search_tag_${SEARCH_TAG}
+    timeout: 30000
 
-#Assert Videos and Users result
-- assertVisible: |-
-    Videos \((?!0)\d+\)
-    Tab 1 of 3
-- assertVisible: |-
-    Users \((?!0)\d+\)
-    Tab 2 of 3
-- assertVisible: |-
-    Hashtags \((?!0)\d+\)
-    Tab 3 of 3
+# 3. Open the tag and validate its video grid.
+- tapOn:
+    id: search_tag_${SEARCH_TAG}
+- extendedWaitUntil:
+    visible:
+      id: video_thumbnail_0
+    timeout: 30000
 
-# 3. Tap on the Hashtags tab: Validate tag is listed
-- tapOn: |-
-    Hashtags \((?!0)\d+\)
-    Tab 3 of 3
-- assertVisible: |-
-    #${SEARCH_TAG}
-    Tap to view videos with this hashtag
-
-# 4. Tap on the hastag: validate videos are listed
-- tapOn: |-
-    #${SEARCH_TAG}
-    Tap to view videos with this hashtag
-- assertVisible: "#${SEARCH_TAG} STG"
-- assertVisible:
+# 4. Open the first result and validate playback.
+- tapOn:
     id: video_thumbnail_0
-
-# 5. Tap on the 1st video listed: Valiate playback
-- tapOn: Video thumbnail 1
-- assertVisible: "#${SEARCH_TAG}" #Search tag is still visible
+- runFlow: ../asserts/assertVideoPlayback.yaml

@@ -44,6 +44,7 @@ Widget _app(
   VoidCallback? onRemove,
   ThemeData? theme,
   bool isPlaying = false,
+  bool isMissingFile = false,
   Stream<double>? progress,
   double progressValue = 0,
 }) => MaterialApp(
@@ -54,6 +55,7 @@ Widget _app(
     body: SingleChildScrollView(
       child: SavedSoundCard(
         sound: sound,
+        isMissingFile: isMissingFile,
         isPlaying: isPlaying,
         progress: progress,
         progressValue: progressValue,
@@ -81,6 +83,57 @@ double _waveformProgress(WidgetTester tester) {
 }
 
 void main() {
+  group('missing audio file', () {
+    testWidgets('says the file is gone and drops the preview', (tester) async {
+      var previewed = false;
+      var opened = false;
+      await tester.pumpWidget(
+        _app(
+          _richSound(),
+          isMissingFile: true,
+          onPreview: () => previewed = true,
+          onTap: () => opened = true,
+        ),
+      );
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.savedSoundFileMissing), findsOneWidget);
+      expect(
+        find.byKey(const Key('saved_sound_preview')),
+        findsNothing,
+        reason:
+            'A preview that plays silence is the bug — there is nothing to '
+            'start (#8023).',
+      );
+      expect(
+        find.byKey(const Key('saved_sound_remove')),
+        findsOneWidget,
+        reason: 'Removal is the only action left that changes anything.',
+      );
+      expect(
+        tester
+            .getSemantics(find.byType(SavedSoundCard))
+            .flagsCollection
+            .isButton,
+        isFalse,
+        reason: 'A card with no card-level tap must not announce as a button.',
+      );
+
+      await tester.tap(find.byType(SavedSoundCard));
+      await tester.pump();
+      expect(previewed, isFalse);
+      expect(opened, isFalse);
+    });
+
+    testWidgets('leaves a playable sound alone', (tester) async {
+      await tester.pumpWidget(_app(_richSound()));
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.savedSoundFileMissing), findsNothing);
+      expect(find.byKey(const Key('saved_sound_preview')), findsOneWidget);
+    });
+  });
+
   group(SavedSoundCard, () {
     testWidgets('shows rich source, private, and catalog context', (
       tester,

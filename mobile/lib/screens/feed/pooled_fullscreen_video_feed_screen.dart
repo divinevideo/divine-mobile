@@ -703,7 +703,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                   onBack();
                   return;
                 }
-                unawaited(Navigator.of(context).maybePop());
+                Navigator.of(context).maybePop();
               },
             ),
             // Show an Undo snackbar after a feed-tuning swipe commits.

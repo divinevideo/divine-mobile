@@ -1,0 +1,11 @@
+# path	tier	runner	requirements	rationale
+tests/prLaunchReady.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator	Clean-install launch readiness
+tests/prAuthenticateHome.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator	Throwaway-account authentication into Home
+tests/prSeededVideoPlayback.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator,QA_VIDEO_EVENT_ID	Immutable public-event playback
+tests/removeKeys.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator	Remove the throwaway account after PR smoke
+suites/smoke.yaml	manual-regression	operator	simulator,USER_EMAIL,USER_PWD,SEARCH_USER	Account and social regression against staging
+suites/fullRegression.yaml	manual-regression	operator	simulator,USER_KEYS,SEARCH_USER,SEARCH_USER_ID,VIDEO_USER,VIDEO_DESCRIPTION,VIDEO_DATA,EXISTING_USERNAME	Broader staging regression with mutable fixtures
+flows/captureModeFlow.yaml	manual-hardware	operator	camera-capable-android,english-system-ui	Capture-mode controls and recording
+flows/classicModeFlow.yaml	manual-hardware	operator	camera-capable-android,english-system-ui	Classic-mode controls and recording limit
+flows/lipSyncModeFlow.yaml	manual-hardware	operator	camera-capable-android,english-system-ui	Lip-sync audio gate and recording
+flows/stopMotionModeFlow.yaml	manual-hardware	operator	camera-capable-android,english-system-ui	Stop-motion capture and undo

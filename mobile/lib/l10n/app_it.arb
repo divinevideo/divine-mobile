@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Accedi per contattare l'assistenza",
     "supportExportingLogs": "Esportazione log...",
     "supportExportLogsFailed": "Esportazione log fallita",
-    "supportChatNotAvailable": "Chat di assistenza non disponibile",
     "supportCouldNotOpenMessages": "Impossibile aprire i messaggi di assistenza",
     "supportCouldNotOpenPage": "Impossibile aprire {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Riproduci anteprima",
     "videoEditorAudioPausePreviewSemanticLabel": "Metti in pausa anteprima",
     "videoEditorAudioUntitledSound": "Suono senza titolo",
+    "videoEditorAudioFileMissing": "File audio non più su questo dispositivo",
     "videoEditorVolumeLongPressHint": "Silenzia o riattiva tutte le tracce",
     "videoEditorAudioUntitled": "Senza titolo",
     "videoEditorAudioAddAudio": "Aggiungi audio",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Audio senza titolo",
-    "soundStopPreview": "Ferma anteprima",
-    "soundPreviewSemanticLabel": "Anteprima di {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Vedi dettagli di {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Cerca...",
     "categoryVideoCount": "{count} video",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Scorri per regolare",
     "videoEditorVolumeSemanticLabel": "Regola volume",
-    "videoEditorChromaKeyLabel": "Green screen",
+    "videoEditorDetachLabel": "Stacca",
+  "videoEditorDetachSemanticLabel": "Stacca la clip selezionata dalla timeline",
+  "videoEditorDetachTitle": "Stacca la clip",
+  "videoEditorDetachDescription": "La clip passa sulla tela, dove puoi metterla dove vuoi. Cosa prende il suo posto sulla timeline?",
+  "videoEditorDetachReplaceRemove": "Niente",
+  "videoEditorDetachReplaceRemoveDetail": "Chiudi il vuoto: tutto quello che segue inizia prima.",
+  "videoEditorDetachReplaceColor": "Colore",
+  "videoEditorDetachReplaceColorDetail": "Tiene un colore pieno per quanto durava la clip.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Scatta una foto che ne tenga il posto.",
+  "videoEditorDetachedClipLabel": "Clip staccata",
+  "videoEditorDetachProgressLabel": "Sto staccando la clip…",
+  "videoEditorDetachFailed": "Non è stato possibile staccare quella clip. La timeline resta invariata.",
+  "videoEditorDetachImagePickFailed": "Impossibile caricare quella foto.",
+  "videoEditorChromaKeyLabel": "Green screen",
     "videoEditorChromaKeyTitle": "Green screen",
     "videoEditorChromaKeySemanticLabel": "Imposta il green screen di questa clip",
     "videoEditorChromaKeyCloseSemanticLabel": "Annulla le modifiche al green screen",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Immagine",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Il video non supporta la trasparenza, quindi in esportazione diventa nero.",
-    "videoEditorChromaKeyDetectFailed": "Nessuno sfondo trovato. Deve arrivare ai bordi dell'inquadratura, altrimenti scegli il colore a mano.",
+    "videoEditorChromaKeySurfaceHint": "Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l'inquadratura.",
+    "videoEditorChromaKeyDetectFailed": "Nessuno sfondo trovato: deve riempire tutta l'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.",
     "videoEditorChromaKeyPickClipTitle": "Scegli una clip",
     "videoEditorChromaKeyNoLibraryClips": "La tua libreria è vuota. Salva prima una clip, poi usala come sfondo.",
     "videoEditorChromaKeyImagePickFailed": "Impossibile caricare quell'immagine.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Commenti, mi piace, repost e follow sono sospesi",
     "minorAccountReviewRestrictionMessaging": "Iniziare o rispondere ai messaggi normali è sospeso",
     "minorAccountReviewRestrictionSupport": "L'assistenza e il tuo messaggio della moderazione restano disponibili",
-    "minorAccountReviewOpenSupportCenter": "Apri il centro assistenza",
+    "appealOpenSupportCenter": "Apri il centro assistenza",
     "minorAccountReviewOpenModerationMessage": "Apri il messaggio della moderazione",
     "minorAccountReviewOpenReviewPage": "Apri la pagina di revisione",
     "minorAccountReviewCheckAgain": "Controlla di nuovo",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Ascolta il suono",
   "savedSoundEditAction": "Modifica i dati del suono",
   "savedSoundRemoveAction": "Rimuovi il suono salvato",
+  "savedSoundFileMissing": "Il file audio di questo suono non è più su questo dispositivo, quindi non può essere riprodotto.",
   "savedSoundClearHashtagFilter": "Azzera il filtro per hashtag",
   "soundAllowRemix": "Permetti ad altri di remixare questo suono",
   "soundReuseUnavailable": "Questo suono non si può remixare al momento.",

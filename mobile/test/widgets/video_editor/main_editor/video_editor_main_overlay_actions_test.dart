@@ -146,6 +146,7 @@ void main() {
                 bodySizeNotifier: ValueNotifier(const Size(400, 600)),
                 zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                 playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
                 fromLibrary: false,
                 onOpenCamera: () {},
                 onOpenClipsEditor: () {},

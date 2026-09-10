@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -935,11 +935,9 @@ void main() {
         // would keep publishing after close() with their completion dropped.
         await tester.tap(find.byTooltip('Back'));
         await tester.pump();
-        final popScope =
-            tester.widget(
-                  find.byWidgetPredicate((widget) => widget is PopScope).first,
-                )
-                as PopScope;
+        final popScope = tester.widget(
+          find.byWidgetPredicate((widget) => widget is PopScope).first,
+        ) as PopScope;
         popScope.onPopInvokedWithResult!(false, null);
         await tester.pump();
         expect(find.text('Owned List'), findsOneWidget);

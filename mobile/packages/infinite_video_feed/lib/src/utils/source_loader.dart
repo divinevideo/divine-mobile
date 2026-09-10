@@ -32,31 +32,39 @@ class SourceLoadAborted implements Exception {
 /// Logs each failure via [log] and re-throws the last error when every
 /// source fails.
 ///
-/// Authentication errors always stop the source ladder immediately. When
-/// [applyTypedFailoverPolicy] is true, other typed player errors that cannot be
-/// fixed by changing sources also stop immediately and preserve their original
-/// error and stack trace. Media-processing errors remain eligible for fallback
-/// because another rendition may already be ready.
-///
 /// [maxPlaybackDuration] becomes the clip's end position, so the native
 /// player stops (and loops) there. Sources shorter than the cap are
 /// unaffected — both backends clamp the clip end to the real duration.
 ///
+/// The two playback-policy flags are required rather than defaulted, so a new
+/// surface states its own intent instead of silently inheriting the feed's.
+/// Neither has a norm to deviate from; read both as a choice.
+///
 /// [trimToCommonTrackEnd] hides the loop seam left by a source whose audio and
-/// video tracks end a few milliseconds apart, and is what a looping feed wants.
-/// Turn it off wherever playback is measured against the container duration —
+/// video tracks end a few milliseconds apart. Pass `true` on a surface that
+/// loops a finished clip and draws no duration axis, which is what a feed does.
+/// Pass `false` wherever playback is measured against the container duration —
 /// an editor timeline, for instance — because the clamp can end playback up to
 /// 500 ms before the duration such an axis is drawn from.
+///
+/// [applyTypedFailoverPolicy] decides whether a typed player error ends the
+/// ladder. Pass `true` to stop on a typed error that changing sources cannot
+/// fix, preserving its original error and stack trace, so a doomed ladder fails
+/// fast instead of retrying every rendition of the same broken file. Pass
+/// `false` to keep walking the ladder, which is what a surface offering
+/// hand-picked alternate renditions wants. Either way, authentication errors
+/// stop the ladder immediately and media-processing errors stay eligible for
+/// fallback, because another rendition may already be ready.
 Future<(String, int)> setSourceWithFallbacks({
   required int index,
   required DivineVideoPlayerController controller,
   required List<String> sources,
   required void Function(String) log,
+  required bool trimToCommonTrackEnd,
+  required bool applyTypedFailoverPolicy,
   Map<String, String>? Function(String source)? httpHeadersForSource,
   bool Function()? isLoadCurrent,
   Duration? maxPlaybackDuration,
-  bool trimToCommonTrackEnd = true,
-  bool applyTypedFailoverPolicy = true,
   Future<void> Function(Duration duration) delay = Future<void>.delayed,
   void Function(String source)? onFailoverSourceFailure,
   void Function(String source)? onSourceLoadFailure,

@@ -1,8 +1,3 @@
-// Permanent: swaps PathProviderPlatform.instance and ProVideoEditor.instance;
-// keep isolated until VideoEditorSplitService accepts injected dependencies.
-@Tags(['skip_very_good_optimization'])
-library;
-
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -74,6 +69,7 @@ DivineVideoClip _clip({
 void main() {
   late MockProVideoEditor mockProVideoEditor;
   late PathProviderPlatform originalPathProviderInstance;
+  late ProVideoEditor originalProVideoEditorInstance;
   late Directory tempDir;
 
   setUp(() {
@@ -85,6 +81,7 @@ void main() {
     PathProviderPlatform.instance = MockPathProviderPlatform(
       documentsPath: '${tempDir.path}/documents',
     );
+    originalProVideoEditorInstance = ProVideoEditor.instance;
     mockProVideoEditor = MockProVideoEditor();
     ProVideoEditor.instance = mockProVideoEditor;
     mockProVideoEditor.splitRequests.clear();
@@ -92,6 +89,7 @@ void main() {
 
   tearDown(() {
     PathProviderPlatform.instance = originalPathProviderInstance;
+    ProVideoEditor.instance = originalProVideoEditorInstance;
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }

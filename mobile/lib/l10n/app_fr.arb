@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Connecte-toi pour contacter le support",
     "supportExportingLogs": "Exportation des logs...",
     "supportExportLogsFailed": "Échec de l'exportation des logs",
-    "supportChatNotAvailable": "Chat du support indisponible",
     "supportCouldNotOpenMessages": "Impossible d'ouvrir les messages du support",
     "supportCouldNotOpenPage": "Impossible d'ouvrir {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Lire l'aperçu",
     "videoEditorAudioPausePreviewSemanticLabel": "Mettre l'aperçu en pause",
     "videoEditorAudioUntitledSound": "Son sans titre",
+    "videoEditorAudioFileMissing": "Fichier audio absent de cet appareil",
     "videoEditorVolumeLongPressHint": "Couper ou rétablir le son de toutes les pistes",
     "videoEditorAudioUntitled": "Sans titre",
     "videoEditorAudioAddAudio": "Ajouter de l'audio",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Son sans titre",
-    "soundStopPreview": "Arrêter l'aperçu",
-    "soundPreviewSemanticLabel": "Aperçu de {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Voir les détails de {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Rechercher...",
     "categoryVideoCount": "{count} vidéos",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Faites glisser pour ajuster",
     "videoEditorVolumeSemanticLabel": "Régler le volume",
-    "videoEditorChromaKeyLabel": "Fond vert",
+    "videoEditorDetachLabel": "Détacher",
+  "videoEditorDetachSemanticLabel": "Détacher le clip sélectionné de la timeline",
+  "videoEditorDetachTitle": "Détacher le clip",
+  "videoEditorDetachDescription": "Le clip passe sur le canevas, où tu peux le placer où tu veux. Qu'est-ce qui prend sa place sur la timeline ?",
+  "videoEditorDetachReplaceRemove": "Rien",
+  "videoEditorDetachReplaceRemoveDetail": "Refermer le trou : tout ce qui suit commence plus tôt.",
+  "videoEditorDetachReplaceColor": "Couleur",
+  "videoEditorDetachReplaceColorDetail": "Tient une couleur unie aussi longtemps que durait le clip.",
+  "videoEditorDetachReplaceImage": "Photo",
+  "videoEditorDetachReplaceImageDetail": "Prends une photo pour tenir sa place.",
+  "videoEditorDetachedClipLabel": "Clip détaché",
+  "videoEditorDetachProgressLabel": "Détachement de votre clip…",
+  "videoEditorDetachFailed": "Impossible de détacher ce clip. Ta timeline est inchangée.",
+  "videoEditorDetachImagePickFailed": "Impossible de charger cette photo.",
+  "videoEditorChromaKeyLabel": "Fond vert",
     "videoEditorChromaKeyTitle": "Fond vert",
     "videoEditorChromaKeySemanticLabel": "Configurer le fond vert de ce clip",
     "videoEditorChromaKeyCloseSemanticLabel": "Annuler les modifications du fond vert",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Image",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "La vidéo ne gère pas la transparence : à l'export, ce sera du noir.",
-    "videoEditorChromaKeyDetectFailed": "Aucun fond détecté. Il doit toucher les bords de l'image — sinon, choisis la couleur à la main.",
+    "videoEditorChromaKeySurfaceHint": "N'importe quelle surface unie derrière toi fait l'affaire — un mur suffit — tant qu'elle remplit tout le cadre.",
+    "videoEditorChromaKeyDetectFailed": "Aucun fond trouvé : il doit remplir tout le cadre derrière toi. Un mur uni fait l'affaire. Ou choisis la couleur à la main.",
     "videoEditorChromaKeyPickClipTitle": "Choisir un clip",
     "videoEditorChromaKeyNoLibraryClips": "Ta bibliothèque est vide. Enregistre d'abord un clip, puis utilise-le comme fond.",
     "videoEditorChromaKeyImagePickFailed": "Impossible de charger cette image.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Commentaires, j'aime, reposts et abonnements sont en pause",
     "minorAccountReviewRestrictionMessaging": "Démarrer ou répondre à des messages classiques est en pause",
     "minorAccountReviewRestrictionSupport": "Le support et ton message de modération restent accessibles",
-    "minorAccountReviewOpenSupportCenter": "Ouvrir le centre d'aide",
+    "appealOpenSupportCenter": "Ouvrir le centre d'aide",
     "minorAccountReviewOpenModerationMessage": "Ouvrir le message de modération",
     "minorAccountReviewOpenReviewPage": "Ouvrir la page d'examen",
     "minorAccountReviewCheckAgain": "Vérifier à nouveau",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Écouter le son",
   "savedSoundEditAction": "Modifier les infos du son",
   "savedSoundRemoveAction": "Retirer le son enregistré",
+  "savedSoundFileMissing": "Le fichier audio de ce son n'est plus sur cet appareil, il ne peut donc pas être lu.",
   "savedSoundClearHashtagFilter": "Effacer le filtre de hashtags",
   "soundAllowRemix": "Autoriser les autres à remixer ce son",
   "soundReuseUnavailable": "Ce son ne peut pas être remixé pour le moment.",

@@ -4,9 +4,10 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openvine/blocs/comments/comment_composer/mention_search.dart';
 import 'package:openvine/blocs/comments/comment_composer/reportable_sites.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
+import 'package:openvine/mentions/mention_search.dart';
+import 'package:openvine/mentions/mention_suggestion.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
@@ -24,12 +25,11 @@ part 'comment_composer_state.dart';
 /// #5854: replies rendered off-screen led posters to re-send the same reply,
 /// spawning duplicates. The scroll-into-view fix stops that at the source; this
 /// checker is the defense-in-depth net for stray double-submits.
-typedef DuplicateCommentChecker =
-    bool Function({
-      required String content,
-      required String authorPubkey,
-      String? parentCommentId,
-    });
+typedef DuplicateCommentChecker = bool Function({
+  required String content,
+  required String authorPubkey,
+  String? parentCommentId,
+});
 
 /// BLoC owning composer input state for one video's comments: main / reply /
 /// edit text buffers, mention search (`restartable()`), publish + edit flows

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4567,9 +4568,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get supportRevealLogsAction => 'Klasörde göster';
 
   @override
-  String get supportChatNotAvailable => 'Destek sohbeti kullanılamıyor';
-
-  @override
   String get supportCouldNotOpenMessages => 'Destek mesajları açılamadı';
 
   @override
@@ -5124,22 +5122,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Sesi Kullan';
-
-  @override
-  String get soundUntitled => 'Adsız ses';
-
-  @override
-  String get soundStopPreview => 'Ön izlemeyi durdur';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title ön izle';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title detaylarını görüntüle';
-  }
 
   @override
   String get soundNoVideoCount => 'Henüz video yok';
@@ -8760,6 +8742,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Ayarlamak için kaydır';
 
   @override
+  String get videoEditorDetachLabel => 'Ayır';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Seçili klibi zaman çizelgesinden ayır';
+
+  @override
+  String get videoEditorDetachTitle => 'Klibi ayır';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip tuvale geçer, orada istediğin yere koyabilirsin. Zaman çizelgesinde yerini ne alacak?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Hiçbir şey';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Boşluğu kapat – sonrasındaki her şey daha erken başlar.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Renk';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Klip ne kadar sürdüyse o kadar düz renk tutar.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Fotoğraf';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Yerini tutacak bir fotoğraf çek.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Ayrılmış klip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Klibin ayrılıyor…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Bu klip ayrılamadı. Zaman çizelgen değişmedi.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Bu fotoğraf yüklenemedi.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Yeşil perde';
 
   @override
@@ -8829,8 +8859,12 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Perde bulunamadı. Karenin kenarlarına kadar ulaşması gerekir — yoksa rengi elle seç.';
+      'Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';
@@ -9120,6 +9154,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Başlıksız ses';
+
+  @override
+  String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override
   String get videoEditorAudioUntitled => 'Başlıksız';
@@ -9789,8 +9826,7 @@ class AppLocalizationsTr extends AppLocalizations {
       locale: localeName,
       other:
           'Bu, şu anda bu rozeti taşıyan $count hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmezler.',
-      one:
-          'Bu, şu anda bu rozeti taşıyan hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmez.',
+      one: 'Bu, şu anda bu rozeti taşıyan hesabı engeller. Gönderileri akışında görünmez ve bu değişiklik hakkında bilgilendirilmez.',
     );
     return '$_temp0';
   }
@@ -10055,7 +10091,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Destek merkezini aç';
+  String get appealOpenSupportCenter => 'Destek merkezini aç';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11249,6 +11285,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get savedSoundRemoveAction => 'Kaydedilen sesi kaldır';
 
   @override
+  String get savedSoundFileMissing =>
+      'Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Hashtag filtresini temizle';
 
   @override
@@ -12032,9 +12072,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

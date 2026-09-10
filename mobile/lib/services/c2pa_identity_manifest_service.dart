@@ -70,9 +70,9 @@ class C2paIdentityManifestService {
         if (creatorBindingAssertion != null)
           CustomAssertion(
             label: creatorBindingAssertion.assertionLabel,
-            data:
-                jsonDecode(creatorBindingAssertion.payloadJson)
-                    as Map<String, dynamic>,
+            data: jsonDecode(
+              creatorBindingAssertion.payloadJson,
+            ) as Map<String, dynamic>,
           ),
         if (cawgIdentityAssertion != null && !requiresAdvancedEmbedding)
           CustomAssertion(

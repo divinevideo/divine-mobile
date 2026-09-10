@@ -334,6 +334,67 @@ void main() {
       }
     });
 
+    test('chroma key surface guidance is localized for every locale', () {
+      final arbFiles =
+          Directory('lib/l10n')
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.arb'))
+              .where((file) => !file.path.endsWith('app_en.arb'))
+              .toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
+
+      final template = _readArb(File('lib/l10n/app_en.arb'));
+      const keys = [
+        'videoEditorChromaKeySurfaceHint',
+        'videoEditorChromaKeyDetectFailed',
+      ];
+
+      for (final file in arbFiles) {
+        final arb = _readArb(file);
+        for (final key in keys) {
+          expect(
+            arb[key],
+            isA<String>().having((s) => s.isNotEmpty, 'isNotEmpty', isTrue),
+            reason: '${file.path} must define a non-empty $key message',
+          );
+          expect(
+            arb[key],
+            isNot(template[key]),
+            reason:
+                '${file.path} must not fall back to English for the chroma '
+                'key surface guidance',
+          );
+        }
+      }
+    });
+
+    test('chroma key copy names a wall, the frame, and the manual way out', () {
+      final template = _readArb(File('lib/l10n/app_en.arb'));
+      final hint = (template['videoEditorChromaKeySurfaceHint']! as String)
+          .toLowerCase();
+      final failure = (template['videoEditorChromaKeyDetectFailed']! as String)
+          .toLowerCase();
+
+      // Epic #8543 ratified the reframing: the requirement is not a green
+      // sheet, it is any uniform surface the subject is not wearing, and most
+      // people already own one. These three facts are what turn the feature's
+      // biggest bounce point into its onboarding (#8546, #8547) — losing any
+      // of them to a copy tweak puts the dead end back.
+      expect(hint, contains('wall'));
+      expect(hint, contains('frame'));
+
+      expect(failure, contains('wall'));
+      expect(failure, contains('frame'));
+      expect(
+        failure,
+        contains('by hand'),
+        reason:
+            'The failure has to end on something the user can do right now, '
+            'not on what went wrong.',
+      );
+    });
+
     test('Bluesky backfill disclosure is localized for every locale', () {
       final l10nDir = Directory('lib/l10n');
       final arbFiles =
@@ -523,7 +584,6 @@ const _knownUntranslatedDebt = <String>{
   'accountStatusKeysUnaffectedBody',
   'accountStatusAppealHeading',
   'accountStatusAppealBody',
-  'accountStatusContactSupport',
   'accountStatusMoveAccount',
   'accountStatusRetry',
   // Restricted-minor age/deletion copy (#8238). This is load-bearing copy,

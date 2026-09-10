@@ -73,11 +73,14 @@ void main() {
     ).thenAnswer((_) async => token);
   }
 
-  EventApiClient buildClient(http.Client httpClient) {
+  EventApiClient buildClient(
+    http.Client httpClient, {
+    String apiBaseUrl = 'https://api.divine.video',
+  }) {
     return EventApiClient(
       httpClient: httpClient,
       nip98AuthService: mockNip98,
-      apiBaseUrl: () => 'https://api.divine.video',
+      apiBaseUrl: () => apiBaseUrl,
     );
   }
 
@@ -370,6 +373,55 @@ void main() {
         );
       },
     );
+
+    group('NIP-98 signed URL equals the requested URL', () {
+      // The `u` tag is signed from publishUrl while the POST goes to a Uri
+      // built from the same base. NIP-98 binds the two and the API compares
+      // them as raw strings, so a base that Uri.parse would normalize makes
+      // the signed string and the request disagree: the publish 401s while
+      // unauthenticated calls to the same host keep working.
+      for (final base in const [
+        'https://API.divine.video',
+        'HTTPS://api.divine.video',
+        'https://api.divine.video:443',
+        'https://api.divine.video/.',
+        'https://api.divine.video/',
+      ]) {
+        test('for a base of $base', () async {
+          stubToken(buildToken());
+          final event = buildVideoEvent();
+          http.Request? captured;
+          final client = buildClient(
+            MockClient((request) async {
+              captured = request;
+              return http.Response(
+                jsonEncode({'accepted': true, 'event_id': event.id}),
+                200,
+              );
+            }),
+            apiBaseUrl: base,
+          );
+
+          await client.publishEvent(event);
+
+          final signed =
+              verify(
+                    () => mockNip98.createAuthToken(
+                      url: captureAny(named: 'url'),
+                      method: any(named: 'method'),
+                      payload: any(named: 'payload'),
+                    ),
+                  ).captured.single
+                  as String;
+
+          expect(signed, equals(captured!.url.toString()));
+          // Pins the value as well as the coupling: both operands above come
+          // from the client, so alone they would still agree if the signed
+          // URL and the request went wrong together.
+          expect(signed, equals('https://api.divine.video/api/events'));
+        });
+      }
+    });
   });
 }
 

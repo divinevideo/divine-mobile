@@ -17,7 +17,6 @@ test/unit/nostr_sdk/vine_tag_filter_test.dart
 test/unit/profile_screen_empty_container_test.dart
 test/unit/providers/relay_set_change_bridge_test.dart
 test/unit/screens/explore_screen_pagination_test.dart
-test/unit/services/classic_vines_priority_test.dart
 test/unit/services/nip17_message_service_test.dart
 test/unit/services/subscription_manager_filter_test.dart
 test/unit/services/upload_manager_function_extraction_test.dart

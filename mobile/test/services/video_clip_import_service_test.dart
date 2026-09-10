@@ -250,8 +250,7 @@ void main() {
     test('normalizes whitespace and truncates long library titles', () {
       final title = VideoClipImportService.defaultLibraryTitleFor(
         _video(
-          title:
-              '  This title has     extra spaces and it keeps going past the eighty character limit for local clip names  ',
+          title: '  This title has     extra spaces and it keeps going past the eighty character limit for local clip names  ',
           content: 'fallback description',
         ),
       );

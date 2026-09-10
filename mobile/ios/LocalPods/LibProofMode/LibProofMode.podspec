@@ -47,6 +47,7 @@ without the need to fork it. That way, spin-offs can easily stay up to date.
 
   s.subspec 'PrivacyProtected' do |ss|
     ss.source_files = 'Classes/**/*'
+    ss.resource_bundles = {'LibProofMode_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
 
     ss.pod_target_xcconfig = {
       'SWIFT_ACTIVE_COMPILATION_CONDITIONS': '$(inherited) PRIVACY_PROTECTED'

@@ -277,6 +277,7 @@ void main() {
       report.writeln(
         '===========================================================',
       );
+      // This benchmark's result is a human-readable console report.
       // ignore: avoid_print
       print(report);
 

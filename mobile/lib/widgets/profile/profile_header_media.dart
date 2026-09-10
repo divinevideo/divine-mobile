@@ -497,11 +497,15 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         if (!showSkeleton)
           Positioned(
             bottom: 0,
-            child: GestureDetector(
-              onTap: onActionTap,
-              child: _ProfileActionLabel(
-                action: pendingActions.first,
-                badgeCount: pendingActions.length,
+            child: Semantics(
+              identifier: SemanticIds.profilePendingAction,
+              button: true,
+              child: GestureDetector(
+                onTap: onActionTap,
+                child: _ProfileActionLabel(
+                  action: pendingActions.first,
+                  badgeCount: pendingActions.length,
+                ),
               ),
             ),
           ),

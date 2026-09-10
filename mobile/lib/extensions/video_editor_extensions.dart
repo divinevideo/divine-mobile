@@ -349,6 +349,29 @@ extension VideoEditorExtensions on ProImageEditorState {
     );
   }
 
+  /// Persists a new [layer] and a clip-list change as **one** history entry.
+  ///
+  /// Detaching a clip is a single user action that changes both halves of the
+  /// composition at once: the clip leaves the track and arrives on the canvas.
+  /// Calling `addLayer` and [setClipState] in sequence would record it as two,
+  /// so one undo would put the clip back on the timeline while its layer stayed
+  /// on the canvas — the same clip twice.
+  ///
+  /// [addHistory] takes both in one entry: `newLayer` is appended to the active
+  /// layers, and `meta` carries the clips. The layer is left unselected, like
+  /// the sticker path's `blockSelectLayer: true`.
+  void setClipStateWithNewLayer({
+    required List<DivineVideoClip> clips,
+    required Layer layer,
+    List<Duration>? timelineMarkers,
+  }) {
+    addHistory(
+      newLayer: layer,
+      meta: _clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
+    );
+    setState(() {});
+  }
+
   /// Persists clip trim and order state in the editor's history metadata.
   ///
   /// When [skipUpdateHistory] is `false` (default), creates a new history

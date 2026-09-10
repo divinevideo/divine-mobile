@@ -1,9 +1,15 @@
 // ABOUTME: Tests the route predicate that decides whether the user is
-// ABOUTME: standing on their own profile.
+// ABOUTME: standing on their own profile, and that the page context survives
+// ABOUTME: alongside the other consumer of the router location.
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
-import 'package:openvine/router/providers/page_context_provider.dart';
+import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/router/app_router.dart';
+import 'package:openvine/router/providers/providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
@@ -223,6 +229,77 @@ void main() {
           null,
         ),
         isFalse,
+      );
+    });
+  });
+
+  group('pageContextProvider', () {
+    late GoRouter router;
+    late ProviderContainer container;
+
+    setUp(() {
+      router = GoRouter(
+        initialLocation: '/home/0',
+        routes: [
+          GoRoute(
+            path: '/home/:index',
+            builder: (_, _) => const SizedBox.shrink(),
+          ),
+          GoRoute(path: '/explore', builder: (_, _) => const SizedBox.shrink()),
+        ],
+      );
+      container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+      router.dispose();
+    });
+
+    test(
+      'resolves alongside the other consumer of the router location',
+      () async {
+        // The order production uses: AppRootSideEffects activates the support
+        // trail during the first frame, and nothing reads the page context
+        // until the shell route builds. Both once shared one
+        // single-subscription stream, so the second one to subscribe was left
+        // in a permanent `Stream has already been listened to` error state —
+        // read app-wide as a null route context.
+        container.listen(routerLocationProvider, (_, _) {});
+        await pumpEventQueue();
+
+        container.listen(pageContextProvider, (_, _) {});
+        await pumpEventQueue();
+
+        expect(container.read(routerLocationProvider).value, '/home/0');
+        expect(container.read(pageContextProvider).value?.type, RouteType.home);
+      },
+    );
+
+    testWidgets('follows navigations for every consumer', (tester) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      container.listen(routerLocationProvider, (_, _) {});
+      container.listen(pageContextProvider, (_, _) {});
+      await tester.pumpAndSettle();
+
+      router.go('/explore');
+      await tester.pumpAndSettle();
+
+      expect(container.read(routerLocationProvider).value, '/explore');
+      expect(
+        container.read(pageContextProvider).value?.type,
+        RouteType.explore,
       );
     });
   });

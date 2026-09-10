@@ -12,7 +12,7 @@ import 'package:equatable/equatable.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
@@ -33,8 +33,9 @@ const _defaultAutoRefreshMinInterval = Duration(minutes: 10);
 ///
 /// Injected so [VideoFeedBloc] stays decoupled from relay clients while still
 /// letting home feeds repair compact REST rows that omit ProofMode/C2PA tags.
-typedef EnrichVideos =
-    Future<List<VideoEvent>> Function(List<VideoEvent> videos);
+typedef EnrichVideos = Future<List<VideoEvent>> Function(
+  List<VideoEvent> videos,
+);
 
 /// BLoC for managing the unified video feed.
 ///

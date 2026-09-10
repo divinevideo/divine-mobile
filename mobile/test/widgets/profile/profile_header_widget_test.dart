@@ -522,8 +522,7 @@ void main() {
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
                 definitionCoordinate: '30009:$issuerUserHex:daily-diviner',
-                awardEventId:
-                    '00000000000000000000000000000000000000000000000000000000000000aa',
+                awardEventId: '00000000000000000000000000000000000000000000000000000000000000aa',
               ),
               award: Nip58BadgeAward(
                 event: _badgeAwardEvent(),
@@ -858,8 +857,7 @@ void main() {
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
                 definitionCoordinate: '30009:$issuerUserHex:daily-diviner',
-                awardEventId:
-                    '00000000000000000000000000000000000000000000000000000000000000aa',
+                awardEventId: '00000000000000000000000000000000000000000000000000000000000000aa',
               ),
               award: Nip58BadgeAward(
                 event: _badgeAwardEvent(),
@@ -919,8 +917,7 @@ void main() {
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
                 definitionCoordinate: '30009:$issuerUserHex:daily-diviner',
-                awardEventId:
-                    '00000000000000000000000000000000000000000000000000000000000000aa',
+                awardEventId: '00000000000000000000000000000000000000000000000000000000000000aa',
               ),
               award: Nip58BadgeAward(
                 event: _badgeAwardEvent(),

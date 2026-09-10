@@ -77,7 +77,7 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
       _elapsed = 0;
       _frame = -1;
     } else if (!_ticker.isActive) {
-      unawaited(_ticker.start());
+      _ticker.start();
     }
   }
 

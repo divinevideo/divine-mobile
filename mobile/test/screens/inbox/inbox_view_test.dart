@@ -38,6 +38,7 @@ import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -126,7 +127,7 @@ void main() {
       Stream<int>? notificationStream,
       TextScaler? textScaler,
       ConversationActionsCubit? actionsCubit,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
       // InboxView has no Scaffold of its own, and a ScaffoldMessenger with
       // no registered Scaffold silently queues SnackBars instead of showing
       // them. Opt in when the test asserts on one.
@@ -566,37 +567,40 @@ void main() {
         );
       });
 
-      testWidgets('shows caught-up state when unread filter is on and everything '
-          'is read', (tester) async {
-        final conversation = DmConversation(
-          id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          participantPubkeys: const [currentPubkey, otherPubkey],
-          isGroup: false,
-          createdAt: nowUnix,
-          lastMessageContent: 'Hello',
-          lastMessageTimestamp: nowUnix,
-        );
+      testWidgets(
+        'shows caught-up state when unread filter is on and everything '
+        'is read',
+        (tester) async {
+          final conversation = DmConversation(
+            id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            participantPubkeys: const [currentPubkey, otherPubkey],
+            isGroup: false,
+            createdAt: nowUnix,
+            lastMessageContent: 'Hello',
+            lastMessageTimestamp: nowUnix,
+          );
 
-        await tester.pumpWidget(
-          buildSubject(
-            state: ConversationListState(
-              status: ConversationListStatus.loaded,
-              conversations: [conversation],
-              filter: InboxFilter.unread,
-              hasMore: false,
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: [conversation],
+                filter: InboxFilter.unread,
+                hasMore: false,
+              ),
             ),
-          ),
-        );
-        await tester.pump();
+          );
+          await tester.pump();
 
-        await tester.tap(find.text('Messages'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 350));
+          await tester.tap(find.text('Messages'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.inboxUnreadEmptyTitle), findsOneWidget);
-        expect(find.byType(ConversationTile), findsNothing);
-      });
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.inboxUnreadEmptyTitle), findsOneWidget);
+          expect(find.byType(ConversationTile), findsNothing);
+        },
+      );
 
       testWidgets('typing in the search bar dispatches '
           '$ConversationListSearchQueryChanged', (tester) async {
@@ -1932,41 +1936,44 @@ void main() {
         expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
       });
 
-      testWidgets('distinguishes a retired moderation thread from the live pin', (
-        tester,
-      ) async {
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        final retiredConversation = DmConversation(
-          id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          participantPubkeys: [currentPubkey, kLegacyModerationPubkeys.first],
-          isGroup: false,
-          createdAt: nowUnix,
-          lastMessageContent: 'You can reply to this message to appeal.',
-          lastMessageTimestamp: nowUnix,
-        );
+      testWidgets(
+        'distinguishes a retired moderation thread from the live pin',
+        (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final retiredConversation = DmConversation(
+            id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            participantPubkeys: [currentPubkey, kLegacyModerationPubkeys.first],
+            isGroup: false,
+            createdAt: nowUnix,
+            lastMessageContent: 'You can reply to this message to appeal.',
+            lastMessageTimestamp: nowUnix,
+          );
 
-        await tester.pumpWidget(
-          buildSubject(
-            state: ConversationListState(
-              status: ConversationListStatus.loaded,
-              conversations: [retiredConversation],
-              visibleConversations: [retiredConversation],
-              pinnedSupport: supportPin(),
-              hasMore: false,
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: [retiredConversation],
+                visibleConversations: [retiredConversation],
+                pinnedSupport: supportPin(),
+                hasMore: false,
+              ),
             ),
-          ),
-        );
-        await openMessages(tester);
+          );
+          await openMessages(tester);
 
-        expect(find.byType(ConversationTile), findsNWidgets(2));
-        expect(find.text(l10n.inboxSupportRowTitle), findsNWidgets(2));
-        expect(find.text(l10n.inboxSupportRowSubtitle), findsOneWidget);
-        expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
-        expect(
-          find.text('You can reply to this message to appeal.'),
-          findsNothing,
-        );
-      });
+          expect(find.byType(ConversationTile), findsNWidgets(2));
+          expect(find.text(l10n.inboxSupportRowTitle), findsNWidgets(2));
+          expect(find.text(l10n.inboxSupportRowSubtitle), findsOneWidget);
+          expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+          expect(
+            find.text('You can reply to this message to appeal.'),
+            findsNothing,
+          );
+        },
+      );
 
       // #7380: the long-press sheet resolves the peer name on its own, and
       // that chain omits `moderationDisplayName`. The tile above it reads

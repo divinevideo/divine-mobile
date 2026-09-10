@@ -43,9 +43,9 @@ target 'Runner' do
   # Explicitly include pods that have given us trouble
   pod 'libwebp', '~> 1.5.0'
 
-  # ProofMode library for cryptographic proof generation
-  # Using local fork with Swift 5.x compatibility fixes
-  pod 'LibProofMode', :path => 'LocalPods/LibProofMode'
+  # ProofMode library for cryptographic proof generation. Divine disables
+  # device-ID collection, so compile out LibProofMode's AdSupport dependency.
+  pod 'LibProofMode/PrivacyProtected', :path => 'LocalPods/LibProofMode'
 
   # Zendesk Support SDK
   pod 'ZendeskSupportSDK', '~> 9.0'

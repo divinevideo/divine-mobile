@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Zaloguj się, żeby skontaktować się z pomocą",
     "supportExportingLogs": "Eksportowanie logów...",
     "supportExportLogsFailed": "Nie udało się wyeksportować logów",
-    "supportChatNotAvailable": "Czat z pomocą niedostępny",
     "supportCouldNotOpenMessages": "Nie można otworzyć wiadomości pomocy",
     "supportCouldNotOpenPage": "Nie można otworzyć {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Odtwórz podgląd",
     "videoEditorAudioPausePreviewSemanticLabel": "Wstrzymaj podgląd",
     "videoEditorAudioUntitledSound": "Nienazwany dźwięk",
+    "videoEditorAudioFileMissing": "Pliku audio już nie ma na tym urządzeniu",
     "videoEditorVolumeLongPressHint": "Wycisz lub wyłącz wyciszenie wszystkich ścieżek",
     "videoEditorAudioUntitled": "Bez tytułu",
     "videoEditorAudioAddAudio": "Dodaj audio",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Dźwięk bez tytułu",
-    "soundStopPreview": "Zatrzymaj podgląd",
-    "soundPreviewSemanticLabel": "Odsłuchaj {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Zobacz szczegóły dźwięku {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Szukaj...",
     "categoryVideoCount": "{count} filmów",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Przesuń, aby dostosować",
     "videoEditorVolumeSemanticLabel": "Dostosuj głośność",
-    "videoEditorChromaKeyLabel": "Zielone tło",
+    "videoEditorDetachLabel": "Odłącz",
+  "videoEditorDetachSemanticLabel": "Odłącz wybrany klip od osi czasu",
+  "videoEditorDetachTitle": "Odłącz klip",
+  "videoEditorDetachDescription": "Klip trafia na płótno, gdzie możesz go umieścić gdziekolwiek. Co zajmie jego miejsce na osi czasu?",
+  "videoEditorDetachReplaceRemove": "Nic",
+  "videoEditorDetachReplaceRemoveDetail": "Zamknij lukę – wszystko dalej zacznie się wcześniej.",
+  "videoEditorDetachReplaceColor": "Kolor",
+  "videoEditorDetachReplaceColorDetail": "Trzyma jednolity kolor tak długo, jak trwał klip.",
+  "videoEditorDetachReplaceImage": "Zdjęcie",
+  "videoEditorDetachReplaceImageDetail": "Zrób zdjęcie, które zajmie jego miejsce.",
+  "videoEditorDetachedClipLabel": "Odłączony klip",
+  "videoEditorDetachProgressLabel": "Odłączanie klipu…",
+  "videoEditorDetachFailed": "Nie udało się odłączyć tego klipu. Twoja oś czasu pozostaje bez zmian.",
+  "videoEditorDetachImagePickFailed": "Nie udało się wczytać tego zdjęcia.",
+  "videoEditorChromaKeyLabel": "Zielone tło",
     "videoEditorChromaKeyTitle": "Zielone tło",
     "videoEditorChromaKeySemanticLabel": "Skonfiguruj zielone tło dla tego klipu",
     "videoEditorChromaKeyCloseSemanticLabel": "Odrzuć zmiany zielonego tła",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Obraz",
     "videoEditorChromaKeyBackgroundVideo": "Klip",
     "videoEditorChromaKeyTransparentHint": "Wideo nie przechowuje przezroczystości, więc w eksporcie będzie czarne.",
-    "videoEditorChromaKeyDetectFailed": "Nie znaleziono tła. Musi sięgać krawędzi kadru — w przeciwnym razie wybierz kolor ręcznie.",
+    "videoEditorChromaKeySurfaceHint": "Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.",
+    "videoEditorChromaKeyDetectFailed": "Nie znaleziono tła — musi wypełniać cały kadr za tobą. Gładka ściana wystarczy. Albo wybierz kolor ręcznie.",
     "videoEditorChromaKeyPickClipTitle": "Wybierz klip",
     "videoEditorChromaKeyNoLibraryClips": "Twoja biblioteka jest pusta. Zapisz najpierw klip, a potem użyj go jako tła.",
     "videoEditorChromaKeyImagePickFailed": "Nie udało się wczytać tego obrazu.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Komentarze, polubienia, udostępnienia i obserwacje są wstrzymane",
     "minorAccountReviewRestrictionMessaging": "Rozpoczynanie i odpowiadanie na zwykłe wiadomości jest wstrzymane",
     "minorAccountReviewRestrictionSupport": "Wsparcie i twoja wiadomość od moderacji pozostają dostępne",
-    "minorAccountReviewOpenSupportCenter": "Otwórz centrum pomocy",
+    "appealOpenSupportCenter": "Otwórz centrum pomocy",
     "minorAccountReviewOpenModerationMessage": "Otwórz wiadomość od moderacji",
     "minorAccountReviewOpenReviewPage": "Otwórz stronę weryfikacji",
     "minorAccountReviewCheckAgain": "Sprawdź ponownie",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Posłuchaj dźwięku",
   "savedSoundEditAction": "Edytuj dane dźwięku",
   "savedSoundRemoveAction": "Usuń zapisany dźwięk",
+  "savedSoundFileMissing": "Pliku audio tego dźwięku już nie ma na tym urządzeniu, więc nie da się go odtworzyć.",
   "savedSoundClearHashtagFilter": "Wyczyść filtr hashtagów",
   "soundAllowRemix": "Pozwól innym remiksować ten dźwięk",
   "soundReuseUnavailable": "Tego dźwięku nie można teraz remiksować.",

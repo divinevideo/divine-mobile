@@ -36,6 +36,7 @@ import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/scroll.dart';
@@ -161,7 +162,7 @@ void main() {
     ).thenAnswer((_) => const Stream<List<String>>.empty());
   });
 
-  List<dynamic> baseOverrides() => [
+  List<Override> baseOverrides() => [
     sharedPreferencesProvider.overrideWithValue(sharedPreferences),
     authServiceProvider.overrideWithValue(authService),
     currentAuthStateProvider.overrideWithValue(AuthState.unauthenticated),
@@ -185,7 +186,7 @@ void main() {
   Widget wrap(
     Widget child, {
     Locale? locale,
-    List<dynamic> overrides = const [],
+    List<Override> overrides = const [],
     AppUpdateBloc? appUpdateBloc,
   }) {
     return ProviderScope(

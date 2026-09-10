@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';
@@ -88,7 +89,13 @@ class _VideoMetadataClassicPreviewThumbnailState
         await controller.dispose();
         return;
       }
-      await controller.setSource(VideoClip.file(filePath));
+      await controller.setSource(
+        VideoClip.file(
+          filePath,
+          // Match the loop boundary used when the same file reaches the feed.
+          trimToCommonTrackEnd: true,
+        ),
+      );
       if (!mounted) {
         await controller.dispose();
         return;

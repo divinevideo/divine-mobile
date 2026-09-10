@@ -47,6 +47,7 @@ while IFS= read -r path; do
   # These inputs affect the runner or the suites as a population, so changes
   # run both dependency groups.
   case "$path" in
+    # SHARED_SCOPE_START — parsed by service_suite_scope_detector.dart.
     .github/workflows/mobile_service_integration_tests.yaml|\
     mobile/scripts/ci/detect_service_suite_scope.sh|\
     mobile/scripts/check_service_suite_coverage.sh|\
@@ -57,6 +58,7 @@ while IFS= read -r path; do
     mobile/pubspec.lock|\
     mobile/dart_test.yaml|\
     mobile/linux/*)
+    # SHARED_SCOPE_END
       focused=true
       app=true
       ;;
@@ -64,11 +66,13 @@ while IFS= read -r path; do
 
   # Eleven suites have this maintainable production dependency closure.
   case "$path" in
+    # FOCUSED_SCOPE_START — parsed by service_suite_scope_detector.dart.
     mobile/packages/cache_sync/*|\
     mobile/packages/db_client/*|\
     mobile/packages/dm_repository/*|\
     mobile/packages/follow_repository/*|\
     mobile/packages/funnelcake_api_client/*|\
+    mobile/packages/logging_types/*|\
     mobile/packages/models/*|\
     mobile/packages/nostr_client/*|\
     mobile/packages/nostr_sdk/*|\
@@ -79,6 +83,7 @@ while IFS= read -r path; do
     mobile/lib/services/outgoing_dm_retry_service_reportable_sites.dart|\
     mobile/lib/services/relay_discovery_service.dart|\
     mobile/lib/utils/relay_url_utils.dart)
+    # FOCUSED_SCOPE_END
       focused=true
       ;;
   esac

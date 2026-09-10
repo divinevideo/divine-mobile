@@ -2,11 +2,14 @@
 // ABOUTME: lifecycle, with the typed failure-key distinguishing
 // ABOUTME: attachment-upload errors from generic failures.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:logging_types/logging_types.dart' show LogEntry, LogLevel;
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show BugReportData, LogEntry, LogLevel;
+import 'package:models/models.dart' show BugReportData;
 import 'package:openvine/blocs/bug_report/bug_report_cubit.dart';
 import 'package:openvine/blocs/bug_report/bug_report_state.dart';
 import 'package:openvine/services/bug_report_service.dart';
@@ -60,6 +63,7 @@ void main() {
         String? stepsToReproduce,
         String? expectedBehavior,
         String? currentScreen,
+        List<String>? recentScreens,
         String? userPubkey,
         Map<String, int>? errorCounts,
         String? logsSummary,
@@ -78,7 +82,7 @@ void main() {
     }) {
       return BugReportCubit(
         bugReportService: service,
-        buildLogsSummary: buildLogsSummary ?? (_) => null,
+        buildLogsSummary: buildLogsSummary ?? (_) async => null,
         submitBugReport:
             submitBugReport ??
             buildSubmit(returnValue: returnValue, throwError: throwError),
@@ -99,6 +103,55 @@ void main() {
         const BugReportState(status: BugReportStatus.submitting),
         const BugReportState(status: BugReportStatus.success),
       ],
+    );
+
+    test(
+      'awaits off-main log summary construction before submitting',
+      () async {
+        final summaryCompleter = Completer<String?>();
+        var submitCalls = 0;
+        String? submittedSummary;
+        final cubit = buildCubit(
+          buildLogsSummary: (_) => summaryCompleter.future,
+          submitBugReport:
+              ({
+                required String subject,
+                required String description,
+                required String reportId,
+                required String appVersion,
+                required Map<String, dynamic> deviceInfo,
+                String? stepsToReproduce,
+                String? expectedBehavior,
+                String? currentScreen,
+                List<String>? recentScreens,
+                String? userPubkey,
+                Map<String, int>? errorCounts,
+                String? logsSummary,
+                List<String>? attachmentPaths,
+              }) async {
+                submitCalls++;
+                submittedSummary = logsSummary;
+                return true;
+              },
+        );
+
+        final submission = cubit.submit(
+          subject: 'Crash',
+          description: 'It crashed',
+          stepsToReproduce: '',
+          expectedBehavior: '',
+          attachments: const [],
+        );
+        await pumpEventQueue();
+
+        expect(submitCalls, 0);
+        summaryCompleter.complete('off-main summary');
+        await submission;
+
+        expect(submitCalls, 1);
+        expect(submittedSummary, 'off-main summary');
+        await cubit.close();
+      },
     );
 
     blocTest<BugReportCubit, BugReportState>(
@@ -201,7 +254,7 @@ void main() {
       },
       build: () {
         return buildCubit(
-          buildLogsSummary: (logs) => logs
+          buildLogsSummary: (logs) async => logs
               .map((log) => '${log.message}\n${log.error}\n${log.stackTrace}')
               .join('\n'),
           submitBugReport:
@@ -214,21 +267,21 @@ void main() {
                 String? stepsToReproduce,
                 String? expectedBehavior,
                 String? currentScreen,
+                List<String>? recentScreens,
                 String? userPubkey,
                 Map<String, int>? errorCounts,
                 String? logsSummary,
                 List<String>? attachmentPaths,
               }) async {
-                final submitted = [
-                  description,
-                  logsSummary,
-                ].join('\n');
+                final submitted = [description, logsSummary].join('\n');
                 expect(submitted, isNot(contains(_rawNsec)));
                 expect(submitted, isNot(contains(_rawEmail)));
                 expect(submitted, contains('[REDACTED]'));
                 expect(subject, 'Crash $_rawNsec');
                 expect(stepsToReproduce, 'Step $_rawNsec');
                 expect(expectedBehavior, 'Expected $_rawEmail');
+                expect(currentScreen, 'settings');
+                expect(recentScreens, ['home', 'profile', 'settings']);
                 return true;
               },
         );
@@ -239,6 +292,8 @@ void main() {
         stepsToReproduce: 'Step $_rawNsec',
         expectedBehavior: 'Expected $_rawEmail',
         attachments: const [],
+        currentScreen: 'settings',
+        recentScreens: const ['home', 'profile', 'settings'],
       ),
       expect: () => [
         const BugReportState(status: BugReportStatus.submitting),

@@ -188,8 +188,7 @@ void main() {
       expect(
         hash1,
         isNot(equals(hash2)),
-        reason:
-            'Adding time constraints should generate different subscription IDs',
+        reason: 'Adding time constraints should generate different subscription IDs',
       );
     });
   });

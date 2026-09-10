@@ -21,15 +21,14 @@ part 'user_search_state.dart';
 const _pageSize = 50;
 int _nextSearchCorrelationId = 0;
 
-typedef UserSearchRunner =
-    Stream<ProgressiveSearchResult> Function({
-      required String query,
-      required int limit,
-      required String sortBy,
-      required bool hasVideos,
-      required Set<String>? boostPubkeys,
-      required SearchCancellationToken cancellationToken,
-    });
+typedef UserSearchRunner = Stream<ProgressiveSearchResult> Function({
+  required String query,
+  required int limit,
+  required String sortBy,
+  required bool hasVideos,
+  required Set<String>? boostPubkeys,
+  required SearchCancellationToken cancellationToken,
+});
 
 Map<SearchSource, SearchSourceStatus> _pendingSourceOutcomes() {
   return {

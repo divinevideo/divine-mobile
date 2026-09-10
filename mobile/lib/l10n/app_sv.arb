@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Logga in för att kontakta supporten",
     "supportExportingLogs": "Exporterar loggar...",
     "supportExportLogsFailed": "Kunde inte exportera loggar",
-    "supportChatNotAvailable": "Supportchatten är inte tillgänglig",
     "supportCouldNotOpenMessages": "Kunde inte öppna supportmeddelanden",
     "supportCouldNotOpenPage": "Kunde inte öppna {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Spela förhandsvisning",
     "videoEditorAudioPausePreviewSemanticLabel": "Pausa förhandsvisning",
     "videoEditorAudioUntitledSound": "Namnlöst ljud",
+    "videoEditorAudioFileMissing": "Ljudfilen finns inte kvar på enheten",
     "videoEditorVolumeLongPressHint": "Tysta eller slå på alla spår",
     "videoEditorAudioUntitled": "Namnlös",
     "videoEditorAudioAddAudio": "Lägg till ljud",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Namnlöst ljud",
-    "soundStopPreview": "Stoppa förhandsvisning",
-    "soundPreviewSemanticLabel": "Förhandsvisa {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Visa detaljer för {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Sök...",
     "categoryVideoCount": "{count} videor",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Dra för att justera",
     "videoEditorVolumeSemanticLabel": "Justera volym",
-    "videoEditorChromaKeyLabel": "Green screen",
+    "videoEditorDetachLabel": "Lossa",
+  "videoEditorDetachSemanticLabel": "Lossa valt klipp från tidslinjen",
+  "videoEditorDetachTitle": "Lossa klipp",
+  "videoEditorDetachDescription": "Klippet flyttas till ytan, där du kan placera det var du vill. Vad tar dess plats på tidslinjen?",
+  "videoEditorDetachReplaceRemove": "Inget",
+  "videoEditorDetachReplaceRemoveDetail": "Slut luckan – allt efter börjar tidigare.",
+  "videoEditorDetachReplaceColor": "Färg",
+  "videoEditorDetachReplaceColorDetail": "Håller en enfärgad yta lika länge som klippet varade.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Ta ett foto som håller platsen.",
+  "videoEditorDetachedClipLabel": "Lossat klipp",
+  "videoEditorDetachProgressLabel": "Kopplar loss klippet …",
+  "videoEditorDetachFailed": "Det gick inte att lossa klippet. Din tidslinje är oförändrad.",
+  "videoEditorDetachImagePickFailed": "Det gick inte att läsa in fotot.",
+  "videoEditorChromaKeyLabel": "Green screen",
     "videoEditorChromaKeyTitle": "Green screen",
     "videoEditorChromaKeySemanticLabel": "Ställ in green screen för det här klippet",
     "videoEditorChromaKeyCloseSemanticLabel": "Ignorera ändringarna av green screen",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Bild",
     "videoEditorChromaKeyBackgroundVideo": "Klipp",
     "videoEditorChromaKeyTransparentHint": "Video kan inte spara transparens, så det här exporteras som svart.",
-    "videoEditorChromaKeyDetectFailed": "Hittade ingen bakgrund. Den måste nå ut till bildkanten – välj annars färgen för hand.",
+    "videoEditorChromaKeySurfaceHint": "Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.",
+    "videoEditorChromaKeyDetectFailed": "Hittade ingen bakgrund – den måste fylla hela bilden bakom dig. En slät vägg räcker. Eller välj färgen för hand.",
     "videoEditorChromaKeyPickClipTitle": "Välj ett klipp",
     "videoEditorChromaKeyNoLibraryClips": "Ditt bibliotek är tomt. Spara ett klipp först, sedan kan du använda det som bakgrund.",
     "videoEditorChromaKeyImagePickFailed": "Det gick inte att läsa in bilden.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Kommentarer, gillningar, reposter och följningar är pausade",
     "minorAccountReviewRestrictionMessaging": "Att starta och svara på vanliga meddelanden är pausat",
     "minorAccountReviewRestrictionSupport": "Support och ditt modereringsmeddelande är fortfarande tillgängliga",
-    "minorAccountReviewOpenSupportCenter": "Öppna supportcentret",
+    "appealOpenSupportCenter": "Öppna supportcentret",
     "minorAccountReviewOpenModerationMessage": "Öppna modereringsmeddelandet",
     "minorAccountReviewOpenReviewPage": "Öppna granskningssidan",
     "minorAccountReviewCheckAgain": "Kontrollera igen",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Lyssna på ljudet",
   "savedSoundEditAction": "Redigera ljudets uppgifter",
   "savedSoundRemoveAction": "Ta bort sparat ljud",
+  "savedSoundFileMissing": "Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp.",
   "savedSoundClearHashtagFilter": "Rensa hashtaggfiltret",
   "soundAllowRemix": "Låt andra remixa det här ljudet",
   "soundReuseUnavailable": "Det här ljudet går inte att remixa just nu.",

@@ -615,7 +615,7 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'28f52a9c9904ac2239cb74fecf5f46394259b319';
+    r'a002a2f1ba14092c472a0c51f342b3caa1be50d4';
 
 /// Hashtag service depends on Video event service and cache service
 
@@ -661,7 +661,7 @@ final class HashtagServiceProvider
   }
 }
 
-String _$hashtagServiceHash() => r'5cd38d3c2e8d78a6f7b74a72b650d79e28938fe4';
+String _$hashtagServiceHash() => r'2b0727a4152eee27d7a1cf595cf5fe66050ee145';
 
 /// Content reporting service for NIP-56 compliance
 

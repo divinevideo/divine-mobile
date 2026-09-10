@@ -27,6 +27,7 @@ import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import '../../helpers/divine_video_player_channel.dart';
 import '../../helpers/go_router.dart';
 
 class _MockClipsLibraryBloc
@@ -854,20 +855,12 @@ void main() {
               return null;
             },
           );
-          messenger.setMockMethodCallHandler(
-            const MethodChannel('divine_video_player/player_0'),
-            (call) async => null,
-          );
+          installMockDivineVideoPlayer();
           addTearDown(() {
-            messenger
-              ..setMockMethodCallHandler(
-                const MethodChannel('divine_video_player'),
-                null,
-              )
-              ..setMockMethodCallHandler(
-                const MethodChannel('divine_video_player/player_0'),
-                null,
-              );
+            messenger.setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              null,
+            );
           });
 
           final mockGoRouter = MockGoRouter();

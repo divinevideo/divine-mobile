@@ -19,8 +19,7 @@ void main() {
         sensorDataCsv: 'timestamp,lat,lon\n2025-01-01,40.7,-74.0',
         pgpSignature:
             '-----BEGIN PGP SIGNATURE-----\ntest\n-----END PGP SIGNATURE-----',
-        publicKey:
-            '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest\n-----END PGP PUBLIC KEY BLOCK-----',
+        publicKey: '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest\n-----END PGP PUBLIC KEY BLOCK-----',
         deviceAttestation: 'attestation_token_12345',
       );
 

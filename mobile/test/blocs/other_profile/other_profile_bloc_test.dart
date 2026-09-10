@@ -92,8 +92,11 @@ void main() {
     // so if it disagrees the app offers to unfollow an account it elsewhere
     // says you do not follow. #6903 stopped severing the follow locally, which
     // makes that disagreement reachable from every block entry point.
-    test('reports a blocked account as not followed', () {
+    test('reports a blocked account as not followed', () async {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
       when(
         () => mockBlocklistRepository.isBlocked(testPubkey),
       ).thenReturn(true);
@@ -101,25 +104,56 @@ void main() {
       final bloc = createBloc();
       expect(bloc.isBlocked, isTrue);
       expect(bloc.isFollowing, isFalse);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('reports an unblocked account as followed', () {
+    test('reports an unblocked account as followed', () async {
       when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(false);
       when(
         () => mockBlocklistRepository.isBlocked(testPubkey),
       ).thenReturn(false);
 
       final bloc = createBloc();
       expect(bloc.isFollowing, isTrue);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('initial state is OtherProfileInitial', () {
+    test('offers Unblock for an imported mute', () async {
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+
+      final bloc = createBloc();
+      expect(bloc.isBlocked, isTrue);
+      await bloc.close();
+    });
+
+    test('still reports an imported mute as followed', () async {
+      when(() => mockFollowRepository.isFollowing(testPubkey)).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.canUnblock(testPubkey),
+      ).thenReturn(true);
+      when(
+        () => mockBlocklistRepository.isBlocked(testPubkey),
+      ).thenReturn(false);
+
+      final bloc = createBloc();
+      // A mute severs nothing: MyFollowingBloc still lists the account and
+      // the kind 3 we publish still carries it, so the profile sheet has to
+      // keep offering `Unfollow` rather than hiding the row.
+      expect(bloc.isBlocked, isTrue);
+      expect(bloc.isFollowing, isTrue);
+      await bloc.close();
+    });
+
+    test('initial state is OtherProfileInitial', () async {
       final bloc = createBloc();
       expect(bloc.state, isA<OtherProfileInitial>());
       expect(bloc.pubkey, equals(testPubkey));
-      bloc.close();
+      await bloc.close();
     });
 
     group('vanished accounts', () {
@@ -273,12 +307,10 @@ void main() {
           'emits [loading with cache, loaded fresh] when fresh fetch succeeds',
           setUp: () {
             final cachedProfile = createTestProfile(
-              eventId:
-                  'cached12345678901234567890123456789012345678901234567890123456',
+              eventId: 'cached12345678901234567890123456789012345678901234567890123456',
             );
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -524,12 +556,10 @@ void main() {
           'emits [loading with current, loaded fresh] when refresh succeeds',
           setUp: () {
             final cachedProfile = createTestProfile(
-              eventId:
-                  'cached12345678901234567890123456789012345678901234567890123456',
+              eventId: 'cached12345678901234567890123456789012345678901234567890123456',
             );
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.getCachedProfile(pubkey: testPubkey),
@@ -541,8 +571,7 @@ void main() {
           build: createBloc,
           seed: () => OtherProfileLoaded(
             profile: createTestProfile(
-              eventId:
-                  'seed1234567890123456789012345678901234567890123456789012345678',
+              eventId: 'seed1234567890123456789012345678901234567890123456789012345678',
             ),
             isFresh: true,
           ),
@@ -620,8 +649,7 @@ void main() {
           'emits loaded fresh when refresh succeeds',
           setUp: () {
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
@@ -630,8 +658,7 @@ void main() {
           build: createBloc,
           seed: () => OtherProfileLoading(
             profile: createTestProfile(
-              eventId:
-                  'loading12345678901234567890123456789012345678901234567890123456',
+              eventId: 'loading12345678901234567890123456789012345678901234567890123456',
             ),
           ),
           act: (bloc) => bloc.add(const OtherProfileRefreshRequested()),
@@ -652,8 +679,7 @@ void main() {
           'preserves profile from error state during refresh',
           setUp: () {
             final freshProfile = createTestProfile(
-              eventId:
-                  'fresh123456789012345678901234567890123456789012345678901234567',
+              eventId: 'fresh123456789012345678901234567890123456789012345678901234567',
             );
             when(
               () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
@@ -663,8 +689,7 @@ void main() {
           seed: () => OtherProfileError(
             errorType: OtherProfileErrorType.networkError,
             profile: createTestProfile(
-              eventId:
-                  'error123456789012345678901234567890123456789012345678901234567',
+              eventId: 'error123456789012345678901234567890123456789012345678901234567',
             ),
           ),
           act: (bloc) => bloc.add(const OtherProfileRefreshRequested()),
@@ -718,7 +743,7 @@ void main() {
             any(),
             ourPubkey: any(named: 'ourPubkey'),
           ),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async => true);
       });
 
       blocTest<OtherProfileBloc, OtherProfileState>(
@@ -747,7 +772,7 @@ void main() {
             () => mockFollowRepository.isFollowing(testPubkey),
           ).thenReturn(true);
           when(
-            () => mockBlocklistRepository.isBlocked(testPubkey),
+            () => mockBlocklistRepository.canUnblock(testPubkey),
           ).thenReturn(true);
         },
         build: createBloc,
@@ -766,7 +791,7 @@ void main() {
       setUp(() {
         when(
           () => mockBlocklistRepository.unblockUser(any()),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async => true);
       });
 
       blocTest<OtherProfileBloc, OtherProfileState>(

@@ -29,8 +29,7 @@ const _creatorPubkey =
 
 const _testInvite = CollaboratorInvite(
   messageId: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-  videoAddress:
-      '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
+  videoAddress: '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
   videoKind: 34236,
   creatorPubkey: _creatorPubkey,
   videoDTag: 'skate-loop',

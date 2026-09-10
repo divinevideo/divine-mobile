@@ -208,7 +208,7 @@ void main() {
 
         final progressSubscription =
             VideoEditorRenderService.compositeProgressStreamById(
-              taskId,
+              () => taskId,
             ).listen((progress) => progressValues.add(progress.progress));
         addTearDown(progressSubscription.cancel);
 
@@ -314,7 +314,7 @@ void main() {
 
         final progressSubscription =
             VideoEditorRenderService.compositeProgressStreamById(
-              taskId,
+              () => taskId,
             ).listen((progress) => progressValues.add(progress.progress));
         addTearDown(progressSubscription.cancel);
 
@@ -348,16 +348,15 @@ void main() {
               return '${Directory.systemTemp.path}/rendered-sm.mp4';
             };
 
-        NativeProofModeService.proofFileOverride =
-            (
-              File videoFile, {
-              required bool enableAdvancedCawgEmbedding,
-              creatorBindingAssertion,
-              cawgIdentityAssertion,
-              verifiedIdentityBundle,
-              clips,
-              editorStateHistory,
-            }) async => const model.NativeProofData(videoHash: 'proof');
+        NativeProofModeService.proofFileOverride = (
+          File videoFile, {
+          required bool enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+        }) async => const model.NativeProofData(videoHash: 'proof');
 
         final stopMotionClip = DivineVideoClip(
           id: 'sm-clip',

@@ -14,6 +14,7 @@ void main() {
   // divine_video_player, so tests can assert the migrated controller wiring
   // (create/play/pause/dispose) without a real native player.
   final methodCalls = <String>[];
+  final setClipsArguments = <Map<Object?, Object?>>[];
 
   // Per-created-player event streams keyed by native player id. Emitting to a
   // stream drives that controller's stateStream, letting tests simulate a
@@ -35,6 +36,11 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(MethodChannel(methodChannel), (call) async {
           methodCalls.add(call.method);
+          if (call.method == 'setClips') {
+            setClipsArguments.add(
+              call.arguments! as Map<Object?, Object?>,
+            );
+          }
           if (call.method == 'play' && failNextPlay) {
             throw PlatformException(code: 'PLAY_FAILED');
           }
@@ -57,6 +63,7 @@ void main() {
   setUp(() {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
     methodCalls.clear();
+    setClipsArguments.clear();
     playerEvents = {};
     installedMethodChannels.clear();
     installedEventChannels.clear();
@@ -182,6 +189,9 @@ void main() {
         methodCalls,
         containsAll(<String>['create', 'setClips', 'setLooping', 'play']),
       );
+      final clips = setClipsArguments.single['clips']! as List<Object?>;
+      final clip = clips.single! as Map<Object?, Object?>;
+      expect(clip['trimToCommonTrackEnd'], isTrue);
     });
 
     testWidgets('disposes the native controller when unmounted', (

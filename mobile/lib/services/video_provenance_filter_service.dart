@@ -22,9 +22,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// provenance check.
 class VideoProvenanceFilterService extends ChangeNotifier {
   VideoProvenanceFilterService(this._prefs)
-    : _showVerifiedOnly = _prefs.getBool(_prefsKey) ?? false;
+    : _showVerifiedOnly = _prefs.getBool(showVerifiedOnlyStorageKey) ?? false;
 
-  static const String _prefsKey = 'show_verified_only';
+  /// Public so `UserDataCleanupService` can clear it by reference.
+  /// A copied literal cannot detect that this key was renamed (#8314).
+  static const String showVerifiedOnlyStorageKey = 'show_verified_only';
 
   final SharedPreferences _prefs;
   bool _showVerifiedOnly;
@@ -34,7 +36,7 @@ class VideoProvenanceFilterService extends ChangeNotifier {
   Future<void> setShowVerifiedOnly(bool value) async {
     if (_showVerifiedOnly == value) return;
 
-    await _prefs.setBool(_prefsKey, value);
+    await _prefs.setBool(showVerifiedOnlyStorageKey, value);
     _showVerifiedOnly = value;
     notifyListeners();
   }

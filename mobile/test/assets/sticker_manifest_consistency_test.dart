@@ -57,9 +57,9 @@ void main() {
 
     for (final locale in expectedLocales) {
       test('"$locale" strings cover every sticker with non-blank text', () {
-        final strings =
-            json.decode(File('$i18nDirectory/$locale.json').readAsStringSync())
-                as Map<String, dynamic>;
+        final strings = json.decode(
+          File('$i18nDirectory/$locale.json').readAsStringSync(),
+        ) as Map<String, dynamic>;
 
         expect(
           strings.keys.toSet(),

@@ -83,24 +83,27 @@ void main() {
       }
     });
 
-    test('the cap clears classic Vine assets and is not the recording limit', () {
-      // Longest classic Vine measured with ffprobe on media.divine.video (#6421).
-      // Capping below this would cut the musical loop point off every one of
-      // them.
-      const longestClassicVine = Duration(milliseconds: 6533);
+    test(
+      'the cap clears classic Vine assets and is not the recording limit',
+      () {
+        // Longest classic Vine measured with ffprobe on media.divine.video (#6421).
+        // Capping below this would cut the musical loop point off every one of
+        // them.
+        const longestClassicVine = Duration(milliseconds: 6533);
 
-      expect(
-        AppConstants.maxFeedPlaybackDuration,
-        greaterThan(longestClassicVine),
-      );
-      expect(
-        AppConstants.maxFeedPlaybackDuration,
-        greaterThan(VideoEditorConstants.maxDuration),
-        reason:
-            'maxDuration is the 6.3s recording limit, not a playback cap; '
-            'reusing it truncates classic Vines.',
-      );
-    });
+        expect(
+          AppConstants.maxFeedPlaybackDuration,
+          greaterThan(longestClassicVine),
+        );
+        expect(
+          AppConstants.maxFeedPlaybackDuration,
+          greaterThan(VideoEditorConstants.maxDuration),
+          reason:
+              'maxDuration is the 6.3s recording limit, not a playback cap; '
+              'reusing it truncates classic Vines.',
+        );
+      },
+    );
   });
 }
 

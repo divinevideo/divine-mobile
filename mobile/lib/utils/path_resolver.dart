@@ -22,8 +22,25 @@ Future<String> getDocumentsPath() async {
     return '';
   }
   final dir = await path_provider.getApplicationDocumentsDirectory();
-  return dir.path;
+  return _cachedDocumentsPath = dir.path;
 }
+
+String? _cachedDocumentsPath;
+
+/// The documents path if [getDocumentsPath] has already resolved it, else
+/// `null`.
+///
+/// The directory does not move while the app is running, so once the plugin
+/// has answered the value is good for the session. Exists for the first frame
+/// of a widget that would otherwise render nothing until an await completes —
+/// a layer remounted by an undo, say, where a blank frame reads as the layer
+/// having been lost. Callers must still fall back to [getDocumentsPath]: the
+/// cache is empty until something asks the plugin once.
+String? get cachedDocumentsPath => kIsWeb ? '' : _cachedDocumentsPath;
+
+/// Clears the cached documents path so a test can pin the miss path.
+@visibleForTesting
+void resetCachedDocumentsPath() => _cachedDocumentsPath = null;
 
 /// Resolves a file path for storage/retrieval.
 ///

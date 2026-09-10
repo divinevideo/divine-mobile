@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4623,9 +4624,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get supportRevealLogsAction => 'Visa i mapp';
 
   @override
-  String get supportChatNotAvailable => 'Supportchatten är inte tillgänglig';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Kunde inte öppna supportmeddelanden';
 
@@ -5180,22 +5178,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Använd ljud';
-
-  @override
-  String get soundUntitled => 'Namnlöst ljud';
-
-  @override
-  String get soundStopPreview => 'Stoppa förhandsvisning';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Förhandsvisa $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Visa detaljer för $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Inga videor än';
@@ -8839,6 +8821,55 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Dra för att justera';
 
   @override
+  String get videoEditorDetachLabel => 'Lossa';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Lossa valt klipp från tidslinjen';
+
+  @override
+  String get videoEditorDetachTitle => 'Lossa klipp';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klippet flyttas till ytan, där du kan placera det var du vill. Vad tar dess plats på tidslinjen?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Inget';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Slut luckan – allt efter börjar tidigare.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Färg';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Håller en enfärgad yta lika länge som klippet varade.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Ta ett foto som håller platsen.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Lossat klipp';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Kopplar loss klippet …';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Det gick inte att lossa klippet. Din tidslinje är oförändrad.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Det gick inte att läsa in fotot.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override
@@ -8908,8 +8939,12 @@ class AppLocalizationsSv extends AppLocalizations {
       'Video kan inte spara transparens, så det här exporteras som svart.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Hittade ingen bakgrund. Den måste nå ut till bildkanten – välj annars färgen för hand.';
+      'Hittade ingen bakgrund – den måste fylla hela bilden bakom dig. En slät vägg räcker. Eller välj färgen för hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Välj ett klipp';
@@ -9205,6 +9240,10 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Namnlöst ljud';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Ljudfilen finns inte kvar på enheten';
 
   @override
   String get videoEditorAudioUntitled => 'Namnlös';
@@ -9875,8 +9914,7 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det här blockerar de $count konton som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
-      one:
-          'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
+      one: 'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
     );
     return '$_temp0';
   }
@@ -10140,7 +10178,7 @@ class AppLocalizationsSv extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Öppna supportcentret';
+  String get appealOpenSupportCenter => 'Öppna supportcentret';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11320,6 +11358,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get savedSoundRemoveAction => 'Ta bort sparat ljud';
 
   @override
+  String get savedSoundFileMissing =>
+      'Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Rensa hashtaggfiltret';
 
   @override
@@ -12106,9 +12148,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

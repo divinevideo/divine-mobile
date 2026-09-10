@@ -8,20 +8,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 typedef ExternalUriLauncher = Future<bool> Function(Uri uri);
 typedef AndroidChooserLauncher = Future<void> Function(Uri uri, String title);
-typedef ShareTextLauncher =
-    Future<void> Function(
-      String text, {
-      String? subject,
-      Rect? sharePositionOrigin,
-    });
+typedef ShareTextLauncher = Future<void> Function(
+  String text, {
+  String? subject,
+  Rect? sharePositionOrigin,
+});
 
-typedef SupportEmailCompose =
-    Future<void> Function({
-      required String toEmail,
-      required String subject,
-      required String body,
-      Rect? sharePositionOrigin,
-    });
+typedef SupportEmailCompose = Future<void> Function({
+  required String toEmail,
+  required String subject,
+  required String body,
+  Rect? sharePositionOrigin,
+});
 
 String _buildFallbackShareText({
   required String toEmail,

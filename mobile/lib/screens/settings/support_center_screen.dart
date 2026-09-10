@@ -8,15 +8,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/clear_logs/clear_logs_cubit.dart';
 import 'package:openvine/blocs/export_logs/export_logs_cubit.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/support_email_composer.dart';
-import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/clear_logs_confirmation_sheet.dart';
@@ -59,11 +60,9 @@ class SupportCenterScreen extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: ListView(
             children: [
-              _SupportTile(
-                icon: DivineIconName.chat,
-                title: l10n.supportContactSupport,
-                subtitle: l10n.supportContactSupportSubtitle,
-                onTap: () => _contactSupport(context),
+              _SupportContactTile(
+                openSupportMessages: openZendeskSupport,
+                composeEmail: composeEmail,
               ),
               if (isAuthenticated)
                 _SupportTile(
@@ -164,44 +163,6 @@ class SupportCenterScreen extends ConsumerWidget {
     context.push(FeatureRequestScreen.path);
   }
 
-  Future<bool> _viewSupportMessages() async {
-    // JWT refresh is handled internally by showTicketListScreen via _ensureFreshJwt
-    return ZendeskSupportService.showTicketListScreen();
-  }
-
-  Future<void> _contactSupport(BuildContext context) async {
-    final l10n = context.l10n;
-    var emailBody = l10n.supportContactSupportSubtitle;
-    final openZendesk =
-        openZendeskSupport ??
-        (ZendeskSupportService.isAvailable ? _viewSupportMessages : null);
-    if (openZendesk != null) {
-      if (await openZendesk()) return;
-      emailBody = '${l10n.supportCouldNotOpenMessages}\n\n$emailBody';
-    } else {
-      emailBody = '${l10n.supportChatNotAvailable}\n\n$emailBody';
-    }
-    if (!context.mounted) return;
-
-    final sharePositionOrigin = shareAnchorForContext(context);
-    try {
-      await (composeEmail ?? SupportEmailComposer().compose)(
-        toEmail: AppConstants.supportEmail,
-        subject: l10n.supportContactSupport,
-        body: emailBody,
-        sharePositionOrigin: sharePositionOrigin,
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          l10n.authCouldNotOpenEmail(AppConstants.supportEmail),
-          error: true,
-        ),
-      );
-    }
-  }
-
   Future<void> _launchUrl(
     BuildContext context,
     String urlString,
@@ -248,6 +209,7 @@ class _SupportTile extends StatelessWidget {
     this.iconColor,
     this.titleColor,
     this.trailingColor,
+    this.trailing,
   });
 
   final DivineIconName icon;
@@ -256,9 +218,10 @@ class _SupportTile extends StatelessWidget {
   /// Overrides the title colour, for destructive entries.
   final Color? titleColor;
   final Color? trailingColor;
+  final Widget? trailing;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -277,12 +240,91 @@ class _SupportTile extends StatelessWidget {
         subtitle,
         style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
       ),
-      trailing: DivineIcon(
-        icon: DivineIconName.caretRight,
-        color: trailingColor ?? context.vineColors.mutedText,
-      ),
+      trailing:
+          trailing ??
+          DivineIcon(
+            icon: DivineIconName.caretRight,
+            color: trailingColor ?? context.vineColors.mutedText,
+          ),
       onTap: onTap,
     );
+  }
+}
+
+class _SupportContactTile extends StatelessWidget {
+  const _SupportContactTile({
+    this.openSupportMessages,
+    this.composeEmail,
+  });
+
+  final OpenSupportMessages? openSupportMessages;
+  final SupportEmailCompose? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => SupportContactCubit(
+        openSupportMessages: openSupportMessages,
+      ),
+      child: _SupportContactTileView(composeEmail: composeEmail),
+    );
+  }
+}
+
+class _SupportContactTileView extends StatelessWidget {
+  const _SupportContactTileView({this.composeEmail});
+
+  final SupportEmailCompose? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return BlocConsumer<SupportContactCubit, SupportContactState>(
+      listenWhen: (previous, current) =>
+          previous.status != current.status &&
+          current.status == SupportContactStatus.unavailable,
+      listener: (context, _) => _composeSupportEmail(context),
+      builder: (context, state) {
+        final isOpening = state.status == SupportContactStatus.opening;
+        return _SupportTile(
+          icon: DivineIconName.chat,
+          title: l10n.supportContactSupport,
+          subtitle: l10n.supportContactSupportSubtitle,
+          onTap: isOpening
+              ? null
+              : () => context.read<SupportContactCubit>().open(),
+          trailing: isOpening
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: DivineCircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+        );
+      },
+    );
+  }
+
+  Future<void> _composeSupportEmail(BuildContext context) async {
+    final l10n = context.l10n;
+    final sharePositionOrigin = shareAnchorForContext(context);
+    try {
+      await (composeEmail ?? SupportEmailComposer().compose)(
+        toEmail: AppConstants.supportEmail,
+        subject: l10n.supportContactSupport,
+        body:
+            '${l10n.supportCouldNotOpenMessages}\n\n'
+            '${l10n.supportContactSupportSubtitle}',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          l10n.authCouldNotOpenEmail(AppConstants.supportEmail),
+          error: true,
+        ),
+      );
+    }
   }
 }
 
@@ -298,11 +340,20 @@ class _ExportLogsTile extends ConsumerWidget {
     final bugReportService = ref.watch(bugReportServiceProvider);
     final authService = ref.watch(authServiceProvider);
     final authState = ref.watch(currentAuthStateProvider);
+    ref.watch(supportRouteTrailProvider);
+    final routeSnapshot = ref.read(supportRouteTrailProvider.notifier).snapshot;
     return BlocProvider<ExportLogsCubit>(
-      key: ValueKey((bugReportService, authService, authState)),
+      key: ValueKey((
+        bugReportService,
+        authService,
+        authState,
+        routeSnapshot.currentScreen,
+        routeSnapshot.recentScreens.join('|'),
+      )),
       create: (_) => ExportLogsCubit(
         bugReportService: bugReportService,
-        currentScreen: 'SupportCenterScreen',
+        currentScreen: routeSnapshot.currentScreen,
+        recentScreens: routeSnapshot.recentScreens,
         userPubkey: authService.currentPublicKeyHex,
       ),
       child: const _ExportLogsTileView(),

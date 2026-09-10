@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4365,9 +4366,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supportRevealLogsAction => '폴더에서 보기';
 
   @override
-  String get supportChatNotAvailable => '지원 채팅을 사용할 수 없어요';
-
-  @override
   String get supportCouldNotOpenMessages => '지원 메시지를 열 수 없어요';
 
   @override
@@ -4898,22 +4896,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundUseSound => '사운드 사용';
-
-  @override
-  String get soundUntitled => '제목 없는 사운드';
-
-  @override
-  String get soundStopPreview => '미리 듣기 중지';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$title 미리 듣기';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$title 세부 정보 보기';
-  }
 
   @override
   String get soundNoVideoCount => '아직 영상이 없어요';
@@ -8427,6 +8409,50 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => '슬라이드하여 조절';
 
   @override
+  String get videoEditorDetachLabel => '분리';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '선택한 클립을 타임라인에서 분리';
+
+  @override
+  String get videoEditorDetachTitle => '클립 분리';
+
+  @override
+  String get videoEditorDetachDescription =>
+      '클립이 캔버스로 옮겨져서 원하는 자리에 놓을 수 있어요. 타임라인에서는 무엇이 그 자리를 채울까요?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => '없음';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      '빈자리를 메워요. 뒤에 있는 건 모두 더 일찍 시작해요.';
+
+  @override
+  String get videoEditorDetachReplaceColor => '색';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => '클립이 재생되던 만큼 단색을 유지해요.';
+
+  @override
+  String get videoEditorDetachReplaceImage => '사진';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => '그 자리를 채울 사진을 찍어요.';
+
+  @override
+  String get videoEditorDetachedClipLabel => '분리한 클립';
+
+  @override
+  String get videoEditorDetachProgressLabel => '클립을 분리하는 중…';
+
+  @override
+  String get videoEditorDetachFailed => '그 클립을 분리하지 못했어요. 타임라인은 그대로예요.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => '그 사진을 불러오지 못했어요.';
+
+  @override
   String get videoEditorChromaKeyLabel => '크로마키';
 
   @override
@@ -8491,8 +8517,12 @@ class AppLocalizationsKo extends AppLocalizations {
       '영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      '뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      '배경을 찾지 못했습니다. 화면 가장자리까지 닿아야 해요. 아니면 색을 직접 고르세요.';
+      '배경을 찾지 못했어요. 뒤쪽 면이 화면을 가득 채워야 해요. 단색 벽도 괜찮아요. 색을 직접 골라도 돼요.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '클립 고르기';
@@ -8768,6 +8798,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => '제목 없는 사운드';
+
+  @override
+  String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
 
   @override
   String get videoEditorAudioUntitled => '제목 없음';
@@ -9656,7 +9689,7 @@ class AppLocalizationsKo extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => '지원 센터 열기';
+  String get appealOpenSupportCenter => '지원 센터 열기';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '검수 메시지 열기';
@@ -10763,6 +10796,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedSoundRemoveAction => '저장한 사운드 삭제';
 
   @override
+  String get savedSoundFileMissing => '이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요.';
+
+  @override
   String get savedSoundClearHashtagFilter => '해시태그 필터 지우기';
 
   @override
@@ -11517,9 +11553,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'client_connected.dart';
 import 'platform_websocket_factory.dart';
 import 'relay.dart';
+import 'relay_diagnostics.dart';
 import 'web_socket_connection_manager.dart';
 
 class RelayBase extends Relay {
@@ -23,6 +24,7 @@ class RelayBase extends Relay {
     super.url,
     super.relayStatus, {
     WebSocketChannelFactory? channelFactory,
+    super.diagnosticsSink,
   }) : _channelFactory = channelFactory;
 
   /// Tracks whether doConnect is in progress to avoid duplicate onConnected calls
@@ -67,7 +69,14 @@ class RelayBase extends Relay {
         url: url,
         channelFactory:
             _channelFactory ?? const PlatformWebSocketChannelFactory(),
-        logger: (msg) => log("[$url] $msg"),
+        logger: (msg) {
+          log("[$url] $msg");
+          diagnose(
+            RelayDiagnosticSite.connectionLifecycle,
+            connectionDiagnosticLevelFor(msg),
+            msg,
+          );
+        },
       );
 
       // Set up stream listeners
@@ -91,6 +100,39 @@ class RelayBase extends Relay {
       onError(e.toString(), reconnect: true);
       return false;
     }
+  }
+
+  /// Phrases [WebSocketConnectionManager] uses when a connection attempt
+  /// did not succeed.
+  ///
+  /// The manager reports its outcome in prose, so this list has to track the
+  /// wording it actually emits. `timed out` is the one that reads like a
+  /// duplicate and is not: the manager renders a `Duration` after
+  /// `Connection timed out after`, so that line carries no `timeout`
+  /// substring, and the same holds for `Max reconnect attempts reached`,
+  /// `Connect abandoned` and `stopping before attempt`. Those four are how a
+  /// relay actually gives up, so without them a relay that timed out on every
+  /// handshake and then spent its reconnect budget reaches a support export
+  /// at the same severity as an ordinary `Connecting to` line.
+  static const List<String> _connectionFailurePhrases = [
+    'error',
+    'failed',
+    'timeout',
+    'timed out',
+    'abandoned',
+    'exhausted',
+    'max reconnect attempts',
+    'stopping before attempt',
+  ];
+
+  /// Severity for a [WebSocketConnectionManager] log line.
+  @visibleForTesting
+  static RelayDiagnosticLevel connectionDiagnosticLevelFor(String message) {
+    final normalized = message.toLowerCase();
+    for (final phrase in _connectionFailurePhrases) {
+      if (normalized.contains(phrase)) return RelayDiagnosticLevel.warning;
+    }
+    return RelayDiagnosticLevel.info;
   }
 
   void _setupStreamListeners() {

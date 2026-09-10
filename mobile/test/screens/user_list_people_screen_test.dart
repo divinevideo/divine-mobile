@@ -169,8 +169,7 @@ void main() {
           const Stream<PeopleListsState>.empty(),
           initialState: PeopleListsState(
             status: PeopleListsStatus.ready,
-            ownerPubkey:
-                'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
+            ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
             lists: [list],
           ),
         );
@@ -289,8 +288,7 @@ void main() {
         const Stream<PeopleListsState>.empty(),
         initialState: PeopleListsState(
           status: PeopleListsStatus.ready,
-          ownerPubkey:
-              'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
+          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
           lists: [list],
         ),
       );
@@ -333,8 +331,7 @@ void main() {
         const Stream<PeopleListsState>.empty(),
         initialState: PeopleListsState(
           status: PeopleListsStatus.ready,
-          ownerPubkey:
-              'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
+          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
           lists: [list],
         ),
       );
@@ -861,59 +858,61 @@ void main() {
   });
 
   group('GoRouter /people-lists/:listId', () {
-    testWidgets('route uses handwritten GoRoute and resolves listId path param', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      final list = _buildList(id: 'routed-list', name: 'Routed List');
-      whenListen(
-        bloc,
-        const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey:
-              'bb11cc22dd33ee44ff55aa66bb11cc22dd33ee44ff55aa66bb11cc22dd33ee44',
-          lists: [list],
-        ),
-      );
-
-      final router = GoRouter(
-        initialLocation: '/people-lists/${Uri.encodeComponent(list.id)}',
-        routes: [
-          GoRoute(
-            path: UserListPeopleScreen.path,
-            name: UserListPeopleScreen.routeName,
-            builder: (context, state) {
-              final listId = state.pathParameters['listId'];
-              if (listId == null || listId.isEmpty) {
-                return const Scaffold(
-                  body: Center(child: Text('Invalid list')),
-                );
-              }
-              return UserListPeopleScreen(listId: listId);
-            },
+    testWidgets(
+      'route uses handwritten GoRoute and resolves listId path param',
+      (
+        tester,
+      ) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList(id: 'routed-list', name: 'Routed List');
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: 'bb11cc22dd33ee44ff55aa66bb11cc22dd33ee44ff55aa66bb11cc22dd33ee44',
+            lists: [list],
           ),
-        ],
-      );
+        );
 
-      await tester.pumpWidget(
-        testProviderScope(
-          child: BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: router,
+        final router = GoRouter(
+          initialLocation: '/people-lists/${Uri.encodeComponent(list.id)}',
+          routes: [
+            GoRoute(
+              path: UserListPeopleScreen.path,
+              name: UserListPeopleScreen.routeName,
+              builder: (context, state) {
+                final listId = state.pathParameters['listId'];
+                if (listId == null || listId.isEmpty) {
+                  return const Scaffold(
+                    body: Center(child: Text('Invalid list')),
+                  );
+                }
+                return UserListPeopleScreen(listId: listId);
+              },
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          testProviderScope(
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: MaterialApp.router(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump();
+        await tester.pump();
 
-      expect(find.byType(UserListPeopleScreen), findsOneWidget);
-      expect(find.text('Routed List'), findsOneWidget);
-    });
+        expect(find.byType(UserListPeopleScreen), findsOneWidget);
+        expect(find.text('Routed List'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'route falls back to invalid-list scaffold with back button for '

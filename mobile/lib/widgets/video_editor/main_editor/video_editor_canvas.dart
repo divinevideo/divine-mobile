@@ -29,6 +29,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -49,9 +50,9 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_cut_area_
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_setup_loading_indicator.dart';
-import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
+import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     hide AudioTrack, VideoClip;
 import 'package:pro_video_editor/pro_video_editor.dart' show ClipTransition;
@@ -106,6 +107,22 @@ class VideoEditorCanvas extends StatelessWidget {
         !previous.isTrimDragging &&
         previous.clips != current.clips;
   }
+
+  /// Whether this editor session needs the Android legacy texture surface.
+  ///
+  /// The choice is sticky once enabled: changing surface implementations more
+  /// than once in a session would repeatedly tear down playback. Imported
+  /// drafts start in legacy mode only when their history already owns a
+  /// detached clip; ordinary sessions upgrade once, on the first detach.
+  @visibleForTesting
+  static bool shouldUseLegacySurface({
+    required bool alreadyEnabled,
+    required Map<String, dynamic> editorStateHistory,
+    ClipDetachResult? detachResult,
+  }) =>
+      alreadyEnabled ||
+      detachResult is ClipDetachSuccess ||
+      DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
   /// Whether [current] differs from [previous] *only* in clip thumbnail paths.
   ///
@@ -405,6 +422,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// [didChangeDependencies]. Published alongside every [_setLayerPlayTime] so
   /// canvas overlays (the CC pill) track playback at the layer cadence.
   ValueNotifier<Duration>? _playTimeNotifier;
+  ValueNotifier<bool>? _playheadAdvancingNotifier;
 
   final _isPlayerReadyNotifier = ValueNotifier<bool>(false);
 
@@ -424,6 +442,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool _isInitialized = false;
   bool _isImportingHistory = false;
+  late bool _useLegacySurface;
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
 
@@ -572,6 +591,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     _initializeController();
     _documentsPath = getDocumentsPath();
+    _useLegacySurface = VideoEditorCanvas.shouldUseLegacySurface(
+      alreadyEnabled: false,
+      editorStateHistory: ref.read(videoEditorProvider).editorStateHistory,
+    );
 
     // Initialize the player with the current clips.
     if (_clipPaths.isNotEmpty) {
@@ -590,7 +613,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _playTimeNotifier = VideoEditorScope.of(context).playTimeNotifier;
+    final scope = VideoEditorScope.of(context);
+    _playTimeNotifier = scope.playTimeNotifier;
+    _playheadAdvancingNotifier = scope.playheadAdvancingNotifier;
   }
 
   /// Renders and caches transition seams so the preview can splice them in
@@ -1028,6 +1053,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // playing (e.g. external unpause) must not double-start it.
     final ticker = _stopMotionTicker ??= createTicker(_onStopMotionTick);
     if (!ticker.isActive) ticker.start();
+    _setPlayheadAdvancing(advancing: true);
 
     // Timed layers follow the overlay play time, not the bloc position.
     _setLayerPlayTime(_stopMotionAnchor);
@@ -1048,6 +1074,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   void _pauseStopMotion() {
     _stopMotionStopwatch.stop();
     if (_stopMotionTicker?.isActive ?? false) _stopMotionTicker!.stop();
+    _setPlayheadAdvancing(advancing: false);
     final audio = _stopMotionAudio;
     if (audio != null) unawaited(audio.pauseAll());
     if (!context.read<VideoEditorMainBloc>().state.isPlaying) return;
@@ -1324,6 +1351,20 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       _playheadStopwatch.stop();
       if (_playheadTicker?.isActive ?? false) _playheadTicker!.stop();
     }
+    _setPlayheadAdvancing(advancing: active);
+  }
+
+  /// Publishes whether the playhead is being advanced by playback.
+  ///
+  /// Both tickers report through here — the composition player's and the
+  /// stop-motion clock's — so anything following the playhead (a detached
+  /// clip's companion player) stops the moment the editor does, instead of
+  /// inferring a pause from ticks going quiet.
+  void _setPlayheadAdvancing({required bool advancing}) {
+    // Captured in didChangeDependencies, not read here: this runs from ticker
+    // and teardown paths, and an inherited-widget lookup outside build takes a
+    // dependency (and asserts once the element is defunct).
+    _playheadAdvancingNotifier?.value = advancing;
   }
 
   /// Advances the overlay play time from the anchor by the wall-clock elapsed
@@ -1484,8 +1525,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     final clips = ref.read(clipManagerProvider).clips;
 
+    // The clip list is named, not just counted: when the preview shows footage
+    // the timeline no longer contains — a clip detached onto the canvas, say —
+    // the question is always *which* files the player was handed, and a bare
+    // count cannot answer it.
     Log.debug(
-      '🎬 Initializing video player with ${clipPaths.length} clip(s)',
+      '🎬 Initializing video player with ${clipPaths.length} clip(s): '
+      '${clips.map((c) => '${c.id}->'
+          '${(c.video?.file?.path ?? '?').split('/').last}').join(', ')}',
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
@@ -1496,6 +1543,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // just abandon it rather than resurrecting a released player.
     final player = DivineVideoPlayerController(
       useTexture: true,
+      // A detached clip puts a second texture-backed player on this screen.
+      // The SurfaceProducer backend shares an ImageReader pool across players,
+      // and that is how the detached clip's frames surfaced inside this
+      // player's area — the composition briefly showing footage its own clip
+      // list does not contain. The legacy SurfaceTexture has no shared pool.
+      //
+      // The trade-off is deliberate: the legacy backend has no surface-recreate
+      // callback, so it cannot transparently survive an OEM compositor event
+      // (a permission dialog, for instance) and the player is re-initialised
+      // instead.
+      useLegacySurface: _useLegacySurface,
       debugLabel: 'editor_canvas',
     );
     _videoPlayer = player;
@@ -2460,6 +2518,37 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             if (trimEndPosition != null) {
               bloc.add(VideoEditorPositionChanged(trimEndPosition));
             }
+
+            final needsLegacyUpgrade =
+                !_useLegacySurface &&
+                VideoEditorCanvas.shouldUseLegacySurface(
+                  alreadyEnabled: _useLegacySurface,
+                  editorStateHistory: const {},
+                  detachResult: state.lastDetachResult,
+                );
+            if (needsLegacyUpgrade) {
+              _useLegacySurface = true;
+              _seekEpoch++;
+              _pendingSeekPosition = null;
+              _isSeeking = true;
+              final ownerEpoch = _seekEpoch;
+              try {
+                await _initializePlayer(
+                  state.clips
+                      .map((clip) => clip.video?.file?.path)
+                      .whereType<String>()
+                      .toList(),
+                  startPosition: startPosition,
+                );
+                if (!mounted) return;
+                _lastReportedPosition = startPosition;
+                _pendingSeekTarget = startPosition;
+                _setLayerPlayTime(startPosition);
+              } finally {
+                if (_seekEpoch == ownerEpoch) _isSeeking = false;
+              }
+              return;
+            }
             // Composition swap back — invalidate in-flight single-clip seeks.
             _seekEpoch++;
             _pendingSeekPosition = null;
@@ -2573,7 +2662,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   ? .fromMap(
                       editorStateHistory,
                       configs: const ImportEditorConfigs(
-                        widgetLoader: videoEditorStickerWidgetLoader,
+                        widgetLoader: videoEditorWidgetLayerLoader,
                       ),
                     )
                   : null,

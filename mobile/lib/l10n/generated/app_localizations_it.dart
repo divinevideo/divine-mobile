@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4679,9 +4680,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get supportRevealLogsAction => 'Mostra nella cartella';
 
   @override
-  String get supportChatNotAvailable => 'Chat di assistenza non disponibile';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Impossibile aprire i messaggi di assistenza';
 
@@ -5242,22 +5240,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Usa audio';
-
-  @override
-  String get soundUntitled => 'Audio senza titolo';
-
-  @override
-  String get soundStopPreview => 'Ferma anteprima';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Anteprima di $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Vedi dettagli di $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Ancora nessun video';
@@ -8940,6 +8922,55 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Scorri per regolare';
 
   @override
+  String get videoEditorDetachLabel => 'Stacca';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Stacca la clip selezionata dalla timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Stacca la clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'La clip passa sulla tela, dove puoi metterla dove vuoi. Cosa prende il suo posto sulla timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Niente';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Chiudi il vuoto: tutto quello che segue inizia prima.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Colore';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Tiene un colore pieno per quanto durava la clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Scatta una foto che ne tenga il posto.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip staccata';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Sto staccando la clip…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Non è stato possibile staccare quella clip. La timeline resta invariata.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Impossibile caricare quella foto.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override
@@ -9009,8 +9040,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il video non supporta la trasparenza, quindi in esportazione diventa nero.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l\'inquadratura.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nessuno sfondo trovato. Deve arrivare ai bordi dell\'inquadratura, altrimenti scegli il colore a mano.';
+      'Nessuno sfondo trovato: deve riempire tutta l\'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Scegli una clip';
@@ -9308,6 +9343,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Suono senza titolo';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'File audio non più su questo dispositivo';
 
   @override
   String get videoEditorAudioUntitled => 'Senza titolo';
@@ -9986,8 +10025,7 @@ class AppLocalizationsIt extends AppLocalizations {
       locale: localeName,
       other:
           'Questo blocca i $count account che ora tengono questo badge sul profilo. I loro post non appariranno nei tuoi feed e non verranno avvisati.',
-      one:
-          'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
+      one: 'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
     );
     return '$_temp0';
   }
@@ -10258,7 +10296,7 @@ class AppLocalizationsIt extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Apri il centro assistenza';
+  String get appealOpenSupportCenter => 'Apri il centro assistenza';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11456,6 +11494,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get savedSoundRemoveAction => 'Rimuovi il suono salvato';
 
   @override
+  String get savedSoundFileMissing =>
+      'Il file audio di questo suono non è più su questo dispositivo, quindi non può essere riprodotto.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Azzera il filtro per hashtag';
 
   @override
@@ -12246,9 +12288,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

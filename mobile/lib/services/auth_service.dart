@@ -15,9 +15,11 @@ import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer, SecureKeyStorage, SecureKeyStorageException;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/models/account_restore_failed_exception.dart';
 import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
+import 'package:openvine/models/auth_service_callbacks.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/auth_user_profile.dart';
 import 'package:openvine/models/authentication_source.dart';
@@ -47,6 +49,7 @@ import 'package:unified_logger/unified_logger.dart';
 // without a facade import cycle; external consumers keep importing it here.
 export 'package:openvine/models/account_restore_failed_exception.dart';
 export 'package:openvine/models/auth_result.dart';
+export 'package:openvine/models/auth_service_callbacks.dart';
 export 'package:openvine/models/auth_state.dart';
 export 'package:openvine/models/auth_user_profile.dart';
 export 'package:openvine/models/authentication_source.dart';
@@ -82,28 +85,6 @@ enum AccountDeletionReadiness {
   /// resolves it. Nothing has been published.
   requiresReauthentication,
 }
-
-/// Callback to pre-fetch following list from REST API before auth state is set.
-///
-/// Called during login setup to populate SharedPreferences cache so the
-/// router redirect has accurate following data before it fires synchronously.
-typedef PreFetchFollowingCallback = Future<void> Function(String pubkeyHex);
-
-/// Port for launching the NIP-46 bunker auth URL in an external browser.
-///
-/// Returns whether the URL could be launched. Wired in the app layer to
-/// url_launcher so this service carries no Flutter-plugin dependency for the
-/// launch; when unset (tests), the auth URL is logged as unlaunchable instead
-/// of hitting a platform channel.
-typedef AuthUrlLauncher = Future<bool> Function(Uri url);
-
-/// Callback invoked before AuthService clears the outgoing session identity.
-typedef BeforeSessionTeardownCallback = Future<void> Function();
-
-/// Factory for NIP-46 remote signers. Injected in tests so startup restore can
-/// exercise unreachable signer behavior without opening relay sockets.
-typedef RemoteSignerFactory =
-    NostrRemoteSigner Function(int relayMode, NostrRemoteSignerInfo info);
 
 /// Total time budget for pre-teardown callbacks during sign-out.
 const _kBeforeSessionTeardownTimeout = Duration(seconds: 5);
@@ -2421,7 +2402,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     try {
       final privateKeyHex = await Nip49.decode(ncryptsec, password);
-      return importFromHex(privateKeyHex);
+      return await importFromHex(privateKeyHex);
     } on Nip49Exception {
       _setAuthState(AuthState.unauthenticated);
       return AuthResult.incorrectPassword();
@@ -3161,8 +3142,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         );
       }
 
-      await prefs.remove('age_verified_16_plus');
-      await prefs.remove('terms_accepted_at');
+      await prefs.remove(TermsAcceptanceKeys.ageVerified16Plus);
+      await prefs.remove(TermsAcceptanceKeys.termsAcceptedAt);
 
       if (deleteKeys && !deleteLocalUserData && currentPubkey != null) {
         await _userDataCleanupService.markOwnerScopedLegacyDataForUser(
@@ -3510,8 +3491,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     await _clearOAuthSessionForSignOut();
 
     await prefs.remove(_kSessionRecoveryAnchorKey);
-    await prefs.remove('age_verified_16_plus');
-    await prefs.remove('terms_accepted_at');
+    await prefs.remove(TermsAcceptanceKeys.ageVerified16Plus);
+    await prefs.remove(TermsAcceptanceKeys.termsAcceptedAt);
     await prefs.remove(SharedPreferencesRelayStorage.defaultKey);
     await prefs.remove(SharedPreferencesRelayStorage.defaultRemovedRelaysKey);
     await prefs.remove('current_user_pubkey_hex');
@@ -3596,7 +3577,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // Falls back to storage read if the container isn't loaded yet.
       final container = _currentKeyContainer;
       if (container != null && container.hasPrivateKey) {
-        return container.withNsec((nsec) => nsec);
+        return await container.withNsec((nsec) => nsec);
       }
 
       if (authenticationSource == AuthenticationSource.divineOAuth) {
@@ -3977,10 +3958,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      'terms_accepted_at',
+      TermsAcceptanceKeys.termsAcceptedAt,
       DateTime.now().toIso8601String(),
     );
-    await prefs.setBool('age_verified_16_plus', true);
+    await prefs.setBool(TermsAcceptanceKeys.ageVerified16Plus, true);
   }
 
   /// Builds a [NostrIdentity] from the current mutable signer fields.
@@ -3988,8 +3969,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Must be called AFTER signer fields (_keycastSigner, _bunkerSigner,
   /// _amberSigner) and _currentKeyContainer have been set for the session.
   ///
-  /// Delegates to [SignerFactory.buildIdentity] with a per-call snapshot of
-  /// the session fields, so the factory never holds a stale signer reference.
+  /// Passes a fresh snapshot to [SignerFactory.buildIdentity], never stale state.
   ///
   /// Throws [StateError] if no valid identity can be constructed — this
   /// indicates a programming error in the auth flow, not a user-facing
@@ -4155,44 +4135,37 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         followingKnownEmpty,
       );
 
-      // Pre-fetch following list from REST API BEFORE setting auth state.
-      // Populate redirect state before the synchronous auth-state transition.
-      if (_preFetchFollowing != null && !hasFollowingCache) {
-        Log.debug(
-          '_setupUserSession: pre-fetching following list...',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        try {
-          await _preFetchFollowing(pubkeyHex);
-          Log.debug(
-            '_setupUserSession: following list pre-fetched',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        } catch (e) {
-          Log.warning(
-            'Pre-fetch following list failed (will rely on '
-            'FollowRepository): $e',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        }
-      } else if (hasFollowingCache) {
-        Log.debug(
-          '_setupUserSession: following list already cached — '
-          'skipping pre-fetch',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-      }
-
       Log.info(
         '_setupUserSession: setting auth state to authenticated',
         name: 'AuthService',
         category: LogCategory.auth,
       );
       _setAuthState(AuthState.authenticated);
+
+      if (_preFetchFollowing != null && !hasFollowingCache) {
+        unawaited(() async {
+          Log.debug(
+            '_setupUserSession: pre-fetching following list...',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
+          try {
+            await _preFetchFollowing(pubkeyHex);
+            Log.debug(
+              '_setupUserSession: following list pre-fetched',
+              name: 'AuthService',
+              category: LogCategory.auth,
+            );
+          } catch (e) {
+            Log.warning(
+              'Pre-fetch following list failed (will rely on '
+              'FollowRepository): $e',
+              name: 'AuthService',
+              category: LogCategory.auth,
+            );
+          }
+        }());
+      }
 
       // Register this account in the known accounts list
       await _knownAccounts.upsert(pubkeyHex, source);

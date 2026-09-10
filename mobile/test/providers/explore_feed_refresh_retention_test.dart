@@ -275,8 +275,7 @@ void main() {
             expect(
               currentFeed?.videos.map((video) => video.id),
               ['popular-classic'],
-              reason:
-                  'Loaded variant must not update before matching feed data is published.',
+              reason: 'Loaded variant must not update before matching feed data is published.',
             );
           },
         );
@@ -302,8 +301,7 @@ void main() {
         expect(
           container.read(popularVideosLoadedVariantProvider),
           isNull,
-          reason:
-              'The UI must not treat the old Native page as the selected Classic page.',
+          reason: 'The UI must not treat the old Native page as the selected Classic page.',
         );
 
         classicCompleter.complete(

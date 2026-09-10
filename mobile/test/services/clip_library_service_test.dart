@@ -172,6 +172,46 @@ void main() {
       });
     });
 
+    group('placeholder clips', () {
+      DivineVideoClip placeholder({String id = 'placeholder_1'}) =>
+          DivineVideoClip(
+            id: id,
+            video: EditorVideo.file('/tmp/$id.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .square,
+            originalAspectRatio: 1,
+            isPlaceholder: true,
+          );
+
+      test('are not listed in the library', () async {
+        final real = DivineVideoClip(
+          id: 'clip_real',
+          video: EditorVideo.file('/tmp/clip_real.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+        );
+        await service.saveClip(real);
+        await service.saveClip(placeholder());
+
+        final clips = await service.getAllClips();
+
+        // The colour or still holding a detached clip's slot travels with the
+        // composition, so the autosave draft stores it — but it is a backdrop
+        // the editor generated, not footage, and has no meaning on its own.
+        expect(clips.map((c) => c.id), ['clip_real']);
+      });
+
+      test('are not listed in the trash either', () async {
+        await service.saveClip(placeholder());
+        await service.softDelete('placeholder_1');
+
+        expect(await service.getTrashedClips(), isEmpty);
+      });
+    });
+
     group('softDelete', () {
       test('hides clip from active queries but keeps row', () async {
         final clip = DivineVideoClip(

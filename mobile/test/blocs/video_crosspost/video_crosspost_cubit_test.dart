@@ -6,28 +6,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
-import 'package:openvine/services/crossposter_api_client.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 
-class _MockCrossposterApiClient extends Mock implements CrossposterApiClient {}
+class _MockCrosspostingApiClient extends Mock
+    implements CrosspostingApiClient {}
 
 void main() {
   group(VideoCrosspostCubit, () {
-    late _MockCrossposterApiClient client;
+    late _MockCrosspostingApiClient client;
 
     const eventId =
         'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
         'bbbbbbbbbbbbbbbbbbbbbbbb';
 
-    const instagramConnection = CrossposterConnection(
+    const instagramConnection = CrosspostingConnection(
       id: 'conn-1',
-      platform: 'instagram',
-      status: 'connected',
+      platform: CrosspostingPlatform.instagram,
+      status: CrosspostingConnectionStatus.connected,
       externalAccountName: 'divine.creator',
     );
-    const disconnectedTiktok = CrossposterConnection(
+    const disconnectedTiktok = CrosspostingConnection(
       id: 'conn-2',
-      platform: 'tiktok',
-      status: 'needs_reauth',
+      platform: CrosspostingPlatform.tiktok,
+      status: CrosspostingConnectionStatus.needsReauth,
     );
 
     const queuedJob = CrosspostJob(
@@ -43,11 +44,11 @@ void main() {
     );
 
     setUp(() {
-      client = _MockCrossposterApiClient();
+      client = _MockCrosspostingApiClient();
     });
 
     VideoCrosspostCubit buildCubit({
-      List<CrossposterConnection>? initialConnections,
+      List<CrosspostingConnection>? initialConnections,
       Duration pollInterval = const Duration(milliseconds: 10),
       Duration pollTimeout = const Duration(milliseconds: 100),
     }) {
@@ -99,7 +100,7 @@ void main() {
         build: () {
           when(
             () => client.getConnections(),
-          ).thenThrow(const CrossposterApiException('boom', statusCode: 500));
+          ).thenThrow(const CrosspostingApiException('boom', statusCode: 500));
           return buildCubit();
         },
         act: (cubit) => cubit.loadConnections(),
@@ -111,7 +112,7 @@ void main() {
             status: VideoCrosspostStatus.connectionsFailed,
           ),
         ],
-        errors: () => [isA<CrossposterApiException>()],
+        errors: () => [isA<CrosspostingApiException>()],
       );
     });
 
@@ -233,7 +234,7 @@ void main() {
         ) async {
           polls += 1;
           if (polls == 1) {
-            throw const CrossposterApiException('flaky', statusCode: 502);
+            throw const CrosspostingApiException('flaky', statusCode: 502);
           }
           return [postedJob];
         });
@@ -269,7 +270,7 @@ void main() {
               platforms: ['instagram'],
             ),
           ).thenThrow(
-            CrossposterApiException('nope', statusCode: 403, code: code),
+            CrosspostingApiException('nope', statusCode: 403, code: code),
           );
 
           final cubit = buildCubit(initialConnections: [instagramConnection]);

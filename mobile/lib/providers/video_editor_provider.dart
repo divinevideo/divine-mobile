@@ -18,7 +18,9 @@ import 'package:models/models.dart'
         VideoEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
+import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -88,10 +90,14 @@ final videoEditorProvider =
 /// [VideoEditorRenderService] directly, keeping the UI/service boundary clean.
 final StreamProvider<ProgressModel> videoEditorCompositeProgressProvider =
     StreamProvider.autoDispose<ProgressModel>((ref) {
-      // draftId is set once during initialization and does not change within a
-      // session, so a one-time read is sufficient.
-      final draftId = ref.read(videoEditorProvider.notifier).draftId;
-      return VideoEditorRenderService.compositeProgressStreamById(draftId);
+      // draftId is NOT fixed for the session: it has a setter and is
+      // reassigned at three sites in this file. Hand the stream a callback so
+      // the filter follows the current id instead of the one this provider
+      // happened to see first (#8796).
+      final notifier = ref.read(videoEditorProvider.notifier);
+      return VideoEditorRenderService.compositeProgressStreamById(
+        () => notifier.draftId,
+      );
     });
 
 /// Manages video editor state and operations.
@@ -297,11 +303,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
-    _startDeferredFileCleanup();
     draftId = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
     }
+    // Started last, not first: the cleanup reference-checks each path against
+    // the drafts table, so it has to run against the state this reset leaves
+    // behind. Started before [removeAutosavedDraft], it sees the autosave row
+    // that is about to be deleted, keeps the file it references, and cannot
+    // retry — [_flushDeferredFileCleanup] empties the deferral set as it goes.
+    // [removeAutosavedDraft] logs its own failures instead of throwing, so
+    // this still runs on every path.
+    _startDeferredFileCleanup();
   }
 
   // === METADATA ===
@@ -409,6 +422,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       description: cleanedDescription,
       tags: allTags,
       metadataLimitReached: false,
+      captionMentions: pruneCaptionMentions(
+        state.captionMentions,
+        cleanedDescription,
+      ),
     );
 
     triggerAutosave();
@@ -492,6 +509,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Set the "Inspired By" reference to a person (NIP-27 npub in content).
   void setInspiredByPerson(String npub) {
     state = state.copyWith(inspiredByNpub: npub, clearInspiredByVideo: true);
+    triggerAutosave();
+  }
+
+  /// Record an account picked from the caption's mention autocomplete.
+  ///
+  /// Appends rather than replaces: mentioning the same person twice in one
+  /// caption is legitimate, and the publisher matches each binding to its own
+  /// occurrence. Stale entries are pruned when the caption text next changes.
+  void recordCaptionMention(CaptionMention mention) {
+    if (state.captionMentions.contains(mention)) return;
+    state = state.copyWith(
+      captionMentions: [...state.captionMentions, mention],
+    );
     triggerAutosave();
   }
 
@@ -615,6 +645,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       collaboratorPubkeys: state.collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpub: state.inspiredByNpub,
+      captionMentions: state.captionMentions,
       // Always the timeline's own credits, never a remembered set: a credit is
       // a factual claim about footage that is *in* this video, and drafts
       // persist each clip's credits on the clip itself. Falling back to the
@@ -1158,6 +1189,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       ),
       inspiredByVideo: draft.inspiredByVideo,
       inspiredByNpub: draft.inspiredByNpub,
+      captionMentions: draft.captionMentions,
       selectedSound: draft.selectedSound,
       seedSelectedSoundAsAudioTrack: false,
       contentWarnings: draft.contentWarnings,

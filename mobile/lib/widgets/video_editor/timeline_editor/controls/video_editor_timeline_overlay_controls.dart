@@ -11,7 +11,10 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
@@ -61,6 +64,8 @@ class _LayerOverlayControls extends StatelessWidget {
         .where((l) => l.id == item.id)
         .firstOrNull;
     final isTextLayer = layer is TextLayer;
+    final isDetachedClip =
+        layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
 
     // Draw layers can be multi-selected and combined when the selected layer is
     // itself a mergeable draw layer and at least two mergeable draw layers exist
@@ -82,7 +87,18 @@ class _LayerOverlayControls extends StatelessWidget {
       multiSelectSemanticLabel:
           context.l10n.videoEditorLayerMultiSelectSemanticLabel,
       onSplit: () => _splitLayer(context: context, layer: layer),
-      onAnimate: layer == null
+      // Crop / rotate / flip, for a detached clip only. Every other layer is
+      // already whatever shape it was drawn or typed at; a detached clip
+      // carries a video file that can genuinely be re-rendered.
+      onTransform: isDetachedClip
+          ? () => transformDetachedClip(context, layer)
+          : null,
+      // Animations are off for a detached clip: the export composites it as a
+      // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
+      // an `animations` field the way a rasterized `ImageLayer` does. Offering
+      // the action would animate the layer in the editor and drop it silently
+      // from the file.
+      onAnimate: layer == null || isDetachedClip
           ? null
           : () => editLayerAnimation(
               context,
@@ -141,9 +157,10 @@ class _LayerOverlayControls extends StatelessWidget {
     final layerIdx = layers.indexWhere((l) => l.id == item.id);
     if (layerIdx < 0) return;
 
-    final copy = layer.copyWith(
-      id: _copyId(layer.id),
-      offset: layer.offset + const Offset(24, 24),
+    final copyId = _copyId(layer.id);
+    final copy = _reownDetachedClip(
+      layer.copyWith(id: copyId, offset: layer.offset + const Offset(24, 24)),
+      layerId: copyId,
     );
 
     layers.insert(layerIdx + 1, copy);
@@ -164,10 +181,23 @@ class _LayerOverlayControls extends StatelessWidget {
     final layerIdx = layers.indexWhere((l) => l.id == item.id);
     if (layerIdx < 0) return;
 
-    final second = layer.copyWith(
-      id: _copyId(layer.id),
-      startTime: splitAt,
-      endTime: item.endTime,
+    final secondId = _copyId(layer.id);
+    // The tail plays on from where the head stopped, so it starts that much
+    // further into the clip. Measured from the layer's own start rather than
+    // from zero, so splitting a tail again keeps accumulating.
+    final headOffset =
+        DetachedClipLayerData.sourceOffsetOf(
+          DetachedClipLayerData.metaOf(layer),
+        ) ??
+        Duration.zero;
+    final second = _reownDetachedClip(
+      layer.copyWith(
+        id: secondId,
+        startTime: splitAt,
+        endTime: item.endTime,
+      ),
+      layerId: secondId,
+      sourceOffset: headOffset + (splitAt - item.startTime),
     );
 
     layers[layerIdx] = layer.copyWith(endTime: splitAt);
@@ -379,10 +409,10 @@ class _TuneOverlayControls extends StatelessWidget {
       updated
         ..add(m.copyWith(endTime: splitAt))
         ..add(
-          _reSet(m, newSetId).copyWith(
-            startTime: splitAt,
-            endTime: item.endTime,
-          ),
+          _reSet(
+            m,
+            newSetId,
+          ).copyWith(startTime: splitAt, endTime: item.endTime),
         );
     }
 
@@ -538,6 +568,35 @@ class _SoundOverlayControls extends StatelessWidget {
       TimelineOverlayItemSelected(second.id),
     );
   }
+}
+
+/// Re-points a copied detached clip's meta at [copy]'s own layer id, and at
+/// [sourceOffset] when the copy starts partway into the clip.
+///
+/// `copyWith` gives the copy a fresh `Layer.id` but carries the meta verbatim,
+/// so without this the copy still names the layer it came from — and then reads
+/// that layer's window off the timeline while the export uses its own. The two
+/// agree only while the copy sits at the same time as the original, which is
+/// where a duplicate starts and why the mismatch surfaces only once it moves.
+///
+/// Returns [copy] unchanged for every other kind of layer.
+Layer _reownDetachedClip(
+  Layer copy, {
+  required String layerId,
+  Duration? sourceOffset,
+}) {
+  if (copy is! WidgetLayer) return copy;
+  final meta = DetachedClipLayerData.rebase(
+    DetachedClipLayerData.metaOf(copy),
+    layerId: layerId,
+    sourceOffset: sourceOffset,
+  );
+  if (meta == null) return copy;
+  return copy.copyWith(
+    widget: DetachedClipLayerView(meta: meta),
+    meta: meta,
+    exportConfigs: copy.exportConfigs.copyWith(id: layerId, meta: meta),
+  );
 }
 
 String _copyId(String id) =>

@@ -2,6 +2,7 @@
 // ABOUTME: Tracks taps to unlock developer mode (7 taps)
 
 import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'developer_mode_tap_provider.g.dart';

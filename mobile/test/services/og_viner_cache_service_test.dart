@@ -60,9 +60,9 @@ void main() {
         expect(service.isOgViner(ogPubkey), isTrue);
         expect(service.isOgViner(nonOgPubkey), isFalse);
 
-        final stored =
-            jsonDecode(prefs.getString(ogVinerPubkeysCacheKey)!)
-                as List<dynamic>;
+        final stored = jsonDecode(
+          prefs.getString(ogVinerPubkeysCacheKey)!,
+        ) as List<dynamic>;
         expect(stored, [ogPubkey]);
       },
     );

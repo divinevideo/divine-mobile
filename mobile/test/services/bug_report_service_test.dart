@@ -7,7 +7,9 @@ import 'dart:ui' show Locale;
 import 'package:analytics/analytics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show BugReportData, LogEntry, LogLevel;
+import 'package:models/models.dart' show BugReportData;
+import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -85,6 +87,54 @@ void main() {
       expect(data.recentLogs, isA<List>());
       expect(data.errorCounts, isA<Map<String, int>>());
       expect(data.timestamp, isA<DateTime>());
+    });
+
+    test('retains a terminal relay failure after bounded chatter', () async {
+      final capture = LogCaptureService();
+      await capture.clearAllLogs();
+      // The capture buffer is a process-global singleton shared by every
+      // suite in the merged VGV isolate, so these entries have to go back out.
+      addTearDown(capture.clearAllLogs);
+      final adapter = RelayDiagnosticsAdapter(maxEventsPerWindow: 1);
+      const relayUrl = 'wss://relay.example';
+      for (var i = 0; i < 4; i++) {
+        adapter(
+          RelayDiagnostic(
+            site: RelayDiagnosticSite.connectionLifecycle,
+            level: RelayDiagnosticLevel.info,
+            relayUrl: relayUrl,
+            message: 'Connection progress $i',
+          ),
+        );
+      }
+      adapter(
+        const RelayDiagnostic(
+          site: RelayDiagnosticSite.connectionLifecycle,
+          level: RelayDiagnosticLevel.warning,
+          relayUrl: relayUrl,
+          message: 'Relay connection failed',
+        ),
+      );
+
+      final data = await service.collectDiagnostics(
+        userDescription: 'Relay connection problem',
+      );
+
+      final relayEntries = data.recentLogs.where(
+        (entry) => entry.name == 'RelayDiagnostics',
+      );
+      expect(
+        relayEntries.where(
+          (entry) => entry.message.contains('Relay connection failed'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        relayEntries.where(
+          (entry) => entry.message.contains('diagnostics suppressed'),
+        ),
+        hasLength(1),
+      );
     });
 
     test('should collect error counts from injected tracker', () async {
@@ -255,10 +305,8 @@ void main() {
         recentLogs: [],
         errorCounts: {},
         additionalContext: {
-          'eventId':
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-          'pubkeyHex':
-              'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+          'eventId': '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          'pubkeyHex': 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         },
       );
 
@@ -610,6 +658,111 @@ void main() {
         await service.clearCapturedLogs();
 
         expect(capture.isEmpty, isTrue);
+      });
+    });
+
+    group('off-main sanitization (#7080)', () {
+      BugReportData reportWith(String description) => BugReportData(
+        reportId: 'test-7080',
+        timestamp: DateTime.now(),
+        userDescription: description,
+        deviceInfo: const {},
+        appVersion: '1.0.0',
+        recentLogs: const [],
+        errorCounts: const {},
+      );
+
+      test('the top-level entrypoint matches the sync sanitizer', () {
+        final input = reportWith('My nsec is $_rawNsec');
+        final viaTopLevel = sanitizeBugReportData(input);
+        final viaSync = BugReportService().sanitizeSensitiveData(input);
+        expect(viaTopLevel.userDescription, viaSync.userDescription);
+        expect(viaTopLevel.userDescription, isNot(contains('nsec1')));
+        expect(viaTopLevel.userDescription, contains('[REDACTED]'));
+      });
+
+      test('runs sanitization through the injected off-main runner', () async {
+        var offMainCalls = 0;
+        final service = BugReportService(
+          sanitizeOffMain: (data) async {
+            offMainCalls++;
+            return sanitizeBugReportData(data);
+          },
+        );
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          reportWith('My nsec is $_rawNsec'),
+        );
+
+        expect(offMainCalls, 1);
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+      });
+
+      test(
+        'falls back to inline sanitization when the isolate cannot spawn',
+        () async {
+          final service = BugReportService(
+            sanitizeOffMain: (_) async =>
+                throw StateError('isolate spawn failed'),
+          );
+
+          final sanitized = await service.sanitizeSensitiveDataInBackground(
+            reportWith('My nsec is $_rawNsec'),
+          );
+
+          // Never transmit unsanitized diagnostics: the fallback still redacts.
+          expect(sanitized.userDescription, isNot(contains('nsec1')));
+          expect(sanitized.userDescription, contains('[REDACTED]'));
+        },
+      );
+
+      test('sanitizes a production-shaped report via real compute', () async {
+        final service = BugReportService();
+        final input = BugReportData(
+          reportId: 'test-7080',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(7080),
+          userDescription: 'My nsec is $_rawNsec',
+          deviceInfo: {
+            'platform': 'test',
+            'localStorage': {
+              'sessionKey': 'device-secret',
+              'counts': [1, 2],
+            },
+          },
+          appVersion: '1.0.0',
+          recentLogs: [
+            LogEntry(
+              timestamp: DateTime.fromMillisecondsSinceEpoch(7081),
+              level: LogLevel.error,
+              category: LogCategory.api,
+              name: 'request',
+              message: 'token: message-secret',
+              error: 'password: error-secret',
+              stackTrace: 'authorization: bearer stack-secret',
+            ),
+          ],
+          errorCounts: const {'password: count-secret': 2},
+        );
+
+        final sanitized = await service.sanitizeSensitiveDataInBackground(
+          input,
+        );
+
+        expect(sanitized.userDescription, isNot(contains('nsec1')));
+        expect(sanitized.userDescription, contains('[REDACTED]'));
+        expect(sanitized.timestamp, input.timestamp);
+        expect(sanitized.recentLogs.single.level, LogLevel.error);
+        expect(sanitized.recentLogs.single.category, LogCategory.api);
+        expect(sanitized.recentLogs.single.message, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.error, contains('[REDACTED]'));
+        expect(sanitized.recentLogs.single.stackTrace, contains('[REDACTED]'));
+        expect(
+          (sanitized.deviceInfo['localStorage']
+              as Map<String, dynamic>)['sessionKey'],
+          '[REDACTED]',
+        );
+        expect(sanitized.errorCounts, {'[REDACTED]': 2});
       });
     });
   });

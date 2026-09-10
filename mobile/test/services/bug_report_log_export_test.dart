@@ -257,6 +257,19 @@ void main() {
     });
   });
 
+  group('buildLogRouteDiagnostics', () {
+    test('includes the retained current screen and bounded trail', () {
+      expect(
+        BugReportService.buildLogRouteDiagnostics(
+          currentScreen: 'settings',
+          recentScreens: const ['home', 'profile', 'settings'],
+        ),
+        'Current Screen: settings\n'
+        'Recent Screens: home → profile → settings\n',
+      );
+    });
+  });
+
   group('buildDeviceDescription', () {
     const channel = MethodChannel('dev.fluttercommunity.plus/device_info');
     final messenger =

@@ -15,6 +15,8 @@ final inviteApiClientProvider = Provider<InviteApiClient>((ref) {
   final client = InviteApiClient(
     baseUrl: ref.watch(currentEnvironmentProvider).inviteBaseUrl,
     client: ref.watch(instrumentedHttpClientFactoryProvider)(),
+    // The explicit value documents that preview builds deliberately override
+    // the client's default closed-onboarding behavior.
     // ignore: avoid_redundant_argument_values
     forceOpenOnboarding: forceOpenOnboarding,
     authHeaderProvider:

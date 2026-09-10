@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';

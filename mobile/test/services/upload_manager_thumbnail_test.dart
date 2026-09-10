@@ -8,19 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/background_activity_manager.dart';
-import 'package:openvine/services/circuit_breaker_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
-
-class _MockVideoCircuitBreaker extends Mock implements VideoCircuitBreaker {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('UploadManager - Local Thumbnail Generation', () {
     late _MockBlossomUploadService mockBlossomService;
-    late _MockVideoCircuitBreaker mockCircuitBreaker;
 
     setUpAll(() {
       registerFallbackValue(File(''));
@@ -28,51 +24,12 @@ void main() {
 
     setUp(() {
       mockBlossomService = _MockBlossomUploadService();
-      mockCircuitBreaker = _MockVideoCircuitBreaker();
-
-      // Default circuit breaker behavior
-      when(() => mockCircuitBreaker.allowRequests).thenReturn(true);
-      when(
-        () => mockCircuitBreaker.state,
-      ).thenReturn(CircuitBreakerState.closed);
-      when(() => mockCircuitBreaker.failureRate).thenReturn(0.0);
     });
 
     test('BlossomUploadService has uploadImage method', () {
       // Verify the new uploadImage method exists
       expect(mockBlossomService.uploadImage, isA<Function>());
     });
-
-    test('uploadImage accepts required parameters', () async {
-      // Setup
-      final testFile = File('test_image.jpg');
-      const testPubkey = 'test-pubkey-123';
-
-      when(
-        () => mockBlossomService.uploadImage(
-          imageFile: testFile,
-          nostrPubkey: testPubkey,
-        ),
-      ).thenAnswer(
-        (_) async => const BlossomUploadResult(
-          success: true,
-          videoId: 'image-hash',
-          thumbnailUrl: 'https://blossom.example.com/image-hash.jpg',
-        ),
-      );
-
-      // Execute
-      final result = await mockBlossomService.uploadImage(
-        imageFile: testFile,
-        nostrPubkey: testPubkey,
-      );
-
-      // Verify
-      expect(result.success, isTrue);
-      expect(result.cdnUrl, isNotNull);
-      expect(result.cdnUrl, contains('image-hash.jpg'));
-      // TODO(any): Fix and enable this test
-    }, skip: true);
 
     test('uploadImage supports progress callback', () async {
       final testFile = File('test_image.jpg');
@@ -121,18 +78,6 @@ void main() {
       expect(result.videoId, 'video-123');
       expect(result.thumbnailUrl, 'https://cdn.example.com/thumbnail.jpg');
     });
-
-    test('BlossomUploadResult thumbnailUrl is optional', () {
-      const result = BlossomUploadResult(
-        success: true,
-        videoId: 'video-123',
-        thumbnailUrl: 'https://cdn.example.com/video.mp4',
-      );
-
-      expect(result.success, isTrue);
-      expect(result.thumbnailUrl, isNull);
-      // TODO(any): Fix and enable this test
-    }, skip: true);
 
     test('uploadImage handles authentication errors', () async {
       final testFile = File('test_image.jpg');

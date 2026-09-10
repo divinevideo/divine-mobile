@@ -30,6 +30,7 @@ class VideoEditorScope extends InheritedWidget {
     required this.bodySizeNotifier,
     required this.zoomMatrixNotifier,
     required this.playTimeNotifier,
+    required this.playheadAdvancingNotifier,
     required this.fromLibrary,
     this.targetClipAspectRatio,
     this.editorOverride,
@@ -92,6 +93,16 @@ class VideoEditorScope extends InheritedWidget {
   /// playback smoothly instead of the coarse `VideoEditorMainBloc` position.
   final ValueNotifier<Duration> playTimeNotifier;
 
+  /// Whether [playTimeNotifier] is currently being advanced by playback.
+  ///
+  /// The notifier only fires on change, so a pause is the *absence* of ticks —
+  /// something a listener can only infer from a timeout, and a timeout is
+  /// either slow to react or trips on ordinary UI-thread jank. This says it
+  /// outright, from the canvas that owns both playback tickers. A scrub moves
+  /// the playhead with this `false`: the frame under the finger has to follow,
+  /// but nothing should be *playing*.
+  final ValueNotifier<bool> playheadAdvancingNotifier;
+
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
 
@@ -108,6 +119,19 @@ class VideoEditorScope extends InheritedWidget {
     originalClipAspectRatio,
     targetAspectRatio: targetClipAspectRatio,
   );
+
+  /// The unscaled surface layers are laid out on.
+  ///
+  /// A layer's `width` is in these coordinates — `LayerWidgetCustomItem` sizes
+  /// it as `SizedBox(width: layer.width * layer.scale)` — so a layer as wide as
+  /// this exactly spans the video. Deriving a layer width from [bodySize]
+  /// instead is off by `targetSize / bodySize`, which is why a "80% of the
+  /// canvas" layer came out wider than the video it sat on.
+  Size get canvasRenderSize => VideoEditorCanvasGeometry(
+    bodySize: bodySizeNotifier.value,
+    originalAspectRatio: originalClipAspectRatio,
+    targetAspectRatio: targetClipAspectRatio,
+  ).renderSize;
 
   /// Calculates the visible target area fitted inside [bodySize].
   static Size calculateTargetSize(Size bodySize, double targetAspectRatio) =>
@@ -160,11 +184,18 @@ class VideoEditorScope extends InheritedWidget {
   ///
   /// Throws if no [VideoEditorScope] is found.
   static VideoEditorScope of(BuildContext context) {
-    final scope = context
-        .dependOnInheritedWidgetOfExactType<VideoEditorScope>();
+    final scope = maybeOf(context);
     assert(scope != null, 'No VideoEditorScope found in context');
     return scope!;
   }
+
+  /// Gets the nearest [VideoEditorScope], or `null` when there is none.
+  ///
+  /// For widgets that also render outside the editor. A detached clip's layer
+  /// widget is one: the draft render path rebuilds every layer from its
+  /// exported map, with no editor around it.
+  static VideoEditorScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<VideoEditorScope>();
 
   /// Checks if the given position is over the remove area.
   bool isOverRemoveArea(Offset globalPosition) {

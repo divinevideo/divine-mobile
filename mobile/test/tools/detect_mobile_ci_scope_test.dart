@@ -1,10 +1,18 @@
-// ABOUTME: Tests Mobile CI scope detection across PR and merge-queue events.
-// ABOUTME: Pins app/native classification and every fall-open API boundary.
+// ABOUTME: Tests Mobile CI and QA scope detection across GitHub event types.
+// ABOUTME: Pins focused classifications and every fail-open API boundary.
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+
+/// One detector invocation: its process result, the parsed $GITHUB_OUTPUT,
+/// and the argument line of every `gh` call it made.
+typedef DetectorRun = ({
+  ProcessResult result,
+  Map<String, String> outputs,
+  List<String> ghCalls,
+});
 
 void main() {
   group('detect_mobile_ci_scope.sh', () {
@@ -31,6 +39,10 @@ void main() {
           r'''
 set -euo pipefail
 
+if [ -n "${FAKE_GH_LOG:-}" ]; then
+  printf '%s\n' "$*" >> "$FAKE_GH_LOG"
+fi
+
 emit_files() {
   if [ -n "${FAKE_CHANGED_FILES:-}" ]; then
     printf '%s\n' "$FAKE_CHANGED_FILES"
@@ -52,15 +64,19 @@ esac
       if (sandbox.existsSync()) sandbox.deleteSync(recursive: true);
     });
 
-    ({ProcessResult result, Map<String, String> outputs}) runDetector({
+    DetectorRun runDetector({
       required String event,
       List<String> changedFiles = const [],
       int changedTotal = 0,
+      String pushBeforeSha = 'push-before',
+      String pushAfterSha = 'push-after',
     }) {
+      final ghLogPath = p.join(sandbox.path, 'gh-calls');
       final result = Process.runSync(
         'bash',
         [scriptPath],
         environment: {
+          'FAKE_GH_LOG': ghLogPath,
           'PATH':
               '${p.join(sandbox.path, 'bin')}:${Platform.environment['PATH']}',
           'GITHUB_EVENT_NAME': event,
@@ -69,6 +85,8 @@ esac
           'PR_NUMBER': '7058',
           'QUEUE_BASE_SHA': 'base-sha',
           'QUEUE_HEAD_SHA': 'head-sha',
+          'PUSH_BEFORE_SHA': pushBeforeSha,
+          'PUSH_AFTER_SHA': pushAfterSha,
           'FAKE_CHANGED_FILES': changedFiles.join('\n'),
           'FAKE_CHANGED_TOTAL': '$changedTotal',
         },
@@ -86,16 +104,43 @@ esac
           }
         }
       }
-      return (result: result, outputs: outputs);
+      final ghLog = File(ghLogPath);
+      return (
+        result: result,
+        outputs: outputs,
+        ghCalls: ghLog.existsSync()
+            ? ghLog.readAsLinesSync()
+            : const <String>[],
+      );
     }
 
     void expectScope(
-      ({ProcessResult result, Map<String, String> outputs}) run, {
+      DetectorRun run, {
       required bool app,
       required bool native,
+      Map<String, bool> also = const {},
     }) {
       expect(run.result.exitCode, 0, reason: run.result.stderr.toString());
-      expect(run.outputs, {'app': '$app', 'native': '$native'});
+      expect(run.outputs['app'], '$app');
+      expect(run.outputs['native'], '$native');
+      expect(
+        run.outputs.keys,
+        containsAll(<String>{
+          'docs_only',
+          'app',
+          'native',
+          'android',
+          'ios',
+          'service',
+          'maestro_static',
+          'smoke',
+          'performance',
+          'ci_config',
+        }),
+      );
+      for (final entry in also.entries) {
+        expect(run.outputs[entry.key], '${entry.value}', reason: entry.key);
+      }
     }
 
     for (final event in ['pull_request', 'merge_group']) {
@@ -109,6 +154,12 @@ esac
             ),
             app: true,
             native: false,
+            also: const {
+              'docs_only': false,
+              'android': true,
+              'ios': true,
+              'smoke': true,
+            },
           );
         });
 
@@ -148,6 +199,11 @@ esac
             ),
             app: false,
             native: false,
+            also: const {
+              'docs_only': false,
+              'maestro_static': true,
+              'ci_config': true,
+            },
           );
         });
 
@@ -160,6 +216,7 @@ esac
             ),
             app: false,
             native: false,
+            also: const {'docs_only': true},
           );
         });
 
@@ -172,6 +229,7 @@ esac
             ),
             app: true,
             native: true,
+            also: const {'android': false, 'ios': true, 'smoke': true},
           );
         });
       });
@@ -252,6 +310,15 @@ esac
         ),
         app: true,
         native: true,
+        also: const {
+          'android': true,
+          'ios': true,
+          'service': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
       );
     });
 
@@ -284,8 +351,183 @@ esac
       );
     });
 
-    test('push falls open to preserve the full main-branch matrix', () {
-      expectScope(runDetector(event: 'push'), app: true, native: true);
+    test('push compares github.event.before against github.sha', () {
+      // The compared range is the whole point of the push path, and nothing
+      // else observes it: the fake gh answers any /compare/ URL, so swapping
+      // the two SHAs, or passing the merge-group pair instead, produces an
+      // identical $GITHUB_OUTPUT. In production a reversed range three-dot
+      // resolves to before-vs-before, returns 0 files, and falls open to
+      // every scope on every merge to main — green, and silently the
+      // opposite of what this PR is for.
+      final run = runDetector(
+        event: 'push',
+        changedFiles: ['mobile/lib/main.dart'],
+      );
+
+      expect(
+        run.ghCalls.singleWhere((call) => call.contains('/compare/')),
+        contains('/compare/push-before...push-after'),
+      );
+      expectScope(
+        run,
+        app: true,
+        native: false,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'service': true,
+          'smoke': true,
+        },
+      );
+    });
+
+    test('push classifies a docs-only merge as docs-only', () {
+      expectScope(
+        runDetector(event: 'push', changedFiles: ['docs/release-notes.md']),
+        app: false,
+        native: false,
+        also: const {'docs_only': true, 'smoke': false},
+      );
+    });
+
+    test('push falls open when the before SHA is all zeroes', () {
+      // A docs-only file, so the zero-file fall-open cannot fire and stand in
+      // for the zeroes guard: without it this test passed unchanged when the
+      // guard was deleted, because the default empty file list falls open on
+      // its own. The stdout reason is what distinguishes the two.
+      final run = runDetector(
+        event: 'push',
+        changedFiles: ['docs/release-notes.md'],
+        pushBeforeSha: '0000000000000000000000000000000000000000',
+      );
+
+      expect(run.result.stdout, contains('no comparable before SHA'));
+      expectScope(
+        run,
+        app: true,
+        native: true,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'service': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
+      );
+    });
+
+    // One path per row, and the complete set of scopes it must turn on —
+    // everything else is asserted false. The test this replaced passed three
+    // paths at once, one of them .github/workflows/mobile_ci.yaml, which hits
+    // the arm that sets every scope true; the other two contributed nothing,
+    // so deleting the performance block, the maestro pattern and the goldens
+    // screens pattern together left it green.
+    const allScopes = {
+      'app',
+      'native',
+      'android',
+      'ios',
+      'service',
+      'maestro_static',
+      'smoke',
+      'performance',
+      'ci_config',
+    };
+
+    const scopeArms = <String, Set<String>>{
+      'mobile/lib/screens/feed/video_feed_page.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'smoke',
+        'performance',
+      },
+      'mobile/e2e/maestro/flows/feed.yaml': {
+        'app',
+        'maestro_static',
+        'performance',
+      },
+      'mobile/packages/dm_repository/lib/src/dm_repository.dart': {
+        'app',
+        'service',
+      },
+      'mobile/test/goldens/widgets/notification_rows_golden_test.dart': {'app'},
+      'mobile/scripts/golden.sh': {'app'},
+      'mobile/packages/divine_ui/lib/src/divine_button.dart': {
+        'app',
+        'service',
+      },
+      'mobile/lib/widgets/user_avatar.dart': {
+        'app',
+        'android',
+        'ios',
+        'service',
+        'smoke',
+      },
+      'mobile/fonts/Roboto.ttf': {'app', 'android', 'ios', 'smoke'},
+      'mobile/android/app/build.gradle.kts': {
+        'app',
+        'native',
+        'android',
+        'smoke',
+      },
+      'mobile/ios/Runner/Info.plist': {'app', 'native', 'ios', 'smoke'},
+      '.github/workflows/badge_repository.yaml': {'app', 'ci_config'},
+      // `app` is what keeps mobile/test/tools/ running — the contract test
+      // that pins this very workflow lives there, so without it the test
+      // could not fire on a change to its own subject.
+      '.github/workflows/mobile_service_integration_tests.yaml': {
+        'app',
+        'service',
+        'ci_config',
+      },
+    };
+
+    for (final entry in scopeArms.entries) {
+      test('${entry.key} turns on exactly its own scopes', () {
+        final run = runDetector(
+          event: 'pull_request',
+          changedFiles: [entry.key],
+          changedTotal: 1,
+        );
+
+        expect(run.result.exitCode, 0, reason: run.result.stderr.toString());
+        expect(run.outputs['docs_only'], 'false');
+        for (final scope in allScopes) {
+          expect(
+            run.outputs[scope],
+            entry.value.contains(scope) ? 'true' : 'false',
+            reason: '$scope for ${entry.key}',
+          );
+        }
+      });
+    }
+
+    test('a mobile_ci.yaml change runs every scope', () {
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['.github/workflows/mobile_ci.yaml'],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: true,
+        also: const {
+          'docs_only': false,
+          'android': true,
+          'ios': true,
+          'service': true,
+          'maestro_static': true,
+          'smoke': true,
+          'performance': true,
+          'ci_config': true,
+        },
+      );
     });
   });
 }

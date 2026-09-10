@@ -279,48 +279,6 @@ void main() {
         );
       },
     );
-
-    test('non-replaceable events (kind 22) are not deduplicated', () async {
-      // Arrange: Two different kind 22 events (non-addressable)
-      const pubkey =
-          '9876543210abcdef9876543210abcdef9876543210abcdef9876543210abcdef';
-      const videoUrl = 'https://example.com/video5.mp4';
-
-      final event1 = sdk.Event(
-        pubkey,
-        NIP71VideoKinds.shortVideo, // Kind 22 is NOT replaceable
-        [
-          ['url', videoUrl],
-          ['title', 'Video 1'],
-        ],
-        'Video 1',
-        createdAt: 1000,
-      );
-
-      final event2 = sdk.Event(
-        pubkey,
-        NIP71VideoKinds.shortVideo,
-        [
-          ['url', videoUrl],
-          ['title', 'Video 2'],
-        ],
-        'Video 2',
-        createdAt: 2000,
-      );
-
-      // Act: Add both events
-      service.handleEventForTesting(event1, SubscriptionType.discovery);
-      service.handleEventForTesting(event2, SubscriptionType.discovery);
-
-      // Assert: Should have both videos (kind 22 is not replaceable)
-      final videos = service.discoveryVideos;
-      expect(
-        videos.length,
-        2,
-        reason: 'Kind 22 events should not replace each other',
-      );
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
   });
 
   group('VideoEventService - updateVideoEvent()', () {

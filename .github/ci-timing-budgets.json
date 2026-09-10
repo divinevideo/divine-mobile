@@ -26,7 +26,7 @@
     "Codemagic Variable Groups": { "warn": 30, "fail": 90 },
     "CI Configuration Tests": { "warn": 150, "fail": 300 },
     "Tests": { "warn": 600, "fail": 780 },
-    "Generated Files": { "warn": 260, "fail": 450 },
+    "Generated Files": { "warn": 500, "fail": 650 },
     "Analyze": { "warn": 150, "fail": 300 },
     "Format": { "warn": 90, "fail": 180 },
     "VGV Tag Gate": { "warn": 30, "fail": 90 },

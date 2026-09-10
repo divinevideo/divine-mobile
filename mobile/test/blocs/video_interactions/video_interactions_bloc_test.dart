@@ -1420,10 +1420,10 @@ void main() {
           await repostedStreamB.close();
         });
 
-        // ignore_for_file: unnecessary_lambdas
         // The closures below cannot be tear-offs because thenAnswer
         // requires a Function(Invocation), but the captured locals are
         // variable references that the analyzer cannot prove constant.
+        // ignore_for_file: unnecessary_lambdas
         when(
           () => mockLikesA.watchLikedEventIds(),
         ).thenAnswer((_) => likedStreamA.stream);

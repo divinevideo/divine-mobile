@@ -166,8 +166,10 @@ class CollaboratorInviteWarning extends Equatable {
 /// Callbacks for VideoPublishService to communicate state changes.
 /// This abstraction makes the service testable without Riverpod dependencies.
 typedef OnStateChanged = void Function(VideoPublishState state);
-typedef OnProgressChanged =
-    void Function({required String draftId, required double progress});
+typedef OnProgressChanged = void Function({
+  required String draftId,
+  required double progress,
+});
 
 class VideoPublishService {
   VideoPublishService({
@@ -600,11 +602,24 @@ class VideoPublishService {
     if (resolver == null) return const [];
 
     final rawText = _videoPublishMentionResolutionText(draft);
-    if (!rawText.contains('@')) return const [];
+    final selectedMentions = draft.captionMentions
+        .map(
+          (mention) => MentionBinding(
+            display: mention.display,
+            pubkey: mention.pubkey,
+            start: mention.start,
+            end: mention.end,
+          ),
+        )
+        .toList(growable: false);
+    // A picked mention still needs resolving even if the caption no longer
+    // reads as a typed one, so the `@` shortcut only applies with no bindings.
+    if (!rawText.contains('@') && selectedMentions.isEmpty) return const [];
 
     try {
       final result = await resolver.resolveTextMentions(
         rawText: rawText,
+        selectedMentions: selectedMentions,
         currentUserPubkey: currentUserPubkey,
       );
       return _excludeCollaboratorPubkeys(
@@ -763,7 +778,7 @@ class VideoPublishService {
         if (File(path).existsSync()) return path;
       }
       if (draft.clips.isNotEmpty) {
-        return draft.clips.first.requireVideo.safeFilePath();
+        return await draft.clips.first.requireVideo.safeFilePath();
       }
     } catch (e) {
       Log.warning('⚠️ Could not resolve video path: $e', category: .video);

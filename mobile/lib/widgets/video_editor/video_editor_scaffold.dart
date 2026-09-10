@@ -11,7 +11,9 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
@@ -25,6 +27,11 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_overlay_controls.dart';
+// Not re-exported by the package barrel, unlike the layer types themselves.
+// It lives outside `lib/src/`, so this is a supported import path.
+import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show WidgetLayer, WidgetLayerExportConfigs;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// A scaffold widget that provides the standard layout for the video editor.
@@ -54,10 +61,14 @@ class VideoEditorScaffold extends StatelessWidget {
           child: _ClipReverseResultListener(
             child: _ClipTransformResultListener(
               child: _ClipMergeResultListener(
-                child: _ClipsRemovedResultListener(
-                  child: _AudioExtractionResultListener(
-                    child: _ClipLibrarySaveResultListener(
-                      child: _ScaffoldBody(isLoading: isLoading),
+                child: _ClipDetachResultListener(
+                  child: _DetachedClipTransformResultListener(
+                    child: _ClipsRemovedResultListener(
+                      child: _AudioExtractionResultListener(
+                        child: _ClipLibrarySaveResultListener(
+                          child: _ScaffoldBody(isLoading: isLoading),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -105,6 +116,7 @@ class _ScaffoldBody extends StatelessWidget {
 
         const _ReverseProgressOverlay(),
         const _TransformProgressOverlay(),
+        const _DetachProgressOverlay(),
         const _MergeProgressOverlay(),
       ],
     );
@@ -313,6 +325,189 @@ class _ClipMergeResultListener extends StatelessWidget {
 
     overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
     editor.setClipState(state.clips, timelineMarkers: rebasedMarkers);
+  }
+}
+
+/// Listens to [ClipEditorBloc.state.lastDetachResult] and finishes a detach:
+/// puts the clip on the canvas as a layer and commits both halves of the change
+/// to editor history as one entry.
+///
+/// The BLoC owns the clip-list mutation and the placeholder render, but it
+/// cannot reach the editor. Kept at the scaffold level (always mounted) so the
+/// layer still lands if the user leaves clip-edit mode while the placeholder
+/// renders.
+class _ClipDetachResultListener extends StatelessWidget {
+  const _ClipDetachResultListener({required this.child});
+
+  final Widget child;
+
+  /// Fraction of the *video's* width a freshly detached clip takes up.
+  ///
+  /// Wider than a sticker's third on purpose: the clip was filling the frame a
+  /// moment ago, so it has to land big enough to still be the thing the user is
+  /// looking at — just clearly inset, so it reads as placed rather than as the
+  /// track it came off.
+  static const double _initialWidthFraction = 0.8;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(prev.lastDetachResult, curr.lastDetachResult) &&
+          curr.lastDetachResult != null,
+      listener: _onDetachResult,
+      child: child,
+    );
+  }
+
+  void _onDetachResult(BuildContext context, ClipEditorState state) {
+    final result = state.lastDetachResult;
+    switch (result) {
+      case ClipDetachSuccess(:final previousClips, :final detachedClip):
+        _commitDetach(context, state, previousClips, detachedClip);
+      case ClipDetachFailure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorDetachFailed,
+          ),
+        );
+      case ClipDetachDiscarded():
+      // The clip the user asked to detach was removed while its placeholder
+      // rendered — nothing to place, and no action that warrants a snackbar.
+      case null:
+        break;
+    }
+  }
+
+  void _commitDetach(
+    BuildContext context,
+    ClipEditorState state,
+    List<DivineVideoClip> previousClips,
+    DivineVideoClip detachedClip,
+  ) {
+    final scope = VideoEditorScope.of(context);
+    final editor = scope.editor;
+    if (editor == null) return;
+    final overlayBloc = context.read<TimelineOverlayBloc>();
+
+    final rebasedMarkers = rebaseTimelineMarkersForClipState(
+      oldClips: previousClips,
+      newClips: state.clips,
+      markers: overlayBloc.state.timelineMarkers,
+    );
+
+    // Measured against the render surface, not the editor body: a layer width
+    // *is* a render coordinate, so this fraction is a fraction of the video
+    // itself. Going through the body would overshoot by `body / target`, which
+    // is letterboxing the clip never sits on.
+    final width = scope.canvasRenderSize.width * _initialWidthFraction;
+
+    // The layer keeps the slot the clip came out of: it stays where it was in
+    // time, is hidden outside it, and the export draws it over exactly the same
+    // stretch. Without a window the clip sat frozen on its last frame for the
+    // rest of the composition while the export showed nothing there.
+    final slotStart = previousClips
+        .takeWhile((c) => c.id != detachedClip.id)
+        .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+
+    final layerId = 'detached_${detachedClip.id}';
+    final meta = DetachedClipLayerData(
+      clip: detachedClip,
+      layerId: layerId,
+    ).toMeta();
+    final layer = WidgetLayer(
+      id: layerId,
+      startTime: slotStart,
+      endTime: slotStart + detachedClip.playbackDuration,
+      width: width,
+      widget: DetachedClipLayerView(meta: meta),
+      meta: meta,
+      // Rotation is deliberately off. The export composites a detached clip
+      // through `SegmentTransform`, which carries offset, size and fit but no
+      // angle — so a rotated layer would look right in the editor and land
+      // square in the file.
+      interaction: LayerInteraction(enableRotate: false),
+      exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
+    );
+
+    overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
+    editor.setClipStateWithNewLayer(
+      clips: state.clips,
+      layer: layer,
+      timelineMarkers: rebasedMarkers,
+    );
+  }
+}
+
+/// Writes a cropped detached clip back onto the layer that carries it.
+///
+/// The BLoC half is [ClipEditorBloc]'s detached-clip transform handler, which
+/// renders the new file; this half swaps it into the layer's meta and its live
+/// widget, as one editor-history entry so undo restores the pre-crop clip.
+///
+/// Kept at the scaffold level (always mounted) so the write-back survives the
+/// layer's action bar unmounting while the render is in flight — the same
+/// reason every other render listener lives here.
+class _DetachedClipTransformResultListener extends StatelessWidget {
+  const _DetachedClipTransformResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastDetachedClipTransformResult,
+            curr.lastDetachedClipTransformResult,
+          ) &&
+          curr.lastDetachedClipTransformResult != null,
+      listener: _onResult,
+      child: child,
+    );
+  }
+
+  void _onResult(BuildContext context, ClipEditorState state) {
+    switch (state.lastDetachedClipTransformResult) {
+      case DetachedClipTransformSuccess(:final layerId, :final clip):
+        _applyToLayer(context, layerId, clip);
+      case DetachedClipTransformFailure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorTransformFailed,
+          ),
+        );
+      case null:
+        break;
+    }
+  }
+
+  void _applyToLayer(
+    BuildContext context,
+    String layerId,
+    DivineVideoClip clip,
+  ) {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final index = editor.activeLayers.indexWhere((l) => l.id == layerId);
+    if (index < 0) return;
+    final layer = editor.activeLayers[index];
+    if (layer is! WidgetLayer) return;
+
+    final meta = DetachedClipLayerData(clip: clip, layerId: layerId).toMeta();
+
+    // The layer keeps its width; the crop changes the content's aspect ratio,
+    // so the height follows on its own through the frame that lays it out. A
+    // crop should change the shape of the box, not jump its size.
+    editor.replaceLayer(
+      index: index,
+      layer: layer.copyWith(
+        widget: DetachedClipLayerView(meta: meta),
+        meta: meta,
+        exportConfigs: layer.exportConfigs.copyWith(meta: meta),
+      ),
+    );
   }
 }
 
@@ -638,6 +833,34 @@ class _ReverseProgressOverlay extends StatelessWidget {
   }
 }
 
+/// Full-screen progress overlay shown while the still that replaces a detached
+/// clip is encoded.
+///
+/// Over everything, like the transform overlay it mirrors: the detach is a
+/// composition-wide change, and leaving only a spinner on one action button
+/// left the rest of the timeline looking tappable while a render was mid-flight.
+class _DetachProgressOverlay extends StatelessWidget {
+  const _DetachProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) => state.isDetaching ? state.detachingRenderId : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorDetachProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
 /// Full-screen progress overlay shown while a transform (crop/rotate/flip) is
 /// re-rendered into a new clip file. Absorbs input for the duration so the
 /// timeline controls underneath can't start a competing edit (reverse, delete,
@@ -665,17 +888,25 @@ class _TransformProgressOverlay extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           child: renderId == null
               ? const SizedBox.shrink()
-              : _TransformProgressContent(renderId: renderId),
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorTransformProgressLabel,
+                ),
         );
       },
     );
   }
 }
 
-class _TransformProgressContent extends StatelessWidget {
-  const _TransformProgressContent({required this.renderId});
+/// A render's progress, over the whole editor, absorbing input for the
+/// duration so nothing underneath can start a competing edit.
+class _RenderProgressContent extends StatelessWidget {
+  const _RenderProgressContent({required this.renderId, required this.label});
 
   final String renderId;
+
+  /// What the user is waiting for, already localized.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -698,7 +929,7 @@ class _TransformProgressContent extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 240),
                   child: Text(
-                    context.l10n.videoEditorTransformProgressLabel,
+                    label,
                     textAlign: TextAlign.center,
                     style: VineTheme.bodyMediumFont(
                       color: context.vineColors.primaryText,

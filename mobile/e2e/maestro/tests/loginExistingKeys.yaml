@@ -5,45 +5,51 @@ appId: co.openvine.app.staging
 # and user has existing keys.
 #Steps:
 # 1. Open the app in clear state
-# 2. Open the import identity flow: the menu is displayed
+# 2. Open the import identity flow through Sign in
 # 3. Insert an invalid key for the user: Message invalid key is displayed
-# 4. Insert a valid key for the user, (optional) dismiss OS message, tap on Import identity:  User is redirected to the Explore screen
-# 5. Tap on profile: Validate user name and bio are displayed.
+# 4. Insert a valid key and relaunch into the authenticated shell
+# 5. Open the imported identity's profile.
 
 # 1. Open the app in clear state
 - launchApp:
     clearState: true
 - runFlow: "../asserts/assertSplash.yaml"
 
-# 2. Open the import identity flow: the menu is displayed
-- tapOn: Already have keys? Import them here →
+# 2. Open the sign-in screen, then the import-identity flow.
+- tapOn:
+    id: sign_in_button
+- runFlow: "../asserts/assertSignIn.yaml"
+- tapOn: Import Nostr key
 - runFlow: "../asserts/assertImportIdentity.yaml"
 
 # 3. Insert an invalid key for the user: Message invalid key is displayed
-- tapOn: Private Key
+- tapOn: Private key or bunker URL
 - inputText: "sec16fvy70pyfw7cjegt4wry24z4nwaleqanrkwputmy5na0wrdyak4sdkn8l2"
-- tapOn:
-    text: Import Identity
-    index: 1
-- assertVisible: Invalid key format. Use nsec... or 64-character hex
+- tapOn: Import Nostr key
+- assertVisible: Invalid format. Use nsec..., hex, ncryptsec1..., or bunker://...
 - eraseText: 64
 
-# 4. Insert a valid key for the user, (optional) dismiss OS message, tap on Import identity: User is redirected to the home screen
+# 4. Insert a valid key, dismiss the keyboard, and import it.
 - inputText: "${USER_KEYS}"
-#Dissmiss OS message Continue and Done on the displayed keypad
+# Dismiss the optional OS prompt and the displayed keypad.
 - tapOn:
     text: "Continue"
     optional: true
 - runFlow: ../utils/hideKeyboard.yaml
-#Import keys
-- tapOn:
-    text: Import Identity
-    index: 1
-#User is taken to the Explore screen, validate it:
+# Import keys.
+- tapOn: Import Nostr key
+# Import completes in place. Relaunch so startup restores the authenticated
+# session, then validate the shell.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: home_tab
+    timeout: 30000
 - runFlow: "../asserts/assertHome.yaml"
 
-# 5. Tap on profile: Validate user name and bio are displayed.
+# 5. Tap on profile: validate the imported identity reaches its own profile.
 - doubleTapOn:
     id: profile_tab
     delay: 100
-- runFlow: "../asserts/assertSpecificUserProfile.yaml"
+- runFlow: "../asserts/assertProfile.yaml"

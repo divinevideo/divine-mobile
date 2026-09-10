@@ -5,7 +5,7 @@
 import 'dart:async';
 
 import 'package:likes_repository/likes_repository.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';

@@ -1119,7 +1119,6 @@
     "supportLoginRequired": "지원팀에 문의하려면 로그인해 주세요",
     "supportExportingLogs": "로그 내보내는 중...",
     "supportExportLogsFailed": "로그 내보내기에 실패했어요",
-    "supportChatNotAvailable": "지원 채팅을 사용할 수 없어요",
     "supportCouldNotOpenMessages": "지원 메시지를 열 수 없어요",
     "supportCouldNotOpenPage": "{pageName}을(를) 열 수 없어요",
     "@supportCouldNotOpenPage": {
@@ -1952,6 +1951,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "미리보기 재생",
     "videoEditorAudioUntitled": "제목 없음",
     "videoEditorAudioUntitledSound": "제목 없는 사운드",
+    "videoEditorAudioFileMissing": "오디오 파일이 기기에 없어요",
     "videoEditorVolumeLongPressHint": "모든 트랙 음소거 또는 해제",
     "videoEditorClipSaveFailed": "클립 저장 실패",
     "videoEditorClipSavedSuccess": "클립이 보관함에 저장되었습니다",
@@ -2748,24 +2748,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "제목 없는 사운드",
-    "soundStopPreview": "미리 듣기 중지",
-    "soundPreviewSemanticLabel": "{title} 미리 듣기",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "{title} 세부 정보 보기",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "검색...",
     "categoryVideoCount": "영상 {count}개",
     "@categoryVideoCount": {
@@ -3194,7 +3176,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "슬라이드하여 조절",
     "videoEditorVolumeSemanticLabel": "볼륨 조절",
-    "videoEditorChromaKeyLabel": "크로마키",
+    "videoEditorDetachLabel": "분리",
+  "videoEditorDetachSemanticLabel": "선택한 클립을 타임라인에서 분리",
+  "videoEditorDetachTitle": "클립 분리",
+  "videoEditorDetachDescription": "클립이 캔버스로 옮겨져서 원하는 자리에 놓을 수 있어요. 타임라인에서는 무엇이 그 자리를 채울까요?",
+  "videoEditorDetachReplaceRemove": "없음",
+  "videoEditorDetachReplaceRemoveDetail": "빈자리를 메워요. 뒤에 있는 건 모두 더 일찍 시작해요.",
+  "videoEditorDetachReplaceColor": "색",
+  "videoEditorDetachReplaceColorDetail": "클립이 재생되던 만큼 단색을 유지해요.",
+  "videoEditorDetachReplaceImage": "사진",
+  "videoEditorDetachReplaceImageDetail": "그 자리를 채울 사진을 찍어요.",
+  "videoEditorDetachedClipLabel": "분리한 클립",
+  "videoEditorDetachProgressLabel": "클립을 분리하는 중…",
+  "videoEditorDetachFailed": "그 클립을 분리하지 못했어요. 타임라인은 그대로예요.",
+  "videoEditorDetachImagePickFailed": "그 사진을 불러오지 못했어요.",
+  "videoEditorChromaKeyLabel": "크로마키",
     "videoEditorChromaKeyTitle": "크로마키",
     "videoEditorChromaKeySemanticLabel": "이 클립의 크로마키 설정",
     "videoEditorChromaKeyCloseSemanticLabel": "크로마키 변경 사항 취소",
@@ -3215,7 +3211,8 @@
     "videoEditorChromaKeyBackgroundImage": "이미지",
     "videoEditorChromaKeyBackgroundVideo": "클립",
     "videoEditorChromaKeyTransparentHint": "영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.",
-    "videoEditorChromaKeyDetectFailed": "배경을 찾지 못했습니다. 화면 가장자리까지 닿아야 해요. 아니면 색을 직접 고르세요.",
+    "videoEditorChromaKeySurfaceHint": "뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.",
+    "videoEditorChromaKeyDetectFailed": "배경을 찾지 못했어요. 뒤쪽 면이 화면을 가득 채워야 해요. 단색 벽도 괜찮아요. 색을 직접 골라도 돼요.",
     "videoEditorChromaKeyPickClipTitle": "클립 고르기",
     "videoEditorChromaKeyNoLibraryClips": "보관함이 비어 있어요. 클립을 먼저 저장하면 배경으로 쓸 수 있습니다.",
     "videoEditorChromaKeyImagePickFailed": "그 이미지를 불러오지 못했습니다.",
@@ -3318,7 +3315,7 @@
     "minorAccountReviewRestrictionEngagement": "댓글, 좋아요, 리포스트, 팔로우가 중단됨",
     "minorAccountReviewRestrictionMessaging": "일반 메시지 보내기와 답장이 중단됨",
     "minorAccountReviewRestrictionSupport": "지원과 검수 메시지는 계속 이용 가능",
-    "minorAccountReviewOpenSupportCenter": "지원 센터 열기",
+    "appealOpenSupportCenter": "지원 센터 열기",
     "minorAccountReviewOpenModerationMessage": "검수 메시지 열기",
     "minorAccountReviewOpenReviewPage": "검토 페이지 열기",
     "minorAccountReviewCheckAgain": "다시 확인",
@@ -4046,6 +4043,7 @@
   "savedSoundPreviewAction": "사운드 미리 듣기",
   "savedSoundEditAction": "사운드 정보 편집",
   "savedSoundRemoveAction": "저장한 사운드 삭제",
+  "savedSoundFileMissing": "이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요.",
   "savedSoundClearHashtagFilter": "해시태그 필터 지우기",
   "soundAllowRemix": "다른 사람이 이 사운드를 리믹스하도록 허용",
   "soundReuseUnavailable": "이 사운드는 지금 리믹스할 수 없어요.",

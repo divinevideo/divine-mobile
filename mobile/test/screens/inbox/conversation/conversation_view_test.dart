@@ -36,7 +36,6 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -86,8 +85,7 @@ void main() {
   const fallbackInvite = CollaboratorInvite(
     messageId:
         '9999999999999999999999999999999999999999999999999999999999999999',
-    videoAddress:
-        '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
+    videoAddress: '34236:1122334411223344112233441122334411223344112233441122334411223344:skate-loop',
     videoKind: 34236,
     creatorPubkey: otherPubkey,
     videoDTag: 'skate-loop',
@@ -415,8 +413,7 @@ void main() {
       ) async {
         final failedRow = OutgoingDm(
           id: 'rumor-failed-id',
-          conversationId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
           recipientPubkey: otherPubkey,
           content: 'React to me',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
@@ -448,13 +445,11 @@ void main() {
         final retired = kLegacyModerationPubkeys.first;
         final message = DmMessage(
           id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          conversationId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
           senderPubkey: retired,
           content: 'React to me',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
         );
 
         await tester.pumpWidget(
@@ -478,13 +473,11 @@ void main() {
         final retired = kLegacyModerationPubkeys.first;
         final message = DmMessage(
           id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          conversationId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
           senderPubkey: retired,
           content: 'React to me',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
         );
 
         await tester.pumpWidget(
@@ -1688,13 +1681,11 @@ void main() {
       ) async {
         final message = DmMessage(
           id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           senderPubkey: otherPubkey,
           content: 'Hello there!',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
         );
 
         await tester.pumpWidget(
@@ -1714,13 +1705,11 @@ void main() {
       testWidgets('maps message keys to their new indices', (tester) async {
         DmMessage message(String id, String content) => DmMessage(
           id: id,
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           senderPubkey: otherPubkey,
           content: content,
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
         );
         final older = message(
           '1111111111111111111111111111111111111111111111111111111111111111',
@@ -1754,53 +1743,53 @@ void main() {
         );
       });
 
-      testWidgets('keeps an expanded message open when a newer message arrives', (
-        tester,
-      ) async {
-        final states = StreamController<ConversationState>();
-        addTearDown(states.close);
-        final olderMessage = DmMessage(
-          id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
-          senderPubkey: otherPubkey,
-          content: 'a' * (dmInitialDisplayCodeUnits + 1),
-          createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
-        );
-        final initialState = ConversationState(
-          status: ConversationStatus.loaded,
-          messages: [olderMessage],
-        );
-
-        await tester.pumpWidget(
-          buildSubject(state: initialState, stateStream: states.stream),
-        );
-        await tester.tap(find.text(l10n.profileShowMore));
-        await tester.pump();
-        expect(find.text(l10n.profileShowLess), findsOneWidget);
-
-        final newerMessage = DmMessage(
-          id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          conversationId: olderMessage.conversationId,
-          senderPubkey: currentPubkey,
-          content: 'new reply',
-          createdAt: olderMessage.createdAt + 1,
-          giftWrapId:
-              'bbbbbbbbccccccccddddddddeeeeeeeebbbbbbbbccccccccddddddddeeeeeeee',
-        );
-        states.add(
-          ConversationState(
+      testWidgets(
+        'keeps an expanded message open when a newer message arrives',
+        (
+          tester,
+        ) async {
+          final states = StreamController<ConversationState>();
+          addTearDown(states.close);
+          final olderMessage = DmMessage(
+            id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            senderPubkey: otherPubkey,
+            content: 'a' * (dmInitialDisplayCodeUnits + 1),
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          );
+          final initialState = ConversationState(
             status: ConversationStatus.loaded,
-            messages: [newerMessage, olderMessage],
-          ),
-        );
-        await tester.pumpAndSettle();
+            messages: [olderMessage],
+          );
 
-        expect(find.text(l10n.profileShowLess), findsOneWidget);
-        expect(find.byKey(ValueKey(newerMessage.id)), findsOneWidget);
-      });
+          await tester.pumpWidget(
+            buildSubject(state: initialState, stateStream: states.stream),
+          );
+          await tester.tap(find.text(l10n.profileShowMore));
+          await tester.pump();
+          expect(find.text(l10n.profileShowLess), findsOneWidget);
+
+          final newerMessage = DmMessage(
+            id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            conversationId: olderMessage.conversationId,
+            senderPubkey: currentPubkey,
+            content: 'new reply',
+            createdAt: olderMessage.createdAt + 1,
+            giftWrapId: 'bbbbbbbbccccccccddddddddeeeeeeeebbbbbbbbccccccccddddddddeeeeeeee',
+          );
+          states.add(
+            ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [newerMessage, olderMessage],
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.profileShowLess), findsOneWidget);
+          expect(find.byKey(ValueKey(newerMessage.id)), findsOneWidget);
+        },
+      );
 
       // The whole retry affordance lived only in the view: the bloc test
       // covers the event's effects and the bubble test covers the icon, but
@@ -1811,13 +1800,11 @@ void main() {
       ) async {
         final message = DmMessage(
           id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           senderPubkey: currentPubkey,
           content: 'Still recognizable',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
           retractionStatus: DmRetractionStatus.failed,
         );
 
@@ -1853,13 +1840,11 @@ void main() {
       ) async {
         final message = DmMessage(
           id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           senderPubkey: currentPubkey,
           content: 'Still deleting',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
           retractionStatus: DmRetractionStatus.pending,
         );
 
@@ -1906,8 +1891,7 @@ void main() {
         (tester) async {
           final pendingRow = OutgoingDm(
             id: 'rumor-test-id',
-            conversationId:
-                'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             recipientPubkey: otherPubkey,
             content: 'Optimistic in flight',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
@@ -1946,8 +1930,7 @@ void main() {
           name: 'alice',
           rawData: const {},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         await tester.pumpWidget(buildSubject(otherProfile: profile));
@@ -1967,8 +1950,7 @@ void main() {
           name: 'Jack',
           rawData: const {},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         await tester.pumpWidget(
@@ -2007,8 +1989,7 @@ void main() {
           name: 'Jack',
           rawData: const {'follower_count': 2100, 'vine_followers': 430},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         await tester.pumpWidget(buildSubject(otherProfile: profile));
@@ -2028,8 +2009,7 @@ void main() {
           name: 'Jack',
           rawData: const {},
           createdAt: now,
-          eventId:
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
 
         await tester.pumpWidget(
@@ -2054,13 +2034,11 @@ void main() {
           const thumbnailUrl = 'https://cdn.divine.video/thumbs/skate-loop.jpg';
           final message = DmMessage(
             id: '9999999999999999999999999999999999999999999999999999999999999999',
-            conversationId:
-                'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             senderPubkey: otherPubkey,
             content: 'You were invited to collaborate.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
             tags: const [
               ['divine', 'collab-invite'],
               [
@@ -2130,13 +2108,11 @@ void main() {
         (tester) async {
           final message = DmMessage(
             id: '9999999999999999999999999999999999999999999999999999999999999999',
-            conversationId:
-                'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             senderPubkey: otherPubkey,
             content: 'You were invited to collaborate.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
             tags: const [
               ['divine', 'collab-invite'],
               [
@@ -2186,13 +2162,11 @@ void main() {
         (tester) async {
           final message = DmMessage(
             id: '9999999999999999999999999999999999999999999999999999999999999999',
-            conversationId:
-                'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             senderPubkey: otherPubkey,
             content: 'You were invited to collaborate.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
             tags: const [
               ['divine', 'collab-invite'],
               [
@@ -2253,13 +2227,11 @@ void main() {
 
           final message = DmMessage(
             id: '9999999999999999999999999999999999999999999999999999999999999999',
-            conversationId:
-                'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             senderPubkey: otherPubkey,
             content: 'You were invited to collaborate.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
             tags: const [
               ['divine', 'collab-invite'],
               [
@@ -2315,13 +2287,11 @@ void main() {
         (tester) async {
           final message = DmMessage(
             id: '8888888888888888888888888888888888888888888888888888888888888888',
-            conversationId:
-                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            conversationId: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
             senderPubkey: currentPubkey,
             content: 'You were invited to collaborate.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'bbbbbbbbccccccccddddddddeeeeeeeebbbbbbbbccccccccddddddddeeeeeeee',
+            giftWrapId: 'bbbbbbbbccccccccddddddddeeeeeeeebbbbbbbbccccccccddddddddeeeeeeee',
             tags: const [
               ['divine', 'collab-invite'],
               [
@@ -2372,15 +2342,13 @@ void main() {
         (tester) async {
           final message = DmMessage(
             id: '7777777777777777777777777777777777777777777777777777777777777777',
-            conversationId:
-                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            conversationId: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
             senderPubkey: otherPubkey,
             content:
                 'You were invited to collaborate on Skate loop. '
                 'Open diVine to review and accept.',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'ccccccccddddddddeeeeeeeeffffffff00000000111111112222222233333333',
+            giftWrapId: 'ccccccccddddddddeeeeeeeeffffffff00000000111111112222222233333333',
           );
 
           await tester.pumpWidget(
@@ -2407,13 +2375,11 @@ void main() {
         (tester) async {
           final message = DmMessage(
             id: '6666666666666666666666666666666666666666666666666666666666666666',
-            conversationId:
-                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            conversationId: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
             senderPubkey: otherPubkey,
             content: 'Hey, want to ride together this weekend?',
             createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            giftWrapId:
-                'ddddddddeeeeeeeeffffffff0000000011111111222222223333333344444444',
+            giftWrapId: 'ddddddddeeeeeeeeffffffff0000000011111111222222223333333344444444',
           );
 
           await tester.pumpWidget(
@@ -2643,8 +2609,7 @@ void main() {
         (tester) async {
           final failedRow = OutgoingDm(
             id: 'rumor-failed-id',
-            conversationId:
-                'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+            conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
             recipientPubkey: otherPubkey,
             content: failedSendContent,
             createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
@@ -2792,15 +2757,13 @@ void main() {
               ),
               sibling(
                 id: 'rumor-failed',
-                recipientPubkey:
-                    '4444444444444444444444444444444444444444444444444444444444444444',
+                recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
                 recipientWrap: OutgoingWrapStatus.failed,
                 selfWrap: OutgoingWrapStatus.failed,
               ),
               sibling(
                 id: 'rumor-delivered-selffailed',
-                recipientPubkey:
-                    '5555555555555555555555555555555555555555555555555555555555555555',
+                recipientPubkey: '5555555555555555555555555555555555555555555555555555555555555555',
                 recipientWrap: OutgoingWrapStatus.sent,
                 selfWrap: OutgoingWrapStatus.failed,
               ),
@@ -3149,13 +3112,11 @@ void main() {
       Future<void> pumpWithMessage(WidgetTester tester) async {
         final message = DmMessage(
           id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          conversationId:
-              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           senderPubkey: otherPubkey,
           content: 'Hello there!',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          giftWrapId:
-              'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+          giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
         );
 
         await tester.pumpWidget(
@@ -3368,8 +3329,7 @@ void main() {
       ) async {
         final message = sharedVideoMessage(
           senderPubkey: otherPubkey,
-          replyToId:
-              '1111111111111111111111111111111111111111111111111111111111111111',
+          replyToId: '1111111111111111111111111111111111111111111111111111111111111111',
         );
 
         await tester.pumpWidget(

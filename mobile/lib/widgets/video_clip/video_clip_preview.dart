@@ -10,6 +10,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -74,6 +75,14 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
   /// Checks if the video file exists, creates a
   /// [DivineVideoPlayerController], initializes it, enables looping,
   /// and starts playback automatically.
+  ///
+  /// The loop boundary comes from the clip itself, through the same
+  /// [DivineVideoClipPlayerMapping] the editor screens and the export use, so
+  /// this sheet loops over exactly the span they play. Asking the native
+  /// player to re-derive the track end instead would put a second rule on the
+  /// same question: its limit is `min(500 ms, 10% of the playable duration)`,
+  /// so for a clip under five seconds — which is most of them here — it
+  /// declines and loops the whole container.
   Future<void> _initializePlayer() async {
     // Stop-motion clips are rendered frame-by-frame by [StopMotionPlayer];
     // there is no video file to load into the native player.
@@ -89,6 +98,13 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
       if (mounted) context.pop();
       return;
     }
+    // `safeFilePath` assigns `video.file` when it materializes a non-file
+    // source, so the mapping resolves to the path just checked.
+    final playerClip = widget.clip.toPlayerVideoClip();
+    if (playerClip == null) {
+      if (mounted) context.pop();
+      return;
+    }
 
     final controller = DivineVideoPlayerController(
       useTexture: true,
@@ -100,7 +116,7 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
         await controller.dispose();
         return;
       }
-      await controller.setSource(VideoClip.file(file.path));
+      await controller.setSource(playerClip);
       if (!mounted) {
         await controller.dispose();
         return;

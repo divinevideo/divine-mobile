@@ -113,7 +113,7 @@ void main() {
       ).thenAnswer((_) => blocklistStream.stream);
       when(
         () => blocklistRepository.unblockUser(any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
     });
 
     tearDown(() async {
@@ -497,7 +497,7 @@ void main() {
       });
 
       test('unblockUser drops its refresh after close', () async {
-        final unblock = Completer<void>();
+        final unblock = Completer<bool>();
         when(
           () => blocklistRepository.unblockUser(any()),
         ).thenAnswer((_) => unblock.future);
@@ -505,7 +505,7 @@ void main() {
         final cubit = buildCubit();
         final unblocking = cubit.unblockUser('blocked_pubkey');
         await cubit.close();
-        unblock.complete();
+        unblock.complete(true);
 
         await expectLater(unblocking, completes);
       });

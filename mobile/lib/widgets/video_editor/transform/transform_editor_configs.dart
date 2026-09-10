@@ -31,6 +31,13 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// already used.
 const transformEditorHeroTag = 'divine-transform-editor-hero';
 
+/// The [transformEditorConfigs] `initAspectRatio` that leaves the crop box
+/// unconstrained, so the user can drag it to any shape.
+///
+/// pro_image_editor spells "free" as `-1` (and "original" as `0`); naming it
+/// keeps that magic number out of call sites.
+const double freeCropAspectRatio = -1;
+
 /// Builds the crop-rotate editor configuration shared by
 /// `VideoClipTransformScreen` and `StopMotionFrameTransformScreen`.
 ///
@@ -40,7 +47,10 @@ const transformEditorHeroTag = 'divine-transform-editor-hero';
 /// returns finished pixels — but everything the user actually sees is the same,
 /// so it lives here rather than being written twice.
 ///
-/// [initAspectRatio] locks the crop to the composition's output ratio.
+/// [initAspectRatio] locks the crop to the composition's output ratio — or
+/// leaves it unconstrained when it is [freeCropAspectRatio], which is what a
+/// detached clip wants: it floats on the canvas rather than filling the frame,
+/// so its shape is the user's to choose.
 /// [bottomBarLeading] is the extra action before Rotate (the clip editor's
 /// play/pause; a still has nothing to play). [loadingOverlay] covers the editor
 /// while Done rasterizes; omit it to leave the wait uncovered.

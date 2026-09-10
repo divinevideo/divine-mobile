@@ -10,7 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// SharedPreferences key for muted conversations.
-const _mutedConversationsKey = 'muted_conversations';
+///
+/// Public so `UserDataCleanupService` can clear it by reference (#8314).
+const mutedConversationsStorageKey = 'muted_conversations';
 
 enum ConversationMuteStatus { idle, success, error }
 
@@ -95,7 +97,7 @@ class ConversationMuteCubit extends Cubit<ConversationMuteState> {
   }
 
   void _load() {
-    final stored = _prefs.getString(_mutedConversationsKey);
+    final stored = _prefs.getString(mutedConversationsStorageKey);
     if (stored == null || stored.isEmpty) return;
 
     try {
@@ -124,6 +126,6 @@ class ConversationMuteCubit extends Cubit<ConversationMuteState> {
 
   Future<void> _save(Set<String> ids) async {
     final json = jsonEncode(ids.toList());
-    await _prefs.setString(_mutedConversationsKey, json);
+    await _prefs.setString(mutedConversationsStorageKey, json);
   }
 }

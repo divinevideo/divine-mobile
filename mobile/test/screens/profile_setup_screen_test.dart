@@ -21,6 +21,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -612,7 +613,7 @@ void main() {
       mockProfileRepository = createMockProfileRepository();
     });
 
-    List<dynamic> baseOverrides() {
+    List<Override> baseOverrides() {
       return [
         authServiceProvider.overrideWithValue(mockAuthService),
         profileRepositoryProvider.overrideWith((ref) => mockProfileRepository),

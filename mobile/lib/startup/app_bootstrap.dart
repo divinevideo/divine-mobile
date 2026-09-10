@@ -84,13 +84,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await handleFirebaseMessagingBackgroundMessage(message);
 }
 
-typedef ShorebirdTrackUpdate =
-    Future<void> Function({
-      required ShorebirdUpdater updater,
-      required SharedPreferences preferences,
-    });
-typedef UnexpectedShorebirdErrorReporter =
-    Future<void> Function(Object error, StackTrace stackTrace);
+typedef ShorebirdTrackUpdate = Future<void> Function({
+  required ShorebirdUpdater updater,
+  required SharedPreferences preferences,
+});
+typedef UnexpectedShorebirdErrorReporter = Future<void> Function(
+  Object error,
+  StackTrace stackTrace,
+);
 
 @visibleForTesting
 Future<void> configureVideoPlayerCacheForStartup({
@@ -864,8 +865,11 @@ String _startupPlatformName() {
 }
 
 /// Sink [handleUncaughtZoneError] files a report to.
-typedef ZoneErrorRecorder =
-    Future<void> Function(Object error, StackTrace stack, {String? reason});
+typedef ZoneErrorRecorder = Future<void> Function(
+  Object error,
+  StackTrace stack, {
+  String? reason,
+});
 
 /// Logs, then files a report for, an error that escaped every `try`/`catch`
 /// in the app zone.

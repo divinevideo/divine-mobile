@@ -25,6 +25,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/moderation_label_service.dart';
@@ -33,6 +34,7 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock classes (public because they are imported by many test files)
@@ -140,12 +142,25 @@ MockAuthService createMockAuthService({
     () => mockAuth.authRpcCapabilityStream,
   ).thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
 
+  // The crossposter client reads its bearer token here, so any widget that
+  // mounts the share sheet reaches it. Unstubbed it returns null rather than a
+  // Future and throws type 'Null' is not a subtype of type 'Future<String?>'
+  // from initState, far from anything about auth.
+  when(mockAuth.getBoundDivineAccessToken).thenAnswer((_) async => null);
+
   // Stub authState and authStateStream so currentAuthStateProvider does not
   // crash with type 'Null' is not a subtype of type 'Stream<AuthState>'
   when(() => mockAuth.authState).thenReturn(authState);
   when(
     () => mockAuth.authStateStream,
   ).thenAnswer((_) => const Stream<AuthState>.empty());
+
+  // Providers built from an authenticated identity read requireIdentity, which
+  // throws on the real service and returned null here. A pubkey-only identity
+  // keeps those providers constructible without granting signing ability.
+  when(() => mockAuth.requireIdentity).thenReturn(
+    PubkeyOnlyNostrIdentity(pubkey: currentPublicKeyHex ?? 'a' * 64),
+  );
   _stubSessionCleanupRegistration(mockAuth);
 
   return mockAuth;
@@ -195,6 +210,24 @@ MockNostrClient createMockNostrService() {
   // completer, so it must be false by default. Tests that exercise the
   // "settled but hasKeys still false" path override this to true.
   when(() => mockNostr.isReadyResolved).thenReturn(false);
+  return mockNostr;
+}
+
+/// [createMockNostrService] plus the relay-status surface the app shell reads.
+///
+/// Kept separate from the base factory on purpose. Stubbing these globally
+/// would let `relayStatisticsBridge` succeed in all ~150 suites that use the
+/// standard overrides — and that bridge opens a subscription and starts a 3s
+/// periodic timer, which is not something every suite should inherit. Ask for
+/// it only when the test actually pumps the shell.
+MockNostrClient createMockNostrServiceWithRelayStatus() {
+  final mockNostr = createMockNostrService();
+  when(() => mockNostr.relayStatuses).thenReturn(const {});
+  when(
+    () => mockNostr.relayStatusStream,
+  ).thenAnswer((_) => const Stream<Map<String, RelayConnectionStatus>>.empty());
+  when(mockNostr.getRelayPoolCounters).thenReturn(const {});
+  when(() => mockNostr.defaultRelayUrl).thenReturn('wss://relay.test');
   return mockNostr;
 }
 
@@ -372,7 +405,7 @@ MockVideoEventService createMockVideoEventService() {
 }
 
 /// Standard provider overrides that fix most ProviderException failures
-List<dynamic> getStandardTestOverrides({
+List<Override> getStandardTestOverrides({
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
@@ -480,7 +513,7 @@ List<dynamic> getStandardTestOverrides({
 /// ```
 Widget testProviderScope({
   required Widget child,
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
@@ -519,7 +552,7 @@ Widget testProviderScope({
   );
 }
 
-bool _overridesProvider(List<dynamic>? overrides, Object provider) {
+bool _overridesProvider(List<Override>? overrides, Object provider) {
   final providerPrefix = '$provider.';
   return overrides?.any((override) => '$override'.startsWith(providerPrefix)) ??
       false;
@@ -543,7 +576,7 @@ Widget testMaterialApp({
   Widget? home,
   Map<String, WidgetBuilder>? routes,
   String? initialRoute,
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,

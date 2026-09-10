@@ -1,10 +1,13 @@
 // ABOUTME: Drives the chroma-key screen: key colour, tolerances, background
 // ABOUTME: choice, and the auto-detect measurement.
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:meta/meta.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -16,9 +19,11 @@ part 'chroma_key_editor_state.dart';
 ///
 /// Injected so tests can supply a measurement without decoding a frame; in the
 /// app it is [ChromaKey.detect], which samples a ring around the frame border
-/// through the thumbnail pipeline — one decode, no render.
-typedef ChromaKeyDetectFn =
-    Future<ChromaKeyDetection> Function(EditorVideo video);
+/// through the thumbnail pipeline — a metadata call, three thumbnails from a
+/// quarter, half and three quarters through, and a decode each. No render.
+typedef ChromaKeyDetectFn = Future<ChromaKeyDetection> Function(
+  EditorVideo video,
+);
 
 /// The key a clip starts from before anything is measured or adjusted.
 ///
@@ -31,16 +36,36 @@ const _initialKey = ClipChromaKey(key: ChromaKey.greenScreen());
 /// Everything here is in-memory: the clip is only updated when the screen is
 /// confirmed, and the key is applied by the renderer at export rather than
 /// baked into the clip's file.
-class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
+///
+/// Constructing one is not free, though. A clip that arrives without a key
+/// starts a measurement from the constructor body, which crosses the platform
+/// channel and decodes frames, so build this once per screen — never in a
+/// `build()` or a list builder.
+class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
+    with CloseGuardedEmit<ChromaKeyEditorState> {
+  /// Starts measuring straight away when the clip arrives without a key.
+  ///
+  /// [detectOnOpen] exists only so a test can stay off the measurement path.
+  /// The screen passes nothing and takes the default, so a production caller
+  /// turning it off would ship the inert panel this measurement replaced —
+  /// hence `@visibleForTesting`, which makes that a static analysis failure.
   ChromaKeyEditorCubit({
     required EditorVideo video,
     ClipChromaKey? initialChromaKey,
     ChromaKeyDetectFn detect = ChromaKey.detect,
+    @visibleForTesting bool detectOnOpen = true,
   }) : _video = video,
        _detect = detect,
-       super(
-         ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey),
-       );
+       super(ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey)) {
+    // Measuring beats guessing, at a metadata round trip and three decoded
+    // thumbnails, so the screen opens on a real cutout — or on the reason
+    // there isn't one — instead of an inert panel the user has to know to
+    // poke. A clip that already has a key keeps it: re-measuring would throw
+    // the user's tuning away.
+    if (detectOnOpen && initialChromaKey == null) {
+      unawaited(detectFromFootage());
+    }
+  }
 
   static const _logName = 'ChromaKeyEditorCubit';
 
@@ -57,23 +82,22 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
   /// measurement never overwrites them.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
-    emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.detecting));
+    // Both callers discard this future — the constructor with `unawaited`, the
+    // button with a tear-off assigned to a `VoidCallback` — so an `emit` that
+    // threw here would escape as an unhandled zone error instead of surfacing
+    // as a failure state.
+    if (!emitIfOpen(
+      state.copyWith(detectionStatus: ChromaKeyDetectionStatus.detecting),
+    )) {
+      return;
+    }
 
+    // Only the measurement is wrapped. A wider `try` would catch the emits
+    // below as well and file a post-close `emit` throw as a detection failure,
+    // which is both wrong and unfalsifiable from a test.
+    final ChromaKeyDetection detection;
     try {
-      final detection = await _detect(_video);
-      if (isClosed) return;
-      emit(
-        state.copyWith(
-          chromaKey: ClipChromaKey(
-            key: state.chromaKey.key.copyWith(
-              color: detection.color,
-              similarity: detection.similarity,
-            ),
-            backgroundVideoPath: state.chromaKey.backgroundVideoPath,
-          ),
-          detectionStatus: ChromaKeyDetectionStatus.idle,
-        ),
-      );
+      detection = await _detect(_video);
     } on ChromaKeyDetectionException catch (error, stackTrace) {
       // Expected: plenty of footage has no screen reaching the frame border.
       // The UI says so and the user sets the key by hand — not a crash report.
@@ -82,25 +106,47 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
         name: _logName,
         category: LogCategory.video,
       );
-      addError(error, stackTrace);
-      if (isClosed) return;
-      emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure));
+      _reportDetectionFailure(error, stackTrace);
+      return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
       // not.
-      addError(
-        switch (error) {
-          StateError() ||
-          TypeError() ||
-          RangeError() => Reportable(error, context: 'detectFromFootage'),
-          _ => error,
-        },
-        stackTrace,
-      );
-      if (isClosed) return;
-      emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure));
+      _reportDetectionFailure(switch (error) {
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(error, context: 'detectFromFootage'),
+        _ => error,
+      }, stackTrace);
+      return;
     }
+
+    emitIfOpen(
+      state.copyWith(
+        chromaKey: ClipChromaKey(
+          key: state.chromaKey.key.copyWith(
+            color: detection.color,
+            similarity: detection.similarity,
+          ),
+          backgroundVideoPath: state.chromaKey.backgroundVideoPath,
+        ),
+        detectionStatus: ChromaKeyDetectionStatus.idle,
+      ),
+    );
+  }
+
+  /// Reports a failed measurement, unless the screen already closed.
+  ///
+  /// `BlocBase.addError` documents that it must not be called on a closed
+  /// sink, and it has no `isClosed` check of its own: it forwards straight to
+  /// the observer, which logs and — for an invariant violation — files a crash
+  /// report against a cubit the user already backed out of.
+  void _reportDetectionFailure(Object error, StackTrace stackTrace) {
+    if (isClosed) return;
+    addError(error, stackTrace);
+    emitIfOpen(
+      state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
+    );
   }
 
   /// Clears a failed measurement so the UI stops reporting it.

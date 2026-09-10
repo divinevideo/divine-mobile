@@ -1,10 +1,11 @@
-// ABOUTME: Tests curation provider lifecycle behavior during navigation
-// ABOUTME: Verifies editor's picks persist when navigating away and back to tab
+// ABOUTME: Tests curation provider lifecycle: build, keepAlive and auto-refresh
+// ABOUTME: Verifies editor's picks survive navigating away from and back to tab
+
+import 'dart:async';
 
 import 'package:curation_repository/curation_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -13,180 +14,179 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/providers/video_events_providers.dart';
+
+import '../helpers/test_helpers.dart';
+import '../helpers/test_provider_overrides.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-class _MockVideoEventService extends Mock implements VideoEventService {}
-
 class _MockLikesRepository extends Mock implements LikesRepository {}
-
-class _MockAuthService extends Mock implements AuthService {}
-
-class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
 
 class _MockVideoEventCache extends Mock implements VideoEventCache {}
 
+class _MockCurationRepository extends Mock implements CurationRepository {}
+
+/// Lets a test drive the `videoEventsProvider` that `Curation.build` listens
+/// to, so the auto-refresh path can be exercised rather than left in
+/// `AsyncError` by an unstubbed service.
+class _ControllableVideoEvents extends VideoEvents {
+  _ControllableVideoEvents(this.controller);
+
+  final StreamController<List<VideoEvent>> controller;
+
+  @override
+  Stream<List<VideoEvent>> build() => controller.stream;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(<Filter>[]);
-    registerFallbackValue(<String>[]);
   });
 
-  group('CurationProvider Lifecycle', () {
-    late _MockNostrClient mockNostrService;
-    late _MockVideoEventService mockVideoEventService;
-    late _MockLikesRepository mockLikesRepository;
-    late _MockAuthService mockAuthService;
-    late _MockFunnelcakeApiClient mockFunnelcakeApiClient;
-    late List<VideoEvent> sampleVideos;
+  group('CurationProvider lifecycle', () {
+    late _MockCurationRepository mockCurationRepository;
+    late MockAuthService mockAuthService;
+    late StreamController<List<VideoEvent>> videoEvents;
 
     setUp(() {
-      mockNostrService = _MockNostrClient();
-      mockVideoEventService = _MockVideoEventService();
-      mockLikesRepository = _MockLikesRepository();
-      mockAuthService = _MockAuthService();
-      mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
-
-      // Create sample videos for editor's picks
-      sampleVideos = List.generate(
-        23,
-        (i) => VideoEvent(
-          id: 'video_$i',
-          pubkey: 'pubkey_$i',
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          content: 'Test video $i',
-          timestamp: DateTime.now(),
-          title: 'Video $i',
-        ),
-      );
-
-      // Mock video event service to return sample videos
-      when(
-        () => mockVideoEventService.discoveryVideos,
-      ).thenReturn(sampleVideos);
-
-      // Stub nostr service methods
-      when(
-        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-      ).thenAnswer((_) => const Stream.empty());
-
-      // Mock getLikeCounts to return empty counts
-      // (replaced getCachedLikeCount)
-      when(
-        () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+      mockCurationRepository = _MockCurationRepository();
+      mockAuthService = createMockAuthService();
+      videoEvents = StreamController<List<VideoEvent>>.broadcast();
+      addTearDown(videoEvents.close);
     });
 
-    test('curation provider uses keepAlive to persist state', () async {
-      // ARRANGE: Create first container
+    void stubEditorsPicks(List<VideoEvent> videos) {
+      when(
+        () => mockCurationRepository.getVideosForSetType(
+          CurationSetType.editorsPicks,
+        ),
+      ).thenReturn(videos);
+    }
+
+    ProviderContainer createContainer() {
       final container = ProviderContainer(
         overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          authServiceProvider.overrideWithValue(mockAuthService),
-          funnelcakeApiClientProvider.overrideWithValue(
-            mockFunnelcakeApiClient,
+          ...getStandardTestOverrides(mockAuthService: mockAuthService),
+          curationRepositoryProvider.overrideWithValue(mockCurationRepository),
+          videoEventsProvider.overrideWith(
+            () => _ControllableVideoEvents(videoEvents),
           ),
         ],
       );
+      addTearDown(container.dispose);
+      return container;
+    }
 
-      // ACT: Read curation provider
-      final curationState = container.read(curationProvider);
+    test('build publishes the repository cache on the first read', () {
+      final cached = TestHelpers.createMockVideoEvents(23);
+      stubEditorsPicks(cached);
 
-      // ASSERT: Provider should initialize synchronously
-      // with loading state
+      final container = createContainer();
+      final state = container.read(curationProvider);
+
+      expect(state.editorsPicks, hasLength(23));
       expect(
-        curationState.isLoading,
-        isTrue,
-        reason: 'Provider initializes in loading state',
+        state.editorsPicks.map((v) => v.title).toList(),
+        cached.map((v) => v.title).toList(),
+        reason: 'VideoEvent == compares id alone, so pin a carried field too',
       );
+      expect(
+        state.isLoading,
+        isFalse,
+        reason: 'the repository read is synchronous, so nothing stays pending',
+      );
+      expect(state.error, isNull);
+      expect(container.read(curationLoadingProvider), isFalse);
+      expect(container.read(editorsPicksProvider), hasLength(23));
+    });
 
-      // The key point: with @Riverpod(keepAlive: true),
-      // the provider will:
-      // 1. NOT autodispose when unwatched
-      // 2. Persist state across navigation
-      // 3. Complete initialization once and reuse that state
+    test('a failing repository read leaves an error, not a stuck spinner', () {
+      when(
+        () => mockCurationRepository.getVideosForSetType(
+          CurationSetType.editorsPicks,
+        ),
+      ).thenThrow(StateError('no signer'));
 
-      // This test verifies the annotation is present and
-      // provider is marked as keepAlive
-      // In production, this prevents the "0 videos" bug when
-      // navigating back to Editor's Pick
+      final container = createContainer();
+      final state = container.read(curationProvider);
 
-      container.dispose();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      expect(state.error, contains('no signer'));
+      expect(state.editorsPicks, isEmpty);
+      expect(
+        state.isLoading,
+        isFalse,
+        reason: 'a failed load must not leave the tab spinning forever',
+      );
+    });
+
+    test('keepAlive holds the state after the last listener closes', () async {
+      final cached = TestHelpers.createMockVideoEvents(23);
+      stubEditorsPicks(cached);
+      when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
+
+      final container = createContainer();
+      final subscription = container.listen(curationProvider, (_, _) {});
+      await container.read(curationProvider.notifier).refreshAll();
+      final populatedState = container.read(curationProvider);
+      expect(populatedState.editorsPicks, hasLength(23));
+
+      subscription.close();
+      await pumpEventQueue();
+
+      expect(container.read(curationProvider), same(populatedState));
+    });
 
     test(
-      'curation provider initialization completes and populates '
-      'editor picks',
+      'a change in the video event count refreshes the curation sets',
       () async {
-        // ARRANGE: Create container
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            funnelcakeApiClientProvider.overrideWithValue(
-              mockFunnelcakeApiClient,
-            ),
-          ],
-        );
+        stubEditorsPicks([]);
+        when(mockCurationRepository.refreshIfNeeded).thenReturn(null);
 
-        // ACT: Read initial state
-        final initialState = container.read(curationProvider);
+        final container = createContainer();
+        // Riverpod pauses a stream subscription while nothing is actively
+        // listening, so a bare read would never see the emission below.
+        final subscription = container.listen(curationProvider, (_, _) {});
+        addTearDown(subscription.close);
 
-        // ASSERT: Initially loading
-        expect(initialState.isLoading, isTrue);
-        expect(initialState.editorsPicks, isEmpty);
+        expect(container.read(curationProvider).editorsPicks, isEmpty);
+        verifyNever(mockCurationRepository.refreshIfNeeded);
 
-        // Wait for async initialization
-        await Future.microtask(() {});
-        await Future.delayed(const Duration(milliseconds: 10));
+        final arrived = TestHelpers.createMockVideoEvents(3);
+        stubEditorsPicks(arrived);
+        videoEvents.add(TestHelpers.createMockVideoEvents(2));
+        await pumpEventQueue();
 
-        // ACT: Read after initialization
-        final loadedState = container.read(curationProvider);
-        final editorsPicks = container.read(editorsPicksProvider);
-
-        // ASSERT: Should be loaded with videos
-        expect(loadedState.isLoading, isFalse);
-        expect(editorsPicks.length, greaterThan(0));
-
-        container.dispose();
+        verify(mockCurationRepository.refreshIfNeeded).called(1);
+        expect(container.read(curationProvider).editorsPicks, hasLength(3));
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
 
-    test('curation service initializes with sample data', () {
-      // ARRANGE: Create curation service directly
-      final mockSigner = _MockNostrSigner();
+    test('CurationRepository reports no work pending once constructed', () {
+      final mockNostrService = _MockNostrClient();
+      when(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).thenAnswer((_) => const Stream.empty());
       final mockVideoEventCache = _MockVideoEventCache();
       when(() => mockVideoEventCache.discoveryVideos).thenReturn([]);
+
       final service = CurationRepository(
         nostrService: mockNostrService,
         videoEventCache: mockVideoEventCache,
-        likesRepository: mockLikesRepository,
-        signer: mockSigner,
+        likesRepository: _MockLikesRepository(),
+        signer: _MockNostrSigner(),
         divineTeamPubkeys: const [],
       );
+      addTearDown(service.dispose);
 
-      // ACT & ASSERT: Service should initialize with sample data
       expect(service.isLoading, isFalse);
-      final editorsPicks = service.getVideosForSetType(
-        CurationSetType.editorsPicks,
+      expect(
+        service.getVideosForSetType(CurationSetType.editorsPicks),
+        isEmpty,
+        reason: 'the Divine Team fetch has not returned, so nothing is curated',
       );
-
-      // Editor's picks may be empty if no videos available,
-      // but service should not be loading
-      expect(service.isLoading, isFalse);
-      // Verify editorsPicks is a valid list
-      // (may be empty if no videos available)
-      expect(editorsPicks, isA<List<VideoEvent>>());
     });
   });
 }

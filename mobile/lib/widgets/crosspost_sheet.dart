@@ -22,7 +22,7 @@ Future<void> showCrosspostSheet({
   required BuildContext context,
   required WidgetRef ref,
   required VideoEvent video,
-  required List<CrossposterConnection> connections,
+  required List<CrosspostingConnection> connections,
 }) {
   final client = ref.read(crossposterApiClientProvider);
   return VineBottomSheet.show<void>(
@@ -84,7 +84,7 @@ class CrosspostSheetView extends StatelessWidget {
                     _PlatformRow(
                       connection: connection,
                       selected: state.selectedPlatforms.contains(
-                        connection.platform,
+                        connection.platform.wireName,
                       ),
                       enabled: state.status == VideoCrosspostStatus.ready,
                     ),
@@ -199,13 +199,13 @@ class _PlatformRow extends StatelessWidget {
     required this.enabled,
   });
 
-  final CrossposterConnection connection;
+  final CrosspostingConnection connection;
   final bool selected;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    final name = crosspostPlatformDisplayName(connection.platform);
+    final name = connection.platform.displayName;
     final account = connection.externalAccountName;
     return Semantics(
       button: true,
@@ -215,7 +215,7 @@ class _PlatformRow extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: enabled
             ? () => context.read<VideoCrosspostCubit>().togglePlatform(
-                connection.platform,
+                connection.platform.wireName,
               )
             : null,
         child: ConstrainedBox(

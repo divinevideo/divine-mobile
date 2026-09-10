@@ -91,16 +91,6 @@ void main() {
       await db.close();
     });
 
-    test('AppDatabase has correct schema version', () async {
-      final db = AppDatabase.test(NativeDatabase(File(testDbPath)));
-
-      // Schema version should match current database version
-      expect(db.schemaVersion, equals(6));
-
-      await db.close();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
-
     test('AppDatabase closes cleanly', () async {
       final db = AppDatabase.test(NativeDatabase(File(testDbPath)));
 

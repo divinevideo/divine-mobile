@@ -41,7 +41,7 @@ or `flutter clean` — re-arms the next codegen pass.
 
 The biggest local-build cost is `dart run build_runner build` (a few
 hundred seconds on a cold analyzer). For active development on
-`@riverpod` / `@freezed` / `@JsonSerializable` / `drift` inputs, run the
+`@riverpod` / `@JsonSerializable` / `drift` inputs, run the
 watcher in a separate terminal once and leave it running:
 
 ```bash

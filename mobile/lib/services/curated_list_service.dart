@@ -12,25 +12,19 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Callback type for list subscription events
-/// Called with listId and the video IDs in that list
-typedef OnListSubscribedCallback =
-    Future<void> Function(String listId, List<String> videoIds);
-
-/// Callback type for list unsubscription events
-/// Called with listId when a list is unsubscribed
-typedef OnListUnsubscribedCallback = void Function(String listId);
+export 'package:openvine/models/curated_list_callbacks.dart';
 
 /// Service for managing NIP-51 curated lists.
 ///

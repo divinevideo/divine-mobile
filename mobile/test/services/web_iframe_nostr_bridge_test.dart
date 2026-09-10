@@ -161,8 +161,7 @@ void main() {
           final signed = <String, dynamic>{
             ...unsigned,
             'pubkey': fakePubkey,
-            'id':
-                'bbbb22222222222222222222222222222222222222222222222222222222bbbb',
+            'id': 'bbbb22222222222222222222222222222222222222222222222222222222bbbb',
             'sig': 'cafe' * 32,
           };
           when(() => signer.signEvent(any())).thenAnswer((_) async => signed);

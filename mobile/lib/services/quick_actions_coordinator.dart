@@ -10,8 +10,11 @@ import 'package:unified_logger/unified_logger.dart';
 const quickActionCameraType = 'camera';
 const quickActionNotificationsType = 'notifications';
 
-typedef QuickActionErrorReporter =
-    Future<void> Function(Object error, StackTrace stackTrace, String reason);
+typedef QuickActionErrorReporter = Future<void> Function(
+  Object error,
+  StackTrace stackTrace,
+  String reason,
+);
 
 typedef QuickActionDelay = Future<bool> Function();
 typedef QuickActionCallbackScheduler = void Function(void Function() callback);

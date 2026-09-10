@@ -1,11 +1,26 @@
 // ABOUTME: Service to clear user-specific cached data when identity changes
 // ABOUTME: Prevents data leakage between different Nostr accounts after reinstall
 
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
+import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
+import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/content_deletion_service.dart';
+import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
+import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -46,37 +61,52 @@ class UserDataCleanupService {
 
   /// Keys that store user-specific data and should be cleared on identity change.
   /// Device/app settings like relay URLs, analytics preferences are NOT included.
+  ///
+  /// Entries reference the constant owned by the writing service wherever one
+  /// exists, so renaming a key is a compile error here rather than a silent
+  /// no-op. A copied literal cannot detect that its owner moved: the moderation
+  /// pair below drifted exactly that way and stopped being cleared (#6985).
   static const List<String> userSpecificKeys = [
     // List services
-    'curated_lists',
-    'curated_lists_default_deleted',
-    'subscribed_list_ids',
-    'user_lists',
+    CuratedListService.listsStorageKey,
+    CuratedListService.defaultListDeletedStorageKey,
+    CuratedListService.subscribedListsStorageKey,
     // Bookmark services
-    'bookmark_sets',
-    'global_bookmarks',
-    'global_bookmarks_revision',
-    'bookmark_published_hashes',
-    'bookmark_pending_changes',
-    // Mute/moderation services
-    'muted_items',
-    'content_moderation_local_mutes',
-    'content_moderation_subscribed_lists',
+    BookmarksRepository.globalBookmarksStorageKey,
+    BookmarksRepository.globalBookmarksRevisionStorageKey,
     // Content history
-    'content_reports_history',
-    'content_deletions_history',
-    // Viewing history
-    'seen_video_ids',
-    'seen_video_metrics',
+    ContentReportingService.reportsStorageKey,
+    ContentDeletionService.deletionsStorageKey,
+    // Viewing history. The migration flag travels with the metrics it gates,
+    // for the same reason the content-filter pair does.
+    SeenVideosService.legacySeenVideosStorageKey,
+    SeenVideosService.seenVideosMetricsStorageKey,
+    SeenVideosService.seenVideosMigratedStorageKey,
     // Labeler subscriptions
-    'subscribed_labelers',
-    'label_cache',
-    // Report aggregation
-    'trusted_reporters',
-    'report_cache',
+    ModerationLabelService.subscribedLabelersStorageKey,
+    ModerationLabelService.followingModerationEnabledStorageKey,
+    // Content labels this account applies to its own uploads
+    AccountLabelService.accountLabelStorageKey,
+    LanguagePreferenceService.prefsKey,
+    AudioSharingPreferenceService.prefsKey,
+    // Per-category filter choices. The migration flag travels with the
+    // preferences it guards: clearing one without the other leaves the next
+    // account with an empty map instead of the defaults.
+    ContentFilterService.filterPrefsStorageKey,
+    ContentFilterService.filterMigratedStorageKey,
+    ContentFilterService.legacyAdultContentPreferenceStorageKey,
+    // Feed filters. showDivineHostedOnly defaults to ON, so inheriting a
+    // relaxed value would leave the incoming account less protected than a
+    // fresh one.
+    DivineHostFilterService.showDivineHostedOnlyStorageKey,
+    VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
+    // Direct messages
+    mutedConversationsStorageKey,
+    // Sound library. SavedSoundsService is pubkey-scoped and swept
+    // separately; this second store is not scoped and was missed.
+    SoundLibraryService.customSoundsStorageKey,
     // TOS acceptance (user must re-accept on new account)
-    'age_verified_16_plus',
-    'terms_accepted_at',
+    ...TermsAcceptanceKeys.all,
   ];
 
   /// Legacy owner-scoped preference keys that contain user data but may still

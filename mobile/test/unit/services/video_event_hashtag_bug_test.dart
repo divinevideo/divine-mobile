@@ -2,7 +2,7 @@
 // ABOUTME: Minimal reproduction case showing the deduplication issue
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -67,8 +67,7 @@ void main() {
       expect(
         result.length,
         equals(2),
-        reason:
-            'Current implementation returns duplicates when same video exists in multiple lists',
+        reason: 'Current implementation returns duplicates when same video exists in multiple lists',
       );
 
       // Both results are the same video

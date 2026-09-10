@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4351,9 +4352,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supportRevealLogsAction => 'フォルダで表示';
 
   @override
-  String get supportChatNotAvailable => 'サポートチャットは今使えないよ';
-
-  @override
   String get supportCouldNotOpenMessages => 'サポートメッセージが開けなかった';
 
   @override
@@ -4881,22 +4879,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundUseSound => 'サウンドを使う';
-
-  @override
-  String get soundUntitled => '無題のサウンド';
-
-  @override
-  String get soundStopPreview => 'プレビューを停止';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '$titleをプレビュー';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '$titleの詳細を表示';
-  }
 
   @override
   String get soundNoVideoCount => '動画はまだないよ';
@@ -8415,6 +8397,50 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'スライドして調整';
 
   @override
+  String get videoEditorDetachLabel => '切り離す';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '選択したクリップをタイムラインから切り離す';
+
+  @override
+  String get videoEditorDetachTitle => 'クリップを切り離す';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'クリップはキャンバスに移り、好きな位置に置けます。タイムラインでは何がその場所を埋めますか？';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'なし';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'すき間を詰める。後ろのものはすべて早く始まります。';
+
+  @override
+  String get videoEditorDetachReplaceColor => '色';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => 'クリップと同じ長さだけ単色を表示します。';
+
+  @override
+  String get videoEditorDetachReplaceImage => '写真';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => 'その場所を埋める静止画を撮ります。';
+
+  @override
+  String get videoEditorDetachedClipLabel => '切り離したクリップ';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'クリップを切り離しています…';
+
+  @override
+  String get videoEditorDetachFailed => 'そのクリップを切り離せませんでした。タイムラインは変更されていません。';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'その写真を読み込めませんでした。';
+
+  @override
   String get videoEditorChromaKeyLabel => 'グリーンバック';
 
   @override
@@ -8479,8 +8505,12 @@ class AppLocalizationsJa extends AppLocalizations {
       '動画は透明を保持できないため、書き出すと黒くなります。';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      '後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      '背景が見つかりませんでした。画面の端まで届いている必要があります。届いていない場合は手動で色を選んでください。';
+      '背景が見つかりませんでした。後ろの面が画面いっぱいに広がっている必要があります。無地の壁でも大丈夫です。手動で色を選ぶこともできます。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'クリップを選ぶ';
@@ -8753,6 +8783,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'タイトルなしのサウンド';
+
+  @override
+  String get videoEditorAudioFileMissing => '音声ファイルは端末に残っていません';
 
   @override
   String get videoEditorAudioUntitled => 'タイトルなし';
@@ -9642,7 +9675,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'サポートセンターを開く';
+  String get appealOpenSupportCenter => 'サポートセンターを開く';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'モデレーションメッセージを開く';
@@ -10749,6 +10782,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get savedSoundRemoveAction => '保存したサウンドを削除';
 
   @override
+  String get savedSoundFileMissing => 'このサウンドの音声ファイルは端末に残っていないため再生できません。';
+
+  @override
   String get savedSoundClearHashtagFilter => 'ハッシュタグの絞り込みを解除';
 
   @override
@@ -11507,9 +11543,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

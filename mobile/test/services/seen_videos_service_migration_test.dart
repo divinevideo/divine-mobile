@@ -114,6 +114,22 @@ void main() {
       expect(prefs.getString('seen_video_metrics'), isNull);
     });
 
+    test('clearSeenVideos propagates database deletion failures', () async {
+      const videoId =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final service = SeenVideosService(database: db);
+      await service.initialize();
+      await service.recordVideoView(videoId);
+      expect(await db.seenVideosDao.count(), 1);
+      await db.customStatement('''
+        CREATE TRIGGER reject_seen_cleanup BEFORE DELETE ON seen_videos
+        BEGIN SELECT RAISE(ABORT, 'seen cleanup failed'); END
+      ''');
+
+      await expectLater(service.clearSeenVideos(), throwsException);
+      expect(await db.seenVideosDao.count(), 1);
+    });
+
     test('persists across service instances via DB', () async {
       final service1 = SeenVideosService(database: db);
       await service1.initialize();

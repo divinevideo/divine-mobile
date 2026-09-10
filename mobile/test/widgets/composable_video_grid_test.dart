@@ -113,8 +113,7 @@ void main() {
       testVideos = [
         VideoEvent(
           id: 'video1',
-          pubkey:
-              'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', // 64-char hex pubkey
+          pubkey: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', // 64-char hex pubkey
           content: 'Test video 1',
           title: 'Video 1',
           videoUrl: 'https://example.com/video1.mp4',
@@ -127,8 +126,7 @@ void main() {
         ),
         VideoEvent(
           id: 'video2',
-          pubkey:
-              'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3', // 64-char hex pubkey
+          pubkey: 'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3', // 64-char hex pubkey
           content: 'Test video 2',
           title: 'Video 2',
           videoUrl: 'https://example.com/video2.mp4',
@@ -141,8 +139,7 @@ void main() {
         ),
         VideoEvent(
           id: 'broken_video',
-          pubkey:
-              'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4', // 64-char hex pubkey
+          pubkey: 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4', // 64-char hex pubkey
           content: 'Broken video',
           title: 'Broken Video',
           videoUrl: 'https://example.com/broken.mp4',

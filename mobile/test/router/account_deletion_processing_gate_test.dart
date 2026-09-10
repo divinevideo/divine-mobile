@@ -152,8 +152,7 @@ void main() {
             .record(
               pubkeyHex: _pubkey,
               attempt: _processing,
-              vanishEventId:
-                  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             );
         final router = GoRouter(
           initialLocation: AccountDeletionRecoveryScreen.path,
@@ -204,8 +203,7 @@ void main() {
             .record(
               pubkeyHex: _pubkey,
               attempt: _recoverable,
-              vanishEventId:
-                  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
               submissionOwnedLocally: true,
             );
         container.invalidate(currentAccountDeletionAttemptProvider);
@@ -358,8 +356,7 @@ void main() {
             .record(
               pubkeyHex: _pubkey,
               attempt: _processing,
-              vanishEventId:
-                  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             );
         container.invalidate(currentAccountDeletionAttemptProvider);
         await tester.runAsync(

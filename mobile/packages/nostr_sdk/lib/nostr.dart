@@ -9,6 +9,7 @@ import 'nip02/contact_list.dart';
 import 'relay/event_filter.dart';
 import 'relay/publish_outcome.dart';
 import 'relay/relay.dart';
+import 'relay/relay_diagnostics.dart';
 import 'relay/relay_pool.dart';
 import 'relay/relay_type.dart';
 import 'relay/signature_verification_policy.dart';
@@ -34,6 +35,7 @@ class Nostr {
     this.tempRelayGener, {
     this.onNotice,
     WebSocketChannelFactory? channelFactory,
+    RelayDiagnosticsSink? diagnosticsSink,
     SignatureVerificationPolicy signatureVerificationPolicy =
         SignatureVerificationPolicy.all,
   }) {
@@ -44,6 +46,7 @@ class Nostr {
       eventFilters,
       tempRelayGener,
       onNotice: onNotice,
+      diagnosticsSink: diagnosticsSink,
       signatureVerificationPolicy: signatureVerificationPolicy,
     );
   }

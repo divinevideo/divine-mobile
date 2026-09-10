@@ -2,6 +2,10 @@ name: Mobile Integration Tests (Services)
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * *'
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -15,7 +19,13 @@ on:
 # sync when suite dependencies change.
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Pushes get a per-commit group. The ref alone is constant across every
+  # merge to main, so the next merge would cancel the previous merge's
+  # post-merge suite — and if that next merge is docs-only its own service
+  # scope is false, so nothing reruns and the regression goes unreported
+  # until the daily run. Every other event still collapses to the ref, so a
+  # PR's superseded runs are cancelled as before.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -26,19 +36,56 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      focused: ${{ steps.scope.outputs.focused }}
-      app: ${{ steps.scope.outputs.app }}
+      focused: ${{ steps.resolved.outputs.focused }}
+      app: ${{ steps.resolved.outputs.app }}
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: mobile/scripts/ci/detect_service_suite_scope.sh
+          sparse-checkout: |
+            mobile/scripts/ci/detect_mobile_ci_scope.sh
+            mobile/scripts/ci/detect_service_suite_scope.sh
           sparse-checkout-cone-mode: false
       - name: Detect affected service suites
         id: scope
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: bash mobile/scripts/ci/detect_service_suite_scope.sh
+      - name: Detect whether a main-branch merge affects services
+        id: mobile-scope
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
+        run: bash mobile/scripts/ci/detect_mobile_ci_scope.sh
+      - name: Run the full deterministic suite on schedules and dispatches
+        id: full-scope
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo "focused=true" >> "$GITHUB_OUTPUT"
+          echo "app=true" >> "$GITHUB_OUTPUT"
+      # The three steps above are mutually exclusive and cover only the four
+      # events in `on:`. With no fallback, an event none of them matches
+      # leaves every lookup empty, the job SUCCEEDS, service-tests skips, and
+      # the workflow reports green having run nothing. The same happens if a
+      # step id is renamed on one side of the `||` chain, which degrades to
+      # '' rather than erroring. Resolving once here makes both fail loudly,
+      # the way mobile_ci.yaml's aggregator already does.
+      - name: Resolve the service suite scope
+        id: resolved
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FOCUSED: ${{ steps.scope.outputs.focused || steps.mobile-scope.outputs.service || steps.full-scope.outputs.focused }}
+          APP: ${{ steps.scope.outputs.app || steps.mobile-scope.outputs.service || steps.full-scope.outputs.app }}
+        run: |
+          if [ -z "${FOCUSED}" ] || [ -z "${APP}" ]; then
+            echo "Could not determine the service suite scope for ${EVENT_NAME}."
+            exit 1
+          fi
+          echo "focused=${FOCUSED}" >> "$GITHUB_OUTPUT"
+          echo "app=${APP}" >> "$GITHUB_OUTPUT"
 
   service-tests:
     name: Integration Tests (services)
@@ -54,7 +101,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       # `flutter test integration_test/...` runs in integration-test mode, which
@@ -129,3 +176,78 @@ jobs:
             echo "── $suite"
             xvfb-run -a flutter test "$suite" --tags service -d linux
           done
+  daily-signal:
+    name: Publish daily service-test result
+    needs: [changes, service-tests]
+    if: ${{ always() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the daily service-test incident
+        if: ${{ needs.changes.result != 'success' || needs.service-tests.result != 'success' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- daily-service-integration-incident -->';
+            const title = 'ci(services): daily integration tests are failing';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              'The daily deterministic service integration run is failing.',
+              '',
+              `Latest failed run: ${runUrl}`,
+              '',
+              'The first maintainer who picks this up owns initial classification and leaves a handoff if another time zone needs to continue. This issue closes automatically after the daily run recovers.',
+            ].join('\n');
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: 100,
+            });
+            const existing = issues.find(issue =>
+              !issue.pull_request && issue.body && issue.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+                state: 'open',
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['bug'],
+              });
+            }
+      - name: Close the recovered daily service-test incident
+        if: ${{ needs.changes.result == 'success' && needs.service-tests.result == 'success' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- daily-service-integration-incident -->';
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find(issue =>
+              !issue.pull_request && issue.body && issue.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+            }

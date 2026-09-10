@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4587,9 +4588,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supportRevealLogsAction => 'إظهار في المجلد';
 
   @override
-  String get supportChatNotAvailable => 'محادثة الدعم غير متاحة';
-
-  @override
   String get supportCouldNotOpenMessages => 'تعذر فتح رسائل الدعم';
 
   @override
@@ -5142,22 +5140,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundUseSound => 'استخدام الصوت';
-
-  @override
-  String get soundUntitled => 'صوت بلا عنوان';
-
-  @override
-  String get soundStopPreview => 'إيقاف المعاينة';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'معاينة $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'عرض تفاصيل $title';
-  }
 
   @override
   String get soundNoVideoCount => 'لا توجد مقاطع فيديو بعد';
@@ -8793,6 +8775,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'اسحب للضبط';
 
   @override
+  String get videoEditorDetachLabel => 'فصل';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'فصل المقطع المحدد عن الجدول الزمني';
+
+  @override
+  String get videoEditorDetachTitle => 'فصل المقطع';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'ينتقل المقطع إلى اللوحة ويمكن وضعه في أي مكان. ما الذي يشغل مكانه على الجدول الزمني؟';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'لا شيء';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'سد الفجوة: كل ما بعده يبدأ أبكر.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'لون';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'إظهار لون ثابت طوال مدة المقطع.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'صورة';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'التقاط صورة ثابتة تشغل مكانه.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'مقطع مفصول';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'جارٍ فصل مقطعك…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'تعذّر فصل هذا المقطع. الجدول الزمني كما هو دون تغيير.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'تعذّر تحميل هذه الصورة.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'الشاشة الخضراء';
 
   @override
@@ -8860,8 +8890,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'لم نعثر على خلفية. يجب أن تصل إلى حواف الإطار، وإلا فاختر اللون يدويًا.';
+      'لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'اختر مقطعًا';
@@ -9154,6 +9188,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'صوت بدون عنوان';
+
+  @override
+  String get videoEditorAudioFileMissing => 'ملف الصوت لم يعد على هذا الجهاز';
 
   @override
   String get videoEditorAudioUntitled => 'بدون عنوان';
@@ -9808,8 +9845,7 @@ class AppLocalizationsAr extends AppLocalizations {
       locale: localeName,
       other:
           'ستُحظر $count حسابات تضع هذه الشارة الآن. لن تظهر منشوراتها في تغذياتك ولن يتم إبلاغها.',
-      one:
-          'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
+      one: 'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
     );
     return '$_temp0';
   }
@@ -10071,7 +10107,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'فتح مركز الدعم';
+  String get appealOpenSupportCenter => 'فتح مركز الدعم';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'فتح رسالة الإشراف';
@@ -11243,6 +11279,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get savedSoundRemoveAction => 'إزالة الصوت المحفوظ';
 
   @override
+  String get savedSoundFileMissing =>
+      'ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'مسح تصفية الوسوم';
 
   @override
@@ -12022,9 +12062,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

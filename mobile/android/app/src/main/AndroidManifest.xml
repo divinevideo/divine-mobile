@@ -109,11 +109,12 @@
              Nothing upstream has changed since. That measurement was
              taken on Flutter 3.44.0, with both cited issues already
              closed - so this is not a re-evaluation after an engine
-             upgrade. The Flutter pin has since moved to 3.44.9 (#7202),
-             which the profiling above predates. What changed is the
-             requirement: the video editor's live chroma-key preview
-             needs `ui.ImageFilter.shader`, which Skia does not implement
-             at all. On Skia the preview degrades to the unkeyed video
+             upgrade. The Flutter pin has since moved on twice (3.44.9
+             in #7202, then 3.47.2), both of which the profiling above
+             predates. What changed is the requirement: the video
+             editor's live chroma-key preview needs
+             `ui.ImageFilter.shader`, which Skia does not implement at
+             all. On Skia the preview degrades to the unkeyed video
              (the exported file is unaffected either way), and we decided
              a working preview is worth re-entering Impeller.
 

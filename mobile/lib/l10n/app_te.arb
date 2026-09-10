@@ -2869,7 +2869,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "మద్దతు చాట్ అందుబాటులో లేదు",
   "supportCouldNotOpenMessages": "మద్దతు సందేశాలను తెరవడం సాధ్యపడలేదు",
   "supportCouldNotOpenPage": "తెరవడం సాధ్యపడలేదు {pageName}",
   "@supportCouldNotOpenPage": {
@@ -3128,24 +3127,6 @@
   "soundPreview": "ప్రివ్యూ",
   "soundStop": "ఆపు",
   "soundUseSound": "సౌండ్ ఉపయోగించండి",
-  "soundUntitled": "శీర్షికలేని ధ్వని",
-  "soundStopPreview": "ప్రివ్యూను ఆపు",
-  "soundPreviewSemanticLabel": "ప్రివ్యూ {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "దీని కోసం వివరాలను వీక్షించండి {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "ఇంకా వీడియోలు లేవు",
   "soundOneVideo": "1 వీడియో",
   "soundVideoCount": "{count, plural, =1{{count}వీడియో} other{{count}వీడియోలు}}",
@@ -5689,6 +5670,20 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "సర్దుబాటు చేయడానికి స్లయిడ్ చేయండి",
+  "videoEditorDetachLabel": "వేరు చేయి",
+  "videoEditorDetachSemanticLabel": "ఎంచుకున్న క్లిప్‌ని టైమ్‌లైన్ నుండి వేరు చేయండి",
+  "videoEditorDetachTitle": "క్లిప్‌ని వేరు చేయండి",
+  "videoEditorDetachDescription": "క్లిప్ కాన్వాస్‌కి వెళ్తుంది, అక్కడ మీరు దానిని ఎక్కడైనా ఉంచవచ్చు. టైమ్‌లైన్‌లో దాని స్థానాన్ని ఏది తీసుకుంటుంది?",
+  "videoEditorDetachReplaceRemove": "ఏమీ లేదు",
+  "videoEditorDetachReplaceRemoveDetail": "ఖాళీని మూసివేయండి – ఆ తర్వాతివన్నీ ముందుగా మొదలవుతాయి.",
+  "videoEditorDetachReplaceColor": "రంగు",
+  "videoEditorDetachReplaceColorDetail": "క్లిప్ నడిచినంత సేపు ఒకే రంగును ఉంచుతుంది.",
+  "videoEditorDetachReplaceImage": "ఫోటో",
+  "videoEditorDetachReplaceImageDetail": "దాని స్థానాన్ని నిలిపే ఫోటో తీయండి.",
+  "videoEditorDetachedClipLabel": "వేరు చేసిన క్లిప్",
+  "videoEditorDetachProgressLabel": "మీ క్లిప్‌ను వేరు చేస్తోంది…",
+  "videoEditorDetachFailed": "ఆ క్లిప్‌ని వేరు చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.",
+  "videoEditorDetachImagePickFailed": "ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.",
   "videoEditorChromaKeyLabel": "గ్రీన్ స్క్రీన్",
   "videoEditorChromaKeyTitle": "గ్రీన్ స్క్రీన్",
   "videoEditorChromaKeySemanticLabel": "ఈ క్లిప్ కోసం గ్రీన్ స్క్రీన్‌ను సెటప్ చేయండి",
@@ -5713,7 +5708,8 @@
   "videoEditorChromaKeyBackgroundImage": "చిత్రం",
   "videoEditorChromaKeyBackgroundVideo": "క్లిప్",
   "videoEditorChromaKeyTransparentHint": "వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.",
-  "videoEditorChromaKeyDetectFailed": "స్క్రీన్‌ని కనుగొనడం సాధ్యపడలేదు. ఇది ఫ్రేమ్ అంచులను చేరుకోవాలి - బదులుగా చేతితో రంగును ఎంచుకోండి.",
+  "videoEditorChromaKeySurfaceHint": "మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.",
+  "videoEditorChromaKeyDetectFailed": "స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.",
   "videoEditorChromaKeyPickClipTitle": "క్లిప్‌ను ఎంచుకోండి",
   "videoEditorChromaKeyNoLibraryClips": "మీ లైబ్రరీ ఖాళీగా ఉంది. ముందుగా క్లిప్‌ను సేవ్ చేసి, ఆపై దాన్ని నేపథ్యంగా ఉపయోగించండి.",
   "videoEditorChromaKeyImagePickFailed": "ఆ చిత్రాన్ని లోడ్ చేయడం సాధ్యపడలేదు.",
@@ -5998,6 +5994,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "ప్రివ్యూని ప్లే చేయండి",
   "videoEditorAudioPausePreviewSemanticLabel": "ప్రివ్యూను పాజ్ చేయండి",
   "videoEditorAudioUntitledSound": "శీర్షికలేని ధ్వని",
+  "videoEditorAudioFileMissing": "ఆడియో ఫైల్ ఈ పరికరంలో లేదు",
   "videoEditorAudioUntitled": "శీర్షిక లేదు",
   "videoEditorAudioAddAudio": "ఆడియోని జోడించండి",
   "videoEditorAudioNoSoundsAvailableTitle": "శబ్దాలు అందుబాటులో లేవు\nసృష్టికర్తలు ఆడియోను షేర్ చేసినప్పుడు ",
@@ -6547,7 +6544,7 @@
   "@minorAccountReviewAppealUnder13Body": {
     "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
   },
-  "minorAccountReviewOpenSupportCenter": "మద్దతు కేంద్రాన్ని తెరవండి",
+  "appealOpenSupportCenter": "మద్దతు కేంద్రాన్ని తెరవండి",
   "minorAccountReviewOpenModerationMessage": "మోడరేషన్ సందేశాన్ని తెరవండి",
   "minorAccountReviewOpenReviewPage": "సమీక్ష పేజీని తెరవండి",
   "minorAccountReviewCheckAgain": "మళ్లీ తనిఖీ చేయండి",
@@ -7483,6 +7480,7 @@
   "savedSoundPreviewAction": "ప్రివ్యూ సౌండ్",
   "savedSoundEditAction": "ధ్వని వివరాలను సవరించండి",
   "savedSoundRemoveAction": "సేవ్ చేయబడిన ధ్వనిని తీసివేయండి",
+  "savedSoundFileMissing": "ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.",
   "savedSoundClearHashtagFilter": "హ్యాష్‌ట్యాగ్ ఫిల్టర్‌ను క్లియర్ చేయండి",
   "soundAllowRemix": "ఈ ధ్వనిని రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి",
   "soundReuseUnavailable": "ఈ ధ్వనిని ప్రస్తుతం రీమిక్స్ చేయడం సాధ్యం కాదు.",
@@ -8300,10 +8298,6 @@
   "accountStatusAppealBody": "Divine నియంత్రణ నిర్ణయాన్ని పునఃపరిశీలించడానికి అభ్యర్థనలను సమీక్షించవచ్చు, కానీ బాధ్యత వహించదు. మీరు దీన్ని పెంచాలనుకుంటే, మద్దతును సంప్రదించండి మరియు ఏమి జరిగిందో మాకు చెప్పండి.",
   "@accountStatusAppealBody": {
     "description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."
-  },
-  "accountStatusContactSupport": "మద్దతును సంప్రదించండి",
-  "@accountStatusContactSupport": {
-    "description": "Button opening the in-app support center."
   },
   "accountStatusMoveAccount": "మీ ఖాతాను తరలించండి",
   "@accountStatusMoveAccount": {

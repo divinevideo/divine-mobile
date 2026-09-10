@@ -2,6 +2,8 @@
 // ABOUTME: Persists basic saves first, then quietly enriches optional waveform data.
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:isolate';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
@@ -34,9 +36,11 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
     required SavedSoundMediaProbe mediaProbe,
     required Stream<SoundSyncRepository?> syncRepositoryStream,
     DateTime Function()? now,
+    FutureOr<bool> Function(String path)? localFileExists,
   }) : _service = service,
        _mediaProbe = mediaProbe,
        _now = now ?? DateTime.now,
+       _localFileExists = localFileExists,
        super(const SavedSoundsState()) {
     on<SavedSoundsEvent>(_onEvent, transformer: sequential());
     _syncRepositorySubscription = syncRepositoryStream.listen(
@@ -62,6 +66,12 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
   StreamSubscription<SoundSyncRepository?>? _syncRepositorySubscription;
 
   final DateTime Function() _now;
+
+  /// Whether a device-local audio path still resolves to a file on disk.
+  ///
+  /// Injectable so the missing-file path can be exercised without touching
+  /// the filesystem.
+  final FutureOr<bool> Function(String path)? _localFileExists;
 
   @override
   Future<void> close() async {
@@ -129,10 +139,16 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
   ) async {
     switch (event) {
       case SavedSoundsLoadRequested():
+        final sounds = _service.loadSavedSounds();
+        final missingFileSoundIds = _findMissingFiles(sounds);
         emit(
           state.copyWith(
             status: SavedSoundsStatus.loaded,
-            sounds: _service.loadSavedSounds(),
+            sounds: sounds,
+            missingFileSoundIds: switch (missingFileSoundIds) {
+              Future<Set<String>>() => await missingFileSoundIds,
+              Set<String>() => missingFileSoundIds,
+            },
           ),
         );
       case SavedSoundSaveRequested():
@@ -150,6 +166,48 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       case SavedSoundSyncRepositoryChanged():
         _syncRepository = event.repository;
     }
+  }
+
+  /// Device-local sounds whose file is gone.
+  ///
+  /// A saved entry outlives the file it points at — the originating draft's
+  /// cleanup could remove it before #8011 started guarding referenced files,
+  /// and a user can always delete it themselves. Left undetected the entry
+  /// stays in the library and plays silence (#8023).
+  FutureOr<Set<String>> _findMissingFiles(List<SavedSound> sounds) {
+    final localPaths = <String, String>{};
+    for (final sound in sounds) {
+      final source = sound.audio.resolvedSource;
+      if (source != null && source.kind == AudioSourceKind.file) {
+        localPaths[sound.audio.id] = source.path;
+      }
+    }
+    if (localPaths.isEmpty) return {};
+
+    final fileExists = _localFileExists;
+    if (fileExists == null) {
+      return Isolate.run(() => _findMissingFileIds(localPaths));
+    }
+
+    return _findMissingFilesWith(fileExists, localPaths);
+  }
+
+  Future<Set<String>> _findMissingFilesWith(
+    FutureOr<bool> Function(String path) fileExists,
+    Map<String, String> localPaths,
+  ) async {
+    final missingIds = await Future.wait(
+      localPaths.entries.map((entry) async {
+        try {
+          return await fileExists(entry.value) ? null : entry.key;
+        } on Exception {
+          // An unreadable path is as unplayable as an absent one, and the user
+          // needs the same way out either way.
+          return entry.key;
+        }
+      }),
+    );
+    return missingIds.whereType<String>().toSet();
   }
 
   Future<void> _save(
@@ -172,10 +230,19 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       // sequentially — before the sound appeared in the library.
       if (!event.completer.isCompleted) event.completer.complete(result);
       if (!emit.isDone) {
+        final sounds = _service.loadSavedSounds();
+        final missingFileSoundIds = _findMissingFiles(sounds);
         emit(
           state.copyWith(
             status: SavedSoundsStatus.loaded,
-            sounds: _service.loadSavedSounds(),
+            sounds: sounds,
+            // Rescanning here, not only on load: this list is the one that
+            // gains entries, and a set left over from the last load would
+            // describe a library that no longer exists.
+            missingFileSoundIds: switch (missingFileSoundIds) {
+              Future<Set<String>>() => await missingFileSoundIds,
+              Set<String>() => missingFileSoundIds,
+            },
           ),
         );
       }
@@ -264,6 +331,8 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
               .where((sound) => sound.id != event.soundId)
               .toList(growable: false),
           unsavedSoundIds: {...state.unsavedSoundIds}..remove(event.soundId),
+          missingFileSoundIds: {...state.missingFileSoundIds}
+            ..remove(event.soundId),
         ),
       );
     }
@@ -302,4 +371,16 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       // Optional enrichment must never turn a successful save into an error.
     }
   }
+}
+
+Set<String> _findMissingFileIds(Map<String, String> localPaths) {
+  final missingIds = <String>{};
+  for (final entry in localPaths.entries) {
+    try {
+      if (!File(entry.value).existsSync()) missingIds.add(entry.key);
+    } on Exception {
+      missingIds.add(entry.key);
+    }
+  }
+  return missingIds;
 }

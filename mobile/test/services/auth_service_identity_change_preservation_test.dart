@@ -172,6 +172,7 @@ void main() {
             reason: 'identity_change',
             isIdentityChange: true,
             userPubkey: any(named: 'userPubkey'),
+            // Explicit false is the identity-preservation regression guard.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false, // ← the regression guard: must NOT be true
           ),
@@ -202,6 +203,7 @@ void main() {
             reason: 'identity_change',
             isIdentityChange: true,
             userPubkey: captureAny(named: 'userPubkey'),
+            // Explicit false is the identity-preservation regression guard.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false, // regression guard: must NOT be true
           ),
@@ -240,6 +242,7 @@ void main() {
           () => mockCleanupService.clearUserSpecificData(
             reason: 'explicit_logout',
             userPubkey: any(named: 'userPubkey'),
+            // Explicit false distinguishes explicit logout from deletion.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
           ),
@@ -300,6 +303,7 @@ void main() {
           () => mockCleanupService.clearUserSpecificData(
             reason: 'explicit_logout',
             userPubkey: any(named: 'userPubkey'),
+            // Explicit false distinguishes explicit logout from deletion.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false, // regression guard: must NOT be true
           ),
@@ -322,6 +326,7 @@ void main() {
             reason: 'identity_change',
             isIdentityChange: true, // must still be true
             userPubkey: any(named: 'userPubkey'),
+            // Explicit false is the identity-preservation regression guard.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false, // regression guard: must NOT be true
           ),

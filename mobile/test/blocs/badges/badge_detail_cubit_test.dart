@@ -395,7 +395,7 @@ void main() {
       setUp: () {
         when(
           () => contentBlocklistRepository.blockUsers(any()),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async => true);
       },
       build: buildCubit,
       act: (cubit) => cubit.blockClaimants({_pubkey(2), _pubkey(3)}),

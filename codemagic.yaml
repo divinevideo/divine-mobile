@@ -109,43 +109,9 @@ definitions:
       script: |
         flutter build ios --config-only
 
-        ruby <<'RUBY'
-        files = [
-          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift',
-          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift',
-        ]
-
-        files.each do |path|
-          contents = File.read(path)
-          updated = contents
-            .gsub('.iOS("13.0")', '.iOS("16.0")')
-            .gsub('.iOS(.v13)', '.iOS("16.0")')
-          has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-
-          unless has_ios_16_target
-            if updated.match?(/^\s*platforms:\s*\[/)
-              abort("expected #{path} platforms block to declare iOS 16.0")
-            end
-
-            updated = updated.sub(
-              /(let package = Package\(\n\s*name: "[^"]+",\n)/,
-              "\\1    platforms: [\n        .iOS(\"16.0\")\n    ],\n",
-            )
-            has_ios_16_target = updated.match?(/\.iOS\(("16\.0"|\.v16)\)/)
-          end
-
-          unless has_ios_16_target
-            abort("expected #{path} to declare iOS 16.0")
-          end
-
-          if updated != contents
-            File.write(path, updated)
-            puts "patched #{path} to iOS 16.0"
-          else
-            puts "#{path} already targets iOS 16.0"
-          end
-        end
-        RUBY
+        ruby scripts/ensure_ios_swift_package_floor.rb \
+          'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift' \
+          'ios/Flutter/ephemeral/Packages/.packages/FlutterFramework/Package.swift'
     - &flutter_pub_get
       name: Get Flutter dependencies
       script: flutter pub get
@@ -202,8 +168,8 @@ definitions:
       script: |
         set -euo pipefail
         SHOREBIRD_BIN="$HOME/.shorebird/bin/shorebird"
-        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.117"
-        EXPECTED_SHOREBIRD_REVISION="45facdd4e4b3c39e0d260107977584f0b7c66bec"
+        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"
+        EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"
         SHOREBIRD_VERSION_OUTPUT=""
         SHOREBIRD_REVISION=""
         if [ -x "$SHOREBIRD_BIN" ]; then
@@ -639,6 +605,11 @@ definitions:
           --dart-define-from-file=build/shorebird/dart_defines.json \
           --public-key-path=build/shorebird/patch_public_key.pem \
           --export-options-plist=/Users/builder/export_options.plist
+
+        # Prove CocoaPods and Xcode copied each manifest into the exact
+        # Shorebird archive before later steps can promote its artifacts.
+        bash scripts/check_privacy_manifest_coverage.sh \
+          --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |
@@ -847,7 +818,10 @@ definitions:
         maestro "$@" test \
           --format junit \
           --output report.xml \
-          e2e/maestro/tests/loginFreshInstall.yaml \
+          -e QA_VIDEO_EVENT_ID="$QA_VIDEO_EVENT_ID" \
+          e2e/maestro/tests/prLaunchReady.yaml \
+          e2e/maestro/tests/prAuthenticateHome.yaml \
+          e2e/maestro/tests/prSeededVideoPlayback.yaml \
           e2e/maestro/tests/removeKeys.yaml
       # Script-level, not workflow-level: Codemagic rejects `test_report` as an
       # unknown workflow field ("extra fields not permitted").
@@ -985,7 +959,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -997,7 +971,7 @@ workflows:
         # Must match `flutter:` above. Shorebird ships its own Flutter, so the
         # release is only reproducible if we pin it to the same version
         # Codemagic provisioned.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1059,7 +1033,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1107,7 +1081,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials
@@ -1117,7 +1091,7 @@ workflows:
         - shorebird_credentials
       vars:
         # Must match `flutter:` above — see the iOS workflow for why.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1213,7 +1187,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1224,7 +1198,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1304,7 +1278,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials
@@ -1314,7 +1288,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.44.9
+        FLUTTER_VERSION: 3.47.2
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1362,7 +1336,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       xcode: latest
       cocoapods: default
       groups:
@@ -1392,15 +1366,21 @@ workflows:
   e2e-smoke-ios:
     name: E2E Smoke Tests (iOS)
     working_directory: mobile
-    # Two green runs measured 12 min and 15m42s end to end (builds 6a7bb0d4
-    # and 6a7d30c1); the spread is cache warmth. 25 covers the slower one with
-    # room to spare while still stopping a hung Maestro driver from billing the
-    # hour the previous 60 allowed — a hang is what 60 actually cost us
-    # (build 6a7d2a83).
+    # A hang-stopper, not a performance gate — those are separate numbers and
+    # only one of them belongs here. Two green runs of the PREVIOUS lane
+    # measured 12 min and 15m42s end to end (builds 6a7bb0d4 and 6a7d30c1),
+    # and this lane does strictly more than that one: prAuthenticateHome still
+    # runs the whole of loginFreshInstall, on top of an extra clean launch and
+    # the video journey. A cap near the slow measurement would turn cache
+    # warmth into a red PR, which is the infrastructure noise this lane exists
+    # to remove. 25 leaves that headroom while still stopping a hung Maestro
+    # driver from billing the hour the previous 60 allowed (build 6a7d2a83).
+    # Speed is governed by the promotion bar instead: p95 below 15 minutes
+    # over the observation window before this becomes a required check.
     max_build_duration: 25
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       # Pinned alongside MAESTRO_VERSION. The compatibility contract has two
       # sides: 2.1.0 cannot drive Xcode 26.x, and `latest` floating means a
       # Codemagic image bump can break the suite with no commit on our side —
@@ -1416,6 +1396,10 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Immutable public Nostr event used only to prove the detail route can
+        # resolve and render playback chrome. Never replace this with a private
+        # account credential or mutable search result.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1441,6 +1425,8 @@ workflows:
       changeset:
         includes:
           - mobile/
+        excludes:
+          - mobile/**/*.md
     scripts:
       - *check_signing_endpoint
       - *check_supporters_config
@@ -1473,7 +1459,7 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      flutter: 3.44.9
+      flutter: 3.47.2
       java: 17
       groups:
         - zendesk_credentials
@@ -1481,6 +1467,13 @@ workflows:
       vars:
         DEFAULT_ENV: STAGING
         BUNDLE_ID: co.openvine.app.staging
+        # Same fixture as the iOS lane, and it has to be: both workflows run
+        # the shared *run_maestro_smoke_tests script, which passes
+        # `-e QA_VIDEO_EVENT_ID`. Leaving it unset here expands to an empty
+        # string under `set -e` (no `set -u`), which fails prSeededVideoPlayback
+        # on every dispatched Android run. The contract test pins the two
+        # values as equal so they cannot drift.
+        QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
     cache:
       cache_paths:
         - $HOME/.gradle/caches

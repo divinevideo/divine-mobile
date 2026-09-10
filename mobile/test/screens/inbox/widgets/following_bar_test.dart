@@ -11,6 +11,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/following_bar.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -52,7 +53,7 @@ void main() {
 
     Widget buildSubject({
       required MyFollowingState state,
-      List<dynamic> additionalOverrides = const [],
+      List<Override> additionalOverrides = const [],
       ValueChanged<String>? onUserTapped,
       Locale? locale,
       String viewerPubkey = currentUserPubkey,

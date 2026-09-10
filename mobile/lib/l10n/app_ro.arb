@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Autentifică-te ca să contactezi asistența",
     "supportExportingLogs": "Se exportă jurnalele...",
     "supportExportLogsFailed": "N-am putut exporta jurnalele",
-    "supportChatNotAvailable": "Chatul de asistență nu e disponibil",
     "supportCouldNotOpenMessages": "N-am putut deschide mesajele de asistență",
     "supportCouldNotOpenPage": "N-am putut deschide {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Redă previzualizarea",
     "videoEditorAudioPausePreviewSemanticLabel": "Pune previzualizarea pe pauză",
     "videoEditorAudioUntitledSound": "Sunet fără titlu",
+    "videoEditorAudioFileMissing": "Fișierul audio nu mai este pe dispozitiv",
     "videoEditorVolumeLongPressHint": "Dezactivați sau activați sunetul tuturor pistelor",
     "videoEditorAudioUntitled": "Fără titlu",
     "videoEditorAudioAddAudio": "Adaugă audio",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Sunet fără titlu",
-    "soundStopPreview": "Oprește previzualizarea",
-    "soundPreviewSemanticLabel": "Previzualizează {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Vezi detalii pentru {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Caută...",
     "categoryVideoCount": "{count} videoclipuri",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Glisează pentru ajustare",
     "videoEditorVolumeSemanticLabel": "Reglare volum",
-    "videoEditorChromaKeyLabel": "Ecran verde",
+    "videoEditorDetachLabel": "Desprinde",
+  "videoEditorDetachSemanticLabel": "Desprinde clipul selectat de pe cronologie",
+  "videoEditorDetachTitle": "Desprinde clipul",
+  "videoEditorDetachDescription": "Clipul trece pe pânză, unde îl poți așeza oriunde. Ce îi ia locul pe cronologie?",
+  "videoEditorDetachReplaceRemove": "Nimic",
+  "videoEditorDetachReplaceRemoveDetail": "Închide golul – tot ce urmează începe mai devreme.",
+  "videoEditorDetachReplaceColor": "Culoare",
+  "videoEditorDetachReplaceColorDetail": "Ține o culoare plină cât a durat clipul.",
+  "videoEditorDetachReplaceImage": "Fotografie",
+  "videoEditorDetachReplaceImageDetail": "Fă o fotografie care să îi țină locul.",
+  "videoEditorDetachedClipLabel": "Clip desprins",
+  "videoEditorDetachProgressLabel": "Se detașează clipul…",
+  "videoEditorDetachFailed": "Clipul nu a putut fi desprins. Cronologia ta rămâne neschimbată.",
+  "videoEditorDetachImagePickFailed": "Fotografia nu a putut fi încărcată.",
+  "videoEditorChromaKeyLabel": "Ecran verde",
     "videoEditorChromaKeyTitle": "Ecran verde",
     "videoEditorChromaKeySemanticLabel": "Configurează ecranul verde pentru acest clip",
     "videoEditorChromaKeyCloseSemanticLabel": "Renunță la modificările ecranului verde",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Imagine",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Videoclipul nu poate păstra transparența, așa că la export iese negru.",
-    "videoEditorChromaKeyDetectFailed": "Nu am găsit niciun fundal. Trebuie să ajungă la marginile cadrului — altfel alege culoarea manual.",
+    "videoEditorChromaKeySurfaceHint": "Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.",
+    "videoEditorChromaKeyDetectFailed": "Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.",
     "videoEditorChromaKeyPickClipTitle": "Alege un clip",
     "videoEditorChromaKeyNoLibraryClips": "Biblioteca ta e goală. Salvează întâi un clip, apoi folosește-l ca fundal.",
     "videoEditorChromaKeyImagePickFailed": "Imaginea nu a putut fi încărcată.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Comentariile, aprecierile, repostările și urmăririle sunt oprite",
     "minorAccountReviewRestrictionMessaging": "Începerea și răspunsul la mesajele obișnuite sunt oprite",
     "minorAccountReviewRestrictionSupport": "Asistența și mesajul de la moderare rămân disponibile",
-    "minorAccountReviewOpenSupportCenter": "Deschide centrul de asistență",
+    "appealOpenSupportCenter": "Deschide centrul de asistență",
     "minorAccountReviewOpenModerationMessage": "Deschide mesajul de la moderare",
     "minorAccountReviewOpenReviewPage": "Deschide pagina de verificare",
     "minorAccountReviewCheckAgain": "Verifică din nou",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Ascultă sunetul",
   "savedSoundEditAction": "Editează detaliile sunetului",
   "savedSoundRemoveAction": "Elimină sunetul salvat",
+  "savedSoundFileMissing": "Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat.",
   "savedSoundClearHashtagFilter": "Șterge filtrul de hashtaguri",
   "soundAllowRemix": "Permite altora să remixeze acest sunet",
   "soundReuseUnavailable": "Acest sunet nu poate fi remixat acum.",

@@ -22,13 +22,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// tear-off of that funnel in the app layer, which keeps the Crashlytics
 /// `auth_source` custom key reading live state. Implementations MUST NOT
 /// throw.
-typedef AuthCrashReporter =
-    void Function(
-      Object error,
-      StackTrace stackTrace, {
-      required String reason,
-      required String logMessage,
-    });
+typedef AuthCrashReporter = void Function(
+  Object error,
+  StackTrace stackTrace, {
+  required String reason,
+  required String logMessage,
+});
 
 /// Isolate worker for [SignerFactory.createAndSignEvent]'s remote-signature
 /// check.

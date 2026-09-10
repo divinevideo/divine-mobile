@@ -44,7 +44,7 @@ updates:
 #     constrained by `dependency_overrides`. mobile/pubspec.yaml has exactly that
 #     shape, so the ecosystem could silently produce nothing at all.
 #   • dependabot/dependabot-core#15654 — unmerged fix for Dependabot rewriting the
-#     lockfile's Flutter constraint (`3.44.0` -> `>=3.44.0`), which would dirty
+#     lockfile's Flutter constraint (`3.47.0` -> `>=3.47.0`), which would dirty
 #     mobile/pubspec.lock on every run and fight the Generated Files check.
 #   • dependabot/dependabot-core#11860 — the Flutter checkout that pub updates
 #     depend on fails on `bin/internal/engine.version`.

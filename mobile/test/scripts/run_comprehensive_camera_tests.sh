@@ -67,9 +67,6 @@ main() {
     run_test_category "Unit - macOS Camera Service" "test/services/native_macos_camera_test.dart"
     run_test_category "Unit - Video Recorder Bloc" "test/blocs/video_recorder/video_recorder_bloc_test.dart"
 
-    # Performance Tests
-    run_test_category "Performance - Initialization Benchmark" "test/performance/camera_initialization_benchmark_test.dart"
-
     # Integration Tests (require device/simulator)
     if [ "$1" != "--skip-integration" ]; then
         echo -e "${YELLOW}Running integration tests (requires device/simulator)...${NC}"
@@ -113,7 +110,6 @@ main() {
 
         # Combine all coverage files
         lcov --add-tracefile coverage/Unit*.info \
-             --add-tracefile coverage/Performance*.info \
              --add-tracefile coverage/Integration*.info \
              --add-tracefile coverage/Visual*.info \
              --add-tracefile coverage/E2E*.info \

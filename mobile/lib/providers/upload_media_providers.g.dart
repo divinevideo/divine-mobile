@@ -313,7 +313,7 @@ final class CrosspostApiClientProvider
 }
 
 String _$crosspostApiClientHash() =>
-    r'3c3771a323baade67d52ed7de2882fb42406ba56';
+    r'8c4a25641f2a497b44505baaa50ce56c95c3dd21';
 
 /// Repository for Bluesky toggle settings
 
@@ -379,11 +379,11 @@ final crossposterApiClientProvider = CrossposterApiClientProvider._();
 final class CrossposterApiClientProvider
     extends
         $FunctionalProvider<
-          CrossposterApiClient,
-          CrossposterApiClient,
-          CrossposterApiClient
+          CrosspostingApiClient,
+          CrosspostingApiClient,
+          CrosspostingApiClient
         >
-    with $Provider<CrossposterApiClient> {
+    with $Provider<CrosspostingApiClient> {
   /// Crossposter service client for manual per-video crossposting
   CrossposterApiClientProvider._()
     : super(
@@ -401,26 +401,26 @@ final class CrossposterApiClientProvider
 
   @$internal
   @override
-  $ProviderElement<CrossposterApiClient> $createElement(
+  $ProviderElement<CrosspostingApiClient> $createElement(
     $ProviderPointer pointer,
   ) => $ProviderElement(pointer);
 
   @override
-  CrossposterApiClient create(Ref ref) {
+  CrosspostingApiClient create(Ref ref) {
     return crossposterApiClient(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CrossposterApiClient value) {
+  Override overrideWithValue(CrosspostingApiClient value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<CrossposterApiClient>(value),
+      providerOverride: $SyncValueProvider<CrosspostingApiClient>(value),
     );
   }
 }
 
 String _$crossposterApiClientHash() =>
-    r'aa560f29562e64ced8c08c2e203abfa6858cd2ee';
+    r'165cb3feea5400f51e48f9ce88a9049d817c78ff';
 
 /// Audio playback service for sound playback during recording and preview
 ///

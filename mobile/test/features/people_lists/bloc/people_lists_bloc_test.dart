@@ -248,8 +248,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '1111111111111111111111111111111111111111111111111111111111111111',
+            eventId: '1111111111111111111111111111111111111111111111111111111111111111',
           ),
         );
       },
@@ -298,8 +297,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '2222222222222222222222222222222222222222222222222222222222222222',
+            eventId: '2222222222222222222222222222222222222222222222222222222222222222',
           ),
         );
       },
@@ -559,8 +557,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '3333333333333333333333333333333333333333333333333333333333333333',
+            eventId: '3333333333333333333333333333333333333333333333333333333333333333',
           ),
         );
       },
@@ -614,8 +611,7 @@ void main() {
           () => repository.deleteList(ownerPubkey: _ownerA, listId: 'list-1'),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '4444444444444444444444444444444444444444444444444444444444444444',
+            eventId: '4444444444444444444444444444444444444444444444444444444444444444',
           ),
         );
       },
@@ -705,8 +701,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '5555555555555555555555555555555555555555555555555555555555555555',
+            eventId: '5555555555555555555555555555555555555555555555555555555555555555',
           ),
         );
       },
@@ -823,8 +818,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '6666666666666666666666666666666666666666666666666666666666666666',
+            eventId: '6666666666666666666666666666666666666666666666666666666666666666',
           ),
         );
         when(
@@ -835,8 +829,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '7777777777777777777777777777777777777777777777777777777777777777',
+            eventId: '7777777777777777777777777777777777777777777777777777777777777777',
           ),
         );
       },
@@ -911,8 +904,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const PeopleListPublishResult.submitted(
-            eventId:
-                '8888888888888888888888888888888888888888888888888888888888888888',
+            eventId: '8888888888888888888888888888888888888888888888888888888888888888',
           ),
         );
       },

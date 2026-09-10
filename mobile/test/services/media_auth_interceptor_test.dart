@@ -462,16 +462,14 @@ void main() {
         );
 
         final result = await interceptor.createPassiveAuthHeadersForAdultMedia(
-          sha256Hash:
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           serverUrl: 'https://media.divine.video',
         );
 
         expect(result.headersOrNull, equals({'Authorization': 'Nostr token'}));
         verify(
           () => mockMediaViewerAuthService.createAuthHeaders(
-            sha256Hash:
-                '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+            sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
             serverUrl: 'https://media.divine.video',
           ),
         ).called(1);
@@ -632,8 +630,7 @@ void main() {
       expect(result, isA<ViewerAuthAuthorized>());
       verify(
         () => mockMediaViewerAuthService.createAuthHeaders(
-          sha256Hash:
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           serverUrl: 'https://media.divine.video',
         ),
       ).called(1);

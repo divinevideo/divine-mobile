@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "Chat hỗ trợ không khả dụng",
   "supportCouldNotOpenMessages": "Không mở được tin nhắn hỗ trợ",
   "supportCouldNotOpenPage": "Không mở được {pageName}",
   "@supportCouldNotOpenPage": {
@@ -2569,24 +2568,6 @@
   "soundPreview": "Nghe thử",
   "soundStop": "Dừng",
   "soundUseSound": "Dùng âm thanh",
-  "soundUntitled": "Âm thanh chưa đặt tên",
-  "soundStopPreview": "Dừng nghe thử",
-  "soundPreviewSemanticLabel": "Nghe thử {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "Xem chi tiết của {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "Chưa có video nào",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count} video",
@@ -4787,6 +4768,20 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "Trượt để điều chỉnh",
+  "videoEditorDetachLabel": "Tách rời",
+  "videoEditorDetachSemanticLabel": "Tách clip đã chọn khỏi timeline",
+  "videoEditorDetachTitle": "Tách rời clip",
+  "videoEditorDetachDescription": "Clip chuyển sang khung nền, bạn đặt nó ở đâu cũng được. Cái gì sẽ thay chỗ nó trên timeline?",
+  "videoEditorDetachReplaceRemove": "Không gì cả",
+  "videoEditorDetachReplaceRemoveDetail": "Khép khoảng trống – mọi thứ phía sau bắt đầu sớm hơn.",
+  "videoEditorDetachReplaceColor": "Màu",
+  "videoEditorDetachReplaceColorDetail": "Giữ một màu đặc đúng bằng thời lượng clip.",
+  "videoEditorDetachReplaceImage": "Ảnh",
+  "videoEditorDetachReplaceImageDetail": "Chụp một tấm ảnh để giữ chỗ.",
+  "videoEditorDetachedClipLabel": "Clip đã tách rời",
+  "videoEditorDetachProgressLabel": "Đang tách clip của bạn…",
+  "videoEditorDetachFailed": "Không tách được clip đó. Timeline của bạn vẫn nguyên.",
+  "videoEditorDetachImagePickFailed": "Không tải được ảnh đó.",
   "videoEditorChromaKeyLabel": "Phông xanh",
   "videoEditorChromaKeyTitle": "Phông xanh",
   "videoEditorChromaKeySemanticLabel": "Thiết lập phông xanh cho clip này",
@@ -4808,7 +4803,8 @@
   "videoEditorChromaKeyBackgroundImage": "Ảnh",
   "videoEditorChromaKeyBackgroundVideo": "Clip",
   "videoEditorChromaKeyTransparentHint": "Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.",
-  "videoEditorChromaKeyDetectFailed": "Không tìm thấy phông. Phông phải chạm tới các cạnh khung hình — nếu không, hãy tự chọn màu.",
+  "videoEditorChromaKeySurfaceHint": "Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.",
+  "videoEditorChromaKeyDetectFailed": "Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.",
   "videoEditorChromaKeyPickClipTitle": "Chọn một clip",
   "videoEditorChromaKeyNoLibraryClips": "Thư viện của bạn đang trống. Lưu một clip trước đã, rồi dùng nó làm nền.",
   "videoEditorChromaKeyImagePickFailed": "Không tải được ảnh đó.",
@@ -5087,6 +5083,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Phát thử",
   "videoEditorAudioPausePreviewSemanticLabel": "Tạm dừng nghe thử",
   "videoEditorAudioUntitledSound": "Âm thanh chưa đặt tên",
+  "videoEditorAudioFileMissing": "Tệp âm thanh không còn trên thiết bị",
   "videoEditorAudioUntitled": "Chưa đặt tên",
   "videoEditorAudioAddAudio": "Thêm âm thanh",
   "videoEditorAudioNoSoundsAvailableTitle": "Không có âm thanh nào",
@@ -5503,7 +5500,7 @@
   "minorAccountReviewRestrictionEngagement": "Bình luận, thích, đăng lại và theo dõi đang tạm dừng",
   "minorAccountReviewRestrictionMessaging": "Bắt đầu hoặc trả lời tin nhắn thường đang tạm dừng",
   "minorAccountReviewRestrictionSupport": "Hỗ trợ và tin nhắn kiểm duyệt của bạn vẫn khả dụng",
-  "minorAccountReviewOpenSupportCenter": "Mở Trung tâm hỗ trợ",
+  "appealOpenSupportCenter": "Mở Trung tâm hỗ trợ",
   "minorAccountReviewOpenModerationMessage": "Mở tin nhắn kiểm duyệt",
   "minorAccountReviewOpenReviewPage": "Mở trang xem xét",
   "minorAccountReviewCheckAgain": "Kiểm tra lại",
@@ -6291,6 +6288,7 @@
   "savedSoundPreviewAction": "Nghe thử âm thanh",
   "savedSoundEditAction": "Chỉnh sửa chi tiết âm thanh",
   "savedSoundRemoveAction": "Gỡ âm thanh đã lưu",
+  "savedSoundFileMissing": "Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được.",
   "savedSoundClearHashtagFilter": "Xóa bộ lọc hashtag",
   "soundAllowRemix": "Cho phép người khác remix âm thanh này",
   "soundReuseUnavailable": "Hiện chưa thể remix âm thanh này.",

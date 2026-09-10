@@ -10,7 +10,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 class SoundLibraryService {
   static const String _manifestPath = 'assets/sounds/sounds_manifest.json';
-  static const String _customSoundsKey = 'custom_sounds';
+
+  /// Public so `UserDataCleanupService` can clear it by reference.
+  /// A copied literal cannot detect that this key was renamed (#8314).
+  static const String customSoundsStorageKey = 'custom_sounds';
 
   List<VineSound> _sounds = [];
   List<VineSound> _customSounds = [];
@@ -75,7 +78,7 @@ class SoundLibraryService {
   Future<void> loadCustomSounds() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final customSoundsJson = prefs.getString(_customSoundsKey);
+      final customSoundsJson = prefs.getString(customSoundsStorageKey);
 
       if (customSoundsJson != null) {
         final jsonList = jsonDecode(customSoundsJson) as List<dynamic>;
@@ -100,7 +103,7 @@ class SoundLibraryService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = _customSounds.map((s) => s.toJson()).toList();
-      await prefs.setString(_customSoundsKey, jsonEncode(jsonList));
+      await prefs.setString(customSoundsStorageKey, jsonEncode(jsonList));
     } catch (e) {
       Log.error(
         '🔊 Failed to save custom sounds: $e',

@@ -1798,7 +1798,6 @@
     "supportLoginRequired": "Влез, за да се свържеш с поддръжката",
     "supportExportingLogs": "Логовете се експортират...",
     "supportExportLogsFailed": "Не успяхме да експортираме логовете",
-    "supportChatNotAvailable": "Чатът за поддръжка не е наличен",
     "supportCouldNotOpenMessages": "Не можах да отворя съобщения за поддръжка",
     "supportCouldNotOpenPage": "Не може да се отвори {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2952,6 +2951,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Пусни предварителен преглед",
     "videoEditorAudioPausePreviewSemanticLabel": "Пауза на прегледа",
     "videoEditorAudioUntitledSound": "Звук без заглавие",
+    "videoEditorAudioFileMissing": "Аудиофайлът вече го няма на устройството",
     "videoEditorVolumeLongPressHint": "Заглуши или включи всички писти",
     "videoEditorAudioUntitled": "Без заглавие",
     "videoEditorAudioAddAudio": "Добави аудио",
@@ -3340,24 +3340,6 @@
     "profileEditGetVerifiedSubtitle": "Свържи социалните си мрежи, за да знаят хората, че това си наистина ти.",
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
-    },
-    "soundUntitled": "Звук без заглавие",
-    "soundStopPreview": "Спри прегледа",
-    "soundPreviewSemanticLabel": "Прегледай {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Виж подробности за {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
     },
     "exploreSearchHint": "Търсене...",
     "categoryVideoCount": "{count} видеа",
@@ -3794,7 +3776,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Плъзнете за регулиране",
     "videoEditorVolumeSemanticLabel": "Регулиране на силата на звука",
-    "videoEditorChromaKeyLabel": "Зелен екран",
+    "videoEditorDetachLabel": "Откачи",
+  "videoEditorDetachSemanticLabel": "Откачи избрания клип от времевата линия",
+  "videoEditorDetachTitle": "Откачане на клип",
+  "videoEditorDetachDescription": "Клипът отива върху платното, където можеш да го сложиш където искаш. Какво заема мястото му на времевата линия?",
+  "videoEditorDetachReplaceRemove": "Нищо",
+  "videoEditorDetachReplaceRemoveDetail": "Затвори празнината – всичко след него започва по-рано.",
+  "videoEditorDetachReplaceColor": "Цвят",
+  "videoEditorDetachReplaceColorDetail": "Задържа плътен цвят толкова, колкото е траел клипът.",
+  "videoEditorDetachReplaceImage": "Снимка",
+  "videoEditorDetachReplaceImageDetail": "Снимай кадър, който да задържи мястото му.",
+  "videoEditorDetachedClipLabel": "Откачен клип",
+  "videoEditorDetachProgressLabel": "Клипът се отделя…",
+  "videoEditorDetachFailed": "Клипът не можа да се откачи. Времевата ти линия остава непроменена.",
+  "videoEditorDetachImagePickFailed": "Снимката не можа да се зареди.",
+  "videoEditorChromaKeyLabel": "Зелен екран",
     "videoEditorChromaKeyTitle": "Зелен екран",
     "videoEditorChromaKeySemanticLabel": "Настрой зеления екран за този клип",
     "videoEditorChromaKeyCloseSemanticLabel": "Отхвърли промените по зеления екран",
@@ -3815,7 +3811,8 @@
     "videoEditorChromaKeyBackgroundImage": "Изображение",
     "videoEditorChromaKeyBackgroundVideo": "Клип",
     "videoEditorChromaKeyTransparentHint": "Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.",
-    "videoEditorChromaKeyDetectFailed": "Не открихме фон. Той трябва да стига до ръба на кадъра — иначе избери цвета ръчно.",
+    "videoEditorChromaKeySurfaceHint": "Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.",
+    "videoEditorChromaKeyDetectFailed": "Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.",
     "videoEditorChromaKeyPickClipTitle": "Избери клип",
     "videoEditorChromaKeyNoLibraryClips": "Библиотеката ти е празна. Първо запази клип, после го използвай като фон.",
     "videoEditorChromaKeyImagePickFailed": "Изображението не можа да се зареди.",
@@ -3918,7 +3915,7 @@
     "minorAccountReviewRestrictionEngagement": "Коментарите, харесванията, споделянията и последванията са спрени",
     "minorAccountReviewRestrictionMessaging": "Започването и отговарянето на обикновени съобщения е спряно",
     "minorAccountReviewRestrictionSupport": "Поддръжката и съобщението от модерацията остават достъпни",
-    "minorAccountReviewOpenSupportCenter": "Отвори центъра за поддръжка",
+    "appealOpenSupportCenter": "Отвори центъра за поддръжка",
     "minorAccountReviewOpenModerationMessage": "Отвори съобщението от модерацията",
     "minorAccountReviewOpenReviewPage": "Отвори страницата за преглед",
     "minorAccountReviewCheckAgain": "Провери пак",
@@ -4646,6 +4643,7 @@
   "savedSoundPreviewAction": "Чуй звука",
   "savedSoundEditAction": "Редактирай данните за звука",
   "savedSoundRemoveAction": "Премахни запазения звук",
+  "savedSoundFileMissing": "Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе.",
   "savedSoundClearHashtagFilter": "Изчисти филтъра по хаштаг",
   "soundAllowRemix": "Позволи на другите да ремиксират този звук",
   "soundReuseUnavailable": "Този звук не може да се ремиксира в момента.",

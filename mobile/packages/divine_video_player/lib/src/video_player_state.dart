@@ -63,6 +63,7 @@ class DivineVideoPlayerState {
     this.isFirstFrameRendered = false,
     this.videoWidth = 0,
     this.videoHeight = 0,
+    this.pixelWidthHeightRatio = 1.0,
     this.rotationDegrees = 0,
     this.errorMessage,
     this.errorCode,
@@ -111,6 +112,13 @@ class DivineVideoPlayerState {
   /// Height of the video in pixels, or 0 if unknown.
   final int videoHeight;
 
+  /// Ratio of a decoded pixel's width to its height.
+  ///
+  /// Most videos use square pixels (`1.0`). Anamorphic videos use a
+  /// different value, which must be applied to the coded dimensions to get
+  /// the video's display aspect ratio.
+  final double pixelWidthHeightRatio;
+
   /// Rotation in degrees (0, 90, 180, 270) that the Dart layer must apply
   /// to the [Texture] widget to show the video upright.
   ///
@@ -130,11 +138,12 @@ class DivineVideoPlayerState {
   /// Prefer this over string-parsing [errorMessage] for retry/failover logic.
   final NativePlayerErrorCode? errorCode;
 
-  /// The aspect ratio of the video (width / height).
+  /// The display aspect ratio of the video.
   ///
   /// Returns 0 when dimensions are not yet available.
-  double get aspectRatio =>
-      videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 0;
+  double get aspectRatio => videoWidth > 0 && videoHeight > 0
+      ? videoWidth * pixelWidthHeightRatio / videoHeight
+      : 0;
 
   /// Whether the player is currently playing.
   bool get isPlaying => status.isPlaying;
@@ -167,6 +176,7 @@ class DivineVideoPlayerState {
     bool? isFirstFrameRendered,
     int? videoWidth,
     int? videoHeight,
+    double? pixelWidthHeightRatio,
     int? rotationDegrees,
     String? errorMessage,
     NativePlayerErrorCode? errorCode,
@@ -185,6 +195,8 @@ class DivineVideoPlayerState {
       isFirstFrameRendered: isFirstFrameRendered ?? this.isFirstFrameRendered,
       videoWidth: videoWidth ?? this.videoWidth,
       videoHeight: videoHeight ?? this.videoHeight,
+      pixelWidthHeightRatio:
+          pixelWidthHeightRatio ?? this.pixelWidthHeightRatio,
       rotationDegrees: rotationDegrees ?? this.rotationDegrees,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
@@ -210,6 +222,8 @@ class DivineVideoPlayerState {
       isFirstFrameRendered: (map['isFirstFrameRendered'] as bool?) ?? false,
       videoWidth: (map['videoWidth'] as int?) ?? 0,
       videoHeight: (map['videoHeight'] as int?) ?? 0,
+      pixelWidthHeightRatio:
+          (map['pixelWidthHeightRatio'] as num?)?.toDouble() ?? 1.0,
       rotationDegrees: (map['rotationDegrees'] as int?) ?? 0,
       errorMessage: map['errorMessage'] as String?,
       errorCode: rawErrorCode is String
@@ -247,6 +261,7 @@ class DivineVideoPlayerState {
           isFirstFrameRendered == other.isFirstFrameRendered &&
           videoWidth == other.videoWidth &&
           videoHeight == other.videoHeight &&
+          pixelWidthHeightRatio == other.pixelWidthHeightRatio &&
           rotationDegrees == other.rotationDegrees &&
           errorMessage == other.errorMessage &&
           errorCode == other.errorCode;
@@ -265,6 +280,7 @@ class DivineVideoPlayerState {
     isFirstFrameRendered,
     videoWidth,
     videoHeight,
+    pixelWidthHeightRatio,
     rotationDegrees,
     errorMessage,
     errorCode,
@@ -276,6 +292,7 @@ class DivineVideoPlayerState {
       'duration: $duration, buffered: $bufferedPosition, '
       'clipIndex: $currentClipIndex/$clipCount, '
       'size: ${videoWidth}x$videoHeight, '
+      'pixelRatio: $pixelWidthHeightRatio, '
       'firstFrame: $isFirstFrameRendered, '
       '${errorCode != null ? 'errorCode: $errorCode, ' : ''}'
       '${errorMessage != null ? 'error: $errorMessage, ' : ''}'

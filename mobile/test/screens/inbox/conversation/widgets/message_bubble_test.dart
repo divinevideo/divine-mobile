@@ -22,6 +22,7 @@ import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart'
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -75,7 +76,7 @@ GoRouter _messageRouter(String message) {
 
 Widget _routerTestApp(
   GoRouter router, {
-  List<dynamic>? additionalOverrides,
+  List<Override>? additionalOverrides,
   MockNostrClient? mockNostrService,
 }) {
   return testProviderScope(
@@ -969,13 +970,11 @@ void main() {
         // Text.rich wraps our TextSpan in a parent; unwrap to reach
         // the actual URL spans built by _MessageText.
         final innerSpan = textSpan.children!.first as TextSpan;
-        final urlSpan =
-            innerSpan.children!.firstWhere(
-                  (span) =>
-                      span is TextSpan &&
-                      (span.text?.contains('https://example.com') ?? false),
-                )
-                as TextSpan;
+        final urlSpan = innerSpan.children!.firstWhere(
+          (span) =>
+              span is TextSpan &&
+              (span.text?.contains('https://example.com') ?? false),
+        ) as TextSpan;
 
         expect(urlSpan.recognizer, isA<TapGestureRecognizer>());
       });
@@ -1040,13 +1039,10 @@ void main() {
 
         final textSpan = richText.text as TextSpan;
         final innerSpan = textSpan.children!.first as TextSpan;
-        final urlSpan =
-            innerSpan.children!.firstWhere(
-                  (span) =>
-                      span is TextSpan &&
-                      (span.text?.contains('google.com') ?? false),
-                )
-                as TextSpan;
+        final urlSpan = innerSpan.children!.firstWhere(
+          (span) =>
+              span is TextSpan && (span.text?.contains('google.com') ?? false),
+        ) as TextSpan;
 
         expect(urlSpan.recognizer, isA<TapGestureRecognizer>());
       });
@@ -1078,13 +1074,11 @@ void main() {
 
         final textSpan = richText.text as TextSpan;
         final innerSpan = textSpan.children!.first as TextSpan;
-        final urlSpan =
-            innerSpan.children!.firstWhere(
-                  (span) =>
-                      span is TextSpan &&
-                      (span.text?.contains('example.com/page') ?? false),
-                )
-                as TextSpan;
+        final urlSpan = innerSpan.children!.firstWhere(
+          (span) =>
+              span is TextSpan &&
+              (span.text?.contains('example.com/page') ?? false),
+        ) as TextSpan;
 
         expect(urlSpan.recognizer, isA<TapGestureRecognizer>());
       });
@@ -1114,13 +1108,11 @@ void main() {
 
         final textSpan = richText.text as TextSpan;
         final innerSpan = textSpan.children!.first as TextSpan;
-        final emailSpan =
-            innerSpan.children!.firstWhere(
-                  (span) =>
-                      span is TextSpan &&
-                      (span.text?.contains('user@example.com') ?? false),
-                )
-                as TextSpan;
+        final emailSpan = innerSpan.children!.firstWhere(
+          (span) =>
+              span is TextSpan &&
+              (span.text?.contains('user@example.com') ?? false),
+        ) as TextSpan;
 
         expect(emailSpan.recognizer, isA<TapGestureRecognizer>());
       });

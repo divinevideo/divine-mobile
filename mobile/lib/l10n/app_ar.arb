@@ -1581,7 +1581,6 @@
     "supportLoginRequired": "سجِّل الدخول للتواصل مع الدعم",
     "supportExportingLogs": "جارٍ تصدير السجلات...",
     "supportExportLogsFailed": "تعذر تصدير السجلات",
-    "supportChatNotAvailable": "محادثة الدعم غير متاحة",
     "supportCouldNotOpenMessages": "تعذر فتح رسائل الدعم",
     "supportCouldNotOpenPage": "تعذر فتح {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2414,6 +2413,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "تشغيل المعاينة",
     "videoEditorAudioUntitled": "بدون عنوان",
     "videoEditorAudioUntitledSound": "صوت بدون عنوان",
+    "videoEditorAudioFileMissing": "ملف الصوت لم يعد على هذا الجهاز",
     "videoEditorVolumeLongPressHint": "كتم صوت جميع المسارات أو إلغاء الكتم",
     "videoEditorClipSaveFailed": "فشل حفظ المقطع",
     "videoEditorClipSavedSuccess": "تم حفظ المقطع في المكتبة",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "صوت بلا عنوان",
-    "soundStopPreview": "إيقاف المعاينة",
-    "soundPreviewSemanticLabel": "معاينة {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "عرض تفاصيل {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "بحث...",
     "categoryVideoCount": "{count} فيديو",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "اسحب للضبط",
     "videoEditorVolumeSemanticLabel": "ضبط مستوى الصوت",
-    "videoEditorChromaKeyLabel": "الشاشة الخضراء",
+    "videoEditorDetachLabel": "فصل",
+  "videoEditorDetachSemanticLabel": "فصل المقطع المحدد عن الجدول الزمني",
+  "videoEditorDetachTitle": "فصل المقطع",
+  "videoEditorDetachDescription": "ينتقل المقطع إلى اللوحة ويمكن وضعه في أي مكان. ما الذي يشغل مكانه على الجدول الزمني؟",
+  "videoEditorDetachReplaceRemove": "لا شيء",
+  "videoEditorDetachReplaceRemoveDetail": "سد الفجوة: كل ما بعده يبدأ أبكر.",
+  "videoEditorDetachReplaceColor": "لون",
+  "videoEditorDetachReplaceColorDetail": "إظهار لون ثابت طوال مدة المقطع.",
+  "videoEditorDetachReplaceImage": "صورة",
+  "videoEditorDetachReplaceImageDetail": "التقاط صورة ثابتة تشغل مكانه.",
+  "videoEditorDetachedClipLabel": "مقطع مفصول",
+  "videoEditorDetachProgressLabel": "جارٍ فصل مقطعك…",
+  "videoEditorDetachFailed": "تعذّر فصل هذا المقطع. الجدول الزمني كما هو دون تغيير.",
+  "videoEditorDetachImagePickFailed": "تعذّر تحميل هذه الصورة.",
+  "videoEditorChromaKeyLabel": "الشاشة الخضراء",
     "videoEditorChromaKeyTitle": "الشاشة الخضراء",
     "videoEditorChromaKeySemanticLabel": "اضبط الشاشة الخضراء لهذا المقطع",
     "videoEditorChromaKeyCloseSemanticLabel": "تجاهل تغييرات الشاشة الخضراء",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "صورة",
     "videoEditorChromaKeyBackgroundVideo": "مقطع",
     "videoEditorChromaKeyTransparentHint": "الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.",
-    "videoEditorChromaKeyDetectFailed": "لم نعثر على خلفية. يجب أن تصل إلى حواف الإطار، وإلا فاختر اللون يدويًا.",
+    "videoEditorChromaKeySurfaceHint": "أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.",
+    "videoEditorChromaKeyDetectFailed": "لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.",
     "videoEditorChromaKeyPickClipTitle": "اختر مقطعًا",
     "videoEditorChromaKeyNoLibraryClips": "مكتبتك فارغة. احفظ مقطعًا أولًا ثم استخدمه كخلفية.",
     "videoEditorChromaKeyImagePickFailed": "تعذّر تحميل هذه الصورة.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "التعليقات والإعجابات وإعادة النشر والمتابعات متوقفة مؤقتًا",
     "minorAccountReviewRestrictionMessaging": "بدء الرسائل العادية أو الرد عليها متوقف مؤقتًا",
     "minorAccountReviewRestrictionSupport": "الدعم ورسالة الإشراف الخاصة بك تبقى متاحة",
-    "minorAccountReviewOpenSupportCenter": "فتح مركز الدعم",
+    "appealOpenSupportCenter": "فتح مركز الدعم",
     "minorAccountReviewOpenModerationMessage": "فتح رسالة الإشراف",
     "minorAccountReviewOpenReviewPage": "فتح صفحة المراجعة",
     "minorAccountReviewCheckAgain": "تحقق مرة أخرى",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "استمع إلى الصوت",
   "savedSoundEditAction": "تعديل تفاصيل الصوت",
   "savedSoundRemoveAction": "إزالة الصوت المحفوظ",
+  "savedSoundFileMissing": "ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله.",
   "savedSoundClearHashtagFilter": "مسح تصفية الوسوم",
   "soundAllowRemix": "اسمح للآخرين بإعادة مزج هذا الصوت",
   "soundReuseUnavailable": "لا يمكن إعادة مزج هذا الصوت الآن.",

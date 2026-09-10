@@ -83,8 +83,7 @@ void main() {
               : await Hive.openBox(HiveBoxNames.hashtagStats);
           final upload = PendingUpload.create(
             localVideoPath: '/tmp/durable-upload.mp4',
-            nostrPubkey:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            nostrPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           );
           await pendingUploads.put(upload.id, upload);
           await hashtagStats.put('popular_hashtags', ['divine']);

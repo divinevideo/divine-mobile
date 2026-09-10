@@ -28,8 +28,10 @@ class BugReportScreen extends StatefulWidget {
     required this.bugReportService,
     super.key,
     this.currentScreen,
+    this.recentScreens = const [],
     this.userPubkey,
     this.submitBugReport,
+    this.buildLogsSummary = buildLogsSummaryOffMain,
   });
 
   static const routeName = 'support-report-bug';
@@ -37,8 +39,10 @@ class BugReportScreen extends StatefulWidget {
 
   final BugReportService bugReportService;
   final String? currentScreen;
+  final List<String> recentScreens;
   final String? userPubkey;
   final SubmitBugReportAction? submitBugReport;
+  final BuildLogsSummary buildLogsSummary;
 
   @override
   State<BugReportScreen> createState() => _BugReportScreenState();
@@ -58,7 +62,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
     return BlocProvider(
       create: (_) => BugReportCubit(
         bugReportService: widget.bugReportService,
-        buildLogsSummary: buildLogsSummary,
+        buildLogsSummary: widget.buildLogsSummary,
         submitBugReport:
             widget.submitBugReport ??
             ZendeskSupportService.createStructuredBugReport,
@@ -66,6 +70,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
       child: _BugReportView(
         fields: _fields,
         currentScreen: widget.currentScreen,
+        recentScreens: widget.recentScreens,
         userPubkey: widget.userPubkey,
       ),
     );
@@ -94,11 +99,13 @@ class _BugReportView extends StatelessWidget {
   const _BugReportView({
     required this.fields,
     this.currentScreen,
+    this.recentScreens = const [],
     this.userPubkey,
   });
 
   final BugReportFields fields;
   final String? currentScreen;
+  final List<String> recentScreens;
   final String? userPubkey;
 
   @override
@@ -206,6 +213,7 @@ class _BugReportView extends StatelessWidget {
             child: BugReportActions(
               fields: fields,
               currentScreen: currentScreen,
+              recentScreens: recentScreens,
               userPubkey: userPubkey,
             ),
           ),
@@ -221,12 +229,14 @@ class BugReportActions extends StatelessWidget {
   const BugReportActions({
     required this.fields,
     this.currentScreen,
+    this.recentScreens = const [],
     this.userPubkey,
     super.key,
   });
 
   final BugReportFields fields;
   final String? currentScreen;
+  final List<String> recentScreens;
   final String? userPubkey;
 
   String _failureMessage(BugReportFailureKey? key, BuildContext context) {
@@ -245,6 +255,7 @@ class BugReportActions extends StatelessWidget {
       expectedBehavior: fields.expected.text,
       attachments: fields.attachments,
       currentScreen: currentScreen,
+      recentScreens: recentScreens,
       userPubkey: userPubkey,
     );
   }

@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -10,7 +12,42 @@ import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Re-exported so UI can render a verification badge without reaching
+/// into the service layer for the status type alone.
+export 'package:openvine/services/nip05_verification_service.dart'
+    show Nip05VerificationStatus;
+
 part 'nip05_verification_provider.g.dart';
+
+@immutable
+class MentionNip05Claim {
+  const MentionNip05Claim({required this.pubkey, required this.nip05});
+
+  final String pubkey;
+  final String nip05;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MentionNip05Claim &&
+          runtimeType == other.runtimeType &&
+          pubkey == other.pubkey &&
+          nip05 == other.nip05;
+
+  @override
+  int get hashCode => Object.hash(pubkey, nip05);
+}
+
+// Riverpod's family builder preserves its full generic type when inferred.
+// ignore: specify_nonobvious_property_types
+final mentionNip05VerificationProvider =
+    FutureProvider.family<Nip05VerificationStatus, MentionNip05Claim>((
+      ref,
+      claim,
+    ) {
+      final service = ref.watch(nip05VerificationServiceProvider);
+      return service.getVerificationStatus(claim.pubkey, claim.nip05);
+    });
 
 /// Provider for the NIP-05 verification service singleton
 @Riverpod(keepAlive: true)

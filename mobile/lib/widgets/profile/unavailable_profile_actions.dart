@@ -58,7 +58,7 @@ class UnavailableProfileActions extends ConsumerWidget {
         // the same generic fallback the conversation header uses.
         displayName: context.l10n.profileUserFallback,
         isFollowing: followRepository.isFollowing(userIdHex),
-        isBlocked: blocklistRepository.isBlocked(userIdHex),
+        isBlocked: blocklistRepository.canUnblock(userIdHex),
         showReport: true,
       ),
       children: const [],

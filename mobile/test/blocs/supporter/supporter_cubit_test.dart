@@ -8,6 +8,7 @@ import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
+import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 
 class _FakeRepository extends Fake implements SupporterRepository {
@@ -25,12 +26,16 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   bool get hasServerClient => false;
 
+  Object? purchaseError;
+
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
 
   @override
-  Future<SupporterEntitlement> purchase(String productId) =>
-      validator.purchase(productId);
+  Future<SupporterEntitlement> purchase(String productId) async {
+    if (purchaseError != null) throw purchaseError!;
+    return validator.purchase(productId);
+  }
 
   @override
   Future<SupporterEntitlement> restorePurchases() =>
@@ -146,6 +151,34 @@ void main() {
   });
 
   group('subscribe', () {
+    blocTest<SupporterCubit, SupporterState>(
+      'maps unavailable verification to a non-busy error',
+      build: () {
+        final repo = _FakeRepository(controller)
+          ..purchaseError = const SupporterApiException(
+            SupporterApiFailureKind.unavailable,
+            'Supporter verification is not configured.',
+          );
+        return SupporterCubit(repository: repo);
+      },
+      act: (cubit) => cubit.subscribe('divine.supporter.monthly'),
+      expect: () => [
+        isA<SupporterState>().having(
+          (s) => s.status,
+          'status',
+          SupporterStatus.purchasing,
+        ),
+        isA<SupporterState>()
+            .having((s) => s.status, 'status', SupporterStatus.error)
+            .having(
+              (s) => s.failure,
+              'failure',
+              SupporterFailure.verificationUnavailable,
+            )
+            .having((s) => s.isBusy, 'isBusy', isFalse),
+      ],
+    );
+
     blocTest<SupporterCubit, SupporterState>(
       'subscribe emits purchasing then active on success',
       build: () {
@@ -282,6 +315,32 @@ void main() {
   });
 
   group('purchase lifecycle', () {
+    test(
+      'surfaces verification failure received from the proof stream',
+      () async {
+        final repo = _FakeRepository(controller);
+        final cubit = SupporterCubit(repository: repo);
+        addTearDown(cubit.close);
+
+        cubit.start();
+        await pumpEventQueue();
+        controller.addError(
+          const SupporterApiException(
+            SupporterApiFailureKind.unavailable,
+            'Supporter verification is not configured.',
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(cubit.state.status, SupporterStatus.error);
+        expect(
+          cubit.state.failure,
+          SupporterFailure.verificationUnavailable,
+        );
+        expect(cubit.state.isBusy, isFalse);
+      },
+    );
+
     test('surfaces pending and confirming purchase lifecycle', () async {
       final lifecycle = StreamController<EntitlementLifecycle>.broadcast();
       addTearDown(lifecycle.close);

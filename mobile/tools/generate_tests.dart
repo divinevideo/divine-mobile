@@ -2,6 +2,7 @@
 // ABOUTME: Supports service, widget, integration, and benchmark test generation
 
 import 'dart:io';
+
 import 'package:args/args.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -273,8 +274,6 @@ void main() {
 }
 
 String _generateDefaultWidgetTest(String className, String inputPath) {
-  // ignore: unused_local_variable
-  final snakeCase = _toSnakeCase(className);
   final importPath = inputPath.replaceFirst('lib/', 'package:openvine/');
 
   return '''

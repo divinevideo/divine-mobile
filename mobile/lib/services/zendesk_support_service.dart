@@ -14,11 +14,10 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-typedef JwtIdentityRefresh =
-    Future<bool> Function({
-      required Nip98AuthService nip98Service,
-      required String relayManagerUrl,
-    });
+typedef JwtIdentityRefresh = Future<bool> Function({
+  required Nip98AuthService nip98Service,
+  required String relayManagerUrl,
+});
 
 class ZendeskAttachmentUploadException implements Exception {
   const ZendeskAttachmentUploadException();
@@ -378,8 +377,21 @@ class ZendeskSupportService {
   static Future<String> fetchPreAuthToken({
     required Nip98AuthService nip98Service,
     required String relayManagerUrl,
+    http.Client? httpClient,
   }) async {
-    final url = '$relayManagerUrl/api/zendesk/pre-auth';
+    // Signed and requested must be the same string: relay-manager compares
+    // the NIP-98 `u` tag to the request URL exactly, and `Uri.parse`
+    // normalizes host case, a default port and dot segments.
+    //
+    // The trailing slash is trimmed first, as the other NIP-98 clients do.
+    // `Uri.parse` does not collapse `//`, so a caller-supplied base ending in
+    // one would post to `//api/zendesk/pre-auth`. Signed would still equal
+    // sent, so NIP-98 passes and only the path is wrong.
+    final base = relayManagerUrl.endsWith('/')
+        ? relayManagerUrl.substring(0, relayManagerUrl.length - 1)
+        : relayManagerUrl;
+    final uri = Uri.parse('$base/api/zendesk/pre-auth');
+    final url = uri.toString();
 
     // Clear NIP-98 cache to avoid reusing a token with a stale timestamp.
     // The server requires created_at within 60s, but tokens are cached 10min.
@@ -394,8 +406,12 @@ class ZendeskSupportService {
       throw Exception('Failed to create NIP-98 auth token');
     }
 
-    final response = await http.post(
-      Uri.parse(url),
+    // Tear-off rather than `httpClient ?? http.Client()`: the top-level
+    // `http.post` owns and closes a client per call, so constructing one here
+    // to satisfy the fallback would leak it.
+    final post = httpClient?.post ?? http.post;
+    final response = await post(
+      uri,
       headers: {
         'Authorization': authToken.authorizationHeader,
         'Content-Type': 'application/json',
@@ -494,6 +510,7 @@ class ZendeskSupportService {
     String? description,
     List<String>? tags,
   }) async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot show ticket screen',
@@ -566,6 +583,7 @@ class ZendeskSupportService {
   /// If the native SDK returns a `NO_IDENTITY` error, this method
   /// automatically falls back to anonymous identity and retries once.
   static Future<bool> showTicketListScreen() async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot show ticket list',
@@ -639,6 +657,7 @@ class ZendeskSupportService {
     List<Map<String, dynamic>>? customFields,
     List<String>? attachmentPaths,
   }) async {
+    await _awaitInitialization();
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot create ticket',
@@ -938,6 +957,7 @@ class ZendeskSupportService {
     String? stepsToReproduce,
     String? expectedBehavior,
     String? currentScreen,
+    List<String>? recentScreens,
     String? userPubkey,
     Map<String, int>? errorCounts,
     String? logsSummary,
@@ -1003,6 +1023,14 @@ class ZendeskSupportService {
       buffer.writeln();
       buffer.writeln(
         '**Current Screen:** ${sanitizeDiagnosticText(currentScreen)}',
+      );
+    }
+    if (recentScreens != null && recentScreens.isNotEmpty) {
+      final sanitizedScreens = recentScreens
+          .take(5)
+          .map(sanitizeDiagnosticText);
+      buffer.writeln(
+        '**Recent Screens:** ${sanitizedScreens.join(' → ')}',
       );
     }
     final effectivePubkey = userPubkey ?? _userNpub;

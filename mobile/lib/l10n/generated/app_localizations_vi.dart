@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4594,9 +4595,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supportRevealLogsAction => 'Hiện trong thư mục';
 
   @override
-  String get supportChatNotAvailable => 'Chat hỗ trợ không khả dụng';
-
-  @override
   String get supportCouldNotOpenMessages => 'Không mở được tin nhắn hỗ trợ';
 
   @override
@@ -5154,22 +5152,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Dùng âm thanh';
-
-  @override
-  String get soundUntitled => 'Âm thanh chưa đặt tên';
-
-  @override
-  String get soundStopPreview => 'Dừng nghe thử';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Nghe thử $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Xem chi tiết của $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Chưa có video nào';
@@ -8806,6 +8788,54 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Trượt để điều chỉnh';
 
   @override
+  String get videoEditorDetachLabel => 'Tách rời';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Tách clip đã chọn khỏi timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'Tách rời clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Clip chuyển sang khung nền, bạn đặt nó ở đâu cũng được. Cái gì sẽ thay chỗ nó trên timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Không gì cả';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Khép khoảng trống – mọi thứ phía sau bắt đầu sớm hơn.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Màu';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Giữ một màu đặc đúng bằng thời lượng clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Ảnh';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Chụp một tấm ảnh để giữ chỗ.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Clip đã tách rời';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Đang tách clip của bạn…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Không tách được clip đó. Timeline của bạn vẫn nguyên.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Không tải được ảnh đó.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Phông xanh';
 
   @override
@@ -8874,8 +8904,12 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Không tìm thấy phông. Phông phải chạm tới các cạnh khung hình — nếu không, hãy tự chọn màu.';
+      'Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Chọn một clip';
@@ -9166,6 +9200,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Âm thanh chưa đặt tên';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Tệp âm thanh không còn trên thiết bị';
 
   @override
   String get videoEditorAudioUntitled => 'Chưa đặt tên';
@@ -9831,8 +9869,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Thao tác này chặn $count tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
-      one:
-          'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
+      one: 'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
     );
     return '$_temp0';
   }
@@ -10101,7 +10138,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Mở Trung tâm hỗ trợ';
+  String get appealOpenSupportCenter => 'Mở Trung tâm hỗ trợ';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11272,6 +11309,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get savedSoundRemoveAction => 'Gỡ âm thanh đã lưu';
 
   @override
+  String get savedSoundFileMissing =>
+      'Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Xóa bộ lọc hashtag';
 
   @override
@@ -12053,9 +12094,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

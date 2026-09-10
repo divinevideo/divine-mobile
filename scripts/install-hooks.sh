@@ -45,10 +45,9 @@ list_codegen_inputs() {
         [ -f "$abs_path" ] || continue
 
         local base_path="${abs_path%.dart}"
-        if grep -Eq '@Riverpod|@riverpod|@freezed|@Freezed|@JsonSerializable|@GenerateMocks|@DriftDatabase|@UseRowClass|@DataClassName|@UseMoor|@HiveType' "$abs_path" \
-            || grep -Eq "part '.*\\.(g|freezed)\\.dart';" "$abs_path" \
+        if grep -Eq '@Riverpod|@riverpod|@JsonSerializable|@GenerateMocks|@DriftDatabase|@UseRowClass|@DataClassName|@UseMoor|@HiveType' "$abs_path" \
+            || grep -Eq "part '.*\\.g\\.dart';" "$abs_path" \
             || [ -f "${base_path}.g.dart" ] \
-            || [ -f "${base_path}.freezed.dart" ] \
             || [ -f "${base_path}.mocks.dart" ]; then
             echo "$file"
         fi
@@ -58,7 +57,7 @@ list_codegen_inputs() {
 capture_generated_status() {
     git status --porcelain -- "$REPO_ROOT/mobile" \
         | awk '{print $2}' \
-        | grep -E '^mobile/.*(\.g\.dart|\.freezed\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
+        | grep -E '^mobile/.*(\.g\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
         | sort -u || true
 }
 
@@ -66,7 +65,7 @@ capture_generated_status() {
 STAGED_DART_FILES=$(git diff --cached --name-only --diff-filter=ACM \
     | grep '^mobile/.*\.dart$' \
     | grep -v '\.g\.dart$' \
-    | grep -v '\.freezed\.dart$' || true)
+    || true)
 
 if [ -z "$STAGED_DART_FILES" ]; then
     exit 0
@@ -137,10 +136,9 @@ list_codegen_inputs() {
         [ -f "$abs_path" ] || continue
 
         local base_path="${abs_path%.dart}"
-        if grep -Eq '@Riverpod|@riverpod|@freezed|@Freezed|@JsonSerializable|@GenerateMocks|@DriftDatabase|@UseRowClass|@DataClassName|@UseMoor|@HiveType' "$abs_path" \
-            || grep -Eq "part '.*\\.(g|freezed)\\.dart';" "$abs_path" \
+        if grep -Eq '@Riverpod|@riverpod|@JsonSerializable|@GenerateMocks|@DriftDatabase|@UseRowClass|@DataClassName|@UseMoor|@HiveType' "$abs_path" \
+            || grep -Eq "part '.*\\.g\\.dart';" "$abs_path" \
             || [ -f "${base_path}.g.dart" ] \
-            || [ -f "${base_path}.freezed.dart" ] \
             || [ -f "${base_path}.mocks.dart" ]; then
             echo "$file"
         fi
@@ -150,7 +148,7 @@ list_codegen_inputs() {
 capture_generated_status() {
     git -C "$REPO_ROOT" status --porcelain -- mobile \
         | awk '{print $2}' \
-        | grep -E '^mobile/.*(\.g\.dart|\.freezed\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
+        | grep -E '^mobile/.*(\.g\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
         | sort -u || true
 }
 
@@ -170,16 +168,19 @@ git -C "$REPO_ROOT" fetch origin main --quiet 2>/dev/null || true
 CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
 if [ "$CURRENT_BRANCH" != "main" ]; then
     echo "Checking for merge conflicts with main..."
-    if ! git -C "$REPO_ROOT" merge-tree --write-tree "$BASE_BRANCH" HEAD >/dev/null 2>&1; then
-        echo ""
-        echo "Branch has merge conflicts with main!"
-        echo ""
-        echo "Resolve conflicts before pushing:"
-        echo "  git fetch origin main"
-        echo "  git merge origin/main   # or: git rebase origin/main"
-        exit 1
+    # Lives in the repo rather than inline so it is testable, and so a fix to
+    # it reaches everyone without a re-run of `mise run setup_hooks`. Skipped
+    # when absent, e.g. on a branch predating it.
+    MERGEABLE_CHECK="$REPO_ROOT/scripts/check_branch_mergeable.sh"
+    # Invoked through `bash`, so it needs to be present and readable, not
+    # executable. Testing `-x` would skip the whole check on a checkout that
+    # lost the +x bit (Windows, a mode-stripped copy) and let a genuine
+    # conflict through — the check must fail closed, not open.
+    if [ -f "$MERGEABLE_CHECK" ]; then
+        bash "$MERGEABLE_CHECK" "$BASE_BRANCH" || exit 1
+    else
+        echo "Skipped: scripts/check_branch_mergeable.sh not present"
     fi
-    echo "No merge conflicts with main"
     echo ""
 
     # Validate branch name matches semantic PR title convention
@@ -229,7 +230,7 @@ fi
 # trigger stays conditional so unrelated pushes are not slowed.
 CHANGED_SERVICE_FILES=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=ADR "$BASE_BRANCH"...HEAD 2>/dev/null \
     | grep -E '^mobile/lib/services/.*\.dart$' \
-    | grep -vE '\.(g|freezed)\.dart$' || true)
+    | grep -vE '\.(g|mocks)\.dart$' || true)
 CHANGED_TEST_FILES=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=DR "$BASE_BRANCH"...HEAD 2>/dev/null \
     | grep -E '^mobile/test/.*_test\.dart$' || true)
 if [ -n "$CHANGED_SERVICE_FILES" ] || [ -n "$CHANGED_TEST_FILES" ]; then
@@ -361,8 +362,7 @@ fi
 # Get list of changed Dart files (excluding generated files)
 CHANGED_FILES=$(git -C "$REPO_ROOT" diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null \
     | grep '^mobile/.*\.dart$' \
-    | grep -v '\.g\.dart$' \
-    | grep -v '\.freezed\.dart$' || true)
+    | grep -vE '\.(g|mocks)\.dart$' || true)
 
 if [ -z "$CHANGED_FILES" ]; then
     echo "No Dart files changed, skipping checks"

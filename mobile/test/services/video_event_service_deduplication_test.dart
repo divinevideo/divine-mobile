@@ -1,9 +1,4 @@
-// Permanent: existing active and skipped assertions depend on
-// VideoEventService subscription lifecycle timing; keep isolated until the
-// subscription dedupe tests use non-completing streams and layer-correct
-// assertions.
-@Tags(['skip_very_good_optimization'])
-library;
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -24,19 +19,40 @@ void main() {
   });
 
   group('VideoEventService Subscription Deduplication', () {
+    final author1 = '1' * 64;
+    final author2 = '2' * 64;
+    final author3 = '3' * 64;
+    final author4 = '4' * 64;
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
     late _MockSubscriptionManager mockSubscriptionManager;
+    late List<StreamController<Event>> streams;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
       mockSubscriptionManager = _MockSubscriptionManager();
+      streams = [];
 
       // Setup mock NostrService
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () => mockNostrService.subscribe(any()),
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).thenAnswer((_) {
+        final controller = StreamController<Event>();
+        streams.add(controller);
+        return controller.stream;
+      });
+      // Home-feed backfill is separate from the persistent subscription.
+      when(
+        () => mockNostrService.subscribe(
+          any(),
+          subscriptionId: any(
+            named: 'subscriptionId',
+            that: startsWith('seed_home_'),
+          ),
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       videoEventService = VideoEventService(
@@ -46,73 +62,85 @@ void main() {
       );
     });
 
-    test('should generate same subscription ID for identical parameters', () {
-      // Access the private method through reflection for testing
-      // Note: In production, we'd test this indirectly through behavior
+    tearDown(() async {
+      await videoEventService.unsubscribeFromVideoFeed();
+      videoEventService.dispose();
+      for (final controller in streams) {
+        await controller.close();
+      }
+    });
 
-      // First subscription
-      videoEventService.subscribeToDiscovery();
+    test('reuses a live subscription for identical parameters', () async {
+      await videoEventService.subscribeToDiscovery();
+      expect(streams.single.hasListener, isTrue);
 
-      // Give it a moment to process
-      Future.delayed(const Duration(milliseconds: 100), () {
-        // Second identical subscription
-        videoEventService.subscribeToDiscovery();
+      await videoEventService.subscribeToDiscovery();
 
-        // Verify NostrService was only called once (reused existing)
-        verify(() => mockNostrService.subscribe(any())).called(1);
-      });
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(1);
+      expect(streams.single.hasListener, isTrue);
     });
 
     test(
-      'should generate different IDs for different subscription types',
+      'keeps different subscription types active independently',
       () async {
         // Subscribe to discovery
         await videoEventService.subscribeToDiscovery();
 
         // Subscribe to home feed with same limit
-        await videoEventService.subscribeToHomeFeed(['author1']);
+        await videoEventService.subscribeToHomeFeed([author1]);
 
         // Both should create separate subscriptions
-        verify(() => mockNostrService.subscribe(any())).called(2);
+        verify(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).called(2);
+        expect(streams.every((stream) => stream.hasListener), isTrue);
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
 
-    test('should generate different IDs for different authors', () async {
+    test('replaces the subscription when authors change', () async {
       // Subscribe with first set of authors
-      await videoEventService.subscribeToHomeFeed(['author1', 'author2']);
+      await videoEventService.subscribeToHomeFeed([author1, author2]);
 
       // Subscribe with different authors
-      await videoEventService.subscribeToHomeFeed(['author3', 'author4']);
+      await videoEventService.subscribeToHomeFeed([author3, author4]);
 
       // Both should create separate subscriptions
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+      expect(streams.first.hasListener, isFalse);
+      expect(streams.last.hasListener, isTrue);
+    });
 
-    test('should generate same ID regardless of author order', () async {
-      // Subscribe with authors in one order
-      await videoEventService.subscribeToHomeFeed([
-        'author1',
-        'author2',
-        'author3',
-      ]);
+    test(
+      'reuses the same ID for reordered authors without replacement',
+      () async {
+        // Subscribe with authors in one order
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.homeFeed,
+          authors: [author1, author2, author3],
+          replace: false,
+        );
+        expect(streams.single.hasListener, isTrue);
 
-      // Clear and subscribe with authors in different order
-      await videoEventService.unsubscribeFromVideoFeed();
-      await videoEventService.subscribeToHomeFeed([
-        'author3',
-        'author1',
-        'author2',
-      ]);
+        // Keep the existing subscription so this reaches ID-based reuse rather
+        // than the default replacement path's order-sensitive parameter check.
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.homeFeed,
+          authors: [author3, author1, author2],
+          replace: false,
+        );
 
-      // Should reuse the subscription pattern (2 calls total, not 3)
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+        verify(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).called(1);
+        expect(streams.single.hasListener, isTrue);
+      },
+    );
 
-    test('should generate different IDs for different hashtags', () async {
+    test('replaces the subscription when hashtags change', () async {
       // Subscribe with first hashtag
       await videoEventService.subscribeToHashtagVideos(['funny']);
 
@@ -120,9 +148,12 @@ void main() {
       await videoEventService.subscribeToHashtagVideos(['music']);
 
       // Both should create separate subscriptions
-      verify(() => mockNostrService.subscribe(any())).called(2);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+      expect(streams.first.hasListener, isFalse);
+      expect(streams.last.hasListener, isTrue);
+    });
 
     test('should not create duplicate subscriptions for rapid calls', () async {
       // Simulate rapid subscription calls (like from multiple UI components)
@@ -135,14 +166,15 @@ void main() {
       await Future.wait(futures);
 
       // Should only create one subscription despite 5 calls
-      verify(() => mockNostrService.subscribe(any())).called(1);
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(1);
+    });
 
     test('subscription count should stay reasonable', () async {
       // Create various subscription types
       await videoEventService.subscribeToDiscovery();
-      await videoEventService.subscribeToHomeFeed(['author1']);
+      await videoEventService.subscribeToHomeFeed([author1]);
       await videoEventService.subscribeToHashtagVideos(['funny']);
 
       // Get connection status to check subscription count
@@ -154,8 +186,7 @@ void main() {
       expect(activeSubscriptions, contains('discovery'));
       expect(activeSubscriptions, contains('homeFeed'));
       expect(activeSubscriptions, contains('hashtag'));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test('should handle subscription replacement correctly', () async {
       // First subscription
@@ -165,13 +196,16 @@ void main() {
       await videoEventService.subscribeToDiscovery();
 
       // Should create two subscriptions (old one cancelled, new one created)
-      verify(() => mockNostrService.subscribe(any())).called(2);
+      verify(
+        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+      ).called(2);
+      expect(streams.first.hasListener, isFalse);
+      expect(streams.last.hasListener, isTrue);
 
       // But only one should be active
       final status = videoEventService.getConnectionStatus();
       final activeSubscriptions = status['activeSubscriptions'] as List;
       expect(activeSubscriptions.length, equals(1));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
   });
 }

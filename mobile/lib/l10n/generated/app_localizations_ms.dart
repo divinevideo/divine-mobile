@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4626,9 +4627,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supportRevealLogsAction => 'Tunjuk dalam folder';
 
   @override
-  String get supportChatNotAvailable => 'Sembang sokongan tidak tersedia';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Tidak dapat membuka mesej sokongan';
 
@@ -5190,22 +5188,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Guna Bunyi';
-
-  @override
-  String get soundUntitled => 'Bunyi tanpa tajuk';
-
-  @override
-  String get soundStopPreview => 'Hentikan pratonton';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Pratonton $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Lihat butiran untuk $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Belum ada video';
@@ -8852,6 +8834,55 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Luncur untuk melaras';
 
   @override
+  String get videoEditorDetachLabel => 'Tanggalkan';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Tanggalkan klip dipilih daripada garis masa';
+
+  @override
+  String get videoEditorDetachTitle => 'Tanggalkan klip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Klip berpindah ke kanvas, dan anda boleh meletakkannya di mana-mana. Apa yang mengambil tempatnya pada garis masa?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Tiada';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Tutup ruang itu – semua selepasnya bermula lebih awal.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Warna';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Menahan satu warna selama klip itu berjalan.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Ambil foto untuk menahan tempatnya.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Klip ditanggalkan';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Meleraikan klip anda…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Klip itu tidak dapat ditanggalkan. Garis masa anda tidak berubah.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Foto itu tidak dapat dimuatkan.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Skrin hijau';
 
   @override
@@ -8921,8 +8952,12 @@ class AppLocalizationsMs extends AppLocalizations {
       'Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Skrin tidak ditemui. Ia perlu mencapai tepi bingkai — pilih warnanya secara manual.';
+      'Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';
@@ -9215,6 +9250,10 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Bunyi tanpa tajuk';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Fail audio sudah tiada pada peranti ini';
 
   @override
   String get videoEditorAudioUntitled => 'Tanpa tajuk';
@@ -9884,8 +9923,7 @@ class AppLocalizationsMs extends AppLocalizations {
       locale: localeName,
       other:
           'Ini menyekat $count akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
-      one:
-          'Ini menyekat akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
+      one: 'Ini menyekat akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
     );
     return '$_temp0';
   }
@@ -10153,7 +10191,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Buka Pusat Sokongan';
+  String get appealOpenSupportCenter => 'Buka Pusat Sokongan';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11328,6 +11366,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get savedSoundRemoveAction => 'Buang bunyi tersimpan';
 
   @override
+  String get savedSoundFileMissing =>
+      'Fail audio bunyi ini sudah tiada pada peranti anda, jadi ia tidak boleh dimainkan.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Kosongkan penapis hashtag';
 
   @override
@@ -12111,9 +12153,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

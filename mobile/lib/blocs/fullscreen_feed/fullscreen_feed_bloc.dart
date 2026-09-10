@@ -12,7 +12,7 @@ import 'package:equatable/equatable.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_cache/media_cache.dart';
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/utils/video_identity.dart';
@@ -44,12 +44,11 @@ typedef OnVideoConfirmedUnavailable = void Function(VideoEvent video);
 /// verdict is persisted. Quarantined and age-restricted blobs also 404 but
 /// are reversible, so they keep their error tile. Tests may inject a smaller
 /// predicate.
-typedef ConfirmVideoUnavailable =
-    Future<FeedUnavailability> Function({
-      required String videoId,
-      required String? videoUrl,
-      String? explicitSha256,
-    });
+typedef ConfirmVideoUnavailable = Future<FeedUnavailability> Function({
+  required String videoId,
+  required String? videoUrl,
+  String? explicitSha256,
+});
 
 /// Returns `true` when [video] must be hidden (blocked / muted / blocked-us /
 /// muted-us authors or reposters, plus shared feed policy). Injected so the

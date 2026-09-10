@@ -1595,7 +1595,6 @@
     "supportLoginRequired": "Iniciá sesión para contactar a soporte",
     "supportExportingLogs": "Exportando logs...",
     "supportExportLogsFailed": "No se pudieron exportar los logs",
-    "supportChatNotAvailable": "El chat de soporte no está disponible",
     "supportCouldNotOpenMessages": "No se pudieron abrir los mensajes de soporte",
     "supportCouldNotOpenPage": "No se pudo abrir {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2688,6 +2687,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Reproducir vista previa",
     "videoEditorAudioPausePreviewSemanticLabel": "Pausar vista previa",
     "videoEditorAudioUntitledSound": "Sonido sin título",
+    "videoEditorAudioFileMissing": "El archivo de audio ya no está en el dispositivo",
     "videoEditorVolumeLongPressHint": "Silenciar o activar todas las pistas",
     "videoEditorAudioUntitled": "Sin título",
     "videoEditorAudioAddAudio": "Agregar audio",
@@ -3214,24 +3214,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Sonido sin título",
-    "soundStopPreview": "Parar la vista previa",
-    "soundPreviewSemanticLabel": "Vista previa de {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Ver detalles de {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Buscar...",
     "categoryVideoCount": "{count} videos",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Desliza para ajustar",
     "videoEditorVolumeSemanticLabel": "Ajustar volumen",
-    "videoEditorChromaKeyLabel": "Croma",
+    "videoEditorDetachLabel": "Separar",
+  "videoEditorDetachSemanticLabel": "Separar el clip seleccionado de la línea de tiempo",
+  "videoEditorDetachTitle": "Separar clip",
+  "videoEditorDetachDescription": "El clip pasa al lienzo, donde podés ubicarlo donde quieras. ¿Qué ocupa su lugar en la línea de tiempo?",
+  "videoEditorDetachReplaceRemove": "Nada",
+  "videoEditorDetachReplaceRemoveDetail": "Cerrar el hueco: todo lo que sigue empieza antes.",
+  "videoEditorDetachReplaceColor": "Color",
+  "videoEditorDetachReplaceColorDetail": "Mantiene un color sólido lo que duró el clip.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Sacá una foto para que ocupe su lugar.",
+  "videoEditorDetachedClipLabel": "Clip separado",
+  "videoEditorDetachProgressLabel": "Separando tu clip…",
+  "videoEditorDetachFailed": "No se pudo separar ese clip. Tu línea de tiempo queda igual.",
+  "videoEditorDetachImagePickFailed": "No se pudo cargar esa foto.",
+  "videoEditorChromaKeyLabel": "Croma",
     "videoEditorChromaKeyTitle": "Croma",
     "videoEditorChromaKeySemanticLabel": "Configura el croma de este clip",
     "videoEditorChromaKeyCloseSemanticLabel": "Descartar los cambios del croma",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Imagen",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "El vídeo no admite transparencia, así que esto se exporta en negro.",
-    "videoEditorChromaKeyDetectFailed": "No se encontró ningún fondo. Tiene que llegar a los bordes del cuadro; si no, elige el color a mano.",
+    "videoEditorChromaKeySurfaceHint": "Sirve cualquier superficie lisa detrás tuyo — una pared alcanza — siempre que llene todo el cuadro.",
+    "videoEditorChromaKeyDetectFailed": "No encontramos ningún fondo: tiene que llenar todo el cuadro detrás tuyo. Una pared lisa sirve. O elegí el color a mano.",
     "videoEditorChromaKeyPickClipTitle": "Elegir un clip",
     "videoEditorChromaKeyNoLibraryClips": "Tu biblioteca está vacía. Guarda un clip primero y luego úsalo de fondo.",
     "videoEditorChromaKeyImagePickFailed": "No se pudo cargar esa imagen.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Comentarios, me gusta, reposts y seguimientos están en pausa",
     "minorAccountReviewRestrictionMessaging": "Empezar o responder mensajes normales está en pausa",
     "minorAccountReviewRestrictionSupport": "El soporte y tu mensaje de moderación siguen disponibles",
-    "minorAccountReviewOpenSupportCenter": "Abrir el centro de soporte",
+    "appealOpenSupportCenter": "Abrir el centro de soporte",
     "minorAccountReviewOpenModerationMessage": "Abrir el mensaje de moderación",
     "minorAccountReviewOpenReviewPage": "Abrir la página de revisión",
     "minorAccountReviewCheckAgain": "Comprobar otra vez",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Escuchar el sonido",
   "savedSoundEditAction": "Editar los datos del sonido",
   "savedSoundRemoveAction": "Quitar el sonido guardado",
+  "savedSoundFileMissing": "El archivo de audio de este sonido ya no está en el dispositivo, así que no se puede reproducir.",
   "savedSoundClearHashtagFilter": "Borrar el filtro de hashtags",
   "soundAllowRemix": "Permitir que otras personas remezclen este sonido",
   "soundReuseUnavailable": "Este sonido no se puede remezclar ahora mismo.",

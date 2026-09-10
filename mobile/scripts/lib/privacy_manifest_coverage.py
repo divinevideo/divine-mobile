@@ -30,15 +30,24 @@ REVIEW (non-fatal) and never as a failure.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import plistlib
 import re
 import sys
 
 # --- Apple's required-reason API catalogue -------------------------------
-# Symbols verified against Apple's DocC payload for
-# bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/
-# nsprivacyaccessedapitype (symbol reference links resolved), 2026-09-08.
+
+CATALOGUE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)),
+    "data",
+    "apple_required_reason_catalogue.json",
+)
+
+with open(CATALOGUE_PATH, encoding="utf-8") as catalogue_file:
+    CATALOGUE = json.load(catalogue_file)
+
+CATEGORIES = {category["id"]: category for category in CATALOGUE["categories"]}
 
 FILE_TIMESTAMP = "NSPrivacyAccessedAPICategoryFileTimestamp"
 SYSTEM_BOOT_TIME = "NSPrivacyAccessedAPICategorySystemBootTime"
@@ -46,20 +55,10 @@ DISK_SPACE = "NSPrivacyAccessedAPICategoryDiskSpace"
 ACTIVE_KEYBOARDS = "NSPrivacyAccessedAPICategoryActiveKeyboards"
 USER_DEFAULTS = "NSPrivacyAccessedAPICategoryUserDefaults"
 
-ALL_CATEGORIES = {
-    FILE_TIMESTAMP,
-    SYSTEM_BOOT_TIME,
-    DISK_SPACE,
-    ACTIVE_KEYBOARDS,
-    USER_DEFAULTS,
-}
-
+ALL_CATEGORIES = set(CATEGORIES)
 VALID_REASONS = {
-    FILE_TIMESTAMP: {"DDA9.1", "C617.1", "3B52.1", "0A2A.1"},
-    SYSTEM_BOOT_TIME: {"35F9.1", "8FFB.1", "3D61.1"},
-    DISK_SPACE: {"85F4.1", "E174.1", "7D9E.1", "B728.1"},
-    ACTIVE_KEYBOARDS: {"3EC4.1", "54BD.1"},
-    USER_DEFAULTS: {"CA92.1", "1C8F.1", "C56D.1", "AC6B.1"},
+    category_id: set(category["reasons"])
+    for category_id, category in CATEGORIES.items()
 }
 
 # Unambiguous: each pattern can only mean the required-reason API.
@@ -69,18 +68,23 @@ DEFINITE = [
     (
         FILE_TIMESTAMP,
         re.compile(
-            r"\bcontentModificationDateKey\b|\bcreationDateKey\b"
+            r"\b(?:contentModificationDateKey|NSURLContentModificationDateKey)\b"
+            r"|\b(?:creationDateKey|NSURLCreationDateKey)\b"
+            r"|\bNSFile(?:CreationDate|ModificationDate)\b"
             r"|\bfileModificationDate\b"
             r"|\bFileAttributeKey\.(?:creationDate|modificationDate)\b"
-            r"|\bgetattrlist(?:bulk|at)?\s*\(|\bfgetattrlist\s*\("
+            r"|\bgetattrlistbulk\s*\("
             r"|\bfstatat\s*\(|\blstat\s*\(|\bfstat\s*\(|(?<![\w.])stat\s*\("
         ),
     ),
     (
         DISK_SPACE,
         re.compile(
-            r"\bvolumeAvailableCapacity(?:ForImportantUsage|ForOpportunisticUsage)?Key\b"
-            r"|\bvolumeTotalCapacityKey\b|\bsystemFreeSize\b|\bsystemSize\b"
+            r"\b(?:volume|NSURLVolume)AvailableCapacity"
+            r"(?:ForImportantUsage|ForOpportunisticUsage)?Key\b"
+            r"|\b(?:volume|NSURLVolume)TotalCapacityKey\b"
+            r"|\bNSFileSystem(?:FreeSize|Size)\b"
+            r"|\bsystemFreeSize\b|\bsystemSize\b"
             r"|\bstatfs\s*\(|\bstatvfs\s*\(|\bfstatfs\s*\(|\bfstatvfs\s*\("
         ),
     ),
@@ -93,6 +97,14 @@ AMBIGUOUS = [
     (
         FILE_TIMESTAMP,
         re.compile(r"\battributesOfItem\b|\.(?:creationDate|modificationDate)\b"),
+    ),
+    (
+        FILE_TIMESTAMP,
+        re.compile(r"\b(?:f?getattrlist|getattrlistat)\s*\("),
+    ),
+    (
+        DISK_SPACE,
+        re.compile(r"\b(?:f?getattrlist|getattrlistat)\s*\("),
     ),
 ]
 
@@ -221,18 +233,34 @@ class Unit:
         roots: list[str],
         manifest: str,
         podspec: str | None,
+        selected_subspec: str | None = None,
         xcodeproj: str | None = None,
     ):
         self.name = name
         self.roots = roots
         self.manifest = manifest
         self.podspec = podspec
+        self.selected_subspec = selected_subspec
         self.xcodeproj = xcodeproj
 
 
 def discover(mobile: str) -> list[Unit]:
     units: list[Unit] = []
     ios = os.path.join(mobile, "ios")
+    selected_subspecs: dict[str, str] = {}
+    podfile = os.path.join(ios, "Podfile")
+    try:
+        with open(podfile, "r", encoding="utf-8") as handle:
+            podfile_text = handle.read()
+    except OSError:
+        podfile_text = ""
+    # Podfile declarations are Ruby: retain quoted names and ignore comment lines.
+    for _, pod, subspec in re.findall(
+        r"^[ \t]*pod[ \t]+(['\"])([^/'\"\n]+)/([^'\"\n]+)\1",
+        podfile_text,
+        re.M,
+    ):
+        selected_subspecs[pod] = subspec
 
     units.append(
         Unit(
@@ -261,7 +289,8 @@ def discover(mobile: str) -> list[Unit]:
             units.append(
                 Unit(f"localpod:{pod}", [path],
                      os.path.join(path, "Resources", "PrivacyInfo.xcprivacy"),
-                     os.path.join(path, specs[0]) if specs else None)
+                     os.path.join(path, specs[0]) if specs else None,
+                     selected_subspec=selected_subspecs.get(pod))
             )
 
     packages = os.path.join(mobile, "packages")
@@ -274,7 +303,8 @@ def discover(mobile: str) -> list[Unit]:
             units.append(
                 Unit(f"package:{pkg}", [pkg_ios],
                      os.path.join(pkg_ios, "Resources", "PrivacyInfo.xcprivacy"),
-                     os.path.join(pkg_ios, specs[0]) if specs else None)
+                     os.path.join(pkg_ios, specs[0]) if specs else None,
+                     selected_subspec=selected_subspecs.get(pkg))
             )
     return units
 
@@ -384,18 +414,68 @@ def xcode_manifest_is_runner_resource(project: str) -> bool:
     return False
 
 
-def podspec_bundles_manifest(spec: str) -> bool:
-    """Return whether a real resource_bundles assignment includes the manifest."""
+def podspec_manifest_bundle(spec: str, selected_subspec: str | None) -> str | None:
+    """Return the selected pod specification's privacy resource-bundle name."""
     uncommented = "\n".join(
         line for line in spec.splitlines() if not line.lstrip().startswith("#")
     )
-    return bool(
-        re.search(
-            r"\b\w+\.resource_bundles\s*=\s*\{[^}]*PrivacyInfo\.xcprivacy[^}]*\}",
+    if selected_subspec:
+        subspec = re.search(
+            rf"\bs\.subspec\s+['\"]{re.escape(selected_subspec)}['\"]\s+do\s+"
+            r"\|(?P<var>\w+)\|(?P<body>.*?)^\s*end\b",
             uncommented,
-            re.S,
+            re.M | re.S,
         )
-    )
+        if not subspec:
+            return None
+        variable = subspec.group("var")
+        scope = subspec.group("body")
+    else:
+        variable = r"\w+"
+        scope = uncommented
+
+    for bundles in re.finditer(
+        rf"\b{variable}\.resource_bundles\s*=\s*\{{(?P<body>[^}}]*)\}}",
+        scope,
+        re.S,
+    ):
+        for bundle_name, resources in re.findall(
+            r"['\"]([^'\"]+)['\"]\s*=>\s*(\[[^]]*\]|['\"][^'\"]*['\"])",
+            bundles.group("body"),
+            re.S,
+        ):
+            if "PrivacyInfo.xcprivacy" in resources:
+                return bundle_name
+    return None
+
+
+def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
+    """Return whether the selected pod specification bundles the manifest."""
+    return podspec_manifest_bundle(spec, selected_subspec) is not None
+
+
+def expected_archive_manifests(mobile: str) -> dict[str, str]:
+    """Derive archive expectations from manifests wired into source targets."""
+    expected: dict[str, str] = {}
+    for unit in discover(mobile):
+        if not os.path.exists(unit.manifest):
+            continue
+        if unit.xcodeproj:
+            expected[unit.name] = os.path.basename(unit.manifest)
+            continue
+        if not unit.podspec:
+            continue
+        try:
+            with open(unit.podspec, "r", encoding="utf-8") as handle:
+                spec = handle.read()
+        except OSError:
+            continue
+        bundle = podspec_manifest_bundle(spec, unit.selected_subspec)
+        if bundle:
+            expected[unit.name] = os.path.join(
+                f"{bundle}.bundle", "PrivacyInfo.xcprivacy"
+            )
+    return expected
 
 
 def check_sources(mobile: str) -> int:
@@ -422,7 +502,7 @@ def check_sources(mobile: str) -> int:
                         + (f" (+{len(sites) - 3} more)" if len(sites) > 3 else "")
                         + f" but {unit.manifest} does not declare it"
                     )
-            for category in sorted(set(declared) - set(definite)):
+            for category in sorted(set(declared) - set(definite) - set(ambiguous)):
                 warnings.append(
                     f"{unit.name}: {unit.manifest} declares {category} but no "
                     f"call site was detected -- confirm it is still used, or "
@@ -450,7 +530,7 @@ def check_sources(mobile: str) -> int:
                         spec = handle.read()
                 except OSError:
                     spec = ""
-                if not podspec_bundles_manifest(spec):
+                if not podspec_bundles_manifest(spec, unit.selected_subspec):
                     failures.append(
                         f"{unit.name}: {unit.manifest} exists but "
                         f"{unit.podspec} has no resource_bundles entry for it, "
@@ -461,11 +541,11 @@ def check_sources(mobile: str) -> int:
             if declared and category in declared:
                 continue
             warnings.append(
-                f"{unit.name}: possible {category} use (ambiguous accessor) at "
+                f"{unit.name}: possible {category} use (review required) at "
                 + ", ".join(sites[:3])
                 + (f" (+{len(sites) - 3} more)" if len(sites) > 3 else "")
-                + " -- confirm whether this is FileAttributeKey/URLResourceKey "
-                  "(declare it) or unrelated metadata such as PHAsset (ignore)"
+                + " -- inspect the concrete type or requested attributes, then "
+                  "declare only the category actually accessed"
             )
 
     for warning in warnings:
@@ -496,22 +576,18 @@ def check_archive(app: str, mobile: str) -> int:
                 found.add(os.path.relpath(os.path.join(dirpath, filename), app))
     print(f"ℹ️  {len(found)} privacy manifest(s) in {os.path.basename(app)}")
 
-    expected = {
-        "app manifest": "PrivacyInfo.xcprivacy",
-        "divine_camera": "divine_camera_privacy.bundle/PrivacyInfo.xcprivacy",
-        "divine_quick_actions": "divine_quick_actions_privacy.bundle/PrivacyInfo.xcprivacy",
-        "LibProofMode": "LibProofMode_privacy.bundle/PrivacyInfo.xcprivacy",
-    }
     failures = []
+    expected = expected_archive_manifests(mobile)
+    if not expected:
+        print(f"❌ no first-party privacy manifest discovered under {mobile}")
+        return 1
     for label, rel in expected.items():
         if rel in found:
             print(f"  ✅ {label}: {rel}")
         else:
             failures.append(f"{label}: expected {rel} in the built app, not found")
 
-    for rel in sorted(found):
-        if not rel.startswith(("divine_", "LibProofMode_")) and rel != "PrivacyInfo.xcprivacy":
-            continue
+    for rel in sorted(found & set(expected.values())):
         try:
             with open(os.path.join(app, rel), "rb") as handle:
                 plistlib.load(handle)

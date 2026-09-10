@@ -26,6 +26,7 @@ curation_repository 100
 db_client 40
 divine_blurhash 100
 divine_camera 100
+divine_device_attestation 100
 divine_quick_actions 76
 divine_status_client 100
 divine_ui 100
@@ -42,6 +43,7 @@ infinite_video_feed 100
 invite_api_client 89
 keycast_flutter 44
 likes_repository 62
+logging_types 100
 media_cache 98
 models 25
 nostr_app_bridge_repository 78

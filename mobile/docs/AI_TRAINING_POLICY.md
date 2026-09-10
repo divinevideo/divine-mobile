@@ -69,7 +69,7 @@ the signature.
 The assertion is built unconditionally by
 `C2paIdentityManifestService.buildCreatedVideoManifest`
 (`mobile/lib/services/c2pa_identity_manifest_service.dart`) and embedded
-during signing by `C2paSigningService.signVideo`
+during signing by `C2paSigningService.signVideoInPlace`
 (`mobile/lib/services/c2pa_signing_service.dart`).
 
 It also appears in the `referenced_assertions` list of the Nostr

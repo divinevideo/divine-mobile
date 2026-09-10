@@ -140,20 +140,16 @@ void main() {
       expect(container.read(shellObscuredProvider), isFalse);
 
       // Push a profile over the shell → obscured.
-      unawaited(
-        navigator.push(
-          MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
-        ),
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
       );
       await tester.pumpAndSettle();
       expect(container.read(shellObscuredProvider), isTrue);
 
       // Push a fullscreen video over the profile → still obscured (the shell's
       // RouteAware does not fire for a push above the profile).
-      unawaited(
-        navigator.push(
-          MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
-        ),
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
       );
       await tester.pumpAndSettle();
       expect(container.read(shellObscuredProvider), isTrue);
@@ -288,11 +284,9 @@ void main() {
       // the background upload-failure sheet, which needs no user tap. It takes
       // no overlay token of its own, so it must not disturb the sheet's.
       final shellContext = tester.element(find.byType(AppShell));
-      unawaited(
-        Navigator.of(shellContext, rootNavigator: true).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const Scaffold(body: Text('Unrelated modal')),
-          ),
+      Navigator.of(shellContext, rootNavigator: true).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Unrelated modal')),
         ),
       );
       await tester.pumpAndSettle();

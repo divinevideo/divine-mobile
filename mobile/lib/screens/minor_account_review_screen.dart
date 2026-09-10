@@ -343,7 +343,7 @@ class _LoadedView extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         DivineButton(
-          label: l10n.minorAccountReviewOpenSupportCenter,
+          label: l10n.appealOpenSupportCenter,
           leadingIcon: DivineIconName.headphones,
           expanded: true,
           onPressed: () => context.push(SupportCenterScreen.path),

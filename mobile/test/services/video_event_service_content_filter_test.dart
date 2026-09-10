@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -23,6 +25,13 @@ class _FakeFilter extends Fake implements Filter {}
 
 class _FakeLabelEvent extends Fake implements Event {
   _FakeLabelEvent({required this.pubkey, required this.tags});
+
+  @override
+  String get id =>
+      '7777777777777777777777777777777777777777777777777777777777777777';
+
+  @override
+  int get createdAt => 0;
 
   @override
   final String pubkey;
@@ -102,6 +111,14 @@ void main() {
     when(() => mockNostrClient.publicKey).thenReturn(
       '1111111111111111111111111111111111111111111111111111111111111111',
     );
+    // The moderation labeler opens a live tail after its backfill (#8255).
+    when(
+      () => mockNostrClient.subscribe(
+        any(),
+        subscriptionId: any(named: 'subscriptionId'),
+        onEose: any(named: 'onEose'),
+      ),
+    ).thenAnswer((_) => StreamController<Event>.broadcast().stream);
 
     ageVerificationService = AgeVerificationService(
       preferences: prefs,
@@ -250,8 +267,7 @@ void main() {
       );
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
-          pubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           tags: const [
             ['content-warning', 'profanity'],
           ],
@@ -265,8 +281,7 @@ void main() {
     test('relay ingest still hides an owner violence label', () {
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
-          pubkey:
-              '1111111111111111111111111111111111111111111111111111111111111111',
+          pubkey: '1111111111111111111111111111111111111111111111111111111111111111',
           tags: const [
             ['content-warning', 'violence'],
           ],

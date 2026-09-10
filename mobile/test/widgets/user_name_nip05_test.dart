@@ -11,7 +11,6 @@ import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/widgets/user_name.dart';
 
 Finder _specialCheckmark() => find.byWidgetPredicate(

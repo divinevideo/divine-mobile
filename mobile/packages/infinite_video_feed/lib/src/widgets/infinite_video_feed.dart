@@ -1223,6 +1223,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             httpHeadersForSource: httpHeadersForSource,
             isLoadCurrent: ownsInit,
             maxPlaybackDuration: widget.maxPlaybackDuration,
+            trimToCommonTrackEnd: true,
+            // A typed error the ladder cannot fix means every rendition of this
+            // file is broken; stop rather than walk the whole ladder.
+            applyTypedFailoverPolicy: true,
             onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
             onSourceLoadFailure: rememberFailedSource,
           );
@@ -1247,6 +1251,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           httpHeadersForSource: httpHeadersForSource,
           isLoadCurrent: ownsInit,
           maxPlaybackDuration: widget.maxPlaybackDuration,
+          trimToCommonTrackEnd: true,
+          // A typed error the ladder cannot fix means every rendition of this
+          // file is broken; stop rather than walk the whole ladder.
+          applyTypedFailoverPolicy: true,
           onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
           onSourceLoadFailure: rememberFailedSource,
         );
@@ -1868,9 +1876,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   bool _isSquareVideo(DivineVideoPlayerController? controller) {
     if (controller == null) return false;
     final state = controller.state;
-    return state.videoWidth > 0 &&
-        state.videoHeight > 0 &&
-        state.videoWidth == state.videoHeight;
+    // Media3 pixel ratios arrive rounded to float32 precision.
+    return (state.aspectRatio - 1.0).abs() < 1e-6;
   }
 
   // ─── Build ──────────────────────────────────────────────────────────────

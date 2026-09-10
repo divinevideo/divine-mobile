@@ -28,6 +28,12 @@ FeaturedTabConfig _featured({
   );
 }
 
+/// English copy the bar renders through `context.l10n`.
+///
+/// Matching the literals instead would pass just as well against a bar that
+/// hardcoded English, which is the regression these tests exist to catch.
+final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
+
 /// Colour the pill's text is painted in, which is what separates the
 /// sponsored state from the unsponsored one.
 Color? _pillTextColor(WidgetTester tester, String pillText) =>
@@ -37,11 +43,14 @@ void main() {
   group('$ExploreTabBar featured tab', () {
     Future<void> pumpBar(
       WidgetTester tester,
-      ExploreTabsState tabsState,
-    ) async {
+      ExploreTabsState tabsState, {
+      Locale? locale,
+      ThemeData? theme,
+    }) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: VineTheme.theme,
+          theme: theme ?? VineTheme.theme,
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: DefaultTabController(
@@ -66,22 +75,41 @@ void main() {
     ) async {
       await pumpBar(tester, const ExploreTabsState());
 
-      expect(find.text('Featured'), findsNothing);
+      expect(find.text(_l10n.exploreTabFeatured), findsNothing);
       expect(find.byType(Tab), findsNWidgets(4));
     });
 
     testWidgets('renders the configured label as a tab', (tester) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 
-      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsOneWidget);
+    });
+
+    testWidgets('renders tab labels in the active locale', (tester) async {
+      // Resolving the English keys above cannot tell a localized bar from one
+      // that hardcodes English, because the English ARB values are those very
+      // words. A second locale is what separates them.
+      final es = lookupAppLocalizations(const Locale('es'));
+      await pumpBar(
+        tester,
+        ExploreTabsState(featuredTab: _featured()),
+        locale: const Locale('es'),
+      );
+
+      expect(find.text(es.exploreTabFeatured), findsOneWidget);
+      expect(find.text(es.exploreTabNew), findsOneWidget);
+      expect(find.text(es.exploreTabPopular), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsNothing);
     });
 
     testWidgets('places the tab between New and Popular', (tester) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 
-      final newX = tester.getCenter(find.text('New')).dx;
-      final featuredX = tester.getCenter(find.text('Featured')).dx;
-      final popularX = tester.getCenter(find.text('Popular')).dx;
+      final newX = tester.getCenter(find.text(_l10n.exploreTabNew)).dx;
+      final featuredX = tester
+          .getCenter(find.text(_l10n.exploreTabFeatured))
+          .dx;
+      final popularX = tester.getCenter(find.text(_l10n.exploreTabPopular)).dx;
 
       expect(featuredX, greaterThan(newX));
       expect(featuredX, lessThan(popularX));
@@ -92,7 +120,7 @@ void main() {
     ) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 
-      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsOneWidget);
       expect(find.text('Skate Week'), findsOneWidget);
     });
 
@@ -104,7 +132,7 @@ void main() {
         ExploreTabsState(featuredTab: _featured(pillLabel: const {})),
       );
 
-      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsOneWidget);
       expect(find.text('Skate Week'), findsNothing);
     });
 
@@ -141,6 +169,29 @@ void main() {
       },
     );
 
+    testWidgets('tints the pill from the active appearance, not the dark one', (
+      tester,
+    ) async {
+      // The pill reads adaptive context.vineColors, so pinning only the dark
+      // values would stay green if it were switched to VineTheme.darkColors —
+      // pixel-identical in dark, and dark-on-dark in light.
+      await pumpBar(
+        tester,
+        ExploreTabsState(featuredTab: _featured()),
+        theme: VineTheme.lightTheme,
+      );
+
+      expect(
+        VineTheme.lightColors.accentChipYellow.onContainer,
+        isNot(VineTheme.darkColors.accentChipYellow.onContainer),
+        reason: 'the appearances must differ for this test to mean anything',
+      );
+      expect(
+        _pillTextColor(tester, 'Skate Week'),
+        equals(VineTheme.lightColors.accentChipYellow.onContainer),
+      );
+    });
+
     testWidgets('tints the pill pink when a sponsor is configured', (
       tester,
     ) async {
@@ -162,30 +213,37 @@ void main() {
     testWidgets('speaks the sponsored state rather than relying on colour', (
       tester,
     ) async {
+      // Disposed in a finally rather than an addTearDown: flutter_test runs
+      // _verifySemanticsHandlesWereDisposed inside the test body, before any
+      // teardown callback, so a deferred dispose reads as a leak. A bare
+      // dispose after the expect would be skipped when the expect throws,
+      // leaving semantics enabled for the rest of the merged isolate.
       final handle = tester.ensureSemantics();
-      await pumpBar(
-        tester,
-        ExploreTabsState(
-          featuredTab: _featured(
-            disclosureLabel: const {'default': 'Acme Bikes'},
-          ),
-        ),
-      );
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      // Matched as a substring: Tab merges its children into one node, so the
-      // pill's label arrives joined to the tab's own.
-      expect(
-        find.bySemanticsLabel(
-          RegExp(
-            RegExp.escape(
-              l10n.exploreFeaturedSponsoredPillSemanticLabel('Skate Week'),
+      try {
+        await pumpBar(
+          tester,
+          ExploreTabsState(
+            featuredTab: _featured(
+              disclosureLabel: const {'default': 'Acme Bikes'},
             ),
           ),
-        ),
-        findsWidgets,
-      );
-      handle.dispose();
+        );
+
+        // Matched as a substring: Tab merges its children into one node, so
+        // the pill's label arrives joined to the tab's own.
+        expect(
+          find.bySemanticsLabel(
+            RegExp(
+              RegExp.escape(
+                _l10n.exploreFeaturedSponsoredPillSemanticLabel('Skate Week'),
+              ),
+            ),
+          ),
+          findsWidgets,
+        );
+      } finally {
+        handle.dispose();
+      }
     });
 
     testWidgets('truncates an overlong pill harder than the label', (
@@ -210,7 +268,7 @@ void main() {
 
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 
-      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -218,11 +276,11 @@ void main() {
       tester,
     ) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
-      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text(_l10n.exploreTabFeatured), findsOneWidget);
 
       await pumpBar(tester, const ExploreTabsState());
 
-      expect(find.text('Featured'), findsNothing);
+      expect(find.text(_l10n.exploreTabFeatured), findsNothing);
     });
   });
 }

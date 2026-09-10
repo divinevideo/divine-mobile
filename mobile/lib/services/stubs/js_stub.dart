@@ -1,6 +1,7 @@
 // ABOUTME: Stub implementation for js package when not on web platform
 // ABOUTME: Provides empty implementations to prevent compilation errors on mobile
 
+// The non-web stub must retain the web JS annotation constructor signature.
 // ignore_for_file: avoid_unused_constructor_parameters
 
 // Stub implementations for non-web platforms

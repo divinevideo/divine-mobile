@@ -30,8 +30,16 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
       app: ${{ steps.scope.outputs.app }}
       native: ${{ steps.scope.outputs.native }}
+      android: ${{ steps.scope.outputs.android }}
+      ios: ${{ steps.scope.outputs.ios }}
+      service: ${{ steps.scope.outputs.service }}
+      maestro_static: ${{ steps.scope.outputs.maestro_static }}
+      smoke: ${{ steps.scope.outputs.smoke }}
+      performance: ${{ steps.scope.outputs.performance }}
+      ci_config: ${{ steps.scope.outputs.ci_config }}
     steps:
       # Fetch only the test-backed detector. The changed-file list itself still
       # comes from the REST API, avoiding a full-history checkout on the
@@ -47,6 +55,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           QUEUE_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           QUEUE_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
         run: bash mobile/scripts/ci/detect_mobile_ci_scope.sh
 
   codex-config:
@@ -117,7 +127,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -174,6 +184,8 @@ jobs:
         run: bash scripts/check_integration_test_error_restore_safety.sh
       - name: 🧾 Verify every E2E service suite is accounted for
         run: bash scripts/check_service_suite_coverage.sh
+      - name: 🕸️ Verify focused service-suite dependency scopes
+        run: bash scripts/check_service_suite_scope_drift.sh
       - name: 🔌 Verify no new raw shared-channel installs (heal-and-blame ratchet)
         run: |
           # LIST ratchet vs origin/main (fails closed if the base baseline can't
@@ -241,6 +253,12 @@ jobs:
           # Production (mobile/lib) counterpart of the test-scoped ratchet above.
           # Fails closed if the base baseline cannot be loaded. Epic: #4339 (PR-4).
           bash scripts/check_future_delayed_production_ceiling.sh
+      - name: ⏳ Verify async-safety findings do not increase (ratchet)
+        run: |
+          # #3342: analyzer-backed per-rule, per-file ceilings for the remaining
+          # unawaited_futures and discarded_futures debt. Every count may only
+          # shrink; new files and increased counts fail closed.
+          bash scripts/check_async_safety_ceiling.sh
       - name: 🧱 Verify untested-services count does not increase (floor ratchet)
         run: bash scripts/check_untested_services_floor.sh
       - name: 🧱 Verify singleton services do not regrow (DI ratchet)
@@ -277,6 +295,10 @@ jobs:
           # Issues #3574 / #3575: optionless packages silently inherit the
           # app's relaxed analyzer config; workflow-less packages get no CI.
           bash scripts/check_package_ci_floor.sh
+      - name: 🔄 Verify workspace package dependencies remain acyclic
+        # Issue #8934: runtime package dependencies must remain a directed
+        # acyclic graph; dev-only test-fixture edges are deliberately excluded.
+        run: bash scripts/check_package_dependency_cycles.sh
       - name: 🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)
         run: |
           # Issue #3338. A package with no `flutter: sdk: flutter` entry has
@@ -465,6 +487,19 @@ jobs:
           # a worklist, each carrying '# wire: <path>:<line>' or
           # '# staged: <why>'.
           bash scripts/check_orphaned_arb_key_floor.sh
+      - name: 🧹 Verify every stored preference key is classified (#8314)
+        run: |
+          # Issues #8314 / #6985. The account-switch sweep named its keys by
+          # copied string literal for nine months: eleven listed keys rotted
+          # into no-ops when their owning service was renamed or deleted, and
+          # fourteen live keys were never listed, two of them a real
+          # cross-account leak. The sweep now references the constants its
+          # services own, so a RENAME is a compile error. This freezes the
+          # other direction, which the compiler cannot see: a NEW key nobody
+          # classifies. Declare it in the sweep, or in a
+          # `deviceScopedPrefsKeys` list beside the constant — never here.
+          # Baseline entries are a worklist, not exemptions.
+          bash scripts/check_prefs_key_classification.sh
       - name: 🔐 Verify no profile publish reaches the ungated read provider (#6423)
         run: bash scripts/check_profile_read_write_split.sh
       - name: 🔨 Verify generated files are up-to-date
@@ -496,7 +531,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -520,7 +555,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -551,7 +586,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -734,7 +769,9 @@ jobs:
   goldens:
     name: Goldens
     needs: changes
-    if: ${{ needs.changes.outputs.app == 'true' }}
+    # Golden tests render through enough of the app dependency graph that a
+    # hand-maintained path allowlist cannot safely describe their inputs.
+    if: ${{ needs.changes.outputs.app == 'true' || inputs.update_goldens }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -744,7 +781,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.9"
+          flutter-version: "3.47.2"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -848,18 +885,26 @@ jobs:
             exit 1
           fi
 
-          results=(
+          required_results=(
             "${CI_CONFIG_TESTS_RESULT}"
             "${GENERATED_FILES_RESULT}"
             "${FORMAT_RESULT}"
             "${ANALYZE_RESULT}"
             "${TESTS_RESULT}"
             "${VGV_TAG_GATE_RESULT}"
-            "${GOLDENS_RESULT}"
           )
 
+          # Goldens follow the app scope. Their transitive dependency graph is
+          # too broad for an independently maintained path allowlist.
+          if [ "${APP_CI_REQUIRED}" = "true" ]; then
+            required_results+=("${GOLDENS_RESULT}")
+          elif [[ "${GOLDENS_RESULT}" != "success" && "${GOLDENS_RESULT}" != "skipped" ]]; then
+            echo "Goldens failed or were cancelled despite app CI not being required."
+            exit 1
+          fi
+
           if [ "${APP_CI_REQUIRED}" = "false" ]; then
-            for result in "${results[@]}"; do
+            for result in "${required_results[@]}"; do
               if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
                 echo "One or more Mobile CI jobs failed or were cancelled."
                 exit 1
@@ -869,7 +914,7 @@ jobs:
             exit 0
           fi
 
-          for result in "${results[@]}"; do
+          for result in "${required_results[@]}"; do
             if [ "${result}" != "success" ]; then
               echo "One or more Mobile CI jobs failed."
               exit 1

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +14,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Why every clip the feed opens has to carry the loop-seam clamp.
+const _trimReason =
+    'Feed playback loops, so a clip must end where both tracks still have '
+    'content rather than at the container duration. VideoClip.toMap omits the '
+    'key when the flag is false, so a null here is a feed call site that '
+    'stopped opting in.';
+
 class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
 class _MockCancellable extends Mock implements CancellableCacheOperation {
@@ -24,6 +33,10 @@ class _NativePlayerHarness {
 
   final WidgetTester tester;
   final List<String> methodCalls = <String>[];
+
+  /// Arguments of every `setClips` call, in order, across every player.
+  final List<Map<Object?, Object?>> setClipsArguments =
+      <Map<Object?, Object?>>[];
   final Map<int, Completer<void>> setClipsDelays = <int, Completer<void>>{};
   final Map<int, int> failSetClipsAfter = <int, int>{};
   final Map<int, List<Exception>> setClipsFailures = <int, List<Exception>>{};
@@ -55,6 +68,9 @@ class _NativePlayerHarness {
         (call) async {
           methodCalls.add('player_$playerId:${call.method}');
           if (call.method == 'setClips') {
+            setClipsArguments.add(
+              (call.arguments as Map).cast<Object?, Object?>(),
+            );
             final delay = setClipsDelays[playerId];
             if (delay != null && !delay.isCompleted) {
               await delay.future;
@@ -95,6 +111,16 @@ class _NativePlayerHarness {
       );
     }
   }
+
+  /// Every clip map handed to the native player, flattened across calls.
+  ///
+  /// `VideoClip.toMap` omits `trimToCommonTrackEnd` when it is `false`, so a
+  /// missing key here means that clip was not opted into loop-seam trimming.
+  List<Map<Object?, Object?>> get clipsHandedToPlayer => setClipsArguments
+      .expand(
+        (args) => (args['clips']! as List).cast<Map<Object?, Object?>>(),
+      )
+      .toList();
 
   int countCalls(String method) =>
       methodCalls.where((call) => call.endsWith(':$method')).length;
@@ -384,87 +410,97 @@ void main() {
         expect(find.byType(InfiniteVideoFeed), findsOneWidget);
       });
 
-      testWidgets('shows loading while first frame is not rendered', (
-        tester,
-      ) async {
-        DivineVideoPlayerController.resetIdCounterForTesting();
-        const globalChannel = MethodChannel('divine_video_player');
-        const playerChannel = MethodChannel('divine_video_player/player_0');
-        const eventChannelName = 'divine_video_player/player_0/events';
-        const methodCodec = StandardMethodCodec();
+      for (final isSquare in [true, false]) {
+        testWidgets(
+          'shows loading with isSquare=$isSquare before first frame',
+          (
+            tester,
+          ) async {
+            DivineVideoPlayerController.resetIdCounterForTesting();
+            const globalChannel = MethodChannel('divine_video_player');
+            const playerChannel = MethodChannel('divine_video_player/player_0');
+            const eventChannelName = 'divine_video_player/player_0/events';
+            const methodCodec = StandardMethodCodec();
 
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          (call) async {
-            if (call.method == 'create') return <Object?, Object?>{};
-            return null;
-          },
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          (_) async => null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMessageHandler(
-          eventChannelName,
-          (message) async {
-            final call = methodCodec.decodeMethodCall(message);
-            if (call.method == 'listen') {
-              scheduleMicrotask(() async {
-                await tester.binding.defaultBinaryMessenger
-                    .handlePlatformMessage(
-                      eventChannelName,
-                      methodCodec.encodeSuccessEnvelope(<Object?, Object?>{
-                        'status': 'ready',
-                        'videoWidth': 1280,
-                        'videoHeight': 720,
-                        'isFirstFrameRendered': false,
-                      }),
-                      (_) {},
-                    );
-              });
-            }
-            return methodCodec.encodeSuccessEnvelope(null);
-          },
-        );
-
-        await tester.pumpWidget(
-          _wrapFeed(
-            InfiniteVideoFeed(
-              videos: [_makeVideo('first_frame_pending')],
-              cache: cache,
-              prefetchCount: 0,
-              preloadGracePeriod: Duration.zero,
-              loadingBuilder: (_, _, {required isSquare}) =>
-                  const Text('loading'),
-              videoBuilder: (_, _, _, _) {
-                return const Text('video');
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              globalChannel,
+              (call) async {
+                if (call.method == 'create') return <Object?, Object?>{};
+                return null;
               },
-            ),
-          ),
-        );
+            );
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              playerChannel,
+              (_) async => null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+              eventChannelName,
+              (message) async {
+                final call = methodCodec.decodeMethodCall(message);
+                if (call.method == 'listen') {
+                  scheduleMicrotask(() async {
+                    await tester.binding.defaultBinaryMessenger
+                        .handlePlatformMessage(
+                          eventChannelName,
+                          methodCodec.encodeSuccessEnvelope(<Object?, Object?>{
+                            'status': 'ready',
+                            'videoWidth': 720,
+                            'videoHeight': 480,
+                            'pixelWidthHeightRatio': isSquare
+                                ? Float32List.fromList([
+                                    2 / 3,
+                                  ]).single
+                                : 1.0,
+                            'isFirstFrameRendered': false,
+                          }),
+                          (_) {},
+                        );
+                  });
+                }
+                return methodCodec.encodeSuccessEnvelope(null);
+              },
+            );
 
-        await tester.pump();
-        await tester.pump();
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('first_frame_pending')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  loadingBuilder: (_, _, {required isSquare}) =>
+                      Text('loading:isSquare=$isSquare'),
+                  videoBuilder: (_, _, _, _) {
+                    return const Text('video');
+                  },
+                ),
+              ),
+            );
 
-        expect(find.text('loading'), findsOneWidget);
-        expect(find.text('video'), findsOneWidget);
+            await tester.pump();
+            await tester.pump();
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
+            expect(find.text('loading:isSquare=$isSquare'), findsOneWidget);
+            expect(find.text('video'), findsOneWidget);
 
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          null,
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              globalChannel,
+              null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              playerChannel,
+              null,
+            );
+            tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+              eventChannelName,
+              null,
+            );
+          },
         );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMessageHandler(
-          eventChannelName,
-          null,
-        );
-      });
+      }
 
       testWidgets(
         'hides loading when first frame becomes rendered after init',
@@ -755,6 +791,250 @@ void main() {
         );
 
         expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      group('loop-seam policy', () {
+        testWidgets('opts every clip it opens into loop-seam trimming', (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0, 1]);
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('current'), _makeVideo('next')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            final clips = harness.clipsHandedToPlayer;
+            expect(
+              clips,
+              isNotEmpty,
+              reason:
+                  'The assertion below is vacuous unless the feed actually '
+                  'opened a source through the mocked player.',
+            );
+            expect(
+              clips.map((clip) => clip['trimToCommonTrackEnd']),
+              everyElement(isTrue),
+              reason:
+                  'Feed playback loops, so a clip must end where both tracks '
+                  'still have content rather than at the container duration. '
+                  'VideoClip.toMap omits the key when the flag is false, so a '
+                  'null here is a feed call site that stopped opting in.',
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        });
+
+        testWidgets('opts a cached file into loop-seam trimming', (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0]);
+          when(
+            () => cache.getCachedFileSync('cached'),
+          ).thenReturn(File('/cache/cached.mp4'));
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('cached')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            expect(
+              harness.clipsHandedToPlayer.map((clip) => clip['uri']),
+              contains(contains('cached.mp4')),
+              reason: 'The cached branch must be the one under test here.',
+            );
+            expect(
+              harness.clipsHandedToPlayer.map(
+                (clip) => clip['trimToCommonTrackEnd'],
+              ),
+              everyElement(isTrue),
+              reason: _trimReason,
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        });
+
+        testWidgets('opts the network fallback for an unreadable cached file '
+            'into loop-seam trimming', (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0]);
+          when(
+            () => cache.getCachedFileSync('corrupt'),
+          ).thenReturn(File('/cache/corrupt.mp4'));
+          // Only the cached open fails; the network source behind it opens.
+          harness.setClipsFailures[0] = <Exception>[
+            PlatformException(code: 'PLAYER_ERROR', message: 'unreadable'),
+          ];
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('corrupt')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            final networkClips = harness.clipsHandedToPlayer
+                .where((clip) => (clip['uri']! as String).startsWith('http'))
+                .toList();
+            expect(
+              networkClips,
+              isNotEmpty,
+              reason:
+                  'The cached open must have failed over to a network source, '
+                  'or this test is asserting on the cached clip again.',
+            );
+            expect(
+              networkClips.map((clip) => clip['trimToCommonTrackEnd']),
+              everyElement(isTrue),
+              reason: _trimReason,
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        });
+
+        testWidgets('opts a runtime failover source into loop-seam trimming', (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0]);
+
+          const divineUrl =
+              'https://media.divine.video/'
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/'
+              '720p.mp4';
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('failover', videoUrl: divineUrl)],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            final beforeFailover = harness.clipsHandedToPlayer.length;
+
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'error',
+              'errorCode': 'parse_error',
+              'errorMessage': 'parse failed',
+            });
+            await tester.pump();
+            await tester.pump();
+
+            final failoverClips = harness.clipsHandedToPlayer
+                .skip(beforeFailover)
+                .toList();
+            expect(
+              failoverClips,
+              isNotEmpty,
+              reason: 'The error must have opened a next source to assert on.',
+            );
+            expect(
+              failoverClips.map((clip) => clip['trimToCommonTrackEnd']),
+              everyElement(isTrue),
+              reason: _trimReason,
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        });
+
+        testWidgets('opts a source retried after processing into loop-seam '
+            'trimming', (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0]);
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('processing')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            final beforeRetry = harness.clipsHandedToPlayer.length;
+
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'error',
+              'errorCode': 'media_processing',
+              'errorMessage': 'HTTP 202 still processing',
+            });
+            await tester.pump();
+            await tester.pump(const Duration(seconds: 2));
+            await tester.pump();
+
+            final retryClips = harness.clipsHandedToPlayer
+                .skip(beforeRetry)
+                .toList();
+            expect(
+              retryClips,
+              isNotEmpty,
+              reason: 'The 202 must have scheduled a retry to assert on.',
+            );
+            expect(
+              retryClips.map((clip) => clip['trimToCommonTrackEnd']),
+              everyElement(isTrue),
+              reason: _trimReason,
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        });
       });
 
       testWidgets('does not autoplay when mounted inactive', (tester) async {

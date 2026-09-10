@@ -182,12 +182,11 @@ class SupporterPurchaseClaim {
 typedef SupporterAuthHeader = ({String authorizationHeader, String pubkey});
 
 /// Provides NIP-98 authentication for an exact request.
-typedef SupporterAuthHeaderProvider =
-    Future<SupporterAuthHeader?> Function({
-      required String url,
-      required HttpMethod method,
-      String? payload,
-    });
+typedef SupporterAuthHeaderProvider = Future<SupporterAuthHeader?> Function({
+  required String url,
+  required HttpMethod method,
+  String? payload,
+});
 
 /// NIP-98 authenticated client for the version-one supporter Worker API.
 class SupporterApiClient {

@@ -21,6 +21,7 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -106,7 +107,7 @@ void main() {
     Widget buildSubject({
       String videoId = 'test_video_id',
       List<String> fallbackVideoIds = const [],
-      List<dynamic> extraOverrides = const <dynamic>[],
+      List<Override> extraOverrides = const <Override>[],
     }) {
       return testMaterialApp(
         mockNostrService: mockNostrClient,

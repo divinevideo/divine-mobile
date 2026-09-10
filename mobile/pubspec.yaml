@@ -19,8 +19,8 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.22+820
 
 environment:
-  sdk: ^3.12.0
-  flutter: ^3.44.0
+  sdk: ^3.13.0
+  flutter: ^3.47.0
 
 workspace:
   - packages/analytics
@@ -46,6 +46,7 @@ workspace:
   - packages/divine_ui
   - packages/db_client
   - packages/divine_camera
+  - packages/divine_device_attestation
   - packages/divine_quick_actions
   - packages/divine_status_client
   - packages/dm_repository
@@ -61,6 +62,7 @@ workspace:
   - packages/invite_api_client
   - packages/keycast_flutter
   - packages/likes_repository
+  - packages/logging_types
   - packages/media_cache
   - packages/models
   - packages/notification_repository
@@ -125,7 +127,6 @@ dependencies:
   flutter_bloc: ^9.0.0
   bloc_concurrency: ^0.3.0
   provider: ^6.1.5+1
-  freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
   rxdart: ^0.28.0
 
@@ -163,6 +164,8 @@ dependencies:
       ref: 847d0c0183c9c09946ce321c107decd3fd9f56b2 # tag 0.0.3
   divine_camera:
     path: packages/divine_camera
+  divine_device_attestation:
+    path: packages/divine_device_attestation
   divine_quick_actions:
     path: packages/divine_quick_actions
   divine_video_player:
@@ -371,8 +374,8 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.11.3
-  pro_image_editor: ^13.3.1
+  pro_video_editor: ^2.11.4
+  pro_image_editor: ^13.5.0
   flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
   sensors_plus: ^7.0.0
@@ -380,7 +383,6 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
   qr_flutter: ^4.1.0
   android_intent_plus: ^6.0.0
-  app_device_integrity: ^1.1.0
   pointer_interceptor: ^0.10.1+2
   volume_controller: ^3.4.4
   meta: ^1.18.0
@@ -389,10 +391,6 @@ dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the
   # transitive 11.x platform interface changes.
   device_info_plus: ^10.1.2
-  # TODO(#6918): Local fork documents its divergence and removal condition in
-  # overrides/app_device_integrity-1.1.0/OVERRIDE.md.
-  app_device_integrity:
-    path: overrides/app_device_integrity-1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -411,6 +409,11 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
 
   very_good_analysis: ^10.2.0
+
+  # Test-only. Nothing under lib/ imports package:logging_types -- the app
+  # reaches LogEntry/LogLevel/LogCategory through the models and unified_logger
+  # re-exports. Only test/ names the package directly.
+  logging_types:
 
   # Powers scripts/check_post_close_emit_ceiling.sh, which needs a real Dart
   # AST to tell Cubit.emit (throws after close) from an event handler's
@@ -444,7 +447,6 @@ dev_dependencies:
   riverpod_generator: ^4.0.4
   # custom_lint: ^0.6.4  # Temporarily disabled due to rxdart version conflict
   # riverpod_lint: ^2.3.10  # Depends on custom_lint
-  freezed: ^3.0.0
   json_serializable: ^6.8.0
   yaml: any
   golden_toolkit: ^0.15.0

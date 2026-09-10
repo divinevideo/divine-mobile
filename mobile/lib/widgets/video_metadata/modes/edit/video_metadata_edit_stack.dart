@@ -165,7 +165,10 @@ class _VideoMetadataEditStackContentState
                     ),
                   ),
                   // Editing is post-publish; expiration cannot be changed.
-                  const VideoMetadataFormFields(enableExpiration: false),
+                  const VideoMetadataFormFields(
+                    enableExpiration: false,
+                    enableCaptionMentionAutocomplete: false,
+                  ),
                 ],
               ),
             ),

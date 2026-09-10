@@ -1,0 +1,11 @@
+appId: co.openvine.app.staging
+name: PR smoke - app launch
+tags:
+  - pr-smoke
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "create_account_button"
+    timeout: 30000

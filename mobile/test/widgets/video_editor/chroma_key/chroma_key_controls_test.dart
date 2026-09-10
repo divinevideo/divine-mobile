@@ -30,12 +30,34 @@ void main() {
       );
     });
 
-    Future<void> pump(WidgetTester tester, ThemeData theme) async {
+    Future<void> pump(
+      WidgetTester tester,
+      ThemeData theme, {
+      TextScaler textScaler = TextScaler.noScaling,
+      Locale? locale,
+    }) async {
+      // A phone, not the 800x600 default. The panel is a narrow column of
+      // rows, so a surface 2.2x a phone's width cannot show one overflowing
+      // and the text-scale test below would pass on anything.
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         MaterialApp(
           theme: theme,
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          // copyWith, not a fresh MediaQueryData: the default constructor
+          // zeroes size, padding and devicePixelRatio, so every test in this
+          // file would measure a 0x0 unpadded screen. Sitting on `builder`
+          // rather than `home` also carries the scale into pushed routes.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            child: child!,
+          ),
           home: BlocProvider<ChromaKeyEditorCubit>.value(
             value: cubit,
             child: Scaffold(
@@ -55,6 +77,77 @@ void main() {
         .widgetList<Text>(find.byType(Text))
         .map((t) => t.style?.color)
         .toSet();
+
+    testWidgets('states the surface requirement without being asked', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(en.videoEditorChromaKeySurfaceHint),
+        findsOneWidget,
+        reason:
+            'The prerequisite used to surface only as a failed detect, after '
+            'the clip was already shot (#8547).',
+      );
+      expect(
+        en.videoEditorChromaKeySurfaceHint.toLowerCase(),
+        contains('wall'),
+        reason:
+            'Naming a wall is the point: most people own no green screen and '
+            'do not know an ordinary wall keys. Epic #8543 ratified that '
+            'framing.',
+      );
+    });
+
+    testWidgets('resolves the hint through l10n rather than a literal', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme, locale: const Locale('de'));
+
+      // Asserting only that the German string is absent from an English
+      // render is satisfied by a hardcoded English literal too. Rendering
+      // German is the half that a literal cannot fake.
+      final de = lookupAppLocalizations(const Locale('de'));
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(de.videoEditorChromaKeySurfaceHint), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeySurfaceHint), findsNothing);
+    });
+
+    testWidgets('puts the hint above auto-detect', (tester) async {
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(
+        tester.getTopLeft(find.text(en.videoEditorChromaKeySurfaceHint)).dy,
+        lessThan(
+          tester.getTopLeft(find.text(en.videoEditorChromaKeyAutoDetect)).dy,
+        ),
+        reason:
+            'The hint has to be read before the button it qualifies, or the '
+            'panel is still inert to a first-time user (#8547). find.text '
+            'alone passes with the hint moved below the fold.',
+      );
+    });
+
+    testWidgets('holds at the largest system text scale', (tester) async {
+      await pump(
+        tester,
+        VineTheme.theme,
+        textScaler: const TextScaler.linear(2),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(
+          lookupAppLocalizations(
+            const Locale('en'),
+          ).videoEditorChromaKeySurfaceHint,
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('takes its text from the light palette, not fixed dark', (
       tester,

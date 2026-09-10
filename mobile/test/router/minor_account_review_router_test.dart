@@ -23,6 +23,7 @@ import 'package:openvine/screens/minor_account_review_under13_support_screen.dar
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -229,7 +230,7 @@ void main() {
             AuthState.authenticated,
             const AsyncLoading<AccountDeletionAttempt?>(),
           ),
-          isFalse,
+          isTrue,
         );
         // The post-auth refetch that retains the pre-auth null must not settle,
         // or the splash releases against the stale null and a recovery user
@@ -239,6 +240,22 @@ void main() {
           authenticatedDeletionLookupSettled(
             AuthState.authenticated,
             await _retainedNullRefetch(),
+          ),
+          isTrue,
+        );
+        expect(
+          authenticatedDeletionLookupSettled(
+            AuthState.authenticated,
+            const AsyncLoading<AccountDeletionAttempt?>(),
+            submittedAttempt: const SubmittedAccountDeletionAttempt(
+              pubkeyHex: 'user-pubkey',
+              attempt: AccountDeletionAttempt(
+                id: 'attempt-id',
+                status: AccountDeletionAttemptStatus.processing,
+              ),
+              vanishEventId: 'vanish-event-id',
+            ),
+            currentPubkeyHex: 'user-pubkey',
           ),
           isFalse,
         );
@@ -266,7 +283,7 @@ void main() {
   group('Minor account review router gating', () {
     late MockAuthService mockAuthService;
 
-    List<dynamic> routerOverrides({
+    List<Override> routerOverrides({
       AccountDeletionAttempt? deletionAttempt,
     }) => [
       ...getStandardTestOverrides(mockAuthService: mockAuthService),

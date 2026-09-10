@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4797,9 +4798,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get supportRevealLogsAction => 'ఫోల్డర్‌లో చూపించు';
 
   @override
-  String get supportChatNotAvailable => 'మద్దతు చాట్ అందుబాటులో లేదు';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'మద్దతు సందేశాలను తెరవడం సాధ్యపడలేదు';
 
@@ -5368,22 +5366,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundUseSound => 'సౌండ్ ఉపయోగించండి';
-
-  @override
-  String get soundUntitled => 'శీర్షికలేని ధ్వని';
-
-  @override
-  String get soundStopPreview => 'ప్రివ్యూను ఆపు';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'ప్రివ్యూ $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'దీని కోసం వివరాలను వీక్షించండి $title';
-  }
 
   @override
   String get soundNoVideoCount => 'ఇంకా వీడియోలు లేవు';
@@ -9106,6 +9088,55 @@ class AppLocalizationsTe extends AppLocalizations {
       'సర్దుబాటు చేయడానికి స్లయిడ్ చేయండి';
 
   @override
+  String get videoEditorDetachLabel => 'వేరు చేయి';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'ఎంచుకున్న క్లిప్‌ని టైమ్‌లైన్ నుండి వేరు చేయండి';
+
+  @override
+  String get videoEditorDetachTitle => 'క్లిప్‌ని వేరు చేయండి';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'క్లిప్ కాన్వాస్‌కి వెళ్తుంది, అక్కడ మీరు దానిని ఎక్కడైనా ఉంచవచ్చు. టైమ్‌లైన్‌లో దాని స్థానాన్ని ఏది తీసుకుంటుంది?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'ఏమీ లేదు';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'ఖాళీని మూసివేయండి – ఆ తర్వాతివన్నీ ముందుగా మొదలవుతాయి.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'రంగు';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'క్లిప్ నడిచినంత సేపు ఒకే రంగును ఉంచుతుంది.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'ఫోటో';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'దాని స్థానాన్ని నిలిపే ఫోటో తీయండి.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'వేరు చేసిన క్లిప్';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'మీ క్లిప్‌ను వేరు చేస్తోంది…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'ఆ క్లిప్‌ని వేరు చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'గ్రీన్ స్క్రీన్';
 
   @override
@@ -9176,8 +9207,12 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'స్క్రీన్‌ని కనుగొనడం సాధ్యపడలేదు. ఇది ఫ్రేమ్ అంచులను చేరుకోవాలి - బదులుగా చేతితో రంగును ఎంచుకోండి.';
+      'స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';
@@ -9484,6 +9519,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'శీర్షికలేని ధ్వని';
+
+  @override
+  String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override
   String get videoEditorAudioUntitled => 'శీర్షిక లేదు';
@@ -10165,8 +10203,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           'ఇది బ్లాక్ చేస్తుంది $countఖాతాలు ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్నాయి. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
-      one:
-          'ఇది ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్న ఖాతాను బ్లాక్ చేస్తుంది. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
+      one: 'ఇది ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్న ఖాతాను బ్లాక్ చేస్తుంది. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
     );
     return '$_temp0';
   }
@@ -10436,8 +10473,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter =>
-      'మద్దతు కేంద్రాన్ని తెరవండి';
+  String get appealOpenSupportCenter => 'మద్దతు కేంద్రాన్ని తెరవండి';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11650,6 +11686,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get savedSoundRemoveAction => 'సేవ్ చేయబడిన ధ్వనిని తీసివేయండి';
 
   @override
+  String get savedSoundFileMissing =>
+      'ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.';
+
+  @override
   String get savedSoundClearHashtagFilter =>
       'హ్యాష్‌ట్యాగ్ ఫిల్టర్‌ను క్లియర్ చేయండి';
 
@@ -12448,9 +12488,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine నియంత్రణ నిర్ణయాన్ని పునఃపరిశీలించడానికి అభ్యర్థనలను సమీక్షించవచ్చు, కానీ బాధ్యత వహించదు. మీరు దీన్ని పెంచాలనుకుంటే, మద్దతును సంప్రదించండి మరియు ఏమి జరిగిందో మాకు చెప్పండి.';
-
-  @override
-  String get accountStatusContactSupport => 'మద్దతును సంప్రదించండి';
 
   @override
   String get accountStatusMoveAccount => 'మీ ఖాతాను తరలించండి';

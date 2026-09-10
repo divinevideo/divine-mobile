@@ -1984,7 +1984,6 @@
     "supportLoginRequired": "ድጋፍን ለማግኘት ይግቡ",
     "supportExportingLogs": "ምዝግብ ማስታወሻዎችን በመላክ ላይ...",
     "supportExportLogsFailed": "ምዝግብ ማስታወሻዎችን ወደ ውጭ መላክ አልተሳካም።",
-    "supportChatNotAvailable": "የድጋፍ ውይይት አይገኝም",
     "supportCouldNotOpenMessages": "የድጋፍ መልዕክቶችን መክፈት አልተቻለም",
     "supportCouldNotOpenPage": "{pageName} መክፈት አልተቻለም",
     "@supportCouldNotOpenPage": {
@@ -2160,24 +2159,6 @@
     "soundPreview": "ቅድመ እይታ",
     "soundStop": "ተወ",
     "soundUseSound": "ድምጽን ተጠቀም",
-    "soundUntitled": "ርዕስ የሌለው ድምፅ",
-    "soundStopPreview": "ቅድመ እይታን አቁም",
-    "soundPreviewSemanticLabel": "{title}ን ቀድመው ያጫውቱ",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "የ{title} ዝርዝሮችን ይመልከቱ",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "soundNoVideoCount": "እስካሁን ምንም ቪዲዮዎች የሉም",
     "soundOneVideo": "1 ቪዲዮ",
     "soundVideoCount": "{count} ቪዲዮዎች",
@@ -3331,6 +3312,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "ቅድመ እይታን አጫውት።",
     "videoEditorAudioPausePreviewSemanticLabel": "ቅድመ እይታን ባለበት አቁም",
     "videoEditorAudioUntitledSound": "ርዕስ አልባ ድምጽ",
+    "videoEditorAudioFileMissing": "የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም",
     "videoEditorVolumeLongPressHint": "ሁሉንም ትራኮች ያጥፉ ወይም ያብሩ",
     "videoEditorAudioUntitled": "ርዕስ አልባ",
     "videoEditorAudioAddAudio": "ኦዲዮ ያክሉ",
@@ -3788,7 +3770,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "ለማስተካከል ያንሸራትቱ",
     "videoEditorVolumeSemanticLabel": "ድምጽ አስተካክል",
-    "videoEditorChromaKeyLabel": "አረንጓዴ ስክሪን",
+    "videoEditorDetachLabel": "ነጥል",
+  "videoEditorDetachSemanticLabel": "የተመረጠውን ቅንጥብ ከጊዜ መስመሩ ይንጠሉ",
+  "videoEditorDetachTitle": "ቅንጥብ መንጠል",
+  "videoEditorDetachDescription": "ቅንጥቡ ወደ ሸራው ይሄዳል፣ እዚያም የፈለጉበት ቦታ ማስቀመጥ ይችላሉ። በጊዜ መስመሩ ላይ ቦታውን ማን ይይዘዋል?",
+  "videoEditorDetachReplaceRemove": "ምንም",
+  "videoEditorDetachReplaceRemoveDetail": "ክፍተቱን ይዝጉ – ከዚያ በኋላ ያለው ሁሉ ቀድሞ ይጀምራል።",
+  "videoEditorDetachReplaceColor": "ቀለም",
+  "videoEditorDetachReplaceColorDetail": "ቅንጥቡ በሄደበት ያህል ጊዜ አንድ ሙሉ ቀለም ይይዛል።",
+  "videoEditorDetachReplaceImage": "ፎቶ",
+  "videoEditorDetachReplaceImageDetail": "ቦታውን የሚይዝ ፎቶ ያንሱ።",
+  "videoEditorDetachedClipLabel": "የተነጠለ ቅንጥብ",
+  "videoEditorDetachProgressLabel": "ቅንጥብዎ እየተለየ ነው…",
+  "videoEditorDetachFailed": "ያንን ቅንጥብ መንጠል አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።",
+  "videoEditorDetachImagePickFailed": "ያንን ፎቶ መጫን አልተቻለም።",
+  "videoEditorChromaKeyLabel": "አረንጓዴ ስክሪን",
     "videoEditorChromaKeyTitle": "አረንጓዴ ስክሪን",
     "videoEditorChromaKeySemanticLabel": "ለዚህ ቅንጥብ አረንጓዴ ስክሪን አዘጋጅ",
     "videoEditorChromaKeyCloseSemanticLabel": "የአረንጓዴ ስክሪን ለውጦችን ተው",
@@ -3809,7 +3805,8 @@
     "videoEditorChromaKeyBackgroundImage": "ምስል",
     "videoEditorChromaKeyBackgroundVideo": "ቅንጥብ",
     "videoEditorChromaKeyTransparentHint": "ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።",
-    "videoEditorChromaKeyDetectFailed": "ስክሪን አልተገኘም። እስከ ፍሬሙ ጠርዝ መድረስ አለበት — ካልሆነ ቀለሙን በእጅ ምረጥ።",
+    "videoEditorChromaKeySurfaceHint": "ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።",
+    "videoEditorChromaKeyDetectFailed": "ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።",
     "videoEditorChromaKeyPickClipTitle": "ቅንጥብ ምረጥ",
     "videoEditorChromaKeyNoLibraryClips": "ቤተ-መጻሕፍትህ ባዶ ነው። መጀመሪያ ቅንጥብ አስቀምጥ፣ ከዚያ እንደ ዳራ ተጠቀምበት።",
     "videoEditorChromaKeyImagePickFailed": "ያንን ምስል መጫን አልተቻለም።",
@@ -3912,7 +3909,7 @@
     "minorAccountReviewRestrictionEngagement": "አስተያየቶች፣ መውደዶች፣ ድጋሚ ልጥፎችና መከታተያዎች ቆመዋል",
     "minorAccountReviewRestrictionMessaging": "መደበኛ መልእክቶችን መጀመር ወይም መመለስ ቆሟል",
     "minorAccountReviewRestrictionSupport": "ድጋፍና የቁጥጥር መልእክትህ አሁንም ይገኛሉ",
-    "minorAccountReviewOpenSupportCenter": "የድጋፍ ማዕከልን ክፈት",
+    "appealOpenSupportCenter": "የድጋፍ ማዕከልን ክፈት",
     "minorAccountReviewOpenModerationMessage": "የቁጥጥር መልእክቱን ክፈት",
     "minorAccountReviewOpenReviewPage": "የግምገማ ገጹን ክፈት",
     "minorAccountReviewCheckAgain": "እንደገና ፈትሽ",
@@ -4640,6 +4637,7 @@
   "savedSoundPreviewAction": "ድምፁን አዳምጥ",
   "savedSoundEditAction": "የድምፅ ዝርዝሮችን አርም",
   "savedSoundRemoveAction": "የተቀመጠውን ድምፅ አስወግድ",
+  "savedSoundFileMissing": "የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም።",
   "savedSoundClearHashtagFilter": "የሃሽታግ ማጣሪያን አጽዳ",
   "soundAllowRemix": "ሌሎች ይህን ድምፅ እንዲቀላቅሉ ፍቀድ",
   "soundReuseUnavailable": "ይህ ድምፅ አሁን መቀላቀል አይችልም።",

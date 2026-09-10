@@ -93,9 +93,22 @@ class SeenVideosService {
        _database = database,
        _prefsOverride = prefsOverride;
 
-  static const String _seenVideosKey = 'seen_video_ids';
-  static const String _seenVideosMetricsKey = 'seen_video_metrics';
-  static const String _seenVideosMigratedKey = 'seen_videos_migrated_to_db';
+  /// Legacy id-only list, read once and removed after migrating to metrics.
+  ///
+  /// Still present on installs that have not launched since the metrics
+  /// format landed, so account cleanup must keep clearing it.
+  static const String legacySeenVideosStorageKey = 'seen_video_ids';
+
+  /// Current seen-video metrics, rewritten on every debounced save.
+  static const String seenVideosMetricsStorageKey = 'seen_video_metrics';
+
+  /// Gates the one-time copy of [seenVideosMetricsStorageKey] into Drift.
+  ///
+  /// Cleared with the data it gates: left set while the metrics and the Drift
+  /// rows are wiped, it would tell the next account's first launch that a
+  /// migration it never ran had already happened.
+  static const String seenVideosMigratedStorageKey =
+      'seen_videos_migrated_to_db';
   static const int _maxSeenVideos = 1000;
 
   final Map<String, SeenVideoMetrics> _seenVideos = {};
@@ -154,7 +167,7 @@ class SeenVideosService {
   Future<void> _loadSeenVideos() async {
     if (_prefs == null) return;
     try {
-      final metricsJson = _prefs!.getString(_seenVideosMetricsKey);
+      final metricsJson = _prefs!.getString(seenVideosMetricsStorageKey);
       if (metricsJson != null) {
         final metricsList = jsonDecode(metricsJson) as List<dynamic>;
         _seenVideos.clear();
@@ -172,7 +185,7 @@ class SeenVideosService {
           category: LogCategory.system,
         );
       } else {
-        final legacyList = _prefs!.getStringList(_seenVideosKey);
+        final legacyList = _prefs!.getStringList(legacySeenVideosStorageKey);
         if (legacyList != null && legacyList.isNotEmpty) {
           _seenVideos.clear();
           _seenLastSeen.clear();
@@ -191,7 +204,7 @@ class SeenVideosService {
             category: LogCategory.system,
           );
           await _saveSeenVideosNow();
-          await _prefs!.remove(_seenVideosKey);
+          await _prefs!.remove(legacySeenVideosStorageKey);
         }
       }
       if (_effectiveDb != null) {
@@ -206,12 +219,13 @@ class SeenVideosService {
               _seenLastSeen[row.videoId] = lastSeen;
             }
           }
-          final migrated = _prefs!.getBool(_seenVideosMigratedKey) ?? false;
+          final migrated =
+              _prefs!.getBool(seenVideosMigratedStorageKey) ?? false;
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
             await _migrateMetricsToDb();
-            await _prefs!.setBool(_seenVideosMigratedKey, true);
+            await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           } else if (dbRows.isNotEmpty && !migrated) {
-            await _prefs!.setBool(_seenVideosMigratedKey, true);
+            await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           }
           Log.debug(
             '📱 Seen DB hydrated: ${dbRows.length} rows, merged to ${_seenLastSeen.length} total',
@@ -278,7 +292,10 @@ class SeenVideosService {
         }
       }
       final metricsList = videosToSave.map((m) => m.toJson()).toList();
-      await _prefs!.setString(_seenVideosMetricsKey, jsonEncode(metricsList));
+      await _prefs!.setString(
+        seenVideosMetricsStorageKey,
+        jsonEncode(metricsList),
+      );
       Log.debug(
         '📱 Saved ${videosToSave.length} seen videos with metrics (seen set: ${_seenLastSeen.length})',
         name: 'SeenVideosService',
@@ -467,6 +484,7 @@ class SeenVideosService {
   }
 
   Future<void> clearSeenVideos() async {
+    await _initializeFuture;
     Log.debug(
       '📱️ Clearing all seen videos',
       name: 'SeenVideosService',
@@ -476,16 +494,12 @@ class SeenVideosService {
     _seenLastSeen.clear();
     await _flushPendingSeenVideosSave();
     if (_prefs != null) {
-      await _prefs!.remove(_seenVideosMetricsKey);
-      await _prefs!.remove(_seenVideosKey);
-      await _prefs!.remove(_seenVideosMigratedKey);
+      await _prefs!.remove(seenVideosMetricsStorageKey);
+      await _prefs!.remove(legacySeenVideosStorageKey);
+      await _prefs!.remove(seenVideosMigratedStorageKey);
     }
     if (_effectiveDb != null) {
-      try {
-        await _effectiveDb!.seenVideosDao.clearAll();
-      } catch (_) {
-        // best-effort cleanup: DB clear failure is non-fatal
-      }
+      await _effectiveDb!.seenVideosDao.clearAll();
     }
   }
 

@@ -2222,6 +2222,7 @@ void main() {
           () => mockCleanupService.clearUserSpecificData(
             reason: 'explicit_logout',
             userPubkey: expectedPubkey,
+            // Explicit false is the account-preservation behavior asserted here.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
           ),
@@ -2246,6 +2247,7 @@ void main() {
         () => mockCleanupService.clearUserSpecificData(
           reason: 'explicit_logout',
           userPubkey: expectedPubkey,
+          // Explicit false is the account-preservation behavior asserted here.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
         ),
@@ -2311,15 +2313,20 @@ void main() {
       });
     }
 
-    test('prefetches following before auth when cache is missing', () async {
+    test('prefetches following after publishing authenticated state', () async {
       final prefetchedPubkeys = <String>[];
+      final prefetchStarted = Completer<void>();
+      final prefetchFinished = Completer<void>();
       authService = AuthService(
         backgroundActivityManager: BackgroundActivityManager(),
         userDataCleanupService: mockCleanupService,
         keyStorage: mockKeyStorage,
         flutterSecureStorage: mockSecureStorage,
         preFetchFollowing: (pubkeyHex) async {
+          expect(authService.authState, AuthState.authenticated);
           prefetchedPubkeys.add(pubkeyHex);
+          prefetchStarted.complete();
+          await prefetchFinished.future;
         },
       );
 
@@ -2336,7 +2343,9 @@ void main() {
       await _ignoringDiscoveryErrors(authService.initialize);
 
       expect(authService.authState, equals(AuthState.authenticated));
+      await prefetchStarted.future;
       expect(prefetchedPubkeys, [testKeyContainer.publicKeyHex]);
+      prefetchFinished.complete();
     });
 
     test(

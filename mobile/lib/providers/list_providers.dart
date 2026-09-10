@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
 import 'package:nostr_sdk/filter.dart';

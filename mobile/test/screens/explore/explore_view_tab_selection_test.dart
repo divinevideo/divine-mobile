@@ -51,6 +51,13 @@ class _FakeCuratedListsState extends CuratedListsState {
 
 const _pollInterval = Duration(seconds: 30);
 
+/// English copy the tab bar renders through `context.l10n`.
+///
+/// The tap targets below are matched by their rendered label, so spelling
+/// them as literals would break this suite on a copy change rather than on
+/// the selection behaviour it exists to guard.
+final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
+
 final _testFeaturedTabAgeGateProvider = StateProvider<bool>((ref) => true);
 
 const _featuredConfig = FeaturedTabConfig(
@@ -116,6 +123,7 @@ void main() {
     when(() => videoEventService.discoveryVideos).thenReturn([]);
     when(() => videoEventService.popularNowVideos).thenReturn([]);
     when(() => videoEventService.isSubscribed(any())).thenReturn(false);
+    // This mock exposes ChangeNotifier listener state to isolate rendering.
     // ignore: invalid_use_of_protected_member
     when(() => videoEventService.hasListeners).thenReturn(false);
   });
@@ -213,7 +221,8 @@ void main() {
         initialTabSlug: explorePopularTabName,
       );
 
-      controllerOf(tester).index = 3;
+      const chosenIndex = 3;
+      controllerOf(tester).index = chosenIndex;
       await tester.pumpAndSettle();
       final chosen = selectedTabName(tester);
       expect(chosen, isNot(explorePopularTabName));
@@ -223,7 +232,40 @@ void main() {
 
       expect(repository.refreshCount, greaterThan(1));
       expect(find.text('Spotlight'), findsOneWidget);
+      // Featured slots in above the chosen tab, so staying on it means
+      // following it to a new index. Without this the test also passes when
+      // featured is appended last and no remap happens at all.
+      expect(controllerOf(tester).index, greaterThan(chosenIndex));
       expect(selectedTabName(tester), equals(chosen));
+    });
+
+    testWidgets('a tab tap writes the choice to the persisted tab name', (
+      tester,
+    ) async {
+      // Explore is torn down and rebuilt on every grid -> feed -> grid trip,
+      // so the choice has to outlive the widget. This covers the write half;
+      // the read half — a fresh mount restoring the stored name — is
+      // `ExploreScreen restores the selected tab by stable name` in
+      // test/screens/explore_screen_apps_tab_test.dart. Nothing in this
+      // group remounts.
+      final repository = _StagedFeaturedTabsRepository();
+      await pumpExplore(tester, repository: repository);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ExploreScreen)),
+      );
+      expect(
+        container.read(exploreTabNameProvider),
+        isNot(exploreCategoriesTabName),
+      );
+
+      await tester.tap(find.text(_l10n.exploreTabCategories));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(exploreTabNameProvider),
+        equals(exploreCategoriesTabName),
+      );
     });
 
     testWidgets('a deep link still lands on a tab that arrives late', (
@@ -274,7 +316,7 @@ void main() {
         initialTabSlug: _featuredConfig.slug,
       );
 
-      await tester.tap(find.text('Categories'));
+      await tester.tap(find.text(_l10n.exploreTabCategories));
       await tester.pumpAndSettle();
       expect(selectedTabName(tester), equals(exploreCategoriesTabName));
 

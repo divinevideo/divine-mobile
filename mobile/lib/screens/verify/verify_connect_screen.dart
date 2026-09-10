@@ -261,6 +261,7 @@ class _ConnectForm extends StatelessWidget {
           textInputAction: .send,
           keyboardType: TextInputType.url,
           textCapitalization: TextCapitalization.none,
+          autocorrect: false,
           onChanged: context.read<VerifyConnectCubit>().proofChanged,
           onSubmitted: (_) => state.isBusy || !state.canSubmitProof
               ? null

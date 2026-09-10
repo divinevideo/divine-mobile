@@ -4,9 +4,19 @@
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
+import 'package:openvine/services/account_label_service.dart';
+import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
+import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -201,23 +211,98 @@ void main() {
       });
 
       test('clears bookmark-related keys', () async {
-        await prefs.setStringList('bookmark_sets', ['set1']);
         await prefs.setString('global_bookmarks', 'bookmark_data');
+        await prefs.setInt('global_bookmarks_revision', 3);
 
         await service.clearUserSpecificData();
 
-        expect(prefs.containsKey('bookmark_sets'), isFalse);
         expect(prefs.containsKey('global_bookmarks'), isFalse);
+        expect(prefs.containsKey('global_bookmarks_revision'), isFalse);
       });
 
-      test('clears mute/moderation keys', () async {
-        await prefs.setStringList('muted_items', ['user1', 'user2']);
-        await prefs.setStringList('content_moderation_local_mutes', ['mute1']);
+      // Each entry is a key a live service writes that the account-switch
+      // sweep did not name. They are grouped because the failure is one
+      // defect, not eight: the sweep list was never linked to the code that
+      // writes these keys, so a key added later was never added here.
+      final unsweptUserKeys = <String, String>{
+        'account self-labels applied to new uploads':
+            AccountLabelService.accountLabelStorageKey,
+        'per-category content filter choices':
+            ContentFilterService.filterPrefsStorageKey,
+        'the content-filter migration flag guarding those choices':
+            ContentFilterService.filterMigratedStorageKey,
+        'the legacy adult-content preference used by that migration':
+            ContentFilterService.legacyAdultContentPreferenceStorageKey,
+        'muted DM conversations': mutedConversationsStorageKey,
+        'the seen-videos migration flag guarding watch history':
+            SeenVideosService.seenVideosMigratedStorageKey,
+        'declared content language published on videos':
+            LanguagePreferenceService.prefsKey,
+        'the unscoped custom sound library':
+            SoundLibraryService.customSoundsStorageKey,
+        'whether this account audio is reusable by others':
+            AudioSharingPreferenceService.prefsKey,
+        'the Divine-hosted-only feed filter':
+            DivineHostFilterService.showDivineHostedOnlyStorageKey,
+        'the verified-only feed filter':
+            VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
+      };
 
-        await service.clearUserSpecificData();
+      for (final entry in unsweptUserKeys.entries) {
+        test('identity change clears ${entry.key}', () async {
+          await prefs.setString(entry.value, 'value_from_departing_account');
 
-        expect(prefs.containsKey('muted_items'), isFalse);
-        expect(prefs.containsKey('content_moderation_local_mutes'), isFalse);
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(
+            prefs.containsKey(entry.value),
+            isFalse,
+            reason:
+                'the incoming account must not inherit "${entry.value}" '
+                'from the account that just signed out',
+          );
+        });
+      }
+
+      test(
+        'clears the labelers the departing account chose to trust',
+        () async {
+          await prefs.setStringList(
+            ModerationLabelService.subscribedLabelersStorageKey,
+            ['labeler_chosen_by_departing_account'],
+          );
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(
+            prefs.getStringList(
+              ModerationLabelService.subscribedLabelersStorageKey,
+            ),
+            isNull,
+            reason:
+                'the incoming account must not inherit moderation '
+                'subscriptions chosen by the previous account (#6985)',
+          );
+        },
+      );
+
+      test('clears the departing account follow-as-labeler choice', () async {
+        await prefs.setBool(
+          ModerationLabelService.followingModerationEnabledStorageKey,
+          true,
+        );
+
+        await service.clearUserSpecificData(isIdentityChange: true);
+
+        expect(
+          prefs.getBool(
+            ModerationLabelService.followingModerationEnabledStorageKey,
+          ),
+          isNull,
+          reason:
+              'the incoming account must not inherit the choice to '
+              'trust followed accounts as labelers (#6985)',
+        );
       });
 
       test(
@@ -741,29 +826,59 @@ void main() {
     });
 
     group('userSpecificKeys', () {
-      test('contains expected key categories', () {
+      // Asserting membership by literal is what let this list rot: the
+      // previous version of this test pinned three keys no code had written
+      // for months, so deleting them turned the suite red. Assert instead
+      // that the list is composed from the constants the writing services
+      // own, which is a property a renamed key cannot satisfy silently.
+      test('is composed from the constants the writing services own', () {
         const keys = UserDataCleanupService.userSpecificKeys;
 
-        // List-related
-        expect(keys, contains('curated_lists'));
-        expect(keys, contains('curated_lists_default_deleted'));
-        expect(keys, contains('subscribed_list_ids'));
-        expect(keys, contains('user_lists'));
+        expect(
+          keys,
+          containsAll(<String>[
+            ModerationLabelService.subscribedLabelersStorageKey,
+            ModerationLabelService.followingModerationEnabledStorageKey,
+            AccountLabelService.accountLabelStorageKey,
+            ContentFilterService.filterPrefsStorageKey,
+            ContentFilterService.filterMigratedStorageKey,
+            LanguagePreferenceService.prefsKey,
+            AudioSharingPreferenceService.prefsKey,
+            DivineHostFilterService.showDivineHostedOnlyStorageKey,
+            VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
+            SoundLibraryService.customSoundsStorageKey,
+            mutedConversationsStorageKey,
+          ]),
+        );
+      });
 
-        // Bookmark-related
-        expect(keys, contains('bookmark_sets'));
-        expect(keys, contains('global_bookmarks'));
-
-        // Mute-related
-        expect(keys, contains('muted_items'));
-
-        // History
-        expect(keys, contains('seen_video_ids'));
-        expect(keys, contains('content_reports_history'));
-
-        // TOS
-        expect(keys, contains('age_verified_16_plus'));
-        expect(keys, contains('terms_accepted_at'));
+      test('contains no key that nothing in the app writes', () {
+        // Every entry below is a literal whose owning service has no
+        // constant to reference yet. They are the remaining conversion work;
+        // a key that reaches this list without a writer is the #8314 defect.
+        expect(
+          UserDataCleanupService.userSpecificKeys,
+          isNot(
+            anyElement(
+              isIn(<String>[
+                'user_lists',
+                'bookmark_sets',
+                'bookmark_published_hashes',
+                'bookmark_pending_changes',
+                'muted_items',
+                'content_moderation_local_mutes',
+                'content_moderation_subscribed_lists',
+                'subscribed_labelers',
+                'label_cache',
+                'trusted_reporters',
+                'report_cache',
+              ]),
+            ),
+          ),
+          reason:
+              'these keys had no writer when they were removed; '
+              'reintroducing one would be a silent no-op again',
+        );
       });
 
       test('does NOT contain device/app settings', () {

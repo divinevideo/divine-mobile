@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:collection';
+
 import 'package:unified_logger/unified_logger.dart';
 
 /// Circuit breaker states

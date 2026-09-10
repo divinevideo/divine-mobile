@@ -2,6 +2,7 @@
 // ABOUTME: Allows injecting relay messages without network IO
 
 import 'dart:async';
+
 import 'package:openvine/nostr/transport/nostr_transport.dart';
 
 /// In-memory transport for testing - no network IO

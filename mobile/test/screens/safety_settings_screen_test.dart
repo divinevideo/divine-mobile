@@ -42,13 +42,15 @@ class _MockContentBlocklistRepository extends Mock
       const Stream<ContentPolicyState>.empty();
 
   @override
-  Future<void> blockUser(String pubkey, {String? ourPubkey}) async {
+  Future<bool> blockUser(String pubkey, {String? ourPubkey}) async {
     _runtimeBlocklist.add(pubkey);
+    return true;
   }
 
   @override
-  Future<void> unblockUser(String pubkey) async {
+  Future<bool> unblockUser(String pubkey) async {
     _runtimeBlocklist.remove(pubkey);
+    return true;
   }
 
   @override

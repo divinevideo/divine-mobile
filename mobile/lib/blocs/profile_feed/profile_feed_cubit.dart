@@ -41,8 +41,9 @@ EventTransformer<E> _auditSequential<E>(Duration duration) {
 
 /// Enriches REST-sourced videos with their full Nostr tag set. Injected so the
 /// cubit stays decoupled from `NostrClient` / the enrichment util and testable.
-typedef EnrichVideos =
-    Future<List<VideoEvent>> Function(List<VideoEvent> videos);
+typedef EnrichVideos = Future<List<VideoEvent>> Function(
+  List<VideoEvent> videos,
+);
 
 /// Bloc backing a single author's profile feed.
 ///

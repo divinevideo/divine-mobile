@@ -134,8 +134,7 @@ void main() {
         expect(
           subscriptionCalls.length,
           equals(2),
-          reason:
-              'Should allow subscription with different parameters (no authors vs specific authors)',
+          reason: 'Should allow subscription with different parameters (no authors vs specific authors)',
         );
 
         // Verify the subscriptions have different filters
@@ -218,7 +217,7 @@ void main() {
       );
     });
 
-    test('should correctly handle replace parameter', () async {
+    test('replace preserves cached videos while resubscribing', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
@@ -231,8 +230,9 @@ void main() {
       // Add some test events
       final event1 = Event(
         'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
-        22,
+        34236,
         [
+          ['d', 'video-1'],
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
           [
@@ -257,7 +257,8 @@ void main() {
 
       expect(videoEventService.discoveryVideos.length, equals(1));
 
-      // Second subscription with replace=true should clear existing videos
+      // Second subscription with replace=true should replace the relay
+      // subscription without emptying the visible cache.
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 100,
@@ -265,12 +266,11 @@ void main() {
 
       expect(
         videoEventService.discoveryVideos.length,
-        equals(0),
-        reason: 'replace=true should clear existing videos',
+        equals(1),
+        reason: 'Replacing a subscription should preserve cached videos',
       );
       expect(subscriptionCalls.length, equals(2));
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test('should track active subscription parameters', () async {
       // This test exposes the current bug where subscription parameters aren't tracked
@@ -335,65 +335,66 @@ void main() {
       );
     });
 
-    test('should handle the classic vines -> open feed sequence correctly', () async {
-      // This is the exact sequence that's failing in production
-      final subscriptionCalls = <List<Filter>>[];
-      when(
-        () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-      ).thenAnswer((invocation) {
-        final filters = invocation.positionalArguments[0] as List<Filter>;
-        subscriptionCalls.add(filters);
-        return eventStreamController.stream;
-      });
+    test(
+      'should handle the classic vines -> open feed sequence correctly',
+      () async {
+        // This is the exact sequence that's failing in production
+        final subscriptionCalls = <List<Filter>>[];
+        when(
+          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
+        ).thenAnswer((invocation) {
+          final filters = invocation.positionalArguments[0] as List<Filter>;
+          subscriptionCalls.add(filters);
+          return eventStreamController.stream;
+        });
 
-      // Step 1: Load classic vines (specific author)
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        authors: [
-          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856',
-        ],
-        limit: 100,
-      );
+        // Step 1: Load classic vines (specific author)
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          authors: [
+            '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856',
+          ],
+          limit: 100,
+        );
 
-      expect(subscriptionCalls.length, equals(1));
-      expect(subscriptionCalls[0][0].authors, isNotNull);
-      expect(subscriptionCalls[0][0].authors!.length, equals(1));
+        expect(subscriptionCalls.length, equals(1));
+        expect(subscriptionCalls[0][0].authors, isNotNull);
+        expect(subscriptionCalls[0][0].authors!.length, equals(1));
 
-      // Step 2: Load open feed (no author filter) - THIS IS BEING WRONGLY REJECTED
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        limit: 300,
-        replace: false,
-      );
+        // Step 2: Load open feed (no author filter) - THIS IS BEING WRONGLY REJECTED
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: 300,
+          replace: false,
+        );
 
-      expect(
-        subscriptionCalls.length,
-        equals(2),
-        reason:
-            'Open feed subscription should not be rejected as duplicate of author-specific subscription',
-      );
-      expect(
-        subscriptionCalls[1][0].authors,
-        isNull,
-        reason: 'Open feed should have no author filter',
-      );
+        expect(
+          subscriptionCalls.length,
+          equals(2),
+          reason: 'Open feed subscription should not be rejected as duplicate of author-specific subscription',
+        );
+        expect(
+          subscriptionCalls[1][0].authors,
+          isNull,
+          reason: 'Open feed should have no author filter',
+        );
 
-      // Step 3: Load editor picks (different specific author)
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        authors: [
-          '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082',
-        ],
-        limit: 50,
-        replace: false,
-      );
+        // Step 3: Load editor picks (different specific author)
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          authors: [
+            '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082',
+          ],
+          limit: 50,
+          replace: false,
+        );
 
-      expect(
-        subscriptionCalls.length,
-        equals(3),
-        reason:
-            'All three subscriptions should be allowed as they have different parameters',
-      );
-    });
+        expect(
+          subscriptionCalls.length,
+          equals(3),
+          reason: 'All three subscriptions should be allowed as they have different parameters',
+        );
+      },
+    );
   });
 }

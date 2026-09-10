@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/active_video_provider.dart';
-import 'package:openvine/providers/app_lifecycle_provider.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
@@ -57,10 +57,9 @@ void main() {
           ),
           // Mock video events with our test data
           videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-          // Mock app as foreground
-          appForegroundProvider.overrideWith((ref) => Stream.value(true)),
         ],
       );
+      container.read(appForegroundProvider.notifier).setForeground(true);
 
       // Listen for page context to be emitted
       final pageContextStates = <AsyncValue<RouteContext>>[];
@@ -103,10 +102,9 @@ void main() {
           ),
           // Mock video events with our test data
           videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-          // Mock app as foreground
-          appForegroundProvider.overrideWith((ref) => Stream.value(true)),
         ],
       );
+      container.read(appForegroundProvider.notifier).setForeground(true);
 
       // Listen for streams to emit
       container.listen(
@@ -149,16 +147,17 @@ void main() {
               (ref) => locationController.stream,
             ),
             videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
           ],
         );
+        container.read(appForegroundProvider.notifier).setForeground(true);
 
         // Listen for active video changes
         final activeVideoIds = <String?>[];
-        container.listen(activeVideoIdProvider, (previous, next) {
-          print('ACTIVE VIDEO CHANGED: $previous → $next');
-          activeVideoIds.add(next);
-        }, fireImmediately: true);
+        container.listen(
+          activeVideoIdProvider,
+          (previous, next) => activeVideoIds.add(next),
+          fireImmediately: true,
+        );
 
         // Listen for streams to emit
         container.listen(
@@ -192,7 +191,6 @@ void main() {
         await pumpEventQueue();
 
         // Active video should change to index 1
-        print('Active video IDs seen: $activeVideoIds');
         expect(
           container.read(activeVideoIdProvider),
           equals('explore-video-1'),
@@ -216,16 +214,17 @@ void main() {
               (ref) => locationController.stream,
             ),
             videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
           ],
         );
+        container.read(appForegroundProvider.notifier).setForeground(true);
 
         // Listen for active video changes
         final activeVideoIds = <String?>[];
-        container.listen(activeVideoIdProvider, (previous, next) {
-          print('ACTIVE VIDEO CHANGED: $previous → $next');
-          activeVideoIds.add(next);
-        }, fireImmediately: true);
+        container.listen(
+          activeVideoIdProvider,
+          (previous, next) => activeVideoIds.add(next),
+          fireImmediately: true,
+        );
 
         // Listen for streams to emit
         container.listen(
@@ -248,9 +247,6 @@ void main() {
         await pumpEventQueue();
 
         // Active video should be null (grid mode)
-        print(
-          'Active video ID in grid mode: ${container.read(activeVideoIdProvider)}',
-        );
         expect(container.read(activeVideoIdProvider), isNull);
 
         locationController.close();

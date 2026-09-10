@@ -260,17 +260,50 @@ void main() {
           CrosspostingConnectionStatus.connected,
         );
         expect(connections.first.externalAccountName, equals('divine.creator'));
-        expect(
-          connections.first.tokenExpiresAt,
-          equals(
-            DateTime.fromMillisecondsSinceEpoch(
-              1785542400 * 1000,
-              isUtc: true,
-            ),
-          ),
-        );
         expect(connections[1].status, CrosspostingConnectionStatus.needsReauth);
       });
+
+      // The server sends more fields than this client models — tokenExpiresAt,
+      // grantedScopes, createdAt, updatedAt, lastRefreshAt. Reading one it does
+      // not model must never cost the user the connection: _optionalJsonField
+      // throws on a type mismatch and getConnections turns that into a skipped
+      // entry, so a connected account would silently render as "Not connected"
+      // (#7802).
+      test(
+        'keeps a connection carrying server fields it does not model',
+        () async {
+          stubGet(
+            jsonEncode({
+              'connections': [
+                {
+                  'id': 'conn-1',
+                  'platform': 'instagram',
+                  'status': 'connected',
+                  'externalAccountName': 'divine.creator',
+                  // Epoch seconds today; an ISO-8601 string is the shape a
+                  // server-side change would plausibly take.
+                  'tokenExpiresAt': '2026-07-22T00:00:00Z',
+                  'grantedScopes': 'publish',
+                  'lastRefreshAt': null,
+                },
+              ],
+            }),
+          );
+
+          final connections = await client.getConnections();
+
+          expect(connections, hasLength(1));
+          expect(connections.single.id, equals('conn-1'));
+          expect(
+            connections.single.status,
+            CrosspostingConnectionStatus.connected,
+          );
+          expect(
+            connections.single.externalAccountName,
+            equals('divine.creator'),
+          );
+        },
+      );
 
       test('skips connections for unknown server platforms', () async {
         stubGet(
@@ -1071,6 +1104,225 @@ void main() {
       expect(exception.toString(), isNot(contains('secret.example')));
       expect(exception.toString(), isNot(contains('private-id')));
       expect(exception.toString(), isNot(contains('private-token')));
+    });
+
+    group('crosspost jobs', () {
+      // Migrated from the deleted CrossposterApiClient suite (#7802): the job
+      // endpoints moved onto this client, so their coverage moves with them.
+      const eventId =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          'aaaaaaaaaaaaaaaaaaaaaaaa';
+
+      const postedJobJson = {
+        'id': 'job-1',
+        'platform': 'instagram',
+        'status': 'posted',
+        'externalPostId': 'ig-post-1',
+        'externalPostUrl': 'https://www.instagram.com/reel/abc/',
+        'errorCode': null,
+        'errorMessage': null,
+      };
+
+      void stubPost(String body, {int statusCode = 200}) {
+        when(
+          () => httpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => http.Response(body, statusCode));
+      }
+
+      group('createCrossposts', () {
+        test('rejects an empty success body instead of completing no jobs', () {
+          stubPost('');
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(
+              isA<CrosspostingApiException>().having(
+                (e) => e.code,
+                'code',
+                equals('malformed_response'),
+              ),
+            ),
+          );
+        });
+
+        // Same user-visible failure as the empty body above, through the
+        // other door: an empty JSON object is well-formed, so the guard on
+        // the raw body does not see it and the sheet reports a finished
+        // crosspost with nothing scheduled.
+        test('rejects a success body with no jobs collection', () {
+          stubPost(jsonEncode(<String, dynamic>{}));
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(isA<CrosspostingApiException>()),
+          );
+        });
+
+        test('POSTs the platform list and parses jobs', () async {
+          stubPost(
+            jsonEncode({
+              'jobs': [postedJobJson],
+            }),
+          );
+
+          final jobs = await client.createCrossposts(
+            eventId: eventId,
+            platforms: ['instagram'],
+          );
+
+          final captured = verify(
+            () => httpClient.post(
+              captureAny(),
+              headers: any(named: 'headers'),
+              body: captureAny(named: 'body'),
+            ),
+          ).captured;
+          expect(
+            (captured.first as Uri).path,
+            equals('/videos/$eventId/crossposts'),
+          );
+          expect(
+            jsonDecode(captured.last as String),
+            equals({
+              'platforms': ['instagram'],
+            }),
+          );
+          expect(jobs.single.status, equals(CrosspostJobStatus.posted));
+          expect(
+            jobs.single.externalPostUrl,
+            equals('https://www.instagram.com/reel/abc/'),
+          );
+        });
+
+        test('surfaces the not_eligible error code', () async {
+          stubPost(
+            jsonEncode({
+              'error': {
+                'code': 'not_eligible',
+                'message': 'video is not eligible',
+              },
+            }),
+            statusCode: 409,
+          );
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(
+              isA<CrosspostingApiException>().having(
+                (e) => e.code,
+                'code',
+                equals('not_eligible'),
+              ),
+            ),
+          );
+        });
+
+        test('wraps a malformed success body as '
+            '$CrosspostingApiException', () {
+          stubPost('<html>bad</html>');
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(
+              isA<CrosspostingApiException>()
+                  .having((e) => e.statusCode, 'statusCode', equals(200))
+                  .having((e) => e.code, 'code', equals('malformed_response'))
+                  .having((e) => e.cause, 'cause', isA<FormatException>()),
+            ),
+          );
+        });
+      });
+
+      group('getCrossposts', () {
+        // A cast error here escapes the cubit's `on CrosspostingApiException`
+        // poll handler, so the timer keeps firing it every tick with the
+        // sheet stuck mid-progress.
+        test('rejects a jobs value that is not a collection', () {
+          stubGet(jsonEncode({'jobs': 'none'}));
+
+          expect(
+            () => client.getCrossposts(eventId: eventId),
+            throwsA(isA<CrosspostingApiException>()),
+          );
+        });
+
+        test('parses pending job statuses from the wire', () async {
+          stubGet(
+            jsonEncode({
+              'jobs': [
+                {'id': 'j1', 'platform': 'instagram', 'status': 'queued'},
+                {'id': 'j2', 'platform': 'tiktok', 'status': 'uploading'},
+                {
+                  'id': 'j3',
+                  'platform': 'x',
+                  'status': 'needs_reauth',
+                  'errorCode': 'needs_reauth',
+                },
+              ],
+            }),
+          );
+
+          final jobs = await client.getCrossposts(eventId: eventId);
+
+          expect(jobs, hasLength(3));
+          expect(jobs[0].status, equals(CrosspostJobStatus.queued));
+          expect(jobs[0].status.isPending, isTrue);
+          expect(jobs[1].status, equals(CrosspostJobStatus.uploading));
+          expect(jobs[2].status, equals(CrosspostJobStatus.needsReauth));
+          expect(jobs[2].status.isPending, isFalse);
+        });
+
+        test('maps an unknown wire status to '
+            '${CrosspostJobStatus.unknown}', () async {
+          stubGet(
+            jsonEncode({
+              'jobs': [
+                {
+                  'id': 'j1',
+                  'platform': 'instagram',
+                  'status': 'brand-new-status',
+                },
+              ],
+            }),
+          );
+
+          final jobs = await client.getCrossposts(eventId: eventId);
+
+          expect(jobs.single.status, equals(CrosspostJobStatus.unknown));
+        });
+
+        test(
+          'falls back to a generic message on a non-JSON error body',
+          () async {
+            stubGet('<html>bad</html>', statusCode: 502);
+
+            expect(
+              () => client.getCrossposts(eventId: eventId),
+              throwsA(
+                isA<CrosspostingApiException>()
+                    .having((e) => e.statusCode, 'statusCode', equals(502))
+                    .having((e) => e.code, 'code', isNull),
+              ),
+            );
+          },
+        );
+      });
     });
 
     test('close closes the owned HTTP client', () {

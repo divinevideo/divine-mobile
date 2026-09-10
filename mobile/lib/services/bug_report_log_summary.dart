@@ -1,8 +1,29 @@
 // ABOUTME: Formats sanitized bug report logs for public support submissions
 // ABOUTME: Keeps diagnostic transformation out of the bug report UI layer
 
-import 'package:models/models.dart' show LogEntry, LogLevel;
+import 'package:flutter/foundation.dart' show compute;
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// Builds the public-support log summary outside the main isolate.
+///
+/// Production input logs have already been sanitized field by field, while
+/// [buildLogsSummary] also guarantees sanitized output for any other caller.
+/// Keep that potentially expensive pre-truncation scan off the UI isolate. If
+/// a worker cannot start, fall back inline rather than risk transmitting an
+/// unsanitized summary.
+Future<String?> buildLogsSummaryOffMain(List<LogEntry> logs) async {
+  try {
+    return await compute(buildLogsSummary, logs);
+  } on Object catch (error) {
+    Log.warning(
+      'Off-main bug report summary failed ($error); building inline so the '
+      'report remains sanitized',
+      category: LogCategory.system,
+    );
+    return buildLogsSummary(logs);
+  }
+}
 
 /// Build a log summary prioritizing errors/warnings with recent context.
 ///

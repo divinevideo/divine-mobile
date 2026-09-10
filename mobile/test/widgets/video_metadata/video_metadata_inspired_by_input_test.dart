@@ -231,8 +231,7 @@ void main() {
       tester,
     ) async {
       final state = VideoEditorProviderState(
-        inspiredByNpub:
-            'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        inspiredByNpub: 'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
       );
 
       await tester.pumpWidget(
@@ -264,8 +263,7 @@ void main() {
       tester,
     ) async {
       final state = VideoEditorProviderState(
-        inspiredByNpub:
-            'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        inspiredByNpub: 'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
       );
 
       await tester.pumpWidget(

@@ -20,5 +20,6 @@ abstract class BlockListSigner {
     required int kind,
     required String content,
     List<List<String>>? tags,
+    int? createdAt,
   });
 }

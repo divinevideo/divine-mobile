@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4330,9 +4331,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportRevealLogsAction => '在文件夹中显示';
 
   @override
-  String get supportChatNotAvailable => '客服聊天不可用';
-
-  @override
   String get supportCouldNotOpenMessages => '无法打开客服消息';
 
   @override
@@ -4851,22 +4849,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundUseSound => '使用声音';
-
-  @override
-  String get soundUntitled => '未命名声音';
-
-  @override
-  String get soundStopPreview => '停止预览';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return '预览 $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return '查看 $title 的详情';
-  }
 
   @override
   String get soundNoVideoCount => '还没有视频';
@@ -8340,6 +8322,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => '滑动调节';
 
   @override
+  String get videoEditorDetachLabel => '分离';
+
+  @override
+  String get videoEditorDetachSemanticLabel => '把选中片段从时间线分离';
+
+  @override
+  String get videoEditorDetachTitle => '分离片段';
+
+  @override
+  String get videoEditorDetachDescription => '片段会移到画布上，你可以随意摆放。时间线上由什么来顶替它的位置？';
+
+  @override
+  String get videoEditorDetachReplaceRemove => '无';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail => '合上空档——后面的一切都会提前开始。';
+
+  @override
+  String get videoEditorDetachReplaceColor => '颜色';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail => '按片段原来的时长显示一块纯色。';
+
+  @override
+  String get videoEditorDetachReplaceImage => '照片';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail => '拍一张照片来顶替它的位置。';
+
+  @override
+  String get videoEditorDetachedClipLabel => '已分离的片段';
+
+  @override
+  String get videoEditorDetachProgressLabel => '正在分离你的片段…';
+
+  @override
+  String get videoEditorDetachFailed => '没能分离那个片段。你的时间线没有改动。';
+
+  @override
+  String get videoEditorDetachImagePickFailed => '这张照片加载不了。';
+
+  @override
   String get videoEditorChromaKeyLabel => '绿幕';
 
   @override
@@ -8403,7 +8427,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
-  String get videoEditorChromaKeyDetectFailed => '没找到幕布。幕布得铺到画面边缘——不然就手动选颜色吧。';
+  String get videoEditorChromaKeySurfaceHint => '你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。';
+
+  @override
+  String get videoEditorChromaKeyDetectFailed =>
+      '没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';
@@ -8670,6 +8698,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => '未命名声音';
+
+  @override
+  String get videoEditorAudioFileMissing => '音频文件已经不在这台设备上了';
 
   @override
   String get videoEditorAudioUntitled => '未命名';
@@ -9546,7 +9577,7 @@ class AppLocalizationsZh extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => '打开帮助中心';
+  String get appealOpenSupportCenter => '打开帮助中心';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '打开管理消息';
@@ -10628,6 +10659,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedSoundRemoveAction => '移除已保存的声音';
 
   @override
+  String get savedSoundFileMissing => '这个声音的音频文件已经不在这台设备上了，没法播放。';
+
+  @override
   String get savedSoundClearHashtagFilter => '清除话题标签筛选';
 
   @override
@@ -11376,9 +11410,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

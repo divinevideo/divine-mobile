@@ -30,8 +30,9 @@ class HitTestExpander extends SingleChildRenderObjectWidget {
   /// onto its nearest edge before being forwarded.
   final Size visibleSize;
 
-  // The render object is a true implementation detail of this widget.
   @override
+  // Flutter's public override returns this widget's private render object;
+  // exposing that implementation type as public would widen the API.
   // ignore: library_private_types_in_public_api
   _RenderHitTestExpander createRenderObject(BuildContext context) {
     return _RenderHitTestExpander(visibleSize: visibleSize);
@@ -40,6 +41,7 @@ class HitTestExpander extends SingleChildRenderObjectWidget {
   @override
   void updateRenderObject(
     BuildContext context,
+    // Flutter passes back the private render object created above.
     // ignore: library_private_types_in_public_api
     _RenderHitTestExpander renderObject,
   ) {

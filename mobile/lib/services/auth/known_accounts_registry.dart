@@ -89,7 +89,7 @@ class KnownAccountsRegistry {
       // null  → key never written → run one-time migration
       // empty → key was written but all accounts removed → no migration
       if (raw == null) {
-        return _migrateLegacyAccount(prefs);
+        return await _migrateLegacyAccount(prefs);
       }
       if (raw.isEmpty) return [];
 

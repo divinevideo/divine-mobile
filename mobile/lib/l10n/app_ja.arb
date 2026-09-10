@@ -1581,7 +1581,6 @@
     "supportLoginRequired": "サポートに連絡するにはログインしてね",
     "supportExportingLogs": "ログをエクスポート中...",
     "supportExportLogsFailed": "ログのエクスポートがうまくいかなかった",
-    "supportChatNotAvailable": "サポートチャットは今使えないよ",
     "supportCouldNotOpenMessages": "サポートメッセージが開けなかった",
     "supportCouldNotOpenPage": "{pageName}が開けなかった",
     "@supportCouldNotOpenPage": {
@@ -2414,6 +2413,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "プレビューを再生",
     "videoEditorAudioUntitled": "タイトルなし",
     "videoEditorAudioUntitledSound": "タイトルなしのサウンド",
+    "videoEditorAudioFileMissing": "音声ファイルは端末に残っていません",
     "videoEditorVolumeLongPressHint": "すべてのトラックをミュートまたはミュート解除",
     "videoEditorClipSaveFailed": "クリップの保存に失敗しました",
     "videoEditorClipSavedSuccess": "クリップをライブラリに保存しました",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "無題のサウンド",
-    "soundStopPreview": "プレビューを停止",
-    "soundPreviewSemanticLabel": "{title}をプレビュー",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "{title}の詳細を表示",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "検索...",
     "categoryVideoCount": "{count}本の動画",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "スライドして調整",
     "videoEditorVolumeSemanticLabel": "音量を調整",
-    "videoEditorChromaKeyLabel": "グリーンバック",
+    "videoEditorDetachLabel": "切り離す",
+  "videoEditorDetachSemanticLabel": "選択したクリップをタイムラインから切り離す",
+  "videoEditorDetachTitle": "クリップを切り離す",
+  "videoEditorDetachDescription": "クリップはキャンバスに移り、好きな位置に置けます。タイムラインでは何がその場所を埋めますか？",
+  "videoEditorDetachReplaceRemove": "なし",
+  "videoEditorDetachReplaceRemoveDetail": "すき間を詰める。後ろのものはすべて早く始まります。",
+  "videoEditorDetachReplaceColor": "色",
+  "videoEditorDetachReplaceColorDetail": "クリップと同じ長さだけ単色を表示します。",
+  "videoEditorDetachReplaceImage": "写真",
+  "videoEditorDetachReplaceImageDetail": "その場所を埋める静止画を撮ります。",
+  "videoEditorDetachedClipLabel": "切り離したクリップ",
+  "videoEditorDetachProgressLabel": "クリップを切り離しています…",
+  "videoEditorDetachFailed": "そのクリップを切り離せませんでした。タイムラインは変更されていません。",
+  "videoEditorDetachImagePickFailed": "その写真を読み込めませんでした。",
+  "videoEditorChromaKeyLabel": "グリーンバック",
     "videoEditorChromaKeyTitle": "グリーンバック",
     "videoEditorChromaKeySemanticLabel": "このクリップのグリーンバックを設定",
     "videoEditorChromaKeyCloseSemanticLabel": "グリーンバックの変更を破棄",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "画像",
     "videoEditorChromaKeyBackgroundVideo": "クリップ",
     "videoEditorChromaKeyTransparentHint": "動画は透明を保持できないため、書き出すと黒くなります。",
-    "videoEditorChromaKeyDetectFailed": "背景が見つかりませんでした。画面の端まで届いている必要があります。届いていない場合は手動で色を選んでください。",
+    "videoEditorChromaKeySurfaceHint": "後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。",
+    "videoEditorChromaKeyDetectFailed": "背景が見つかりませんでした。後ろの面が画面いっぱいに広がっている必要があります。無地の壁でも大丈夫です。手動で色を選ぶこともできます。",
     "videoEditorChromaKeyPickClipTitle": "クリップを選ぶ",
     "videoEditorChromaKeyNoLibraryClips": "ライブラリが空です。先にクリップを保存すると、背景として使えます。",
     "videoEditorChromaKeyImagePickFailed": "その画像を読み込めませんでした。",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "コメント、いいね、リポスト、フォローは停止中です",
     "minorAccountReviewRestrictionMessaging": "通常のメッセージの送信と返信は停止中です",
     "minorAccountReviewRestrictionSupport": "サポートとモデレーションメッセージは引き続き利用できます",
-    "minorAccountReviewOpenSupportCenter": "サポートセンターを開く",
+    "appealOpenSupportCenter": "サポートセンターを開く",
     "minorAccountReviewOpenModerationMessage": "モデレーションメッセージを開く",
     "minorAccountReviewOpenReviewPage": "審査ページを開く",
     "minorAccountReviewCheckAgain": "もう一度確認",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "サウンドを試聴",
   "savedSoundEditAction": "サウンドの詳細を編集",
   "savedSoundRemoveAction": "保存したサウンドを削除",
+  "savedSoundFileMissing": "このサウンドの音声ファイルは端末に残っていないため再生できません。",
   "savedSoundClearHashtagFilter": "ハッシュタグの絞り込みを解除",
   "soundAllowRemix": "他の人がこのサウンドをリミックスするのを許可",
   "soundReuseUnavailable": "このサウンドは今はリミックスできません。",

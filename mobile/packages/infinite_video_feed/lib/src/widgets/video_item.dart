@@ -80,8 +80,8 @@ class _VideoItemWidgetState extends State<VideoItemWidget> {
   /// the actual video aspect ratio.
   BoxFit _resolveBoxFit() {
     if (!widget.shouldPortraitExpand) return BoxFit.contain;
-    // 1:1 → contain, everything else → cover
-    if (_aspectRatio > 0 && _aspectRatio == 1.0) return BoxFit.contain;
+    // Allow float32 rounding in Media3's pixel ratio for square videos.
+    if ((_aspectRatio - 1.0).abs() < 1e-6) return BoxFit.contain;
     return BoxFit.cover;
   }
 

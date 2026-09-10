@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "سپورٹ چیٹ دستیاب نہیں",
   "supportCouldNotOpenMessages": "سپورٹ پیغامات نہیں کھل سکے",
   "supportCouldNotOpenPage": "{pageName} نہیں کھل سکا",
   "@supportCouldNotOpenPage": {
@@ -2569,24 +2568,6 @@
   "soundPreview": "پیش منظر",
   "soundStop": "روکیں",
   "soundUseSound": "آواز استعمال کریں",
-  "soundUntitled": "بلا عنوان آواز",
-  "soundStopPreview": "پیش منظر روکیں",
-  "soundPreviewSemanticLabel": "{title} کا پیش منظر",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "{title} کی تفصیلات دیکھیں",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "ابھی کوئی ویڈیو نہیں",
   "soundOneVideo": "1 ویڈیو",
   "soundVideoCount": "{count} ویڈیوز",
@@ -4787,6 +4768,20 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "ایڈجسٹ کرنے کے لیے سلائیڈ کریں",
+  "videoEditorDetachLabel": "الگ کریں",
+  "videoEditorDetachSemanticLabel": "منتخب کلپ کو ٹائم لائن سے الگ کریں",
+  "videoEditorDetachTitle": "کلپ الگ کریں",
+  "videoEditorDetachDescription": "کلپ کینوس پر چلا جاتا ہے، جہاں آپ اسے کہیں بھی رکھ سکتے ہیں۔ ٹائم لائن پر اس کی جگہ کیا لے گا؟",
+  "videoEditorDetachReplaceRemove": "کچھ نہیں",
+  "videoEditorDetachReplaceRemoveDetail": "خلا بند کریں – اس کے بعد کی ہر چیز پہلے شروع ہو گی۔",
+  "videoEditorDetachReplaceColor": "رنگ",
+  "videoEditorDetachReplaceColorDetail": "کلپ جتنی دیر چلا، اتنی دیر ایک ٹھوس رنگ دکھاتا ہے۔",
+  "videoEditorDetachReplaceImage": "تصویر",
+  "videoEditorDetachReplaceImageDetail": "اس کی جگہ رکھنے کے لیے ایک تصویر لیں۔",
+  "videoEditorDetachedClipLabel": "الگ کیا گیا کلپ",
+  "videoEditorDetachProgressLabel": "آپ کی کلپ الگ کی جا رہی ہے…",
+  "videoEditorDetachFailed": "وہ کلپ الگ نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
+  "videoEditorDetachImagePickFailed": "وہ تصویر لوڈ نہیں ہو سکی۔",
   "videoEditorChromaKeyLabel": "گرین اسکرین",
   "videoEditorChromaKeyTitle": "گرین اسکرین",
   "videoEditorChromaKeySemanticLabel": "اس کلپ کے لیے گرین اسکرین سیٹ کریں",
@@ -4808,7 +4803,8 @@
   "videoEditorChromaKeyBackgroundImage": "تصویر",
   "videoEditorChromaKeyBackgroundVideo": "کلپ",
   "videoEditorChromaKeyTransparentHint": "ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔",
-  "videoEditorChromaKeyDetectFailed": "کوئی اسکرین نہیں ملی۔ اسے فریم کے کناروں تک پہنچنا چاہیے — ورنہ رنگ خود منتخب کریں۔",
+  "videoEditorChromaKeySurfaceHint": "آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔",
+  "videoEditorChromaKeyDetectFailed": "کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔",
   "videoEditorChromaKeyPickClipTitle": "کلپ چنیں",
   "videoEditorChromaKeyNoLibraryClips": "آپ کی لائبریری خالی ہے۔ پہلے کوئی کلپ محفوظ کریں، پھر اسے پس منظر کے طور پر استعمال کریں۔",
   "videoEditorChromaKeyImagePickFailed": "وہ تصویر لوڈ نہیں ہو سکی۔",
@@ -5087,6 +5083,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "پیش منظر چلائیں",
   "videoEditorAudioPausePreviewSemanticLabel": "پیش منظر روکیں",
   "videoEditorAudioUntitledSound": "بلا عنوان آواز",
+  "videoEditorAudioFileMissing": "آڈیو فائل اب اس ڈیوائس پر نہیں ہے",
   "videoEditorAudioUntitled": "بلا عنوان",
   "videoEditorAudioAddAudio": "آڈیو شامل کریں",
   "videoEditorAudioNoSoundsAvailableTitle": "کوئی آواز دستیاب نہیں",
@@ -5503,7 +5500,7 @@
   "minorAccountReviewRestrictionEngagement": "تبصرے، پسند، ریپوسٹ اور فالو روکے گئے ہیں",
   "minorAccountReviewRestrictionMessaging": "عام پیغامات شروع کرنے یا ان کا جواب دینے پر روک ہے",
   "minorAccountReviewRestrictionSupport": "سپورٹ اور آپ کا موڈریشن پیغام دستیاب رہتے ہیں",
-  "minorAccountReviewOpenSupportCenter": "مدد کا مرکز کھولیں",
+  "appealOpenSupportCenter": "مدد کا مرکز کھولیں",
   "minorAccountReviewOpenModerationMessage": "موڈریشن پیغام کھولیں",
   "minorAccountReviewOpenReviewPage": "جائزہ صفحہ کھولیں",
   "minorAccountReviewCheckAgain": "دوبارہ چیک کریں",
@@ -6291,6 +6288,7 @@
   "savedSoundPreviewAction": "ساؤنڈ سنیں",
   "savedSoundEditAction": "ساؤنڈ کی تفصیلات میں ترمیم کریں",
   "savedSoundRemoveAction": "محفوظ شدہ ساؤنڈ ہٹائیں",
+  "savedSoundFileMissing": "اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔",
   "savedSoundClearHashtagFilter": "ہیش ٹیگ فلٹر صاف کریں",
   "soundAllowRemix": "دوسروں کو اس ساؤنڈ کو ری مکس کرنے دیں",
   "soundReuseUnavailable": "اس ساؤنڈ کو ابھی ری مکس نہیں کیا جا سکتا۔",

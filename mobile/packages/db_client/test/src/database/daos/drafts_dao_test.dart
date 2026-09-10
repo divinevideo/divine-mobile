@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for DraftsDao - focused on isDraftFileReferenced
 // ABOUTME: and basic CRUD operations.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
@@ -34,6 +35,28 @@ void main() {
 
   group(DraftsDao, () {
     group('isDraftFileReferenced', () {
+      test('finds files in the draft-owned asset manifest', () async {
+        await dao.saveDraftWithClips(
+          id: 'manifest-draft',
+          title: 'Manifest draft',
+          description: '',
+          publishStatus: 'draft',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          data: jsonEncode({
+            draftOwnedFileBasenamesKey: ['detached.mp4', 'detached.jpg'],
+          }),
+          renderedFilePath: null,
+          renderedThumbnailPath: null,
+          customThumbnailPath: null,
+          clipDataList: const [],
+        );
+
+        expect(await dao.isDraftFileReferenced('detached.mp4'), isTrue);
+        expect(await dao.isDraftFileReferenced('detached.jpg'), isTrue);
+        expect(await dao.isDraftFileReferenced('missing.mp4'), isFalse);
+      });
+
       test('returns true when filename matches renderedFilePath', () async {
         await dao.upsertDraft(
           id: 'draft_1',
@@ -66,9 +89,7 @@ void main() {
             data: '{}',
           );
 
-          final result = await dao.isDraftFileReferenced(
-            'rendered_thumb.jpeg',
-          );
+          final result = await dao.isDraftFileReferenced('rendered_thumb.jpeg');
           expect(result, isTrue);
         },
       );
@@ -87,9 +108,7 @@ void main() {
           data: '{}',
         );
 
-        final result = await dao.isDraftFileReferenced(
-          'selected_cover.jpeg',
-        );
+        final result = await dao.isDraftFileReferenced('selected_cover.jpeg');
         expect(result, isTrue);
       });
 

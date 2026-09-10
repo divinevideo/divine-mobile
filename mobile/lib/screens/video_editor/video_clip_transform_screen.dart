@@ -23,9 +23,21 @@ import 'package:unified_logger/unified_logger.dart';
 /// the resulting [ExportTransform] when the user confirms, or `null` when they
 /// cancel or make no change.
 class VideoClipTransformScreen extends StatefulWidget {
-  const VideoClipTransformScreen({required this.clip, super.key});
+  const VideoClipTransformScreen({
+    required this.clip,
+    this.initAspectRatio,
+    super.key,
+  });
 
   final DivineVideoClip clip;
+
+  /// Crop ratio the editor opens locked to, defaulting to the composition's
+  /// output ratio.
+  ///
+  /// Pass [freeCropAspectRatio] for a clip that is not bound to the
+  /// composition — a detached clip sits on the canvas as its own object, so
+  /// cropping it to a different shape is a valid thing to want.
+  final double? initAspectRatio;
 
   @override
   State<VideoClipTransformScreen> createState() =>
@@ -183,7 +195,8 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
         convertToUint8List: true,
         configs: transformEditorConfigs(
           context,
-          initAspectRatio: widget.clip.targetAspectRatio.value,
+          initAspectRatio:
+              widget.initAspectRatio ?? widget.clip.targetAspectRatio.value,
           bottomBarLeading: _PlayPauseAction(controller: playerController),
           // No overlay: nothing is rasterized here. Done only reads the crop
           // parameters back out and hands the render to the bloc, which puts

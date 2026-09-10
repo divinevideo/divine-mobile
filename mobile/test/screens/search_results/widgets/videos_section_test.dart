@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
@@ -89,6 +90,10 @@ void main() {
         expect(find.byType(SectionHeader), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().searchVideosSectionHeader),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.searchVideoTileAt(0)),
           findsOneWidget,
         );
       });

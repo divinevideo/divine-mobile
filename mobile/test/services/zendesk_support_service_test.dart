@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
@@ -217,6 +223,11 @@ void main() {
 
   group('ZendeskSupportService.showNewTicketScreen', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.showNewTicketScreen();
 
       expect(result, false);
@@ -349,8 +360,111 @@ void main() {
     });
   });
 
+  group('ZendeskSupportService user-facing initialization gate', () {
+    test('showNewTicketScreen waits for an in-flight initialization', () async {
+      final initializationRelease = Completer<void>();
+      var showNewTicketCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') {
+              await initializationRelease.future;
+              return true;
+            }
+            if (call.method == 'showNewTicket') showNewTicketCalls++;
+            return null;
+          });
+
+      final initialization = ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      final opening = ZendeskSupportService.showNewTicketScreen();
+      await pumpEventQueue();
+
+      expect(showNewTicketCalls, 0);
+      initializationRelease.complete();
+
+      expect(await opening, isTrue);
+      await initialization;
+      expect(showNewTicketCalls, 1);
+    });
+
+    test(
+      'showTicketListScreen waits for an in-flight initialization',
+      () async {
+        final initializationRelease = Completer<void>();
+        var showTicketListCalls = 0;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (MethodCall call) async {
+              if (call.method == 'initialize') {
+                await initializationRelease.future;
+                return true;
+              }
+              if (call.method == 'showTicketList') showTicketListCalls++;
+              return null;
+            });
+
+        final initialization = ZendeskSupportService.initialize(
+          appId: 'test',
+          clientId: 'test',
+          zendeskUrl: 'https://test.zendesk.com',
+        );
+        final opening = ZendeskSupportService.showTicketListScreen();
+        await pumpEventQueue();
+
+        expect(showTicketListCalls, 0);
+        initializationRelease.complete();
+
+        expect(await opening, isTrue);
+        await initialization;
+        expect(showTicketListCalls, 1);
+      },
+    );
+
+    test('createTicket waits for an in-flight initialization', () async {
+      final initializationRelease = Completer<void>();
+      var createTicketCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') {
+              await initializationRelease.future;
+              return true;
+            }
+            if (call.method == 'createTicket') {
+              createTicketCalls++;
+              return true;
+            }
+            return null;
+          });
+
+      final initialization = ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      final creation = ZendeskSupportService.createTicket(
+        subject: 'Subject',
+        description: 'Description',
+      );
+      await pumpEventQueue();
+
+      expect(createTicketCalls, 0);
+      initializationRelease.complete();
+
+      expect(await creation, isTrue);
+      await initialization;
+      expect(createTicketCalls, 1);
+    });
+  });
+
   group('ZendeskSupportService.showTicketListScreen', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.showTicketListScreen();
 
       expect(result, false);
@@ -563,6 +677,11 @@ void main() {
 
   group('ZendeskSupportService.createTicket', () {
     test('returns false when not initialized', () async {
+      await ZendeskSupportService.initialize(
+        appId: '',
+        clientId: '',
+        zendeskUrl: '',
+      );
       final result = await ZendeskSupportService.createTicket(
         subject: 'Test',
         description: 'Test description',
@@ -733,8 +852,7 @@ void main() {
               if (call.method == 'createTicket') {
                 throw PlatformException(
                   code: 'UPLOAD_FAILED',
-                  message:
-                      'File not found: /private/var/mobile/Containers/Data/Application/foo.jpg',
+                  message: 'File not found: /private/var/mobile/Containers/Data/Application/foo.jpg',
                 );
               }
               return null;
@@ -1039,6 +1157,10 @@ void main() {
         stepsToReproduce: '1. paste api_key=STEPSSECRET',
         expectedBehavior: 'no secret=EXPECTEDSECRET in the ticket',
         currentScreen: 'CameraScreen?secret=SCREENSECRET',
+        recentScreens: const [
+          'home',
+          'profile?token=RECENTSCREENSECRET',
+        ],
         errorCounts: {'upload:password=COUNTSSECRET': 3},
         logsSummary: '[10:00] [ERROR] jwt: LOGSSECRET',
       );
@@ -1052,11 +1174,13 @@ void main() {
         'STEPSSECRET',
         'EXPECTEDSECRET',
         'SCREENSECRET',
+        'RECENTSCREENSECRET',
         'COUNTSSECRET',
         'LOGSSECRET',
       ]) {
         expect(payload, isNot(contains(secret)), reason: 'leaked $secret');
       }
+      expect(capturedDescription, contains('**Recent Screens:** home'));
     });
 
     // Each contributed field is sanitized separately, and the containment that
@@ -1729,6 +1853,47 @@ void main() {
       },
     );
   });
+
+  group('fetchPreAuthToken signed URL', () {
+    // The `u` tag is signed from the composed string while the POST goes to a
+    // Uri built from that same string. NIP-98 binds the two and relay-manager
+    // compares them as raw strings, so a base that Uri.parse would normalize
+    // makes them disagree and the pre-auth call 401s — which downgrades the
+    // Zendesk identity to the raw npub path this token exists to replace.
+    for (final base in const [
+      'https://RELAY.example',
+      'HTTPS://relay.example',
+      'https://relay.example:443',
+      'https://relay.example/.',
+      'https://relay.example/',
+    ]) {
+      test('is canonical for a base of $base', () async {
+        final nip98 = _RecordingUrlNip98AuthService();
+        http.Request? captured;
+
+        await expectLater(
+          ZendeskSupportService.fetchPreAuthToken(
+            nip98Service: nip98,
+            relayManagerUrl: base,
+            httpClient: MockClient(
+              (request) async {
+                captured = request;
+                return http.Response('{"success":true,"token":"t"}', 200);
+              },
+            ),
+          ),
+          completion(equals('t')),
+        );
+
+        expect(nip98.signedUrl, isNotNull);
+        expect(
+          nip98.signedUrl,
+          equals('https://relay.example/api/zendesk/pre-auth'),
+        );
+        expect(nip98.signedUrl, equals(captured!.url.toString()));
+      });
+    }
+  });
 }
 
 /// Fails token creation like [_FakeNip98AuthService], but records whether
@@ -1757,4 +1922,38 @@ class _FakeNip98AuthService implements Nip98AuthService {
     // fetchPreAuthToken to throw, which _ensureFreshJwt catches gracefully.
     return null;
   }
+}
+
+/// Records the URL [ZendeskSupportService.fetchPreAuthToken] signs, and hands
+/// back a usable token so the request is actually attempted.
+class _RecordingUrlNip98AuthService implements Nip98AuthService {
+  String? signedUrl;
+
+  @override
+  Future<Nip98Token?> createAuthToken({
+    required String url,
+    required HttpMethod method,
+    String? payload,
+  }) async {
+    signedUrl = url;
+    final now = clock.now();
+    return Nip98Token(
+      token: 'fake-token',
+      signedEvent: Event(
+        '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
+        27235,
+        [
+          ['u', url],
+          ['method', 'POST'],
+        ],
+        '',
+        createdAt: 1700000000,
+      ),
+      createdAt: now,
+      expiresAt: now.add(const Duration(seconds: 45)),
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

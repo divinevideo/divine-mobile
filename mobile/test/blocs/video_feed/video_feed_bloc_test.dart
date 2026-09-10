@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoFeedBloc - unified video feed with mode switching
 // ABOUTME: Tests loading, pagination, mode switching, and following changes
 
+// Mutable list literals keep each bloc-test fixture isolated and editable.
 // ignore_for_file: prefer_const_literals_to_create_immutables
 
 import 'dart:async';
@@ -2256,8 +2257,7 @@ void main() {
           videos: [
             createTestVideo(
               'original-event-id',
-              pubkey:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
               vineId: 'shared-d-tag',
               createdAt: 2000,
             ),
@@ -2316,8 +2316,7 @@ void main() {
           videos: [
             createTestVideo(
               'author-a-event',
-              pubkey:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
               vineId: 'shared-d-tag',
               createdAt: 2000,
             ),

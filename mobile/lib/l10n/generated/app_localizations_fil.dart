@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4659,9 +4660,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get supportRevealLogsAction => 'Ipakita sa folder';
 
   @override
-  String get supportChatNotAvailable => 'Hindi available ang support chat';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Hindi nabuksan ang support messages';
 
@@ -5222,22 +5220,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Gamitin ang Sound';
-
-  @override
-  String get soundUntitled => 'Sound na walang pamagat';
-
-  @override
-  String get soundStopPreview => 'Itigil ang preview';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'I-preview ang $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Tingnan ang details para sa $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Wala pang video';
@@ -8911,6 +8893,55 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'I-slide para i-adjust';
 
   @override
+  String get videoEditorDetachLabel => 'I-detach';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'I-detach ang napiling clip mula sa timeline';
+
+  @override
+  String get videoEditorDetachTitle => 'I-detach ang clip';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Lilipat ang clip sa canvas, kung saan mo siya puwedeng ilagay kahit saan. Ano ang papalit sa puwesto niya sa timeline?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Wala';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Isara ang puwang – mas maaga na magsisimula ang lahat pagkatapos niyan.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Kulay';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Nagpapakita ng solidong kulay hangga\'t tumagal ang clip.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Larawan';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Kumuha ng larawan na hahawak sa puwesto niya.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Na-detach na clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Inaalis ang clip mo…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Hindi ma-detach ang clip na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Hindi ma-load ang larawang iyon.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override
@@ -8980,8 +9011,12 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Walang nakitang screen. Kailangang umabot ito sa gilid ng frame — kung hindi, piliin ang kulay nang manu-mano.';
+      'Walang nahanap na screen: kailangang punuin nito ang buong frame sa likod mo. Pwede ang plain na pader. O pumili ng kulay nang manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';
@@ -9278,6 +9313,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Walang pamagat na sound';
+
+  @override
+  String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
 
   @override
   String get videoEditorAudioUntitled => 'Walang Pamagat';
@@ -9952,8 +9990,7 @@ class AppLocalizationsFil extends AppLocalizations {
       locale: localeName,
       other:
           'Iba-block nito ang $count account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
-      one:
-          'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
+      one: 'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
     );
     return '$_temp0';
   }
@@ -10224,7 +10261,7 @@ class AppLocalizationsFil extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Buksan ang support center';
+  String get appealOpenSupportCenter => 'Buksan ang support center';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11425,6 +11462,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get savedSoundRemoveAction => 'Alisin ang naka-save na sound';
 
   @override
+  String get savedSoundFileMissing =>
+      'Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'I-clear ang hashtag filter';
 
   @override
@@ -12216,9 +12257,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

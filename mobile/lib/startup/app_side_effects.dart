@@ -12,6 +12,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
+import 'package:openvine/router/providers/support_route_trail_provider.dart';
 
 /// App-wide side effects that must run for the whole life of the process.
 ///
@@ -38,6 +39,10 @@ class AppRootSideEffects extends ConsumerWidget {
     // Redirects the router to canonical URLs. Router plumbing, not a service:
     // it only reads `goRouterProvider` and attaches a listener.
     ref.watch(routeNormalizationProvider);
+
+    // Retains parameter-free route context for support diagnostics. It must be
+    // active before the user enters Settings or the Support Center.
+    ref.watch(supportRouteTrailProvider);
 
     // Mirrors the authenticated pubkey into Zendesk, and into Firebase
     // Analytics + Crashlytics. Cheap to activate: `authServiceProvider` is

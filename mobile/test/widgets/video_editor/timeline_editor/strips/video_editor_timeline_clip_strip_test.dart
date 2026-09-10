@@ -179,9 +179,7 @@ void main() {
                 TimelineConstants.clipWaveformBarWidth,
                 baseline,
               ),
-              const Radius.circular(
-                TimelineConstants.clipWaveformBarWidth / 2,
-              ),
+              const Radius.circular(TimelineConstants.clipWaveformBarWidth / 2),
             ),
           ),
         );
@@ -290,14 +288,11 @@ void main() {
           // 3 s of content at 100 px/s → 300 px wide. sourceStartOffset 1.3 s
           // puts the recording-anchored slot grid 130 px in, leaving a 34 px
           // phase (130 % 48) that shifts the frames but not the band.
-          final clip =
-              _createTestClip(
-                id: 'clip1',
-                seconds: 3,
-                trimStartMs: 500,
-              ).copyWith(
-                sourceStartOffset: const Duration(milliseconds: 1300),
-              );
+          final clip = _createTestClip(
+            id: 'clip1',
+            seconds: 3,
+            trimStartMs: 500,
+          ).copyWith(sourceStartOffset: const Duration(milliseconds: 1300));
 
           await tester.pumpWidget(
             buildWidget(
@@ -339,15 +334,15 @@ void main() {
         'swaps from source-timed preview to rebased rendered geometry',
         (tester) async {
           final manager = ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required String videoPath,
-                  required String clipId,
-                  required Duration duration,
-                  required Size outputSize,
-                  required int thumbsPerSecond,
-                  List<Duration>? priorityTimestamps,
-                }) => const Stream.empty(),
+            stripThumbnailStreamFactory: ({
+              required String videoPath,
+              required String clipId,
+              required Duration duration,
+              required Size outputSize,
+              required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
+              List<Duration>? priorityTimestamps,
+            }) => const Stream.empty(),
           );
           addTearDown(manager.dispose);
 
@@ -356,9 +351,10 @@ void main() {
           const totalWidth = 170.0;
 
           // Preview phase: still source-timed against the source video.
-          final previewEnd = _createTestClip(id: 'end', seconds: 3).copyWith(
-            trimStart: const Duration(milliseconds: 1300),
-          );
+          final previewEnd = _createTestClip(
+            id: 'end',
+            seconds: 3,
+          ).copyWith(trimStart: const Duration(milliseconds: 1300));
           await tester.pumpWidget(
             buildWidget(
               clips: [previewEnd],
@@ -442,15 +438,15 @@ void main() {
         'stays file-anchored',
         (tester) async {
           final manager = ClipThumbnailManager(
-            stripThumbnailStreamFactory:
-                ({
-                  required String videoPath,
-                  required String clipId,
-                  required Duration duration,
-                  required Size outputSize,
-                  required int thumbsPerSecond,
-                  List<Duration>? priorityTimestamps,
-                }) => const Stream.empty(),
+            stripThumbnailStreamFactory: ({
+              required String videoPath,
+              required String clipId,
+              required Duration duration,
+              required Size outputSize,
+              required int thumbsPerSecond,
+              Duration startOffset = Duration.zero,
+              List<Duration>? priorityTimestamps,
+            }) => const Stream.empty(),
           );
           addTearDown(manager.dispose);
 
@@ -472,9 +468,10 @@ void main() {
           ];
 
           // File-anchored reference: identical geometry with no offset.
-          final plain = _createTestClip(id: 'end', seconds: 3).copyWith(
-            duration: const Duration(milliseconds: 1700),
-          );
+          final plain = _createTestClip(
+            id: 'end',
+            seconds: 3,
+          ).copyWith(duration: const Duration(milliseconds: 1700));
           await tester.pumpWidget(
             buildWidget(
               clips: [plain],
@@ -1018,15 +1015,15 @@ void main() {
       setUp(() {
         clipBloc = _MockClipEditorBloc();
         manager = ClipThumbnailManager(
-          stripThumbnailStreamFactory:
-              ({
-                required String videoPath,
-                required String clipId,
-                required Duration duration,
-                required Size outputSize,
-                required int thumbsPerSecond,
-                List<Duration>? priorityTimestamps,
-              }) => const Stream<List<StripThumbnail>>.empty(),
+          stripThumbnailStreamFactory: ({
+            required String videoPath,
+            required String clipId,
+            required Duration duration,
+            required Size outputSize,
+            required int thumbsPerSecond,
+            Duration startOffset = Duration.zero,
+            List<Duration>? priorityTimestamps,
+          }) => const Stream<List<StripThumbnail>>.empty(),
         );
       });
 

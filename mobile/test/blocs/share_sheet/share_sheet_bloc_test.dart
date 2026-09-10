@@ -443,8 +443,7 @@ void main() {
           bloc.add(
             const ShareSheetRecipientToggled(
               ShareableUser(
-                pubkey:
-                    'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
                 displayName: 'Picked Stranger',
               ),
             ),
@@ -508,8 +507,7 @@ void main() {
           bloc.add(
             const ShareSheetRecipientToggled(
               ShareableUser(
-                pubkey:
-                    'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
                 displayName: 'Picked Stranger',
               ),
             ),
@@ -578,8 +576,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           const picked = ShareableUser(
-            pubkey:
-                'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+            pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
             displayName: 'Picked Stranger',
           );
           bloc.add(const ShareSheetContactsLoadRequested());
@@ -651,13 +648,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           const firstPicked = ShareableUser(
-            pubkey:
-                'yyyy56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+            pubkey: 'yyyy56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
             displayName: 'Picked First',
           );
           const secondPicked = ShareableUser(
-            pubkey:
-                'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+            pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
             displayName: 'Picked Second',
           );
           bloc.add(const ShareSheetContactsLoadRequested());

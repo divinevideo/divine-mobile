@@ -1,7 +1,7 @@
 // ABOUTME: Service for publishing video view events (Kind 22236) to Nostr
 // ABOUTME: Tracks video watch time and publishes ephemeral analytics events
 
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/models/view_traffic_source.dart';
@@ -30,12 +30,11 @@ enum ViewEventPhase {
 ///
 /// Wired in the app layer to Crashlytics for structural drops. Injected
 /// rather than reached for statically so tests can assert on drops.
-typedef ViewEventDropReporter =
-    void Function(
-      ViewEventDropReason reason, {
-      required String videoId,
-      required String method,
-    });
+typedef ViewEventDropReporter = void Function(
+  ViewEventDropReason reason, {
+  required String videoId,
+  required String method,
+});
 
 /// Service for publishing video view events to Nostr relays.
 ///

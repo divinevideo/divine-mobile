@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "Sembang sokongan tidak tersedia",
   "supportCouldNotOpenMessages": "Tidak dapat membuka mesej sokongan",
   "supportCouldNotOpenPage": "Tidak dapat membuka {pageName}",
   "@supportCouldNotOpenPage": {
@@ -2569,24 +2568,6 @@
   "soundPreview": "Pratonton",
   "soundStop": "Berhenti",
   "soundUseSound": "Guna Bunyi",
-  "soundUntitled": "Bunyi tanpa tajuk",
-  "soundStopPreview": "Hentikan pratonton",
-  "soundPreviewSemanticLabel": "Pratonton {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "Lihat butiran untuk {title}",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "Belum ada video",
   "soundOneVideo": "1 video",
   "soundVideoCount": "{count} video",
@@ -4787,6 +4768,20 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "Luncur untuk melaras",
+  "videoEditorDetachLabel": "Tanggalkan",
+  "videoEditorDetachSemanticLabel": "Tanggalkan klip dipilih daripada garis masa",
+  "videoEditorDetachTitle": "Tanggalkan klip",
+  "videoEditorDetachDescription": "Klip berpindah ke kanvas, dan anda boleh meletakkannya di mana-mana. Apa yang mengambil tempatnya pada garis masa?",
+  "videoEditorDetachReplaceRemove": "Tiada",
+  "videoEditorDetachReplaceRemoveDetail": "Tutup ruang itu – semua selepasnya bermula lebih awal.",
+  "videoEditorDetachReplaceColor": "Warna",
+  "videoEditorDetachReplaceColorDetail": "Menahan satu warna selama klip itu berjalan.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Ambil foto untuk menahan tempatnya.",
+  "videoEditorDetachedClipLabel": "Klip ditanggalkan",
+  "videoEditorDetachProgressLabel": "Meleraikan klip anda…",
+  "videoEditorDetachFailed": "Klip itu tidak dapat ditanggalkan. Garis masa anda tidak berubah.",
+  "videoEditorDetachImagePickFailed": "Foto itu tidak dapat dimuatkan.",
   "videoEditorChromaKeyLabel": "Skrin hijau",
   "videoEditorChromaKeyTitle": "Skrin hijau",
   "videoEditorChromaKeySemanticLabel": "Sediakan skrin hijau untuk klip ini",
@@ -4808,7 +4803,8 @@
   "videoEditorChromaKeyBackgroundImage": "Imej",
   "videoEditorChromaKeyBackgroundVideo": "Klip",
   "videoEditorChromaKeyTransparentHint": "Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.",
-  "videoEditorChromaKeyDetectFailed": "Skrin tidak ditemui. Ia perlu mencapai tepi bingkai — pilih warnanya secara manual.",
+  "videoEditorChromaKeySurfaceHint": "Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.",
+  "videoEditorChromaKeyDetectFailed": "Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.",
   "videoEditorChromaKeyPickClipTitle": "Pilih klip",
   "videoEditorChromaKeyNoLibraryClips": "Pustaka anda kosong. Simpan klip dahulu, kemudian gunakannya sebagai latar.",
   "videoEditorChromaKeyImagePickFailed": "Imej itu tidak dapat dimuatkan.",
@@ -5087,6 +5083,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Main pratonton",
   "videoEditorAudioPausePreviewSemanticLabel": "Jeda pratonton",
   "videoEditorAudioUntitledSound": "Bunyi tanpa tajuk",
+  "videoEditorAudioFileMissing": "Fail audio sudah tiada pada peranti ini",
   "videoEditorAudioUntitled": "Tanpa tajuk",
   "videoEditorAudioAddAudio": "Tambah audio",
   "videoEditorAudioNoSoundsAvailableTitle": "Tiada bunyi tersedia",
@@ -5503,7 +5500,7 @@
   "minorAccountReviewRestrictionEngagement": "Komen, sukaan, siaran semula dan ikutan dijeda",
   "minorAccountReviewRestrictionMessaging": "Memulakan atau membalas mesej biasa dijeda",
   "minorAccountReviewRestrictionSupport": "Sokongan dan mesej kesederhanaan anda kekal tersedia",
-  "minorAccountReviewOpenSupportCenter": "Buka Pusat Sokongan",
+  "appealOpenSupportCenter": "Buka Pusat Sokongan",
   "minorAccountReviewOpenModerationMessage": "Buka Mesej Kesederhanaan",
   "minorAccountReviewOpenReviewPage": "Buka halaman semakan",
   "minorAccountReviewCheckAgain": "Semak Semula",
@@ -6291,6 +6288,7 @@
   "savedSoundPreviewAction": "Dengar bunyi",
   "savedSoundEditAction": "Sunting butiran bunyi",
   "savedSoundRemoveAction": "Buang bunyi tersimpan",
+  "savedSoundFileMissing": "Fail audio bunyi ini sudah tiada pada peranti anda, jadi ia tidak boleh dimainkan.",
   "savedSoundClearHashtagFilter": "Kosongkan penapis hashtag",
   "soundAllowRemix": "Benarkan orang lain me-remix bunyi ini",
   "soundReuseUnavailable": "Bunyi ini tidak boleh di-remix sekarang.",

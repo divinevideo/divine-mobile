@@ -7,6 +7,10 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:openvine/config/app_config.dart';
+import 'package:openvine/models/crosspost_models.dart';
+
+export 'package:openvine/models/crosspost_models.dart';
 
 /// Reads an account-bound Divine OAuth access token.
 typedef CrosspostingAccessTokenReader = Future<String?> Function();
@@ -129,7 +133,6 @@ class CrosspostingConnection extends Equatable {
     required this.status,
     this.externalAccountId,
     this.externalAccountName,
-    this.tokenExpiresAt,
   });
 
   factory CrosspostingConnection.fromJson(
@@ -147,18 +150,6 @@ class CrosspostingConnection extends Equatable {
         json,
         'externalAccountName',
       ),
-      tokenExpiresAt: _parseEpochSeconds(
-        _optionalJsonField<num>(json, 'tokenExpiresAt'),
-      ),
-    );
-  }
-
-  /// The server sends `tokenExpiresAt` as Unix epoch seconds.
-  static DateTime? _parseEpochSeconds(num? value) {
-    if (value == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(
-      (value * 1000).round(),
-      isUtc: true,
     );
   }
 
@@ -167,7 +158,9 @@ class CrosspostingConnection extends Equatable {
   final CrosspostingConnectionStatus status;
   final String? externalAccountId;
   final String? externalAccountName;
-  final DateTime? tokenExpiresAt;
+
+  /// Whether the service currently considers this link usable for publishing.
+  bool get isConnected => status == CrosspostingConnectionStatus.connected;
 
   @override
   List<Object?> get props => [
@@ -176,7 +169,6 @@ class CrosspostingConnection extends Equatable {
     status,
     externalAccountId,
     externalAccountName,
-    tokenExpiresAt,
   ];
 }
 
@@ -242,6 +234,9 @@ class CrosspostingApiException implements Exception {
     return CrosspostingApiErrorKind.generic;
   }
 
+  /// Deliberately omits [message] and [cause]: the message can carry a
+  /// connection URL and the cause a bearer token, and this text reaches logs.
+  /// Pinned by "diagnostic text omits raw messages and transport causes".
   @override
   String toString() =>
       'CrosspostingApiException'
@@ -262,8 +257,10 @@ class CrosspostingApiClient {
        _baseUrl = baseUrl,
        _httpClient = httpClient ?? http.Client();
 
-  /// Production crossposter service.
-  static const defaultBaseUrl = 'https://crossposter.divine.video';
+  /// The crossposter service, overridable per build with `CROSSPOSTER_URL`
+  /// so a local-stack or staging run reaches the same host as the rest of
+  /// the app.
+  static const String defaultBaseUrl = AppConfig.crossposterBaseUrl;
 
   static const Duration _timeout = Duration(seconds: 20);
   static const _allowedReturnUrlHosts = {
@@ -454,6 +451,50 @@ class CrosspostingApiClient {
     );
   }
 
+  /// Triggers crossposts of the video [eventId] to [platforms].
+  ///
+  /// Idempotent server-side: repeat calls return the existing jobs rather
+  /// than double-posting.
+  ///
+  /// Throws [CrosspostingApiException] on failure; [CrosspostingApiException.code]
+  /// carries server codes such as `not_owner`, `not_eligible`, and
+  /// `not_connected`.
+  Future<List<CrosspostJob>> createCrossposts({
+    required String eventId,
+    required List<String> platforms,
+  }) async {
+    final json = await _send(
+      'POST',
+      '/videos/${Uri.encodeComponent(eventId)}/crossposts',
+      body: {'platforms': platforms},
+      allowEmpty: false,
+    );
+    return _parseJobs(json);
+  }
+
+  /// Fetches the current crosspost jobs for the video [eventId].
+  ///
+  /// Throws [CrosspostingApiException] on failure.
+  Future<List<CrosspostJob>> getCrossposts({required String eventId}) async {
+    final json = await _get(
+      '/videos/${Uri.encodeComponent(eventId)}/crossposts',
+    );
+    return _parseJobs(json);
+  }
+
+  /// A body without a `jobs` collection is malformed, not an empty result:
+  /// reporting zero jobs tells the user the crosspost finished when nothing
+  /// was scheduled. Matches how `platforms`, `connections` and `preferences`
+  /// are read, and keeps a non-list value a [CrosspostingApiException] rather
+  /// than a raw cast error no caller catches.
+  List<CrosspostJob> _parseJobs(Map<String, dynamic> json) {
+    final entries = _requiredJsonField<List<dynamic>>(json, 'jobs');
+    return entries
+        .whereType<Map<String, dynamic>>()
+        .map(CrosspostJob.fromJson)
+        .toList();
+  }
+
   Future<Map<String, dynamic>> _get(String path) async {
     final headers = await _authHeaders();
     final uri = Uri.parse('$_baseUrl$path');
@@ -467,6 +508,7 @@ class CrosspostingApiClient {
     String method,
     String path, {
     Map<String, dynamic>? body,
+    bool allowEmpty = true,
   }) async {
     final headers = await _authHeaders();
     final uri = Uri.parse('$_baseUrl$path');
@@ -481,7 +523,7 @@ class CrosspostingApiClient {
       'DELETE' => _request(() => _httpClient.delete(uri, headers: headers)),
       _ => throw ArgumentError.value(method, 'method'),
     };
-    return _decode(response, allowEmpty: true);
+    return _decode(response, allowEmpty: allowEmpty);
   }
 
   Future<http.Response> _request(
@@ -515,16 +557,19 @@ class CrosspostingApiClient {
     final dynamic decoded;
     try {
       decoded = jsonDecode(response.body);
-    } on FormatException {
+    } on FormatException catch (error) {
       throw CrosspostingApiException(
         'Malformed JSON response',
         statusCode: response.statusCode,
+        code: 'malformed_response',
+        cause: error,
       );
     }
     if (decoded is! Map<String, dynamic>) {
       throw CrosspostingApiException(
         'Unexpected response shape',
         statusCode: response.statusCode,
+        code: 'malformed_response',
       );
     }
     return decoded;

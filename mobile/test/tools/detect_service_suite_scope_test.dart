@@ -101,6 +101,7 @@ fi
         'dm_repository',
         'follow_repository',
         'funnelcake_api_client',
+        'logging_types',
         'models',
         'nostr_client',
         'nostr_sdk',

@@ -1588,7 +1588,6 @@
     "supportLoginRequired": "Login untuk menghubungi dukungan",
     "supportExportingLogs": "Mengekspor log...",
     "supportExportLogsFailed": "Gagal mengekspor log",
-    "supportChatNotAvailable": "Chat dukungan tidak tersedia",
     "supportCouldNotOpenMessages": "Tidak bisa membuka pesan dukungan",
     "supportCouldNotOpenPage": "Tidak bisa membuka {pageName}",
     "@supportCouldNotOpenPage": {
@@ -2421,6 +2420,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Putar pratinjau",
     "videoEditorAudioUntitled": "Tanpa judul",
     "videoEditorAudioUntitledSound": "Suara tanpa judul",
+    "videoEditorAudioFileMissing": "File audio sudah tidak ada di perangkat",
     "videoEditorVolumeLongPressHint": "Bisukan atau aktifkan semua trek",
     "videoEditorClipSaveFailed": "Gagal menyimpan klip",
     "videoEditorClipSavedSuccess": "Klip disimpan ke perpustakaan",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Suara tanpa judul",
-    "soundStopPreview": "Hentikan pratinjau",
-    "soundPreviewSemanticLabel": "Pratinjau {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Lihat detail untuk {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Cari...",
     "categoryVideoCount": "{count} video",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Geser untuk menyesuaikan",
     "videoEditorVolumeSemanticLabel": "Sesuaikan volume",
-    "videoEditorChromaKeyLabel": "Layar hijau",
+    "videoEditorDetachLabel": "Lepas",
+  "videoEditorDetachSemanticLabel": "Lepas klip yang dipilih dari timeline",
+  "videoEditorDetachTitle": "Lepas klip",
+  "videoEditorDetachDescription": "Klip pindah ke kanvas, kamu bisa menaruhnya di mana saja. Apa yang menggantikan tempatnya di timeline?",
+  "videoEditorDetachReplaceRemove": "Tidak ada",
+  "videoEditorDetachReplaceRemoveDetail": "Tutup celahnya – semua setelahnya mulai lebih awal.",
+  "videoEditorDetachReplaceColor": "Warna",
+  "videoEditorDetachReplaceColorDetail": "Menahan satu warna selama klip tadi berjalan.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Ambil foto untuk menahan tempatnya.",
+  "videoEditorDetachedClipLabel": "Klip terlepas",
+  "videoEditorDetachProgressLabel": "Melepaskan klip kamu…",
+  "videoEditorDetachFailed": "Klip itu tidak bisa dilepas. Timeline-mu tidak berubah.",
+  "videoEditorDetachImagePickFailed": "Foto itu tidak bisa dimuat.",
+  "videoEditorChromaKeyLabel": "Layar hijau",
     "videoEditorChromaKeyTitle": "Layar hijau",
     "videoEditorChromaKeySemanticLabel": "Atur layar hijau untuk klip ini",
     "videoEditorChromaKeyCloseSemanticLabel": "Buang perubahan layar hijau",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Gambar",
     "videoEditorChromaKeyBackgroundVideo": "Klip",
     "videoEditorChromaKeyTransparentHint": "Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.",
-    "videoEditorChromaKeyDetectFailed": "Layar tidak ditemukan. Layar harus mencapai tepi bingkai — kalau tidak, pilih warnanya secara manual.",
+    "videoEditorChromaKeySurfaceHint": "Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.",
+    "videoEditorChromaKeyDetectFailed": "Layar tidak ditemukan: harus memenuhi seluruh bingkai di belakang kamu. Tembok polos juga bisa. Atau pilih warnanya sendiri.",
     "videoEditorChromaKeyPickClipTitle": "Pilih klip",
     "videoEditorChromaKeyNoLibraryClips": "Pustakamu kosong. Simpan klip dulu, lalu pakai sebagai latar.",
     "videoEditorChromaKeyImagePickFailed": "Gambar itu tidak bisa dimuat.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Komentar, suka, repost, dan mengikuti dihentikan sementara",
     "minorAccountReviewRestrictionMessaging": "Memulai atau membalas pesan biasa dihentikan sementara",
     "minorAccountReviewRestrictionSupport": "Dukungan dan pesan moderasimu tetap tersedia",
-    "minorAccountReviewOpenSupportCenter": "Buka pusat dukungan",
+    "appealOpenSupportCenter": "Buka pusat dukungan",
     "minorAccountReviewOpenModerationMessage": "Buka pesan moderasi",
     "minorAccountReviewOpenReviewPage": "Buka halaman peninjauan",
     "minorAccountReviewCheckAgain": "Periksa lagi",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Dengarkan suaranya",
   "savedSoundEditAction": "Edit detail suara",
   "savedSoundRemoveAction": "Hapus suara tersimpan",
+  "savedSoundFileMissing": "File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar.",
   "savedSoundClearHashtagFilter": "Bersihkan filter tagar",
   "soundAllowRemix": "Izinkan orang lain me-remix suara ini",
   "soundReuseUnavailable": "Suara ini belum bisa di-remix sekarang.",

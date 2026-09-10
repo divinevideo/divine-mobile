@@ -5,18 +5,43 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
-import 'package:openvine/screens/explore/explore_screen.dart';
-import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/services/auth_service.dart';
+
+import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 void main() {
+  Future<ProviderContainer> createContainer() async {
+    final container = ProviderContainer(
+      overrides: [
+        ...getStandardTestOverrides(
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: syntheticTestPubkey,
+          ),
+        ),
+        currentMinorAccountReviewStatusProvider.overrideWith(
+          (ref) async => MinorAccountReviewStatus.active(),
+        ),
+        currentAccountDeletionAttemptProvider.overrideWith((ref) async => null),
+      ],
+    );
+    await container.read(currentMinorAccountReviewStatusProvider.future);
+    await container.read(currentAccountDeletionAttemptProvider.future);
+    return container;
+  }
+
   group('Router Location Provider', () {
     testWidgets('emits initial location immediately', (tester) async {
-      final container = ProviderContainer();
+      final container = await createContainer();
       addTearDown(container.dispose);
-
-      // Build minimal widget tree with GoRouter
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -30,18 +55,20 @@ void main() {
 
       final stream = container.read(routerLocationStreamProvider);
       final queue = StreamQueue(stream);
-      addTearDown(() async => queue.cancel());
 
       // Get initial location
       final initial = await queue.next;
-      expect(initial, VideoFeedPage.pathForIndex(0));
+      expect(initial, WelcomeScreen.path);
+
+      await queue.cancel();
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
     });
 
     testWidgets('emits new location when router navigates', (tester) async {
-      final container = ProviderContainer();
+      final container = await createContainer();
       addTearDown(container.dispose);
-
-      // Build minimal widget tree with GoRouter
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -56,56 +83,74 @@ void main() {
       // Listen to the raw stream for deterministic events
       final stream = container.read(routerLocationStreamProvider);
       final queue = StreamQueue(stream);
-      addTearDown(() async => queue.cancel());
 
       // 1) Initial location
       final initial = await queue.next;
-      expect(initial, VideoFeedPage.pathForIndex(0));
+      expect(initial, WelcomeScreen.path);
 
-      // 2) Navigate to explore
-      container.read(goRouterProvider).go(ExploreScreen.pathForIndex(0));
-      await tester.pump(); // Flush delegate change notification
+      // Use error routes so this provider test does not initialize unrelated
+      // app-shell side effects.
+      container.read(goRouterProvider).go('/unknown-one');
+      await tester.pump();
 
       final next1 = await queue.next;
-      expect(next1, ExploreScreen.pathForIndex(0));
+      expect(next1, '/unknown-one');
 
-      // 3) Navigate to explore page 5
-      container.read(goRouterProvider).go(ExploreScreen.pathForIndex(5));
+      container.read(goRouterProvider).go('/unknown-two');
       await tester.pump();
 
       final next2 = await queue.next;
-      expect(next2, ExploreScreen.pathForIndex(5));
+      expect(next2, '/unknown-two');
+
+      await queue.cancel();
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
     });
 
-    testWidgets('cleans up listener on dispose', (tester) async {
-      final container = ProviderContainer();
-
-      // Build minimal widget tree
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: container.read(goRouterProvider),
-          ),
-        ),
+    test('removes its listener and closes the stream on dispose', () async {
+      final router = _MockGoRouter();
+      final delegate = _MockGoRouterDelegate();
+      final routeInformation = GoRouteInformationProvider(
+        initialLocation: '/sentinel-location',
+        initialExtra: null,
       );
+      addTearDown(routeInformation.dispose);
+      when(() => router.routerDelegate).thenReturn(delegate);
+      when(() => router.routeInformationProvider).thenReturn(routeInformation);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
 
       final stream = container.read(routerLocationStreamProvider);
-      final queue = StreamQueue(stream);
+      final locations = <String>[];
+      var isDone = false;
+      final subscription = stream.listen(
+        locations.add,
+        onDone: () => isDone = true,
+      );
+      addTearDown(subscription.cancel);
+      final listener =
+          verify(
+                () => delegate.addListener(captureAny()),
+              ).captured.single
+              as VoidCallback;
 
-      // Get initial value to confirm stream is working
-      final initial = await queue.next;
-      expect(initial, isNotEmpty);
+      await pumpEventQueue();
+      expect(locations, ['/sentinel-location']);
+      expect(isDone, isFalse);
 
-      // Cancel and dispose
-      await queue.cancel();
+      // Keep the subscription active so cancellation cannot hide a leaked
+      // controller. The router remains alive independently of this container.
       container.dispose();
-
-      // If this completes without error, cleanup worked
-      expect(true, isTrue);
+      verify(() => delegate.removeListener(listener)).called(1);
+      await pumpEventQueue();
+      expect(isDone, isTrue);
     });
-    // TODO(Any): Fix and re-enable these tests
-  }, skip: true);
+  });
 }
+
+class _MockGoRouter extends Mock implements GoRouter {}
+
+class _MockGoRouterDelegate extends Mock implements GoRouterDelegate {}

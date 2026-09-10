@@ -13,6 +13,7 @@ import 'package:models/models.dart'
         InspiredByInfo,
         NativeProofData;
 import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -48,6 +49,7 @@ class DivineVideoDraft {
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
     this.inspiredByNpub,
+    this.captionMentions = const [],
     this.clipSourceCredits = const [],
     this.selectedSound,
     this.audioShareAttribution,
@@ -74,6 +76,7 @@ class DivineVideoDraft {
     Set<String> collaboratorPubkeys = const {},
     InspiredByInfo? inspiredByVideo,
     String? inspiredByNpub,
+    List<CaptionMention> captionMentions = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedSound,
     AudioShareAttribution? audioShareAttribution,
@@ -104,6 +107,7 @@ class DivineVideoDraft {
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpub: inspiredByNpub,
+      captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
       audioShareAttribution: audioShareAttribution,
@@ -205,6 +209,7 @@ class DivineVideoDraft {
             )
           : null,
       inspiredByNpub: json['inspiredByNpub'] as String?,
+      captionMentions: CaptionMention.listFromJson(json['captionMentions']),
       clipSourceCredits: ClipSourceCredit.listFromJson(
         json['clipSourceCredits'],
       ),
@@ -303,6 +308,12 @@ class DivineVideoDraft {
   /// NIP-27 npub reference for general "Inspired By" a creator.
   final String? inspiredByNpub;
 
+  /// Accounts the author picked from the caption's mention autocomplete.
+  ///
+  /// Carries the pubkey the author actually chose, which the typed text
+  /// cannot express when two accounts share a display name.
+  final List<CaptionMention> captionMentions;
+
   /// Factual credits for clips reused from published videos.
   final List<ClipSourceCredit> clipSourceCredits;
 
@@ -380,6 +391,7 @@ class DivineVideoDraft {
     Set<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
     String? inspiredByNpub,
+    List<CaptionMention>? captionMentions,
     List<ClipSourceCredit>? clipSourceCredits,
     AudioEvent? selectedSound,
     bool clearSelectedSound = false,
@@ -423,6 +435,7 @@ class DivineVideoDraft {
     collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
     inspiredByVideo: inspiredByVideo ?? this.inspiredByVideo,
     inspiredByNpub: inspiredByNpub ?? this.inspiredByNpub,
+    captionMentions: captionMentions ?? this.captionMentions,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     selectedSound: clearSelectedSound
         ? null
@@ -482,6 +495,7 @@ class DivineVideoDraft {
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpub: inspiredByNpub,
+      captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
       audioShareAttribution: audioShareAttribution,
@@ -519,6 +533,10 @@ class DivineVideoDraft {
       'collaboratorPubkeys': collaboratorPubkeys.toList(),
     if (inspiredByVideo != null) 'inspiredByVideo': inspiredByVideo!.toJson(),
     if (inspiredByNpub != null) 'inspiredByNpub': inspiredByNpub,
+    if (captionMentions.isNotEmpty)
+      'captionMentions': captionMentions
+          .map((mention) => mention.toJson())
+          .toList(),
     if (clipSourceCredits.isNotEmpty)
       'clipSourceCredits': clipSourceCredits
           .map((credit) => credit.toJson())

@@ -5,14 +5,14 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
-import 'package:openvine/services/crossposter_api_client.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   VideoCrosspostCubit({
-    required CrossposterApiClient client,
+    required CrosspostingApiClient client,
     required String eventId,
-    List<CrossposterConnection>? initialConnections,
+    List<CrosspostingConnection>? initialConnections,
     Duration pollInterval = const Duration(seconds: 3),
     Duration pollTimeout = const Duration(minutes: 5),
   }) : _client = client,
@@ -27,12 +27,12 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
                  connections: initialConnections,
                  selectedPlatforms: {
                    for (final connection in initialConnections)
-                     if (connection.isConnected) connection.platform,
+                     if (connection.isConnected) connection.platform.wireName,
                  },
                ),
        );
 
-  final CrossposterApiClient _client;
+  final CrosspostingApiClient _client;
   final String _eventId;
   final Duration _pollInterval;
   final Duration _pollTimeout;
@@ -50,11 +50,11 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
           connections: connections,
           selectedPlatforms: {
             for (final connection in connections)
-              if (connection.isConnected) connection.platform,
+              if (connection.isConnected) connection.platform.wireName,
           },
         ),
       );
-    } on CrossposterApiException catch (e, stackTrace) {
+    } on CrosspostingApiException catch (e, stackTrace) {
       Log.error(
         'Failed to load crossposter connections',
         name: 'VideoCrosspostCubit',
@@ -87,7 +87,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
       );
       if (isClosed) return;
       _onJobsUpdated(jobs);
-    } on CrossposterApiException catch (e, stackTrace) {
+    } on CrosspostingApiException catch (e, stackTrace) {
       Log.error(
         'Crosspost submit failed',
         name: 'VideoCrosspostCubit',
@@ -157,7 +157,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
           ),
         );
         if (!pending) _stopPolling();
-      } on CrossposterApiException catch (e, stackTrace) {
+      } on CrosspostingApiException catch (e, stackTrace) {
         // Transient poll failure — keep the timer running and retry on
         // the next tick.
         Log.warning(
@@ -174,7 +174,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
     _pollTimer = null;
   }
 
-  VideoCrosspostSubmitError _submitErrorFor(CrossposterApiException e) =>
+  VideoCrosspostSubmitError _submitErrorFor(CrosspostingApiException e) =>
       switch (e.code) {
         'not_owner' => VideoCrosspostSubmitError.notOwner,
         'not_eligible' => VideoCrosspostSubmitError.notEligible,

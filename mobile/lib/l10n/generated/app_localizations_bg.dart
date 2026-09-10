@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4676,9 +4677,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get supportRevealLogsAction => 'Покажи в папка';
 
   @override
-  String get supportChatNotAvailable => 'Чатът за поддръжка не е наличен';
-
-  @override
   String get supportCouldNotOpenMessages =>
       'Не можах да отворя съобщения за поддръжка';
 
@@ -5239,22 +5237,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Използвай звук';
-
-  @override
-  String get soundUntitled => 'Звук без заглавие';
-
-  @override
-  String get soundStopPreview => 'Спри прегледа';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Прегледай $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Виж подробности за $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Още няма видеа';
@@ -8922,6 +8904,55 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Плъзнете за регулиране';
 
   @override
+  String get videoEditorDetachLabel => 'Откачи';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Откачи избрания клип от времевата линия';
+
+  @override
+  String get videoEditorDetachTitle => 'Откачане на клип';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'Клипът отива върху платното, където можеш да го сложиш където искаш. Какво заема мястото му на времевата линия?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Нищо';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Затвори празнината – всичко след него започва по-рано.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Цвят';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Задържа плътен цвят толкова, колкото е траел клипът.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Снимка';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Снимай кадър, който да задържи мястото му.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Откачен клип';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Клипът се отделя…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Клипът не можа да се откачи. Времевата ти линия остава непроменена.';
+
+  @override
+  String get videoEditorDetachImagePickFailed =>
+      'Снимката не можа да се зареди.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Зелен екран';
 
   @override
@@ -8990,8 +9021,12 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Не открихме фон. Той трябва да стига до ръба на кадъра — иначе избери цвета ръчно.';
+      'Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';
@@ -9289,6 +9324,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Звук без заглавие';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Аудиофайлът вече го няма на устройството';
 
   @override
   String get videoEditorAudioUntitled => 'Без заглавие';
@@ -9967,8 +10006,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           'Това блокира $count акаунта, които в момента заявяват тази значка. Публикациите им ще излязат от твоите фийдове и няма да получат известие.',
-      one:
-          'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
+      one: 'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
     );
     return '$_temp0';
   }
@@ -10234,8 +10272,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter =>
-      'Отвори центъра за поддръжка';
+  String get appealOpenSupportCenter => 'Отвори центъра за поддръжка';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11436,6 +11473,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get savedSoundRemoveAction => 'Премахни запазения звук';
 
   @override
+  String get savedSoundFileMissing =>
+      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Изчисти филтъра по хаштаг';
 
   @override
@@ -12226,9 +12267,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

@@ -20,6 +20,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
+const _accountPubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _firstFollow =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const _secondFollow =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+const _removedFollow =
+    'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+const _contactListEventId =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
 class _FakeExtension extends NostrExtension {
   @override
   Future<String> getPublicKey() async =>
@@ -107,6 +118,87 @@ void main() {
       );
       expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isFalse);
     });
+
+    test('preserves a follow written while the prefetch is pending', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final response = Completer<List<String>>();
+      final persistence = () async {
+        final pubkeys = await response.future;
+        await persistFollowingPrefetchForAuthRedirect(
+          prefs: prefs,
+          pubkeyHex: _accountPubkey,
+          pubkeys: pubkeys,
+        );
+      }();
+
+      final newerRecord = FollowingCacheRecord(
+        pubkeys: const [_firstFollow, _secondFollow],
+        createdAt: 1234,
+        eventId: _contactListEventId,
+      );
+      await prefs.setString(
+        FollowingCacheRecord.storageKey(_accountPubkey),
+        newerRecord.encode(),
+      );
+      final beforeRelease = FollowingCacheRecord.decode(
+        prefs.getString(FollowingCacheRecord.storageKey(_accountPubkey))!,
+      );
+      expect(beforeRelease.pubkeys, hasLength(2));
+
+      response.complete(const [_firstFollow]);
+      await persistence;
+
+      final persisted = FollowingCacheRecord.decode(
+        prefs.getString(FollowingCacheRecord.storageKey(_accountPubkey))!,
+      );
+      expect(persisted.pubkeys, const [_firstFollow, _secondFollow]);
+      expect(persisted.createdAt, 1234);
+      expect(persisted.eventId, _contactListEventId);
+      expect(hasFollowingPrefetchMarker(prefs, _accountPubkey), isTrue);
+    });
+
+    test(
+      'preserves an unfollow written while the prefetch is pending',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final response = Completer<List<String>>();
+        final persistence = () async {
+          final pubkeys = await response.future;
+          await persistFollowingPrefetchForAuthRedirect(
+            prefs: prefs,
+            pubkeyHex: _accountPubkey,
+            pubkeys: pubkeys,
+          );
+        }();
+
+        final newerRecord = FollowingCacheRecord(
+          pubkeys: const [_firstFollow],
+          createdAt: 1234,
+          eventId: _contactListEventId,
+        );
+        await prefs.setString(
+          FollowingCacheRecord.storageKey(_accountPubkey),
+          newerRecord.encode(),
+        );
+        final beforeRelease = FollowingCacheRecord.decode(
+          prefs.getString(FollowingCacheRecord.storageKey(_accountPubkey))!,
+        );
+        expect(beforeRelease.pubkeys, const [_firstFollow]);
+
+        response.complete(const [_firstFollow, _removedFollow]);
+        await persistence;
+
+        final persisted = FollowingCacheRecord.decode(
+          prefs.getString(FollowingCacheRecord.storageKey(_accountPubkey))!,
+        );
+        expect(persisted.pubkeys, const [_firstFollow]);
+        expect(persisted.createdAt, 1234);
+        expect(persisted.eventId, _contactListEventId);
+        expect(hasFollowingPrefetchMarker(prefs, _accountPubkey), isTrue);
+      },
+    );
   });
 
   group('flutterSecureStorageProvider', () {

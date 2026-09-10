@@ -73,16 +73,13 @@ test/nostr/transport/nostr_fixture_pump_test.dart	3
 test/notifications/badge_converges_after_tap_read_back_test.dart	8
 test/notifications/bloc/notification_feed_bloc_test.dart	23
 test/observability/divine_bloc_observer_test.dart	8
-test/performance/camera_initialization_benchmark_test.dart	6
-test/providers/account_deletion_recovery_providers_test.dart	4
+test/providers/account_deletion_recovery_providers_test.dart	3
 test/providers/account_enforcement_providers_test.dart	2
 test/providers/auth_providers_test.dart	3
 test/providers/auth_rpc_capability_provider_test.dart	1
 test/providers/broken_video_tracker_identity_test.dart	1
 test/providers/bug_report_providers_test.dart	1
 test/providers/crossposting_providers_test.dart	1
-test/providers/curation_provider_lifecycle_test.dart	1
-test/providers/curation_provider_tab_refresh_test.dart	2
 test/providers/deep_link_provider_test.dart	3
 test/providers/dm_repository_provider_test.dart	4
 test/providers/feed_background_preservation_test.dart	8
@@ -92,10 +89,7 @@ test/providers/invite_status_auth_sessions_test.dart	2
 test/providers/list_providers_test.dart	17
 test/providers/moderation_label_provider_session_test.dart	3
 test/providers/moderation_providers_blocked_follow_reconciler_test.dart	19
-test/providers/nostr_service_identity_source_test.dart	116
 test/providers/provider_identity_stream_test.dart	10
-test/providers/push_notification_sync_test.dart	85
-test/providers/seen_videos_notifier_test.dart	8
 test/providers/sounds_providers_test.dart	2
 test/providers/supporter_providers_test.dart	1
 test/providers/user_profile_providers_test.dart	31
@@ -138,7 +132,6 @@ test/services/pending_action_service_test.dart	3
 test/services/pro_video_editor_log_forwarder_test.dart	2
 test/services/profile_save_retry_service_test.dart	6
 test/services/quick_actions_coordinator_test.dart	2
-test/services/reactive_pagination_test.dart	1
 test/services/relay_capability_service_test.dart	1
 test/services/saved_sounds_service_test.dart	4
 test/services/seen_videos_service_test.dart	2
@@ -157,7 +150,6 @@ test/services/video_editor/video_editor_render_service_progress_test.dart	1
 test/services/video_editor/video_editor_split_service_test.dart	1
 test/services/video_event_publisher_retry_test.dart	1
 test/services/video_event_service_blocklist_sweep_test.dart	7
-test/services/video_event_service_deduplication_test.dart	1
 test/services/video_event_service_deletion_test.dart	9
 test/services/video_event_service_event_deduplication_test.dart	24
 test/services/video_event_service_initial_page_pagination_test.dart	2

@@ -21,6 +21,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA', 'urlB'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
       );
 
@@ -41,6 +43,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['optimizedUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         maxPlaybackDuration: cap,
       );
@@ -62,6 +66,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         maxPlaybackDuration: cap,
         delay: (_) async {},
@@ -71,7 +77,7 @@ void main() {
       expect(clips.map((clip) => clip.end), equals([cap, cap]));
     });
 
-    test('opts every source into loop-seam trimming', () async {
+    test("forwards the caller's loop-seam choice to every source", () async {
       final controller = FakeController();
       addTearDown(controller.dispose);
 
@@ -79,6 +85,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
       );
 
@@ -86,8 +94,9 @@ void main() {
         controller.lastSource?.trimToCommonTrackEnd,
         isTrue,
         reason:
-            'Feed playback loops, so a clip must end where both tracks still '
-            'have content rather than at the container duration.',
+            'The parameter is required, so this pins forwarding, not policy. '
+            'That the feed itself opts in is pinned by the loop-seam policy '
+            'group in infinite_video_feed_test.dart.',
       );
     });
 
@@ -107,6 +116,7 @@ void main() {
         sources: ['processingUrl'],
         log: logs.add,
         trimToCommonTrackEnd: false,
+        applyTypedFailoverPolicy: true,
         delay: (_) async {},
       );
 
@@ -127,6 +137,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['urlA'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         httpHeadersForSource: (source) =>
             source == 'urlA' ? {'Authorization': 'Nostr token'} : null,
@@ -147,6 +159,8 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['badUrl', 'goodUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
       );
 
@@ -164,6 +178,8 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['badUrl', 'goodUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         onSourceLoadFailure: failedSources.add,
       );
@@ -189,6 +205,8 @@ void main() {
         index: 1,
         controller: controller,
         sources: ['slowOptimizedUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
       );
 
@@ -220,6 +238,8 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         delay: (duration) async => delays.add(duration),
       );
@@ -254,6 +274,8 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         delay: (duration) async => delays.add(duration),
       );
@@ -276,6 +298,8 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl', 'rawUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         onFailoverSourceFailure: recordedFailures.add,
       );
@@ -316,6 +340,8 @@ void main() {
           index: 2,
           controller: controller,
           sources: ['derivedMp4', 'hlsUrl'],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
           onFailoverSourceFailure: recordedFailures.add,
         );
@@ -355,6 +381,8 @@ void main() {
             index: 2,
             controller: controller,
             sources: ['derivedMp4', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
             log: logs.add,
           ),
           throwsA(same(error)),
@@ -382,6 +410,7 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['derivedMp4', 'hlsUrl'],
+        trimToCommonTrackEnd: true,
         log: logs.add,
         applyTypedFailoverPolicy: false,
       );
@@ -403,6 +432,8 @@ void main() {
         index: 2,
         controller: controller,
         sources: ['processingUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         httpHeadersForSource: (_) => headers,
         delay: (_) async {},
@@ -432,6 +463,8 @@ void main() {
             index: 2,
             controller: controller,
             sources: ['processingUrl'],
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
             log: logs.add,
             delay: (_) async {},
           ),
@@ -464,6 +497,8 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['optimizedUrl', 'hlsUrl'],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
           // Mirrors _httpHeadersByIndex: one hash-bound header set returned for
           // every resolved source, so the fallback authenticates too.
@@ -499,6 +534,7 @@ void main() {
             index: 0,
             controller: controller,
             sources: ['optimizedUrl', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
             log: logs.add,
             applyTypedFailoverPolicy: false,
           ),
@@ -536,6 +572,8 @@ void main() {
             index: 0,
             controller: controller,
             sources: ['optimizedUrl', 'hlsUrl'],
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
             log: logs.add,
           );
         } on Object catch (error, stackTrace) {
@@ -561,6 +599,8 @@ void main() {
         index: 0,
         controller: controller,
         sources: ['anonymousUrl', 'authedUrl'],
+        trimToCommonTrackEnd: true,
+        applyTypedFailoverPolicy: true,
         log: logs.add,
         httpHeadersForSource: (source) =>
             source == 'authedUrl' ? headers : null,
@@ -586,6 +626,8 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['derivedMp4', 'hls', 'raw'],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
           isLoadCurrent: () => isCurrent,
         ),
@@ -613,6 +655,8 @@ void main() {
             index: 3,
             controller: controller,
             sources: ['derivedMp4', 'hls', 'raw'],
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
             log: logs.add,
             isLoadCurrent: () => isCurrent,
           ),
@@ -648,6 +692,8 @@ void main() {
           index: 0,
           controller: controller,
           sources: ['url1', 'url2'],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
         ),
         throwsA(isA<Exception>()),
@@ -663,6 +709,8 @@ void main() {
           index: 0,
           controller: controller,
           sources: [],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
         ),
         throwsA(isA<StateError>()),
@@ -679,6 +727,8 @@ void main() {
           index: 5,
           controller: controller,
           sources: ['onlyUrl'],
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
           log: logs.add,
         );
 

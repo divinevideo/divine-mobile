@@ -25,6 +25,7 @@ import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
 
@@ -48,8 +49,7 @@ AudioEvent createTestAudioEvent({
   String? title,
   double? duration,
   String? url,
-  String pubkey =
-      'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  String pubkey = 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   int createdAt = 1700000000,
 }) {
   return AudioEvent(
@@ -130,7 +130,7 @@ class MockVideosUsingSoundErrorNotifier
 /// defaults to signed-out (null).
 Widget createTestWidget({
   required Widget child,
-  List<dynamic>? overrides,
+  List<Override>? overrides,
   String? viewerPubkey,
   TextScaler textScaler = TextScaler.noScaling,
 }) {
@@ -290,8 +290,7 @@ void main() {
             child: SoundDetailScreen(
               sound: AudioEvent(
                 id: 'sound1',
-                pubkey:
-                    'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
                 createdAt: 1700000000,
                 duration: 6.0,
                 url: 'https://example.com/audio.m4a',
@@ -893,7 +892,7 @@ void main() {
             sourceVideo(allowReuse: allowReuse),
           );
 
-      List<dynamic> gridOverrides() => [
+      List<Override> gridOverrides() => [
         soundUsageCountProvider(
           sourceVideoId,
         ).overrideWith((ref) => Future.value(0)),
@@ -1096,8 +1095,7 @@ void main() {
       testWidgets('shows snackbar when sound has no URL', (tester) async {
         final testSound = AudioEvent(
           id: 'sound1',
-          pubkey:
-              'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           createdAt: 1700000000,
           title: 'No URL Sound',
           duration: 6.0,

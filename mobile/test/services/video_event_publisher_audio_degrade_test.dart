@@ -235,8 +235,7 @@ void main() {
             audioFilePath: audioPath,
             duration: 6,
             fileSize: 12345,
-            sha256Hash:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            sha256Hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             mimeType: 'audio/m4a',
           ),
         );
@@ -253,8 +252,7 @@ void main() {
             success: true,
             url: 'https://cdn.example.com/audio.m4a',
             fallbackUrl: 'https://cdn.example.com/audio.m4a',
-            videoId:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         );
 
@@ -286,67 +284,68 @@ void main() {
       },
     );
 
-    test('an authoritative reusable-audio restriction is not degraded', () async {
-      const audioPath = '/tmp/divine-audio.m4a';
-      when(
-        () => mockAudioExtractionService.extractAudio(
-          videoPath: any(named: 'videoPath'),
-        ),
-      ).thenAnswer(
-        (_) async => const AudioExtractionResult(
-          audioFilePath: audioPath,
-          duration: 6,
-          fileSize: 12345,
-          sha256Hash:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          mimeType: 'audio/m4a',
-        ),
-      );
-      when(
-        () => mockAudioExtractionService.cleanupAudioFile(audioPath),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockBlossomUploadService.uploadAudio(
-          audioFile: any(named: 'audioFile'),
-          mimeType: 'audio/m4a',
-        ),
-      ).thenAnswer(
-        (_) async => const BlossomUploadResult(
-          success: true,
-          url: 'https://cdn.example.com/audio.m4a',
-          fallbackUrl: 'https://cdn.example.com/audio.m4a',
-          videoId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        ),
-      );
-      stubSigning();
-      when(
-        () => mockNostrClient.publishEventAwaitOk(
-          any(),
-          timeout: any(named: 'timeout'),
-        ),
-      ).thenAnswer((invocation) async {
-        final event = invocation.positionalArguments.first as Event;
-        return PublishOutcome(
-          eventId: event.id,
-          acceptedBy: const [],
-          rejectedBy: const {
-            'wss://relay.divine.video': 'blocked: pubkey is suspended',
-          },
-          noResponseFrom: const [],
-        );
-      });
-
-      await expectLater(
-        publisher.publishDirectUpload(createUpload(), allowAudioReuse: true),
-        throwsA(
-          isA<AccountRestrictedPublishException>().having(
-            (error) => error.source,
-            'source',
-            AccountRestrictionSource.webSocket,
+    test(
+      'an authoritative reusable-audio restriction is not degraded',
+      () async {
+        const audioPath = '/tmp/divine-audio.m4a';
+        when(
+          () => mockAudioExtractionService.extractAudio(
+            videoPath: any(named: 'videoPath'),
           ),
-        ),
-      );
-    });
+        ).thenAnswer(
+          (_) async => const AudioExtractionResult(
+            audioFilePath: audioPath,
+            duration: 6,
+            fileSize: 12345,
+            sha256Hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            mimeType: 'audio/m4a',
+          ),
+        );
+        when(
+          () => mockAudioExtractionService.cleanupAudioFile(audioPath),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockBlossomUploadService.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: 'audio/m4a',
+          ),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            url: 'https://cdn.example.com/audio.m4a',
+            fallbackUrl: 'https://cdn.example.com/audio.m4a',
+            videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+        );
+        stubSigning();
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: const {
+              'wss://relay.divine.video': 'blocked: pubkey is suspended',
+            },
+            noResponseFrom: const [],
+          );
+        });
+
+        await expectLater(
+          publisher.publishDirectUpload(createUpload(), allowAudioReuse: true),
+          throwsA(
+            isA<AccountRestrictedPublishException>().having(
+              (error) => error.source,
+              'source',
+              AccountRestrictionSource.webSocket,
+            ),
+          ),
+        );
+      },
+    );
   });
 }

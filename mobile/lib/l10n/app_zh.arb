@@ -2352,7 +2352,6 @@
   "@supportRevealLogsAction": {
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
-  "supportChatNotAvailable": "客服聊天不可用",
   "supportCouldNotOpenMessages": "无法打开客服消息",
   "supportCouldNotOpenPage": "无法打开{pageName}",
   "@supportCouldNotOpenPage": {
@@ -2569,24 +2568,6 @@
   "soundPreview": "预览",
   "soundStop": "停止",
   "soundUseSound": "使用声音",
-  "soundUntitled": "未命名声音",
-  "soundStopPreview": "停止预览",
-  "soundPreviewSemanticLabel": "预览 {title}",
-  "@soundPreviewSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "soundViewDetailsSemanticLabel": "查看 {title} 的详情",
-  "@soundViewDetailsSemanticLabel": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "soundNoVideoCount": "还没有视频",
   "soundOneVideo": "1 个视频",
   "soundVideoCount": "{count} 个视频",
@@ -4787,6 +4768,20 @@
     }
   },
   "videoEditorTimelineSlideToAdjust": "滑动调节",
+  "videoEditorDetachLabel": "分离",
+  "videoEditorDetachSemanticLabel": "把选中片段从时间线分离",
+  "videoEditorDetachTitle": "分离片段",
+  "videoEditorDetachDescription": "片段会移到画布上，你可以随意摆放。时间线上由什么来顶替它的位置？",
+  "videoEditorDetachReplaceRemove": "无",
+  "videoEditorDetachReplaceRemoveDetail": "合上空档——后面的一切都会提前开始。",
+  "videoEditorDetachReplaceColor": "颜色",
+  "videoEditorDetachReplaceColorDetail": "按片段原来的时长显示一块纯色。",
+  "videoEditorDetachReplaceImage": "照片",
+  "videoEditorDetachReplaceImageDetail": "拍一张照片来顶替它的位置。",
+  "videoEditorDetachedClipLabel": "已分离的片段",
+  "videoEditorDetachProgressLabel": "正在分离你的片段…",
+  "videoEditorDetachFailed": "没能分离那个片段。你的时间线没有改动。",
+  "videoEditorDetachImagePickFailed": "这张照片加载不了。",
   "videoEditorChromaKeyLabel": "绿幕",
   "videoEditorChromaKeyTitle": "绿幕",
   "videoEditorChromaKeySemanticLabel": "为这个片段设置绿幕",
@@ -4808,7 +4803,8 @@
   "videoEditorChromaKeyBackgroundImage": "图片",
   "videoEditorChromaKeyBackgroundVideo": "片段",
   "videoEditorChromaKeyTransparentHint": "视频存不了透明，所以导出会是黑色。",
-  "videoEditorChromaKeyDetectFailed": "没找到幕布。幕布得铺到画面边缘——不然就手动选颜色吧。",
+  "videoEditorChromaKeySurfaceHint": "你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。",
+  "videoEditorChromaKeyDetectFailed": "没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。",
   "videoEditorChromaKeyPickClipTitle": "选个片段",
   "videoEditorChromaKeyNoLibraryClips": "作品库是空的。先存一个片段，就能拿它当背景了。",
   "videoEditorChromaKeyImagePickFailed": "这张图片加载不了。",
@@ -5087,6 +5083,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "播放预览",
   "videoEditorAudioPausePreviewSemanticLabel": "暂停预览",
   "videoEditorAudioUntitledSound": "未命名声音",
+  "videoEditorAudioFileMissing": "音频文件已经不在这台设备上了",
   "videoEditorAudioUntitled": "未命名",
   "videoEditorAudioAddAudio": "添加音频",
   "videoEditorAudioNoSoundsAvailableTitle": "暂无声音",
@@ -5503,7 +5500,7 @@
   "minorAccountReviewRestrictionEngagement": "评论、点赞、转发和关注已暂停",
   "minorAccountReviewRestrictionMessaging": "发起或回复普通消息已暂停",
   "minorAccountReviewRestrictionSupport": "客服和管理消息仍然可用",
-  "minorAccountReviewOpenSupportCenter": "打开帮助中心",
+  "appealOpenSupportCenter": "打开帮助中心",
   "minorAccountReviewOpenModerationMessage": "打开管理消息",
   "minorAccountReviewOpenReviewPage": "打开审核页面",
   "minorAccountReviewCheckAgain": "再查一次",
@@ -6291,6 +6288,7 @@
   "savedSoundPreviewAction": "试听声音",
   "savedSoundEditAction": "编辑声音信息",
   "savedSoundRemoveAction": "移除已保存的声音",
+  "savedSoundFileMissing": "这个声音的音频文件已经不在这台设备上了，没法播放。",
   "savedSoundClearHashtagFilter": "清除话题标签筛选",
   "soundAllowRemix": "允许他人混剪此声音",
   "soundReuseUnavailable": "此声音目前无法混剪。",

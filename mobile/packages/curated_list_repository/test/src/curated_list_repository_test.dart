@@ -29,14 +29,20 @@ const _blockedPubkey =
     'ffffffffffffffffffffffffffffffff'
     'ffffffffffffffffffffffffffffffff';
 
+/// Another author, for lists that share a d-tag across accounts.
+const _otherPubkey =
+    '99999999999999999999999999999999'
+    '99999999999999999999999999999999';
+
 /// Creates a kind 30005 Nostr event with the given [tags] and [content].
 Event _makeEvent({
   List<List<String>> tags = const [],
   String content = '',
   int? createdAt,
+  String pubkey = _testPubkey,
 }) {
   return Event(
-    _testPubkey,
+    pubkey,
     30005,
     tags.map(List<String>.from).toList(),
     content,
@@ -350,6 +356,35 @@ void main() {
     });
 
     group('searchLists', () {
+      test("matches the viewer's own public lists", () {
+        repository
+          ..setOwnLists([
+            createList(id: 'mine', name: 'Top Dance', pubkey: _testPubkey),
+          ])
+          ..setSubscribedLists([createList(id: 'other', name: 'Cooking')]);
+
+        final results = repository.searchLists('dance');
+
+        expect(results.map((l) => l.id), equals(['mine']));
+      });
+
+      test("excludes the viewer's own private lists", () {
+        repository.setOwnLists([
+          createList(id: 'mine', name: 'Secret Dance', isPublic: false),
+        ]);
+
+        expect(repository.searchLists('dance'), isEmpty);
+      });
+
+      test('reports a list that is both owned and subscribed once', () {
+        final list = createList(id: 'a', name: 'Dance', pubkey: _testPubkey);
+        repository
+          ..setOwnLists([list])
+          ..setSubscribedLists([list]);
+
+        expect(repository.searchLists('dance'), hasLength(1));
+      });
+
       test('returns empty for blank query', () {
         repository.setSubscribedLists([createList(id: 'a', name: 'Test')]);
 
@@ -551,6 +586,60 @@ void main() {
         registerFallbackValue(<Filter>[]);
       });
 
+      test('asks the relays for a window past the placeholder flood', () async {
+        // Every account publishes an empty default list, so the newest 50
+        // list events are placeholders; the search reads the same 500-event
+        // window as the discovery gallery.
+        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+
+        await repository.searchAllLists('dance').toList();
+
+        final filters =
+            verify(() => nostrClient.queryEvents(captureAny())).captured.single
+                as List<Filter>;
+        expect(filters.single.kinds, equals([30005]));
+        expect(filters.single.limit, equals(500));
+      });
+
+      test('keeps same-named lists from different authors apart', () async {
+        // Every account owns a `my_vine_list`: the viewer's must not hide
+        // other authors' lists with that d-tag, and only the viewer's own
+        // relay copy is the duplicate to drop.
+        repository.setOwnLists([
+          createList(
+            id: 'my_vine_list',
+            name: 'Dance Mine',
+            pubkey: _testPubkey,
+          ),
+        ]);
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            _makeEvent(
+              pubkey: _otherPubkey,
+              tags: [
+                ['d', 'my_vine_list'],
+                ['title', 'Dance Theirs'],
+                ['e', 'video-1'],
+              ],
+            ),
+            _makeEvent(
+              tags: [
+                ['d', 'my_vine_list'],
+                ['title', 'Dance Mine Stale'],
+                ['e', 'video-1'],
+              ],
+            ),
+          ],
+        );
+
+        final emissions = await repository.searchAllLists('dance').toList();
+
+        expect(
+          emissions[2].map((l) => l.name),
+          unorderedEquals(['Dance Mine', 'Dance Theirs']),
+        );
+      });
+
       test('emits nothing for blank query', () async {
         await expectLater(repository.searchAllLists(''), emitsDone);
       });
@@ -622,8 +711,8 @@ void main() {
           createList(id: 'shared-id', name: 'Dance Local'),
         ]);
 
-        // Relay returns a list with the same ID — but excludeIds
-        // should prevent it. Return a different one instead.
+        // Relay returns a list with the same author-qualified coordinate — but
+        // excludeCoordinates should prevent it. Return a different one instead.
         when(() => nostrClient.queryEvents(any())).thenAnswer(
           (_) async => [
             _makeEvent(

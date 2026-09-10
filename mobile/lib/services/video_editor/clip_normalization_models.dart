@@ -10,15 +10,11 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class NormalizationResult {
   const NormalizationResult({
     required this.segments,
-    required this.tempFilePaths,
     this.globalTransform,
   });
 
   /// The video segments ready for concatenation.
   final List<VideoSegment> segments;
-
-  /// Paths to temporary files that should be cleaned up after rendering.
-  final List<String> tempFilePaths;
 
   /// Global crop transform to apply during concatenation (if all clips match).
   final CropParameters? globalTransform;

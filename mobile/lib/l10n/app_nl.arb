@@ -1591,7 +1591,6 @@
     "supportLoginRequired": "Log in om contact op te nemen met support",
     "supportExportingLogs": "Logs exporteren...",
     "supportExportLogsFailed": "Logs exporteren mislukt",
-    "supportChatNotAvailable": "Supportchat niet beschikbaar",
     "supportCouldNotOpenMessages": "Supportberichten openen mislukt",
     "supportCouldNotOpenPage": "{pageName} openen mislukt",
     "@supportCouldNotOpenPage": {
@@ -2680,6 +2679,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Voorbeeld afspelen",
     "videoEditorAudioPausePreviewSemanticLabel": "Voorbeeld pauzeren",
     "videoEditorAudioUntitledSound": "Naamloos geluid",
+    "videoEditorAudioFileMissing": "Audiobestand staat niet meer op dit apparaat",
     "videoEditorVolumeLongPressHint": "Alle tracks dempen of hervatten",
     "videoEditorAudioUntitled": "Naamloos",
     "videoEditorAudioAddAudio": "Audio toevoegen",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Geluid zonder titel",
-    "soundStopPreview": "Preview stoppen",
-    "soundPreviewSemanticLabel": "Voorbeeld van {title}",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "Details bekijken voor {title}",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Zoeken...",
     "categoryVideoCount": "{count} video's",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Schuif om aan te passen",
     "videoEditorVolumeSemanticLabel": "Volume aanpassen",
-    "videoEditorChromaKeyLabel": "Greenscreen",
+    "videoEditorDetachLabel": "Losmaken",
+  "videoEditorDetachSemanticLabel": "Geselecteerde clip losmaken van de tijdlijn",
+  "videoEditorDetachTitle": "Clip losmaken",
+  "videoEditorDetachDescription": "De clip gaat naar het canvas, waar je hem overal kunt neerzetten. Wat komt er op de tijdlijn voor in de plaats?",
+  "videoEditorDetachReplaceRemove": "Niets",
+  "videoEditorDetachReplaceRemoveDetail": "Gat dichten – alles erna begint eerder.",
+  "videoEditorDetachReplaceColor": "Kleur",
+  "videoEditorDetachReplaceColorDetail": "Houdt een effen kleur vast zolang de clip duurde.",
+  "videoEditorDetachReplaceImage": "Foto",
+  "videoEditorDetachReplaceImageDetail": "Maak een foto die zijn plek inneemt.",
+  "videoEditorDetachedClipLabel": "Losgemaakte clip",
+  "videoEditorDetachProgressLabel": "Clip wordt losgemaakt…",
+  "videoEditorDetachFailed": "Kon die clip niet losmaken. Je tijdlijn blijft ongewijzigd.",
+  "videoEditorDetachImagePickFailed": "Kon die foto niet laden.",
+  "videoEditorChromaKeyLabel": "Greenscreen",
     "videoEditorChromaKeyTitle": "Greenscreen",
     "videoEditorChromaKeySemanticLabel": "Greenscreen voor deze clip instellen",
     "videoEditorChromaKeyCloseSemanticLabel": "Greenscreen-wijzigingen verwerpen",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Afbeelding",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.",
-    "videoEditorChromaKeyDetectFailed": "Geen achtergrond gevonden. Die moet tot aan de rand van het beeld komen — kies anders de kleur met de hand.",
+    "videoEditorChromaKeySurfaceHint": "Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.",
+    "videoEditorChromaKeyDetectFailed": "Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.",
     "videoEditorChromaKeyPickClipTitle": "Kies een clip",
     "videoEditorChromaKeyNoLibraryClips": "Je bibliotheek is leeg. Bewaar eerst een clip en gebruik die dan als achtergrond.",
     "videoEditorChromaKeyImagePickFailed": "Kon die afbeelding niet laden.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Reacties, likes, reposts en volgen staan op pauze",
     "minorAccountReviewRestrictionMessaging": "Gewone berichten starten of beantwoorden staat op pauze",
     "minorAccountReviewRestrictionSupport": "Support en je moderatiebericht blijven beschikbaar",
-    "minorAccountReviewOpenSupportCenter": "Supportcentrum openen",
+    "appealOpenSupportCenter": "Supportcentrum openen",
     "minorAccountReviewOpenModerationMessage": "Moderatiebericht openen",
     "minorAccountReviewOpenReviewPage": "Beoordelingspagina openen",
     "minorAccountReviewCheckAgain": "Opnieuw controleren",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Geluid beluisteren",
   "savedSoundEditAction": "Geluidsgegevens bewerken",
   "savedSoundRemoveAction": "Opgeslagen geluid verwijderen",
+  "savedSoundFileMissing": "Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen.",
   "savedSoundClearHashtagFilter": "Hashtagfilter wissen",
   "soundAllowRemix": "Laat anderen dit geluid remixen",
   "soundReuseUnavailable": "Dit geluid kan nu niet worden geremixt.",

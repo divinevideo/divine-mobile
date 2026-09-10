@@ -1,22 +1,9 @@
 // ABOUTME: TDD tests for pure ExploreScreen replacement using revolutionary Riverpod architecture
 // ABOUTME: Tests 3-tab system, grid/feed modes, and pure reactive state management without VideoManager
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
-
-// Mock class for VideoEvents provider
-class VideoEventsMock extends VideoEvents {
-  @override
-  Stream<List<VideoEvent>> build() {
-    // Return empty stream to avoid infinite loading
-    return Stream.value(<VideoEvent>[]);
-  }
-}
 
 void main() {
   group('ExploreScreen Pure (TDD)', () {
@@ -135,43 +122,6 @@ void main() {
           throw UnimplementedError('Large dataset handling not implemented');
         }, throwsA(isA<UnimplementedError>()));
       });
-    });
-
-    // Integration test - basic widget rendering with mocked providers
-    group('Phase 6: Widget Integration Tests (Basic)', () {
-      testWidgets('ExploreScreen renders correctly', (tester) async {
-        // Create a container with overridden providers to avoid infinite loading
-        final testContainer = ProviderContainer(
-          overrides: [
-            // Mock videoEventsProvider to return empty stream instead of loading indefinitely
-            videoEventsProvider.overrideWith(VideoEventsMock.new),
-          ],
-        );
-
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: ExploreScreen(),
-            ),
-          ),
-        );
-
-        // Use pump instead of pumpAndSettle to avoid timeout
-        await tester.pump();
-
-        // Should render successfully
-        expect(find.byType(ExploreScreen), findsOneWidget);
-        // "Explore" title is now in AppShell app bar (router-driven), not in ExploreScreen itself
-        expect(find.text('Popular Now'), findsOneWidget);
-        expect(find.text('Trending'), findsOneWidget);
-        expect(find.text("Editor's Pick"), findsOneWidget);
-
-        testContainer.dispose();
-        // TODO(any): Fix and re-enable this test
-      }, skip: true);
     });
   });
 }

@@ -18,7 +18,9 @@ import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
+import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/startup/app_side_effects.dart';
@@ -27,6 +29,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockProductEventQueue extends Mock implements ProductEventQueue {}
+
+class _EmptySupportRouteTrail extends SupportRouteTrail {
+  @override
+  List<RouteType> build() => const [];
+}
 
 class _RecordingAnalytics implements AnalyticsEventSink {
   final userIds = <String?>[];
@@ -102,6 +109,7 @@ void main() {
     ),
     // Root tier, stubbed: neither reaches the identity mirrors under test.
     routeNormalizationProvider.overrideWithValue(null),
+    supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new),
     connectivityRelayReconnectProvider.overrideWithValue(null),
     outgoingDmRetryServiceProvider.overrideWithValue(null),
     dmReactionRetryServiceProvider.overrideWithValue(null),
@@ -326,6 +334,7 @@ void main() {
     const hosts = {'lib/startup/app_side_effects.dart'};
     const activationOnlyProviders = <String>[
       'routeNormalizationProvider',
+      'supportRouteTrailProvider',
       'connectivityRelayReconnectProvider',
       'outgoingDmRetryServiceProvider',
       'dmReactionRetryServiceProvider',

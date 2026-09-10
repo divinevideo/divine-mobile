@@ -198,9 +198,14 @@ class _DivineAppState extends ConsumerState<DivineApp>
     final initialDeletionAttempt = ref.read(
       currentAccountDeletionAttemptProvider,
     );
+    final initialSubmittedDeletionAttempt = ref.read(
+      currentSubmittedAccountDeletionAttemptProvider,
+    );
     _authenticatedDeletionLookupSettled = authenticatedDeletionLookupSettled(
       authService.authState,
       initialDeletionAttempt,
+      submittedAttempt: initialSubmittedDeletionAttempt,
+      currentPubkeyHex: authService.currentPublicKeyHex,
     );
     _splashReleaseController = StartupSplashReleaseController(
       authStateStream: authService.authStateStream,
@@ -220,7 +225,14 @@ class _DivineAppState extends ConsumerState<DivineApp>
       currentAccountDeletionAttemptProvider,
       (_, next) {
         _authenticatedDeletionLookupSettled =
-            authenticatedDeletionLookupSettled(authService.authState, next);
+            authenticatedDeletionLookupSettled(
+              authService.authState,
+              next,
+              submittedAttempt: ref.read(
+                currentSubmittedAccountDeletionAttemptProvider,
+              ),
+              currentPubkeyHex: authService.currentPublicKeyHex,
+            );
         _splashReleaseController.reevaluate();
       },
     );

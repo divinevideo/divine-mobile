@@ -20,10 +20,14 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/analytics_ingest_client.dart';
@@ -88,6 +92,43 @@ final pendingUploadOwnerCleanupProvider = Provider<PendingUploadOwnerCleanup>((
   return (ownerPubkey) =>
       ref.read(uploadManagerProvider).deleteAllForOwner(ownerPubkey);
 });
+
+/// Clears the live watch-history service as well as its device-wide stores.
+///
+/// The service is initialized before authentication on a cold launch, so
+/// clearing Drift and preferences directly would leave the departing
+/// account's history in memory until it was persisted again.
+final seenVideosClearProvider = Provider<Future<void> Function()>((ref) {
+  final db = ref.read(databaseProvider);
+  return () {
+    if (ref.exists(seenVideosServiceProvider)) {
+      return ref.read(seenVideosServiceProvider).clearSeenVideos();
+    }
+    return db.seenVideosDao.clearAll();
+  };
+});
+
+/// Recreates preference-backed services after an account-boundary sweep.
+///
+/// These services cache account-specific values in memory. Invalidating them
+/// does not construct an unused provider, but any live consumer rebuilds from
+/// the now-cleared preferences instead of retaining the departing account's
+/// settings for the rest of the session.
+final accountScopedPreferenceServicesResetProvider = Provider<void Function()>(
+  (ref) {
+    return () {
+      ref
+        ..invalidate(divineHostFilterServiceProvider)
+        ..invalidate(videoProvenanceFilterServiceProvider)
+        ..invalidate(contentFilterServiceProvider)
+        ..invalidate(accountLabelServiceProvider)
+        ..invalidate(moderationLabelServiceProvider)
+        ..invalidate(languagePreferenceServiceProvider)
+        ..invalidate(audioSharingPreferenceServiceProvider)
+        ..invalidate(soundLibraryServiceProvider);
+    };
+  },
+);
 
 /// Stops the live DM gift-wrap subscription during account cleanup.
 ///
@@ -872,6 +913,28 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'identityVerifications',
             db.identityVerificationsDao.clearAll,
           );
+          // Three stores below hold this account's data under a key with no
+          // pubkey in it, so the next account reads the previous account's
+          // rows. Each already had a clear method; none of them had a caller
+          // (#8314).
+          //
+          // Watch history is feed *dedup* state, so inheriting it also hides
+          // videos the incoming account has never seen.
+          await requiredCleanup(
+            'seenVideos',
+            ref.read(seenVideosClearProvider),
+          );
+          await requiredCleanup(
+            'personalEvents',
+            ref.read(personalEventCacheClearProvider),
+          );
+          await requiredCleanup(
+            'pushPreferences',
+            ref.read(notificationPreferencesStoreProvider).clearPreferences,
+          );
+          await requiredCleanup('accountScopedPreferenceServices', () async {
+            ref.read(accountScopedPreferenceServicesResetProvider)();
+          });
         }
         // Clear the leaving account's DM sync cursors so its next login
         // re-fetches from relays instead of resuming from a `since:` boundary
@@ -948,6 +1011,23 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'outgoingDms',
             () => db.outgoingDmsDao.clearAllForUser(userPubkey),
           );
+          // Queued work belonging to the account being removed. These rows
+          // carry an owner and are filtered by it at flush, so they never
+          // leaked into another account — they were simply never deleted
+          // when their owner was (#8314). Scoped by owner, so a still-active
+          // account's queue is untouched.
+          await requiredDelete(
+            'pendingProfileSaves',
+            () => db.pendingProfileSavesDao.clear(userPubkey),
+          );
+          await requiredDelete(
+            'pendingViewEvents',
+            () => db.pendingViewEventsDao.deleteAllForUser(userPubkey),
+          );
+          await requiredDelete(
+            'pendingProductEvents',
+            () => db.pendingProductEventsDao.deleteForOwner(userPubkey),
+          );
         }
       };
 
@@ -980,7 +1060,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
 HashtagService hashtagService(Ref ref) {
   final videoEventService = ref.watch(videoEventServiceProvider);
   final cacheService = ref.watch(hashtagCacheServiceProvider);
-  return HashtagService(videoEventService, cacheService);
+  final service = HashtagService(videoEventService, cacheService);
+  // The constructor starts a 1-minute periodic timer and registers a listener
+  // on VideoEventService. This provider watches two other providers, so it
+  // rebuilds whenever either changes — without this, every rebuild strands a
+  // live timer and a listener on the previous instance.
+  ref.onDispose(service.dispose);
+  return service;
 }
 
 /// Content reporting service for NIP-56 compliance

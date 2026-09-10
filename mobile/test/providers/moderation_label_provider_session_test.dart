@@ -101,7 +101,9 @@ void main() {
       final nostrClient = _MockNostrClient();
       final followRepository = _MockFollowRepository();
       final followingController = StreamController<List<String>>.broadcast();
+      final labelTail = StreamController<Event>.broadcast();
       addTearDown(followingController.close);
+      addTearDown(labelTail.close);
 
       when(() => nostrClient.hasKeys).thenReturn(true);
       when(() => nostrClient.publicKey).thenReturn(testPubkey);
@@ -113,6 +115,13 @@ void main() {
       ).thenAnswer(
         (_) async => (events: <Event>[], timedOut: false, noRelays: false),
       );
+      when(
+        () => nostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => labelTail.stream);
       when(() => followRepository.followingPubkeys).thenReturn(const []);
       when(
         () => followRepository.followingStream,

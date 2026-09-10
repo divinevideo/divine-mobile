@@ -14,6 +14,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reactions_detail_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../../helpers/test_provider_overrides.dart';
 
@@ -55,8 +56,9 @@ void main() {
 
   Widget host(
     _MockConversationReactionsCubit cubit, {
-    List<dynamic> additionalOverrides = const <dynamic>[],
+    List<Override> additionalOverrides = const <Override>[],
     Locale? locale,
+    bool removalEnabled = true,
   }) {
     return testMaterialApp(
       additionalOverrides: additionalOverrides,
@@ -72,6 +74,7 @@ void main() {
                 messageId: messageId,
                 messageAuthorPubkey: otherPubkey,
                 ownerPubkey: ownerPubkey,
+                removalEnabled: removalEnabled,
               ),
               child: const Text('open'),
             ),
@@ -97,8 +100,12 @@ void main() {
       whenListen(cubit, Stream.value(state), initialState: state);
     }
 
-    Future<void> open(WidgetTester tester, {bool settle = true}) async {
-      await tester.pumpWidget(host(cubit));
+    Future<void> open(
+      WidgetTester tester, {
+      bool settle = true,
+      bool removalEnabled = true,
+    }) async {
+      await tester.pumpWidget(host(cubit, removalEnabled: removalEnabled));
       await tester.pump();
       await tester.tap(find.text('open'));
       if (settle) {
@@ -390,6 +397,83 @@ void main() {
               widget.properties.label == l10n.dmReactionChipFailedA11yLabel,
         ),
         findsOneWidget,
+      );
+
+      semantics.dispose();
+    });
+
+    testWidgets('own refused-removal row announces the retry, not the plain '
+        'own-reaction label', (tester) async {
+      final semantics = tester.ensureSemantics();
+      primeState([
+        makeReaction(
+          id: 'own-removal-refused',
+          reactorPubkey: ownerPubkey,
+          emoji: '🔥',
+          publishStatus: DmReactionPublishStatus.removalRefused,
+        ),
+      ]);
+
+      await open(tester);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  l10n.dmReactionRemovalRefusedA11yLabel('🔥'),
+        ),
+        findsOneWidget,
+      );
+      // Deleting the refused arm falls through to the own-reaction label, which
+      // is grammatical and localized — so only its absence proves which arm ran.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == l10n.dmReactionChipOwnA11yLabel('🔥'),
+        ),
+        findsNothing,
+      );
+
+      semantics.dispose();
+    });
+
+    testWidgets('a closed thread keeps the plain own-reaction label on a '
+        'refused removal, promising no retry', (tester) async {
+      final semantics = tester.ensureSemantics();
+      primeState([
+        makeReaction(
+          id: 'own-removal-refused',
+          reactorPubkey: ownerPubkey,
+          emoji: '🔥',
+          publishStatus: DmReactionPublishStatus.removalRefused,
+        ),
+      ]);
+
+      await open(tester, removalEnabled: false);
+
+      // `removalEnabled: false` collapses the trailing to a bare emoji, so the
+      // row must not announce a retry it cannot perform. Priming the *refused*
+      // status is what makes this discriminating: the `!canRetract` guard and
+      // the status switch below it disagree, so only the guard running first
+      // produces the plain label.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == l10n.dmReactionChipOwnA11yLabel('🔥'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  l10n.dmReactionRemovalRefusedA11yLabel('🔥'),
+        ),
+        findsNothing,
       );
 
       semantics.dispose();

@@ -1588,7 +1588,6 @@
     "supportLoginRequired": "Destekle iletişime geçmek için giriş yap",
     "supportExportingLogs": "Günlükler dışa aktarılıyor...",
     "supportExportLogsFailed": "Günlükler dışa aktarılamadı",
-    "supportChatNotAvailable": "Destek sohbeti kullanılamıyor",
     "supportCouldNotOpenMessages": "Destek mesajları açılamadı",
     "supportCouldNotOpenPage": "{pageName} açılamadı",
     "@supportCouldNotOpenPage": {
@@ -2421,6 +2420,7 @@
     "videoEditorAudioPlayPreviewSemanticLabel": "Önizlemeyi oynat",
     "videoEditorAudioUntitled": "Başlıksız",
     "videoEditorAudioUntitledSound": "Başlıksız ses",
+    "videoEditorAudioFileMissing": "Ses dosyası artık cihazda yok",
     "videoEditorVolumeLongPressHint": "Tüm parçaları sessize al veya aç",
     "videoEditorClipSaveFailed": "Klip kaydedilemedi",
     "videoEditorClipSavedSuccess": "Klip kütüphaneye kaydedildi",
@@ -3210,24 +3210,6 @@
     "@profileEditGetVerifiedSubtitle": {
         "description": "Subtitle under the Get verified tile, harmonized with verifier.divine.video landing copy."
     },
-    "soundUntitled": "Adsız ses",
-    "soundStopPreview": "Ön izlemeyi durdur",
-    "soundPreviewSemanticLabel": "{title} ön izle",
-    "@soundPreviewSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
-    "soundViewDetailsSemanticLabel": "{title} detaylarını görüntüle",
-    "@soundViewDetailsSemanticLabel": {
-        "placeholders": {
-            "title": {
-                "type": "String"
-            }
-        }
-    },
     "exploreSearchHint": "Ara...",
     "categoryVideoCount": "{count} video",
     "@categoryVideoCount": {
@@ -3656,7 +3638,21 @@
     },
     "videoEditorTimelineSlideToAdjust": "Ayarlamak için kaydır",
     "videoEditorVolumeSemanticLabel": "Sesi ayarla",
-    "videoEditorChromaKeyLabel": "Yeşil perde",
+    "videoEditorDetachLabel": "Ayır",
+  "videoEditorDetachSemanticLabel": "Seçili klibi zaman çizelgesinden ayır",
+  "videoEditorDetachTitle": "Klibi ayır",
+  "videoEditorDetachDescription": "Klip tuvale geçer, orada istediğin yere koyabilirsin. Zaman çizelgesinde yerini ne alacak?",
+  "videoEditorDetachReplaceRemove": "Hiçbir şey",
+  "videoEditorDetachReplaceRemoveDetail": "Boşluğu kapat – sonrasındaki her şey daha erken başlar.",
+  "videoEditorDetachReplaceColor": "Renk",
+  "videoEditorDetachReplaceColorDetail": "Klip ne kadar sürdüyse o kadar düz renk tutar.",
+  "videoEditorDetachReplaceImage": "Fotoğraf",
+  "videoEditorDetachReplaceImageDetail": "Yerini tutacak bir fotoğraf çek.",
+  "videoEditorDetachedClipLabel": "Ayrılmış klip",
+  "videoEditorDetachProgressLabel": "Klibin ayrılıyor…",
+  "videoEditorDetachFailed": "Bu klip ayrılamadı. Zaman çizelgen değişmedi.",
+  "videoEditorDetachImagePickFailed": "Bu fotoğraf yüklenemedi.",
+  "videoEditorChromaKeyLabel": "Yeşil perde",
     "videoEditorChromaKeyTitle": "Yeşil perde",
     "videoEditorChromaKeySemanticLabel": "Bu klip için yeşil perdeyi ayarla",
     "videoEditorChromaKeyCloseSemanticLabel": "Yeşil perde değişikliklerini iptal et",
@@ -3677,7 +3673,8 @@
     "videoEditorChromaKeyBackgroundImage": "Görsel",
     "videoEditorChromaKeyBackgroundVideo": "Klip",
     "videoEditorChromaKeyTransparentHint": "Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.",
-    "videoEditorChromaKeyDetectFailed": "Perde bulunamadı. Karenin kenarlarına kadar ulaşması gerekir — yoksa rengi elle seç.",
+    "videoEditorChromaKeySurfaceHint": "Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.",
+    "videoEditorChromaKeyDetectFailed": "Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.",
     "videoEditorChromaKeyPickClipTitle": "Bir klip seç",
     "videoEditorChromaKeyNoLibraryClips": "Kitaplığın boş. Önce bir klip kaydet, sonra onu arka plan olarak kullan.",
     "videoEditorChromaKeyImagePickFailed": "Bu görsel yüklenemedi.",
@@ -3780,7 +3777,7 @@
     "minorAccountReviewRestrictionEngagement": "Yorumlar, beğeniler, repostlar ve takipler duraklatıldı",
     "minorAccountReviewRestrictionMessaging": "Normal mesaj başlatma ve yanıtlama duraklatıldı",
     "minorAccountReviewRestrictionSupport": "Destek ve moderasyon mesajın kullanılabilir durumda",
-    "minorAccountReviewOpenSupportCenter": "Destek merkezini aç",
+    "appealOpenSupportCenter": "Destek merkezini aç",
     "minorAccountReviewOpenModerationMessage": "Moderasyon mesajını aç",
     "minorAccountReviewOpenReviewPage": "İnceleme sayfasını aç",
     "minorAccountReviewCheckAgain": "Tekrar kontrol et",
@@ -4508,6 +4505,7 @@
   "savedSoundPreviewAction": "Sesi dinle",
   "savedSoundEditAction": "Ses bilgilerini düzenle",
   "savedSoundRemoveAction": "Kaydedilen sesi kaldır",
+  "savedSoundFileMissing": "Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor.",
   "savedSoundClearHashtagFilter": "Hashtag filtresini temizle",
   "soundAllowRemix": "Başkalarının bu sesi remikslemesine izin ver",
   "soundReuseUnavailable": "Bu ses şu anda remikslenemiyor.",

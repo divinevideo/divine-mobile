@@ -59,8 +59,7 @@ void main() {
           ),
           hardBinding: const CreatorBindingHardBinding(
             alg: 'sha256',
-            value:
-                'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
+            value: 'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
           ),
           referencedAssertions: const <String>[
             'c2pa.actions.v2',
@@ -79,8 +78,7 @@ void main() {
           ),
           hardBinding: const CreatorBindingHardBinding(
             alg: 'sha256',
-            value:
-                'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
+            value: 'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
           ),
           referencedAssertions: const <String>[
             'c2pa.actions.v2',
@@ -121,8 +119,7 @@ void main() {
           payload['hard_binding'],
           equals(const <String, String>{
             'alg': 'sha256',
-            'value':
-                'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
+            'value': 'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
           }),
         );
         expect(claims['nip05'], equals('alice@example.com'));

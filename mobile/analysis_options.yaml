@@ -9,6 +9,12 @@ analyzer:
     - "**/generated/**"
     - "**/l10n/**"
     - "build/**"
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     avoid_catches_without_on_clauses: ignore
     avoid_positional_boolean_parameters: ignore
@@ -17,13 +23,11 @@ analyzer:
     cascade_invocations: ignore
     comment_references: ignore
     discarded_futures: ignore
-    document_ignores: ignore
     inference_failure_on_collection_literal: ignore
     inference_failure_on_function_invocation: ignore
     inference_failure_on_function_return_type: ignore
     inference_failure_on_instance_creation: ignore
     inference_failure_on_untyped_parameter: ignore
-    list_element_type_not_assignable: ignore
     prefer_int_literals: ignore
     sort_constructors_first: ignore
     strict_raw_type: ignore

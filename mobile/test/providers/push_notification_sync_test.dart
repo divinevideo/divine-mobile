@@ -22,6 +22,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
@@ -49,6 +50,9 @@ class _MockEvent extends Mock implements Event {}
 class _FakeNotificationPreferencesStore
     implements NotificationPreferencesStore {
   final publishedSchemaVersions = <String, int>{};
+
+  @override
+  Future<void> clearPreferences() async {}
 
   @override
   Future<int?> loadPublishedSchemaVersion(String pubkey) async =>
@@ -188,9 +192,11 @@ void main() {
     environment: AppEnvironment.staging,
     configuredPushServicePubkey: pushServicePubkey,
   );
+  const switchedPushServicePubkey =
+      'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
   const stagingEnvironment = _ConfiguredEnvironmentConfig(
     environment: AppEnvironment.staging,
-    configuredPushServicePubkey: pushServicePubkey,
+    configuredPushServicePubkey: switchedPushServicePubkey,
   );
 
   setUpAll(() {
@@ -210,6 +216,7 @@ void main() {
     preferenceStore = _FakeNotificationPreferencesStore();
     authStateController = StreamController<AuthState>.broadcast();
     defaultTokenRefreshController = StreamController<String>.broadcast();
+    beforeSessionTeardownCallback = null;
 
     when(
       () => authService.authStateStream,
@@ -293,7 +300,7 @@ void main() {
 
   ProviderContainer buildContainer({
     _TestNostrSession? nostrSession,
-    List<dynamic> extraOverrides = const [],
+    List<Override> extraOverrides = const [],
   }) {
     final container = ProviderContainer(
       overrides: [
@@ -325,8 +332,7 @@ void main() {
     nostrSession.setReadiness(
       NostrSessionReadiness.nostrReady(pubkey: pubkey, client: nostrClient),
     );
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue(times: 2);
   }
 
   void recordMockDeregistration(
@@ -389,7 +395,7 @@ void main() {
             data: {'title': 'New like', 'body': 'Someone'},
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         verify(
           () => pushService.handleForegroundMessage(const {
@@ -464,17 +470,16 @@ void main() {
         container.read(pushNotificationSyncProvider);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         verify(() => messaging.getToken()).called(1);
 
         when(() => authService.currentIdentity).thenReturn(_identity(pubkeyB));
         when(() => authService.currentPublicKeyHex).thenReturn(pubkeyB);
         authStateController.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         tokenCompleter.complete('fcm-token-for-stale-session');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         verifyNever(
           () => nostrClient.publishEventAwaitOk(
@@ -500,8 +505,7 @@ void main() {
       when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
       when(() => authService.currentPublicKeyHex).thenReturn(pubkeyA);
       authStateController.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -842,8 +846,7 @@ void main() {
       nostrSession.setReadiness(
         NostrSessionReadiness.nostrReady(pubkey: pubkeyA, client: nostrClient),
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -884,8 +887,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         await beforeSessionTeardownCallback!();
 
@@ -915,15 +917,14 @@ void main() {
       nostrSession.setReadiness(
         NostrSessionReadiness.nostrReady(pubkey: pubkeyA, client: nostrClient),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       when(() => authService.currentIdentity).thenReturn(null);
       when(() => authService.currentPublicKeyHex).thenReturn(null);
       nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
 
       settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 2);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -954,11 +955,14 @@ void main() {
 
         await emitReady(nostrSession, pubkeyA);
 
+        // Bounded deliberately: teardown must not serialize behind the
+        // blocked permission check. Without this, a widened operations
+        // filter stalls four real seconds and then fails on the event list,
+        // instead of failing here in 100ms naming the blocked future.
         final teardownFuture = beforeSessionTeardownCallback!().timeout(
           const Duration(milliseconds: 100),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         await teardownFuture;
         when(() => authService.currentIdentity).thenReturn(null);
@@ -966,8 +970,7 @@ void main() {
         expect(events, ['deregister $pubkeyA']);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         expect(events, ['deregister $pubkeyA']);
         verifyNever(
@@ -1015,15 +1018,15 @@ void main() {
             .updatePreferences(prefs);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
         expect(registerCalls, equals(1));
 
         publishCompleter.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        expect(registerCalls, equals(1));
       },
     );
 
@@ -1051,11 +1054,11 @@ void main() {
         container.read(pushNotificationSyncProvider);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(events, ['register $pubkeyA']);
 
         final teardownFuture = beforeSessionTeardownCallback!();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(events, ['register $pubkeyA']);
 
@@ -1107,8 +1110,10 @@ void main() {
             'publish ${pubkeysByEvent[event]} cleanup ${identical(publishClient, cleanupClient)}',
           );
         });
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1186,8 +1191,10 @@ void main() {
             return PushRegistrationResult.published;
           });
           recordMockDeregistration(events);
+          // Mocktail needs the closure to capture this mock invocation.
           // ignore: unnecessary_lambdas
           when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+          // Mocktail needs the closure to capture this mock invocation.
           // ignore: unnecessary_lambdas
           when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1257,8 +1264,10 @@ void main() {
           return PushRegistrationResult.published;
         });
         recordMockDeregistration(events);
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1324,8 +1333,10 @@ void main() {
           await registerCompleter.future;
           return PushRegistrationResult.published;
         });
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.initialize()).thenAnswer((_) async {});
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
         recordMockDeregistration(
@@ -1375,8 +1386,10 @@ void main() {
           'register $pubkeyA',
           'deregister $pubkeyA with cleanup client true',
         ]);
+        // Mocktail needs the closure to capture this verification invocation.
         // ignore: unnecessary_lambdas
         verify(() => cleanupClient.initialize()).called(1);
+        // Mocktail needs the closure to capture this verification invocation.
         // ignore: unnecessary_lambdas
         verify(() => cleanupClient.dispose()).called(1);
       });
@@ -1497,18 +1510,18 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(
@@ -1549,11 +1562,15 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        // Drain the queue fully: a leak that surfaces on a later turn must
+        // still reach the zone handler before the isEmpty assertion runs.
+        await pumpEventQueue();
       }, (error, stack) => unhandled.add(error));
 
       expect(unhandled, isEmpty);
+      verify(
+        () => pushService.register(pubkeyA, isCurrent: any(named: 'isCurrent')),
+      ).called(1);
     });
 
     test(
@@ -1579,25 +1596,31 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 2);
 
           // Then start sign-out teardown — publishing deregistration throws.
           await beforeSessionTeardownCallback!();
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
+        verify(
+          () => pushService.publishDeregistrationEvent(
+            any(),
+            publishClient: any(named: 'publishClient'),
+          ),
+        ).called(1);
       },
     );
 
@@ -1650,7 +1673,7 @@ void main() {
       when(() => authService.currentIdentity).thenReturn(null);
       when(() => authService.currentPublicKeyHex).thenReturn(null);
       nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       await beforeSessionTeardownCallback!();
 
@@ -1680,7 +1703,7 @@ void main() {
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
 
@@ -1767,13 +1790,12 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
 
@@ -1858,8 +1880,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         when(() => authService.currentIdentity).thenReturn(null);
         when(() => authService.currentPublicKeyHex).thenReturn(null);
@@ -1923,6 +1944,7 @@ void main() {
         when(
           cleanupClient.initialize,
         ).thenAnswer((_) => initializeCompleter.future);
+        // Mocktail needs the closure to capture this mock invocation.
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
@@ -1962,8 +1984,7 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         currentEnvironment = stagingEnvironment;
         container.invalidate(currentEnvironmentProvider);
@@ -1973,13 +1994,11 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         final teardownFuture = coordinator
             .deregisterLastReadyPubkeyAfterAccountSwitch();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         verify(() => messaging.getToken()).called(1);
         verifyNever(cleanupClient.initialize);
@@ -1993,8 +2012,7 @@ void main() {
 
         container.dispose();
         tokenCompleter.complete('fcm-token');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         verify(() => signer.signEvent(any())).called(1);
         verify(cleanupClient.initialize).called(1);
@@ -2108,13 +2126,11 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         await beforeSessionTeardownCallback!();
         tokenRefreshController.add('refreshed-token-during-teardown');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         verifyNever(
           () => authService.createAndSignEvent(
@@ -2242,12 +2258,10 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         tokenRefreshController.add('refreshed-token-during-session');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
         expect(events, ['registration publish started']);
 
         // The refresh delivered a token, so getToken() now returns it and the
@@ -2255,8 +2269,7 @@ void main() {
         sessionToken = 'refreshed-token-during-session';
 
         final teardownFuture = beforeSessionTeardownCallback!();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
         expect(events, ['registration publish started']);
 
         registrationPublishCompleter.complete(
@@ -2337,10 +2350,14 @@ void main() {
         );
         addTearDown(container.dispose);
 
+        // Build the subject: the token-refresh subscription lives in the
+        // coordinator, which only pushNotificationSyncProvider constructs.
+        container.read(pushNotificationSyncProvider);
+
         expect(container.read(pushNotificationServiceProvider), isNull);
 
         tokenRefreshController.add('refreshed-token');
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         verifyNever(() => nostrClient.signer);
       },
@@ -2662,7 +2679,7 @@ void main() {
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyB),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
@@ -2723,7 +2740,7 @@ void main() {
             .updatePreferences(prefs);
 
         nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         nostrSession.setReadiness(
@@ -2789,9 +2806,9 @@ void main() {
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          // Drain the queue fully: a leak that surfaces on a later turn must
+          // still reach the zone handler before the isEmpty assertion runs.
+          await pumpEventQueue();
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
@@ -2825,11 +2842,9 @@ void main() {
               .updatePreferences(prefs),
           completes,
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        // Drain fully: the retry ladder is microtasks bounded by
+        // maxDirtySyncRetries, so the assertion pins the retry cap.
+        await pumpEventQueue();
 
         verify(() => pushService.updatePreferences(prefs)).called(5);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
@@ -2866,9 +2881,8 @@ void main() {
         await container
             .read(notificationPreferencesServiceProvider)
             .updatePreferences(publishedPrefs);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+        await preferenceStore.waitForClear(pubkeyA);
 
         verify(() => pushService.updatePreferences(publishedPrefs)).called(1);
         verify(() => pushService.updatePreferences(newerPrefs)).called(1);
@@ -2907,9 +2921,8 @@ void main() {
       await container
           .read(notificationPreferencesServiceProvider)
           .updatePreferences(prefs);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+      await preferenceStore.waitForClear(pubkeyA);
 
       expect(attempts, equals(2));
       expect(
@@ -2943,9 +2956,8 @@ void main() {
           ),
         );
         container.read(pushNotificationSyncProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        expect(preferenceStore.dirtyPreferencesByPubkey, contains(pubkeyA));
+        await preferenceStore.waitForClear(pubkeyA);
 
         expect(attempts, equals(2));
         expect(
@@ -2997,9 +3009,9 @@ void main() {
           when(
             () => authService.currentIdentity,
           ).thenReturn(_identity(pubkeyA));
-          final nostrSession =
-              container.read(nostrSessionProvider.notifier)
-                  as _TestNostrSession;
+          final nostrSession = container.read(
+            nostrSessionProvider.notifier,
+          ) as _TestNostrSession;
           nostrSession.setReadiness(
             NostrSessionReadiness.nostrReady(
               pubkey: pubkeyA,
@@ -3088,13 +3100,10 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 2);
 
         permissionCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 3);
 
         expect(requestCount, 1);
         expect(events, ['register $pubkeyB']);

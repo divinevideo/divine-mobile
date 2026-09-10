@@ -42,6 +42,8 @@ void main() {
       required AudioEvent audio,
       bool isSelected = false,
       bool isPlaying = false,
+      bool isUnavailable = false,
+      int? videoCount,
       String? semanticIdentifier,
     }) {
       return MaterialApp(
@@ -52,6 +54,8 @@ void main() {
             audio: audio,
             isSelected: isSelected,
             isPlaying: isPlaying,
+            isUnavailable: isUnavailable,
+            videoCount: videoCount,
             semanticIdentifier: semanticIdentifier,
             onTap: () => tapped = true,
           ),
@@ -98,6 +102,48 @@ void main() {
         );
 
         handle.dispose();
+      });
+    });
+
+    group('unavailable', () {
+      testWidgets('says the file is gone and cannot be chosen', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Gone Sound', duration: 6),
+            isUnavailable: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text('Gone Sound'), findsOneWidget);
+        expect(find.text(l10n.videoEditorAudioFileMissing), findsOneWidget);
+
+        await tester.tap(find.text('Gone Sound'));
+        await tester.pumpAndSettle();
+        expect(
+          tapped,
+          isFalse,
+          reason:
+              'Selecting it would attach a source that plays nothing to the '
+              'draft (#8023).',
+        );
+      });
+
+      testWidgets('leaves a playable sound tappable', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Here Sound', duration: 6),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorAudioFileMissing), findsNothing);
+
+        await tester.tap(find.text('Here Sound'));
+        await tester.pumpAndSettle();
+        expect(tapped, isTrue);
       });
     });
 
@@ -154,6 +200,56 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(ListTile), findsOneWidget);
+      });
+    });
+
+    group('Reuse count', () {
+      testWidgets('renders the localized reuse count', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createTestAudioEvent(), videoCount: 12),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.textContaining(l10n.soundVideoCount(12)), findsOneWidget);
+      });
+
+      testWidgets('renders the singular form for one reuse', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createTestAudioEvent(), videoCount: 1),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.textContaining(l10n.soundVideoCount(1)), findsOneWidget);
+      });
+
+      // A picker row for an unused sound should read the same as one whose
+      // count has not arrived yet, rather than advertising the zero.
+      testWidgets('renders no reuse count for an unused sound', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(duration: 12),
+            videoCount: 0,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.textContaining(l10n.soundVideoCount(0)), findsNothing);
+        // The subtitle still renders; only the count segment is absent.
+        expect(find.textContaining('00:12'), findsOneWidget);
+      });
+
+      testWidgets('renders no reuse count when it is unknown', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createTestAudioEvent(duration: 12)),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.textContaining(l10n.soundVideoCount(1)), findsNothing);
+        expect(find.textContaining('00:12'), findsOneWidget);
       });
     });
 

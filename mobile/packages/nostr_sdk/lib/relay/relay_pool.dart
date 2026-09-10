@@ -22,6 +22,7 @@ import 'publish_outcome.dart';
 import 'relay.dart';
 import 'relay_base.dart';
 import 'relay_type.dart';
+import 'relay_diagnostics.dart';
 import 'signature_verification_policy.dart';
 
 class _AuthRequiredPublishRetry {
@@ -251,6 +252,7 @@ class RelayPool {
     this.eventFilters,
     this.tempRelayGener, {
     this.onNotice,
+    this.diagnosticsSink,
     this.signatureVerificationPolicy = SignatureVerificationPolicy.all,
     this.silentRepairCooldown = const Duration(seconds: 60),
     this.minSubscriptionAgeBeforeRepair = const Duration(seconds: 10),
@@ -258,6 +260,61 @@ class RelayPool {
     this.tempRelayIdleTimeout = const Duration(seconds: 120),
     this.tempRelaySweepInterval = const Duration(seconds: 60),
   });
+
+  final RelayDiagnosticsSink? diagnosticsSink;
+
+  void _diagnose(
+    RelayDiagnosticSite site,
+    RelayDiagnosticLevel level,
+    String relayUrl,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) => emitRelayDiagnostic(
+    diagnosticsSink,
+    RelayDiagnostic(
+      site: site,
+      level: level,
+      relayUrl: relayUrl,
+      message: message,
+      error: error,
+      stackTrace: stackTrace,
+    ),
+  );
+
+  /// NIP-01's machine-readable `OK` / `CLOSED` prefixes, plus NIP-42's
+  /// `auth-required` and the `unsupported` prefix NIP-01 uses in its own
+  /// `CLOSED` examples.
+  static const Set<String> _closedReasonPrefixes = {
+    'auth-required',
+    'blocked',
+    'duplicate',
+    'error',
+    'invalid',
+    'mute',
+    'pow',
+    'rate-limited',
+    'restricted',
+    'unsupported',
+  };
+
+  /// Reduces a `CLOSED` reason to its NIP-01 prefix, or `other`.
+  ///
+  /// Matches the prefix rather than searching the whole reason, like
+  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
+  /// Searching mislabels the human-readable half: `blocked: too many failed
+  /// auth attempts` is not an auth problem, and sends triage after NIP-42
+  /// when the account is blocked. Only the fixed prefixes above are ever
+  /// emitted, so relay-supplied text still cannot reach a support export.
+  String _closedReasonCategory(String reason) {
+    final normalized = reason.trim().toLowerCase();
+    for (final prefix in _closedReasonPrefixes) {
+      if (!normalized.startsWith(prefix)) continue;
+      final rest = normalized.substring(prefix.length);
+      if (rest.isEmpty || rest.startsWith(':')) return prefix;
+    }
+    return 'other';
+  }
 
   /// How long a temp relay may sit with no inbound traffic before the sweep
   /// closes it. Injectable so tests need no wall-clock wait.
@@ -589,12 +646,25 @@ class RelayPool {
     _observeRelayStatus(relay);
 
     if (await relay.connect()) {
+      log('Relay connection succeeded: ${relay.url}');
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Relay connection succeeded',
+      );
       if (autoSubscribe) {
         var replayFailed = false;
         final msg =
             '🔄 autoSubscribe: re-sending ${_subscriptions.length} '
             'subscriptions to ${relay.url}';
         log(msg);
+        _diagnose(
+          RelayDiagnosticSite.subscriptionReplay,
+          RelayDiagnosticLevel.info,
+          relay.url,
+          'Re-sending ${_subscriptions.length} saved subscriptions',
+        );
         for (final subscription in _subscriptionsSnapshot()) {
           // Save the subscription to the relay so that after AUTH completes
           // the relay can re-send it. Without this, autoSubscribe sends the
@@ -609,6 +679,12 @@ class RelayPool {
           replayFailed = replayFailed || !sent;
         }
         if (replayFailed) {
+          _diagnose(
+            RelayDiagnosticSite.subscriptionReplay,
+            RelayDiagnosticLevel.warning,
+            relay.url,
+            'Saved-subscription replay failed; reconnecting once',
+          );
           relay.relayStatus.onError();
           log(
             'autoSubscribe replay failed for ${relay.url}; '
@@ -626,6 +702,12 @@ class RelayPool {
       return true;
     } else {
       log("relay connect fail! ${relay.url}");
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Relay connection failed',
+      );
     }
 
     relay.relayStatus.onError();
@@ -735,6 +817,17 @@ class RelayPool {
 
     try {
       var message = subscription.toJson();
+      log(
+        'Dispatching one-shot query ${subscription.id} to ${relay.url} '
+        '(filters=${subscription.filters.length})',
+      );
+      _diagnose(
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Dispatching one-shot query ${subscription.id} '
+        '(filters=${subscription.filters.length})',
+      );
       if ((sendAfterAuth || relay.relayStatus.alwaysAuth) &&
           !relay.relayStatus.authed) {
         log('🔐 Auth-required query - sending to trigger AUTH challenge');
@@ -749,6 +842,15 @@ class RelayPool {
             'for replay after reconnect/auth: ${subscription.id} ${relay.url}',
           );
         }
+        _diagnose(
+          RelayDiagnosticSite.queryDispatch,
+          result ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
+          relay.url,
+          'One-shot query ${subscription.id} trigger sent=$result',
+        );
+        if (result) {
+          log('One-shot query ${subscription.id} trigger sent to ${relay.url}');
+        }
         return true;
       } else {
         // Skip reconnect during query fan-out to avoid blocking
@@ -759,9 +861,27 @@ class RelayPool {
         if (result) {
           relay.saveQuery(subscription);
         }
+        log(
+          'One-shot query ${subscription.id} dispatch to ${relay.url} '
+          'succeeded=$result',
+        );
+        _diagnose(
+          RelayDiagnosticSite.queryDispatch,
+          result ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
+          relay.url,
+          'One-shot query ${subscription.id} dispatch succeeded=$result',
+        );
         return result;
       }
-    } catch (err) {
+    } catch (err, stackTrace) {
+      _diagnose(
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticLevel.error,
+        relay.url,
+        'One-shot query ${subscription.id} dispatch threw',
+        error: err,
+        stackTrace: stackTrace,
+      );
       log(err.toString());
       relay.relayStatus.onError();
     }
@@ -1403,8 +1523,23 @@ class RelayPool {
   Future<void> _reconnectDroppedRelay(Relay relay) async {
     if (_closed) return;
     try {
+      log('Reconnecting dropped relay ${relay.url}');
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Reconnecting dropped relay',
+      );
       await relay.connect();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Dropped-relay reconnect failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       log('dropped-relay reconnect failed for ${relay.url}: $e');
     }
   }
@@ -1604,6 +1739,20 @@ class RelayPool {
     } else if (messageType == 'EOSE') {
       final subId = _stringAt(relay, json, 1, 'EOSE subscription id');
       if (subId == null) return;
+      // Debug-only: EOSE is a per-settlement frame, and logging it
+      // unconditionally cost ~6% of main-isolate CPU in on-device profiling
+      // (#5957). The assert closure never runs in profile/release; the
+      // structured diagnostic below carries the settlement to injected sinks.
+      assert(() {
+        log('Relay ${relay.url} settled request $subId with EOSE');
+        return true;
+      }());
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Relay settled request $subId with EOSE',
+      );
       var isQuery = await relay.checkAndCompleteQuery(subId);
       if (isQuery) {
         _fireQueryCompleteIfSettled(subId, afterTerminalFrame: true);
@@ -1639,6 +1788,12 @@ class RelayPool {
         defaultValue: '',
       );
       if (message == null) return;
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        success ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
+        relay.url,
+        'Relay settled event $eventId with OK accepted=$success',
+      );
 
       // The relay has spoken for this event. Unless it refused for a reason
       // NIP-42 can fix, a frame retained by [_retainForAuthRetry] has served
@@ -1707,6 +1862,12 @@ class RelayPool {
         if (success) {
           relay.relayStatus.authed = true;
           log('🔐 AUTH succeeded for ${relay.url}');
+          _diagnose(
+            RelayDiagnosticSite.authentication,
+            RelayDiagnosticLevel.info,
+            relay.url,
+            'Relay authentication succeeded',
+          );
 
           // Send pending messages
           for (var message in relay.pendingAuthedMessages) {
@@ -1751,6 +1912,12 @@ class RelayPool {
         } else {
           relay.relayStatus.authed = false;
           log('🔐 AUTH failed for ${relay.url}: $message');
+          _diagnose(
+            RelayDiagnosticSite.authentication,
+            RelayDiagnosticLevel.warning,
+            relay.url,
+            'Relay authentication failed',
+          );
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH
           // replay will never be replayed.
@@ -1761,6 +1928,12 @@ class RelayPool {
       log('📡 NOTICE from ${relay.url}: $json');
       final message = _stringAt(relay, json, 1, 'NOTICE message');
       if (message == null) return;
+      _diagnose(
+        RelayDiagnosticSite.notice,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Relay sent a NOTICE frame',
+      );
 
       // notice save, TODO maybe should change code
       if (onNotice != null) {
@@ -1770,6 +1943,12 @@ class RelayPool {
       try {
         // auth needed
         log('🔐 AUTH challenge received from ${relay.url}');
+        _diagnose(
+          RelayDiagnosticSite.authentication,
+          RelayDiagnosticLevel.info,
+          relay.url,
+          'Relay requested authentication',
+        );
         final challenge = _stringAt(relay, json, 1, 'AUTH challenge');
         if (challenge == null) return;
         relay.relayStatus.alwaysAuth = true;
@@ -1812,6 +1991,14 @@ class RelayPool {
           _closeAuthGate(relay);
         }
       } catch (err, stackTrace) {
+        _diagnose(
+          RelayDiagnosticSite.authentication,
+          RelayDiagnosticLevel.error,
+          relay.url,
+          'Relay authentication handling failed',
+          error: err,
+          stackTrace: stackTrace,
+        );
         log('🔐 AUTH handling failed for ${relay.url}: $err\n$stackTrace');
         _rejectAuthRequiredPublishesForRelay(relay, '');
         _closeAuthGate(relay);
@@ -1857,6 +2044,13 @@ class RelayPool {
       if (reason == null) return;
 
       log('📡 CLOSED from ${relay.url}: $subscriptionId - $reason');
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Relay closed request $subscriptionId '
+        '(reason=${_closedReasonCategory(reason)})',
+      );
       // Check if this is a COUNT query being refused
       if (relay.hasCountQuery(subscriptionId)) {
         relay.failCountQuery(subscriptionId, reason);
@@ -2043,6 +2237,13 @@ class RelayPool {
           'readAccess=${relay.relayStatus.readAccess}, '
           'connected=${relay.relayStatus.connected})';
       log(subscribeMsg);
+      _diagnose(
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Dispatching request ${subscription.id} '
+        '(filters=${subscription.filters.length})',
+      );
       if ((sendAfterAuth || relay.relayStatus.alwaysAuth) &&
           !relay.relayStatus.authed) {
         log(
@@ -2053,14 +2254,35 @@ class RelayPool {
             .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (result) {
+          log('Request ${subscription.id} dispatch to ${relay.url} succeeded');
+          _diagnose(
+            RelayDiagnosticSite.queryDispatch,
+            RelayDiagnosticLevel.info,
+            relay.url,
+            'Request ${subscription.id} dispatch succeeded',
+          );
           return true;
         }
       } else {
         var result = await relay.send(message, skipReconnect: true);
         log('📤 relayDoSubscribe: ${subscription.id} send result=$result');
+        _diagnose(
+          RelayDiagnosticSite.queryDispatch,
+          result ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
+          relay.url,
+          'Request ${subscription.id} dispatch succeeded=$result',
+        );
         return result;
       }
-    } catch (err) {
+    } catch (err, stackTrace) {
+      _diagnose(
+        RelayDiagnosticSite.queryDispatch,
+        RelayDiagnosticLevel.error,
+        relay.url,
+        'Request ${subscription.id} dispatch threw',
+        error: err,
+        stackTrace: stackTrace,
+      );
       log(err.toString());
       relay.relayStatus.onError();
     }
@@ -2735,6 +2957,12 @@ class RelayPool {
         '📡 $url accepted a frame but sent nothing back for the whole window '
         'the caller waited; reconnecting the stale connection',
       );
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.warning,
+        url,
+        'Relay sent no response during the settlement window; reconnecting',
+      );
       unawaited(
         _reconnectSilentRelay(
           relay,
@@ -2756,7 +2984,22 @@ class RelayPool {
     if (_closed) return;
     try {
       await relay.forceReconnect();
-    } catch (e) {
+      log('Silent-relay reconnect completed for ${relay.url}');
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.info,
+        relay.url,
+        'Silent-relay reconnect completed',
+      );
+    } catch (e, stackTrace) {
+      _diagnose(
+        RelayDiagnosticSite.connectionLifecycle,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Silent-relay reconnect failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       log('silent-relay reconnect failed for ${relay.url}: $e');
     }
   }

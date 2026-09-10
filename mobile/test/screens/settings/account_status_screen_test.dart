@@ -65,7 +65,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.suspended);
 
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusContactSupport), findsOneWidget);
+      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
       expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       expect(
         find.text(l10n.accountStatusKeysUnaffectedHeading),
@@ -79,7 +79,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.banned);
 
       expect(find.text(l10n.accountStatusBannedHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusContactSupport), findsOneWidget);
+      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (
@@ -87,7 +87,7 @@ void main() {
     ) async {
       await _pumpWith(tester, AccountEnforcementKind.unknownRestriction);
 
-      expect(find.text(l10n.accountStatusContactSupport), findsOneWidget);
+      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
     });
 
     testWidgets('an unrestricted account is greeted, not reported to', (
@@ -96,7 +96,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.noRestrictionReported);
 
       expect(find.text(l10n.accountStatusAllClearHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusContactSupport), findsNothing);
+      expect(find.text(l10n.appealOpenSupportCenter), findsNothing);
       expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
     });
 
@@ -110,7 +110,7 @@ void main() {
         );
 
         expect(find.text(l10n.accountStatusRestrictedHeading), findsOneWidget);
-        expect(find.text(l10n.accountStatusContactSupport), findsOneWidget);
+        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
         expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       },
     );
@@ -134,7 +134,7 @@ void main() {
         goRouter: goRouter,
       );
 
-      await tester.tap(find.text(l10n.accountStatusContactSupport));
+      await tester.tap(find.text(l10n.appealOpenSupportCenter));
       await tester.pumpAndSettle();
 
       verify(() => goRouter.push(SupportCenterScreen.path)).called(1);
@@ -353,7 +353,7 @@ void main() {
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
       expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
       expect(find.text(l10n.accountStatusRetry), findsOneWidget);
-      expect(find.text(l10n.accountStatusContactSupport), findsOneWidget);
+      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
     });
 
     testWidgets('an active account is offered no futile retry', (tester) async {

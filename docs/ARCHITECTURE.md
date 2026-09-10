@@ -88,7 +88,8 @@ dependency when it is one of:
 
 - a **native plugin** — it ships a `flutter: plugin:` block and talks over a
   `MethodChannel` (`background_uploader`, `caption_generator`,
-  `divine_quick_actions`, `image_metadata_stripper`), or wraps one
+  `divine_device_attestation`, `divine_quick_actions`,
+  `image_metadata_stripper`), or wraps one
   (`keycast_flutter`, `nostr_key_manager`, `media_cache`,
   `permissions_service`, `sound_service`);
 - a **presentation-layer package** — it exports widgets (`divine_ui`,
@@ -102,11 +103,13 @@ dependency when it is one of:
 
 Anything else is out of policy, and **CI enforces it**:
 `mobile/scripts/check_package_flutter_boundary.sh` freezes the set in
-`mobile/scripts/baseline/package_flutter_deps.txt` (shrink-only — a package
-re-adding the entry fails the `generated-files` job). That baseline, not this
-page, is the machine-checked list; each entry carries a reason naming the
-concrete Flutter surface it uses. Regenerate only after *removing* a
-dependency:
+`mobile/scripts/baseline/package_flutter_deps.txt`. Existing entries are
+shrink-only, and a package re-adding one fails the `generated-files` job. A new
+package may be registered only when its own pubspec contains a
+`flutter: plugin:` block; wrappers, UI packages, and Flutter API consumers
+remain unable to grow the baseline. That baseline, not this page, is the
+machine-checked list; each entry carries a reason naming the concrete Flutter
+surface it uses. Regenerate only after *removing* a dependency:
 
 ```bash
 UPDATE_BASELINE=1 bash mobile/scripts/check_package_flutter_boundary.sh
@@ -121,7 +124,9 @@ ship exactly that shape.
 (`compute.dart` ports Flutter's implementation, conditional import and all;
 `build_mode.dart` reuses Flutter's exact `kReleaseMode` definition so the
 `_classifyDiagnostics` const still folds away under AOT product mode). That is
-the worked example for the rest of the group. `unified_logger` is the next
+the worked example for the rest of the group. The logging value types now live
+in the pure-Dart `logging_types` leaf, so `unified_logger` no longer depends on
+the `models`/`nostr_sdk` cone. Making the logger itself pure Dart is the next
 candidate — it needs an injected console sink, since `debugPrint`'s throttling
 has no drop-in replacement. The others are genuinely bound: `dart:ui`,
 `defaultTargetPlatform`, and `NavigatorObserver` have no pure-Dart substitute

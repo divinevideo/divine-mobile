@@ -31,12 +31,11 @@ final _authorityTerminator = RegExp('[/#?]');
 final _malformedPercentTriplet = RegExp('%(?![0-9A-Fa-f]{2})');
 
 /// Authentication seam matching the arguments used by [FlutterWebAuth2].
-typedef AppOAuthAuthenticate =
-    Future<String> Function({
-      required String url,
-      required String callbackUrlScheme,
-      required FlutterWebAuth2Options options,
-    });
+typedef AppOAuthAuthenticate = Future<String> Function({
+  required String url,
+  required String callbackUrlScheme,
+  required FlutterWebAuth2Options options,
+});
 
 /// Opens [authorizationUri] in the native OAuth session and returns the
 /// callback URL, or null when the user dismissed the session.

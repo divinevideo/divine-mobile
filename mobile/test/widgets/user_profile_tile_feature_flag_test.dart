@@ -128,8 +128,7 @@ Widget _buildSubject({
       ],
       child: Scaffold(
         body: UserProfileTile(
-          pubkey:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           onTap: onTap,
         ),
       ),

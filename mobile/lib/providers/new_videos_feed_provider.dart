@@ -1,7 +1,7 @@
 // ABOUTME: New Videos feed provider showing videos sorted by creation time
 // ABOUTME: Uses VideosRepository.getNewVideos so Explore New is distinct from Popular
 
-import 'package:models/models.dart' hide LogCategory;
+import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';

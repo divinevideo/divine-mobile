@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4645,9 +4646,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get supportRevealLogsAction => 'Tonen in map';
 
   @override
-  String get supportChatNotAvailable => 'Supportchat niet beschikbaar';
-
-  @override
   String get supportCouldNotOpenMessages => 'Supportberichten openen mislukt';
 
   @override
@@ -5206,22 +5204,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get soundUseSound => 'Geluid gebruiken';
-
-  @override
-  String get soundUntitled => 'Geluid zonder titel';
-
-  @override
-  String get soundStopPreview => 'Preview stoppen';
-
-  @override
-  String soundPreviewSemanticLabel(String title) {
-    return 'Voorbeeld van $title';
-  }
-
-  @override
-  String soundViewDetailsSemanticLabel(String title) {
-    return 'Details bekijken voor $title';
-  }
 
   @override
   String get soundNoVideoCount => 'Nog geen video\'s';
@@ -8883,6 +8865,54 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTimelineSlideToAdjust => 'Schuif om aan te passen';
 
   @override
+  String get videoEditorDetachLabel => 'Losmaken';
+
+  @override
+  String get videoEditorDetachSemanticLabel =>
+      'Geselecteerde clip losmaken van de tijdlijn';
+
+  @override
+  String get videoEditorDetachTitle => 'Clip losmaken';
+
+  @override
+  String get videoEditorDetachDescription =>
+      'De clip gaat naar het canvas, waar je hem overal kunt neerzetten. Wat komt er op de tijdlijn voor in de plaats?';
+
+  @override
+  String get videoEditorDetachReplaceRemove => 'Niets';
+
+  @override
+  String get videoEditorDetachReplaceRemoveDetail =>
+      'Gat dichten – alles erna begint eerder.';
+
+  @override
+  String get videoEditorDetachReplaceColor => 'Kleur';
+
+  @override
+  String get videoEditorDetachReplaceColorDetail =>
+      'Houdt een effen kleur vast zolang de clip duurde.';
+
+  @override
+  String get videoEditorDetachReplaceImage => 'Foto';
+
+  @override
+  String get videoEditorDetachReplaceImageDetail =>
+      'Maak een foto die zijn plek inneemt.';
+
+  @override
+  String get videoEditorDetachedClipLabel => 'Losgemaakte clip';
+
+  @override
+  String get videoEditorDetachProgressLabel => 'Clip wordt losgemaakt…';
+
+  @override
+  String get videoEditorDetachFailed =>
+      'Kon die clip niet losmaken. Je tijdlijn blijft ongewijzigd.';
+
+  @override
+  String get videoEditorDetachImagePickFailed => 'Kon die foto niet laden.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Greenscreen';
 
   @override
@@ -8952,8 +8982,12 @@ class AppLocalizationsNl extends AppLocalizations {
       'Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.';
 
   @override
+  String get videoEditorChromaKeySurfaceHint =>
+      'Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.';
+
+  @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Geen achtergrond gevonden. Die moet tot aan de rand van het beeld komen — kies anders de kleur met de hand.';
+      'Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';
@@ -9250,6 +9284,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorAudioUntitledSound => 'Naamloos geluid';
+
+  @override
+  String get videoEditorAudioFileMissing =>
+      'Audiobestand staat niet meer op dit apparaat';
 
   @override
   String get videoEditorAudioUntitled => 'Naamloos';
@@ -9924,8 +9962,7 @@ class AppLocalizationsNl extends AppLocalizations {
       locale: localeName,
       other:
           'Dit blokkeert de $count accounts die deze badge nu hebben. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
-      one:
-          'Dit blokkeert het account dat deze badge nu heeft. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
+      one: 'Dit blokkeert het account dat deze badge nu heeft. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
     );
     return '$_temp0';
   }
@@ -10192,7 +10229,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get minorAccountReviewOpenSupportCenter => 'Supportcentrum openen';
+  String get appealOpenSupportCenter => 'Supportcentrum openen';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11380,6 +11417,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get savedSoundRemoveAction => 'Opgeslagen geluid verwijderen';
 
   @override
+  String get savedSoundFileMissing =>
+      'Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen.';
+
+  @override
   String get savedSoundClearHashtagFilter => 'Hashtagfilter wissen';
 
   @override
@@ -12171,9 +12212,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get accountStatusAppealBody =>
       'Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.';
-
-  @override
-  String get accountStatusContactSupport => 'Contact support';
 
   @override
   String get accountStatusMoveAccount => 'Move your account';

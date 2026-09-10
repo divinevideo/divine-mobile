@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -288,6 +290,86 @@ void main() {
 
         notifier.updateMetadata(description: '   hello world   ');
         expect(container.read(videoEditorProvider).description, 'hello world');
+      });
+    });
+
+    group('caption mentions', () {
+      const alice = CaptionMention(
+        display: 'alice',
+        pubkey:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        start: 3,
+        end: 9,
+      );
+
+      test('recordCaptionMention keeps every pick in order', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice and @OG-AB')
+          ..recordCaptionMention(alice);
+        const ogab = CaptionMention(
+          display: 'OG-AB',
+          pubkey:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        );
+        notifier.recordCaptionMention(ogab);
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice, ogab]),
+        );
+      });
+
+      test('recordCaptionMention ignores an identical pick', () {
+        container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice)
+          ..recordCaptionMention(alice);
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice]),
+        );
+      });
+
+      test('drops a mention once its handle is edited out of the caption', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          isNotEmpty,
+        );
+
+        notifier.updateMetadata(description: 'hi there');
+
+        expect(container.read(videoEditorProvider).captionMentions, isEmpty);
+      });
+
+      test('keeps a mention while its handle is still written', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+
+        notifier.updateMetadata(description: 'hello @alice, welcome');
+
+        expect(
+          container.read(videoEditorProvider).captionMentions,
+          equals([alice]),
+        );
+      });
+
+      test('carries picks into the draft it builds', () {
+        container.read(videoEditorProvider.notifier)
+          ..updateMetadata(description: 'hi @alice')
+          ..recordCaptionMention(alice);
+
+        final draft = container
+            .read(videoEditorProvider.notifier)
+            .getActiveDraft();
+
+        expect(draft.captionMentions, equals([alice]));
       });
     });
 
@@ -579,13 +661,12 @@ void main() {
           originalAspectRatio: 9 / 16,
         );
 
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => (renderedClip, null);
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (renderedClip, null);
 
         await notifier.startRenderVideo();
 
@@ -647,13 +728,12 @@ void main() {
               duration: const Duration(seconds: 2),
             );
 
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw Exception('C2PA network failure'); // hung proof
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw Exception('C2PA network failure'); // hung proof
 
         await notifier.startRenderVideo();
 
@@ -675,13 +755,12 @@ void main() {
           targetAspectRatio: .vertical,
           originalAspectRatio: 9 / 16,
         );
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => (renderedClip, null);
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (renderedClip, null);
 
         await notifier.startRenderVideo();
 
@@ -929,13 +1008,12 @@ void main() {
 
           // Never completes and never throws — a hung native call.
           final hung = Completer<(DivineVideoClip, String?)>();
-          VideoEditorRenderService.renderVideoToClipOverride =
-              ({
-                required clips,
-                required editorStateHistory,
-                parameters,
-                taskId,
-              }) => hung.future;
+          VideoEditorRenderService.renderVideoToClipOverride = ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) => hung.future;
 
           unawaited(notifier.startRenderVideo());
           async.flushMicrotasks();
@@ -1233,16 +1311,15 @@ void main() {
           );
 
           // Network still down on retry — the re-sign throws.
-          NativeProofModeService.proofFileOverride =
-              (
-                file, {
-                required enableAdvancedCawgEmbedding,
-                creatorBindingAssertion,
-                cawgIdentityAssertion,
-                verifiedIdentityBundle,
-                clips,
-                editorStateHistory,
-              }) async => throw Exception('still offline');
+          NativeProofModeService.proofFileOverride = (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) async => throw Exception('still offline');
 
           await notifier.retryC2paSigning();
 
@@ -1479,13 +1556,12 @@ void main() {
       );
 
       void failRenderWith(VideoRenderFailedException failure) {
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw failure;
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw failure;
       }
 
       test('tags outcome=failed with the reason behind a render that produced '
@@ -1551,13 +1627,12 @@ void main() {
       test('tags outcome=error with the type when the render throws', () async {
         final notifier = container.read(videoEditorProvider.notifier);
         addOneClip();
-        VideoEditorRenderService.renderVideoToClipOverride =
-            ({
-              required clips,
-              required editorStateHistory,
-              parameters,
-              taskId,
-            }) async => throw StateError('render boom');
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw StateError('render boom');
 
         await notifier.startRenderVideo();
         final trace = performanceMonitor.traces.single;
@@ -1656,13 +1731,12 @@ void main() {
               );
 
           final renderCompleter = Completer<(DivineVideoClip, String?)>();
-          VideoEditorRenderService.renderVideoToClipOverride =
-              ({
-                required clips,
-                required editorStateHistory,
-                parameters,
-                taskId,
-              }) => renderCompleter.future;
+          VideoEditorRenderService.renderVideoToClipOverride = ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) => renderCompleter.future;
 
           final render = notifier.startRenderVideo();
 
@@ -1692,6 +1766,92 @@ void main() {
           expect(container.read(videoEditorProvider).isProcessing, isFalse);
         },
       );
+    });
+  });
+
+  group('videoEditorCompositeProgressProvider', () {
+    late ProviderContainer container;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('keeps reporting progress after the draft id is reassigned', () async {
+      final notifier = container.read(videoEditorProvider.notifier)
+        ..setDraftId('draft-before');
+
+      final readings = <double>[];
+      final subscription = container.listen(
+        videoEditorCompositeProgressProvider,
+        (_, next) {
+          final value = next.asData?.value;
+          if (value != null) readings.add(value.progress);
+        },
+      );
+      addTearDown(subscription.close);
+
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'draft-before',
+        progress: 0.25,
+      );
+      await pumpEventQueue();
+      expect(
+        readings,
+        equals([0.25]),
+        reason:
+            'Without a first reading under the original id the assertion '
+            'below could pass on an provider that reports nothing at all.',
+      );
+
+      notifier.setDraftId('draft-after');
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'draft-after',
+        progress: 0.5,
+      );
+      await pumpEventQueue();
+
+      expect(
+        readings,
+        equals([0.25, 0.5]),
+        reason:
+            'A filter pinned to the id this provider first saw goes silent '
+            'when the export publishes under a new draft id, which the '
+            'overlay cannot tell apart from a genuine 0% (#8796).',
+      );
+    });
+
+    test('ignores progress published under a different draft id', () async {
+      container.read(videoEditorProvider.notifier).setDraftId('mine');
+
+      final readings = <double>[];
+      final subscription = container.listen(
+        videoEditorCompositeProgressProvider,
+        (_, next) {
+          final value = next.asData?.value;
+          if (value != null) readings.add(value.progress);
+        },
+      );
+      addTearDown(subscription.close);
+
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'someone-elses-draft',
+        progress: 0.9,
+      );
+      VideoEditorRenderService.emitCompositeProgressForTesting(
+        taskId: 'mine',
+        progress: 0.1,
+      );
+      await pumpEventQueue();
+
+      expect(readings, equals([0.1]));
     });
   });
 
@@ -3588,16 +3748,15 @@ void main() {
           NativeProofModeService.proofFileOverride;
       restoreProofFileOverride = () =>
           NativeProofModeService.proofFileOverride = originalProofFileOverride;
-      NativeProofModeService.proofFileOverride =
-          (
-            file, {
-            required enableAdvancedCawgEmbedding,
-            creatorBindingAssertion,
-            cawgIdentityAssertion,
-            verifiedIdentityBundle,
-            clips,
-            editorStateHistory,
-          }) async => null;
+      NativeProofModeService.proofFileOverride = (
+        file, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+      }) async => null;
       when(
         () => mockDraftStorage.draftExists(any()),
       ).thenAnswer((_) async => false);
@@ -3973,6 +4132,73 @@ void main() {
           reason: 'the surviving draft still references this rendered file',
         );
         expect(goner.existsSync(), isFalse);
+      },
+    );
+
+    test(
+      'discard reaps the files its deleted autosave row referenced',
+      () async {
+        // The deferred reference check asks the drafts table whether anything
+        // still points at a path. On discard reset() deletes the autosave row,
+        // so the check is only meaningful once that row is gone: run it first
+        // and the row it is about to delete keeps the file, while the flush has
+        // already emptied the deferral set so nothing retries it.
+        final orphan = File(p.join(tempDir.path, 'discarded-orphan.mp4'))
+          ..writeAsBytesSync(const [0, 1, 2, 3]);
+        final realDraftStorage = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        await realDraftStorage.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [
+              DivineVideoClip(
+                id: 'discarded',
+                video: EditorVideo.file(orphan.path),
+                duration: const Duration(seconds: 6),
+                recordedAt: DateTime(2025),
+                targetAspectRatio: AspectRatio.square,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: 'video',
+          ),
+        );
+        when(() => mockDraftStorage.draftExists(any())).thenAnswer(
+          (invocation) => realDraftStorage.draftExists(
+            invocation.positionalArguments.first as String,
+          ),
+        );
+        when(() => mockDraftStorage.deleteDraft(any())).thenAnswer(
+          (invocation) => realDraftStorage.deleteDraft(
+            invocation.positionalArguments.first as String,
+          ),
+        );
+
+        final notifier = container.read(videoEditorProvider.notifier);
+        notifier.deferFileCleanup([orphan.path]);
+        expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
+
+        await container.read(videoPublishProvider.notifier).clearAll();
+        await settleBackgroundWork();
+
+        expect(
+          await realDraftStorage.draftExists(VideoEditorConstants.autoSaveId),
+          isFalse,
+          reason: 'discard must have deleted the autosave row',
+        );
+        expect(
+          orphan.existsSync(),
+          isFalse,
+          reason:
+              'the discarded autosave row was the only thing referencing this '
+              'file, so the same reset must reap it',
+        );
+        expect(notifier.deferredFileCleanupForTest, isEmpty);
       },
     );
 

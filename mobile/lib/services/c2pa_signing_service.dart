@@ -30,9 +30,10 @@ abstract class C2paEditActions {
 enum C2paSigningFailureReason {
   inputMissing,
 
-  /// Signing produced no usable output: either nothing was written, or the
-  /// file it wrote was empty. Both are reported here because neither can
-  /// replace the recording.
+  /// Signing produced no usable output: nothing was written, the file it
+  /// wrote was empty, or that file carries no readable active C2PA manifest.
+  /// All three are reported here because none of them may replace the
+  /// recording.
   outputMissing,
   tls,
   network,
@@ -53,6 +54,7 @@ class C2paSigningResult {
     required this.success,
     this.error,
     this.failureReason,
+    this.manifest,
   });
 
   /// Path to the signed video file
@@ -66,6 +68,13 @@ class C2paSigningResult {
 
   /// Machine-readable reason when signing failed.
   final C2paSigningFailureReason? failureReason;
+
+  /// The manifest read back out of the signed file, when signing succeeded.
+  ///
+  /// [C2paSigningService.signVideoInPlace] has to read this before it may
+  /// replace the input, so it hands the result to the caller rather than
+  /// making them read the same manifest off the same file a second time.
+  final ManifestStoreInfo? manifest;
 }
 
 /// Service for signing videos with C2PA content credentials.
@@ -117,17 +126,31 @@ class C2paSigningService {
   /// callers gate the "sign or skip" prompt on this (#6058).
   static bool get isSigningConfigured => !_signingDisabled;
 
-  /// Signs a video file with C2PA content credentials.
+  /// Signs the video at [videoPath] and **replaces it with the signed bytes**.
   ///
-  /// [videoPath] - Path to the video file to sign
+  /// The replacement is the point of this method, not a side effect. ProofMode
+  /// hashes the credentialed media, and the editor, exporter and uploader all
+  /// read the same path afterwards, so the signed file has to become the
+  /// canonical one. The name says so because the caller is handing over
+  /// ownership of the file: on success the bytes at [videoPath] are different
+  /// bytes, and the recording as captured no longer exists anywhere.
+  ///
+  /// Nothing replaces the input until the signed output has been read back and
+  /// found to carry an active C2PA manifest that does not fail validation. An
+  /// output that does not is deleted, and [videoPath] is left byte-for-byte
+  /// untouched — a file that merely exists and is non-empty is not evidence
+  /// that signing worked, and the input is the only copy.
+  ///
+  /// That successful read is returned as [C2paSigningResult.manifest] so the
+  /// caller does not read the same manifest off the same file again.
   ///
   /// The CAWG `training-mining` assertion (opt-out of AI training and data
   /// mining) is embedded unconditionally as a matter of Divine policy.
   /// See `mobile/docs/AI_TRAINING_POLICY.md`.
   ///
-  /// Returns the path to the signed video file, or the original path if
-  /// signing fails (signing is best-effort, not blocking).
-  Future<C2paSigningResult> signVideo({
+  /// Signing is best-effort and never throws: on failure the result carries
+  /// the original path, `success: false`, and a [C2paSigningFailureReason].
+  Future<C2paSigningResult> signVideoInPlace({
     required String videoPath,
     NostrCreatorBindingAssertion? creatorBindingAssertion,
     Map<String, dynamic>? cawgIdentityAssertion,
@@ -242,6 +265,26 @@ class C2paSigningService {
         );
       }
 
+      // The rename is irreversible and the input is the only copy, so prove
+      // the output is actually credentialed before trusting it with that.
+      // A non-empty file can still be a re-encode the signer never stamped.
+      final manifest = await readManifest(signedPath);
+      final rejection = _describeUnusableManifest(manifest);
+      if (rejection != null) {
+        _deleteSignedOutput(signedPath);
+        Log.warning(
+          'Refusing to replace "$videoPath": $rejection',
+          name: 'C2paSigningService',
+          category: LogCategory.video,
+        );
+        return C2paSigningResult(
+          signedFilePath: videoPath,
+          success: false,
+          error: 'Signed file $rejection',
+          failureReason: C2paSigningFailureReason.outputMissing,
+        );
+      }
+
       final sFileNew = signedFile.renameSync(inputFile.path);
       Log.debug(
         'Signed file renamed: ${sFileNew.path}',
@@ -256,7 +299,11 @@ class C2paSigningService {
         category: LogCategory.video,
       );
 
-      return C2paSigningResult(signedFilePath: sFileNew.path, success: true);
+      return C2paSigningResult(
+        signedFilePath: sFileNew.path,
+        success: true,
+        manifest: manifest,
+      );
     } catch (e, stackTrace) {
       final failureReason = classifyFailureReason(e);
       Log.error(
@@ -414,6 +461,27 @@ class C2paSigningService {
         error: e.toString(),
       );
     }
+  }
+
+  /// Why [manifest] does not establish that signing worked, or null when it
+  /// does.
+  ///
+  /// `ValidationStatus.unknown` passes deliberately. The library reports it
+  /// whenever the native read returned no `validation_status` key at all,
+  /// which is what an ordinary clean read looks like — only `invalid` is
+  /// positive evidence that the output is broken
+  /// (`ManifestStoreInfo._determineValidationStatus`). Rejecting `unknown`
+  /// would throw away correctly signed recordings.
+  static String? _describeUnusableManifest(ManifestStoreInfo? manifest) {
+    if (manifest == null) return 'carries no readable C2PA manifest';
+    if (manifest.activeManifest == null) {
+      return 'carries no active C2PA manifest';
+    }
+    if (manifest.validationStatus == ValidationStatus.invalid) {
+      return 'carries a C2PA manifest that failed validation '
+          '(${manifest.validationErrors.length} error(s))';
+    }
+    return null;
   }
 
   /// Removes the signed-file the native call may still write after a timeout.

@@ -22,6 +22,15 @@ const _curatedListKind = 30005;
 /// Well-known d-tag for the user's default "My List".
 const defaultListId = 'my_vine_list';
 
+/// Newest kind-30005 events asked of each relay per search.
+///
+/// Every new account publishes an empty default list, and on production those
+/// placeholders are all but a percent or two of the newest events, so a
+/// 50-event window held nothing but placeholders whatever the query. 500 is
+/// the relay gateway's default discovery window; the placeholders drop out
+/// below because they carry no videos.
+const _relaySearchWindow = 500;
+
 /// {@template curated_list_repository}
 /// Repository for managing curated video list subscriptions.
 ///
@@ -48,6 +57,7 @@ class CuratedListRepository {
   final FunnelcakeApiClient _funnelcakeApiClient;
   final BlockedCuratedListFilter? _blockFilter;
   final Map<String, CuratedList> _subscribedLists = {};
+  final Map<String, CuratedList> _ownLists = {};
 
   // BehaviorSubject replays last value to late subscribers, fixing race
   // condition where BLoC subscribes AFTER initial emission.
@@ -84,6 +94,20 @@ class CuratedListRepository {
     _emitSubscribedLists();
   }
 
+  /// Replaces the lists the current user owns with [lists].
+  ///
+  /// The same transitional bridge as [setSubscribedLists]: the Page layer
+  /// pushes `CuratedListService.myLists` so [searchLists] can match the
+  /// viewer's own lists, which are not among the subscribed ones. Owned lists
+  /// take part in search only; the subscribed stream and lookups are
+  /// unaffected. Goes away with [setSubscribedLists] once the repository
+  /// loads its own data.
+  void setOwnLists(List<CuratedList> lists) {
+    _ownLists
+      ..clear()
+      ..addEntries(lists.map((list) => MapEntry(list.id, list)));
+  }
+
   // ---------------------------------------------------------------------------
   // Read-only queries
   // ---------------------------------------------------------------------------
@@ -113,28 +137,33 @@ class CuratedListRepository {
   /// Returns the user's default "My List", or `null` if not subscribed.
   CuratedList? getDefaultList() => _subscribedLists[defaultListId];
 
-  /// Searches subscribed public lists by [query] against name, description,
-  /// and tags (case-insensitive).
+  /// Searches the public lists known locally, the viewer's own and the
+  /// subscribed ones, by [query] against name, description, and tags
+  /// (case-insensitive).
   ///
   /// Returns an empty list when [query] is blank.
   List<CuratedList> searchLists(String query) {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
-    return _subscribedLists.values
-        .where(
-          (list) =>
-              list.isPublic &&
-              !_isBlocked(list.pubkey) &&
-              (list.name.toLowerCase().contains(lowerQuery) ||
-                  (list.description?.toLowerCase().contains(lowerQuery) ??
-                      false) ||
-                  list.tags.any(
-                    (tag) => tag.toLowerCase().contains(lowerQuery),
-                  )),
-        )
-        .toList();
+    final matches = <String, CuratedList>{};
+    for (final list in [..._ownLists.values, ..._subscribedLists.values]) {
+      if (!list.isPublic || _isBlocked(list.pubkey)) continue;
+      if (!_matchesQuery(list, lowerQuery)) continue;
+      matches.putIfAbsent(_coordinateOf(list), () => list);
+    }
+    return matches.values.toList();
   }
+
+  static bool _matchesQuery(CuratedList list, String lowerQuery) =>
+      list.name.toLowerCase().contains(lowerQuery) ||
+      (list.description?.toLowerCase().contains(lowerQuery) ?? false) ||
+      list.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
+
+  /// Author-qualified identity. Every account owns a `my_vine_list`, so the
+  /// d-tag alone conflates lists from different authors.
+  static String _coordinateOf(CuratedList list) =>
+      '${list.pubkey ?? ''}:${list.id}';
 
   /// Returns subscribed public lists that contain the given [tag].
   List<CuratedList> getListsByTag(String tag) {
@@ -207,13 +236,13 @@ class CuratedListRepository {
   /// resolving thumbnails.
   Future<List<CuratedList>> _queryListsFromRelays({
     required String query,
-    int limit = 50,
-    Set<String>? excludeIds,
+    int limit = _relaySearchWindow,
+    Set<String>? excludeCoordinates,
   }) async {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
-    final excluded = excludeIds ?? const {};
+    final excluded = excludeCoordinates ?? const {};
 
     final events = await _nostrClient.queryEvents([
       Filter(kinds: [_curatedListKind], limit: limit),
@@ -224,23 +253,18 @@ class CuratedListRepository {
       if (_isBlocked(event.pubkey)) continue;
       final list = CuratedListConverter.fromEvent(event);
       if (list == null) continue;
-      if (excluded.contains(list.id)) continue;
+      final coordinate = _coordinateOf(list);
+      if (excluded.contains(coordinate)) continue;
       if (!list.isPublic) continue;
       if (list.videoEventIds.isEmpty) continue;
+      if (!_matchesQuery(list, lowerQuery)) continue;
 
-      // Client-side query filter
-      final matches =
-          list.name.toLowerCase().contains(lowerQuery) ||
-          (list.description?.toLowerCase().contains(lowerQuery) ?? false) ||
-          list.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
-      if (!matches) continue;
-
-      // Dedup by d-tag, keep newest
-      final existing = seen[list.id];
+      // Dedup per author and d-tag, keep newest
+      final existing = seen[coordinate];
       if (existing != null && existing.updatedAt.isAfter(list.updatedAt)) {
         continue;
       }
-      seen[list.id] = list;
+      seen[coordinate] = list;
     }
 
     return seen.values.toList();
@@ -264,7 +288,7 @@ class CuratedListRepository {
   /// 3. Local + relay matches merged (relay items without thumbnails)
   /// 4. Fully enriched (relay thumbnails resolved)
   ///
-  /// Deduplicates by list ID.
+  /// Deduplicates by author-qualified list coordinate (pubkey + d-tag).
   Stream<List<CuratedList>> searchAllLists(
     String query, {
     int maxThumbnails = 5,
@@ -273,7 +297,7 @@ class CuratedListRepository {
 
     final localResults = searchLists(query);
     final merged = <String, CuratedList>{
-      for (final list in localResults) list.id: list,
+      for (final list in localResults) _coordinateOf(list): list,
     };
 
     // Yield 1: local results immediately (no thumbnails)
@@ -286,16 +310,16 @@ class CuratedListRepository {
     );
     merged
       ..clear()
-      ..addEntries(enrichedLocal.map((l) => MapEntry(l.id, l)));
+      ..addEntries(enrichedLocal.map((l) => MapEntry(_coordinateOf(l), l)));
     yield List.unmodifiable(merged.values.toList());
 
     // Yield 3: relay results merged (no thumbnails on new items)
     final relayResults = await _queryListsFromRelays(
       query: query,
-      excludeIds: merged.keys.toSet(),
+      excludeCoordinates: merged.keys.toSet(),
     );
     for (final list in relayResults) {
-      merged[list.id] = list;
+      merged[_coordinateOf(list)] = list;
     }
     yield List.unmodifiable(merged.values.toList());
 
@@ -305,7 +329,7 @@ class CuratedListRepository {
       maxThumbnails: maxThumbnails,
     );
     for (final list in enrichedRelay) {
-      merged[list.id] = list;
+      merged[_coordinateOf(list)] = list;
     }
     yield List.unmodifiable(merged.values.toList());
   }

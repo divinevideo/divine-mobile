@@ -4,7 +4,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
-import 'package:models/models.dart' hide LogCategory, NIP71VideoKinds;
+import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/nip71_migration.dart';
