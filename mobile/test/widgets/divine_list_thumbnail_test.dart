@@ -2,6 +2,8 @@
 // ABOUTME: two media variants (video fan, people collage), seams, badges,
 // ABOUTME: fixed-height footer, and tap handling.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -820,6 +822,140 @@ void main() {
             .first,
       );
       expect(large.width / media.width, closeTo(0.661, 0.01));
+    });
+  });
+
+  group('pending thumbnails', () {
+    Widget pending({
+      required Widget child,
+      List<Override> overrides = const [],
+    }) {
+      return ProviderScope(
+        overrides: [...getStandardTestOverrides(), ...overrides],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SizedBox(width: 185, child: child)),
+        ),
+      );
+    }
+
+    // The skeletonizer widget is built through a subclass, so it has to be
+    // found by predicate rather than by type.
+    Finder skeletonizer() => find.byWidgetPredicate((w) => w is Skeletonizer);
+
+    // A flat placeholder slot clips its image; a bone has no clip. The
+    // frame itself adds one clip around the whole fan.
+    Finder slotClips() => find.descendant(
+      of: find.byType(DivineListThumbnail),
+      matching: find.byType(ClipRRect),
+    );
+
+    testWidgets('shimmers the fan slots a video could still fill', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(videoEventIds: const ['a', 'b', 'c']),
+            thumbnailsPending: true,
+            onTap: () {},
+          ),
+        ),
+      );
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isTrue,
+      );
+      // Three of five slots are bones; the two the list can never fill
+      // keep their flat placeholder.
+      expect(slotClips(), findsNWidgets(1 + 2));
+    });
+
+    testWidgets('keeps every slot flat once thumbnails are resolved', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(videoEventIds: const ['a', 'b', 'c']),
+            onTap: () {},
+          ),
+        ),
+      );
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isFalse,
+      );
+      expect(slotClips(), findsNWidgets(1 + 5));
+    });
+
+    testWidgets('shimmers a collage tile while the member profile loads', (
+      tester,
+    ) async {
+      final member = 'c' * 64;
+      final neverResolves = Completer<UserProfile?>();
+      await tester.pumpWidget(
+        pending(
+          overrides: [
+            fetchUserProfileProvider(
+              member,
+            ).overrideWith((ref) => neverResolves.future),
+          ],
+          child: DivineListThumbnail.people(
+            userList: createUserList(pubkeys: [member]),
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isTrue,
+      );
+      // Exactly the member's tile is a bone: the one filled box with a
+      // rounded collage corner.
+      const corner = Radius.circular(16);
+      final bones = find.descendant(
+        of: find.byType(DivineListThumbnail),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).color != null &&
+              ((w.decoration as BoxDecoration).borderRadius as BorderRadius?)
+                      ?.topLeft ==
+                  corner,
+        ),
+      );
+      expect(bones, findsOneWidget);
+    });
+
+    testWidgets('settles the tile once the profile is known', (tester) async {
+      final member = 'c' * 64;
+      await tester.pumpWidget(
+        pending(
+          overrides: [
+            fetchUserProfileProvider(
+              member,
+            ).overrideWith((ref) async => profileFor(member)),
+          ],
+          child: DivineListThumbnail.people(
+            userList: createUserList(pubkeys: [member]),
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isFalse,
+      );
     });
   });
 }

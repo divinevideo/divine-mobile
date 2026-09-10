@@ -11,6 +11,7 @@ void main() {
     required bool disableAnimations,
     ThemeData? theme,
     Brightness platformBrightness = Brightness.light,
+    Color? baseColor,
   }) {
     return MaterialApp(
       theme: theme,
@@ -21,7 +22,7 @@ void main() {
         ),
         child: Builder(
           builder: (context) => Skeletonizer(
-            effect: vineSkeletonEffectOf(context),
+            effect: vineSkeletonEffectOf(context, baseColor: baseColor),
             child: const Text('Loading'),
           ),
         ),
@@ -89,6 +90,34 @@ void main() {
       final effect = skeletonizer.effect! as ShimmerEffect;
       final base = VineTheme.lightColors.skeleton;
       expect(effect.colors, [base, base.withValues(alpha: 0.6), base]);
+    });
+
+    testWidgets('paints a caller-supplied base colour in both modes', (
+      tester,
+    ) async {
+      const base = Color(0xFF123456);
+
+      await tester.pumpWidget(
+        subject(disableAnimations: false, baseColor: base),
+      );
+      final shimmer = tester
+          .widget<Skeletonizer>(
+            find.byWidgetPredicate((widget) => widget is Skeletonizer),
+          )
+          .effect;
+      expect(shimmer, isA<ShimmerEffect>());
+      expect((shimmer! as ShimmerEffect).colors.first, base);
+
+      await tester.pumpWidget(
+        subject(disableAnimations: true, baseColor: base),
+      );
+      final solid = tester
+          .widget<Skeletonizer>(
+            find.byWidgetPredicate((widget) => widget is Skeletonizer),
+          )
+          .effect;
+      expect(solid, isA<SolidColorEffect>());
+      expect((solid! as SolidColorEffect).color, base);
     });
   });
 }
