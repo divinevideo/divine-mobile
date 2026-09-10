@@ -56,6 +56,8 @@ class SupporterRepository {
   final SharedPreferences _prefs;
 
   static const String _cacheKeyPrefix = 'divine_supporter_entitlement:';
+  static const _pendingOwnerPrefix = 'divine_supporter_pending_owner:';
+  static const _proofOwnerPrefix = 'divine_supporter_proof_owner:';
   final String _cacheKey;
 
   late SupporterEntitlement _current;
@@ -63,6 +65,7 @@ class SupporterRepository {
   StreamSubscription<SupporterPurchaseProof>? _proofSubscription;
   Future<void>? _recoveryInFlight;
   bool _recoveryCompleted = false;
+  int _claimFailureRevision = 0;
   final StreamController<SupporterEntitlement> _controller =
       StreamController<SupporterEntitlement>.broadcast();
 
@@ -96,17 +99,45 @@ class SupporterRepository {
         'Supporter verification is not configured.',
       );
     }
+    final snapshot = await refreshFromServer();
+    if (snapshot.entitlement.isSupporter) return snapshot.entitlement;
+
+    final pendingKey = '$_pendingOwnerPrefix$productId';
+    final pendingOwner = _prefs.getString(pendingKey);
+    if (pendingOwner != null && pendingOwner != _pubkey) {
+      throw const SupporterApiException(
+        SupporterApiFailureKind.ownershipConflict,
+        'An unfinished store purchase belongs to another Divine account.',
+      );
+    }
+    await _rememberOwner(pendingKey);
+
     Log.info(
       'Starting supporter purchase for ${pubkeyForLogs(_pubkey)} '
       '(productId=$productId)',
       name: 'SupporterRepository',
       category: LogCategory.system,
     );
-    return _validator.purchase(
-      productId,
-      capturedPubkey: _pubkey,
-      attemptId: 'supporter-${DateTime.now().microsecondsSinceEpoch}',
-    );
+    try {
+      return await _validator.purchase(
+        productId,
+        capturedPubkey: _pubkey,
+        attemptId: 'supporter-${DateTime.now().microsecondsSinceEpoch}',
+      );
+    } on StoreUnavailableException {
+      if (pendingOwner == null && _prefs.getString(pendingKey) == _pubkey) {
+        await _prefs.remove(pendingKey);
+      }
+      rethrow;
+    } on PurchaseFailedException catch (error) {
+      if ((error.responseCode == 'cancelled' ||
+              error.responseCode == 'not_started') &&
+          pendingOwner == null &&
+          _prefs.getString(pendingKey) == _pubkey) {
+        await _prefs.remove(pendingKey);
+      }
+      rethrow;
+    }
   }
 
   /// Restores purchases for this exact signed-in account.
@@ -142,18 +173,17 @@ class SupporterRepository {
 
   Future<void> _recoverPurchases() async {
     try {
-      final snapshot = await refreshFromServer();
-      if (snapshot.entitlement.isSupporter) {
-        _recoveryCompleted = true;
-        return;
-      }
+      await refreshFromServer();
+      // Even active accounts may have a transaction still awaiting store
+      // acknowledgment after the app closed during a successful claim.
+      final failureRevision = _claimFailureRevision;
       await _validator.restorePurchases(
         capturedPubkey: _pubkey,
         attemptId:
             'supporter-recovery-${DateTime.now().microsecondsSinceEpoch}',
         silent: true,
       );
-      _recoveryCompleted = true;
+      if (failureRevision == _claimFailureRevision) _recoveryCompleted = true;
     } on Object {
       // Background repair stays silent. A later foreground edge retries.
     }
@@ -251,9 +281,30 @@ class SupporterRepository {
   }
 
   Future<void> _confirmPurchase(SupporterPurchaseProof proof) async {
-    // Never send a store result under a different account after an account
-    // switch. A device-scope durable queue will retain this case once wired.
-    if (proof.capturedPubkey != _pubkey) return;
+    final proofOwnerKey = '$_proofOwnerPrefix${proof.attemptId}';
+    final pendingKey = '$_pendingOwnerPrefix${proof.productId}';
+    final owner =
+        _prefs.getString(proofOwnerKey) ?? _prefs.getString(pendingKey);
+    if (owner != null ? owner != _pubkey : proof.capturedPubkey != _pubkey) {
+      if (!proof.silent && proof.capturedPubkey == _pubkey) {
+        _handleValidatorError(
+          const SupporterApiException(
+            SupporterApiFailureKind.ownershipConflict,
+            'This store purchase belongs to another Divine account.',
+          ),
+          StackTrace.current,
+        );
+      }
+      return;
+    }
+    if (owner == null && proof.silent) {
+      Log.info(
+        'Unbound supporter purchase requires an explicit restore.',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
+      return;
+    }
 
     Log.info(
       'Received supporter purchase proof for ${pubkeyForLogs(_pubkey)} '
@@ -282,6 +333,8 @@ class SupporterRepository {
     }
 
     try {
+      // Legacy restores acquire local ownership only after server acceptance.
+      if (owner != null) await _rememberOwner(proofOwnerKey);
       final snapshot = await client.claimPurchase(
         SupporterPurchaseClaim(
           store: proof.store,
@@ -291,8 +344,12 @@ class SupporterRepository {
         ),
         expectedPubkey: _pubkey,
       );
+      await _rememberOwner(proofOwnerKey);
       _handleChange(snapshot.entitlement);
       await _validator.completePurchase(proof);
+      if (_prefs.getString(pendingKey) == _pubkey) {
+        await _prefs.remove(pendingKey);
+      }
       Log.info(
         'Claimed and acknowledged supporter purchase for '
         '${pubkeyForLogs(_pubkey)} '
@@ -301,6 +358,7 @@ class SupporterRepository {
         category: LogCategory.system,
       );
     } on Object catch (error, stackTrace) {
+      _claimFailureRevision++;
       _recoveryCompleted = _isTerminalClaimFailure(error);
       Log.warning(
         'Supporter purchase claim failed for ${pubkeyForLogs(_pubkey)}; '
@@ -312,6 +370,17 @@ class SupporterRepository {
       if (!proof.silent) _handleValidatorError(error, stackTrace);
       // Keep the purchase unacknowledged so the store can redeliver it after
       // the Worker or signer becomes available.
+    }
+  }
+
+  Future<void> _rememberOwner(String key) async {
+    // Persist only the public account identifier and opaque proof digest,
+    // never store receipts or purchase tokens.
+    if (!await _prefs.setString(key, _pubkey)) {
+      throw const SupporterApiException(
+        SupporterApiFailureKind.unavailable,
+        'Could not save the purchase account. Try again later.',
+      );
     }
   }
 

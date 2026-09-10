@@ -142,7 +142,13 @@ void main() {
           ).thenAnswer((_) => const Stream<List<PurchaseDetails>>.empty());
           await expectLater(
             validator.purchase('divine.supporter.monthly'),
-            throwsA(isA<PurchaseFailedException>()),
+            throwsA(
+              isA<PurchaseFailedException>().having(
+                (error) => error.responseCode,
+                'responseCode',
+                'not_started',
+              ),
+            ),
           );
         },
       );
@@ -256,7 +262,16 @@ void main() {
             status: PurchaseStatus.canceled,
           ),
         ]);
-        await expectLater(future, throwsA(isA<PurchaseFailedException>()));
+        await expectLater(
+          future,
+          throwsA(
+            isA<PurchaseFailedException>().having(
+              (error) => error.responseCode,
+              'responseCode',
+              'cancelled',
+            ),
+          ),
+        );
       });
 
       test(

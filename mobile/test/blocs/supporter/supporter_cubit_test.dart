@@ -27,6 +27,7 @@ class _FakeRepository extends Fake implements SupporterRepository {
   bool get hasServerClient => false;
 
   Object? purchaseError;
+  Completer<SupporterEntitlement>? purchaseCompleter;
 
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
@@ -34,7 +35,7 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   Future<SupporterEntitlement> purchase(String productId) async {
     if (purchaseError != null) throw purchaseError!;
-    return validator.purchase(productId);
+    return purchaseCompleter?.future ?? validator.purchase(productId);
   }
 
   @override
@@ -315,6 +316,103 @@ void main() {
   });
 
   group('purchase lifecycle', () {
+    test('late store completion does not overwrite verified status', () async {
+      final events = <String>[];
+      final repo = _FakeRepository(controller)
+        ..purchaseCompleter = Completer<SupporterEntitlement>();
+      final cubit = SupporterCubit(repository: repo, trackEvent: events.add);
+      addTearDown(cubit.close);
+      cubit.start();
+      await pumpEventQueue();
+      final purchase = cubit.subscribe('divine.supporter.monthly');
+      controller.add(
+        const SupporterEntitlement(
+          productId: 'divine.supporter.monthly',
+          source: EntitlementSource.server,
+        ),
+      );
+      await pumpEventQueue();
+      repo.purchaseCompleter!.complete(SupporterEntitlement.inactive);
+      await purchase;
+
+      expect(cubit.state.isSupporter, isTrue);
+      expect(cubit.state.status, SupporterStatus.active);
+      expect(
+        events.where((event) => event == 'supporter_subscribe_succeeded'),
+        hasLength(1),
+      );
+    });
+
+    test('records success only after canonical activation', () async {
+      final events = <String>[];
+      final repo = _FakeRepository(controller);
+      final cubit = SupporterCubit(repository: repo, trackEvent: events.add);
+      addTearDown(cubit.close);
+      cubit.start();
+      await pumpEventQueue();
+
+      await cubit.subscribe('divine.supporter.monthly');
+
+      expect(cubit.state.status, SupporterStatus.confirming);
+      expect(events, ['supporter_subscribe_tapped']);
+
+      controller.add(
+        const SupporterEntitlement(
+          productId: 'divine.supporter.monthly',
+          source: EntitlementSource.server,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(cubit.state.isSupporter, isTrue);
+      expect(events, [
+        'supporter_subscribe_tapped',
+        'supporter_subscribe_succeeded',
+      ]);
+    });
+
+    test('records failed verification instead of purchase success', () async {
+      final events = <String>[];
+      final cubit = SupporterCubit(
+        repository: _FakeRepository(controller),
+        trackEvent: events.add,
+      );
+      addTearDown(cubit.close);
+      cubit.start();
+      await pumpEventQueue();
+      await cubit.subscribe('divine.supporter.monthly');
+      controller.addError(
+        const SupporterApiException(
+          SupporterApiFailureKind.unavailable,
+          'Verification unavailable.',
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(cubit.state.isBusy, isFalse);
+      expect(events, [
+        'supporter_subscribe_tapped',
+        'supporter_subscribe_failed',
+      ]);
+    });
+
+    test('analytics failures cannot prevent a purchase', () async {
+      final repo = _FakeRepository(controller);
+      repo.validator.purchaseResult = const SupporterEntitlement(
+        productId: 'divine.supporter.monthly',
+        source: EntitlementSource.server,
+      );
+      final cubit = SupporterCubit(
+        repository: repo,
+        trackEvent: (_) => throw StateError('Analytics unavailable'),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.subscribe('divine.supporter.monthly');
+
+      expect(cubit.state.isSupporter, isTrue);
+    });
+
     test(
       'surfaces verification failure received from the proof stream',
       () async {

@@ -40,6 +40,43 @@ void main() {
   tearDown(() => httpClient.close());
 
   group('SupporterApiClient methods', () {
+    test('does not extend expired billing grace', () {
+      final past = DateTime.now().toUtc().subtract(const Duration(days: 1));
+      final snapshot = SupporterAccountSnapshot.fromJson({
+        'status': 'grace',
+        'entitlement': {
+          'isActive': true,
+          'expirationDate': past
+              .subtract(const Duration(days: 3))
+              .toIso8601String(),
+        },
+        'graceThroughAt': past.toIso8601String(),
+      });
+      expect(snapshot.entitlement.isSupporter, isFalse);
+    });
+
+    test('preserves supporter status until billing grace ends', () {
+      final paidThrough = DateTime.now().toUtc().subtract(
+        const Duration(days: 1),
+      );
+      final graceThrough = DateTime.now().toUtc().add(const Duration(days: 3));
+      final snapshot = SupporterAccountSnapshot.fromJson({
+        'status': 'grace',
+        'entitlement': {
+          'productId': 'divine.supporter.monthly',
+          'source': 'app_store',
+          'isActive': true,
+          'expirationDate': paidThrough.toIso8601String(),
+        },
+        'paidThroughAt': paidThrough.toIso8601String(),
+        'graceThroughAt': graceThrough.toIso8601String(),
+      });
+
+      expect(snapshot.entitlement.isSupporter, isTrue);
+      expect(snapshot.entitlement.expirationDate, graceThrough);
+      expect(snapshot.paidThrough, paidThrough);
+    });
+
     test(
       'fetchMe signs the exact Worker URL and maps canonical state',
       () async {

@@ -117,7 +117,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
         }
       case PurchaseStatus.canceled:
         const exception = PurchaseFailedException(
-          null,
+          'cancelled',
           'Purchase was cancelled.',
         );
         pending?.completer?.completeError(exception);
@@ -207,7 +207,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
     if (!initiated) {
       _pendingPurchases.remove(productId);
       throw const PurchaseFailedException(
-        null,
+        'not_started',
         'Store did not start the purchase.',
       );
     }
