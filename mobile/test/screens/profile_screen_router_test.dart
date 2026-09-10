@@ -240,8 +240,21 @@ void main() {
       );
       addTearDown(router.dispose);
 
+      final authService = createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: _authorPubkeyHex,
+      );
+      // ProfileHeaderWidget reads these directly; createMockAuthService()
+      // does not stub them, and unstubbed Mock getters return null, which
+      // throws building the header (mirrors other_profile_screen_test.dart's
+      // setUp and profile_route_redirect_test.dart's pumpRouter).
+      when(() => authService.isAnonymous).thenReturn(false);
+      when(() => authService.hasExpiredOAuthSession).thenReturn(false);
+      when(() => authService.isRpcUpgradeInProgress).thenReturn(false);
+
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: authService,
           additionalOverrides: [
             videosRepositoryProvider.overrideWithValue(videosRepository),
             videoEventServiceProvider.overrideWithValue(videoEventService),
