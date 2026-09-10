@@ -78,6 +78,7 @@ class _ImageUrlFormState extends State<_ImageUrlForm> {
             primaryWhenFilled: true,
             textCapitalization: .none,
             keyboardType: TextInputType.url,
+            autocorrect: false,
             textInputAction: TextInputAction.done,
             autofocus: true,
             onSubmitted: (_) => _save(),

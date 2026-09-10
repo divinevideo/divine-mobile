@@ -23,6 +23,7 @@ class WebsiteField extends StatelessWidget {
       primaryWhenFilled: true,
       textCapitalization: .none,
       keyboardType: TextInputType.url,
+      autocorrect: false,
       // Last field in the form, so done dismisses the keyboard rather than
       // moving on. Flutter does that for `done` without an onSubmitted.
       textInputAction: TextInputAction.done,
