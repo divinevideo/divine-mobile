@@ -95,7 +95,12 @@ void main() {
 
       expect(find.text('Family guide'), findsOneWidget);
 
-      await tester.pageBack();
+      // Not tester.pageBack(): it looks for a framework `BackButton` tooltip
+      // or a `CupertinoNavigationBarBackButton`, and since #8916 neither type
+      // is what DiVineAppBar builds.
+      await tester.tap(
+        find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Open family guide'), findsOneWidget);

@@ -2,6 +2,7 @@
 // ABOUTME: Requires: local Docker stack running (mise run local_up) + Android emulator
 // ABOUTME: Run with: mise run e2e_test (passes --dart-define=DEFAULT_ENV=LOCAL automatically)
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/event.dart';
@@ -424,7 +425,12 @@ void main() {
         // The edit dialog pops after deletion. We should be back on the
         // fullscreen player. Navigate back to profile.
         // Use system back or tap back button to leave fullscreen player.
-        await tester.pageBack();
+        // Not tester.pageBack(): it looks for a framework `BackButton` tooltip
+        // or a `CupertinoNavigationBarBackButton`, and since #8916 neither
+        // type is what DiVineAppBar builds.
+        await tester.tap(
+          find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+        );
         await pumpUntilSettled(tester);
 
         // Navigate: profile → home → explore → profile to force refresh
