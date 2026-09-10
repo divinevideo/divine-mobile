@@ -82,3 +82,51 @@ class SharedPreferencesAccountDeletionRecoveryPollBudgetStore
     await _prefs.remove('$keyPrefix$attemptId');
   }
 }
+
+/// Anchors on the durable deletion receipt when this install has one for the
+/// attempt, and falls back to [fallback] when it does not.
+///
+/// The receipt is the better home: it already exists, is already cleaned up
+/// with the attempt, and needs no preference key of its own. But the recovery
+/// screen is reachable *without* a receipt — the router gates on the server's
+/// attempt status, not on local state, so a reinstall mid-deletion, a receipt
+/// cleared as corrupt, or a deletion submitted from another device all land on
+/// the screen with nothing stored locally. Those are exactly the long waits
+/// this budget exists for, so they get a keyed fallback rather than a
+/// process-local anchor that restarts every launch.
+class ReceiptAnchoredPollBudgetStore
+    implements AccountDeletionRecoveryPollBudgetStore {
+  ReceiptAnchoredPollBudgetStore({
+    required this.readReceiptAnchor,
+    required this.fallback,
+  });
+
+  /// The receipt's attempt id and anchor, or `null` when none is stored.
+  final ({String attemptId, DateTime startedAt})? Function() readReceiptAnchor;
+
+  final AccountDeletionRecoveryPollBudgetStore fallback;
+
+  ({String attemptId, DateTime startedAt})? _anchorFor(String attemptId) {
+    final anchor = readReceiptAnchor();
+    return anchor != null && anchor.attemptId == attemptId ? anchor : null;
+  }
+
+  @override
+  Future<DateTime?> startedAt(String attemptId) async =>
+      _anchorFor(attemptId)?.startedAt ?? await fallback.startedAt(attemptId);
+
+  @override
+  Future<void> recordStartIfAbsent(String attemptId, DateTime at) async {
+    // A receipt always carries an anchor once read, so there is nothing to
+    // record on that path.
+    if (_anchorFor(attemptId) != null) return;
+    await fallback.recordStartIfAbsent(attemptId, at);
+  }
+
+  @override
+  Future<void> clear(String attemptId) async {
+    // The receipt's anchor goes when the receipt does, so only the fallback
+    // key needs clearing here.
+    await fallback.clear(attemptId);
+  }
+}

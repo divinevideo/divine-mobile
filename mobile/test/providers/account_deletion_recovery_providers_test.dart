@@ -2,6 +2,7 @@
 // ABOUTME: Verifies lookup readiness remains fail-closed until signing works.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -217,6 +218,166 @@ void main() {
       );
       addTearDown(subscription.close);
     }
+
+    group('recovery watch anchor', () {
+      /// A container whose clock the test drives, so "later" is exact.
+      ProviderContainer containerAt(DateTime now) {
+        final made = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+            accountDeletionRecoveryClockProvider.overrideWithValue(() => now),
+          ],
+        );
+        addTearDown(made.dispose);
+        return made;
+      }
+
+      test('is stamped when the receipt is first recorded', () async {
+        final at = DateTime.utc(2026, 3, 4, 5);
+        final scoped = containerAt(at);
+        await scoped
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: pubkey,
+              attempt: processing,
+              vanishEventId: _vanishEventId,
+            );
+
+        expect(
+          scoped
+              .read(submittedAccountDeletionAttemptProvider)!
+              .recoveryWatchStartedAt,
+          at,
+        );
+      });
+
+      test(
+        're-recording the same attempt keeps the original anchor, so the '
+        'support budget cannot be pushed out by a status refresh',
+        () async {
+          final first = DateTime.utc(2026, 3, 4, 5);
+          final scoped = containerAt(first);
+          final notifier = scoped.read(
+            submittedAccountDeletionAttemptProvider.notifier,
+          );
+          await notifier.record(
+            pubkeyHex: pubkey,
+            attempt: processing,
+            vanishEventId: _vanishEventId,
+          );
+
+          // Same attempt id, recorded again half an hour later.
+          final later = containerAt(first.add(const Duration(minutes: 30)));
+          await later
+              .read(submittedAccountDeletionAttemptProvider.notifier)
+              .record(
+                pubkeyHex: pubkey,
+                attempt: processing,
+                vanishEventId: _vanishEventId,
+              );
+
+          expect(
+            later
+                .read(submittedAccountDeletionAttemptProvider)!
+                .recoveryWatchStartedAt,
+            first,
+          );
+        },
+      );
+
+      test('updateAttempt does not restamp the anchor', () async {
+        final first = DateTime.utc(2026, 3, 4, 5);
+        final scoped = containerAt(first);
+        await scoped
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: pubkey,
+              attempt: processing,
+              vanishEventId: _vanishEventId,
+            );
+
+        final later = containerAt(first.add(const Duration(minutes: 30)));
+        await later
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .updateAttempt(
+              const AccountDeletionAttempt(
+                id: 'attempt-id',
+                status: AccountDeletionAttemptStatus.completed,
+              ),
+            );
+
+        final receipt = later.read(submittedAccountDeletionAttemptProvider)!;
+        expect(receipt.recoveryWatchStartedAt, first);
+        expect(receipt.attempt.status, AccountDeletionAttemptStatus.completed);
+      });
+
+      test(
+        'a legacy receipt is stamped once on adoption and that stamp sticks, '
+        'so the budget is not re-anchored on every read',
+        () async {
+          // A receipt written before the field existed.
+          SharedPreferences.setMockInitialValues({
+            'account_deletion_receipt_v1': jsonEncode({
+              'pubkey_hex': pubkey,
+              'vanish_event_id': _vanishEventId,
+              'attempt': processing.toJson(),
+            }),
+          });
+          final legacyPrefs = await SharedPreferences.getInstance();
+
+          ProviderContainer adoptAt(DateTime now) {
+            final made = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(legacyPrefs),
+                authServiceProvider.overrideWithValue(authService),
+                currentAuthStateProvider.overrideWithValue(
+                  AuthState.authenticated,
+                ),
+                currentAuthRpcCapabilityProvider.overrideWithValue(
+                  AuthRpcCapability.rpcReady,
+                ),
+                accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+                  repository,
+                ),
+                accountDeletionRecoveryClockProvider.overrideWithValue(
+                  () => now,
+                ),
+              ],
+            );
+            addTearDown(made.dispose);
+            return made;
+          }
+
+          final adopted = DateTime.utc(2026, 3, 4, 5);
+          final first = adoptAt(adopted);
+          expect(
+            first
+                .read(submittedAccountDeletionAttemptProvider)!
+                .recoveryWatchStartedAt,
+            adopted,
+          );
+          // Let the backfill write land.
+          await Future<void>.delayed(Duration.zero);
+
+          final later = adoptAt(adopted.add(const Duration(hours: 1)));
+          expect(
+            later
+                .read(submittedAccountDeletionAttemptProvider)!
+                .recoveryWatchStartedAt,
+            adopted,
+            reason: 'the adoption stamp was persisted, not recomputed',
+          );
+        },
+      );
+    });
 
     test(
       'a recorded attempt is the current attempt without a lookup',

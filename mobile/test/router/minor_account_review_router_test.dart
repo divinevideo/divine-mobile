@@ -115,6 +115,7 @@ void main() {
             pubkeyHex: 'first-account',
             attempt: retained.value!,
             vanishEventId: 'vanish-event-id',
+            recoveryWatchStartedAt: DateTime.utc(2026),
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -131,14 +132,15 @@ void main() {
       expect(
         accountDeletionRecoveryGateActive(
           const AsyncData<AccountDeletionAttempt?>(lookup),
-          submittedAttempt: const SubmittedAccountDeletionAttempt(
+          submittedAttempt: SubmittedAccountDeletionAttempt(
             pubkeyHex: 'first-account',
-            attempt: AccountDeletionAttempt(
+            attempt: const AccountDeletionAttempt(
               id: 'first-account-attempt',
               status: AccountDeletionAttemptStatus.processing,
               failureCode: 'x',
             ),
             vanishEventId: 'vanish-event-id',
+            recoveryWatchStartedAt: DateTime.utc(2026),
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -156,13 +158,14 @@ void main() {
               status: AccountDeletionAttemptStatus.processing,
             ),
           ),
-          submittedAttempt: const SubmittedAccountDeletionAttempt(
+          submittedAttempt: SubmittedAccountDeletionAttempt(
             pubkeyHex: 'first-account',
-            attempt: AccountDeletionAttempt(
+            attempt: const AccountDeletionAttempt(
               id: 'first-account-attempt',
               status: AccountDeletionAttemptStatus.processing,
             ),
             vanishEventId: 'vanish-event-id',
+            recoveryWatchStartedAt: DateTime.utc(2026),
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -247,13 +250,14 @@ void main() {
           authenticatedDeletionLookupSettled(
             AuthState.authenticated,
             const AsyncLoading<AccountDeletionAttempt?>(),
-            submittedAttempt: const SubmittedAccountDeletionAttempt(
+            submittedAttempt: SubmittedAccountDeletionAttempt(
               pubkeyHex: 'user-pubkey',
-              attempt: AccountDeletionAttempt(
+              attempt: const AccountDeletionAttempt(
                 id: 'attempt-id',
                 status: AccountDeletionAttemptStatus.processing,
               ),
               vanishEventId: 'vanish-event-id',
+              recoveryWatchStartedAt: DateTime.utc(2026),
             ),
             currentPubkeyHex: 'user-pubkey',
           ),

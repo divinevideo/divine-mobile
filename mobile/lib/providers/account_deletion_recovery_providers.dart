@@ -25,8 +25,19 @@ import 'package:unified_logger/unified_logger.dart';
 /// fallback would restart it on every launch.
 final accountDeletionRecoveryPollBudgetProvider =
     Provider<AccountDeletionRecoveryPollBudgetStore>(
-      (ref) => SharedPreferencesAccountDeletionRecoveryPollBudgetStore(
-        ref.watch(sharedPreferencesProvider),
+      (ref) => ReceiptAnchoredPollBudgetStore(
+        readReceiptAnchor: () {
+          final receipt = ref.read(submittedAccountDeletionAttemptProvider);
+          return receipt == null
+              ? null
+              : (
+                  attemptId: receipt.attempt.id,
+                  startedAt: receipt.recoveryWatchStartedAt,
+                );
+        },
+        fallback: SharedPreferencesAccountDeletionRecoveryPollBudgetStore(
+          ref.watch(sharedPreferencesProvider),
+        ),
       ),
     );
 
@@ -45,27 +56,49 @@ final accountDeletionRecoveryRepositoryProvider =
       );
     });
 
+/// Wall clock for deletion-recovery timing, injectable for tests.
+final accountDeletionRecoveryClockProvider = Provider<DateTime Function()>(
+  (_) => DateTime.now,
+);
+
 /// Durable receipt for a deletion this installation submitted.
 final class SubmittedAccountDeletionAttempt {
   const SubmittedAccountDeletionAttempt({
     required this.pubkeyHex,
     required this.attempt,
     required this.vanishEventId,
+    required this.recoveryWatchStartedAt,
     this.submissionOwnedLocally = false,
   });
 
-  factory SubmittedAccountDeletionAttempt.fromJson(Map<String, dynamic> json) =>
-      SubmittedAccountDeletionAttempt(
-        pubkeyHex: json['pubkey_hex'] as String,
-        vanishEventId: json['vanish_event_id'] as String,
-        attempt: AccountDeletionAttempt.fromJson(
-          json['attempt'] as Map<String, dynamic>,
-        ),
-      );
+  factory SubmittedAccountDeletionAttempt.fromJson(
+    Map<String, dynamic> json, {
+    DateTime Function() now = DateTime.now,
+  }) {
+    final startedAtMs = (json['recovery_watch_started_at_ms'] as num?)?.toInt();
+    return SubmittedAccountDeletionAttempt(
+      pubkeyHex: json['pubkey_hex'] as String,
+      vanishEventId: json['vanish_event_id'] as String,
+      attempt: AccountDeletionAttempt.fromJson(
+        json['attempt'] as Map<String, dynamic>,
+      ),
+      // A receipt written before this field existed anchors from the first
+      // read that adopts it, and the notifier persists that stamp so the
+      // anchor stops moving.
+      recoveryWatchStartedAt: startedAtMs == null
+          ? now().toUtc()
+          : DateTime.fromMillisecondsSinceEpoch(startedAtMs, isUtc: true),
+    );
+  }
 
   final String pubkeyHex;
   final AccountDeletionAttempt attempt;
   final String vanishEventId;
+
+  /// When this install started watching the deletion, used as the durable
+  /// anchor for the support-escape budget. Carried on the receipt so the
+  /// common path needs no preference key of its own.
+  final DateTime recoveryWatchStartedAt;
 
   /// True only while this process's deletion dialog owns submission and cleanup.
   /// It is deliberately not persisted, so an app restart adopts the receipt.
@@ -76,15 +109,21 @@ final class SubmittedAccountDeletionAttempt {
     'pubkey_hex': pubkeyHex,
     'vanish_event_id': vanishEventId,
     'attempt': attempt.toJson(),
+    'recovery_watch_started_at_ms': recoveryWatchStartedAt
+        .toUtc()
+        .millisecondsSinceEpoch,
   };
 
   SubmittedAccountDeletionAttempt copyWith({
     AccountDeletionAttempt? attempt,
+    DateTime? recoveryWatchStartedAt,
     bool? submissionOwnedLocally,
   }) => SubmittedAccountDeletionAttempt(
     pubkeyHex: pubkeyHex,
     attempt: attempt ?? this.attempt,
     vanishEventId: vanishEventId,
+    recoveryWatchStartedAt:
+        recoveryWatchStartedAt ?? this.recoveryWatchStartedAt,
     submissionOwnedLocally:
         submissionOwnedLocally ?? this.submissionOwnedLocally,
   );
@@ -113,9 +152,15 @@ class SubmittedAccountDeletionAttemptNotifier
     Map<String, dynamic>? decoded;
     try {
       decoded = jsonDecode(encoded) as Map<String, dynamic>;
-      return SubmittedAccountDeletionAttempt.fromJson(
+      final needsBackfill = decoded['recovery_watch_started_at_ms'] == null;
+      final receipt = SubmittedAccountDeletionAttempt.fromJson(
         decoded,
+        now: ref.read(accountDeletionRecoveryClockProvider),
       );
+      // Persist the stamp a legacy receipt was just given, or every read would
+      // re-anchor it to now and the budget would never advance.
+      if (needsBackfill) unawaited(_persistLegacyWatchStart(receipt));
+      return receipt;
     } on Object catch (error) {
       final encodedPubkey = decoded?['pubkey_hex'];
       Log.error(
@@ -127,6 +172,24 @@ class SubmittedAccountDeletionAttemptNotifier
       );
       unawaited(_removeCorruptReceipt());
       return null;
+    }
+  }
+
+  Future<void> _persistLegacyWatchStart(
+    SubmittedAccountDeletionAttempt receipt,
+  ) async {
+    try {
+      final saved = await ref
+          .read(sharedPreferencesProvider)
+          .setString(_storageKey, jsonEncode(receipt.toJson()));
+      if (!saved) throw StateError('Could not backfill recovery watch start');
+    } on Object catch (error) {
+      Log.error(
+        'Failed to backfill account deletion recovery watch start for '
+        '${pubkeyForLogs(receipt.pubkeyHex)}: $error',
+        name: 'AccountDeletionRecovery',
+        category: LogCategory.auth,
+      );
     }
   }
 
@@ -156,27 +219,36 @@ class SubmittedAccountDeletionAttemptNotifier
         'Another account deletion receipt is already pending',
       );
     }
-    final receipt = SubmittedAccountDeletionAttempt(
-      pubkeyHex: pubkeyHex,
-      attempt: attempt,
-      vanishEventId: vanishEventId,
-      submissionOwnedLocally: submissionOwnedLocally,
+    // Re-recording the SAME attempt keeps its original anchor; a different
+    // attempt is a new wait and starts its own.
+    final recoveryWatchStartedAt =
+        existing != null && existing.attempt.id == attempt.id
+        ? existing.recoveryWatchStartedAt
+        : ref.read(accountDeletionRecoveryClockProvider)().toUtc();
+    await _persist(
+      SubmittedAccountDeletionAttempt(
+        pubkeyHex: pubkeyHex,
+        attempt: attempt,
+        vanishEventId: vanishEventId,
+        recoveryWatchStartedAt: recoveryWatchStartedAt,
+        submissionOwnedLocally: submissionOwnedLocally,
+      ),
     );
-    final saved = await ref
-        .read(sharedPreferencesProvider)
-        .setString(_storageKey, jsonEncode(receipt.toJson()));
-    if (!saved) throw StateError('Could not persist account deletion receipt');
-    state = receipt;
   }
 
   Future<void> updateAttempt(AccountDeletionAttempt attempt) async {
     final receipt = state;
     if (receipt == null || receipt.attempt.id != attempt.id) return;
-    await record(
-      pubkeyHex: receipt.pubkeyHex,
-      attempt: attempt,
-      vanishEventId: receipt.vanishEventId,
-    );
+    // copyWith, not record: a status update must not restamp the anchor.
+    await _persist(receipt.copyWith(attempt: attempt));
+  }
+
+  Future<void> _persist(SubmittedAccountDeletionAttempt receipt) async {
+    final saved = await ref
+        .read(sharedPreferencesProvider)
+        .setString(_storageKey, jsonEncode(receipt.toJson()));
+    if (!saved) throw StateError('Could not persist account deletion receipt');
+    state = receipt;
   }
 
   void releaseSubmissionOwnership() {
