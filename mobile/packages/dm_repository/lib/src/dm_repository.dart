@@ -4264,13 +4264,17 @@ class DmRepository {
   /// relay that answers — which is right for a caller that falls back to the
   /// default pool but not for one about to replace what it read. Sharing it
   /// was what made the guard above unreachable (#8212). The extra query is
-  /// bounded: this method returns early once `dmRelayListPublished` is set, so
-  /// it runs at most once per (device, pubkey), and it is never awaited by
-  /// login. Idempotent per (device, pubkey) via
-  /// `DmSyncState.dmRelayListPublished`, with the flag set ONLY once
-  /// [_dmInboxRelayUrl] itself confirms `OK`. A rejection there, or a
-  /// slow/failed signer, leaves the flag unset and the next login retries —
-  /// the publish never blocks login and self-heals.
+  /// bounded: this method returns early once `dmRelayListPublished` is set,
+  /// and it is never awaited by login.
+  ///
+  /// `DmSyncState.dmRelayListPublished` is set only when that read returns the
+  /// list — never on a publish's `OK`. [_dmInboxRelayUrl] answers `OK` once
+  /// the event is queued, commits it minutes later, and can lose it in
+  /// between (#8433), so an `OK` proves the relay took the event, not that
+  /// anyone can read it. The session after a publish reads it back: `found`
+  /// records the flag, `absent` publishes again. A rejection, or a slow/failed
+  /// signer, records nothing and the next login retries — the publish never
+  /// blocks login and self-heals.
   ///
   /// No-op when uninitialized, when no signer / sync state is wired, or when
   /// no valid advertised relay URL is configured.
@@ -4351,10 +4355,10 @@ class DmRepository {
         targetRelays: <String>[relayUrl, ...discoveryTargets],
       );
       if (_disposed || _resetGeneration != gen) return;
-      // Success is the advertised relay's own `OK`, not "something accepted".
-      // A discovery relay accepting while divine's relay refused would mark
-      // the list published and stop retrying, leaving the one relay divine
-      // reads from without it.
+      // The advertised relay's own `OK` decides which line is logged, never
+      // what is recorded: that relay queues the event and commits it minutes
+      // later, and can lose it in between (#8433). Nothing is recorded here
+      // either way; the next session's read finds the list or publishes again.
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
@@ -4375,13 +4379,13 @@ class DmRepository {
         );
       }
 
-      await syncState.markDmRelayListPublished(pubkey);
       // The event id is the anchor: a relay serves only the newest revision of
       // a replaceable kind for a coordinate query, so an id is the one handle
       // that still reaches an earlier one. Logged whole.
       Log.info(
         'Published kind-10050 DM inbox relay list for ${pubkeyForLogs(pubkey)} '
-        '-> $relayUrl (event ${signed.id})',
+        '-> $relayUrl (event ${signed.id}); recorded once a relay read '
+        'returns it',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {

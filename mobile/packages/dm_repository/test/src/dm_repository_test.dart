@@ -5650,7 +5650,7 @@ void main() {
 
       test(
         'publishes a kind-10050 advertising the injected stable relay when '
-        'absent and records the flag on a confirmed OK',
+        'absent, and leaves recording it to a later read (#8433)',
         () async {
           // setUp default queryEventsDetailed -> [] : no existing kind-10050.
           when(
@@ -5676,10 +5676,9 @@ void main() {
             ['relay', 'wss://relay.divine.video'],
           ]);
           expect(captured[1], ['wss://relay.divine.video']);
-          expect(
-            syncState.dmRelayListPublishedPubkeys,
-            contains(_validPubkeyA),
-          );
+          // The relay's OK means it queued the event, not that anyone can
+          // read it yet, so nothing is recorded until a read returns it.
+          expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
         },
       );
 
@@ -5746,39 +5745,57 @@ void main() {
               dmFallback2,
               discovery,
             ]);
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
           },
         );
 
         test(
-          'a discovery relay refusing the kind is best-effort — the list is '
-          'still published',
+          'a discovery relay refusing the kind is best-effort — the next '
+          'login records the list the advertised relay serves',
           () async {
+            Event? published;
             when(
               () => mockNostrClient.publishEventAwaitOk(
                 any(),
                 targetRelays: any(named: 'targetRelays'),
               ),
-            ).thenAnswer(
-              (_) async => partialOutcome(
+            ).thenAnswer((invocation) async {
+              published = invocation.positionalArguments.first as Event;
+              return partialOutcome(
                 targets: const [divine, discovery],
                 acceptedBy: const [divine],
+              );
+            });
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
               ),
-            );
+            ).thenAnswer((_) async {
+              final event = published;
+              return answeredList(event == null ? const <Event>[] : [event]);
+            });
 
             final syncState = _FakeDmSyncState();
-            final repository = createRepository(
+            DmRepository login() => createRepository(
               syncState: syncState,
               dmInboxDiscoveryRelays: const [discovery],
             );
-            await repository.ensureDmRelayListPublished();
+            await login().ensureDmRelayListPublished();
+            await login().ensureDmRelayListPublished();
 
             // Discovery is a bonus, not a precondition: a third-party relay
             // changing its kind policy must never put every account into a
             // republish loop on each login.
+            verify(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).called(1);
             expect(
               syncState.dmRelayListPublishedPubkeys,
               contains(_validPubkeyA),
@@ -6060,10 +6077,6 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
             ),
           ).called(1);
-          expect(
-            syncState.dmRelayListPublishedPubkeys,
-            contains(_validPubkeyA),
-          );
         },
       );
 
@@ -6234,10 +6247,6 @@ void main() {
                 targetRelays: any(named: 'targetRelays'),
               ),
             ).called(1);
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
           },
         );
 
@@ -6477,10 +6486,100 @@ void main() {
                 targetRelays: any(named: 'targetRelays'),
               ),
             ).called(1);
+          },
+        );
+      });
+
+      group('records the list only once a relay read returns it (#8433)', () {
+        test(
+          'a later session whose read returns the published list records it '
+          'without publishing again',
+          () async {
+            Event? published;
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((invocation) async {
+              published = invocation.positionalArguments.first as Event;
+              return outcome(accepted: true);
+            });
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) async {
+              final event = published;
+              return answeredList(event == null ? const <Event>[] : [event]);
+            });
+
+            final syncState = _FakeDmSyncState();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+
+            // Next login: the relay now serves what it acknowledged.
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+
+            verify(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).called(1);
             expect(
               syncState.dmRelayListPublishedPubkeys,
               contains(_validPubkeyA),
             );
+          },
+        );
+
+        test(
+          'a later session whose read still finds nothing publishes again — '
+          'an acknowledged list the relay never served is retried',
+          () async {
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((_) async => outcome(accepted: true));
+            // Every read answers, and none returns the list.
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) async => answeredList(const <Event>[]));
+
+            final syncState = _FakeDmSyncState();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+
+            verify(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).called(2);
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
           },
         );
       });
