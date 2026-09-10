@@ -28,22 +28,19 @@ class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
 class _MockDownload extends Mock implements CancellableDownload {}
 
-List<VideoEvent> _videos() => List.generate(
-  feedTtffWarmupCount + feedTtffSampleCount,
-  (index) {
-    final id = index.toRadixString(16).padLeft(64, '0');
-    return VideoEvent(
-      id: id,
-      pubkey: '1'.padLeft(64, '1'),
-      createdAt: index,
-      content: '',
-      timestamp: DateTime.utc(2026),
-      videoUrl:
-          '$_baseUrl/${_fixtureNames[index % _fixtureNames.length]}'
-          '?sample=$index',
-    );
-  },
-);
+List<VideoEvent> _videos() => List.generate(feedTtffSampleCount, (index) {
+  final id = index.toRadixString(16).padLeft(64, '0');
+  return VideoEvent(
+    id: id,
+    pubkey: '1'.padLeft(64, '1'),
+    createdAt: index,
+    content: '',
+    timestamp: DateTime.utc(2026),
+    videoUrl:
+        '$_baseUrl/${_fixtureNames[index % _fixtureNames.length]}'
+        '?sample=$index',
+  );
+});
 
 Future<FeedFirstFrameMetric> _waitForSample(
   StreamIterator<FeedFirstFrameMetric> samples,
@@ -103,20 +100,12 @@ void main() {
           ),
         );
 
-        // Prime the emulator's renderer/decoder and every fixture container
-        // layout before scoring steady-state feed activations. Cold platform
-        // startup is intentionally outside this scroll-to-first-frame SLO.
-        for (var warmup = 0; warmup < feedTtffWarmupCount; warmup++) {
-          if (warmup > 0) {
-            feedKey.currentState!.debugActivatePage(warmup);
-          }
-          await _waitForSample(metrics, warmup + 1);
-        }
-
-        final samples = <FeedFirstFrameMetric>[];
-        for (var sample = 0; sample < feedTtffSampleCount; sample++) {
-          feedKey.currentState!.debugActivatePage(feedTtffWarmupCount + sample);
-          samples.add(await _waitForSample(metrics, sample + 1));
+        final samples = <FeedFirstFrameMetric>[
+          await _waitForSample(metrics, 1),
+        ];
+        for (var expected = 2; expected <= feedTtffSampleCount; expected++) {
+          feedKey.currentState!.debugActivatePage(expected - 1);
+          samples.add(await _waitForSample(metrics, expected));
         }
 
         for (final metric in samples) {

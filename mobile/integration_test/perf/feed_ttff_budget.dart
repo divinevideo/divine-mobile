@@ -3,9 +3,6 @@ import 'package:infinite_video_feed/infinite_video_feed.dart';
 /// Number of distinct feed activations in the TTFF sample.
 const feedTtffSampleCount = 10;
 
-/// Number of unscored activations used to initialize each fixture layout.
-const feedTtffWarmupCount = 3;
-
 /// Maximum allowed p90 activation-to-first-frame time at 5 Mbps.
 const feedTtffP90Budget = Duration(seconds: 5);
 
