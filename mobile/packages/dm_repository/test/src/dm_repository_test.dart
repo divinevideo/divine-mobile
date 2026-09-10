@@ -8507,6 +8507,118 @@ void main() {
         });
       });
 
+      test('durable cursor progress replenishes automatic timer resumes', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var stage = 0;
+          var stageGiftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            stageGiftWrapPages++;
+            if (stage == 0) return unansweredPage(noRelays: true);
+            if (stage == 1 && stageGiftWrapPages == 1) {
+              return answeredPage([deletion(90)]);
+            }
+            if (stage == 1) return unansweredPage(noRelays: true);
+            return answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          // Spend the complete retry budget without moving the cursor.
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          // A later manual run advances the durable boundary, then encounters
+          // another outage. That progress must replenish the timer budget.
+          stage = 1;
+          stageGiftWrapPages = 0;
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(syncState.drainCursorOverride, 90);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          stage = 2;
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('failed NIP-04 recovery cannot replenish retries forever', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return unansweredPage(noRelays: true);
+            }
+            giftWrapPages++;
+            return answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          async
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.deferredRetryDelays.length + 1,
+          );
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
       test('teardown cancels the deferred drain timer', () {
         fakeAsync((async) {
           stubRelayStatus();

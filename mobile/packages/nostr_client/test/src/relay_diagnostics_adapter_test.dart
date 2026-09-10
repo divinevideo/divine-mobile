@@ -48,6 +48,24 @@ void main() {
       expect(entry.level, LogLevel.info);
     });
 
+    test('groups pool summaries under the reserved pool scope', () {
+      final adapter = RelayDiagnosticsAdapter(clock: () => now);
+
+      adapter(
+        diagnostic(
+          relayUrl: RelayDiagnostic.poolScope,
+          site: RelayDiagnosticSite.requestSettlement,
+          message: 'Full-settlement request ended inconclusively',
+          level: RelayDiagnosticLevel.warning,
+        ),
+      );
+
+      final entry = capture.getRecentLogs().single;
+      expect(entry.message, startsWith('[${RelayDiagnostic.poolScope}]'));
+      expect(entry.message, isNot(contains('wss://')));
+      expect(entry.level, LogLevel.warning);
+    });
+
     test('bounds repeated relay and site diagnostics', () {
       final adapter = RelayDiagnosticsAdapter(
         maxEventsPerWindow: 2,

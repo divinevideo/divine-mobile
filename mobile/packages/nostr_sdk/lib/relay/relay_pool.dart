@@ -2370,12 +2370,12 @@ class RelayPool {
     _diagnose(
       RelayDiagnosticSite.requestSettlement,
       RelayDiagnosticLevel.warning,
-      'relay-pool',
+      RelayDiagnostic.poolScope,
       'Full-settlement request $subId ended inconclusively '
-          '(answered=$answered, closedWithoutAnswer=$closedWithoutAnswer, '
-          'noRelayTookRequest=$noRelayTookRequest, '
-          'strandedOnBlockedRelay=$strandedOnBlockedRelay, '
-          'unsettledRelays=${unsettled.length})',
+      '(answered=$answered, closedWithoutAnswer=$closedWithoutAnswer, '
+      'noRelayTookRequest=$noRelayTookRequest, '
+      'strandedOnBlockedRelay=$strandedOnBlockedRelay, '
+      'unsettledRelays=${unsettled.length})',
     );
   }
 

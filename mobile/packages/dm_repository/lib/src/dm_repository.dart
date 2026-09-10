@@ -629,10 +629,21 @@ class DmRepository {
   Timer? _reconnectTimer;
 
   /// Backoff retry paired with [_drainRelayReadySubscription]. Whichever fires
-  /// first cancels the other, and the finite delay list bounds a permanently
-  /// unsettled relay to three automatic resumes per listening session. #9030.
+  /// first cancels the other. The finite delay list bounds consecutive
+  /// no-progress deferrals; durable cursor progress or completion replenishes
+  /// the budget for a later, independent outage. #9030.
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
+
+  /// Replenishes deferred retries only after the drain durably made progress.
+  ///
+  /// An authoritative empty gift-wrap page is not enough on its own: outgoing
+  /// NIP-04 recovery can still fail immediately afterward. Resetting before
+  /// that pass would turn a permanent NIP-04 outage into an unbounded sequence
+  /// of first-delay retries.
+  void _resetAutomaticDrainRetriesAfterProgress() {
+    _automaticDrainRetryCount = 0;
+  }
 
   /// One-shot relay-status listener armed by a deferred history drain, so
   /// the drain resumes when a relay connects instead of waiting for the next
@@ -2101,6 +2112,7 @@ class DmRepository {
         // point never moves below a window that page may not have seen whole.
         if (!sawUnansweredPage) {
           await syncState.setHistoryDrainCursor(pubkey, cursor);
+          _resetAutomaticDrainRetriesAfterProgress();
         }
       }
 
@@ -2124,6 +2136,7 @@ class DmRepository {
           // later session never has to spend a read finding that out.
           await syncState.setDrainCoveredOwnInbox(pubkey);
           await syncState.markHistoryDrainComplete(pubkey);
+          _resetAutomaticDrainRetriesAfterProgress();
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);

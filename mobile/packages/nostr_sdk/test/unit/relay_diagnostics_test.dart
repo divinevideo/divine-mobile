@@ -144,6 +144,17 @@ void main() {
         diagnostics.map((entry) => entry.message),
         contains(contains('noRelayTookRequest=true')),
       );
+      expect(
+        diagnostics
+            .where(
+              (entry) =>
+                  entry.site == RelayDiagnosticSite.requestSettlement &&
+                  entry.message.contains('noRelayTookRequest=true'),
+            )
+            .single
+            .relayUrl,
+        RelayDiagnostic.poolScope,
+      );
     });
 
     test(
