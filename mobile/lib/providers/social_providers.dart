@@ -913,7 +913,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'identityVerifications',
             db.identityVerificationsDao.clearAll,
           );
-          // Three stores below hold this account's data under a key with no
+          // The two stores below hold this account's data under a key with no
           // pubkey in it, so the next account reads the previous account's
           // rows. Each already had a clear method; none of them had a caller
           // (#8314).
@@ -924,10 +924,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'seenVideos',
             ref.read(seenVideosClearProvider),
           );
-          await requiredCleanup(
-            'personalEvents',
-            () => ref.read(personalEventCacheClearProvider)(userPubkey),
-          );
+          // Personal events are owner-scoped in Drift, so an account switch
+          // only needs to hide them. Delete them when the account itself is
+          // being removed; otherwise they remain available after re-auth.
+          if (deleteUserData) {
+            await requiredCleanup(
+              'personalEvents',
+              () => ref.read(personalEventCacheClearProvider)(userPubkey),
+            );
+          }
           await requiredCleanup(
             'pushPreferences',
             ref.read(notificationPreferencesStoreProvider).clearPreferences,

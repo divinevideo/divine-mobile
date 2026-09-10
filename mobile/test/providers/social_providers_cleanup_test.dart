@@ -332,7 +332,29 @@ void main() {
       expect(incoming.declaredContentLanguage, isNull);
     });
 
-    test("clears only the departing account's personal events", () async {
+    test('account switch preserves owner-scoped personal events', () async {
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyA, 1700000000),
+      );
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyB, 1700000001),
+      );
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await subscription.read().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _pubkeyA,
+      );
+
+      expect(await db.personalEventsDao.countForOwner(_pubkeyA), 1);
+      expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
+    });
+
+    test("direct clear removes only the requested owner's events", () async {
       await db.personalEventsDao.upsertPersonalEvent(
         _personalEvent(_pubkeyA, 1700000000),
       );
@@ -344,9 +366,6 @@ void main() {
 
       await container.read(personalEventCacheClearProvider)(_pubkeyA);
 
-      // The Hive box this replaced held one account and was cleared whole.
-      // The table carries an owner, so wiping it would destroy a surviving
-      // account's cache on an ordinary account switch.
       expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
       expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
     });
@@ -392,7 +411,7 @@ void main() {
     );
 
     test(
-      'account switch stops when shared event-cache cleanup fails',
+      'destructive cleanup stops when personal-event cleanup fails',
       () async {
         final failure = StateError('cache cleanup failed');
         container.dispose();
@@ -415,9 +434,9 @@ void main() {
         addTearDown(subscription.close);
 
         await expectLater(
-          subscription.read().clearUserSpecificData(
-            isIdentityChange: true,
+          subscription.read().onDatabaseCleanup!(
             userPubkey: _pubkeyA,
+            deleteUserData: true,
           ),
           throwsA(same(failure)),
         );
