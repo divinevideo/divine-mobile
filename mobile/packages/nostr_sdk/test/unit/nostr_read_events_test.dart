@@ -98,6 +98,9 @@ const _privateKey =
 
 const _readId = 'read-events-query';
 
+const _authChallenge =
+    'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+
 /// A deadline the test's frames are delivered well inside: the events are
 /// signed before the read starts, so only the pool's handling of a few frames
 /// races it.
@@ -173,6 +176,48 @@ void main() {
       for (final event in events) {
         await relay.deliver(['EVENT', _readId, event.toJson()]);
       }
+    }
+
+    List<List<dynamic>> sentOfType(_ScriptedRelay relay, String type) => [
+      for (final message in relay.sentMessages)
+        if (message.first == type) message,
+    ];
+
+    /// A relay that gates reads behind NIP-42, and whose first `REQ` write
+    /// throws. The pool saves a gated query before writing it, so the relay
+    /// holds a `REQ` the fan-out reports no relay took.
+    Future<_ScriptedRelay> addAuthGatedRelay() async {
+      final relay = await addRelay('wss://auth-gated.example')
+        ..reqWriteThrows = true;
+      relay.relayStatus.alwaysAuth = true;
+      return relay;
+    }
+
+    /// Waits until the read's `REQ` write to [relay] has failed and the
+    /// fan-out has moved past it.
+    Future<void> reqWriteFailed(_ScriptedRelay relay) async {
+      await reqLanded(relay);
+      await pumpEventQueue();
+      expect(sentOfType(relay, 'REQ'), hasLength(1));
+    }
+
+    /// Takes [relay] through NIP-42, so the pool replays the read's saved
+    /// `REQ`, then answers the replay with [events] and `EOSE`.
+    Future<void> authenticateAndAnswer(
+      _ScriptedRelay relay,
+      List<Event> events,
+    ) async {
+      relay.reqWriteThrows = false;
+      await relay.deliver(['AUTH', _authChallenge]);
+      final authEvent = sentOfType(relay, 'AUTH').single[1] as Map;
+      await relay.deliver(['OK', authEvent['id'], true, '']);
+      expect(
+        sentOfType(relay, 'REQ'),
+        hasLength(2),
+        reason: 'the pool replays the saved REQ once the relay accepts AUTH',
+      );
+      await deliverEvents(relay, events);
+      await relay.deliver(['EOSE', _readId]);
     }
 
     Iterable<String> idsOf(List<Event> events) =>
@@ -324,6 +369,32 @@ void main() {
 
           expect(result.endedBy, QueryEnd.noRelay);
           expect(result.events, isEmpty);
+        });
+      });
+
+      group('when a relay behind NIP-42 answers the REQ its write '
+          'failed', () {
+        test('keeps its events, as complete', () async {
+          final relay = await addAuthGatedRelay();
+          final events = await signedEvents(1);
+          final pending = nostr.readEvents(
+            _filters(),
+            id: _readId,
+            timeout: _guard,
+          );
+          await reqWriteFailed(relay);
+          await authenticateAndAnswer(relay, events);
+
+          final result = await pending;
+
+          expect(idsOf(result.events), equals(idsOf(events)));
+          expect(
+            result.endedBy,
+            QueryEnd.complete,
+            reason:
+                'the fan-out found no relay that took the REQ, but the relay '
+                'answered its replay, so it took part',
+          );
         });
       });
 
@@ -674,6 +745,30 @@ void main() {
           result.timedOut,
           isTrue,
           reason: 'the read ran out its deadline, as it always reported',
+        );
+      });
+
+      test('counts a relay behind NIP-42 that answers the REQ its write '
+          'failed as taking part, without a timeout', () async {
+        final relay = await addAuthGatedRelay();
+        final pending = nostr.queryEventsDetailed(
+          _filters(),
+          id: _readId,
+          timeout: _guard,
+        );
+        await reqWriteFailed(relay);
+        await authenticateAndAnswer(relay, const []);
+
+        final result = await pending;
+
+        expect(result.events, isEmpty);
+        expect(result.timedOut, isFalse);
+        expect(
+          result.noRelaysParticipated,
+          isFalse,
+          reason:
+              'the relay answered the replayed REQ with EOSE alone: that is '
+              'taking part, although the fan-out saw its write fail',
         );
       });
     });
