@@ -332,7 +332,7 @@ void main() {
       expect(incoming.declaredContentLanguage, isNull);
     });
 
-    test("clears every owner's personal events", () async {
+    test("clears only the departing account's personal events", () async {
       await db.personalEventsDao.upsertPersonalEvent(
         _personalEvent(_pubkeyA, 1700000000),
       );
@@ -342,7 +342,25 @@ void main() {
       expect(await db.personalEventsDao.countForOwner(_pubkeyA), 1);
       expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
 
-      await container.read(personalEventCacheClearProvider)();
+      await container.read(personalEventCacheClearProvider)(_pubkeyA);
+
+      // The Hive box this replaced held one account and was cleared whole.
+      // The table carries an owner, so wiping it would destroy a surviving
+      // account's cache on an ordinary account switch.
+      expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
+      expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
+    });
+
+    test('clears every account when there is no departing pubkey', () async {
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyA, 1700000000),
+      );
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyB, 1700000001),
+      );
+      expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
+
+      await container.read(personalEventCacheClearProvider)(null);
 
       expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
       expect(await db.personalEventsDao.countForOwner(_pubkeyB), 0);
@@ -385,7 +403,7 @@ void main() {
             dmRepositoryProvider.overrideWithValue(dmRepository),
             openVineImageCacheClearProvider.overrideWithValue(() async {}),
             uploadManagerProvider.overrideWithValue(uploadManager),
-            personalEventCacheClearProvider.overrideWithValue(() async {
+            personalEventCacheClearProvider.overrideWithValue((_) async {
               throw failure;
             }),
           ],

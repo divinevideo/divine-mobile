@@ -926,7 +926,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
           await requiredCleanup(
             'personalEvents',
-            ref.read(personalEventCacheClearProvider),
+            () => ref.read(personalEventCacheClearProvider)(userPubkey),
           );
           await requiredCleanup(
             'pushPreferences',
