@@ -1329,6 +1329,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1342,6 +1343,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1358,6 +1360,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -1380,6 +1383,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1402,6 +1406,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1420,6 +1425,7 @@ void main() {
             tempRelays: tempRelays,
             relayTypes: [RelayType.normal],
             sendAfterAuth: true,
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1466,6 +1472,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1518,6 +1525,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1572,6 +1580,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1592,6 +1601,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
       }
@@ -1835,6 +1845,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [event]);
 
@@ -1855,6 +1866,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [event]);
 
@@ -1867,6 +1879,7 @@ void main() {
             tempRelays: [relayUrl],
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1881,6 +1894,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -1906,6 +1920,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent]);
 
@@ -1924,6 +1939,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -4416,6 +4432,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => websocketEvents);
           when(
@@ -4449,6 +4466,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4480,6 +4498,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4509,6 +4528,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => []);
 
@@ -4531,6 +4551,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
 
@@ -4557,6 +4578,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4600,6 +4622,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => [wsEvent]);
           when(
@@ -4654,6 +4677,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => [wsProfile]);
           when(
@@ -5053,6 +5077,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent]);
 
@@ -5072,6 +5097,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5084,6 +5110,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5102,6 +5129,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5114,6 +5142,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5132,6 +5161,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5144,6 +5174,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5161,6 +5192,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5187,6 +5219,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent1, profileEvent2]);
 
@@ -5207,6 +5240,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5219,6 +5253,7 @@ void main() {
             tempRelays: captureAny(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5370,6 +5405,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [_createTestEvent(), _createTestEvent()]);
 
@@ -5384,6 +5420,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         );
       });
@@ -5805,6 +5842,96 @@ void main() {
         );
 
         expect(result.timedOut, isTrue);
+      });
+
+      group('when a relay never answers', () {
+        late Event delivered;
+
+        setUp(() async {
+          // What the relays that did answer sent before the deadline.
+          final signer = LocalNostrSigner(generatePrivateKey());
+          final author = (await signer.getPublicKey())!;
+          delivered = (await signer.signEvent(
+            Event(author, EventKind.giftWrap, [
+              ['p', testPublicKey],
+            ], 'answered'),
+          ))!;
+          mockNostr.timedOut = true;
+          // The SDK query ends itself at the deadline it is handed and returns
+          // what arrived, resolving a moment after it as a real one does.
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) {
+            final budget = invocation.namedArguments[#timeout] as Duration;
+            final settled = Completer<List<Event>>();
+            Timer(
+              budget + const Duration(milliseconds: 20),
+              () => settled.complete([delivered]),
+            );
+            return settled.future;
+          });
+        });
+
+        Future<({List<Event> events, bool timedOut, bool noRelays})> read(
+          NostrClient via, {
+          bool useQueryPool = true,
+          Duration timeout = const Duration(milliseconds: 200),
+        }) => via.queryEventsDetailed(
+          [
+            Filter(kinds: const [EventKind.giftWrap], p: [testPublicKey]),
+          ],
+          useCache: false,
+          useQueryPool: useQueryPool,
+          requireAllRelaysSettled: true,
+          timeout: timeout,
+        );
+
+        test('keeps the events the other relays delivered (#9030)', () async {
+          final result = await read(client);
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+        });
+
+        test('keeps them on the non-pooled path too', () async {
+          final result = await read(client, useQueryPool: false);
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+        });
+
+        test('keeps them after waiting for a query slot', () async {
+          final originalMax = NostrClient.maxConcurrentQueries;
+          NostrClient.maxConcurrentQueries = 1;
+          addTearDown(() => NostrClient.maxConcurrentQueries = originalMax);
+          final pooledClient = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+          );
+          addTearDown(pooledClient.dispose);
+          // Holds the only slot for longer than the overrun grace, so the read
+          // below reaches the relays with much of its deadline already spent.
+          final occupant = read(
+            pooledClient,
+            timeout: const Duration(milliseconds: 400),
+          );
+
+          final result = await read(
+            pooledClient,
+            timeout: const Duration(milliseconds: 800),
+          );
+          await occupant;
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+        });
       });
     });
   });
