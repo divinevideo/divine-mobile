@@ -9,6 +9,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:sounds_repository/sounds_repository.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -103,6 +104,17 @@ void main() {
         'sig': '',
       });
     }
+
+    int unresolvedWarningCount(String eventId) => LogCaptureService()
+        .getRecentLogs(minLevel: LogLevel.warning)
+        .where(
+          (entry) =>
+              entry.name == 'SoundsRepository' &&
+              entry.message.contains(eventId) &&
+              (entry.message.startsWith('Sound not found') ||
+                  entry.message.contains('is not a Kind')),
+        )
+        .length;
 
     group('initialization', () {
       test('initializes with empty cache', () async {
@@ -324,6 +336,27 @@ void main() {
         expect(sound, isNull);
       });
 
+      test('warns once per missing event until the cache is cleared', () async {
+        when(
+          () => mockNostrClient.fetchEventById(any()),
+        ).thenAnswer((_) async => null);
+        final firstBaseline = unresolvedWarningCount(testEventId1);
+
+        expect(await repository.fetchSoundById(testEventId1), isNull);
+        expect(unresolvedWarningCount(testEventId1), firstBaseline + 1);
+
+        expect(await repository.fetchSoundById(testEventId1), isNull);
+        expect(unresolvedWarningCount(testEventId1), firstBaseline + 1);
+
+        final secondBaseline = unresolvedWarningCount(testEventId2);
+        expect(await repository.fetchSoundById(testEventId2), isNull);
+        expect(unresolvedWarningCount(testEventId2), secondBaseline + 1);
+
+        repository.clearCache();
+        expect(await repository.fetchSoundById(testEventId1), isNull);
+        expect(unresolvedWarningCount(testEventId1), firstBaseline + 2);
+      });
+
       test('returns null when event is wrong kind', () async {
         final wrongKindEvent = Event.fromJson({
           'id': testEventId1,
@@ -342,6 +375,28 @@ void main() {
         final sound = await repository.fetchSoundById(testEventId1);
 
         expect(sound, isNull);
+      });
+
+      test('warns once per unsupported event kind', () async {
+        final wrongKindEvent = Event.fromJson({
+          'id': testEventId1,
+          'pubkey': testPubkey1,
+          'kind': 1,
+          'tags': <List<dynamic>>[],
+          'content': 'Not audio',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'sig': '',
+        });
+        when(
+          () => mockNostrClient.fetchEventById(testEventId1),
+        ).thenAnswer((_) async => wrongKindEvent);
+        final baseline = unresolvedWarningCount(testEventId1);
+
+        expect(await repository.fetchSoundById(testEventId1), isNull);
+        expect(unresolvedWarningCount(testEventId1), baseline + 1);
+
+        expect(await repository.fetchSoundById(testEventId1), isNull);
+        expect(unresolvedWarningCount(testEventId1), baseline + 1);
       });
 
       test(

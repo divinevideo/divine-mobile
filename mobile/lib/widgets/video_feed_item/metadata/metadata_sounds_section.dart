@@ -72,19 +72,12 @@ class _SharedAudioSection extends ConsumerWidget {
         label: context.l10n.metadataSoundsLabel,
         child: const _SoundSkeleton(),
       ),
-      error: (error, stack) {
-        Log.error(
-          'Failed to load audio for metadata sheet: $error',
-          name: 'MetadataSoundsSection',
-          category: LogCategory.ui,
-        );
-        return _OriginalSoundSection(
-          video: video,
-          reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
-            video,
-          ),
-        );
-      },
+      error: (error, stack) => _OriginalSoundSection(
+        video: video,
+        reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
+          video,
+        ),
+      ),
     );
   }
 }
