@@ -8347,6 +8347,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Couldn\'t remove 1 video. Try again.} other{Couldn\'t remove {count} videos. Try again.}}'**
   String listRemoveVideosFailure(int count);
 
+  /// Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ').
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get listMemberNamesSeparator;
+
   /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
   ///
   /// In en, this message translates to:

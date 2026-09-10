@@ -3054,6 +3054,10 @@
     "description": "Snackbar when selected videos are still in the list after a removal batch.",
     "placeholders": { "count": { "type": "int" } }
   },
+  "listMemberNamesSeparator": ", ",
+  "@listMemberNamesSeparator": {
+    "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
+  },
   "listsDiscoveryLoadingLabel": "Loading lists",
   "@listsDiscoveryLoadingLabel": {
     "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
