@@ -18,7 +18,8 @@ QueryRelaySummary _relay(
 
 /// The step after a settled page that no relay confirmed exhaustive. Unless
 /// [sentTo] says otherwise, every relay in [previousRelays] and [relays] took
-/// the page's REQ.
+/// the page's REQ, and unless [firstSentTo] says otherwise, every relay that
+/// took this page's REQ took the first page's too.
 PagedReadStep _afterSettledPage(
   int? cursor,
   List<QueryRelaySummary> relays, {
@@ -26,20 +27,25 @@ PagedReadStep _afterSettledPage(
   bool possiblyCapped = false,
   List<QueryRelaySummary> previousRelays = const [],
   List<String>? sentTo,
-}) => nextPagedReadStep(
-  cursor: cursor,
-  since: since,
-  relays: relays,
-  previousRelays: previousRelays,
-  sentTo:
+  List<String>? firstSentTo,
+}) {
+  final took =
       sentTo ??
       [
         for (final relay in [...previousRelays, ...relays]) relay.url,
-      ],
-  settled: true,
-  confirmedExhaustive: false,
-  possiblyCapped: possiblyCapped,
-);
+      ];
+  return nextPagedReadStep(
+    cursor: cursor,
+    since: since,
+    relays: relays,
+    previousRelays: previousRelays,
+    sentTo: took,
+    firstSentTo: firstSentTo ?? took,
+    settled: true,
+    confirmedExhaustive: false,
+    possiblyCapped: possiblyCapped,
+  );
+}
 
 Matcher _readsAt(int until) =>
     isA<ReadPageAt>().having((step) => step.until, 'until', until);
@@ -134,6 +140,7 @@ int _newestFirst(_Held a, _Held b) {
   final untils = <int?>[];
   var cursor = until;
   var previousSummaries = const <QueryRelaySummary>[];
+  var firstSentTo = const <String>[];
   while (untils.length < 50) {
     untils.add(cursor);
     final page = untils.length;
@@ -167,12 +174,14 @@ int _newestFirst(_Held a, _Held b) {
           if (!hidden.contains(event.id)) event.id,
       ]);
     }
+    if (page == 1) firstSentTo = sentTo;
     switch (nextPagedReadStep(
       cursor: cursor,
       since: since,
       relays: summaries,
       previousRelays: previousSummaries,
       sentTo: sentTo,
+      firstSentTo: firstSentTo,
       settled: true,
       confirmedExhaustive: false,
       possiblyCapped: possiblyCapped,
@@ -198,6 +207,7 @@ void main() {
             relays: [_relay(_first, oldest: 100)],
             previousRelays: const [],
             sentTo: const [_first],
+            firstSentTo: const [_first],
             settled: false,
             confirmedExhaustive: false,
             possiblyCapped: false,
@@ -215,6 +225,7 @@ void main() {
             relays: [_relay(_first, oldest: 100)],
             previousRelays: const [],
             sentTo: const [_first],
+            firstSentTo: const [_first],
             settled: false,
             confirmedExhaustive: true,
             possiblyCapped: false,
@@ -234,6 +245,7 @@ void main() {
             relays: [_relay(_first, oldest: 100)],
             previousRelays: const [],
             sentTo: const [_first],
+            firstSentTo: const [_first],
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
@@ -362,6 +374,7 @@ void main() {
               _relay(_second, oldest: 50),
             ],
             sentTo: const [_second],
+            firstSentTo: const [_first, _second],
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
@@ -384,8 +397,12 @@ void main() {
           _readsAt(50),
         );
       });
+    });
 
-      test('keeps walking when a relay first takes part on a later page', () {
+    group("when a relay takes a page's REQ that missed the first page's", () {
+      test('ends the walk incomplete', () {
+        // Every page it did take asked only at or below that page's cursor,
+        // so whatever it holds above 108 was never read.
         expect(
           _afterSettledPage(
             108,
@@ -394,6 +411,39 @@ void main() {
               _relay(_second, oldest: 107),
             ],
             previousRelays: [_relay(_first, oldest: 108, capped: true)],
+            firstSentTo: [_first],
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('ends the walk incomplete even when every relay that answered '
+          'confirmed it exhaustive', () {
+        expect(
+          nextPagedReadStep(
+            cursor: 108,
+            since: null,
+            relays: [_relay(_second, oldest: 107)],
+            previousRelays: [_relay(_first, oldest: 108, capped: true)],
+            sentTo: const [_first, _second],
+            firstSentTo: const [_first],
+            settled: true,
+            confirmedExhaustive: true,
+            possiblyCapped: false,
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('keeps walking when every relay that took this page took the '
+          'first page too', () {
+        expect(
+          _afterSettledPage(
+            108,
+            [_relay(_second, oldest: 107)],
+            previousRelays: [_relay(_second, oldest: 108)],
+            sentTo: [_second],
+            firstSentTo: [_first, _second],
           ),
           _readsAt(107),
         );
@@ -657,6 +707,29 @@ void main() {
               'the capped relay sent the first page 110 and 109, then missed '
               "the page at 109; following the sparse relay's 50 from there "
               'would skip its 108 down to 101',
+        );
+      });
+
+      test('stops incomplete at a relay that first takes part on a later '
+          'page', () {
+        final joiner = _ModelRelay(
+          _first,
+          _held('x', [110, 109, 108]),
+          missesPages: {1},
+        );
+        final early = _ModelRelay(_second, _held('y', [50]));
+
+        final walk = _walk([joiner, early], pageSize: 2);
+
+        expect(walk.untils, [null, 50]);
+        expect(walk.collected, {'y-0'});
+        expect(
+          walk.isComplete,
+          isFalse,
+          reason:
+              'the first page never reached the relay holding 110 down to '
+              '108, and the page that did reach it asked only at or below the '
+              "other relay's 50",
         );
       });
 

@@ -764,6 +764,37 @@ void main() {
       });
 
       test(
+        "stops incomplete when a relay first takes a later page's REQ",
+        () async {
+          final held = await eventsAt([110, 109, 108]);
+          final [early] = await eventsAt([50]);
+          final joiner = await addStore('wss://joiner.example', held)
+            ..failsReqWrites.add(1);
+          final earlyRelay = await addStore('wss://early.example', [early]);
+
+          final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+          expect(_untilsOf(joiner), [null, 50]);
+          expect(_untilsOf(earlyRelay), [null, 50]);
+          expect(_idsOf(result.events), unorderedEquals(_idsOf([early])));
+          expect(
+            result.isComplete,
+            isFalse,
+            reason:
+                'the first page never reached the relay holding 110 down to '
+                '108, and the only page it took asked at 50, so its events were '
+                'never read',
+          );
+          expect(
+            result.stoppedBy,
+            QueryEnd.complete,
+            reason: 'both relays settled the page that stopped the walk',
+          );
+          expect(result.pages, 2);
+        },
+      );
+
+      test(
         'reads on when that relay sent the page before it nothing',
         () async {
           final stored = await eventsAt([110, 109, 108]);

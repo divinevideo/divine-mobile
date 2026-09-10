@@ -393,6 +393,9 @@ class Nostr {
   /// * A relay that sent the previous page an event, and did not take this
   ///   page's REQ, stops the walk incomplete: the walk was following that
   ///   relay, and has asked it nothing below the cursor.
+  /// * A relay that takes a page's REQ after missing the first page's stops
+  ///   the walk incomplete: every page it did take asked only for events at
+  ///   or below that page's cursor, so its newer events were never read.
   /// * A relay whose oldest event is in the cursor's second, and that may be
   ///   capped, stops the walk incomplete: it may hold more events in that
   ///   second than any `until` can reach.
@@ -427,8 +430,8 @@ class Nostr {
   /// * A frame the pool cannot tie to any read, one that names no
   ///   subscription or does not decode, does not mark its relay capped.
   /// * Like [readEvents], the walk answers for the relays that take part in
-  ///   it: a relay that takes no page's REQ is not read, and one that first
-  ///   takes a later page's REQ is read only from that page's cursor down.
+  ///   it: a relay that takes no page's REQ at all is never read, and no page
+  ///   names it, so nothing tells the walk it was missed.
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
@@ -454,6 +457,7 @@ class Nostr {
     var until = filter['until'] as int?;
     final since = filter['since'] as int?;
     var previousRelays = const <QueryRelaySummary>[];
+    var firstSentTo = const <String>[];
     var pages = 0;
 
     PagedQueryResult walked({required bool isComplete, QueryEnd? stoppedBy}) =>
@@ -489,13 +493,16 @@ class Nostr {
         for (final event in page.events)
           if (seenIds.add(event.id)) event,
       ]);
+      // Unknown only when the deadline ended the page, which never settles.
+      final sentTo = read.sentTo ?? const <String>[];
+      if (pages == 1) firstSentTo = sentTo;
       switch (nextPagedReadStep(
         cursor: until,
         since: since,
         relays: read.relays,
         previousRelays: previousRelays,
-        // Unknown only when the deadline ended the page, which never settles.
-        sentTo: read.sentTo ?? const [],
+        sentTo: sentTo,
+        firstSentTo: firstSentTo,
         settled: page.isComplete,
         confirmedExhaustive: page.confirmedExhaustive,
         possiblyCapped: page.possiblyCapped,

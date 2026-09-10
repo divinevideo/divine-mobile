@@ -35,14 +35,17 @@ final class EndPagedRead extends PagedReadStep {
 /// page before it. None sent anything newer than [cursor], since the pool
 /// drops what the filter does not match. A relay sends its newest events
 /// first, so each one has sent everything it holds after its oldest event.
-/// [sentTo] names the relays that took the page's REQ, and [since] is the
-/// filter's `since`, if any. [settled], [confirmedExhaustive] and
-/// [possiblyCapped] are the page's `QueryResult.isComplete`,
-/// `confirmedExhaustive` and `possiblyCapped`.
+/// [sentTo] names the relays that took the page's REQ and [firstSentTo] the
+/// relays that took the first page's, and [since] is the filter's `since`, if
+/// any. [settled], [confirmedExhaustive] and [possiblyCapped] are the page's
+/// `QueryResult.isComplete`, `confirmedExhaustive` and `possiblyCapped`.
 ///
 /// * A page that did not settle ends the walk incomplete.
 /// * So does a page whose REQ a relay in [previousRelays] did not take: the
 ///   walk was following that relay, and asked it nothing below the cursor.
+/// * So does a page whose REQ a relay took that missed the first page's: the
+///   walk has asked that relay for nothing above this page's cursor, so its
+///   newer events were never read.
 /// * Otherwise a page every relay confirmed exhaustive ends the walk
 ///   complete.
 /// * A capped relay whose oldest event is in the cursor's second ends the walk
@@ -64,12 +67,16 @@ PagedReadStep nextPagedReadStep({
   required List<QueryRelaySummary> relays,
   required List<QueryRelaySummary> previousRelays,
   required List<String> sentTo,
+  required List<String> firstSentTo,
   required bool settled,
   required bool confirmedExhaustive,
   required bool possiblyCapped,
 }) {
   if (!settled) return const EndPagedRead(isComplete: false);
   if (previousRelays.any((relay) => !sentTo.contains(relay.url))) {
+    return const EndPagedRead(isComplete: false);
+  }
+  if (sentTo.any((url) => !firstSentTo.contains(url))) {
     return const EndPagedRead(isComplete: false);
   }
   if (confirmedExhaustive) return const EndPagedRead(isComplete: true);
