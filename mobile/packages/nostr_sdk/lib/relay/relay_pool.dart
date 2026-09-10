@@ -3303,17 +3303,25 @@ class RelayPool {
     return completer.future;
   }
 
-  /// Sends a COUNT query (NIP-45) to relays and returns the count.
+  /// Sends a COUNT query (NIP-45) to relays and returns the largest count.
   ///
   /// Unlike [query], this returns a count rather than events.
-  /// Throws [CountNotSupportedException] if no relay supports NIP-45.
+  ///
+  /// [timeout] bounds the whole request, the send included, so a relay that
+  /// is still connecting cannot hold it past the deadline. A COUNT that could
+  /// not be written is dropped, not queued: replayed on the next connection,
+  /// its answer would reach nobody.
+  ///
+  /// Throws [CountNotSentException] when no relay accepted the COUNT, and
+  /// [CountNotSupportedException] when relays accepted it but none answered
+  /// in time, whether by timing out or refusing with CLOSED.
   ///
   /// Parameters:
   /// - [filters]: The filters to count events for (same format as REQ)
   /// - [id]: Optional subscription ID
   /// - [tempRelays]: Optional list of temporary relays to query
   /// - [relayTypes]: Types of relays to query (default: all)
-  /// - [timeout]: How long to wait for a response (default: 5 seconds)
+  /// - [timeout]: How long the whole request may take (default: 5 seconds)
   Future<CountResponse> count(
     List<Map<String, dynamic>> filters, {
     String? id,
@@ -3323,6 +3331,12 @@ class RelayPool {
   }) async {
     if (filters.isEmpty) {
       throw ArgumentError('No filters given', 'filters');
+    }
+
+    final deadline = DateTime.now().add(timeout);
+    Duration remaining() {
+      final left = deadline.difference(DateTime.now());
+      return left.isNegative ? Duration.zero : left;
     }
 
     tempRelays = handleAddrList(tempRelays);
@@ -3369,9 +3383,10 @@ class RelayPool {
         .toList();
 
     if (eligibleRelays.isEmpty) {
-      throw CountNotSupportedException('No relay responded to COUNT');
+      throw CountNotSentException('No relay can take COUNT');
     }
 
+    var acceptedByAny = false;
     final futures = <Future<CountResponse?>>[];
     for (var i = 0; i < eligibleRelays.length; i++) {
       final relay = eligibleRelays[i];
@@ -3381,28 +3396,55 @@ class RelayPool {
 
       futures.add(() async {
         try {
-          final sent = await relay.send(relayMessage, skipReconnect: true);
-          if (!sent) return null;
+          final sent = await relay.send(
+            relayMessage,
+            queueIfFailed: false,
+            skipReconnect: true,
+            deadline: deadline,
+          );
+          if (!sent) {
+            log('📊 COUNT not sent to ${relay.url}');
+            _diagnose(
+              RelayDiagnosticSite.queryDispatch,
+              RelayDiagnosticLevel.info,
+              relay.url,
+              'COUNT $relaySubId not sent',
+            );
+            return null;
+          }
+          acceptedByAny = true;
 
           // Only register after successful send to avoid orphaned completers
           final responseFuture = relay.registerCountQuery(relaySubId);
           log('📊 COUNT request sent to ${relay.url}');
-          return await responseFuture.timeout(
-            timeout,
-            onTimeout: () {
-              // Clean up the completer on timeout
-              if (relay.hasCountQuery(relaySubId)) {
-                relay.failCountQuery(relaySubId, 'Timeout');
-              }
-              throw CountNotSupportedException('Timeout');
-            },
+          return await responseFuture.timeout(remaining());
+        } on TimeoutException {
+          log('📊 COUNT timed out on ${relay.url}');
+          relay.failCountQuery(relaySubId, 'Timeout');
+          _diagnose(
+            RelayDiagnosticSite.requestSettlement,
+            RelayDiagnosticLevel.warning,
+            relay.url,
+            'Relay did not answer COUNT $relaySubId within '
+            '${timeout.inMilliseconds} ms',
           );
+          return null;
+        } on CountNotSupportedException catch (e) {
+          // A CLOSED refusal, which the CLOSED handler has already reported.
+          log('📊 COUNT refused by ${relay.url}: $e');
+          return null;
         } catch (e) {
           log('📊 COUNT failed on ${relay.url}: $e');
           // Clean up if the completer is still pending
           if (relay.hasCountQuery(relaySubId)) {
             relay.failCountQuery(relaySubId, e.toString());
           }
+          _diagnose(
+            RelayDiagnosticSite.requestSettlement,
+            RelayDiagnosticLevel.warning,
+            relay.url,
+            'COUNT $relaySubId failed (${e.runtimeType})',
+          );
           return null;
         }
       }());
@@ -3415,6 +3457,9 @@ class RelayPool {
     );
 
     if (best == null) {
+      if (!acceptedByAny) {
+        throw CountNotSentException('No relay accepted COUNT');
+      }
       throw CountNotSupportedException('No relay responded to COUNT');
     }
 
