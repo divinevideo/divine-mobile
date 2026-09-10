@@ -6295,6 +6295,41 @@ void main() {
         );
 
         test(
+          'a list only other relays serve is re-sent to the advertised relay '
+          'and not recorded (#8433)',
+          () async {
+            final list = existingInbox(const ['wss://relay.divine.video']);
+            stubOwnInboxByLeg(
+              pool: answeredList([list]),
+              advertised: answeredList(const <Event>[]),
+            );
+            Event? sent;
+            List<String>? sentTo;
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((invocation) async {
+              sent = invocation.positionalArguments.first as Event;
+              sentTo =
+                  invocation.namedArguments[#targetRelays] as List<String>?;
+              return outcome(accepted: true);
+            });
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            // The same signed event, to that relay alone: nothing re-signed,
+            // nothing published over the user's list.
+            expect(sent?.id, list.id);
+            expect(sentTo, ['wss://relay.divine.video']);
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
           'reads a recipient kind-10050 conclusively before reporting absent',
           () async {
             stubOwnInbox(answeredList(const <Event>[]));

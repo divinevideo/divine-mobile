@@ -805,8 +805,8 @@ DmRepository dmRepository(Ref ref) {
       unawaited(repository.startListening());
       // Self-advertise the user's NIP-17 kind-10050 DM inbox relay list when
       // absent, so compliant senders deliver where divine reads. Recorded only
-      // once a relay read returns it, so it retries until one does — never
-      // blocks login. See #4974, #8433.
+      // once the advertised relay serves it, so it retries until that relay
+      // does — never blocks login. See #4974, #8433.
       unawaited(repository.ensureDmRelayListPublished());
     }
   }

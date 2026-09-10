@@ -398,16 +398,16 @@ class DmSyncState {
   /// Whether a NIP-17 kind-10050 DM inbox relay list has been published for
   /// [pubkey] from this device.
   ///
-  /// Gates #4974's publish-on-login. Set only when a relay read returns the
-  /// list (see [markDmRelayListPublished]) — a relay's `OK` is not enough,
-  /// because it acknowledges before storing (#8433). A reinstall wipes
-  /// SharedPreferences and a fresh install should re-advertise, so this
-  /// correctly reads `false` again then.
+  /// Gates #4974's publish-on-login. Set only when the advertised DM relay
+  /// itself returns the list (see [markDmRelayListPublished]) — neither a
+  /// relay's `OK`, which acknowledges before storing, nor another relay's copy
+  /// is enough (#8433). A reinstall wipes SharedPreferences and a fresh
+  /// install should re-advertise, so this correctly reads `false` again then.
   bool dmRelayListPublished(String pubkey) =>
       _prefs.getBool('$_dmRelayListPublishedPrefix$pubkey') ?? false;
 
-  /// Records that a relay read returned a kind-10050 DM inbox relay list for
-  /// [pubkey]. See [dmRelayListPublished].
+  /// Records that the advertised DM relay returned a kind-10050 DM inbox relay
+  /// list for [pubkey]. See [dmRelayListPublished].
   Future<void> markDmRelayListPublished(String pubkey) async {
     await _prefs.setBool('$_dmRelayListPublishedPrefix$pubkey', true);
   }

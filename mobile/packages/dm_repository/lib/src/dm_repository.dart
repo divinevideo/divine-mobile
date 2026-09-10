@@ -300,6 +300,15 @@ enum _OwnDmInboxState {
   failed,
 }
 
+/// An own-inbox read's outcome. `advertisedMissing` is the newest list found,
+/// set only for a `found` read that asked the advertised relay without that
+/// relay returning it (#8433).
+typedef _OwnDmInboxRead = ({
+  _OwnDmInboxState state,
+  List<String>? relays,
+  Event? advertisedMissing,
+});
+
 /// Why a recipient's NIP-17 DM inbox lookup returned what it did.
 ///
 /// The relay list alone cannot answer this: [DmInboxResolution.absent] and
@@ -645,7 +654,7 @@ class DmRepository {
   /// reconnects don't re-query; a `failed` (transient relay error) outcome is
   /// NOT cached — the memo is cleared once it resolves so the next caller
   /// re-queries, and RC3 never overwrites a real list on a transient failure.
-  Future<({_OwnDmInboxState state, List<String>? relays})>? _ownInboxFuture;
+  Future<_OwnDmInboxRead>? _ownInboxFuture;
 
   /// Debounced cross-device DM read-state marker publish (#4977). Reading a
   /// conversation advances its read cursor and schedules this; a burst of
@@ -1238,8 +1247,7 @@ class DmRepository {
   /// — the memo clears itself once it resolves `failed` so the next caller
   /// re-queries instead of degrading the whole session to the default pool.
   /// [_resetState] clears the memo on account switch.
-  Future<({_OwnDmInboxState state, List<String>? relays})>
-  _resolveOwnDmInbox() {
+  Future<_OwnDmInboxRead> _resolveOwnDmInbox() {
     final cached = _ownInboxFuture;
     if (cached != null) return cached;
     final future = _queryOwnDmInbox(
@@ -4053,7 +4061,7 @@ class DmRepository {
   /// Resolving a COUNTERPARTY's inbox passes `false`: it runs on every send,
   /// degrades to the default pool on either outcome, and overwrites nothing,
   /// so it keeps the cache and the first answer it gets.
-  Future<({_OwnDmInboxState state, List<String>? relays})> _queryOwnDmInbox(
+  Future<_OwnDmInboxRead> _queryOwnDmInbox(
     String pubkey, {
     required bool requireAuthoritative,
     // Defaults to the strict reading so a call site added later fails closed.
@@ -4120,6 +4128,10 @@ class DmRepository {
         inboxResolutionBudget,
       );
       final events = [for (final result in results) ...result.events];
+      // The advertised leg, when asked, is queued last.
+      final advertisedEvents = advertisedRelay == null
+          ? null
+          : results.last.events;
       // Computed here but applied ONLY at the two exits below where nothing
       // matching came back. A read that DID return the list stays `found` even
       // when some relay never settled: the list is in hand, and RC3's job is
@@ -4178,7 +4190,7 @@ class DmRepository {
 
       if (events.isEmpty) {
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null);
+        return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       final matchingEvents = [
         for (final event in events)
@@ -4192,7 +4204,7 @@ class DmRepository {
           category: LogCategory.system,
         );
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null);
+        return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       // Newest wins for a replaceable event served from multiple relays.
       matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -4214,9 +4226,24 @@ class DmRepository {
         pubkey,
         source,
       );
-      return relays.isEmpty
-          ? (state: _OwnDmInboxState.absent, relays: null)
-          : (state: _OwnDmInboxState.found, relays: relays);
+      if (relays.isEmpty) {
+        return (
+          state: _OwnDmInboxState.absent,
+          relays: null,
+          advertisedMissing: null,
+        );
+      }
+      final advertisedServesList =
+          advertisedEvents == null ||
+          advertisedEvents.any(
+            (event) =>
+                event.kind == EventKind.dmRelaysList && event.pubkey == pubkey,
+          );
+      return (
+        state: _OwnDmInboxState.found,
+        relays: relays,
+        advertisedMissing: advertisedServesList ? null : matchingEvents.first,
+      );
     } on TimeoutException {
       // Deliberately `failed`, never `absent`. NIP-17 says an absent kind-10050
       // means the user "is not ready to receive messages"; a read we abandoned
@@ -4228,13 +4255,21 @@ class DmRepository {
         '${inboxResolutionBudget.inMilliseconds}ms; treating as unread',
         category: LogCategory.system,
       );
-      return (state: _OwnDmInboxState.failed, relays: null);
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
     } on Object catch (e) {
       Log.warning(
         'Failed to resolve DM inbox relays for ${pubkeyForLogs(pubkey)}: $e',
         category: LogCategory.system,
       );
-      return (state: _OwnDmInboxState.failed, relays: null);
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
     }
   }
 
@@ -4268,14 +4303,16 @@ class DmRepository {
   /// bounded: this method returns early once `dmRelayListPublished` is set,
   /// and it is never awaited by login.
   ///
-  /// `DmSyncState.dmRelayListPublished` is set only when that read returns the
-  /// list — never on a publish's `OK`. [_dmInboxRelayUrl] answers `OK` once
-  /// the event is queued, commits it minutes later, and can lose it in
-  /// between (#8433), so an `OK` proves the relay took the event, not that
-  /// anyone can read it. The session after a publish reads it back: `found`
-  /// records the flag, `absent` publishes again. A rejection, or a slow/failed
-  /// signer, records nothing and the next login retries — the publish never
-  /// blocks login and self-heals.
+  /// `DmSyncState.dmRelayListPublished` is set only when [_dmInboxRelayUrl]
+  /// itself returns the list — never on a publish's `OK`, and never on another
+  /// relay's copy. That relay answers `OK` once the event is queued, commits
+  /// it minutes later, and can lose it in between (#8433), so an `OK` proves
+  /// the relay took the event, not that anyone can read it. The session after
+  /// a publish reads it back: the advertised relay's copy records the flag, a
+  /// list only other relays serve is sent there unchanged, and `absent`
+  /// publishes again. A rejection, or a slow/failed signer, records nothing
+  /// and the next login retries — the publish never blocks login and
+  /// self-heals.
   ///
   /// No-op when uninitialized, when no signer / sync state is wired, or when
   /// no valid advertised relay URL is configured.
@@ -4295,7 +4332,8 @@ class DmRepository {
 
       // Its own authoritative read, NOT the shared session memo: this is the
       // one caller that replaces what it read. See #8212. It also asks the
-      // relay it publishes to, which the pool may not contain (#8433).
+      // relay it publishes to on its own: only that relay's copy is recorded,
+      // and the pool may not contain it (#8433).
       final resolution = await _queryOwnDmInbox(
         pubkey,
         requireAuthoritative: true,
@@ -4304,6 +4342,13 @@ class DmRepository {
       );
       if (_disposed || _resetGeneration != gen) return;
       if (resolution.state == _OwnDmInboxState.found) {
+        final missing = resolution.advertisedMissing;
+        if (missing != null) {
+          // Only other relays serve it: send that same signed list to the
+          // advertised relay, and record it once that relay serves it.
+          await _resendDmRelayList(missing, relayUrl);
+          return;
+        }
         // Already advertising an inbox — never overwrite a richer list.
         // Record the flag so we stop re-checking every login.
         await syncState.markDmRelayListPublished(pubkey);
@@ -4382,8 +4427,7 @@ class DmRepository {
       // that still reaches an earlier one. Logged whole.
       Log.info(
         'Published kind-10050 DM inbox relay list for ${pubkeyForLogs(pubkey)} '
-        '-> $relayUrl (event ${signed.id}); recorded once a relay read '
-        'returns it',
+        '-> $relayUrl (event ${signed.id}); recorded once $relayUrl serves it',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {
@@ -4394,6 +4438,32 @@ class DmRepository {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Sends [list], the user's own signed kind-10050 found only on other
+  /// relays, to [relayUrl] unchanged — nothing is re-signed or published over.
+  /// Nothing is recorded either: the next session records it once [relayUrl]
+  /// returns it (#8433).
+  Future<void> _resendDmRelayList(Event list, String relayUrl) async {
+    final outcome = await _nostrClient.publishEventAwaitOk(
+      list,
+      targetRelays: [relayUrl],
+    );
+    if (!outcome.acceptedBy.contains(relayUrl)) {
+      Log.warning(
+        'kind-10050 re-send to $relayUrl did not land '
+        '(${outcome.rejectedBy[relayUrl] ?? 'no response'}) — will retry next '
+        'login',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    Log.info(
+      'Re-sent kind-10050 DM inbox relay list for '
+      '${pubkeyForLogs(list.pubkey)} -> $relayUrl (event ${list.id}), which '
+      'did not serve it; recorded once it does',
+      category: LogCategory.system,
+    );
   }
 
   /// Upserts a conversation for a LIVE outgoing send and marks it read in
