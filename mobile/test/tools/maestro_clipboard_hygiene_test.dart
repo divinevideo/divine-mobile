@@ -87,6 +87,24 @@ void main() {
       );
     });
 
+    test('a flow still taps the control the guard watches', () {
+      // The guard below skips every flow that does not tap the button, so
+      // renaming the control turns it green while the copy still happens —
+      // #8777's shape exactly. Pin that the detector has something to check.
+      expect(
+        flows.where(
+          (flow) => _tapsId(_documentsOf(flow).commands, _copyPrivateKeyId),
+        ),
+        isNotEmpty,
+        reason:
+            'no flow under $_maestroDir taps $_copyPrivateKeyId, so the '
+            'clipboard guard checks nothing. If the control was renamed, '
+            'point $_copyPrivateKeyId at the new '
+            '`SemanticIds.keyManagementCopyNsecButton`; if the copy journey '
+            'was deleted, delete this guard with it (#8828).',
+      );
+    });
+
     test('a flow that copies the private key clears it on completion', () {
       for (final flow in flows) {
         final (:header, :commands) = _documentsOf(flow);
