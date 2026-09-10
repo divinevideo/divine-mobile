@@ -30,6 +30,15 @@ List<RouteBase> shellRoutes() {
     // pageContextProvider per branch so each tab sees *its own* route context
     // (not the active tab's) and keeps rendering real content while inactive.
     StatefulShellRoute(
+      // go_router 17 started notifying the root observers from inside a
+      // shell's branch navigators, and its 18.x line is what the
+      // material_ui migration needs (#8916). Three observers hang off the
+      // root — routeObserver plus the two analytics ones — so taking the
+      // new default would start emitting screen-view and page-load events
+      // for every in-branch push. That is a product-analytics decision,
+      // not a side effect of a design-system migration, so behaviour is
+      // pinned here and the change can be made deliberately later.
+      notifyRootObserver: false,
       // Transition-free on purpose: the shell replaces `/welcome` on the root
       // navigator when the authenticated redirect lands (startup restore,
       // login), and the startup splash lifts at the *start* of that
