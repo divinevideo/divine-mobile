@@ -4,7 +4,7 @@
 # SHRINK (growth fails CI vs origin/main). Replace Future.delayed with explicit
 # async coordination. Epic: #4339 (production counterpart of the test-scoped
 # #4337 WS-2 ratchet).
-lib/blocs/email_verification/email_verification_cubit.dart	4
+lib/blocs/email_verification/email_verification_cubit.dart	3
 lib/blocs/video_recorder/video_recorder_bloc.dart	1
 lib/providers/subtitle_providers.dart	1
 lib/providers/upload_media_providers.dart	1

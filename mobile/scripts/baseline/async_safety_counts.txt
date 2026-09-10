@@ -45,7 +45,6 @@ discarded_futures|lib/providers/video_editor_provider.dart	3
 discarded_futures|lib/providers/video_events_providers.dart	2
 discarded_futures|lib/providers/video_providers.dart	4
 discarded_futures|lib/repositories/feed_repository_impl.dart	2
-discarded_futures|lib/repositories/invite_availability_repository.dart	1
 discarded_futures|lib/router/deep_link_coordinator.dart	6
 discarded_futures|lib/router/nav_extensions.dart	1
 discarded_futures|lib/router/providers/router_location_provider.dart	1
@@ -105,7 +104,6 @@ discarded_futures|lib/screens/search_results/widgets/videos_section.dart	1
 discarded_futures|lib/screens/settings/account/change_email_screen.dart	2
 discarded_futures|lib/screens/settings/content_preferences_screen.dart	2
 discarded_futures|lib/screens/settings/crossposting_settings_screen.dart	1
-discarded_futures|lib/screens/settings/invites_screen.dart	1
 discarded_futures|lib/screens/settings/privacy_settings_screen.dart	1
 discarded_futures|lib/screens/settings/settings_screen.dart	2
 discarded_futures|lib/screens/settings/storage/storage_management_page.dart	1
@@ -322,8 +320,6 @@ discarded_futures|test/repositories/community_content_label_repository_test.dart
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
 discarded_futures|test/screens/auth/email_verification_screen_test.dart	1
-discarded_futures|test/screens/auth/invite_gate_screen_test.dart	4
-discarded_futures|test/screens/auth/invite_protected_create_account_screen_test.dart	1
 discarded_futures|test/screens/feed/feed_mode_switch_test.dart	2
 discarded_futures|test/screens/inbox/bloc/new_message_search_bloc_test.dart	1
 discarded_futures|test/screens/safety_settings_screen_test.dart	6
@@ -432,7 +428,6 @@ unawaited_futures|test/screens/settings/nip05_settings_screen_test.dart	1
 unawaited_futures|test/screens/settings/storage/storage_management_view_test.dart	9
 unawaited_futures|test/services/auth_service_data_cleanup_ordering_test.dart	1
 unawaited_futures|test/services/auth_service_identity_change_preservation_test.dart	1
-unawaited_futures|test/services/auth_service_invite_session_cleanup_test.dart	1
 unawaited_futures|test/services/auth_service_multi_account_test.dart	1
 unawaited_futures|test/services/auth_service_nip07_test.dart	1
 unawaited_futures|test/services/auth_service_oauth_local_signing_test.dart	1
