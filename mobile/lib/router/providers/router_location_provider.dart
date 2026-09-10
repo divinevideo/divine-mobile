@@ -8,6 +8,12 @@ import 'package:openvine/router/app_router.dart';
 
 /// Provider that exposes the raw router location stream
 ///
+/// Single-subscription: the stream accepts exactly one listener, and that
+/// listener is [routerLocationProvider]. Consume the locations through that
+/// provider — Riverpod multiplexes it — rather than subscribing here a second
+/// time, which throws `Stream has already been listened to` and strands the
+/// losing consumer in a permanent error state.
+///
 /// For testing, access this directly: `container.read(routerLocationStreamProvider)`
 final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
   final router = ref.read(goRouterProvider);
