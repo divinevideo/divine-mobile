@@ -81,6 +81,15 @@ class QueryResult {
 
   /// Why the read ended. See the [QueryEnd] values for what each one implies
   /// about the completeness of [events].
+  ///
+  /// When more than one applies, the read reports one: [QueryEnd.noRelay]
+  /// when no relay took the `REQ`; otherwise [QueryEnd.deadline] when the
+  /// caller's deadline fired before the read settled; otherwise the most
+  /// severe way a relay that took the `REQ` left it, in the order
+  /// [QueryEnd.socketDropped], [QueryEnd.relayClosed],
+  /// [QueryEnd.settledEarly], [QueryEnd.complete]. A deadline that fires
+  /// before every relay has been asked is [QueryEnd.deadline], since whether
+  /// any relay took the `REQ` is still unknown.
   final QueryEnd endedBy;
 
   /// `true` when a relay may have withheld matching events because the read

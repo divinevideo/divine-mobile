@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:math' as math;
 
 import 'count_response.dart';
 import 'event.dart';
@@ -8,6 +9,8 @@ import 'event_mem_box.dart';
 import 'nip02/contact_list.dart';
 import 'relay/event_filter.dart';
 import 'relay/publish_outcome.dart';
+import 'relay/query_outcome.dart';
+import 'relay/query_result.dart';
 import 'relay/relay.dart';
 import 'relay/relay_diagnostics.dart';
 import 'relay/relay_pool.dart';
@@ -337,6 +340,145 @@ class Nostr {
     _pool.unsubscribe(id);
   }
 
+  /// Reads the events [filters] match, and reports how the read ended.
+  ///
+  /// The read ends at [deadline] — [timeout] from now when [deadline] is
+  /// null — unless the relay pool completes it first, and either way it
+  /// returns the events that had arrived. [QueryResult.endedBy] says how it
+  /// ended.
+  ///
+  /// Set [requireAllRelaysSettled] when an incomplete answer must not
+  /// complete the read — see [RelayPool.query]. Such a read then runs to its
+  /// deadline rather than completing on the relays that answered first.
+  ///
+  /// A read that ends any other way than a complete, uncapped answer gets one
+  /// [RelayDiagnosticSite.queryCompletion] line, from the pool.
+  ///
+  /// Throws [ArgumentError] when [filters] is empty.
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final read = await _read(
+      filters,
+      id: id,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      deadline: deadline ?? DateTime.now().add(timeout),
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    return read.result;
+  }
+
+  /// Reads every event [filter] matches, a page of [pageSize] at a time,
+  /// walking back through the relays' history with an inclusive `until`
+  /// cursor.
+  ///
+  /// Each page is a [readEvents] that every relay taking its REQ must settle,
+  /// asking for events at or before the oldest `created_at` the page before it
+  /// returned. Asking for that second again, rather than for the one before
+  /// it, keeps the events that share it on both sides of a page break; the
+  /// ones collected twice are dropped by event id. A page that brings back
+  /// only events at the cursor — one second holding more than a page, or a
+  /// relay that ignores `until` — moves the cursor one second back rather
+  /// than asking for the same page again.
+  ///
+  /// The walk is complete once a settled page brings no event it had not
+  /// already collected, or a settled page is confirmed exhaustive by NIP-67
+  /// `finish`. A short page is not taken as the end: a relay may send fewer
+  /// events than it holds. The walk stops incomplete, keeping what it
+  /// collected, on the first page that does not settle — whose [QueryEnd] is
+  /// [PagedQueryResult.stoppedBy] — after [maxPages] pages, or once
+  /// [deadline] has passed. Each page gets [pageTimeout], cut short by
+  /// [deadline].
+  ///
+  /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
+  /// any, starts the walk.
+  ///
+  /// One cursor serves every relay a page reaches, so a relay whose history
+  /// reaches further back can move it past events that another relay, stopped
+  /// at its limit, has not sent yet. A walk that must not miss any reads one
+  /// relay at a time, naming it in [tempRelays] with
+  /// `relayTypes: [RelayType.temp]`.
+  ///
+  /// Throws [ArgumentError] when [pageSize] or [maxPages] is below 1.
+  Future<PagedQueryResult> readAllEvents(
+    Map<String, dynamic> filter, {
+    int pageSize = 500,
+    int maxPages = 50,
+    Duration pageTimeout = const Duration(seconds: 10),
+    DateTime? deadline,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+  }) async {
+    if (pageSize < 1) {
+      throw ArgumentError.value(pageSize, 'pageSize', 'must be at least 1');
+    }
+    if (maxPages < 1) {
+      throw ArgumentError.value(maxPages, 'maxPages', 'must be at least 1');
+    }
+    final collected = <Event>[];
+    final seenIds = <String>{};
+    var until = filter['until'] as int?;
+    var pages = 0;
+
+    PagedQueryResult walked({required bool isComplete, QueryEnd? stoppedBy}) =>
+        PagedQueryResult(
+          events: collected,
+          isComplete: isComplete,
+          pages: pages,
+          stoppedBy: stoppedBy,
+        );
+
+    while (pages < maxPages) {
+      final now = DateTime.now();
+      if (deadline != null && !now.isBefore(deadline)) break;
+      var pageDeadline = now.add(pageTimeout);
+      if (deadline != null && deadline.isBefore(pageDeadline)) {
+        pageDeadline = deadline;
+      }
+
+      pages++;
+      final page = await readEvents(
+        [
+          {...filter, 'limit': pageSize, if (until != null) 'until': until},
+        ],
+        tempRelays: tempRelays,
+        relayTypes: relayTypes,
+        deadline: pageDeadline,
+        requireAllRelaysSettled: true,
+      );
+      final newEvents = [
+        for (final event in page.events)
+          if (seenIds.add(event.id)) event,
+      ];
+      collected.addAll(newEvents);
+
+      if (!page.isComplete) {
+        return walked(isComplete: false, stoppedBy: page.endedBy);
+      }
+      if (page.confirmedExhaustive) return walked(isComplete: true);
+      if (newEvents.isNotEmpty) {
+        until = page.events.map((event) => event.createdAt).reduce(math.min);
+      } else if (page.events.isEmpty) {
+        return walked(isComplete: true);
+      } else {
+        // Nothing new came back, so every event on the page sits at the
+        // cursor: the pool's filter gate keeps out anything newer, and nothing
+        // older has been collected yet.
+        until = until! - 1;
+      }
+    }
+    return walked(isComplete: false);
+  }
+
   /// Set [requireAllRelaysSettled] when an incomplete answer must be reported
   /// as `timedOut` rather than as a result — see [RelayPool.query].
   ///
@@ -344,6 +486,9 @@ class Nostr {
   /// an empty `events` on its own cannot distinguish from every relay holding
   /// nothing. It stays `false` when the fan-out itself ran out of time, since
   /// that leaves participation genuinely unknown.
+  ///
+  /// It runs the same read as [readEvents] and maps how that read ended onto
+  /// the two flags.
   Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
   queryEventsDetailed(
     List<Map<String, dynamic>> filters, {
@@ -354,52 +499,31 @@ class Nostr {
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
   }) async {
-    final eventBox = EventMemBox(sortAfterAdd: false);
-    final completer = Completer<void>();
-    final subscriptionId = id ?? StringUtil.rndNameStr(16);
-    final deadline = DateTime.now().add(timeout);
-    var timedOut = false;
-    var noRelaysParticipated = false;
-
-    Duration remainingTimeout() {
-      final remaining = deadline.difference(DateTime.now());
-      if (remaining.isNegative || remaining == Duration.zero) {
-        return Duration.zero;
-      }
-      return remaining;
-    }
-
-    try {
-      final fanout = await query(
-        filters,
-        id: subscriptionId,
-        tempRelays: tempRelays,
-        relayTypes: relayTypes,
-        sendAfterAuth: sendAfterAuth,
-        requireAllRelaysSettled: requireAllRelaysSettled,
-        (event) {
-          eventBox.add(event);
-        },
-        onComplete: () {
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-      ).timeout(remainingTimeout());
-      noRelaysParticipated = fanout.sentTo.isEmpty;
-      await completer.future.timeout(remainingTimeout());
-    } on TimeoutException {
-      timedOut = true;
-      unsubscribe(subscriptionId);
-    }
-
+    final read = await _read(
+      filters,
+      id: id,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      deadline: DateTime.now().add(timeout),
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    final noRelaysParticipated = read.result.endedBy == QueryEnd.noRelay;
     return (
-      events: eventBox.all(),
+      events: read.result.events,
+      // A deadline that ends the read is a timeout. That is every
+      // [QueryEnd.deadline], and one [QueryEnd.noRelay] as well: noRelay
+      // outranks the deadline, so a read no relay took still reads noRelay
+      // when the pool waits out its deadline on a relay that saved the REQ
+      // but failed to write it.
+      //
       // A full-settlement caller is about to replace what it read, so a
       // fan-out no relay took stays as inconclusive as a relay that never
       // answered. A default read is content with what the reachable relays
       // hold and keeps its prompt empty answer.
-      timedOut: timedOut || (requireAllRelaysSettled && noRelaysParticipated),
+      timedOut:
+          read.endedAtDeadline ||
+          (requireAllRelaysSettled && noRelaysParticipated),
       noRelaysParticipated: noRelaysParticipated,
     );
   }
@@ -412,7 +536,7 @@ class Nostr {
     bool sendAfterAuth = false,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    final result = await queryEventsDetailed(
+    final result = await readEvents(
       filters,
       id: id,
       tempRelays: tempRelays,
@@ -421,6 +545,83 @@ class Nostr {
       timeout: timeout,
     );
     return result.events;
+  }
+
+  /// Runs one read for [readEvents] and its wrappers, and says whether the
+  /// caller's deadline is what ended it.
+  Future<({QueryResult result, bool endedAtDeadline})> _read(
+    List<Map<String, dynamic>> filters, {
+    required String? id,
+    required List<String>? tempRelays,
+    required List<int> relayTypes,
+    required bool sendAfterAuth,
+    required DateTime deadline,
+    required bool requireAllRelaysSettled,
+  }) async {
+    final eventBox = EventMemBox(sortAfterAdd: false);
+    final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final ended = Completer<QueryOutcome>();
+    var endedAtDeadline = false;
+
+    void endAtDeadline() {
+      // The pool hands its outcome over synchronously as it completes the
+      // read, so an [ended] already completed means the pool finished first.
+      if (ended.isCompleted) return;
+      endedAtDeadline = true;
+      // Judged before unsubscribing, which forgets how each relay stood. A
+      // null means something other than a completion dropped the pool's
+      // record of the read, such as an unsubscribe of its id; the deadline is
+      // still what ended it.
+      final outcome = _pool.reportQueryDeadline(subscriptionId);
+      unsubscribe(subscriptionId);
+      ended.complete(outcome ?? const QueryOutcome(endedBy: QueryEnd.deadline));
+    }
+
+    // A deadline already past fires at once: a Timer treats it as zero.
+    final deadlineTimer = Timer(
+      deadline.difference(DateTime.now()),
+      endAtDeadline,
+    );
+    try {
+      // Not awaited: the deadline must be able to end the read while the
+      // fan-out is still writing the REQ to a slow relay.
+      unawaited(
+        _pool
+            .query(
+              filters,
+              (event) {
+                eventBox.add(event);
+              },
+              id: subscriptionId,
+              tempRelays: tempRelays,
+              relayTypes: relayTypes,
+              sendAfterAuth: sendAfterAuth,
+              requireAllRelaysSettled: requireAllRelaysSettled,
+              onOutcome: (outcome) {
+                if (!ended.isCompleted) ended.complete(outcome);
+              },
+            )
+            .then<void>(
+              (_) {},
+              onError: (Object error, StackTrace stackTrace) {
+                // An error after the read ended has no caller left to hear it.
+                if (!ended.isCompleted) ended.completeError(error, stackTrace);
+              },
+            ),
+      );
+      final outcome = await ended.future;
+      return (
+        result: QueryResult(
+          events: eventBox.all(),
+          endedBy: outcome.endedBy,
+          possiblyCapped: outcome.possiblyCapped,
+          confirmedExhaustive: outcome.confirmedExhaustive,
+        ),
+        endedAtDeadline: endedAtDeadline,
+      );
+    } finally {
+      deadlineTimer.cancel();
+    }
   }
 
   /// Sends a COUNT request (NIP-45) to relays and returns the count.
