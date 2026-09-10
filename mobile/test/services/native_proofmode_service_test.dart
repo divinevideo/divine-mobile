@@ -161,9 +161,7 @@ void main() {
       expect(proofData!.videoHash, generatedProofHash);
       expect(c2paService.readManifestCallCount, 0);
       expect(
-        _latestLogContaining(
-          'Skipping C2PA manifest read after failed signing (tls)',
-        ),
+        _latestLogContaining('C2PA signing failed (tls; continuing without)'),
         isNotNull,
       );
     });
@@ -261,7 +259,10 @@ void main() {
       expect(proofData, isNotNull);
       expect(proofData!.c2paManifestId, 'urn:c2pa:generated');
       expect(c2paService.signVideoCallCount, 1);
-      expect(c2paService.readManifestCallCount, 1);
+      // Signing already read the manifest back to decide it was safe to
+      // replace the recording, so proofFile reuses that read rather than
+      // performing a second one over the same file (#8799).
+      expect(c2paService.readManifestCallCount, 0);
     });
   });
 
@@ -361,7 +362,7 @@ class _FailingC2paSigningService extends C2paSigningService {
   int readManifestCallCount = 0;
 
   @override
-  Future<C2paSigningResult> signVideo({
+  Future<C2paSigningResult> signVideoInPlace({
     required String videoPath,
     NostrCreatorBindingAssertion? creatorBindingAssertion,
     Map<String, dynamic>? cawgIdentityAssertion,
@@ -387,7 +388,7 @@ class _ExistingProofC2paSigningService extends C2paSigningService {
   int signVideoCallCount = 0;
 
   @override
-  Future<C2paSigningResult> signVideo({
+  Future<C2paSigningResult> signVideoInPlace({
     required String videoPath,
     NostrCreatorBindingAssertion? creatorBindingAssertion,
     Map<String, dynamic>? cawgIdentityAssertion,
@@ -412,14 +413,18 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
   int signVideoCallCount = 0;
 
   @override
-  Future<C2paSigningResult> signVideo({
+  Future<C2paSigningResult> signVideoInPlace({
     required String videoPath,
     NostrCreatorBindingAssertion? creatorBindingAssertion,
     Map<String, dynamic>? cawgIdentityAssertion,
     bool enableAdvancedCawgEmbedding = false,
   }) async {
     signVideoCallCount += 1;
-    return C2paSigningResult(signedFilePath: this.videoPath, success: true);
+    return C2paSigningResult(
+      signedFilePath: this.videoPath,
+      success: true,
+      manifest: const ManifestStoreInfo(activeManifest: 'urn:c2pa:generated'),
+    );
   }
 
   @override

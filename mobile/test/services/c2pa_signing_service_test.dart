@@ -123,7 +123,9 @@ void main() {
           ),
         );
 
-        final result = await failingService.signVideo(videoPath: video.path);
+        final result = await failingService.signVideoInPlace(
+          videoPath: video.path,
+        );
 
         expect(result.success, isFalse);
         expect(result.signedFilePath, video.path);
@@ -140,7 +142,9 @@ void main() {
             signingTimeout: const Duration(milliseconds: 10),
           );
 
-          final result = await hangingService.signVideo(videoPath: video.path);
+          final result = await hangingService.signVideoInPlace(
+            videoPath: video.path,
+          );
 
           expect(result.success, isFalse);
           expect(
@@ -162,7 +166,9 @@ void main() {
             signingTimeout: const Duration(milliseconds: 10),
           );
 
-          final result = await slowService.signVideo(videoPath: video.path);
+          final result = await slowService.signVideoInPlace(
+            videoPath: video.path,
+          );
           expect(result.success, isFalse);
           expect(result.failureReason, C2paSigningFailureReason.network);
 
@@ -196,7 +202,9 @@ void main() {
             ),
           );
 
-          final result = await failingService.signVideo(videoPath: video.path);
+          final result = await failingService.signVideoInPlace(
+            videoPath: video.path,
+          );
 
           expect(result.success, isFalse);
           expect(
@@ -223,7 +231,7 @@ void main() {
             c2pa: _WritingC2pa(const []),
           );
 
-          final result = await emptyOutputService.signVideo(
+          final result = await emptyOutputService.signVideoInPlace(
             videoPath: video.path,
           );
 
@@ -244,11 +252,10 @@ void main() {
         'replaces the original in place and leaves nothing else behind',
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
-          final service = C2paSigningService(
-            c2pa: _WritingC2pa(const [7, 8, 9, 10, 11]),
-          );
+          final c2pa = _WritingC2pa(const [7, 8, 9, 10, 11]);
+          final service = C2paSigningService(c2pa: c2pa);
 
-          final result = await service.signVideo(videoPath: video.path);
+          final result = await service.signVideoInPlace(videoPath: video.path);
 
           expect(result.success, isTrue);
           expect(result.error, isNull);
@@ -262,6 +269,125 @@ void main() {
             ),
             equals(['video.mp4']),
           );
+          // Handed to the caller so ProofMode does not read the same manifest
+          // off the same file a second time (#8799).
+          expect(result.manifest?.activeManifest, 'urn:c2pa:signed');
+          expect(c2pa.readManifestCallCount, 1);
+        },
+      );
+
+      test(
+        'keeps the recording when the output carries no manifest (#8799)',
+        () async {
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _WritingC2pa(const [7, 8, 9], manifest: null),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.outputMissing);
+          expect(result.signedFilePath, video.path);
+          expect(result.manifest, isNull);
+          expect(
+            video.readAsBytesSync(),
+            equals([0, 1, 2, 3]),
+            reason:
+                'a non-empty output that was never stamped must not replace '
+                'the only copy of the recording',
+          );
+          expect(signedLeftovers(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps the recording when the manifest has no active claim (#8799)',
+        () async {
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _WritingC2pa(
+              const [7, 8, 9],
+              manifest: const ManifestStoreInfo(),
+            ),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.outputMissing);
+          expect(video.readAsBytesSync(), equals([0, 1, 2, 3]));
+          expect(signedLeftovers(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps the recording when the manifest fails validation (#8799)',
+        () async {
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _WritingC2pa(
+              const [7, 8, 9],
+              manifest: const ManifestStoreInfo(
+                activeManifest: 'urn:c2pa:broken',
+                validationErrors: [
+                  ValidationError(
+                    code: 'signingCredential.untrusted',
+                    message: 'untrusted signer',
+                  ),
+                ],
+                validationStatus: ValidationStatus.invalid,
+              ),
+            ),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.outputMissing);
+          expect(video.readAsBytesSync(), equals([0, 1, 2, 3]));
+          expect(signedLeftovers(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps the recording when the output cannot be read at all (#8799)',
+        () async {
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _UnreadableManifestC2pa(const [7, 8, 9]),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.outputMissing);
+          expect(video.readAsBytesSync(), equals([0, 1, 2, 3]));
+          expect(signedLeftovers(), isEmpty);
+        },
+      );
+
+      test(
+        'accepts an unknown validation status, which is a clean read (#8799)',
+        () async {
+          // `unknown` is what the library reports when the native read
+          // returned no `validation_status` key — the ordinary success shape.
+          // Only `invalid` is positive evidence the output is broken, so
+          // rejecting `unknown` would discard correctly signed recordings.
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _WritingC2pa(
+              const [7, 8, 9],
+              manifest: const ManifestStoreInfo(
+                activeManifest: 'urn:c2pa:signed',
+              ),
+            ),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isTrue);
+          expect(video.readAsBytesSync(), equals([7, 8, 9]));
         },
       );
     });
@@ -480,8 +606,48 @@ class _WriteThenThrowC2pa extends C2pa {
   }
 }
 
+/// Simulates a signing call that writes [bytes] and, on read-back, reports
+/// [manifest].
+///
+/// The manifest matters as much as the bytes: signing reads its own output
+/// back before it is allowed to replace the recording, so a fake that reports
+/// nothing is a fake whose output must be rejected (#8799).
 class _WritingC2pa extends C2pa {
-  _WritingC2pa(this.bytes);
+  _WritingC2pa(
+    this.bytes, {
+    this.manifest = const ManifestStoreInfo(
+      activeManifest: 'urn:c2pa:signed',
+      validationStatus: ValidationStatus.valid,
+    ),
+  });
+
+  final List<int> bytes;
+  final ManifestStoreInfo? manifest;
+  int readManifestCallCount = 0;
+
+  @override
+  Future<void> signFile({
+    required String sourcePath,
+    required String destPath,
+    required String manifestJson,
+    required C2paSigner signer,
+  }) async {
+    File(destPath).writeAsBytesSync(bytes);
+  }
+
+  @override
+  Future<ManifestStoreInfo?> readManifestFromFile(
+    String path, {
+    ReaderOptions options = const ReaderOptions(),
+  }) async {
+    readManifestCallCount += 1;
+    return manifest;
+  }
+}
+
+/// Simulates an output the native reader cannot parse at all.
+class _UnreadableManifestC2pa extends C2pa {
+  _UnreadableManifestC2pa(this.bytes);
 
   final List<int> bytes;
 
@@ -493,5 +659,13 @@ class _WritingC2pa extends C2pa {
     required C2paSigner signer,
   }) async {
     File(destPath).writeAsBytesSync(bytes);
+  }
+
+  @override
+  Future<ManifestStoreInfo?> readManifestFromFile(
+    String path, {
+    ReaderOptions options = const ReaderOptions(),
+  }) async {
+    throw const FormatException('not a C2PA container');
   }
 }
