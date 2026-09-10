@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -32,9 +33,12 @@ final accountDeletionRecoveryRepositoryProvider =
       );
     });
 
-final accountDeletionRecoveryClockProvider = Provider<DateTime Function()>(
-  (_) => DateTime.now,
-);
+final accountDeletionRecoveryPollBudgetProvider =
+    Provider<AccountDeletionRecoveryPollBudgetStore>(
+      (ref) => SharedPreferencesAccountDeletionRecoveryPollBudgetStore(
+        ref.watch(sharedPreferencesProvider),
+      ),
+    );
 
 /// Durable receipt for a deletion this installation submitted.
 final class SubmittedAccountDeletionAttempt {
@@ -42,35 +46,21 @@ final class SubmittedAccountDeletionAttempt {
     required this.pubkeyHex,
     required this.attempt,
     required this.vanishEventId,
-    required this.recoveryWatchStartedAt,
     this.submissionOwnedLocally = false,
   });
 
-  factory SubmittedAccountDeletionAttempt.fromJson(
-    Map<String, dynamic> json, {
-    DateTime Function() now = DateTime.now,
-  }) {
-    final recoveryWatchStartedAtMs =
-        (json['recovery_watch_started_at_ms'] as num?)?.toInt();
-    return SubmittedAccountDeletionAttempt(
-      pubkeyHex: json['pubkey_hex'] as String,
-      vanishEventId: json['vanish_event_id'] as String,
-      attempt: AccountDeletionAttempt.fromJson(
-        json['attempt'] as Map<String, dynamic>,
-      ),
-      recoveryWatchStartedAt: recoveryWatchStartedAtMs == null
-          ? now().toUtc()
-          : DateTime.fromMillisecondsSinceEpoch(
-              recoveryWatchStartedAtMs,
-              isUtc: true,
-            ),
-    );
-  }
+  factory SubmittedAccountDeletionAttempt.fromJson(Map<String, dynamic> json) =>
+      SubmittedAccountDeletionAttempt(
+        pubkeyHex: json['pubkey_hex'] as String,
+        vanishEventId: json['vanish_event_id'] as String,
+        attempt: AccountDeletionAttempt.fromJson(
+          json['attempt'] as Map<String, dynamic>,
+        ),
+      );
 
   final String pubkeyHex;
   final AccountDeletionAttempt attempt;
   final String vanishEventId;
-  final DateTime recoveryWatchStartedAt;
 
   /// True only while this process's deletion dialog owns submission and cleanup.
   /// It is deliberately not persisted, so an app restart adopts the receipt.
@@ -81,21 +71,15 @@ final class SubmittedAccountDeletionAttempt {
     'pubkey_hex': pubkeyHex,
     'vanish_event_id': vanishEventId,
     'attempt': attempt.toJson(),
-    'recovery_watch_started_at_ms': recoveryWatchStartedAt
-        .toUtc()
-        .millisecondsSinceEpoch,
   };
 
   SubmittedAccountDeletionAttempt copyWith({
     AccountDeletionAttempt? attempt,
-    DateTime? recoveryWatchStartedAt,
     bool? submissionOwnedLocally,
   }) => SubmittedAccountDeletionAttempt(
     pubkeyHex: pubkeyHex,
     attempt: attempt ?? this.attempt,
     vanishEventId: vanishEventId,
-    recoveryWatchStartedAt:
-        recoveryWatchStartedAt ?? this.recoveryWatchStartedAt,
     submissionOwnedLocally:
         submissionOwnedLocally ?? this.submissionOwnedLocally,
   );
@@ -124,16 +108,7 @@ class SubmittedAccountDeletionAttemptNotifier
     Map<String, dynamic>? decoded;
     try {
       decoded = jsonDecode(encoded) as Map<String, dynamic>;
-      final needsWatchStartBackfill =
-          decoded['recovery_watch_started_at_ms'] == null;
-      final receipt = SubmittedAccountDeletionAttempt.fromJson(
-        decoded,
-        now: ref.read(accountDeletionRecoveryClockProvider),
-      );
-      if (needsWatchStartBackfill) {
-        unawaited(_persistLegacyWatchStart(receipt));
-      }
-      return receipt;
+      return SubmittedAccountDeletionAttempt.fromJson(decoded);
     } on Object catch (error) {
       final encodedPubkey = decoded?['pubkey_hex'];
       Log.error(
@@ -145,24 +120,6 @@ class SubmittedAccountDeletionAttemptNotifier
       );
       unawaited(_removeCorruptReceipt());
       return null;
-    }
-  }
-
-  Future<void> _persistLegacyWatchStart(
-    SubmittedAccountDeletionAttempt receipt,
-  ) async {
-    try {
-      final saved = await ref
-          .read(sharedPreferencesProvider)
-          .setString(_storageKey, jsonEncode(receipt.toJson()));
-      if (!saved) throw StateError('Could not backfill recovery watch start');
-    } on Object catch (error) {
-      Log.error(
-        'Failed to backfill account deletion recovery watch start for '
-        '${pubkeyForLogs(receipt.pubkeyHex)}: $error',
-        name: 'AccountDeletionRecovery',
-        category: LogCategory.auth,
-      );
     }
   }
 
@@ -192,15 +149,10 @@ class SubmittedAccountDeletionAttemptNotifier
         'Another account deletion receipt is already pending',
       );
     }
-    final recoveryWatchStartedAt =
-        existing != null && existing.attempt.id == attempt.id
-        ? existing.recoveryWatchStartedAt
-        : ref.read(accountDeletionRecoveryClockProvider)().toUtc();
     final receipt = SubmittedAccountDeletionAttempt(
       pubkeyHex: pubkeyHex,
       attempt: attempt,
       vanishEventId: vanishEventId,
-      recoveryWatchStartedAt: recoveryWatchStartedAt,
       submissionOwnedLocally: submissionOwnedLocally,
     );
     await _persist(receipt);
@@ -278,6 +230,9 @@ submittedAccountDeletionMonitorProvider =
       );
       var disposed = false;
       final cubit = AccountDeletionRecoveryCubit(
+        pollBudgetStore: ref.watch(
+          accountDeletionRecoveryPollBudgetProvider,
+        ),
         repository: ref.watch(accountDeletionRecoveryRepositoryProvider),
         authService: ref.watch(authServiceProvider),
         onAttemptResolved: () async {
@@ -288,8 +243,6 @@ submittedAccountDeletionMonitorProvider =
         onAttemptUpdated: receiptNotifier.updateAttempt,
         receiptPubkeyHex: receipt.pubkeyHex,
         receiptVanishEventId: receipt.vanishEventId,
-        recoveryWatchStartedAt: receipt.recoveryWatchStartedAt,
-        now: ref.watch(accountDeletionRecoveryClockProvider),
       );
       ref.listen(currentAuthStateProvider, (_, next) {
         if (next != AuthState.authenticated) return;

@@ -184,10 +184,8 @@ void main() {
     late _MockDeletionRepository repository;
     late _MockAuthService authService;
     late ProviderContainer container;
-    late DateTime now;
 
     setUp(() {
-      now = DateTime.utc(2026, 9, 10, 12);
       repository = _MockDeletionRepository();
       authService = _MockAuthService();
       when(repository.fetchCurrent).thenAnswer((_) async => null);
@@ -204,7 +202,6 @@ void main() {
           accountDeletionRecoveryRepositoryProvider.overrideWithValue(
             repository,
           ),
-          accountDeletionRecoveryClockProvider.overrideWithValue(() => now),
         ],
       );
       addTearDown(container.dispose);
@@ -277,155 +274,12 @@ void main() {
       expect(receipt?.attempt.id, processing.id);
       expect(receipt?.attempt.status, processing.status);
       expect(receipt?.vanishEventId, _vanishEventId);
-      expect(receipt?.recoveryWatchStartedAt, now);
       expect(
         await restarted.read(currentAccountDeletionAttemptProvider.future),
         isNotNull,
       );
       verifyNever(repository.fetchCurrent);
     });
-
-    test('a legacy receipt backfills its recovery watch start once', () async {
-      await preferences.setString(
-        'account_deletion_receipt_v1',
-        '{"pubkey_hex":"$pubkey",'
-            '"vanish_event_id":"$_vanishEventId",'
-            '"attempt":{"id":"attempt-id","status":"processing",'
-            '"operation":"none"}}',
-      );
-      final first = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          accountDeletionRecoveryClockProvider.overrideWithValue(() => now),
-        ],
-      );
-      addTearDown(first.dispose);
-
-      final adopted = first.read(submittedAccountDeletionAttemptProvider);
-      expect(adopted?.recoveryWatchStartedAt, now);
-      await pumpEventQueue();
-
-      now = now.add(const Duration(hours: 1));
-      final restarted = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          accountDeletionRecoveryClockProvider.overrideWithValue(() => now),
-        ],
-      );
-      addTearDown(restarted.dispose);
-
-      expect(
-        restarted
-            .read(submittedAccountDeletionAttemptProvider)
-            ?.recoveryWatchStartedAt,
-        adopted?.recoveryWatchStartedAt,
-      );
-    });
-
-    test('attempt updates preserve the recovery watch start', () async {
-      final notifier = container.read(
-        submittedAccountDeletionAttemptProvider.notifier,
-      );
-      await notifier.record(
-        pubkeyHex: pubkey,
-        attempt: processing,
-        vanishEventId: _vanishEventId,
-      );
-      final startedAt = notifier.state!.recoveryWatchStartedAt;
-      now = now.add(const Duration(minutes: 5));
-
-      await notifier.updateAttempt(
-        const AccountDeletionAttempt(
-          id: 'attempt-id',
-          status: AccountDeletionAttemptStatus.completed,
-        ),
-      );
-
-      expect(notifier.state?.recoveryWatchStartedAt, startedAt);
-      final persisted = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-        ],
-      );
-      addTearDown(persisted.dispose);
-      expect(
-        persisted
-            .read(submittedAccountDeletionAttemptProvider)
-            ?.recoveryWatchStartedAt,
-        startedAt,
-      );
-    });
-
-    test(
-      're-recording the submitted attempt preserves its watch start',
-      () async {
-        final notifier = container.read(
-          submittedAccountDeletionAttemptProvider.notifier,
-        );
-        await notifier.record(
-          pubkeyHex: pubkey,
-          attempt: const AccountDeletionAttempt(
-            id: 'attempt-id',
-            status: AccountDeletionAttemptStatus.recoverable,
-          ),
-          vanishEventId: _vanishEventId,
-          submissionOwnedLocally: true,
-        );
-        final startedAt = notifier.state!.recoveryWatchStartedAt;
-        now = now.add(const Duration(minutes: 5));
-
-        await notifier.record(
-          pubkeyHex: pubkey,
-          attempt: processing,
-          vanishEventId: _vanishEventId,
-          submissionOwnedLocally: true,
-        );
-
-        expect(notifier.state?.recoveryWatchStartedAt, startedAt);
-      },
-    );
-
-    test(
-      'a recreated provider container keeps an expired watch paused',
-      () async {
-        await container
-            .read(submittedAccountDeletionAttemptProvider.notifier)
-            .record(
-              pubkeyHex: pubkey,
-              attempt: processing,
-              vanishEventId: _vanishEventId,
-            );
-        now = now.add(const Duration(minutes: 16));
-        final restarted = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(preferences),
-            authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWithValue(
-              AuthState.authenticated,
-            ),
-            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
-              repository,
-            ),
-            accountDeletionRecoveryClockProvider.overrideWithValue(() => now),
-          ],
-        );
-        addTearDown(restarted.dispose);
-        final subscription = restarted.listen(
-          submittedAccountDeletionMonitorProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-        final cubit = subscription.read()!;
-
-        final paused = cubit.state.pollingPaused
-            ? cubit.state
-            : await cubit.stream.firstWhere((state) => state.pollingPaused);
-
-        expect(paused.pollingPaused, isTrue);
-        verify(repository.fetchCurrent).called(1);
-      },
-    );
 
     test(
       'submitted monitor finishes cleanup after another account signs in',

@@ -27,8 +27,6 @@ import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
 
-final _recoveryWatchStartedAt = DateTime.utc(2026, 9, 10);
-
 /// Authenticated identity is known but the signer-backed Nostr client has
 /// not finished initializing — the not-ready window the router must
 /// fail-closed through. Replaces the pre-refactor
@@ -117,7 +115,6 @@ void main() {
             pubkeyHex: 'first-account',
             attempt: retained.value!,
             vanishEventId: 'vanish-event-id',
-            recoveryWatchStartedAt: _recoveryWatchStartedAt,
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -134,15 +131,14 @@ void main() {
       expect(
         accountDeletionRecoveryGateActive(
           const AsyncData<AccountDeletionAttempt?>(lookup),
-          submittedAttempt: SubmittedAccountDeletionAttempt(
+          submittedAttempt: const SubmittedAccountDeletionAttempt(
             pubkeyHex: 'first-account',
-            attempt: const AccountDeletionAttempt(
+            attempt: AccountDeletionAttempt(
               id: 'first-account-attempt',
               status: AccountDeletionAttemptStatus.processing,
               failureCode: 'x',
             ),
             vanishEventId: 'vanish-event-id',
-            recoveryWatchStartedAt: _recoveryWatchStartedAt,
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -160,14 +156,13 @@ void main() {
               status: AccountDeletionAttemptStatus.processing,
             ),
           ),
-          submittedAttempt: SubmittedAccountDeletionAttempt(
+          submittedAttempt: const SubmittedAccountDeletionAttempt(
             pubkeyHex: 'first-account',
-            attempt: const AccountDeletionAttempt(
+            attempt: AccountDeletionAttempt(
               id: 'first-account-attempt',
               status: AccountDeletionAttemptStatus.processing,
             ),
             vanishEventId: 'vanish-event-id',
-            recoveryWatchStartedAt: _recoveryWatchStartedAt,
           ),
           authState: AuthState.authenticated,
           currentPubkeyHex: 'second-account',
@@ -252,14 +247,13 @@ void main() {
           authenticatedDeletionLookupSettled(
             AuthState.authenticated,
             const AsyncLoading<AccountDeletionAttempt?>(),
-            submittedAttempt: SubmittedAccountDeletionAttempt(
+            submittedAttempt: const SubmittedAccountDeletionAttempt(
               pubkeyHex: 'user-pubkey',
-              attempt: const AccountDeletionAttempt(
+              attempt: AccountDeletionAttempt(
                 id: 'attempt-id',
                 status: AccountDeletionAttemptStatus.processing,
               ),
               vanishEventId: 'vanish-event-id',
-              recoveryWatchStartedAt: _recoveryWatchStartedAt,
             ),
             currentPubkeyHex: 'user-pubkey',
           ),

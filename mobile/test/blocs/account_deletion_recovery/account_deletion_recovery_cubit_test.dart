@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
@@ -99,17 +100,18 @@ void main() {
 
   AccountDeletionRecoveryCubit buildCubit({
     bool withReceipt = false,
-    DateTime? recoveryWatchStartedAt,
+    AccountDeletionRecoveryPollBudgetStore? pollBudgetStore,
     Future<void> Function()? onAttemptResolved,
     Future<void> Function(AccountDeletionAttempt)? onAttemptUpdated,
   }) => AccountDeletionRecoveryCubit(
+    pollBudgetStore:
+        pollBudgetStore ?? InMemoryAccountDeletionRecoveryPollBudgetStore(),
     repository: repository,
     authService: authService,
     onAttemptResolved: onAttemptResolved ?? () async => resolvedCalls++,
     onAttemptUpdated: onAttemptUpdated,
     receiptPubkeyHex: withReceipt ? 'a' * 64 : null,
     receiptVanishEventId: withReceipt ? 'b' * 64 : null,
-    recoveryWatchStartedAt: recoveryWatchStartedAt,
     timerFactory: timers.create,
     now: () => now,
   );
@@ -666,10 +668,12 @@ void main() {
             pubkeyHex: 'a' * 64,
           ),
         ).thenAnswer((_) async => _processing);
-        final cubit = buildCubit(
-          withReceipt: true,
-          recoveryWatchStartedAt: now.subtract(const Duration(minutes: 16)),
+        final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+        await store.recordStartIfAbsent(
+          _processing.id,
+          now.subtract(const Duration(minutes: 16)),
         );
+        final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
 
         await cubit.resume(_processing);
 
@@ -699,10 +703,12 @@ void main() {
           pubkeyHex: 'a' * 64,
         ),
       ).thenAnswer((_) async => _processing);
-      final cubit = buildCubit(
-        withReceipt: true,
-        recoveryWatchStartedAt: now.subtract(const Duration(minutes: 16)),
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      await store.recordStartIfAbsent(
+        _processing.id,
+        now.subtract(const Duration(minutes: 16)),
       );
+      final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
 
       await cubit.resume(_processing);
       await timers.fireNext();
@@ -716,6 +722,77 @@ void main() {
           pubkeyHex: 'a' * 64,
         ),
       ).called(1);
+      await cubit.close();
+    });
+
+    test('receipt-less relaunch keeps the same attempt budget', () async {
+      when(repository.fetchCurrent).thenAnswer((_) async => _processing);
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      final first = buildCubit(pollBudgetStore: store);
+      await first.load();
+      await first.close();
+      now = now.add(const Duration(minutes: 16));
+
+      final relaunched = buildCubit(pollBudgetStore: store);
+      addTearDown(relaunched.close);
+      await relaunched.resume(_processing);
+
+      expect(
+        timers.timers.singleWhere((timer) => timer.isActive).delay,
+        Duration.zero,
+      );
+    });
+
+    test('a different attempt receives a fresh budget', () async {
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      await store.recordStartIfAbsent(
+        _processing.id,
+        now.subtract(const Duration(minutes: 16)),
+      );
+      const differentAttempt = AccountDeletionAttempt(
+        id: 'different-attempt-id',
+        status: AccountDeletionAttemptStatus.processing,
+      );
+      final cubit = buildCubit(pollBudgetStore: store);
+
+      await cubit.resume(_processing);
+      await cubit.resume(differentAttempt);
+
+      expect(
+        timers.timers.singleWhere((timer) => timer.isActive).delay,
+        AccountDeletionRecoveryPolling.schedule.first,
+      );
+      await cubit.close();
+    });
+
+    test('fresh load does not perform a redundant overdue refresh', () async {
+      when(repository.fetchCurrent).thenAnswer((_) async => _processing);
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      await store.recordStartIfAbsent(
+        _processing.id,
+        now.subtract(const Duration(minutes: 16)),
+      );
+      final cubit = buildCubit(pollBudgetStore: store);
+
+      await cubit.load();
+
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(timers.timers.any((timer) => timer.isActive), isFalse);
+      verify(repository.fetchCurrent).called(1);
+      await cubit.close();
+    });
+
+    test('resolution clears the durable budget for that attempt', () async {
+      when(repository.fetchCurrent).thenAnswer((_) async => _cancelled);
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      final cubit = buildCubit(pollBudgetStore: store);
+
+      await cubit.resume(_processing);
+      expect(await store.startedAt(_processing.id), isNotNull);
+      await timers.fireNext();
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.resolved);
+      expect(await store.startedAt(_processing.id), isNull);
       await cubit.close();
     });
 

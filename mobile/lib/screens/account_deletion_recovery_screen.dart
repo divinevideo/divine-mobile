@@ -53,6 +53,9 @@ class AccountDeletionRecoveryScreen extends ConsumerWidget {
       create: (_) {
         final expectedPubkeyHex = authService.currentPublicKeyHex;
         final cubit = AccountDeletionRecoveryCubit(
+          pollBudgetStore: ref.read(
+            accountDeletionRecoveryPollBudgetProvider,
+          ),
           repository: repository,
           authService: authService,
           onAttemptResolved: () async {
