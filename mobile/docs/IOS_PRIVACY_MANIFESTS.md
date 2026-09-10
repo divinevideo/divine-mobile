@@ -89,15 +89,15 @@ that must match the App Store Connect label. The decisions and their rationale
 are recorded on #8850; this table keeps the engineering-facing outcome next to
 the manifest rules and the release checklist.
 
-| Decision | Outcome | Manifest / release impact |
-|---|---|---|
-| D1 — advertising / `NSPrivacyTracking` | Personalized advertising is disabled and the ad-tech account link has been removed from the analytics property; personal advertising is off in every region and Google signals is off. | Keep `NSPrivacyTracking = false` and `NSPrivacyTrackingDomains` empty. No ATT prompt. Re-check the property before every candidate. |
-| D2 — linked set | Approved as listed. | Name, Email Address, Contacts, public profile/user content, Photos or Videos, Audio Data, Customer Support, User ID, Device ID, Product Interaction, Crash Data, and Other Diagnostic Data are declared linked. |
-| D3 — bug-report attachment location | Strip attachment metadata instead of declaring Precise Location. | Implemented in #9049 (`requestFullMetadata: false` on the bug-report picker). Precise Location is omitted. |
-| D4 — Search History | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
-| D5 — private-message linkage | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
-| D6 — Performance Data | Linked (conservative). | Performance Data declared linked, tracking false. |
-| D7 — Shorebird | SDK-owned collection, disclosed in App Store Connect only. | Do not duplicate Shorebird's Device ID / Product Interaction / Other Diagnostic Data in the Runner manifest. |
+| Decision | Status | Outcome | Manifest / release impact |
+|---|---|---|---|
+| D1 — advertising / `NSPrivacyTracking` | Approved | Personalized advertising is disabled and the ad-tech account link has been removed from the analytics property; personal advertising is off in every region and Google signals is off. | Keep `NSPrivacyTracking = false` and `NSPrivacyTrackingDomains` empty. No ATT prompt. Re-check the property before every candidate. |
+| D2 — linked set | Approved | The linked set is approved as listed. | Name, Email Address, Contacts, public profile/user content, Photos or Videos, Audio Data, Customer Support, User ID, Device ID, Product Interaction, Crash Data, and Other Diagnostic Data are declared linked. |
+| D3 — bug-report attachment location | Approved; implemented in #9049 | Strip attachment metadata instead of declaring Precise Location. | The bug-report picker strips EXIF explicitly and fails closed (#9049); Precise Location is omitted. |
+| D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
+| D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
+| D6 — Performance Data | Pending | Proposed: linked (conservative), purposes Analytics and App Functionality, tracking false. | Not authoritative until approved; the manifest value is provisional. |
+| D7 — Shorebird | Pending | Proposed: not linked, not tracking, conditional on neither Divine nor Shorebird joining the installation identifier to Divine account data. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); do not duplicate them in the Runner manifest. |
 
 ### Tracking posture before each candidate
 
@@ -106,8 +106,11 @@ building a release candidate confirm on the analytics property that personalized
 advertising is still disabled and no ad account is linked (D1). A change there
 can flip the required `NSPrivacyTracking` answer.
 
-`NSPrivacyCollectedDataTypes` is populated from the final table once every
-decision above is ticked.
+The app manifest is populated from this table, then verified: build the
+Shorebird store candidate, collect the embedded manifests and Xcode's aggregate
+privacy report, and reconcile both against this table and the intended App Store
+Connect answers. Correct and rebuild on any mismatch; #8850 stays open until the
+post-build verification passes.
 
 ## Apple's catalogue
 
