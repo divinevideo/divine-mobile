@@ -415,16 +415,20 @@ class Nostr {
   /// incomplete after [maxPages] pages, or once [deadline] has passed. Each
   /// page gets [pageTimeout], cut short by [deadline].
   ///
-  /// One case can still lose events: a relay that stops short of [pageSize]
-  /// without saying so, and holds more events in one second than it sends a
-  /// page, can lose the rest of that second, since nothing marks its page
-  /// capped. A NIP-11 `max_limit` or a NIP-67 `more` hint from the relay
-  /// removes that ambiguity.
+  /// Four cases can still lose events while the walk reports complete:
   ///
-  /// Like [readEvents], the walk answers for the relays that take part in
-  /// it. A relay that takes no page's REQ is not read, and one that first
-  /// takes a later page's REQ is read only from that page's cursor down;
-  /// neither stops the walk.
+  /// * A relay that stops short of [pageSize] without saying so, and holds
+  ///   more events in one second than its cap, can lose the rest of that
+  ///   second, since nothing marks its page capped. A NIP-11 `max_limit` or
+  ///   a NIP-67 `more` hint from the relay removes that ambiguity.
+  /// * The walk takes a relay's page to be its newest matching events, as
+  ///   NIP-01 assumes of a `limit`. A relay that answers with others, as a
+  ///   NIP-50 search ranked by relevance may, can have events skipped.
+  /// * A frame the pool cannot tie to any read, one that names no
+  ///   subscription or does not decode, does not mark its relay capped.
+  /// * Like [readEvents], the walk answers for the relays that take part in
+  ///   it: a relay that takes no page's REQ is not read, and one that first
+  ///   takes a later page's REQ is read only from that page's cursor down.
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
