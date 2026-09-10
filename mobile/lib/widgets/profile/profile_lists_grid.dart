@@ -50,6 +50,9 @@ class ProfileListsGrid extends ConsumerWidget {
         final hydrated = ref.watch(myListsWithThumbnailsProvider).value;
         return _ProfileListsContent(
           videoLists: _withResolvedThumbnails(ownLists, hydrated),
+          // Until the resolver's first pass lands, every fan slot a video
+          // could fill shimmers rather than sitting flat.
+          thumbnailsPending: hydrated == null,
           peopleEnabled: peopleEnabled,
         );
       },
@@ -93,10 +96,12 @@ List<CuratedList> _withResolvedThumbnails(
 class _ProfileListsContent extends StatelessWidget {
   const _ProfileListsContent({
     required this.videoLists,
+    required this.thumbnailsPending,
     required this.peopleEnabled,
   });
 
   final List<CuratedList> videoLists;
+  final bool thumbnailsPending;
   final bool peopleEnabled;
 
   @override
@@ -121,13 +126,19 @@ class _ProfileListsContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (peopleEnabled)
-          _OwnListsGallery(videoLists: videoLists)
+          _OwnListsGallery(
+            videoLists: videoLists,
+            thumbnailsPending: thumbnailsPending,
+          )
         else if (videoLists.isEmpty)
           const _EmptyListsMessage()
         else
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _VideoListsColumn(lists: videoLists),
+            child: _VideoListsColumn(
+              lists: videoLists,
+              thumbnailsPending: thumbnailsPending,
+            ),
           ),
       ],
     );
@@ -139,9 +150,13 @@ class _ProfileListsContent extends StatelessWidget {
 /// Columns are independent, like the Explore discovery gallery: when one
 /// kind runs out its side stays empty while the other keeps going.
 class _OwnListsGallery extends StatelessWidget {
-  const _OwnListsGallery({required this.videoLists});
+  const _OwnListsGallery({
+    required this.videoLists,
+    required this.thumbnailsPending,
+  });
 
   final List<CuratedList> videoLists;
+  final bool thumbnailsPending;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +172,12 @@ class _OwnListsGallery extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 16,
             children: [
-              Expanded(child: _VideoListsColumn(lists: videoLists)),
+              Expanded(
+                child: _VideoListsColumn(
+                  lists: videoLists,
+                  thumbnailsPending: thumbnailsPending,
+                ),
+              ),
               Expanded(child: _PeopleListsColumn(lists: peopleLists)),
             ],
           ),
@@ -168,9 +188,13 @@ class _OwnListsGallery extends StatelessWidget {
 }
 
 class _VideoListsColumn extends StatelessWidget {
-  const _VideoListsColumn({required this.lists});
+  const _VideoListsColumn({
+    required this.lists,
+    required this.thumbnailsPending,
+  });
 
   final List<CuratedList> lists;
+  final bool thumbnailsPending;
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +208,7 @@ class _VideoListsColumn extends StatelessWidget {
             // shift slots; the key keeps each card's image state with its list.
             key: ValueKey(list.authorScopedId),
             curatedList: list,
+            thumbnailsPending: thumbnailsPending,
             onTap: () => context.push(
               CuratedListFeedScreen.pathForId(list.id),
               extra: CuratedListRouteExtra(listName: list.name),

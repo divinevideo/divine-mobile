@@ -131,6 +131,29 @@ void main() {
       expect(videoSize.height, peopleSize.height);
     });
 
+    testWidgets('tells the cards while their thumbnails are still resolving', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          videoLists: [_videoList('skate')],
+          videoThumbnailsPending: true,
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      final card = tester.widget<DivineListThumbnail>(
+        find.byType(DivineListThumbnail),
+      );
+      expect(card.thumbnailsPending, isTrue);
+    });
+
     testWidgets('keeps one column alive while the other loads', (
       tester,
     ) async {

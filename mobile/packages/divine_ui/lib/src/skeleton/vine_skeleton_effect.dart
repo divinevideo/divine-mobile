@@ -5,10 +5,12 @@ import 'package:skeletonizer/skeletonizer.dart';
 /// Default shimmer effect for skeleton loaders, resolved for the appearance
 /// mode of [context].
 ///
-/// Uses the placeholder surface of the active palette with a 60 % alpha
-/// highlight and a 1 500 ms sweep, matching the design-system skeleton spec.
-PaintingEffect vineSkeletonEffectOf(BuildContext context) {
-  final base = context.vineColors.skeleton;
+/// Uses the placeholder surface of the active palette — or [baseColor], for
+/// a surface whose placeholders already have a colour of their own — with a
+/// 60 % alpha highlight and a 1 500 ms sweep, matching the design-system
+/// skeleton spec.
+PaintingEffect vineSkeletonEffectOf(BuildContext context, {Color? baseColor}) {
+  final base = baseColor ?? context.vineColors.skeleton;
   if (MediaQuery.disableAnimationsOf(context)) {
     return SolidColorEffect(color: base);
   }

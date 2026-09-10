@@ -19,6 +19,7 @@ class ListsDiscoveryState extends Equatable {
     this.peopleStatus = ListsDiscoveryColumnStatus.initial,
     this.videoLists = const [],
     this.peopleLists = const [],
+    this.videoThumbnailsPending = false,
   });
 
   final ListsDiscoveryColumnStatus videoStatus;
@@ -29,6 +30,11 @@ class ListsDiscoveryState extends Equatable {
 
   /// Discovered kind-30000 people lists, newest first.
   final List<PeopleListSearchResult> peopleLists;
+
+  /// Whether [videoLists] are still waiting on the thumbnail resolver:
+  /// true from the first streamed lists until the enriched copies land or
+  /// the resolve gives up, so cards can shimmer their empty fan slots.
+  final bool videoThumbnailsPending;
 
   /// Whether both columns finished without anything to show.
   bool get isEmpty =>
@@ -42,12 +48,15 @@ class ListsDiscoveryState extends Equatable {
     ListsDiscoveryColumnStatus? peopleStatus,
     List<CuratedList>? videoLists,
     List<PeopleListSearchResult>? peopleLists,
+    bool? videoThumbnailsPending,
   }) {
     return ListsDiscoveryState(
       videoStatus: videoStatus ?? this.videoStatus,
       peopleStatus: peopleStatus ?? this.peopleStatus,
       videoLists: videoLists ?? this.videoLists,
       peopleLists: peopleLists ?? this.peopleLists,
+      videoThumbnailsPending:
+          videoThumbnailsPending ?? this.videoThumbnailsPending,
     );
   }
 
@@ -57,5 +66,6 @@ class ListsDiscoveryState extends Equatable {
     peopleStatus,
     videoLists,
     peopleLists,
+    videoThumbnailsPending,
   ];
 }
