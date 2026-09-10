@@ -815,7 +815,7 @@ void main() {
     });
 
     test(
-      'preserves purchase ownership across account switch and restart',
+      'routes a foreign purchase through owned restore after account switch',
       () async {
         final prefs = await SharedPreferences.getInstance();
         final apiClientA = buildApiClient();
@@ -828,12 +828,17 @@ void main() {
         );
         await original.purchase('divine.supporter.monthly');
         original.dispose();
-        var claims = 0;
+        final paths = <String>[];
         final apiClientB = SupporterApiClient(
           baseUri: Uri.parse('https://supporters.test'),
-          httpClient: MockClient((_) async {
-            claims++;
-            return http.Response('{}', 200);
+          httpClient: MockClient((request) async {
+            paths.add(request.url.path);
+            return http.Response(
+              jsonEncode({
+                'error': {'code': 'ownership_conflict'},
+              }),
+              409,
+            );
           }),
           authHeaderProvider:
               ({required url, required method, payload}) async =>
@@ -860,7 +865,7 @@ void main() {
         );
         await pumpEventQueue();
 
-        expect(claims, 0);
+        expect(paths, ['/v1/purchases/restore']);
         expect(switched.isSupporter, isFalse);
         expect(validator.completePurchaseCallCount, 0);
       },
@@ -1077,8 +1082,10 @@ void main() {
 
         // B starts a purchase, setting the product-scoped pending marker to B.
         await repoB.purchase('divine.supporter.monthly');
-        // Account A's paid-but-unclaimed transaction redelivers unsolicited:
-        // no proof-owner marker, no captured pubkey, silent.
+        // Account A's paid-but-unclaimed transaction redelivers during B's
+        // automatic recovery. The restore context captures B even though the
+        // receipt may belong to another store account, so silent recovery must
+        // never treat that captured pubkey as first-time claim authority.
         validator.proofController.add(
           const SupporterPurchaseProof(
             attemptId: 'account-a-unfinished',
@@ -1086,6 +1093,7 @@ void main() {
             productId: 'divine.supporter.monthly',
             serverVerificationData: 'account-a-receipt',
             localVerificationData: '',
+            capturedPubkey: pubkeyB,
             silent: true,
           ),
         );

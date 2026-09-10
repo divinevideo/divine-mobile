@@ -291,7 +291,10 @@ class SupporterRepository {
     // or account B's pending marker would first-time-claim account A's
     // redelivered receipt under B.
     final owner =
-        proofOwner ?? (proof.capturedPubkey == _pubkey ? pendingOwner : null);
+        proofOwner ??
+        (!proof.silent && proof.capturedPubkey == _pubkey
+            ? pendingOwner
+            : null);
     final background = proof.silent || proof.capturedPubkey == null;
     final existingOwnerOnly = owner == null && background;
     if (owner != null
