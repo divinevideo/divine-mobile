@@ -2616,6 +2616,44 @@ void main() {
           expect(captured.single.authors, equals([testPubkey]));
         },
       );
+
+      test(
+        'keeps the reposts subscription id within the NIP-01 cap from '
+        'subscribe to dispose',
+        () async {
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+
+          final repository = RepostsRepository(
+            nostrClient: mockNostrClient,
+            localStorage: mockLocalStorage,
+          );
+          await repository.initialize();
+          repository.dispose();
+
+          final id =
+              verify(
+                    () => mockNostrClient.subscribe(
+                      any(),
+                      subscriptionId: captureAny(named: 'subscriptionId'),
+                    ),
+                  ).captured.single
+                  as String;
+          expect(
+            id.length,
+            lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
+            reason:
+                '"$id" is ${id.length} characters; relays enforcing '
+                'NIP-01 refuse the REQ',
+          );
+          expect(
+            id,
+            equals(scopedSubscriptionId('reposts_repo_reposts', testPubkey)),
+          );
+          verify(() => mockNostrClient.unsubscribe(id)).called(1);
+        },
+      );
     });
 
     group('real-time sync', () {

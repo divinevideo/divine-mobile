@@ -2712,7 +2712,10 @@ class LikesRepository {
   /// updates the local cache.
   void _subscribeToReactions(String currentUserPubkey) {
     // Use a deterministic subscription ID so we can unsubscribe later
-    _reactionSubscriptionId = 'likes_repo_reactions_$currentUserPubkey';
+    _reactionSubscriptionId = scopedSubscriptionId(
+      'likes_repo_reactions',
+      currentUserPubkey,
+    );
 
     final eventStream = _nostrClient.subscribe([
       Filter(

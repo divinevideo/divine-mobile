@@ -2711,7 +2711,10 @@ class FollowRepository {
     );
 
     // Use a deterministic subscription ID so we can unsubscribe later
-    _contactListSubscriptionId = 'follow_repo_contact_list_$currentUserPubkey';
+    _contactListSubscriptionId = scopedSubscriptionId(
+      'follow_repo_contact_list',
+      currentUserPubkey,
+    );
 
     final eventStream = _nostrClient.subscribe([
       Filter(

@@ -2583,6 +2583,47 @@ void main() {
         await controller.close();
       });
 
+      test(
+        'opens the subscription under an id within the NIP-01 cap',
+        () async {
+          final controller = StreamController<Event>.broadcast();
+
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => controller.stream);
+
+          repository.watchComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          final id =
+              verify(
+                    () => mockNostrClient.subscribe(
+                      any(),
+                      subscriptionId: captureAny(named: 'subscriptionId'),
+                    ),
+                  ).captured.single
+                  as String;
+          expect(
+            id.length,
+            lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
+            reason:
+                '"$id" is ${id.length} characters; relays enforcing '
+                'NIP-01 refuse the REQ',
+          );
+          expect(
+            id,
+            equals(scopedSubscriptionId('comments_watch', testRootEventId)),
+          );
+
+          await controller.close();
+        },
+      );
+
       test('allows watchComments without since and forwards onEose', () async {
         final controller = StreamController<Event>.broadcast();
         void Function()? capturedOnEose;
@@ -2786,11 +2827,15 @@ void main() {
 
         await repository.stopWatchingComments();
 
-        verify(
-          () => mockNostrClient.unsubscribe(
-            'comments_watch_$testRootEventId',
-          ),
-        ).called(1);
+        final subscribedId =
+            verify(
+                  () => mockNostrClient.subscribe(
+                    any(),
+                    subscriptionId: captureAny(named: 'subscriptionId'),
+                  ),
+                ).captured.single
+                as String;
+        verify(() => mockNostrClient.unsubscribe(subscribedId)).called(1);
 
         await controller.close();
       });
