@@ -22,8 +22,7 @@ AudioEvent _sound({
 }) {
   return AudioEvent(
     id: id,
-    pubkey:
-        'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     createdAt: createdAt,
     title: title ?? 'Test Sound $id',
     duration: 6,
@@ -191,9 +190,9 @@ void main() {
 
         await service.saveSavedSound(record);
 
-        final raw =
-            jsonDecode(sharedPreferences.getString(service.storageKey)!)
-                as Map<String, dynamic>;
+        final raw = jsonDecode(
+          sharedPreferences.getString(service.storageKey)!,
+        ) as Map<String, dynamic>;
         expect(
           raw['schemaVersion'],
           SavedSoundLibraryPayload.currentSchemaVersion,
@@ -808,11 +807,9 @@ void main() {
             filePath: '/documents/draft_audio_imports/d1/good.m4a',
           ),
         );
-        final stored =
-            jsonDecode(
-                  sharedPreferences.getString('saved_reusable_sounds_anon')!,
-                )
-                as Map<String, dynamic>;
+        final stored = jsonDecode(
+          sharedPreferences.getString('saved_reusable_sounds_anon')!,
+        ) as Map<String, dynamic>;
         (stored['sounds'] as List<dynamic>).add({'audio': 'not a map'});
         await sharedPreferences.setString(
           'saved_reusable_sounds_anon',
