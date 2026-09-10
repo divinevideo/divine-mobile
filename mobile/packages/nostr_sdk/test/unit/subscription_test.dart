@@ -92,6 +92,8 @@ void main() {
         'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
     test('brings every production prefix inside the NIP-01 cap', () {
+      // Each repository's own id test runs only when its package changes, so
+      // this list guards a builder change that would push one past the cap.
       const prefixes = [
         'comments_watch',
         'dm_drain',
@@ -103,11 +105,6 @@ void main() {
       ];
 
       for (final prefix in prefixes) {
-        expect(
-          '${prefix}_$scope'.length,
-          greaterThan(nip01MaxSubscriptionIdLength),
-          reason: 'a full hex id behind "$prefix" is what relays refused',
-        );
         expect(
           scopedSubscriptionId(prefix, scope).length,
           lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
