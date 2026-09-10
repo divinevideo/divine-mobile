@@ -13,6 +13,7 @@ import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 /// Number of portrait card slots in the video fan.
 const _fanSlotCount = 5;
@@ -542,6 +543,86 @@ class _PlainLinkText extends StatelessWidget {
       mentionStyle: style,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+/// The card's silhouette while its list is still on its way.
+///
+/// Same media box, gap and footer boxes as [DivineListThumbnail], so a
+/// gallery column keeps its rows when the placeholders give way to cards.
+/// Paints as bones under an enclosing [Skeletonizer]; the caller owns the
+/// shimmer effect and the semantics label for the loading column.
+class DivineListThumbnailSkeleton extends StatelessWidget {
+  /// Creates the placeholder.
+  const DivineListThumbnailSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    final bone = colors.skeleton;
+    // The styles only size the bones; the colours match what the real
+    // footer paints so the metrics come from the same styles.
+    final titleLine = _scaledLineHeight(
+      context,
+      VineTheme.titleSmallFont(color: colors.primaryText),
+    );
+    final descriptionLine = _scaledLineHeight(
+      context,
+      VineTheme.bodySmallFont(color: colors.secondaryText),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Skeleton.leaf(
+          child: AspectRatio(
+            aspectRatio: _mediaAspectRatio,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: bone,
+                borderRadius: BorderRadius.circular(_mediaRadius),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _TextBone(lineHeight: titleLine, widthFactor: 0.6),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.9),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.7),
+      ],
+    );
+  }
+}
+
+/// One text line's box with a bone inside it, so the placeholder footer is
+/// exactly as tall as the real one.
+class _TextBone extends StatelessWidget {
+  const _TextBone({required this.lineHeight, required this.widthFactor});
+
+  final double lineHeight;
+  final double widthFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: lineHeight,
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: widthFactor,
+          child: Skeleton.leaf(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.vineColors.skeleton,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
