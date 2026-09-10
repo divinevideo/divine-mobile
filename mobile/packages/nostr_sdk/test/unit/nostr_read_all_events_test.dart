@@ -439,8 +439,9 @@ void main() {
           _untilsOf(relay),
           [null, 108, 107, 106],
           reason:
-              'each page asks again for the second the last one ended on, '
-              'and steps past it once nothing new comes back',
+              'each page starts at the oldest second the page before it '
+              'reached, asking for it again; the short page that sits wholly '
+              'in its cursor second, 107, moves the next one a second back',
         );
         expect(result.isComplete, isTrue);
         expect(result.pages, 4);
@@ -457,8 +458,9 @@ void main() {
           _untilsOf(relay),
           [null, 104],
           reason:
-              'the second page brought nothing new at the cursor second, '
-              'from a relay that filled it',
+              'the second page came back full and wholly in the cursor '
+              'second, so the relay may hold more there than any until can '
+              'reach',
         );
         expect(
           result.events,
@@ -797,9 +799,10 @@ void main() {
           _untilsOf(relay),
           [null, 101, 100],
           reason:
-              'a short page is not taken as the end: the walk asks for the '
-              'second it ended on again, steps past it once nothing new '
-              'comes back, and only that empty page ends it',
+              'a short page is not taken as the end: the walk asks again for '
+              'the second it ended on, steps a second back once the page sits '
+              'wholly in the cursor second, and only the empty page there '
+              'ends it',
         );
         expect(result.isComplete, isTrue);
         expect(result.stoppedBy, isNull);
@@ -905,16 +908,17 @@ void main() {
         final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
 
         // Every page gets the same two newest events back, and the pool's
-        // filter gate drops the one above `until`. What is left brings
-        // nothing new, from a relay that did not honour the filter.
+        // filter gate drops the one above `until`. A relay that did not
+        // honour the filter may be capped, and what is left of its page sits
+        // in the cursor second.
         expect(_untilsOf(relay), [null, 102]);
         expect(result.isComplete, isFalse);
         expect(
           result.stoppedBy,
           QueryEnd.complete,
           reason:
-              'the page settled; it stopped the walk by bringing nothing new '
-              'from a relay that may be capped',
+              'the page settled; what stopped the walk is its page from a '
+              'relay that may be capped, sitting in the cursor second',
         );
         expect(_idsOf(result.events), unorderedEquals(_idsOf(stored.take(2))));
         expect([
