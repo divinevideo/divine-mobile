@@ -9,7 +9,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -190,7 +189,7 @@ void main() {
     });
 
     test(
-      'runs empty-feed diagnostic query with profile author filters',
+      'does not issue relay queries while diagnosing an empty profile feed',
       () async {
         void Function()? capturedOnEose;
         final controller = StreamController<Event>();
@@ -214,61 +213,12 @@ void main() {
         capturedOnEose!();
         await pumpEventQueue();
 
-        final capturedCalls = verify(
-          () => mockNostrService.queryEvents(captureAny()),
-        ).captured.cast<List<Filter>>();
-
-        expect(
-          capturedCalls,
-          hasLength(3),
-          reason:
-              'Each subscription filter is probed separately so the local '
-              'cache is consulted (queryEvents only reads cache for '
-              'single-filter queries).',
-        );
-        expect(
-          capturedCalls.every((filters) => filters.length == 1),
-          isTrue,
-          reason: 'Probe must query one filter at a time to hit the cache',
-        );
-
-        final probeFilters = capturedCalls
-            .map((filters) => filters.single)
-            .toList();
-
-        expect(
-          probeFilters.every(
-            (filter) => filter.authors != null && filter.authors!.isNotEmpty,
-          ),
-          isTrue,
-          reason: 'Diagnostic probe must not fall back to a global video query',
-        );
-        expect(
-          probeFilters.map((filter) => filter.authors).toList(),
-          everyElement(equals([_profileAuthor])),
-        );
-        final videoFilter = probeFilters.singleWhere(
-          (filter) =>
-              filter.kinds != null &&
-              filter.kinds!.length ==
-                  NIP71VideoKinds.getAllVideoKinds().length &&
-              filter.kinds!.every(NIP71VideoKinds.getAllVideoKinds().contains),
-        );
-        final repostFilter = probeFilters.singleWhere(
-          (filter) => filter.kinds != null && filter.kinds!.singleOrNull == 16,
-        );
-        final deletionFilter = probeFilters.singleWhere(
-          (filter) => filter.kinds != null && filter.kinds!.singleOrNull == 5,
-        );
-
-        expect(videoFilter.limit, 100);
-        expect(repostFilter.limit, 50);
-        expect(deletionFilter.limit, 100);
+        verifyNever(() => mockNostrService.queryEvents(any()));
       },
     );
 
     test(
-      'logs expected empty profile state without subscription error',
+      'logs that empty-feed diagnostics do not issue a follow-up query',
       () async {
         void Function()? capturedOnEose;
         final controller = StreamController<Event>();
@@ -291,74 +241,11 @@ void main() {
         await pumpEventQueue();
 
         final logs = LogCaptureService().getRecentLogs();
-        expect(
-          logs.where(
-            (entry) =>
-                entry.level == LogLevel.error &&
-                entry.message.contains(
-                  'subscription filtering is too restrictive OR subscription stream is broken',
-                ),
-          ),
-          isEmpty,
-        );
         expect(
           logs.where(
             (entry) =>
                 entry.level == LogLevel.info &&
-                entry.message.contains(
-                  'No cached events match the empty SubscriptionType.profile subscription filters',
-                ),
-          ),
-          isNotEmpty,
-        );
-      },
-    );
-
-    test(
-      'keeps subscription error when filtered diagnostic query has events',
-      () async {
-        void Function()? capturedOnEose;
-        final controller = StreamController<Event>();
-        addTearDown(controller.close);
-
-        when(
-          () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
-        ).thenAnswer((invocation) {
-          capturedOnEose =
-              invocation.namedArguments[#onEose] as void Function()?;
-          return controller.stream;
-        });
-        when(() => mockNostrService.queryEvents(any())).thenAnswer(
-          (_) async => [
-            Event(
-              _profileAuthor,
-              NIP71VideoKinds.addressableShortVideo,
-              const [
-                ['d', 'diagnostic-video'],
-                ['url', 'https://example.com/video.mp4'],
-              ],
-              '',
-              createdAt: 1000,
-            )..id = 'diagnostic-video-event',
-          ],
-        );
-
-        await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.profile,
-          authors: const [_profileAuthor],
-        );
-
-        capturedOnEose!();
-        await pumpEventQueue();
-
-        final logs = LogCaptureService().getRecentLogs();
-        expect(
-          logs.where(
-            (entry) =>
-                entry.level == LogLevel.error &&
-                entry.message.contains(
-                  'subscription filtering is too restrictive OR subscription stream is broken',
-                ),
+                entry.message.contains('no follow-up relay query issued'),
           ),
           isNotEmpty,
         );
