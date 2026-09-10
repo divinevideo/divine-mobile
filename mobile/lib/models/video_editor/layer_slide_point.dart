@@ -93,25 +93,6 @@ class LayerSlidePoints {
     );
   }
 
-  /// A copy with [phase]'s point replaced by [fraction] (`null` clears it).
-  LayerSlidePoints withFraction(AnimationPhase phase, Offset? fraction) =>
-      switch (phase) {
-        AnimationPhase.animateIn => LayerSlidePoints(
-          enter: fraction,
-          leave: leave,
-        ),
-        // animateInOut shares the enter slot it reads from, so setting it there
-        // keeps [fractionFor] returning the value that was just stored.
-        AnimationPhase.animateOut => LayerSlidePoints(
-          enter: enter,
-          leave: fraction,
-        ),
-        AnimationPhase.animateInOut => LayerSlidePoints(
-          enter: fraction,
-          leave: leave,
-        ),
-      };
-
   /// [meta] with these points written into it, ready for `Layer.copyWith`.
   ///
   /// Every other key is carried through untouched — a sticker keeps its

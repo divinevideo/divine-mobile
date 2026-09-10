@@ -73,11 +73,18 @@ extension DivineLayerAnimationList on List<pve.LayerAnimation> {
     Size canvasSize = Size.zero,
   }) => [
     for (final animation in this)
-      LayerAnimation.fromMap(animation.toMap()).copyWith(
-        slideFrom: animation.type == pve.LayerAnimationType.slide
-            ? points.resolve(animation.phase, canvasSize)
-            : null,
-      ),
+      LayerAnimation.fromMap({
+        // Any incoming `slideFrom` is dropped and rebuilt from [points], for
+        // the same reason the outbound direction drops it: it arrives in video
+        // pixels from the frame's top-left and would be read here as canvas
+        // pixels from the canvas centre. It cannot be overridden afterwards
+        // either — `copyWith` resolves `slideFrom ?? this.slideFrom`, so a
+        // phase with no point would silently keep the video-space value.
+        ..._withoutSlideFrom(animation.toMap()),
+        if (animation.type == pve.LayerAnimationType.slide)
+          if (points.resolve(animation.phase, canvasSize) case final point?)
+            'slideFrom': _offsetToMap(point),
+      }),
   ];
 }
 
@@ -85,6 +92,12 @@ extension DivineLayerAnimationList on List<pve.LayerAnimation> {
 /// packages (see [LayerAnimationStorage]).
 Map<String, dynamic> _withoutSlideFrom(Map<String, dynamic> map) =>
     Map<String, dynamic>.from(map)..remove('slideFrom');
+
+/// [offset] in the shape both packages serialize an `Offset` as.
+Map<String, dynamic> _offsetToMap(Offset offset) => <String, dynamic>{
+  'dx': offset.dx,
+  'dy': offset.dy,
+};
 
 /// Top-left corner of an exported layer, in the video's pixel space.
 ///

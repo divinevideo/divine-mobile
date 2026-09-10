@@ -616,8 +616,9 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     );
   }
 
-  /// The direction and distance a phase's custom slide covers, in canvas
-  /// proportions. `null` when the phase travels from an edge instead.
+  /// Where a phase's custom point sits relative to the layer's resting place,
+  /// in canvas proportions — the direction and distance the slide covers.
+  /// `null` when the phase travels from an edge instead.
   Offset? _travelOf(_PhaseConfig config) {
     final from = config.slideFrom;
     if (from == null) return null;
@@ -882,8 +883,8 @@ class _LayerTypeTile extends StatelessWidget {
   final AnimationPhase phase;
   final SlideDirection direction;
 
-  /// Travel from the custom point to the layer's resting place, in layer
-  /// coordinates. `null` previews the edge slide [direction] names.
+  /// Where the custom point sits relative to the layer's resting place, in
+  /// layer coordinates. `null` previews the edge slide [direction] names.
   final Offset? slideVector;
   final double scaleFrom;
   final AnimationCurve curve;
@@ -1081,9 +1082,9 @@ double _holdProgress(double value, int durationMs) {
 
 /// The edge [travel] points at — the axis it leans on, and the side of it.
 ///
-/// [travel] runs from the custom point to the layer's resting place for an
-/// enter, and the other way for a leave; both name the same edge, so the sign
-/// rule is shared. A zero-length travel names no edge and keeps [fallback].
+/// [travel] runs from the layer's resting place to the custom point, so its
+/// sign already names the side an enter comes from and a leave heads for. A
+/// zero-length travel names no edge and keeps [fallback].
 SlideDirection _nearestSlideDirection(
   Offset travel, {
   required SlideDirection fallback,

@@ -72,9 +72,15 @@ Future<Offset?> pickLayerSlidePoint(
     ),
   );
 
-  mainBloc.add(const VideoEditorSlidePointPlacementChanged(isPlacing: false));
-  if (wasPlaying) {
-    mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));
+  // Guarded on the bloc rather than on `context.mounted`: the editor giving up
+  // the screen is exactly what this restores, so it must run even if the widget
+  // that opened the picker went away while it was open. Only a torn-down editor
+  // is skipped, and there `add` would throw on a closed bloc.
+  if (!mainBloc.isClosed) {
+    mainBloc.add(const VideoEditorSlidePointPlacementChanged(isPlacing: false));
+    if (wasPlaying) {
+      mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));
+    }
   }
   return picked;
 }
@@ -314,13 +320,17 @@ class _LayerSlidePointPickerViewState extends State<LayerSlidePointPickerView> {
           Align(
             alignment: .bottomCenter,
             // Never in the way of a touch: the hint sits over the frame the
-            // point is placed on.
+            // point is placed on. Excluded from semantics too, because the tap
+            // target underneath already carries the same text as its label and
+            // a second node would read it out twice.
             child: IgnorePointer(
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const .fromSTEB(24, 0, 24, 24),
-                  child: _HintPill(text: hint),
+              child: ExcludeSemantics(
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const .fromSTEB(24, 0, 24, 24),
+                    child: _HintPill(text: hint),
+                  ),
                 ),
               ),
             ),
