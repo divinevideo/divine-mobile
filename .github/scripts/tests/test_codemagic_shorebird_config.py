@@ -157,6 +157,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("serve_ttff_fixtures.py", runner)
         self.assertIn("adb reverse tcp:8765 tcp:8765", runner)
         self.assertIn("feed_ttff_test.dart", runner)
+        self.assertIn("FIXTURE_PROBE_ATTEMPTS=0", runner)
+        self.assertIn('"$FIXTURE_PROBE_ATTEMPTS" -ge 30', runner)
+        self.assertIn("within 30 seconds", runner)
         self.assertNotIn("local_stack", runner)
         self.assertNotIn("GHCR", runner)
 

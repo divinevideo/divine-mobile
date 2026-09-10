@@ -1497,10 +1497,16 @@ workflows:
             --directory assets/seed_media/videos \
             --rate 625000 > test_reports/feed_ttff_fixture_server.log 2>&1 &
           FIXTURE_SERVER_PID=$!
+          FIXTURE_PROBE_ATTEMPTS=0
           until curl --fail --silent --range 0-0 \
             http://127.0.0.1:8765/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4 \
             >/dev/null; do
             kill -0 "$FIXTURE_SERVER_PID"
+            FIXTURE_PROBE_ATTEMPTS=$((FIXTURE_PROBE_ATTEMPTS + 1))
+            if [ "$FIXTURE_PROBE_ATTEMPTS" -ge 30 ]; then
+              echo "Fixture server did not serve the readiness fixture within 30 seconds" >&2
+              exit 1
+            fi
             sleep 1
           done
           adb reverse tcp:8765 tcp:8765
