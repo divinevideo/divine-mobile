@@ -35,6 +35,17 @@
 #                         the baseline immediately instead of remaining slack.
 #   emit_current()       prints the current "key<TAB>count" lines (one per key)
 #   print_baseline_header()  prints the baseline file header comment block
+# Optional:
+#   validate_baseline_growth_policy() validates a guard-owned exception policy
+#                         before growth is filtered. It receives MAIN_F, BASE_F,
+#                         CUR_F, REPO_ROOT, and BASE_STATUS; nonzero marks the
+#                         run failed. BASE_STATUS is 0 only when MAIN_F is usable.
+#   filter_added_baseline_growth() reads proposed added baseline rows from stdin
+#                         and emits only rows that should remain failures. It is
+#                         passed MAIN_F, BASE_F, CUR_F, and REPO_ROOT as args.
+#                         The hook cannot suppress NEW, GROWTH, STALE, or raised
+#                         ceiling failures; the owning guard must validate any
+#                         policy exception before filtering an added row.
 #
 # A trailing "# reason" on a baseline line is documentation, ignored by every
 # comparison and CARRIED FORWARD across UPDATE_BASELINE (matched by key, so a
@@ -42,7 +53,6 @@
 # baselines have always been able to explain themselves; without it a reason
 # survives only until the next regeneration, which is why no numeric baseline
 # carried one before #3340.
-#
 # Honours UPDATE_BASELINE=1 to regenerate. Bash 3.2 compatible (sort/join only).
 
 set -euo pipefail
@@ -69,7 +79,7 @@ _nr_write_baseline() {
       {
         line = $0
         comment = ""
-        if (match(line, /[[:space:]]+#.*/)) {
+        if (match(line, /[[:space:]]*#.*/)) {
           comment = substr(line, RSTART)
           sub(/^[[:space:]]+/, "", comment)
         }
@@ -168,11 +178,20 @@ run_numeric_ratchet() {
   elif ! git -C "$REPO_ROOT" show "$BASE_REF:$BASELINE_REPO_PATH" 2>/dev/null | _nr_strip > "$MAIN_F"; then
     base_status=3
   fi
+  if declare -F validate_baseline_growth_policy >/dev/null; then
+    if ! validate_baseline_growth_policy "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT" "$base_status"; then
+      fail=1
+    fi
+  fi
+
   case "$base_status" in
     0)
       local added raised
       added="$(join -t "$TAB" -v1 "$BASE_F" "$MAIN_F" || true)"
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
+      if declare -F filter_added_baseline_growth >/dev/null; then
+        added="$(printf '%s\n' "$added" | filter_added_baseline_growth "$MAIN_F" "$BASE_F" "$CUR_F" "$REPO_ROOT")"
+      fi
       if [[ -n "$added" || -n "$raised" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline ADDED a key or RAISED a ceiling vs ${BASE_REF} (may only shrink):"
         [[ -n "$added" ]] && echo "$added" | sed 's/^/  +added /'

@@ -21,6 +21,9 @@ void main() {
     ProcessResult run({
       bool update = false,
       bool requireBaselineUpdateOnDecrease = false,
+      String? filterBody,
+      String? validateBody,
+      String baseRef = 'HEAD',
     }) {
       return Process.runSync(
         'bash',
@@ -30,6 +33,11 @@ void main() {
           'PROBE_BASELINE': baseline.path,
           'PROBE_CURRENT': current.path,
           'PROBE_LIB': libPath,
+          'PROBE_BASE_REF': baseRef,
+          'PROBE_BASELINE_REPO_PATH':
+              'mobile/scripts/baseline/__probe_nonexistent__.txt',
+          'PROBE_FILTER': ?filterBody,
+          'PROBE_VALIDATE': ?validateBody,
           if (requireBaselineUpdateOnDecrease)
             'PROBE_REQUIRE_BASELINE_UPDATE_ON_DECREASE': '1',
           if (update) 'UPDATE_BASELINE': '1',
@@ -40,6 +48,23 @@ void main() {
     setUp(() {
       tmp = Directory.systemTemp.createTempSync('numeric_ratchet_test');
       Directory('${tmp.path}/m').createSync(recursive: true);
+      Directory(
+        '${tmp.path}/mobile/scripts/baseline',
+      ).createSync(recursive: true);
+      File(
+        '${tmp.path}/mobile/scripts/baseline/__probe_nonexistent__.txt',
+      ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+      File('${tmp.path}/a').writeAsStringSync('same\n');
+      for (final args in [
+        ['init'],
+        ['config', 'user.email', 'test@example.invalid'],
+        ['config', 'user.name', 'Ratchet Test'],
+        ['add', '.'],
+        ['commit', '-m', 'base'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
       libPath = File('scripts/lib/numeric_ratchet.sh').absolute.path;
       current = File('${tmp.path}/current.txt');
       baseline = File('${tmp.path}/baseline.txt');
@@ -60,6 +85,12 @@ STALE_HINT="stale-hint"
 FOOTER="footer"
 emit_current() { cat "$PROBE_CURRENT"; }
 print_baseline_header() { echo "# probe baseline"; }
+if [[ -n "${PROBE_FILTER:-}" ]]; then
+  eval "filter_added_baseline_growth() { $PROBE_FILTER; }"
+fi
+if [[ -n "${PROBE_VALIDATE:-}" ]]; then
+  eval "validate_baseline_growth_policy() { $PROBE_VALIDATE; }"
+fi
 source "$PROBE_LIB"
 run_numeric_ratchet
 ''');
@@ -134,6 +165,48 @@ run_numeric_ratchet
       expect(res.exitCode, 1);
       expect(res.stdout, contains('DECREASED'));
       expect(res.stdout, contains('a\t5 -> 4'));
+    });
+
+    group('guard-owned growth hooks', () {
+      test('an added-row hook can exempt an approved baseline addition', () {
+        baseline.writeAsStringSync('# probe baseline\na\t5\nb\t3\nc\t2\n');
+        writeCurrent('a\t5\nb\t3\nc\t2\n');
+
+        final res = run(filterBody: "grep -v '^c[[:space:]]' || true");
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+      });
+
+      test('the hook cannot suppress a raised ceiling', () {
+        baseline.writeAsStringSync('# probe baseline\na\t6\nb\t3\n');
+        writeCurrent('a\t6\nb\t3\n');
+
+        final res = run(filterBody: 'grep -v . || true');
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('^raised a'));
+      });
+
+      test('the hook cannot suppress a NEW current key', () {
+        baseline.writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+        writeCurrent('a\t5\nb\t3\nc\t2\n');
+
+        final res = run(filterBody: 'grep -v . || true');
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('NEW key'));
+      });
+
+      test('a failed policy validation fails the run', () {
+        writeCurrent('a\t5\nb\t3\n');
+        baseline.writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+
+        final res = run(validateBody: 'echo policy-rejected; return 1');
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('policy-rejected'));
+        expect(res.stdout, contains('footer'));
+      });
     });
 
     group('trailing "# reason" comments', () {
