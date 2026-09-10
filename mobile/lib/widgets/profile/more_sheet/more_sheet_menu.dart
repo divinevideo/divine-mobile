@@ -19,6 +19,7 @@ class MoreSheetMenu extends StatelessWidget {
     this.onBlockTap,
     this.onAddToList,
     this.onReport,
+    this.onEmbedCode,
     super.key,
   });
 
@@ -56,6 +57,10 @@ class MoreSheetMenu extends StatelessWidget {
   /// yourself is meaningless).
   final VoidCallback? onReport;
 
+  /// Optional callback for the "Get embed code" action.
+  /// When null, the action is hidden.
+  final VoidCallback? onEmbedCode;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -74,6 +79,12 @@ class MoreSheetMenu extends StatelessWidget {
             icon: DivineIconName.copy,
             label: l10n.profileCopyPublicKey,
             onTap: onCopy!,
+          ),
+        if (onEmbedCode != null)
+          _MoreSheetMenuItem(
+            icon: DivineIconName.bracketsAngle,
+            label: l10n.profileGetEmbedCode,
+            onTap: onEmbedCode!,
           ),
         if (isFollowing)
           _MoreSheetMenuItem(

@@ -240,8 +240,21 @@ void main() {
       );
       addTearDown(router.dispose);
 
+      final authService = createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: _authorPubkeyHex,
+      );
+      // ProfileHeaderWidget reads these directly; createMockAuthService()
+      // does not stub them, and unstubbed Mock getters return null, which
+      // throws building the header (mirrors other_profile_screen_test.dart's
+      // setUp and profile_route_redirect_test.dart's pumpRouter).
+      when(() => authService.isAnonymous).thenReturn(false);
+      when(() => authService.hasExpiredOAuthSession).thenReturn(false);
+      when(() => authService.isRpcUpgradeInProgress).thenReturn(false);
+
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: authService,
           additionalOverrides: [
             videosRepositoryProvider.overrideWithValue(videosRepository),
             videoEventServiceProvider.overrideWithValue(videoEventService),
@@ -435,6 +448,10 @@ void main() {
 
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: _authorPubkeyHex,
+          ),
           additionalOverrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(
               blocklistRepository,
@@ -483,7 +500,11 @@ void main() {
 
     /// Pumps the grid route (no video index) for [segment], signed in as
     /// [_authorPubkeyHex].
-    Future<void> pumpGridRoute(WidgetTester tester, String segment) async {
+    Future<void> pumpGridRoute(
+      WidgetTester tester,
+      String segment, {
+      bool settle = true,
+    }) async {
       final location = ProfileScreenRouter.pathForNpub(segment);
       final router = GoRouter(
         initialLocation: location,
@@ -517,7 +538,11 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+      }
     }
 
     // `/profile/<hex>` is a documented deep-link form, and the app only ever
@@ -538,14 +563,14 @@ void main() {
       expect(find.byType(ProfileScaffold), findsOneWidget);
     });
 
-    testWidgets("another user's profile is not yours", (tester) async {
+    testWidgets("another user's profile fails closed until redirected", (
+      tester,
+    ) async {
       // A real, decodable identity: a malformed segment would pass this by
       // failing to normalize rather than by being compared and rejected.
-      await pumpGridRoute(tester, _otherNpub);
+      await pumpGridRoute(tester, _otherNpub, settle: false);
 
-      // Positive control: the body really did render, so findsNothing below
-      // means the scaffold was not chosen — not that the tree failed to build.
-      expect(find.byType(BlockedUserScreen), findsOneWidget);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(ProfileScaffold), findsNothing);
     });
   });

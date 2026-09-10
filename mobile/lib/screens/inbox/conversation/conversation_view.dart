@@ -204,6 +204,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           // addToList is not surfaced from this caller (showAddToList defaults
           // to false on MoreSheetContent here), so this branch is unreachable.
           break;
+        case MoreSheetResult.embedCode:
+          // Not surfaced here: `showEmbedCode` defaults to false above.
+          break;
       }
     } finally {
       _isOpeningOptions = false;

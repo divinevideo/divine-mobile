@@ -27,6 +27,8 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
+import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
+import 'package:openvine/widgets/profile/more_sheet/more_sheet_result.dart';
 import 'package:openvine/widgets/profile/profile_grid.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -93,17 +95,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   /// Notifier to trigger refresh of profile BLoCs (likes, reposts).
   final _refreshNotifier = ValueNotifier<int>(0);
 
-  void _fetchProfileIfNeeded(String userIdHex, bool isOwnProfile) {
-    if (isOwnProfile) return; // Own profile loads automatically
-
-    // Trigger a background fetch via the read-only handle.
-    ref
-        .read(profileReadRepositoryProvider)
-        ?.fetchFreshProfile(
-          pubkey: userIdHex,
-        );
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -136,7 +127,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     final content = _ProfileContentView(
       routeContext: routeContext,
       scrollController: _scrollController,
-      onFetchProfile: _fetchProfileIfNeeded,
       onEditProfile: _editProfile,
       onOpenClips: _openClips,
       onMore: _more,
@@ -247,21 +237,35 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   }
 
   Future<void> _more(String userIdHex) async {
-    await VineBottomSheetActionMenu.show(
+    final result = await VineBottomSheet.show<MoreSheetResult>(
       context: context,
-      options: [
-        VineBottomSheetActionData(
-          iconPath: DivineIconName.copy.assetPath,
-          label: context.l10n.profileCopyPublicKey,
-          onTap: () => _copyNpub(userIdHex),
-        ),
-        VineBottomSheetActionData(
-          iconPath: DivineIconName.bracketsAngle.assetPath,
-          label: context.l10n.profileGetEmbedCode,
-          onTap: () => _copyEmbedCode(userIdHex),
-        ),
-      ],
+      scrollable: false,
+      body: MoreSheetContent(
+        userIdHex: userIdHex,
+        displayName:
+            '', // unused on own profile (no Report/Block/Unfollow labels)
+        isFollowing: false,
+        isBlocked: false,
+        showBlock: false,
+        showEmbedCode: true,
+      ),
+      children: const [],
     );
+
+    if (!mounted) return;
+    switch (result) {
+      case MoreSheetResult.copy:
+        await _copyNpub(userIdHex);
+      case MoreSheetResult.embedCode:
+        await _copyEmbedCode(userIdHex);
+      case null:
+      case MoreSheetResult.unfollow:
+      case MoreSheetResult.report:
+      case MoreSheetResult.blockConfirmed:
+      case MoreSheetResult.unblockConfirmed:
+      case MoreSheetResult.addToList:
+        break;
+    }
   }
 
   Future<void> _copyNpub(String userIdHex) async {
@@ -324,7 +328,6 @@ class _ProfileContentView extends ConsumerWidget {
   const _ProfileContentView({
     required this.routeContext,
     required this.scrollController,
-    required this.onFetchProfile,
     required this.onEditProfile,
     required this.onOpenClips,
     required this.onMore,
@@ -334,7 +337,6 @@ class _ProfileContentView extends ConsumerWidget {
 
   final RouteContext routeContext;
   final ScrollController scrollController;
-  final void Function(String userIdHex, bool isOwnProfile) onFetchProfile;
   final VoidCallback onEditProfile;
   final VoidCallback onOpenClips;
   final void Function(String userIdHex) onMore;
@@ -366,7 +368,16 @@ class _ProfileContentView extends ConsumerWidget {
     // Get current user for comparison
     final authService = ref.watch(authServiceProvider);
     final currentUserHex = authService.currentPublicKeyHex;
-    final isOwnProfile = userIdHex == currentUserHex;
+    if (currentUserHex == null || currentUserHex.isEmpty) {
+      return const Center(child: DivineCircularProgressIndicator());
+    }
+
+    // The top-level router redirects every other-user visit before this
+    // branch builds. During an account switch, fail closed until that redirect
+    // settles instead of briefly exposing own-profile actions for another user.
+    if (!routeIdentifiesUser(npub, currentUserHex)) {
+      return const Center(child: DivineCircularProgressIndicator());
+    }
 
     // Check if this user has muted us (mutual mute blocking)
     // Note: We only block profile viewing for users who muted US, not users WE blocked.
@@ -380,26 +391,12 @@ class _ProfileContentView extends ConsumerWidget {
       return BlockedUserScreen(onBack: context.safePop, userIdHex: userIdHex);
     }
 
-    // Fetch profile data if needed (post-frame to avoid build mutations)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      onFetchProfile(userIdHex, isOwnProfile);
-    });
-
-    // Get display name for unfollow confirmation (only needed for other profiles)
-    final displayName = isOwnProfile
-        ? null
-        : ref
-              .watch(userProfileReactiveProvider(userIdHex))
-              .value
-              ?.bestDisplayName;
-
     return ProfileFeedScope(
       userIdHex: userIdHex,
       child: _ProfileDataView(
         npub: npub,
         userIdHex: userIdHex,
-        isOwnProfile: isOwnProfile,
-        displayName: displayName,
+        isOwnProfile: true,
         videoIndex: routeContext.videoIndex,
         scrollController: scrollController,
         onEditProfile: onEditProfile,
@@ -453,13 +450,11 @@ class _ProfileDataView extends ConsumerWidget {
     required this.onMore,
     required this.onShareProfile,
     required this.refreshNotifier,
-    this.displayName,
   });
 
   final String npub;
   final String userIdHex;
   final bool isOwnProfile;
-  final String? displayName;
   final int? videoIndex;
   final ScrollController scrollController;
   final VoidCallback onEditProfile;
@@ -508,7 +503,6 @@ class _ProfileDataView extends ConsumerWidget {
           npub: npub,
           userIdHex: userIdHex,
           isOwnProfile: isOwnProfile,
-          displayName: displayName,
           profile: profile,
           profileStats: profileStats,
           videos: feedState.videos,

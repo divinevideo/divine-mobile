@@ -22,4 +22,7 @@ enum MoreSheetResult {
 
   /// User tapped add-to-list (curated lists feature).
   addToList,
+
+  /// User tapped get embed code (own profile only).
+  embedCode,
 }
