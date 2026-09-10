@@ -19,6 +19,7 @@ import 'client_connected.dart';
 import 'event_filter.dart';
 import 'event_verify_isolate.dart';
 import 'publish_outcome.dart';
+import 'query_outcome.dart';
 import 'relay.dart';
 import 'relay_base.dart';
 import 'relay_type.dart';
@@ -96,6 +97,12 @@ class RelayPool {
   final Map<String, Subscription> _initQuery = {};
 
   final Map<String, Function> _queryCompleteCallbacks = {};
+
+  /// How each one-shot query is being answered, relay by relay, keyed by
+  /// subscription id, for every query that asked to hear when it completes.
+  /// Dropped with the rest of the query's state, in [_completeQuery] and
+  /// [unsubscribe].
+  final Map<String, QueryOutcomeTracker> _queryOutcomes = {};
 
   final Set<String> _queryFanoutInProgress = {};
 
@@ -315,6 +322,11 @@ class RelayPool {
     }
     return 'other';
   }
+
+  /// Records that [relay] refused one-shot query [subId] with `CLOSED`,
+  /// keeping only the reason's NIP-01 prefix.
+  void _recordQueryClosed(Relay relay, String subId, String reason) =>
+      _queryOutcomes[subId]?.recordClosed(relay, _closedReasonCategory(reason));
 
   /// How long a temp relay may sit with no inbound traffic before the sweep
   /// closes it. Injectable so tests need no wall-clock wait.
@@ -1253,6 +1265,12 @@ class RelayPool {
 
   void _completeQuery(String subId, Function callback) {
     _diagnoseInconclusiveFullSettlementQuery(subId);
+    // Judged before [_releaseQuery] takes the query off every relay, which
+    // would erase which of them never answered.
+    final tracker = _queryOutcomes.remove(subId);
+    final outcome = tracker == null
+        ? null
+        : _concludeQueryOutcome(subId, tracker, atDeadline: false);
     _queryCompleteCallbacks.remove(subId);
     _queryAnswered.remove(subId);
     _queryClosedWithoutAnswer.remove(subId);
@@ -1261,6 +1279,7 @@ class RelayPool {
     _querySettleTimers.remove(subId)?.cancel();
     _releaseQuery(subId);
     callback();
+    if (outcome != null) tracker?.onOutcome?.call(outcome);
   }
 
   /// Tears down [subId] on every relay that still has it saved.
@@ -1704,6 +1723,12 @@ class RelayPool {
           return;
         }
 
+        if (querySubscription != null) {
+          // Counted before the block list below: an event hidden from the
+          // caller still took a slot in the relay's `limit`.
+          _queryOutcomes[subId]?.recordEvent(relay, event);
+        }
+
         if ((relay.relayStatus.relayType != RelayType.cache)) {
           var event = Map<String, dynamic>.from(eventJson);
           var kind = event["kind"];
@@ -1754,6 +1779,12 @@ class RelayPool {
         relay.url,
         'Relay settled request $subId with EOSE',
       );
+      // Recorded before the await: `checkAndCompleteQuery` forgets the query
+      // at once, and a completion that runs while its CLOSE is in flight
+      // would otherwise find this relay gone without an answer.
+      if (relay.checkQuery(subId)) {
+        _queryOutcomes[subId]?.recordEose(relay, json);
+      }
       var isQuery = await relay.checkAndCompleteQuery(subId);
       if (isQuery) {
         _fireQueryCompleteIfSettled(subId, afterTerminalFrame: true);
@@ -2089,6 +2120,11 @@ class RelayPool {
       // A refused/abandoned REQ is terminal unless it is the pre-AUTH probe
       // that must stay saved for replay after NIP-42 succeeds.
       if (_shouldReplayQueryAfterAuth(relay, reason)) {
+        // A refusal the post-AUTH replay may still overturn; an EOSE the
+        // replay draws replaces it.
+        if (relay.checkQuery(subscriptionId)) {
+          _recordQueryClosed(relay, subscriptionId, reason);
+        }
         // The relay named the gate itself. With no live handshake nothing is
         // going to run that replay, and this refusal is the evidence
         // [_canStillSettleQuery] waits for before giving up on it. Judged on
@@ -2097,6 +2133,7 @@ class RelayPool {
         // later query on that socket pays its full budget.
         if (!_hasLiveAuthHandshake(relay)) _closeAuthGate(relay);
       } else if (relay.discardQuery(subscriptionId)) {
+        _recordQueryClosed(relay, subscriptionId, reason);
         _fireQueryCompleteIfSettled(
           subscriptionId,
           afterTerminalFrame: true,
@@ -2316,6 +2353,7 @@ class RelayPool {
       // completion callback so a query cancelled before EOSE doesn't leak a
       // never-fired callback in [_queryCompleteCallbacks].
       _queryCompleteCallbacks.remove(id);
+      _queryOutcomes.remove(id);
       _queryFanoutInProgress.remove(id);
       _queryAnswered.remove(id);
       _queryClosedWithoutAnswer.remove(id);
@@ -2437,11 +2475,19 @@ class RelayPool {
   ///
   /// The future resolves once the fan-out is done. `onComplete` may already
   /// have fired by then — a fan-out that settles the query calls it inline.
+  ///
+  /// [onOutcome] receives how the query ended, as a [QueryOutcome], when the
+  /// pool completes it: at the same moment and under the same conditions as
+  /// `onComplete`, which it may replace. Its `endedBy` is never
+  /// `QueryEnd.deadline`, because the pool does not own the caller's
+  /// deadline; a caller whose deadline fires first calls
+  /// [reportQueryDeadline], then [unsubscribe], instead.
   Future<({String id, List<String> sentTo})> query(
     List<Map<String, dynamic>> filters,
     Function(Event) onEvent, {
     String? id,
     Function? onComplete,
+    void Function(QueryOutcome outcome)? onOutcome,
     List<String>? tempRelays,
     List<String>? targetRelays,
     List<int> relayTypes = RelayType.all,
@@ -2457,13 +2503,23 @@ class RelayPool {
     targetRelays = handleAddrList(targetRelays);
 
     Subscription subscription = Subscription(filters, onEvent, id: id);
-    if (onComplete != null) {
-      _queryCompleteCallbacks[subscription.id] = onComplete;
+    // Either callback asks the pool to settle the query and say so.
+    final completionRequested = onComplete != null || onOutcome != null;
+    QueryOutcomeTracker? outcomeTracker;
+    if (completionRequested) {
+      _queryCompleteCallbacks[subscription.id] =
+          onComplete ?? _ignoreQueryComplete;
       _queryFanoutInProgress.add(subscription.id);
       _querySentAt[subscription.id] = DateTime.now();
       if (requireAllRelaysSettled) {
         _queriesRequiringFullSettlement.add(subscription.id);
       }
+      outcomeTracker = QueryOutcomeTracker(
+        subscription.id,
+        filters,
+        onOutcome: onOutcome,
+      );
+      _queryOutcomes[subscription.id] = outcomeTracker;
     }
 
     // Collect futures so we can await them before the early-completion
@@ -2473,16 +2529,20 @@ class RelayPool {
     // is actually able to answer.
     final queryFutures = <Future<String?>>[];
     final queriedRelayIdentities = <String>{};
+    final askedRelays = <Relay>[];
 
     Future<String?> sendQueryTo(
       Relay relay, {
       bool runBeforeConnected = false,
-    }) => relayDoQuery(
-      relay,
-      subscription,
-      sendAfterAuth,
-      runBeforeConnected: runBeforeConnected,
-    ).then((accepted) => accepted ? relay.url : null);
+    }) {
+      askedRelays.add(relay);
+      return relayDoQuery(
+        relay,
+        subscription,
+        sendAfterAuth,
+        runBeforeConnected: runBeforeConnected,
+      ).then((accepted) => accepted ? relay.url : null);
+    }
 
     // tempRelay, only query those relay which has bean provide
     if (tempRelays != null &&
@@ -2530,13 +2590,16 @@ class RelayPool {
       // terminal frames to decide whether every relay has settled.
       fanout = await Future.wait(queryFutures);
     } finally {
-      if (onComplete != null) {
+      if (completionRequested) {
         _queryFanoutInProgress.remove(subscription.id);
       }
     }
     final sentTo = fanout.nonNulls.toList();
+    // This call's own record, never a newer one under the same id: a fan-out
+    // can outlive a caller that has already given up.
+    outcomeTracker?.recordFanout(asked: askedRelays, sentTo: sentTo);
 
-    if (onComplete != null) {
+    if (completionRequested) {
       _fireQueryCompleteIfSettled(
         subscription.id,
         afterFanoutReachedNoRelay: sentTo.isEmpty,
@@ -2545,6 +2608,53 @@ class RelayPool {
 
     return (id: subscription.id, sentTo: sentTo);
   }
+
+  /// Reports that the caller's own deadline ended one-shot query [id] before
+  /// the pool completed it, and returns how the query stood at that moment.
+  ///
+  /// Call it when that deadline fires, just before [unsubscribe]. The
+  /// outcome's `endedBy` is `QueryEnd.deadline`, or `QueryEnd.noRelay` when
+  /// the fan-out had already finished without any relay taking the REQ; its
+  /// `possiblyCapped` and `confirmedExhaustive` are judged on what had
+  /// arrived. It emits the query's one [RelayDiagnosticSite.queryCompletion]
+  /// line, at warning level, and marks the query reported, so the pool emits
+  /// no second line for it, even if a relay completes it before [unsubscribe]
+  /// runs.
+  ///
+  /// Returns null when the pool holds no record of [id]: it has completed or
+  /// been unsubscribed, or it was started with neither `onComplete` nor
+  /// `onOutcome`.
+  QueryOutcome? reportQueryDeadline(String id) {
+    final tracker = _queryOutcomes[id];
+    if (tracker == null) return null;
+    return _concludeQueryOutcome(id, tracker, atDeadline: true);
+  }
+
+  /// Judges how query [subId] ended and emits its completion line when due.
+  QueryOutcome _concludeQueryOutcome(
+    String subId,
+    QueryOutcomeTracker tracker, {
+    required bool atDeadline,
+  }) {
+    final concluded = tracker.conclude(
+      atDeadline: atDeadline,
+      hasLostConnection: (relay) => _hasLostQueryConnection(relay, subId),
+    );
+    final diagnostic = concluded.diagnostic;
+    if (diagnostic != null) emitRelayDiagnostic(diagnosticsSink, diagnostic);
+    return concluded.outcome;
+  }
+
+  /// Whether [relay], which has sent no terminal frame for [subId], can no
+  /// longer send one: it no longer holds the query, its socket is down, or
+  /// the socket is being force-cycled as a zombie.
+  bool _hasLostQueryConnection(Relay relay, String subId) =>
+      !relay.checkQuery(subId) ||
+      relay.relayStatus.connected != ClientConnected.connected ||
+      _silentRelayRepairsInFlight.contains(relay.url);
+
+  /// Stands in for `onComplete` when a query asked only for its outcome.
+  static void _ignoreQueryComplete() {}
 
   /// send message to relay
   /// there are tempRelays, it also send to tempRelays too.
