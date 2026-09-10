@@ -503,9 +503,8 @@ class RelayManager {
   /// Concurrent callers share the underlying sweep for the full lifetime of
   /// its dials. Each caller stops waiting at the sweep's original aggregate
   /// deadline, while late dial results continue updating their own relay
-  /// status. `_connectToRelay` replaces the prior relay object, so clearing the
-  /// single-flight latch when only the caller deadline expires would let the
-  /// next caller start duplicate sockets against the same hosts (#7091).
+  /// status (#7091). A relay that is already being dialled is joined rather
+  /// than redialled, so no sweep opens a second socket to it (#8991).
   Future<void> retryDisconnectedRelays() {
     final inFlight = _retryInFlight;
     if (inFlight != null) return _waitForRetrySweep(inFlight);
@@ -545,8 +544,9 @@ class RelayManager {
     // First, check health of all "connected" relays to detect dead connections
     _checkRelayHealth();
 
-    // A relay with a dial in flight is joined, never redialled: redialling
-    // tears its socket down mid-handshake and opens a second one (#8991).
+    // A relay with a dial in flight is joined and one the SDK is reconnecting
+    // is left alone: redialling either tears its socket down mid-handshake
+    // and opens a second one (#8991).
     final attempts = <Future<bool>>[];
     for (final url in List<String>.from(_configuredRelays)) {
       final running = _dials[url];
@@ -555,7 +555,9 @@ class RelayManager {
         continue;
       }
       final status = _relayStatuses[url];
-      if (status == null || status.isConnected) continue;
+      if (status == null || status.isConnected || _isSocketConnecting(url)) {
+        continue;
+      }
       attempts.add(_dial(url, failureMessage: 'Reconnection failed'));
     }
     _notifyStatusChange();
@@ -578,6 +580,9 @@ class RelayManager {
   /// died silently (common with WebSockets after ~2 minutes of idle time).
   void _checkRelayHealth() {
     for (final url in _configuredRelays) {
+      // A socket still being dialled fails its idle check by definition, and
+      // demoting it gets the socket torn down mid-handshake (#8991).
+      if (_dials.containsKey(url) || _isSocketConnecting(url)) continue;
       final relay = _relayPool.getRelay(url);
       if (relay == null) continue;
 
@@ -594,6 +599,14 @@ class RelayManager {
         }
       }
     }
+  }
+
+  /// Whether the pooled socket for [url] is mid-handshake, as it is while the
+  /// SDK reconnects it on its own.
+  bool _isSocketConnecting(String url) {
+    final relay = _relayPool.getRelay(url);
+    return relay is RelayBase &&
+        relay.relayStatus.connected == ClientConnected.connecting;
   }
 
   /// Force reconnect all relays (disconnect first, then reconnect)

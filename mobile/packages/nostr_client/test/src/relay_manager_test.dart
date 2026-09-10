@@ -15,6 +15,8 @@ class _MockRelayPool extends Mock implements RelayPool {}
 
 class _MockRelay extends Mock implements Relay {}
 
+class _MockRelayBase extends Mock implements RelayBase {}
+
 class _MockRelayStatus extends Mock implements RelayStatus {}
 
 class _MockRelayStorage extends Mock implements RelayStorage {}
@@ -63,6 +65,22 @@ _MockRelay _createMockRelay(
   when(() => mockStatus.authed).thenReturn(authed);
 
   return mockRelay;
+}
+
+/// A pooled relay whose socket reports [connected] and whose idle check
+/// returns [healthy].
+_MockRelayBase _createPooledRelay(
+  String url, {
+  required int connected,
+  required bool healthy,
+}) {
+  final relay = _MockRelayBase();
+  final status = _MockRelayStatus();
+  when(() => relay.url).thenReturn(url);
+  when(() => relay.relayStatus).thenReturn(status);
+  when(() => status.connected).thenReturn(connected);
+  when(relay.checkHealth).thenReturn(healthy);
+  return relay;
 }
 
 // =============================================================================
@@ -1622,6 +1640,120 @@ void main() {
           reason: "a caller of the replaced dial gets the replacement's result",
         );
       });
+    });
+
+    group('health check', () {
+      test('leaves a relay whose dial is still in flight', () async {
+        // The pooled socket can still read as disconnected before its
+        // handshake starts; a dial in flight is not a failed health check.
+        final dial = Completer<bool>();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => dial.future);
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.disconnect,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+
+        final startup = manager.initialize();
+        final sweep = manager.retryDisconnectedRelays();
+        await pumpEventQueue();
+
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connecting,
+        );
+
+        dial.complete(true);
+        await Future.wait([startup, sweep]);
+      });
+
+      test('leaves a relay whose socket is still connecting', () async {
+        // Demoting it made the sweep tear the socket down mid-handshake and
+        // dial again (#8991).
+        await manager.initialize();
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.connecting,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+        clearInteractions(mockRelayPool);
+
+        await manager.retryDisconnectedRelays();
+
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connected,
+        );
+        verifyNever(() => mockRelayPool.remove(testDefaultRelayUrl));
+      });
+
+      test('a sweep leaves a relay the SDK is still connecting', () async {
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) async => false);
+        await manager.initialize();
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.connecting,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+        clearInteractions(mockRelayPool);
+
+        await manager.retryDisconnectedRelays();
+
+        verifyNever(() => mockRelayPool.remove(testDefaultRelayUrl));
+        verifyNever(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        );
+      });
+
+      for (final (name, connected) in [
+        ('a connected', ClientConnected.connected),
+        ('a disconnected', ClientConnected.disconnect),
+      ]) {
+        test('still redials $name socket that fails its check', () async {
+          await manager.initialize();
+          final relay = _createPooledRelay(
+            testDefaultRelayUrl,
+            connected: connected,
+            healthy: false,
+          );
+          when(
+            () => mockRelayPool.getRelay(testDefaultRelayUrl),
+          ).thenReturn(relay);
+          clearInteractions(mockRelayPool);
+
+          await manager.retryDisconnectedRelays();
+
+          verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+          verify(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).called(1);
+        });
+      }
     });
 
     group('reconnectRelay', () {
