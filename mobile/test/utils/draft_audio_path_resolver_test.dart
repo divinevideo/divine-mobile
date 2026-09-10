@@ -63,8 +63,35 @@ void main() {
   group('resolveAudioPath', () {
     test('roots a portable path at the current documents directory', () {
       expect(
+        resolveAudioPath('library_audio_imports/song.m4a', _newDocs),
+        '$_newDocs/library_audio_imports/song.m4a',
+      );
+    });
+
+    test('rebases a retired draft-import path onto library storage', () {
+      // `migrateDraftOwnedAudioImports` moved the file; a path persisted
+      // before that still names the old root, and the tail below it — the
+      // basename audio reclaim matches on — is preserved (#8024).
+      expect(
         resolveAudioPath('draft_audio_imports/draft_1/song.m4a', _newDocs),
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
+      );
+    });
+
+    test('rebases an absolute pre-move path onto library storage', () {
+      expect(
+        resolveAudioPath(
+          '$_oldDocs/draft_audio_imports/d1/song.m4a',
+          _newDocs,
+        ),
+        '$_newDocs/library_audio_imports/d1/song.m4a',
+      );
+    });
+
+    test('leaves the other audio roots where they are', () {
+      expect(
+        resolveAudioPath('extracted_clip_audio/clip.m4a', _newDocs),
+        '$_newDocs/extracted_clip_audio/clip.m4a',
       );
     });
 
@@ -121,7 +148,7 @@ void main() {
       expect(
         (resolvedAudio['audio'] as List).map((e) => (e as Map)['url']),
         [
-          '$_newDocs/draft_audio_imports/d1/song.m4a',
+          '$_newDocs/library_audio_imports/d1/song.m4a',
           '$_newDocs/voice_over_recordings/take.m4a',
         ],
       );
@@ -139,7 +166,7 @@ void main() {
         _newDocs,
       );
       final audio = ((resolved['meta'] as Map)['audio'] as List).first as Map;
-      expect(audio['url'], '$_newDocs/draft_audio_imports/d1/song.m4a');
+      expect(audio['url'], '$_newDocs/library_audio_imports/d1/song.m4a');
     });
 
     test('rewrites a bare audio event map', () {

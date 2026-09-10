@@ -4,8 +4,26 @@
 import 'package:models/models.dart' show AudioEvent;
 import 'package:path/path.dart' as p;
 
-/// Documents-relative directory holding audio files imported into a draft.
+/// Documents-relative directory that *used* to hold imported audio files.
+///
+/// Imports landed under `draft_audio_imports/<draftId>/` — the draft that
+/// happened to be open when the user picked the file. A track saved to My
+/// Sounds is a library entry that outlives that draft, so the draft was never
+/// its owner; only the directory said otherwise. New imports go to
+/// [libraryAudioImportsDirName] and existing trees are moved there by
+/// `migrateDraftOwnedAudioImports`.
+///
+/// The name stays a known audio root so a path persisted before the move
+/// still resolves, and so audio reclaim still recognizes anything the move
+/// could not relocate.
 const String draftAudioImportsDirName = 'draft_audio_imports';
+
+/// Documents-relative directory holding audio files the user imported.
+///
+/// Owned by the sound library rather than by any draft: its lifetime is the
+/// user's, and nothing about deleting a draft implies deleting a track the
+/// user imported while that draft happened to be open (#8024).
+const String libraryAudioImportsDirName = 'library_audio_imports';
 
 /// Documents-relative directory holding committed voice-over recordings.
 const String voiceOverRecordingsDirName = 'voice_over_recordings';
@@ -20,6 +38,7 @@ const String extractedClipAudioDirName = 'extracted_clip_audio';
 
 const Set<String> _audioRootDirNames = {
   draftAudioImportsDirName,
+  libraryAudioImportsDirName,
   voiceOverRecordingsDirName,
   extractedClipAudioDirName,
 };
@@ -63,10 +82,24 @@ bool isDraftLocalAudioPath(String path) {
 ///
 /// Accepts the portable form as well as an absolute path from a previous
 /// container, so drafts written before the portable form existed heal the
-/// first time they are loaded.
+/// first time they are loaded. A path still naming the retired
+/// [draftAudioImportsDirName] root is rebased onto
+/// [libraryAudioImportsDirName], which is where
+/// `migrateDraftOwnedAudioImports` put the file — the tail below the root is
+/// preserved exactly, so basenames (which is what audio reclaim matches on)
+/// do not change.
 String resolveAudioPath(String path, String documentsPath) {
   final relative = _belowAudioRoot(path);
-  return relative == null ? path : p.join(documentsPath, relative);
+  if (relative == null) return path;
+  return p.join(documentsPath, _relocateRetiredImportRoot(relative));
+}
+
+/// [relative] with a leading [draftAudioImportsDirName] segment replaced by
+/// [libraryAudioImportsDirName].
+String _relocateRetiredImportRoot(String relative) {
+  final segments = p.split(relative);
+  if (segments.first != draftAudioImportsDirName) return relative;
+  return p.joinAll([libraryAudioImportsDirName, ...segments.skip(1)]);
 }
 
 /// [json] with every draft-local audio path rewritten to its portable form.

@@ -24,6 +24,7 @@ import 'package:openvine/services/seed_media_cleanup_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/startup/timed_startup_task.dart';
+import 'package:openvine/utils/library_audio_migration.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:path_provider/path_provider.dart';
@@ -43,6 +44,17 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
   await migrateLegacyNostrKeys(container.read(secureKeyStorageProvider));
   Log.info(
     '[INIT] ✅ Legacy key migration checked',
+    name: 'Main',
+    category: LogCategory.system,
+  );
+
+  // Relocate imported audio that older builds stored under whichever draft
+  // was open at the time. A track saved to My Sounds outlives that draft, so
+  // no draft owns it (#8024). Best-effort and idempotent; a file it cannot
+  // move still resolves at its old path.
+  await migrateDraftOwnedAudioImports();
+  Log.info(
+    '[INIT] ✅ Imported-audio storage checked',
     name: 'Main',
     category: LogCategory.system,
   );
