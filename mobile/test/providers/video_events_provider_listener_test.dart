@@ -13,13 +13,11 @@ import 'package:models/models.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
@@ -30,11 +28,6 @@ class _MockContentBlocklistRepository extends Mock
 class _FakeAppForeground extends AppForeground {
   @override
   bool build() => true;
-}
-
-class _FakeSeenVideosNotifier extends SeenVideosNotifier {
-  @override
-  SeenVideosState build() => SeenVideosState.initial;
 }
 
 /// Creates a [ProviderContainer] with standard overrides for testing
@@ -79,9 +72,6 @@ ProviderContainer _createContainer({
           ),
         ),
       ),
-
-      // Override seen videos provider
-      seenVideosProvider.overrideWith(_FakeSeenVideosNotifier.new),
     ],
   );
 }

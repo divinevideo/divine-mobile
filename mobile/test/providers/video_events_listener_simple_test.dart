@@ -10,7 +10,6 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/router.dart';
@@ -104,7 +103,6 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -157,7 +155,6 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 

@@ -4,7 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/state/curation_state.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 import 'package:openvine/state/user_profile_state.dart';
 import 'package:openvine/state/video_feed_state.dart';
 
@@ -63,13 +62,6 @@ void main() {
     // `const` literal on purpose: a const collection already throws on
     // `clear()`, so a const fixture would keep these tests green even if the
     // getters stopped wrapping at all.
-    test('remain deeply comparable across distinct collection instances', () {
-      expect(
-        SeenVideosState(seenVideoIds: mutableSet(['one'])),
-        SeenVideosState(seenVideoIds: mutableSet(['one'])),
-      );
-    });
-
     test('curation lists remain unmodifiable', () {
       final state = CurationState(
         editorsPicks: mutableList<VideoEvent>([]),
@@ -81,12 +73,6 @@ void main() {
       expect(state.editorsPicks.clear, throwsUnsupportedError);
       expect(state.trending.clear, throwsUnsupportedError);
       expect(state.curationSets.clear, throwsUnsupportedError);
-    });
-
-    test('seen-video sets remain unmodifiable', () {
-      final state = SeenVideosState(seenVideoIds: mutableSet(['one']));
-
-      expect(state.seenVideoIds.clear, throwsUnsupportedError);
     });
 
     test('profile cache collections remain unmodifiable', () {
@@ -154,22 +140,33 @@ void main() {
     });
 
     test('stays flat instead of nesting one view per copyWith', () {
-      var state = SeenVideosState(seenVideoIds: mutableSet(['one']));
-      final first = state.seenVideoIds;
+      var state = VideoFeedState(
+        videos: mutableList<VideoEvent>([]),
+        hasMoreContent: false,
+        listOnlyVideoIds: mutableSet(['one']),
+      );
+      final first = state.listOnlyVideoIds;
+      expect(first, hasLength(1));
 
       for (var i = 0; i < 5; i++) {
-        state = state.copyWith(isInitialized: true);
+        state = state.copyWith(hasMoreContent: true);
       }
 
-      expect(state.seenVideoIds == first, isTrue);
+      expect(state.listOnlyVideoIds == first, isTrue);
     });
 
     test('breaks when the collection is replaced', () {
-      final state = SeenVideosState(seenVideoIds: mutableSet(['one']));
+      final state = VideoFeedState(
+        videos: mutableList<VideoEvent>([]),
+        hasMoreContent: false,
+        listOnlyVideoIds: mutableSet(['one']),
+      );
 
-      final copied = state.copyWith(seenVideoIds: mutableSet(['one', 'two']));
+      final copied = state.copyWith(
+        listOnlyVideoIds: mutableSet(['one', 'two']),
+      );
 
-      expect(copied.seenVideoIds == state.seenVideoIds, isFalse);
+      expect(copied.listOnlyVideoIds == state.listOnlyVideoIds, isFalse);
     });
   });
 }

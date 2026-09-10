@@ -8,12 +8,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -115,7 +113,6 @@ class VideoEvents extends _$VideoEvents {
     ref.watch(contentFilterVersionProvider);
     final isAppReady = ref.watch(appReadyProvider);
     final isTabActive = ref.watch(isDiscoveryTabActiveProvider);
-    final seenVideosState = ref.watch(seenVideosProvider);
 
     Log.error(
       '🔥🔥🔥 VideoEvents: Provider REBUILDING (appReady: $isAppReady, tabActive: $isTabActive, cached: ${videoEventService.discoveryVideos.length}) 🔥🔥🔥',
@@ -171,21 +168,18 @@ class VideoEvents extends _$VideoEvents {
     });
 
     // Setup listeners to react to gate changes
-    _setupGateListeners(videoEventService, seenVideosState);
+    _setupGateListeners(videoEventService);
 
     // ALWAYS start subscription to load videos (database-first + Nostr)
     // This works even when gates are false - it will load from database
     // and skip Nostr subscription until gates flip true
-    _startSubscription(videoEventService, seenVideosState);
+    _startSubscription(videoEventService);
 
     return _subject!.stream;
   }
 
   /// Setup listeners on gate providers to start/stop subscription
-  void _setupGateListeners(
-    VideoEventService service,
-    SeenVideosState seenState,
-  ) {
+  void _setupGateListeners(VideoEventService service) {
     Log.debug(
       '🎧 VideoEvents: Setting up gate listeners...',
       name: 'VideoEventsProvider',
@@ -206,7 +200,7 @@ class VideoEvents extends _$VideoEvents {
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
-        _startSubscription(service, seenState);
+        _startSubscription(service);
       }
       if (!next) {
         Log.debug(
@@ -232,7 +226,7 @@ class VideoEvents extends _$VideoEvents {
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
-        _startSubscription(service, seenState);
+        _startSubscription(service);
       }
       if (!next) {
         Log.debug(
@@ -252,10 +246,7 @@ class VideoEvents extends _$VideoEvents {
   }
 
   /// Start subscription and emit initial events
-  void _startSubscription(
-    VideoEventService service,
-    SeenVideosState seenState,
-  ) {
+  void _startSubscription(VideoEventService service) {
     // Use service's isSubscribed() to check actual subscription state
     // This prevents the bug where we skip retrying after a failed initial subscription
     final isAlreadySubscribed = service.isSubscribed(
