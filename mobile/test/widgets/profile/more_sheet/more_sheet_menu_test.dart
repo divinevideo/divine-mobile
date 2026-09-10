@@ -7,7 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_menu.dart';
+
+import '../../../helpers/test_provider_overrides.dart';
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -209,6 +212,68 @@ void main() {
           find.text(l10n.profileBlockDisplayName(displayName)),
           findsOneWidget,
         );
+      },
+    );
+  });
+
+  // Exercises the two profile audiences through MoreSheetContent (rather
+  // than MoreSheetMenu directly) so the showReport/showEmbedCode wiring
+  // between the two widgets is pinned, not just MoreSheetMenu's own gating.
+  group('MoreSheetContent audiences', () {
+    Future<void> pumpContent(
+      WidgetTester tester, {
+      required bool showReport,
+      required bool showEmbedCode,
+    }) async {
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: MoreSheetContent(
+              userIdHex: 'a' * 64,
+              displayName: displayName,
+              isFollowing: false,
+              isBlocked: false,
+              showReport: showReport,
+              showEmbedCode: showEmbedCode,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets(
+      'own profile shows Copy and Get embed code, hides Report and Block',
+      (tester) async {
+        await pumpContent(tester, showReport: false, showEmbedCode: true);
+
+        expect(find.text(l10n.profileCopyPublicKey), findsOneWidget);
+        expect(find.text(l10n.profileGetEmbedCode), findsOneWidget);
+        expect(
+          find.text(l10n.profileBlockDisplayName(displayName)),
+          findsNothing,
+        );
+        expect(
+          find.text(l10n.profileReportDisplayName(displayName)),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'other user shows Report and Block, hides Get embed code',
+      (tester) async {
+        await pumpContent(tester, showReport: true, showEmbedCode: false);
+
+        expect(
+          find.text(l10n.profileReportDisplayName(displayName)),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.profileBlockDisplayName(displayName)),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.profileGetEmbedCode), findsNothing);
       },
     );
   });

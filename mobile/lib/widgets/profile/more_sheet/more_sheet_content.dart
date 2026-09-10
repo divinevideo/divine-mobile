@@ -35,6 +35,7 @@ class MoreSheetContent extends StatefulWidget {
     this.showReport = false,
     this.showBlock = true,
     this.showCopy = true,
+    this.showEmbedCode = false,
     super.key,
   });
 
@@ -74,6 +75,12 @@ class MoreSheetContent extends StatefulWidget {
   /// Defaults to true. A group DM passes false because this sheet's key is
   /// the first member's key, not the room's identity.
   final bool showCopy;
+
+  /// Whether to show the "Get embed code" action.
+  ///
+  /// Own-profile only. Defaults to false. Also suppresses the Block row —
+  /// see [MoreSheetMenu.showEmbedCode].
+  final bool showEmbedCode;
 
   @override
   State<MoreSheetContent> createState() => _MoreSheetContentState();
@@ -212,6 +219,10 @@ class _MoreSheetContentState extends State<MoreSheetContent>
           : null,
       onReport: widget.showReport
           ? () => Navigator.of(context).pop(MoreSheetResult.report)
+          : null,
+      showEmbedCode: widget.showEmbedCode,
+      onEmbedCode: widget.showEmbedCode
+          ? () => Navigator.of(context).pop(MoreSheetResult.embedCode)
           : null,
     );
   }

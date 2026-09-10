@@ -28,6 +28,8 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
+import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
+import 'package:openvine/widgets/profile/more_sheet/more_sheet_result.dart';
 import 'package:openvine/widgets/profile/profile_grid.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -248,21 +250,30 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   }
 
   Future<void> _more(String userIdHex) async {
-    await VineBottomSheetActionMenu.show(
+    final result = await VineBottomSheet.show<MoreSheetResult>(
       context: context,
-      options: [
-        VineBottomSheetActionData(
-          iconPath: DivineIconName.copy.assetPath,
-          label: context.l10n.profileCopyPublicKey,
-          onTap: () => _copyNpub(userIdHex),
-        ),
-        VineBottomSheetActionData(
-          iconPath: DivineIconName.bracketsAngle.assetPath,
-          label: context.l10n.profileGetEmbedCode,
-          onTap: () => _copyEmbedCode(userIdHex),
-        ),
-      ],
+      scrollable: false,
+      body: MoreSheetContent(
+        userIdHex: userIdHex,
+        displayName:
+            '', // unused on own profile (no Report/Block/Unfollow labels)
+        isFollowing: false,
+        isBlocked: false,
+        showEmbedCode: true,
+      ),
+      children: const [],
     );
+
+    if (!mounted) return;
+    switch (result) {
+      case MoreSheetResult.copy:
+        await _copyNpub(userIdHex);
+      case MoreSheetResult.embedCode:
+        await _copyEmbedCode(userIdHex);
+      case null:
+      default:
+        break;
+    }
   }
 
   Future<void> _copyNpub(String userIdHex) async {
@@ -391,7 +402,7 @@ class _ProfileContentView extends ConsumerWidget {
         if (!context.mounted) return;
         context.pushReplacement(OtherProfileScreen.pathForNpub(npub));
       });
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: DivineCircularProgressIndicator());
     }
 
     // Fetch profile data if needed (post-frame to avoid build mutations)

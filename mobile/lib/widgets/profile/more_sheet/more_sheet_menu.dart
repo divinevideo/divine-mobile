@@ -19,6 +19,8 @@ class MoreSheetMenu extends StatelessWidget {
     this.onBlockTap,
     this.onAddToList,
     this.onReport,
+    this.showEmbedCode = false,
+    this.onEmbedCode,
     super.key,
   });
 
@@ -56,6 +58,17 @@ class MoreSheetMenu extends StatelessWidget {
   /// yourself is meaningless).
   final VoidCallback? onReport;
 
+  /// Whether to show the "Get embed code" action.
+  ///
+  /// Own-profile only. Also gates the Block row off — the two are mutually
+  /// exclusive audiences, so Block never renders alongside embed code.
+  final bool showEmbedCode;
+
+  /// Called when "Get embed code" is tapped.
+  ///
+  /// Required when [showEmbedCode] is true.
+  final VoidCallback? onEmbedCode;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -75,6 +88,12 @@ class MoreSheetMenu extends StatelessWidget {
             label: l10n.profileCopyPublicKey,
             onTap: onCopy!,
           ),
+        if (showEmbedCode)
+          _MoreSheetMenuItem(
+            icon: DivineIconName.bracketsAngle,
+            label: l10n.profileGetEmbedCode,
+            onTap: onEmbedCode!,
+          ),
         if (isFollowing)
           _MoreSheetMenuItem(
             icon: DivineIconName.userMinus,
@@ -88,7 +107,7 @@ class MoreSheetMenu extends StatelessWidget {
             label: l10n.profileReportDisplayName(displayName),
             onTap: onReport!,
           ),
-        if (onBlockTap != null)
+        if (onBlockTap != null && !showEmbedCode)
           _MoreSheetMenuItem(
             icon: isBlocked
                 ? DivineIconName.prohibitInset

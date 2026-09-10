@@ -358,6 +358,11 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             DivineSnackbarContainer.snackBar(l10n.profileUnblockedUser(name)),
           );
         }
+      case MoreSheetResult.embedCode:
+        // Not surfaced here: MoreSheetContent above never sets
+        // showEmbedCode, so this branch is unreachable on another user's
+        // profile.
+        break;
     }
   }
 

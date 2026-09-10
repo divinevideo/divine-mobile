@@ -104,6 +104,9 @@ class UnavailableProfileActions extends ConsumerWidget {
       case MoreSheetResult.addToList:
         // Not surfaced here: `showAddToList` defaults to false above.
         break;
+      case MoreSheetResult.embedCode:
+        // Not surfaced here: `showEmbedCode` defaults to false above.
+        break;
     }
   }
 
