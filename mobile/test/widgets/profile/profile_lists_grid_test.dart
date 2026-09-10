@@ -207,6 +207,42 @@ void main() {
     });
 
     group('list membership vs thumbnail hydration', () {
+      testWidgets('cards shimmer their fans until the resolver first returns', (
+        tester,
+      ) async {
+        _fakeLists = [_videoList('a')];
+        when(() => mockListService.myLists).thenReturn([_videoList('a')]);
+        final neverResolves = Completer<List<CuratedList>>();
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith(
+                (ref) => neverResolves.future,
+              ),
+            ],
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: peopleListsBloc,
+              child: const MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: ProfileListsGrid()),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final card = tester.widget<DivineListThumbnail>(
+          find.byType(DivineListThumbnail),
+        );
+        expect(card.thumbnailsPending, isTrue);
+      });
+
       testWidgets('renders a list the resolver has not caught up with', (
         tester,
       ) async {

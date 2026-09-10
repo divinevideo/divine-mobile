@@ -49,9 +49,15 @@ const _largeTileFraction = 0.661;
 ///   a member-count badge.
 class DivineListThumbnail extends StatelessWidget {
   /// Card for a curated video list (kind 30005).
+  ///
+  /// [thumbnailsPending] says the list's thumbnails are still being
+  /// resolved: fan slots that could still fill shimmer instead of sitting
+  /// as flat placeholders. Slots beyond the list's video count never fill
+  /// and stay flat either way.
   DivineListThumbnail.videos({
     required CuratedList curatedList,
     required this.onTap,
+    this.thumbnailsPending = false,
     super.key,
   }) : name = curatedList.name,
        description = curatedList.description,
@@ -61,6 +67,7 @@ class DivineListThumbnail extends StatelessWidget {
        _media = _VideoFanMedia(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
+         pending: thumbnailsPending,
        );
 
   /// Card for a people list (kind 30000).
@@ -71,6 +78,7 @@ class DivineListThumbnail extends StatelessWidget {
   }) : name = userList.name,
        description = userList.description,
        isPrivate = false,
+       thumbnailsPending = false,
        _count = userList.pubkeys.length,
        _kind = _ListKind.people,
        _media = _PeopleCollageMedia(
@@ -85,6 +93,9 @@ class DivineListThumbnail extends StatelessWidget {
   /// private list and a shared one never look the same in My Lists.
   final bool isPrivate;
   final VoidCallback onTap;
+
+  /// Whether a video list's thumbnails are still resolving; see [videos].
+  final bool thumbnailsPending;
   final int _count;
   final _ListKind _kind;
   final Widget _media;
@@ -151,19 +162,38 @@ enum _ListKind { videos, people }
 /// z-index. Cards with a resolved thumbnail URL show the image; the rest
 /// are colored placeholders.
 class _VideoFanMedia extends StatelessWidget {
-  const _VideoFanMedia({required this.thumbnailUrls, required this.videoCount});
+  const _VideoFanMedia({
+    required this.thumbnailUrls,
+    required this.videoCount,
+    required this.pending,
+  });
 
   final List<String> thumbnailUrls;
   final int videoCount;
+
+  /// The resolver has not returned yet: empty slots that a video could
+  /// still fill shimmer as bones.
+  final bool pending;
 
   String? _urlAt(int index) =>
       index < thumbnailUrls.length ? thumbnailUrls[index] : null;
 
   @override
   Widget build(BuildContext context) {
-    return _FanFrame(
-      slotBuilder: (index) => _FanSlot(imageUrl: _urlAt(index)),
-      badge: _CountBadge(icon: DivineIconName.play, count: videoCount),
+    return Skeletonizer(
+      enabled: pending,
+      ignoreContainers: true,
+      effect: listSkeletonEffectOf(context),
+      child: _FanFrame(
+        slotBuilder: (index) {
+          final url = _urlAt(index);
+          if (pending && url == null && index < videoCount) {
+            return const _FanSlotBone();
+          }
+          return Skeleton.keep(child: _FanSlot(imageUrl: url));
+        },
+        badge: _CountBadge(icon: DivineIconName.play, count: videoCount),
+      ),
     );
   }
 }
@@ -203,7 +233,11 @@ class _FanFrame extends StatelessWidget {
                     child: slotBuilder(i),
                   ),
                 if (badge case final badge?)
-                  Positioned(left: 8, bottom: 9, child: badge),
+                  Positioned(
+                    left: 8,
+                    bottom: 9,
+                    child: Skeleton.keep(child: badge),
+                  ),
               ],
             );
           },
@@ -256,7 +290,12 @@ class _FanSlot extends StatelessWidget {
 }
 
 /// One large tile left, two stacked tiles right, badge bottom-left.
-class _PeopleCollageMedia extends StatelessWidget {
+///
+/// Each filled slot watches its member's profile here: a tile whose
+/// profile is still loading shimmers as a bone, the same way a video
+/// card's pending fan slots do, and settles into a picture or the accent
+/// placeholder once the profile is known.
+class _PeopleCollageMedia extends ConsumerWidget {
   const _PeopleCollageMedia({
     required this.memberPubkeys,
     required this.memberCount,
@@ -269,11 +308,36 @@ class _PeopleCollageMedia extends StatelessWidget {
       index < memberPubkeys.length ? memberPubkeys[index] : null;
 
   @override
-  Widget build(BuildContext context) {
-    return _CollageFrame(
-      tileBuilder: (slot, seams) =>
-          _MemberTile(pubkey: _pubkeyAt(slot), slot: slot, seams: seams),
-      badge: _CountBadge(icon: DivineIconName.users, count: memberCount),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profiles = [
+      for (var slot = 0; slot < 3; slot++)
+        switch (_pubkeyAt(slot)) {
+          final pubkey? => ref.watch(fetchUserProfileProvider(pubkey)),
+          null => null,
+        },
+    ];
+    final pending = profiles.any((profile) => profile?.isLoading ?? false);
+    return Skeletonizer(
+      enabled: pending,
+      ignoreContainers: true,
+      effect: listSkeletonEffectOf(context),
+      child: _CollageFrame(
+        tileBuilder: (slot, seams) {
+          final profile = profiles[slot];
+          if (profile != null && profile.isLoading) {
+            return _TileBone(slot: slot, seams: seams);
+          }
+          return Skeleton.keep(
+            child: _MemberTile(
+              pubkey: _pubkeyAt(slot),
+              pictureUrl: profile?.value?.picture,
+              slot: slot,
+              seams: seams,
+            ),
+          );
+        },
+        badge: _CountBadge(icon: DivineIconName.users, count: memberCount),
+      ),
     );
   }
 }
@@ -331,7 +395,11 @@ class _CollageFrame extends StatelessWidget {
                   ],
                 ),
                 if (badge case final badge?)
-                  Positioned(left: 8, bottom: 9, child: badge),
+                  Positioned(
+                    left: 8,
+                    bottom: 9,
+                    child: Skeleton.keep(child: badge),
+                  ),
               ],
             ),
           ),
@@ -353,14 +421,18 @@ class _CollageFrame extends StatelessWidget {
 /// One collage tile: the member's profile picture, or an accent placeholder
 /// with a generic avatar glyph when the profile has none (or no member fills
 /// this slot).
-class _MemberTile extends ConsumerWidget {
+class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.pubkey,
+    required this.pictureUrl,
     required this.slot,
     required this.seams,
   });
 
   final String? pubkey;
+
+  /// The member's resolved profile picture, if any.
+  final String? pictureUrl;
 
   /// Position in the collage; seeds the placeholder tone of an empty slot.
   final int slot;
@@ -369,13 +441,7 @@ class _MemberTile extends ConsumerWidget {
   final Border seams;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pictureUrl = switch (pubkey) {
-      final pubkey? =>
-        ref.watch(fetchUserProfileProvider(pubkey)).value?.picture,
-      null => null,
-    };
-
+  Widget build(BuildContext context) {
     // Same seed rule as UserAvatar, so a member keeps one accent across
     // every surface; the ink comes from the same palette so the glyph
     // reads on every fill rather than washing out on lime.
@@ -570,6 +636,14 @@ class _PlainLinkText extends StatelessWidget {
   }
 }
 
+/// The shimmer every list-card placeholder uses, in the fan placeholder's
+/// own fill so a bone and a flat slot read as the same surface.
+PaintingEffect listSkeletonEffectOf(BuildContext context) =>
+    vineSkeletonEffectOf(
+      context,
+      baseColor: context.vineColors.containerLow,
+    );
+
 /// The card's silhouette while its list is still on its way.
 ///
 /// Same media geometry, gap and footer boxes as [DivineListThumbnail], so
@@ -637,7 +711,7 @@ class _FanSlotBone extends StatelessWidget {
         Skeleton.leaf(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: colors.skeleton,
+              color: colors.containerLow,
               borderRadius: BorderRadius.circular(_mediaRadius),
             ),
           ),
@@ -681,7 +755,7 @@ class _TileBone extends StatelessWidget {
         Skeleton.leaf(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: context.vineColors.skeleton,
+              color: context.vineColors.containerLow,
               borderRadius: corners,
             ),
           ),
@@ -715,7 +789,7 @@ class _TextBone extends StatelessWidget {
           child: Skeleton.leaf(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: context.vineColors.skeleton,
+                color: context.vineColors.containerLow,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
