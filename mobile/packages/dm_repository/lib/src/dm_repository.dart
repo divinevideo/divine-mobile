@@ -40,6 +40,7 @@ import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
+import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
@@ -4079,14 +4080,13 @@ class DmRepository {
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
       //
-      // Own-inbox reads deliberately keep the existing single pool-only leg.
-      // The fast read is in front of the receiving subscription, while the
-      // authoritative read protects publication (#8212); widening receipt is
-      // a separate asynchronous concern and must not add a cold connection to
-      // either synchronous path. The publish alone passes [advertisedRelay]:
-      // a user can remove that relay from the pool, and a read that never
-      // asks where the list was written can neither confirm it nor see a
-      // list held only there (#8433).
+      // The live memo read and the drain's strict read keep a single
+      // pool-only leg: the memo is in front of the receiving subscription, and
+      // widening receipt is a separate asynchronous concern (#8212). Only the
+      // publish passes [advertisedRelay], and that leg asks it alone: a user
+      // can remove the relay from the pool, and a read that never asks where
+      // the list was written can neither confirm it nor see a list held only
+      // there (#8433).
       final queryFutures = [
         _nostrClient.queryEventsDetailed(
           filter,
@@ -4111,6 +4111,7 @@ class DmRepository {
             filter,
             useCache: false,
             tempRelays: [advertisedRelay],
+            relayTypes: const [RelayType.temp],
             requireAllRelaysSettled: true,
             timeout: _ownDmInboxAuthoritativeTimeout,
           ),

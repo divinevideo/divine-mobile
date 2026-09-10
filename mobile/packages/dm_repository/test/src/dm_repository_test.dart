@@ -20,6 +20,7 @@ import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -732,6 +733,7 @@ void main() {
           subscriptionId: any(named: 'subscriptionId'),
           useCache: any(named: 'useCache'),
           tempRelays: any(named: 'tempRelays'),
+          relayTypes: any(named: 'relayTypes'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           timeout: any(named: 'timeout'),
         ),
@@ -977,6 +979,7 @@ void main() {
         subscriptionId: any(named: 'subscriptionId'),
         useCache: any(named: 'useCache'),
         tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         timeout: any(named: 'timeout'),
       ),
@@ -5901,6 +5904,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -5991,6 +5995,7 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             timeout: any(named: 'timeout'),
           ),
@@ -6014,6 +6019,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6044,6 +6050,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6105,6 +6112,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6150,6 +6158,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6165,8 +6174,8 @@ void main() {
           ).thenAnswer((_) async => outcome(accepted: true));
         }
 
-        /// Answers the pool read and the advertised-relay read separately;
-        /// only the latter names a temp relay.
+        /// Answers the pool read and the advertised-relay read separately. The
+        /// advertised leg must ask that relay alone, not re-ask the pool.
         void stubOwnInboxByLeg({
           required ({List<Event> events, bool timedOut, bool noRelays}) pool,
           required ({List<Event> events, bool timedOut, bool noRelays})
@@ -6178,14 +6187,26 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
-          ).thenAnswer(
-            (invocation) async => invocation.namedArguments[#tempRelays] == null
-                ? pool
-                : advertised,
-          );
+          ).thenAnswer((invocation) async {
+            final tempRelays =
+                invocation.namedArguments[#tempRelays] as List<String>?;
+            if (tempRelays == null) return pool;
+            final relayTypes =
+                invocation.namedArguments[#relayTypes] as List<int>;
+            final asksOnlyTheAdvertisedRelay =
+                tempRelays.length == 1 &&
+                tempRelays.single == 'wss://relay.divine.video' &&
+                relayTypes.length == 1 &&
+                relayTypes.single == RelayType.temp;
+            if (!asksOnlyTheAdvertisedRelay) {
+              throw StateError('unexpected own-inbox read: $tempRelays');
+            }
+            return advertised;
+          });
         }
 
         test(
@@ -6298,6 +6319,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: captureAny(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: captureAny(
                   named: 'requireAllRelaysSettled',
                 ),
@@ -6321,38 +6343,6 @@ void main() {
               );
             }
             expect(sawOwnInboxRead, isTrue);
-          },
-        );
-
-        test(
-          'reads the own kind-10050 from the relay it publishes to as well as '
-          'from the pool (#8433)',
-          () async {
-            stubOwnInbox(answeredList(const <Event>[]));
-            stubAcceptedPublish();
-
-            final repository = createRepository(syncState: _FakeDmSyncState());
-            await repository.ensureDmRelayListPublished();
-
-            final captured = verify(
-              () => mockNostrClient.queryEventsDetailed(
-                any(),
-                subscriptionId: any(named: 'subscriptionId'),
-                useCache: any(named: 'useCache'),
-                tempRelays: captureAny(named: 'tempRelays'),
-                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-                timeout: any(named: 'timeout'),
-              ),
-            ).captured;
-            // A user can remove the advertised relay from their pool; a read
-            // that never asks it cannot see the list it holds.
-            expect(
-              captured,
-              unorderedEquals(<Object?>[
-                null,
-                ['wss://relay.divine.video'],
-              ]),
-            );
           },
         );
 
@@ -6460,6 +6450,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
                 timeout: any(named: 'timeout'),
               ),
@@ -6511,6 +6502,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
                 timeout: any(named: 'timeout'),
               ),
@@ -6560,6 +6552,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
                 timeout: any(named: 'timeout'),
               ),
