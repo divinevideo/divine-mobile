@@ -4,6 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:image_metadata_stripper/image_metadata_stripper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -27,6 +28,13 @@ class ImageAttachmentPicker extends StatefulWidget {
   @visibleForTesting
   static ImagePicker imagePicker = ImagePicker();
 
+  /// Strips EXIF (including GPS) from a picked attachment before it is handed
+  /// back to the caller. Injectable so tests can drive the fail-closed path
+  /// without a platform channel. Defaults to the fail-closed stripper.
+  @visibleForTesting
+  static Future<File> Function(File file) stripAttachmentMetadata =
+      ImageMetadataStripper.stripMetadataInPlaceOrThrow;
+
   @override
   State<ImageAttachmentPicker> createState() => _ImageAttachmentPickerState();
 }
@@ -49,34 +57,54 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
       picked = await ImageAttachmentPicker.imagePicker.pickMultiImage(
         maxWidth: 1920,
         imageQuality: 80,
-        // Bug-report attachments are uploaded to Zendesk. Without this the
-        // picker reattaches the original photo metadata, so a selected image
-        // can carry GPS EXIF off the device (#8850, decision D3).
-        requestFullMetadata: false,
       );
     } catch (error, stackTrace) {
-      Log.error(
-        'Failed to pick bug report attachments: $error',
-        category: LogCategory.ui,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.bugReportUploadFailed),
-          backgroundColor: VineTheme.error,
-        ),
-      );
+      _showPickFailure(error, stackTrace);
       return;
     }
 
     if (!mounted) return;
     if (picked.isEmpty) return;
 
+    // `image_picker` does not strip EXIF on every platform and plugin version:
+    // Android's multi-image path drops `requestFullMetadata` before the native
+    // call, and the iOS 16+ PHPicker path rebuilds the image from the original
+    // bytes. Strip explicitly and fail closed, because a bug-report attachment
+    // is uploaded to Zendesk and a GPS tag would leave the device (#8850, D3).
+    final sanitized = <XFile>[];
+    var stripFailed = false;
+    for (final file in picked.take(remaining)) {
+      try {
+        final stripped = await ImageAttachmentPicker.stripAttachmentMetadata(
+          File(file.path),
+        );
+        sanitized.add(XFile(stripped.path));
+      } catch (error, stackTrace) {
+        stripFailed = true;
+        Log.error(
+          'Failed to strip metadata from a bug report attachment; dropping it',
+          category: LogCategory.storage,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+
+    if (!mounted) return;
+    if (sanitized.isEmpty) {
+      if (stripFailed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.bugReportUploadFailed),
+            backgroundColor: VineTheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
-      final toAdd = picked.take(remaining).toList();
-      _images.addAll(toAdd);
+      _images.addAll(sanitized);
     });
     widget.onChanged(List.unmodifiable(_images));
 
@@ -87,6 +115,22 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
         Directionality.of(context),
       );
     }
+  }
+
+  void _showPickFailure(Object error, StackTrace stackTrace) {
+    Log.error(
+      'Failed to pick bug report attachments: $error',
+      category: LogCategory.ui,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.bugReportUploadFailed),
+        backgroundColor: VineTheme.error,
+      ),
+    );
   }
 
   void _removeImage(int index) {

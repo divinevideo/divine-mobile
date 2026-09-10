@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_metadata_stripper/image_metadata_stripper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -16,11 +19,16 @@ void main() {
   setUp(() {
     mockPicker = _MockImagePicker();
     ImageAttachmentPicker.imagePicker = mockPicker;
+    // Identity by default so unrelated tests are not forced through the
+    // platform stripper; the metadata tests below override it.
+    ImageAttachmentPicker.stripAttachmentMetadata = (file) async => file;
     l10n = lookupAppLocalizations(const Locale('en'));
   });
 
   tearDown(() {
     ImageAttachmentPicker.imagePicker = ImagePicker();
+    ImageAttachmentPicker.stripAttachmentMetadata =
+        ImageMetadataStripper.stripMetadataInPlaceOrThrow;
   });
 
   Widget buildTestWidget({
@@ -73,7 +81,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => pickedFiles);
 
@@ -93,7 +100,7 @@ void main() {
       }
     });
 
-    testWidgets('strips photo metadata from bug report attachments', (
+    testWidgets('delivers sanitized attachment paths, not the originals', (
       tester,
     ) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
@@ -102,22 +109,50 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
-        ).thenAnswer((_) async => [XFile('/tmp/img1.jpg')]);
+        ).thenAnswer((_) async => [XFile('/tmp/original.jpg')]);
+        ImageAttachmentPicker.stripAttachmentMetadata = (file) async =>
+            File('/tmp/sanitized.jpg');
 
-        await tester.pumpWidget(buildTestWidget());
+        List<XFile>? result;
+        await tester.pumpWidget(
+          buildTestWidget(onChanged: (files) => result = files),
+        );
 
         await tester.tap(find.bySemanticsLabel(l10n.bugReportAttachImages));
         await tester.pumpAndSettle();
 
-        verify(
+        expect(result, isNotNull);
+        expect(result!.single.path, '/tmp/sanitized.jpg');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('drops an attachment whose metadata cannot be stripped', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        when(
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: false,
           ),
-        ).called(1);
+        ).thenAnswer((_) async => [XFile('/tmp/original.jpg')]);
+        ImageAttachmentPicker.stripAttachmentMetadata = (file) async =>
+            throw const FileSystemException('strip failed');
+
+        List<XFile>? result;
+        await tester.pumpWidget(
+          buildTestWidget(onChanged: (files) => result = files),
+        );
+
+        await tester.tap(find.bySemanticsLabel(l10n.bugReportAttachImages));
+        await tester.pump();
+
+        expect(result, isNull);
+        expect(find.text(l10n.bugReportUploadFailed), findsOneWidget);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -132,7 +167,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenThrow(Exception('picker failed'));
 
@@ -160,7 +194,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => fourFiles);
 
@@ -190,7 +223,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => threeFiles);
 
@@ -213,7 +245,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => twoFiles);
 
@@ -280,7 +311,6 @@ void main() {
           () => mockPicker.pickMultiImage(
             maxWidth: any(named: 'maxWidth'),
             imageQuality: any(named: 'imageQuality'),
-            requestFullMetadata: any(named: 'requestFullMetadata'),
           ),
         ).thenAnswer((_) async => pickedFiles);
 
