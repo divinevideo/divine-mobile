@@ -3325,6 +3325,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get authCreateAccountTitle => 'ఖాతాను సృష్టించండి';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి';
 
   @override

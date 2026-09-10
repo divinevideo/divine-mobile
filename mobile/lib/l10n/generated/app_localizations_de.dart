@@ -3229,6 +3229,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authCreateAccountTitle => 'Konto erstellen';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'Zurück zum Einladungscode';
 
   @override

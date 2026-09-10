@@ -2988,6 +2988,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authCreateAccountTitle => 'アカウントを作ろう';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => '招待コードに戻る';
 
   @override

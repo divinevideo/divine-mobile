@@ -3192,6 +3192,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get authCreateAccountTitle => 'اکاؤنٹ بنائیں';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'دعوتی کوڈ پر واپس';
 
   @override

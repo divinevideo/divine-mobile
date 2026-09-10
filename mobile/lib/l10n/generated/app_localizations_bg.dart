@@ -3238,6 +3238,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get authCreateAccountTitle => 'Създаване на акаунт';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'Назад към кода на поканата';
 
   @override

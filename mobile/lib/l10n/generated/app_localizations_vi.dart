@@ -3163,6 +3163,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get authCreateAccountTitle => 'Tạo tài khoản';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'Quay lại mã mời';
 
   @override

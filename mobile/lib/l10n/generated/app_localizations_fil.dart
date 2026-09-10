@@ -3207,6 +3207,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get authCreateAccountTitle => 'Gumawa ng account';
 
   @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
+
+  @override
   String get authBackToInviteCode => 'Bumalik sa invite code';
 
   @override
