@@ -13,14 +13,8 @@ const _second = 'wss://second.example';
 QueryRelaySummary _relay(
   String url, {
   required int oldest,
-  int events = 1,
   bool capped = false,
-}) => QueryRelaySummary(
-  url: url,
-  events: events,
-  oldestCreatedAt: oldest,
-  capped: capped,
-);
+}) => QueryRelaySummary(url: url, oldestCreatedAt: oldest, capped: capped);
 
 /// The step after a settled page that no relay confirmed exhaustive. Unless
 /// [sentTo] says otherwise, every relay in [previousRelays] and [relays] took
@@ -164,7 +158,6 @@ int _newestFirst(_Held a, _Held b) {
       summaries.add(
         QueryRelaySummary(
           url: relay.url,
-          events: counted.length,
           oldestCreatedAt: counted.last.createdAt,
           capped: capped,
         ),
@@ -267,7 +260,7 @@ void main() {
           'created_at', () {
         expect(
           _afterSettledPage(null, [
-            _relay(_first, oldest: 108, events: 3),
+            _relay(_first, oldest: 108),
             _relay(_second, oldest: 50),
           ]),
           _readsAt(108),
@@ -277,7 +270,7 @@ void main() {
       test('moves to the latest oldest created_at below the cursor', () {
         expect(
           _afterSettledPage(108, [
-            _relay(_first, oldest: 106, events: 3),
+            _relay(_first, oldest: 106),
             _relay(_second, oldest: 50),
           ]),
           _readsAt(106),
@@ -289,7 +282,7 @@ void main() {
         // It may hold more events in that second than any until can reach.
         expect(
           _afterSettledPage(104, [
-            _relay(_first, oldest: 104, events: 2, capped: true),
+            _relay(_first, oldest: 104, capped: true),
             _relay(_second, oldest: 90),
           ], possiblyCapped: true),
           _ends(complete: false),
@@ -302,7 +295,7 @@ void main() {
         // relay holds below this second is only safe from a page at 109.
         expect(
           _afterSettledPage(110, [
-            _relay(_first, oldest: 105, events: 2),
+            _relay(_first, oldest: 105),
             _relay(_second, oldest: 110),
           ]),
           _readsAt(109),
@@ -348,7 +341,7 @@ void main() {
             109,
             [_relay(_second, oldest: 50)],
             previousRelays: [
-              _relay(_first, oldest: 109, events: 2, capped: true),
+              _relay(_first, oldest: 109, capped: true),
               _relay(_second, oldest: 50),
             ],
             sentTo: [_second],
@@ -365,7 +358,7 @@ void main() {
             since: null,
             relays: [_relay(_second, oldest: 50)],
             previousRelays: [
-              _relay(_first, oldest: 109, events: 2, capped: true),
+              _relay(_first, oldest: 109, capped: true),
               _relay(_second, oldest: 50),
             ],
             sentTo: const [_second],
@@ -383,7 +376,7 @@ void main() {
             108,
             [_relay(_second, oldest: 50)],
             previousRelays: [
-              _relay(_first, oldest: 108, events: 2, capped: true),
+              _relay(_first, oldest: 108, capped: true),
               _relay(_second, oldest: 50),
             ],
             sentTo: [_first, _second],
@@ -397,12 +390,10 @@ void main() {
           _afterSettledPage(
             108,
             [
-              _relay(_first, oldest: 106, events: 3, capped: true),
+              _relay(_first, oldest: 106, capped: true),
               _relay(_second, oldest: 107),
             ],
-            previousRelays: [
-              _relay(_first, oldest: 108, events: 3, capped: true),
-            ],
+            previousRelays: [_relay(_first, oldest: 108, capped: true)],
           ),
           _readsAt(107),
         );

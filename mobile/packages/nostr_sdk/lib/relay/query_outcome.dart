@@ -47,7 +47,6 @@ class QueryRelaySummary {
   /// Creates the summary of one relay's part in a query.
   const QueryRelaySummary({
     required this.url,
-    required this.events,
     required this.oldestCreatedAt,
     required this.capped,
   });
@@ -55,11 +54,8 @@ class QueryRelaySummary {
   /// The relay's url.
   final String url;
 
-  /// How many `EVENT` frames from the relay matched the query's filters,
-  /// block-listed ones included: the count its cap is judged on.
-  final int events;
-
-  /// The oldest `created_at` among those events.
+  /// The oldest `created_at` among the relay's `EVENT` frames that matched
+  /// the query's filters, block-listed ones included.
   final int oldestCreatedAt;
 
   /// Whether the relay may have stopped at its result-size limit rather than

@@ -230,7 +230,6 @@ class QueryOutcomeTracker {
               when tally.relay.relayStatus.relayType != RelayType.cache)
             QueryRelaySummary(
               url: tally.relay.url,
-              events: tally.events,
               oldestCreatedAt: oldest,
               capped: _isCapped(tally),
             ),

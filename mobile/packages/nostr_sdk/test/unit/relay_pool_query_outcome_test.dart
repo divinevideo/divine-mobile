@@ -139,12 +139,10 @@ const _queryId = 'outcome-query';
 
 Matcher _summary({
   required String url,
-  required int events,
   required int oldestCreatedAt,
   required bool capped,
 }) => isA<QueryRelaySummary>()
     .having((summary) => summary.url, 'url', url)
-    .having((summary) => summary.events, 'events', events)
     .having(
       (summary) => summary.oldestCreatedAt,
       'oldestCreatedAt',
@@ -863,7 +861,7 @@ void main() {
       void expectCapped(QueryOutcome ended) {
         expect(ended.possiblyCapped, isTrue);
         expect(ended.relays, [
-          _summary(url: url, events: 1, oldestCreatedAt: 110, capped: true),
+          _summary(url: url, oldestCreatedAt: 110, capped: true),
         ]);
       }
 
@@ -1511,8 +1509,8 @@ void main() {
     });
 
     group('relays', () {
-      test('names each relay that sent events, with how many, the oldest '
-          'created_at and whether it may be capped', () async {
+      test('names each relay that sent events, with the oldest created_at '
+          'and whether it may be capped', () async {
         final full = await addRelay('wss://full.example');
         final short = await addRelay('wss://short.example');
         final empty = await addRelay('wss://empty.example');
@@ -1534,13 +1532,11 @@ void main() {
           unorderedMatches([
             _summary(
               url: 'wss://full.example',
-              events: 2,
               oldestCreatedAt: 101,
               capped: true,
             ),
             _summary(
               url: 'wss://short.example',
-              events: 1,
               oldestCreatedAt: 102,
               capped: false,
             ),
@@ -1567,7 +1563,6 @@ void main() {
         expect((await outcome.future).relays, [
           _summary(
             url: 'wss://relay.example',
-            events: 2,
             oldestCreatedAt: 104,
             capped: true,
           ),
@@ -1607,26 +1602,23 @@ void main() {
           unorderedMatches([
             _summary(
               url: 'wss://finishes.example',
-              events: 2,
               oldestCreatedAt: 109,
               capped: false,
             ),
             _summary(
               url: 'wss://more.example',
-              events: 1,
               oldestCreatedAt: 108,
               capped: true,
             ),
             _summary(
               url: 'wss://off-filter.example',
-              events: 1,
               oldestCreatedAt: 107,
               capped: true,
             ),
           ]),
           reason:
               'finish clears the cap its count would set, more sets one, '
-              'and so does an event outside the filter, which is not counted',
+              'and so does an event outside the filter',
         );
       });
 
@@ -1655,7 +1647,6 @@ void main() {
           [
             _summary(
               url: 'wss://relay.example',
-              events: 1,
               oldestCreatedAt: 103,
               capped: false,
             ),
@@ -1682,7 +1673,6 @@ void main() {
         expect(atDeadline?.relays, [
           _summary(
             url: 'wss://streams.example',
-            events: 2,
             oldestCreatedAt: 102,
             capped: false,
           ),
