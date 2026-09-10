@@ -3969,6 +3969,12 @@ abstract class AppLocalizations {
   /// **'Failed to connect to relays. Please check your network connection.'**
   String get relaySettingsFailedToConnectCheck;
 
+  /// Shown when a relay reconnect has not finished within its budget, so whether it succeeded is not yet known. Deliberately not an error: the reconnect is still running.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting. This is taking a moment - your relays will show up here when they land.'**
+  String get relaySettingsStillConnecting;
+
   /// No description provided for @relaySettingsSavedLocallyPublishPending.
   ///
   /// In en, this message translates to:

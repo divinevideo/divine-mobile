@@ -2308,6 +2308,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte ansluta till reler. Kolla din nätverksanslutning.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Sparat på den här enheten. Vi synkar det till ditt konto när publicering fungerar igen.';
 

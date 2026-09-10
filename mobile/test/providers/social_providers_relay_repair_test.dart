@@ -89,7 +89,9 @@ void main() {
       client = _MockNostrClient();
       when(() => client.hasKeys).thenReturn(true);
       when(() => client.publicKey).thenReturn(pubkey);
-      when(client.forceReconnectAll).thenAnswer((_) async {});
+      when(client.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
 
       dao = _MockOutgoingDmsDao();
       when(

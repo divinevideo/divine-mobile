@@ -81,7 +81,9 @@ void main() {
         () => mockVideoEventService.resetAndResubscribeAll(),
       ).thenAnswer((_) async {});
       when(() => mockNostrClient.isInitialized).thenReturn(true);
-      when(() => mockNostrClient.forceReconnectAll()).thenAnswer((_) async {});
+      when(() => mockNostrClient.forceReconnectAll()).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
       when(() => mockNostrClient.defaultRelayUrl).thenReturn(defaultRelay);
       when(() => mockNostrClient.publicKey).thenAnswer((_) => clientPublicKey);
       stubUserRemovedRelays(mockNostrClient);
@@ -499,7 +501,9 @@ void main() {
           final relay = call.positionalArguments.single as String;
           return replacementRelays.remove(relay);
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -630,7 +634,9 @@ void main() {
             final relay = call.positionalArguments.single as String;
             return replacementRelays.remove(relay);
           });
-          when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+          when(replacementClient.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
 
           final swappableService = SwappableNostrService(mockNostrClient);
           final container = ProviderContainer(
@@ -746,7 +752,9 @@ void main() {
             source: any(named: 'source'),
           ),
         ).thenAnswer((_) async => true);
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -832,7 +840,9 @@ void main() {
             source: any(named: 'source'),
           ),
         ).thenAnswer((_) async => true);
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -935,7 +945,9 @@ void main() {
           );
           return 1;
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1027,7 +1039,9 @@ void main() {
             final relay = call.positionalArguments.single as String;
             return replacementRelays.remove(relay);
           });
-          when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+          when(replacementClient.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
 
           final swappableService = SwappableNostrService(mockNostrClient);
           final container = ProviderContainer(
@@ -1112,7 +1126,9 @@ void main() {
           );
           return 1;
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1200,7 +1216,9 @@ void main() {
           if (removeAttempts == 1) return false;
           return replacementRelays.remove(removedRelay);
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1411,7 +1429,9 @@ void main() {
         for (final client in [firstReplacement, secondReplacement]) {
           when(() => client.isInitialized).thenReturn(true);
           stubClientScope(client);
-          when(client.forceReconnectAll).thenAnswer((_) async {});
+          when(client.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
         }
         when(() => firstReplacement.relayStatuses).thenAnswer(
           (_) => {

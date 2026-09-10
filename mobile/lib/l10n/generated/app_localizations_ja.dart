@@ -2147,6 +2147,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get relaySettingsFailedToConnectCheck => 'リレーに接続できなかった。ネット接続を確認してみて。';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'この端末に保存しました。公開がまた動くようになったらアカウントに同期します。';
 

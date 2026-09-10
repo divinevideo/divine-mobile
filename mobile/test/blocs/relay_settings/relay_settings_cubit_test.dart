@@ -49,7 +49,9 @@ void main() {
       when(
         relayListRepository.publishConfiguredRelayList,
       ).thenAnswer((_) async => const RelayListPublishResult.published());
-      when(nostr.forceReconnectAll).thenAnswer((_) async {});
+      when(nostr.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
       when(videos.resetAndResubscribeAll).thenAnswer((_) async {});
     });
 
@@ -483,6 +485,27 @@ void main() {
       act: (cubit) async {
         final outcome = await cubit.retryConnection();
         expect(outcome.kind, RetryConnectionOutcomeKind.notConnected);
+      },
+      verify: (_) {
+        verifyNever(videos.resetAndResubscribeAll);
+      },
+    );
+
+    blocTest<RelaySettingsCubit, RelaySettingsState>(
+      'retryConnection reports stillConnecting, not notConnected, when the '
+      'reconnect had not finished',
+      setUp: () {
+        // The shared cycle keeps dialling past the deadline. Zero connected
+        // relays here means "no answer yet", and calling it a failure told the
+        // user the retry failed while it was still succeeding.
+        when(nostr.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.stillDialling,
+        );
+      },
+      build: buildCubit,
+      act: (cubit) async {
+        final outcome = await cubit.retryConnection();
+        expect(outcome.kind, RetryConnectionOutcomeKind.stillConnecting);
       },
       verify: (_) {
         verifyNever(videos.resetAndResubscribeAll);

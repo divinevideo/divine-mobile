@@ -2320,6 +2320,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi nakakonekta sa mga relay. Pakitsek ang iyong network connection.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Naka-save sa device na ito. Isi-sync namin ito sa account mo kapag gumana ulit ang publishing.';
 

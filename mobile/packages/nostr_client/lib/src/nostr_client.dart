@@ -1614,9 +1614,11 @@ class NostrClient {
   /// Use this when WebSocket connections may have been silently dropped
   /// (e.g., after app backgrounding). Concurrent callers share one cycle;
   /// see [RelayManager.forceReconnectAll].
-  Future<void> forceReconnectAll() async {
-    await _relayManager.forceReconnectAll();
-  }
+  ///
+  /// Returns whether the cycle finished, so a caller reporting the result to
+  /// the user can tell a completed reconnect from one still in flight.
+  Future<ForceReconnectOutcome> forceReconnectAll() =>
+      _relayManager.forceReconnectAll();
 
   /// Gets relay connection status as a simple map.
   ///

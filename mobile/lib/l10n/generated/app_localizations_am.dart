@@ -2262,6 +2262,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ከቅብብሎሽ ጋር መገናኘት አልተሳካም። እባክዎ የአውታረ መረብ ግንኙነትዎን ያረጋግጡ።';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'በዚህ መሣሪያ ላይ ተቀምጧል። ማተም እንደገና ሲሰራ ወደ መለያዎ እናስመሳስለዋለን።';
 

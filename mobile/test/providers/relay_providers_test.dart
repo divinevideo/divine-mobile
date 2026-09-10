@@ -60,8 +60,12 @@ void main() {
     setUp(() {
       first = _MockNostrClient();
       second = _MockNostrClient();
-      when(first.forceReconnectAll).thenAnswer((_) async {});
-      when(second.forceReconnectAll).thenAnswer((_) async {});
+      when(first.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
+      when(second.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
     });
 
     ProviderContainer containerFor(_FakeConnectivity connectivity) {

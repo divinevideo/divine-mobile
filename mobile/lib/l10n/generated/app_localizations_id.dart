@@ -2243,6 +2243,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Gagal terhubung ke relay. Silakan cek koneksi jaringanmu.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Tersimpan di perangkat ini. Kami akan menyinkronkannya ke akunmu saat penerbitan berfungsi lagi.';
 

@@ -113,6 +113,8 @@ class RetryConnectionOutcome extends Equatable {
     : this._(kind: RetryConnectionOutcomeKind.connected, connectedCount: count);
   const RetryConnectionOutcome.notConnected()
     : this._(kind: RetryConnectionOutcomeKind.notConnected);
+  const RetryConnectionOutcome.stillConnecting()
+    : this._(kind: RetryConnectionOutcomeKind.stillConnecting);
   const RetryConnectionOutcome.failed()
     : this._(kind: RetryConnectionOutcomeKind.failed);
 
@@ -123,4 +125,18 @@ class RetryConnectionOutcome extends Equatable {
   List<Object?> get props => [kind, connectedCount];
 }
 
-enum RetryConnectionOutcomeKind { connected, notConnected, failed }
+enum RetryConnectionOutcomeKind {
+  /// The reconnect finished and at least one relay is connected.
+  connected,
+
+  /// The reconnect finished and nothing connected.
+  notConnected,
+
+  /// The reconnect had not finished when we stopped waiting, so nothing is
+  /// known yet. Distinct from [notConnected]: reporting a failure here tells
+  /// the user the retry failed while it is still succeeding.
+  stillConnecting,
+
+  /// The reconnect threw.
+  failed,
+}

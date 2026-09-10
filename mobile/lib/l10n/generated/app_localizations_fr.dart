@@ -2353,6 +2353,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Échec de la connexion aux relays. Vérifie ta connexion réseau.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Enregistré sur cet appareil. On le synchronisera avec ton compte quand la publication refonctionnera.';
 

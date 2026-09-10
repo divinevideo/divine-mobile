@@ -2333,6 +2333,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Falha ao conectar aos relays. Verifique sua conexão de rede.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Salvo neste dispositivo. Vamos sincronizar com sua conta quando a publicação voltar a funcionar.';
 

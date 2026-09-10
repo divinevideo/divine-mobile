@@ -3138,7 +3138,9 @@ void main() {
 
     group('forceReconnectAll', () {
       test('delegates to RelayManager', () async {
-        when(mockRelayManager.forceReconnectAll).thenAnswer((_) async {});
+        when(mockRelayManager.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         await client.forceReconnectAll();
 

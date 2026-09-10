@@ -2297,6 +2297,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Gagal bersambung ke relay. Sila semak sambungan rangkaian anda.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Disimpan pada peranti ini. Kami akan menyegerakkannya ke akaun anda apabila penerbitan berfungsi semula.';
 

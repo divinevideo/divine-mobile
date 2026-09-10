@@ -49,6 +49,20 @@ String? normalizeRelayUrl(String url) {
   return normalized;
 }
 
+/// Whether a force-reconnect cycle finished, or was still dialling when the
+/// caller stopped waiting.
+///
+/// The shared cycle keeps running after the deadline, so `stillDialling` is
+/// "no answer yet", not "failed".
+enum ForceReconnectOutcome {
+  /// The cycle finished inside its budget.
+  completed,
+
+  /// The caller stopped waiting at the shared deadline while dials were still
+  /// open. The cycle keeps running and keeps writing relay status.
+  stillDialling,
+}
+
 /// {@template relay_manager}
 /// Manages relay configuration and connection status.
 ///
@@ -528,15 +542,22 @@ class RelayManager {
   Future<void>? _retryInFlight;
   DateTime? _retryDeadline;
 
-  Future<void> _waitForRetrySweep(Future<void> sweep) {
+  Future<void> _waitForRetrySweep(Future<void> sweep) async {
     final deadline = _retryDeadline;
     if (deadline == null) return sweep;
-    return _waitUntil(sweep, deadline, 'Reconnect sweep');
+    // The retry sweep has no caller that reports an outcome, so its result is
+    // deliberately dropped here rather than widened through that path too.
+    await _waitUntil(sweep, deadline, 'Reconnect sweep');
   }
 
   /// Waits for [work] until [deadline]. Work still running afterwards keeps
   /// going and keeps writing its relays' status.
-  Future<void> _waitUntil(
+  ///
+  /// Returns whether [work] finished inside the deadline. Callers that report
+  /// an outcome need that: an expired deadline and a finished cycle both leave
+  /// this future completing normally, and treating the first as the second
+  /// tells the user the reconnect failed while it is still succeeding.
+  Future<ForceReconnectOutcome> _waitUntil(
     Future<void> work,
     DateTime deadline,
     String label,
@@ -544,11 +565,13 @@ class RelayManager {
     final remaining = deadline.difference(DateTime.now());
     try {
       await work.timeout(remaining.isNegative ? Duration.zero : remaining);
+      return ForceReconnectOutcome.completed;
     } on TimeoutException {
       _log(
         '$label exceeded ${reconnectSweepBudget.inSeconds}s; '
         'hosts still dialling remain in flight',
       );
+      return ForceReconnectOutcome.stillDialling;
     }
   }
 
@@ -630,7 +653,12 @@ class RelayManager {
   /// (e.g., after app backgrounding). Concurrent callers share one cycle and
   /// stop waiting at its [reconnectSweepBudget] deadline; a call after that
   /// deadline starts a new cycle, which replaces any dial still hanging.
-  Future<void> forceReconnectAll() {
+  ///
+  /// Returns [ForceReconnectOutcome.completed] only when the cycle actually
+  /// finished. A caller joining shortly before the shared deadline gets
+  /// [ForceReconnectOutcome.stillDialling] instead of a normal completion it
+  /// would otherwise read as "the reconnect is done and nothing connected".
+  Future<ForceReconnectOutcome> forceReconnectAll() {
     final running = _forceCycle;
     final runningDeadline = _forceCycleDeadline;
     if (running != null &&

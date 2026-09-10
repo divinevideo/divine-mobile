@@ -1548,6 +1548,8 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "Failed to connect to relays. Please check your network connection.",
+  "relaySettingsStillConnecting": "Still connecting. This is taking a moment - your relays will show up here when they land.",
+  "@relaySettingsStillConnecting": {"description": "Shown when a relay reconnect has not finished within its budget, so whether it succeeded is not yet known. Deliberately not an error: the reconnect is still running."},
   "relaySettingsSavedLocallyPublishPending": "Saved on this device. We'll sync it to your account when publishing works again.",
   "relaySettingsAddRelayTitle": "Add Relay",
   "relaySettingsAddRelayPrompt": "Enter the WebSocket URL of the relay you want to add:",

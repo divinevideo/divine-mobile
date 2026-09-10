@@ -2367,6 +2367,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రిలేలకు కనెక్ట్ చేయడంలో విఫలమైంది. దయచేసి మీ నెట్‌వర్క్ కనెక్షన్‌ని తనిఖీ చేయండి.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'ఈ పరికరంలో సేవ్ చేయబడింది. రచనలను మళ్లీ ప్రచురించేటప్పుడు మేము దానిని మీ ఖాతాకు సమకాలీకరిస్తాము.';
 

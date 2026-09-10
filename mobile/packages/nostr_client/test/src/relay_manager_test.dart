@@ -1957,6 +1957,68 @@ void main() {
         ).called(3);
       });
 
+      test(
+        'a completed cycle reports completed',
+        () async {
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) async => true);
+
+          expect(
+            await manager.forceReconnectAll(),
+            ForceReconnectOutcome.completed,
+          );
+        },
+      );
+
+      test(
+        'a caller joining shortly before the shared deadline is told the '
+        'cycle is still dialling, not that it finished',
+        () async {
+          // The bug this pins: the joiner used to get a normal completion
+          // when the shared deadline expired, indistinguishable from a
+          // finished cycle. The Relays screen then read connectedRelayCount
+          // as zero and told the user the retry had failed, while the
+          // reconnect was still running.
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          final original = RelayManager.reconnectSweepBudget;
+          RelayManager.reconnectSweepBudget = const Duration(milliseconds: 60);
+          addTearDown(() => RelayManager.reconnectSweepBudget = original);
+
+          final first = manager.forceReconnectAll();
+          await pumpEventQueue();
+          // Joins the running cycle with only part of its budget left.
+          final joiner = manager.forceReconnectAll();
+
+          expect(await joiner, ForceReconnectOutcome.stillDialling);
+          expect(await first, ForceReconnectOutcome.stillDialling);
+          expect(
+            dials.every((dial) => !dial.isCompleted),
+            isTrue,
+            reason: 'the dials are still open; the cycle really did not finish',
+          );
+
+          for (final dial in dials) {
+            dial.complete(true);
+          }
+          await pumpEventQueue();
+        },
+      );
+
       test('starts every dial before any completes', () async {
         final dials = <Completer<bool>>[];
         when(
