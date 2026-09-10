@@ -1249,8 +1249,8 @@ class DmRepository {
       // falls back to the default pool on `absent` and `failed` alike, and
       // `startListening` awaits it before opening the subscription. Making it
       // strict would put a full timeout in front of DM delivery on every login
-      // and every reconnect to protect a write that happens at most once per
-      // device. The publish path reads authoritatively on its own instead.
+      // and every reconnect to protect the inbox-list publish, which reads
+      // authoritatively on its own instead.
       // See #8212.
       requireAuthoritative: false,
       source: _DmRelayListSource.selfAuthored,
@@ -4356,10 +4356,7 @@ class DmRepository {
         targetRelays: <String>[relayUrl, ...discoveryTargets],
       );
       if (_disposed || _resetGeneration != gen) return;
-      // The advertised relay's own `OK` decides which line is logged, never
-      // what is recorded: that relay queues the event and commits it minutes
-      // later, and can lose it in between (#8433). Nothing is recorded here
-      // either way; the next session's read finds the list or publishes again.
+      // The advertised relay's `OK` only decides which line is logged (#8433).
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
