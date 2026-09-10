@@ -13,8 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:models/models.dart' as model;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -332,7 +332,7 @@ void main() {
       expect(incoming.declaredContentLanguage, isNull);
     });
 
-    test('clears every owner\'s personal events', () async {
+    test("clears every owner's personal events", () async {
       await db.personalEventsDao.upsertPersonalEvent(
         _personalEvent(_pubkeyA, 1700000000),
       );
