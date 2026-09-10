@@ -29,7 +29,15 @@ class _MockNostr extends Mock implements Nostr {
   /// list-returning method that tests stub. Tests that care about the timeout
   /// signal set [timedOut] instead of stubbing a second method.
   @override
-  Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+  Future<
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelaysParticipated,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
+  >
   queryEventsDetailed(
     List<Map<String, dynamic>> filters, {
     String? id,
@@ -52,6 +60,8 @@ class _MockNostr extends Mock implements Nostr {
       events: events,
       timedOut: timedOut,
       noRelaysParticipated: noRelaysParticipated,
+      anyRelayAnswered: false,
+      unsettledRelays: const <String>[],
     );
   }
 }

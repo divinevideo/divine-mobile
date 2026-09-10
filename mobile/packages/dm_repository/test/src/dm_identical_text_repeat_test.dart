@@ -82,6 +82,8 @@ void main() {
           events: const <Event>[],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ),
       );
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});

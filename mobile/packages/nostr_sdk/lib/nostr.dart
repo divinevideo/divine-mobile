@@ -344,7 +344,23 @@ class Nostr {
   /// an empty `events` on its own cannot distinguish from every relay holding
   /// nothing. It stays `false` when the fan-out itself ran out of time, since
   /// that leaves participation genuinely unknown.
-  Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+  ///
+  /// `anyRelayAnswered` splits the two ways a full-settlement read times out.
+  /// A relay that sends `EOSE` has made a data claim, so an empty box with
+  /// `anyRelayAnswered: true` means the relays that could be reached hold
+  /// nothing older and only a silent holdout is unaccounted for. With `false`
+  /// nothing made a claim at all, and the empty box is evidence of nothing.
+  /// `unsettledRelays` names the holdouts; relay urls are configuration, not
+  /// user data, so they are safe to log.
+  Future<
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelaysParticipated,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
+  >
   queryEventsDetailed(
     List<Map<String, dynamic>> filters, {
     String? id,
@@ -360,6 +376,8 @@ class Nostr {
     final deadline = DateTime.now().add(timeout);
     var timedOut = false;
     var noRelaysParticipated = false;
+    var anyRelayAnswered = false;
+    var unsettledRelays = const <String>[];
 
     Duration remainingTimeout() {
       final remaining = deadline.difference(DateTime.now());
@@ -390,6 +408,11 @@ class Nostr {
       await completer.future.timeout(remainingTimeout());
     } on TimeoutException {
       timedOut = true;
+      // Sample before `unsubscribe`, which sweeps the pool's per-query
+      // settlement bookkeeping.
+      final settlement = _pool.querySettlement(subscriptionId);
+      anyRelayAnswered = settlement.anyRelayAnswered;
+      unsettledRelays = settlement.unsettledRelays;
       unsubscribe(subscriptionId);
     }
 
@@ -401,6 +424,10 @@ class Nostr {
       // hold and keeps its prompt empty answer.
       timedOut: timedOut || (requireAllRelaysSettled && noRelaysParticipated),
       noRelaysParticipated: noRelaysParticipated,
+      // A query that completed rather than timed out settled on every relay
+      // that took it, so participation is the whole answer.
+      anyRelayAnswered: timedOut ? anyRelayAnswered : !noRelaysParticipated,
+      unsettledRelays: unsettledRelays,
     );
   }
 

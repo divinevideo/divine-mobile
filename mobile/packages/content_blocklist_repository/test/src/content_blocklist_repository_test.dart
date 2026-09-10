@@ -29,6 +29,8 @@ class _MockNostrClient extends Mock implements NostrClient {
         events: await queryEvents(filters),
         timedOut: false,
         noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
       );
     });
   }
@@ -1205,6 +1207,8 @@ void main() {
             events: <Event>[],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
         when(
@@ -3369,6 +3373,8 @@ void main() {
             events: events,
             timedOut: timedOut,
             noRelays: noRelays,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
       }
@@ -3731,6 +3737,8 @@ void main() {
             events: <Event>[],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
       }
@@ -3742,7 +3750,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          (_) async => (
+            events: <Event>[],
+            timedOut: true,
+            noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
       }
 
@@ -4306,6 +4320,8 @@ void main() {
                 events: [clockSkewedList],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               ),
             );
             when(
@@ -4365,6 +4381,8 @@ void main() {
                 events: [clockSkewedList],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               ),
             );
 
@@ -4425,6 +4443,8 @@ void main() {
                 events: [clockSkewedList],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               ),
             );
 
@@ -4483,6 +4503,8 @@ void main() {
                 events: [landedList],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               ),
             );
             when(
@@ -4540,6 +4562,8 @@ void main() {
                 events: [invalidFutureList],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               ),
             );
 
@@ -4598,6 +4622,8 @@ void main() {
               events: [clockSkewedList],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
           when(
@@ -5643,7 +5669,13 @@ void main() {
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        (_) async => (
+          events: <Event>[],
+          timedOut: true,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
 
       final service = ContentBlocklistRepository(prefs: prefs);

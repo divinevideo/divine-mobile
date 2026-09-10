@@ -99,6 +99,8 @@ void main() {
           events: responses[callCount++ % responses.length],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         );
       });
     }

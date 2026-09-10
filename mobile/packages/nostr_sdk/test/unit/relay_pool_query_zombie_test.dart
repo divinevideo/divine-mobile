@@ -38,7 +38,15 @@ void main() {
       await nostr.relayPool.add(relay);
     });
 
-    Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+    Future<
+      ({
+        List<Event> events,
+        bool timedOut,
+        bool noRelaysParticipated,
+        bool anyRelayAnswered,
+        List<String> unsettledRelays,
+      })
+    >
     queryOnce() {
       return nostr.queryEventsDetailed([
         {

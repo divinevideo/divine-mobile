@@ -17,9 +17,22 @@ class _MockClient extends Mock implements NostrClient {}
 
 /// Shapes a `queryEventsDetailed` answer with a live (non-failed) relay
 /// pool returning [events].
-({List<Event> events, bool timedOut, bool noRelays}) _confirmed(
+({
   List<Event> events,
-) => (events: events, timedOut: false, noRelays: false);
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+_confirmed(
+  List<Event> events,
+) => (
+  events: events,
+  timedOut: false,
+  noRelays: false,
+  anyRelayAnswered: false,
+  unsettledRelays: const <String>[],
+);
 
 /// A publish one relay answered `OK true`.
 PublishOutcome _accepted(Event event) => PublishOutcome(
@@ -514,7 +527,13 @@ void main() {
         'when no relays are connected',
         () async {
           when(() => client.queryEventsDetailed(any())).thenAnswer(
-            (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+            (_) async => (
+              events: <Event>[],
+              timedOut: false,
+              noRelays: true,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
 
           await expectLater(
@@ -529,7 +548,13 @@ void main() {
         'when the relay query times out',
         () async {
           when(() => client.queryEventsDetailed(any())).thenAnswer(
-            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+            (_) async => (
+              events: <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
 
           await expectLater(

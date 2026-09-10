@@ -185,7 +185,14 @@ class VaultKeyService {
   /// uses [NostrClient.queryEventsDetailed] and fails closed on
   /// `noRelays`/`timedOut` instead.
   Future<Event?> _fetchRemote(String pubkey) async {
-    final ({List<Event> events, bool timedOut, bool noRelays}) result;
+    final ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelays,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
+    result;
     try {
       result = await _client.queryEventsDetailed(
         [

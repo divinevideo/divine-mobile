@@ -34,6 +34,8 @@ class _MockNostrClient extends Mock implements NostrClient {
         events: await queryEvents(filters),
         timedOut: false,
         noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
       );
     });
   }
@@ -248,7 +250,13 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
-          (_) async => (events: [remote], timedOut: false, noRelays: false),
+          (_) async => (
+            events: [remote],
+            timedOut: false,
+            noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
         when(() => client.publishEvent(any())).thenAnswer((invocation) async {
           final event = invocation.positionalArguments.first as Event;
@@ -302,6 +310,8 @@ void main() {
               events: [staleRemote],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
           when(() => client.publishEvent(any())).thenAnswer((invocation) async {
@@ -364,7 +374,13 @@ void main() {
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
-            (_) async => (events: [remote], timedOut: false, noRelays: false),
+            (_) async => (
+              events: [remote],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
           // NostrClient appends the NIP-89 client tag during publish and
           // rebinds event.tags to a new list, so the caller's pre-publish
@@ -627,7 +643,13 @@ void main() {
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
-            (_) async => (events: [remote], timedOut: false, noRelays: false),
+            (_) async => (
+              events: [remote],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
           when(() => client.publishEvent(any())).thenAnswer((invocation) async {
             final event = invocation.positionalArguments.first as Event;
@@ -689,7 +711,13 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
-          (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+          (_) async => (
+            events: events,
+            timedOut: timedOut,
+            noRelays: noRelays,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
       }
 
@@ -1070,6 +1098,8 @@ void main() {
               events: [newer, older],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
           final repository = buildRepository(nostrClient: client);
@@ -1122,6 +1152,8 @@ void main() {
             events: [higherId, lowerId],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
         final repository = buildRepository(nostrClient: client);

@@ -95,7 +95,13 @@ void main() {
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
-        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+        (_) async => (
+          events: events,
+          timedOut: timedOut,
+          noRelays: noRelays,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
     }
 
@@ -115,7 +121,13 @@ void main() {
           requireAllRelaysSettled: fullSettlement,
         ),
       ).thenAnswer(
-        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+        (_) async => (
+          events: events,
+          timedOut: timedOut,
+          noRelays: noRelays,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
     }
 
@@ -1249,9 +1261,21 @@ void main() {
           ).thenAnswer((_) async {
             if (++queries == 1) {
               await releaseRead.future;
-              return (events: [staleRead], timedOut: false, noRelays: false);
+              return (
+                events: [staleRead],
+                timedOut: false,
+                noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
+              );
             }
-            return (events: [relayHeld], timedOut: false, noRelays: false);
+            return (
+              events: [relayHeld],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           });
           when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
             invocation,
@@ -1338,7 +1362,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: [relayHeld], timedOut: false, noRelays: false),
+          (_) async => (
+            events: [relayHeld],
+            timedOut: false,
+            noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
         when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
           invocation,

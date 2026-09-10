@@ -145,8 +145,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(

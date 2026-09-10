@@ -21,7 +21,15 @@ class _MockNostrClient extends Mock implements NostrClient {
   bool? queryRequiresAllRelaysSettled;
 
   @override
-  Future<({List<Event> events, bool timedOut, bool noRelays})>
+  Future<
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelays,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
+  >
   queryEventsDetailed(
     List<Filter> filters, {
     String? subscriptionId,
@@ -40,6 +48,8 @@ class _MockNostrClient extends Mock implements NostrClient {
       events: events,
       timedOut: queryTimedOut,
       noRelays: connectedRelays.isEmpty,
+      anyRelayAnswered: false,
+      unsettledRelays: const <String>[],
     );
   }
 }

@@ -15,7 +15,13 @@ class _MockLikesLocalStorage extends Mock implements LikesLocalStorage {}
 
 class _MockEvent extends Mock implements Event {}
 
-typedef _RelaySnapshot = ({List<Event> events, bool timedOut, bool noRelays});
+typedef _RelaySnapshot = ({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+});
 
 /// Holds the startup relay snapshot open so a tap can race it.
 class _GatedRelaySnapshot {
@@ -28,10 +34,22 @@ class _GatedRelaySnapshot {
     List<Event> deletions = const [],
   }) {
     this.reactions.complete(
-      (events: reactions, timedOut: false, noRelays: false),
+      (
+        events: reactions,
+        timedOut: false,
+        noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
+      ),
     );
     this.deletions.complete(
-      (events: deletions, timedOut: false, noRelays: false),
+      (
+        events: deletions,
+        timedOut: false,
+        noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
+      ),
     );
   }
 }
@@ -124,6 +142,8 @@ void main() {
           events: kinds.contains(EventKind.reaction) ? reactions : deletions,
           timedOut: timedOut,
           noRelays: noRelays,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         );
       });
     }

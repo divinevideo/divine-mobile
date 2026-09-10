@@ -1208,10 +1208,27 @@ class RelayPool {
         _armQuerySettleWindow(subId);
         return;
       }
-      log(
-        'Query $subId settled without ${_queryStragglers(subId)} — '
-        'completing on the relays that answered',
-      );
+      final stragglers = _queryStragglers(subId);
+      assert(() {
+        log(
+          'Query $subId settled without $stragglers — '
+          'completing on the relays that answered',
+        );
+        return true;
+      }());
+      // Which relay went silent is the one fact support cannot reconstruct
+      // from a stalled read, so it goes to the injected sink rather than only
+      // to the debug console. One diagnostic per straggler keeps the relay url
+      // in the structured `relayUrl` field instead of interpolated into text.
+      for (final straggler in stragglers) {
+        _diagnose(
+          RelayDiagnosticSite.requestSettlement,
+          RelayDiagnosticLevel.warning,
+          straggler,
+          'Relay never settled request $subId; completing on the relays that '
+          'answered',
+        );
+      }
       _completeQuery(subId, callback);
     });
   }
@@ -1240,6 +1257,23 @@ class RelayPool {
     armed.cancel();
     _armQuerySettleWindow(subId);
   }
+
+  /// Settlement evidence for a one-shot query that is still in flight.
+  ///
+  /// Read by [queryEventsDetailed] on its timeout path, where the query has
+  /// by definition not completed, so [_queryAnswered] has not yet been swept
+  /// by [_completeQuery]. A caller that required full settlement gets an empty
+  /// box either way; this is what tells it whether the box is empty because
+  /// the reachable relays said so, or because nothing said anything.
+  ///
+  /// [unsettledRelays] names the relays still holding the REQ. Relay urls are
+  /// configuration, not user data, so they are safe to log and export.
+  ({bool anyRelayAnswered, List<String> unsettledRelays}) querySettlement(
+    String subId,
+  ) => (
+    anyRelayAnswered: _queryAnswered.contains(subId),
+    unsettledRelays: _queryStragglers(subId),
+  );
 
   /// Relay urls that never answered [subId]; diagnostic only.
   List<String> _queryStragglers(String subId) => [

@@ -75,8 +75,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       // The leg OK-confirms its kind 4 (#8262), so it calls
       // `publishEventAwaitOk`. Stubbing `publishEvent` here would leave the

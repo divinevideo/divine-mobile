@@ -223,7 +223,13 @@ void main() {
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       final service = buildService(canQueryRelays: true);
 
@@ -327,6 +333,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -363,6 +371,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -396,6 +406,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -431,6 +443,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -468,6 +482,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -503,6 +519,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -536,6 +554,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -571,6 +591,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -620,6 +642,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -680,6 +704,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -730,6 +756,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -767,6 +795,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -798,6 +828,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -829,6 +861,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -880,6 +914,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -921,6 +957,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -960,7 +998,15 @@ void main() {
         const labeler =
             'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
         final events =
-            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+            Completer<
+              ({
+                List<Event> events,
+                bool timedOut,
+                bool noRelays,
+                bool anyRelayAnswered,
+                List<String> unsettledRelays,
+              })
+            >();
         when(
           () => mockNostrClient.queryEventsDetailed(
             any(),
@@ -992,6 +1038,8 @@ void main() {
           ],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ));
         await Future.wait([firstSubscribe, secondSubscribe]);
 
@@ -1002,7 +1050,15 @@ void main() {
         const labeler =
             'abababababababababababababababababababababababababababababababab';
         final firstPage =
-            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+            Completer<
+              ({
+                List<Event> events,
+                bool timedOut,
+                bool noRelays,
+                bool anyRelayAnswered,
+                List<String> unsettledRelays,
+              })
+            >();
         var queryCount = 0;
         when(
           () => mockNostrClient.queryEventsDetailed(
@@ -1025,6 +1081,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ));
         });
 
@@ -1040,6 +1098,8 @@ void main() {
           events: <Event>[],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ));
         await Future.wait([initialFollow, refollow]);
 
@@ -1069,6 +1129,8 @@ void main() {
             ],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -1108,6 +1170,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -1153,6 +1217,8 @@ void main() {
               ],
               timedOut: true,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -1206,7 +1272,13 @@ void main() {
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
           ).thenAnswer(
-            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+            (_) async => (
+              events: <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
 
           await service.subscribeToLabeler(labeler);
@@ -1222,6 +1294,8 @@ void main() {
               events: <Event>[labelFor('timed_out_event')],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -1238,7 +1312,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+          (_) async => (
+            events: <Event>[],
+            timedOut: false,
+            noRelays: true,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
 
         await service.subscribeToLabeler(labeler);
@@ -1254,6 +1334,8 @@ void main() {
             events: <Event>[labelFor('no_relay_event')],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -1271,7 +1353,13 @@ void main() {
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
           ).thenAnswer(
-            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+            (_) async => (
+              events: <Event>[],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
 
           await service.subscribeToLabeler(labeler);
@@ -1302,7 +1390,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          (_) async => (
+            events: <Event>[],
+            timedOut: true,
+            noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
 
         await service.subscribeToLabeler(labeler);
@@ -1318,6 +1412,8 @@ void main() {
             events: <Event>[labelFor('relay_ready_event')],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
 
@@ -1351,7 +1447,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          (_) async => (
+            events: <Event>[],
+            timedOut: true,
+            noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
 
         await service.subscribeToLabeler(labeler);
@@ -1386,7 +1488,13 @@ void main() {
             ),
           ).thenAnswer((_) async {
             calls++;
-            return (events: <Event>[], timedOut: true, noRelays: false);
+            return (
+              events: <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           });
 
           await service.subscribeToLabeler(labeler);
@@ -1416,7 +1524,13 @@ void main() {
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
           ).thenAnswer(
-            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+            (_) async => (
+              events: <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            ),
           );
 
           await service.subscribeToLabeler(labeler);
@@ -1461,6 +1575,8 @@ void main() {
               events: <Event>[labelFor('cached_event')],
               timedOut: true,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
 
@@ -1487,7 +1603,15 @@ void main() {
         ).thenAnswer((_) => statuses.stream);
         when(() => mockNostrClient.connectedRelayCount).thenReturn(0);
         final inFlight =
-            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+            Completer<
+              ({
+                List<Event> events,
+                bool timedOut,
+                bool noRelays,
+                bool anyRelayAnswered,
+                List<String> unsettledRelays,
+              })
+            >();
         when(
           () => mockNostrClient.queryEventsDetailed(
             any(),
@@ -1500,7 +1624,13 @@ void main() {
 
         service.dispose();
 
-        inFlight.complete((events: <Event>[], timedOut: true, noRelays: false));
+        inFlight.complete((
+          events: <Event>[],
+          timedOut: true,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ));
         await pending;
         await pumpEventQueue();
 
@@ -1529,6 +1659,8 @@ void main() {
               events: <Event>[labelFor('repeat_event')],
               timedOut: true,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
           await service.subscribeToLabeler(labeler);
@@ -1545,6 +1677,8 @@ void main() {
               events: <Event>[labelFor('repeat_event')],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ),
           );
           await service.subscribeToLabeler(labeler);
@@ -1572,6 +1706,8 @@ void main() {
             events: <Event>[labelFor('preserved_event')],
             timedOut: true,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ),
         );
         await service.subscribeToLabeler(labeler);
@@ -1583,7 +1719,13 @@ void main() {
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
         ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+          (_) async => (
+            events: <Event>[],
+            timedOut: false,
+            noRelays: true,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
+          ),
         );
         await service.subscribeToLabeler(labeler);
 
@@ -1636,7 +1778,13 @@ void main() {
             capturedFilters.add(
               invocation.positionalArguments.first as List<Filter>,
             );
-            return (events: <Event>[], timedOut: false, noRelays: false);
+            return (
+              events: <Event>[],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           });
 
           await service.subscribeToLabeler(labeler);
@@ -1674,6 +1822,8 @@ void main() {
                 ],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               );
             }
             if (until == 90) {
@@ -1684,6 +1834,8 @@ void main() {
                 ],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               );
             }
             // until == 80: only the boundary repeats -> short page ends paging.
@@ -1691,6 +1843,8 @@ void main() {
               events: <Event>[labelEvent('id_c', 80, 'target_c')],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -1727,6 +1881,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -1768,10 +1924,18 @@ void main() {
                 ],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               );
             }
             // The second page never settles.
-            return (events: <Event>[], timedOut: true, noRelays: false);
+            return (
+              events: <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           });
 
           await paged.subscribeToLabeler(labeler);
@@ -1821,6 +1985,8 @@ void main() {
               events: matching.take(2).toList(),
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -1868,6 +2034,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -1916,6 +2084,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -1962,6 +2132,8 @@ void main() {
                 ],
                 timedOut: false,
                 noRelays: false,
+                anyRelayAnswered: false,
+                unsettledRelays: const <String>[],
               );
             }
             // The user unfollows the labeler while the walk is mid-flight.
@@ -1970,6 +2142,8 @@ void main() {
               events: <Event>[labelEvent('id_b', 90, 'target_b')],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -2018,6 +2192,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -2057,6 +2233,8 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           });
 
@@ -2100,7 +2278,13 @@ void main() {
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
     }
 
@@ -2236,6 +2420,8 @@ void main() {
           ],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ),
       );
 

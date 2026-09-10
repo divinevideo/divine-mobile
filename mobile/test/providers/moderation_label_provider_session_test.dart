@@ -113,7 +113,13 @@ void main() {
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       when(
         () => nostrClient.subscribe(

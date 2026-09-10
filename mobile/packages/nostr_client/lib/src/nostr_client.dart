@@ -904,7 +904,15 @@ class NostrClient {
   /// A client disposed *mid-call* is deliberately not in that list: the relays
   /// were reachable and only this one query was dropped, so it arrives as
   /// `timedOut` for a full-settlement caller instead.
-  Future<({List<Event> events, bool timedOut, bool noRelays})>
+  Future<
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelays,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
+  >
   queryEventsDetailed(
     List<Filter> filters, {
     String? subscriptionId,
@@ -922,7 +930,13 @@ class NostrClient {
     // right before `withResource` (see below) closes the residual race
     // where dispose() runs during the awaits in between. See #5952.
     if (_isDisposed) {
-      return (events: <Event>[], timedOut: false, noRelays: true);
+      return (
+        events: <Event>[],
+        timedOut: false,
+        noRelays: true,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
+      );
     }
 
     // One deadline for the whole call, spent by every awaited step below.
@@ -1002,7 +1016,15 @@ class NostrClient {
     final noConnectedRelays =
         _relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool;
     final filtersJson = filters.map((f) => f.toJson()).toList();
-    Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+    Future<
+      ({
+        List<Event> events,
+        bool timedOut,
+        bool noRelaysParticipated,
+        bool anyRelayAnswered,
+        List<String> unsettledRelays,
+      })
+    >
     runWebSocketQuery() => _nostr.queryEventsDetailed(
       filtersJson,
       id: subscriptionId,
@@ -1016,7 +1038,15 @@ class NostrClient {
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
 
-    Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+    Future<
+      ({
+        List<Event> events,
+        bool timedOut,
+        bool noRelaysParticipated,
+        bool anyRelayAnswered,
+        List<String> unsettledRelays,
+      })
+    >
     runPooledWebSocketQuery() async {
       final acquisition = _queryPool.request();
       PoolResource resource;
@@ -1050,7 +1080,13 @@ class NostrClient {
     // the NIP-50 search relays and leak temp relays nothing would clean up.
     // This check-then-call has no await before the query, so it closes the
     // race rather than narrowing it. See #5952.
-    ({List<Event> events, bool timedOut, bool noRelaysParticipated})
+    ({
+      List<Event> events,
+      bool timedOut,
+      bool noRelaysParticipated,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })
     websocketResult;
     if (_queryPool.isClosed) {
       // Nothing was asked of the relays here, which is a different thing from
@@ -1063,6 +1099,9 @@ class NostrClient {
         events: <Event>[],
         timedOut: requireAllRelaysSettled,
         noRelaysParticipated: false,
+        // Nothing was asked, so nothing answered.
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
       );
     } else {
       try {
@@ -1080,6 +1119,11 @@ class NostrClient {
           events: <Event>[],
           timedOut: true,
           noRelaysParticipated: false,
+          // The client's own budget expired before the relay leg reported, so
+          // whether a relay answered is unknown here — and unknown must read
+          // as "no claim was made", or a caller would latch on it.
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         );
       }
     }
@@ -1107,6 +1151,8 @@ class NostrClient {
       events: _mergeEvents(cacheResults, websocketEvents, limit: limit),
       timedOut: websocketResult.timedOut,
       noRelays: noConnectedRelays || websocketResult.noRelaysParticipated,
+      anyRelayAnswered: websocketResult.anyRelayAnswered,
+      unsettledRelays: websocketResult.unsettledRelays,
     );
   }
 

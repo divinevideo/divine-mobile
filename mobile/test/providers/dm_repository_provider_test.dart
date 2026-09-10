@@ -97,6 +97,8 @@ void main() {
           events: const <Event>[],
           noRelays: false,
           timedOut: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ),
       );
 

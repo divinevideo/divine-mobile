@@ -275,43 +275,116 @@ class _SinceEnforcingRelay {
 /// Shapes a `queryEventsDetailed` answer to a kind-10050 lookup that the relays
 /// actually gave: an empty [events] is genuine absence, which is the only thing
 /// the RC3 publisher may act on (#8212).
-({List<Event> events, bool timedOut, bool noRelays}) answeredList(
+({
   List<Event> events,
-) => (events: events, timedOut: false, noRelays: false);
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+answeredList(
+  List<Event> events,
+) => (
+  events: events,
+  timedOut: false,
+  noRelays: false,
+  anyRelayAnswered: true,
+  unsettledRelays: const <String>[],
+);
 
 /// Shapes a kind-10050 lookup nothing answered: a fan-out no relay took
 /// ([noRelays]), or a relay that refused the REQ with `CLOSED` / a settle window
 /// that completed while the relay holding the list stayed silent ([timedOut]).
 /// The empty list means nothing — RC3 must NOT read it as absence (#8212).
-({List<Event> events, bool timedOut, bool noRelays}) unansweredList({
+({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+unansweredList({
   bool noRelays = false,
   bool timedOut = false,
-}) => (events: const <Event>[], timedOut: timedOut, noRelays: noRelays);
+  bool anyRelayAnswered = false,
+  List<String> unsettledRelays = const <String>[],
+}) => (
+  events: const <Event>[],
+  timedOut: timedOut,
+  noRelays: noRelays,
+  anyRelayAnswered: anyRelayAnswered,
+  unsettledRelays: unsettledRelays,
+);
 
 /// Shapes a `queryEventsDetailed` answer a relay actually gave: [events] is
 /// the whole truth, so an empty list is genuine exhaustion. This is what the
 /// history drain requires before it may mark itself complete (#8209).
-({List<Event> events, bool timedOut, bool noRelays}) answeredPage(
+({
   List<Event> events,
-) => (events: events, timedOut: false, noRelays: false);
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+answeredPage(
+  List<Event> events,
+) => (
+  events: events,
+  timedOut: false,
+  noRelays: false,
+  anyRelayAnswered: true,
+  unsettledRelays: const <String>[],
+);
 
 /// Shapes a page that carries real [events] but which NOT every relay settled:
 /// one relay answered while another never did, so the window may still hold
 /// events this page could not see. The drain may persist these events, but must
 /// not advance its durable cursor past them or mark itself complete (#8209).
-({List<Event> events, bool timedOut, bool noRelays}) partialPage(
+({
   List<Event> events,
-) => (events: events, timedOut: true, noRelays: false);
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+partialPage(
+  List<Event> events, {
+  List<String> unsettledRelays = const ['wss://silent'],
+}) => (
+  events: events,
+  timedOut: true,
+  noRelays: false,
+  // "Partial" means one relay answered while another never did, so a relay
+  // did make a data claim here — that is what separates this from a page
+  // nothing answered.
+  anyRelayAnswered: true,
+  unsettledRelays: unsettledRelays,
+);
 
 /// Shapes a `queryEventsDetailed` answer that nothing gave: a fan-out no relay
 /// took ([noRelays]), or a relay that refused the REQ with `CLOSED` / a page
 /// the settle window completed without every relay answering ([timedOut]).
 /// The events list is empty and means nothing — the drain must defer, not
 /// conclude exhaustion.
-({List<Event> events, bool timedOut, bool noRelays}) unansweredPage({
+({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+unansweredPage({
   bool noRelays = false,
   bool timedOut = false,
-}) => (events: const <Event>[], timedOut: timedOut, noRelays: noRelays);
+  bool anyRelayAnswered = false,
+  List<String> unsettledRelays = const <String>[],
+}) => (
+  events: const <Event>[],
+  timedOut: timedOut,
+  noRelays: noRelays,
+  anyRelayAnswered: anyRelayAnswered,
+  unsettledRelays: unsettledRelays,
+);
 
 class _MockNIP17MessageService extends Mock implements NIP17MessageService {}
 
@@ -461,6 +534,8 @@ class _FakeDmSyncState implements DmSyncState {
   final List<String> inboxCoveredPubkeys = <String>[];
   final List<String> rearmedForInboxPubkeys = <String>[];
   final List<String> drainPreambleOperations = <String>[];
+  final Map<String, int> silentHoldoutRunsOverride = <String, int>{};
+  final List<String> clearedSilentHoldoutPubkeys = <String>[];
 
   @override
   int? newestSyncedAt(String pubkey) => newestOverride;
@@ -484,6 +559,23 @@ class _FakeDmSyncState implements DmSyncState {
 
   @override
   bool historyDrainCompletedBefore(String pubkey) => completedBeforeOverride;
+
+  @override
+  int drainSilentHoldoutRuns(String pubkey) =>
+      silentHoldoutRunsOverride[pubkey] ?? 0;
+
+  @override
+  Future<int> recordDrainSilentHoldoutRun(String pubkey) async {
+    final next = drainSilentHoldoutRuns(pubkey) + 1;
+    silentHoldoutRunsOverride[pubkey] = next;
+    return next;
+  }
+
+  @override
+  Future<void> clearDrainSilentHoldoutRuns(String pubkey) async {
+    silentHoldoutRunsOverride.remove(pubkey);
+    clearedSilentHoldoutPubkeys.add(pubkey);
+  }
 
   @override
   Future<void> migrateHistoryDrainCompletion(String pubkey) async {
@@ -4764,11 +4856,25 @@ void main() {
           addTearDown(() => DmRepository.inboxResolutionBudget = original);
 
           final stalledRead =
-              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+              Completer<
+                ({
+                  List<Event> events,
+                  bool timedOut,
+                  bool noRelays,
+                  bool anyRelayAnswered,
+                  List<String> unsettledRelays,
+                })
+              >();
           addTearDown(() {
             if (!stalledRead.isCompleted) {
               stalledRead.complete(
-                (events: const <Event>[], timedOut: true, noRelays: false),
+                (
+                  events: const <Event>[],
+                  timedOut: true,
+                  noRelays: false,
+                  anyRelayAnswered: false,
+                  unsettledRelays: const <String>[],
+                ),
               );
             }
           });
@@ -5028,7 +5134,14 @@ void main() {
       );
 
       void stubQueryDetailed(
-        ({List<Event> events, bool timedOut, bool noRelays}) answer,
+        ({
+          List<Event> events,
+          bool timedOut,
+          bool noRelays,
+          bool anyRelayAnswered,
+          List<String> unsettledRelays,
+        })
+        answer,
       ) {
         when(
           () => mockNostrClient.queryEventsDetailed(
@@ -5185,6 +5298,8 @@ void main() {
             ],
             timedOut: true,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           ));
           final repository = createRepository();
           final resolved = await repository.resolveDmInboxRelaysDetailed(
@@ -5525,9 +5640,25 @@ void main() {
           // stopped calling it, so the read fell through to the shared
           // answered-empty default and returned before the switch.
           final resolveA =
-              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+              Completer<
+                ({
+                  List<Event> events,
+                  bool timedOut,
+                  bool noRelays,
+                  bool anyRelayAnswered,
+                  List<String> unsettledRelays,
+                })
+              >();
           final resolveB =
-              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+              Completer<
+                ({
+                  List<Event> events,
+                  bool timedOut,
+                  bool noRelays,
+                  bool anyRelayAnswered,
+                  List<String> unsettledRelays,
+                })
+              >();
           var resolveCalls = 0;
           when(
             () => mockNostrClient.queryEventsDetailed(
@@ -6127,7 +6258,14 @@ void main() {
 
       group('own kind-10050 authoritative read (#8212)', () {
         void stubOwnInbox(
-          ({List<Event> events, bool timedOut, bool noRelays}) answer,
+          ({
+            List<Event> events,
+            bool timedOut,
+            bool noRelays,
+            bool anyRelayAnswered,
+            List<String> unsettledRelays,
+          })
+          answer,
         ) {
           when(
             () => mockNostrClient.queryEventsDetailed(
@@ -6226,6 +6364,8 @@ void main() {
               ],
               timedOut: true,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             ));
             stubAcceptedPublish();
 
@@ -6449,6 +6589,193 @@ void main() {
           (_) async => unansweredPage(noRelays: noRelays, timedOut: timedOut),
         );
       }
+
+      group('a relay that never settles any page', () {
+        /// Stubs every drain page as one the reachable relays answered while
+        /// [silent] never settled.
+        void stubSilentHoldout({List<String> silent = const ['wss://silent']}) {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => unansweredPage(
+              timedOut: true,
+              anyRelayAnswered: true,
+              unsettledRelays: silent,
+            ),
+          );
+        }
+
+        _FakeDmSyncState freshSyncState() => _FakeDmSyncState()
+          ..oldestOverride = 100
+          ..drainVersionOverride = DmSyncState.currentDrainVersion;
+
+        setUp(() {
+          when(() => mockNostrClient.connectedRelayCount).thenReturn(6);
+        });
+
+        test(
+          'defers on the runs before the budget, exactly as #8209 requires',
+          () async {
+            stubSilentHoldout();
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            for (
+              var run = 1;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
+              run++
+            ) {
+              await repository.backfillHistoryIfNeeded();
+              expect(
+                syncState.markedCompletePubkeys,
+                isEmpty,
+                reason: 'run $run must still defer',
+              );
+            }
+            // The counter is what carries the deferrals forward; without it
+            // every run would look like the first one, forever.
+            expect(
+              syncState.drainSilentHoldoutRuns(_validPubkeyA),
+              DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion - 1,
+            );
+          },
+        );
+
+        test(
+          'completes on the relays that answered once the budget is spent, so '
+          'a permanently silent relay cannot strand the inbox forever',
+          () async {
+            stubSilentHoldout();
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            for (
+              var run = 0;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
+              run++
+            ) {
+              await repository.backfillHistoryIfNeeded();
+            }
+
+            expect(syncState.markedCompletePubkeys, contains(_validPubkeyA));
+            expect(syncState.drainCompleteOverride, isTrue);
+          },
+        );
+
+        test(
+          'never completes when NOTHING answered, however many runs — an empty '
+          'box no relay claimed is evidence of nothing (#5202)',
+          () async {
+            // Same timeout, same run count, only `anyRelayAnswered` differs.
+            // This is the discriminator the whole change rests on: without it
+            // the budget below would latch completion over unread history.
+            stubUnansweredHistory(timedOut: true);
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            for (
+              var run = 0;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion +
+                      2;
+              run++
+            ) {
+              await repository.backfillHistoryIfNeeded();
+            }
+
+            expect(syncState.markedCompletePubkeys, isEmpty);
+            expect(syncState.drainSilentHoldoutRuns(_validPubkeyA), 0);
+          },
+        );
+
+        test(
+          'completes even when an earlier page carried events the holdout did '
+          'not settle, so the strand cannot just move one window down',
+          () async {
+            // The empty-page tests above leave `sawUnansweredPage` false, so
+            // the ordinary completion gate would let them through on its own.
+            // This is the shape that needs the quorum clause: a first page
+            // that returned events without full settlement latches
+            // `sawUnansweredPage`, and every later run repeats it.
+            var page = 0;
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((inv) async {
+              final filters =
+                  inv.positionalArguments.first as List<nostr_filter.Filter>;
+              final filter = filters.single;
+              // Let the outgoing-NIP-04 pass answer, so this test dies to the
+              // gift-wrap gate rather than to that pass.
+              if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+                return answeredPage(const <Event>[]);
+              }
+              // First gift-wrap page of each run: real events, not settled.
+              if ((page++).isEven) return partialPage([deletion(90)]);
+              return unansweredPage(
+                timedOut: true,
+                anyRelayAnswered: true,
+                unsettledRelays: const ['wss://silent'],
+              );
+            });
+
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+            for (
+              var run = 0;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
+              run++
+            ) {
+              page = 0;
+              await repository.backfillHistoryIfNeeded();
+            }
+
+            expect(syncState.markedCompletePubkeys, contains(_validPubkeyA));
+          },
+        );
+
+        test(
+          'a fully settled page clears the count, so a flapping relay never '
+          'accumulates toward the budget',
+          () async {
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            stubSilentHoldout();
+            await repository.backfillHistoryIfNeeded();
+            expect(syncState.drainSilentHoldoutRuns(_validPubkeyA), 1);
+
+            // The holdout speaks: this run settles on every relay.
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) async => answeredPage(const <Event>[]));
+            await repository.backfillHistoryIfNeeded();
+
+            expect(syncState.clearedSilentHoldoutPubkeys, isNotEmpty);
+            expect(syncState.drainSilentHoldoutRuns(_validPubkeyA), 0);
+          },
+        );
+      });
 
       test(
         'does NOT mark complete when a fan-out reached no relay — defers to '
@@ -15550,7 +15877,14 @@ void main() {
 
       group('#8515 an unreadable recipient inbox is not delivery', () {
         void stubInboxLookup(
-          ({List<Event> events, bool timedOut, bool noRelays}) answer,
+          ({
+            List<Event> events,
+            bool timedOut,
+            bool noRelays,
+            bool anyRelayAnswered,
+            List<String> unsettledRelays,
+          })
+          answer,
         ) {
           when(
             () => mockNostrClient.queryEventsDetailed(

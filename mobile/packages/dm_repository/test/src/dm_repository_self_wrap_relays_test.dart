@@ -107,7 +107,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async => (events: events, timedOut: false, noRelays: false),
+        (_) async => (
+          events: events,
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
     }
 

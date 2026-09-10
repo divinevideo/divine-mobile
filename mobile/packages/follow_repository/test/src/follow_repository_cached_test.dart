@@ -31,7 +31,13 @@ class _MockNostrClient extends Mock implements NostrClient {
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer(
-      (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      (_) async => (
+        events: <Event>[],
+        timedOut: false,
+        noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
+      ),
     );
   }
 }

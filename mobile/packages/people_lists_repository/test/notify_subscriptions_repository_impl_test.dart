@@ -33,11 +33,24 @@ Event _notifyEvent(List<String> pubkeys, {int createdAt = 1710000000}) => Event(
 );
 
 /// Shapes a `queryEventsDetailed` answer.
-({List<Event> events, bool timedOut, bool noRelays}) _readResult(
+({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+_readResult(
   List<Event> events, {
   bool timedOut = false,
   bool noRelays = false,
-}) => (events: events, timedOut: timedOut, noRelays: noRelays);
+}) => (
+  events: events,
+  timedOut: timedOut,
+  noRelays: noRelays,
+  anyRelayAnswered: false,
+  unsettledRelays: const <String>[],
+);
 
 /// Member pubkeys carried on the event handed to `publishEvent`.
 List<String> _publishedMembers(Event event) => event.tags

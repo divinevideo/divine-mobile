@@ -126,6 +126,19 @@ abstract class DmHistoryDrainConfig {
   /// Maximum pages fetched in a single drain (≈ [pageSize] × this events).
   static const int maxPages = 50;
 
+  /// Consecutive drain runs that must end with every reachable relay answering
+  /// and only a silent holdout unaccounted for, before the drain completes
+  /// against the relays that did answer.
+  ///
+  /// One such run proves nothing: a relay that never sends `EOSE` looks exactly
+  /// like one that is about to, so the first runs defer — #8209's guarantee,
+  /// unchanged. But a relay can be silent *permanently*, and deferring forever
+  /// on that never flips the completion latch, which is what gates restoring
+  /// read state and splitting message requests. Three runs is the smallest
+  /// count that is not a single flap, and the drain re-arms and re-reads the
+  /// held window whenever the holdout speaks again.
+  static const int silentHoldoutRunsBeforeQuorumCompletion = 3;
+
   /// Maximum NIP-44 decryption attempts for a single gift wrap before the
   /// failed-decrypt retry queue gives up on it. Generous so a transient
   /// remote-signer (Keycast RPC) outage spanning several inbox opens still
@@ -1383,7 +1396,22 @@ class DmRepository {
   /// the REQ, a relay refused it with `CLOSED`, the client was disposed, or
   /// only some relays answered. An empty page is proof of exhaustion only when
   /// it is authoritative; see the guard in [_runHistoryDrain]. See #8209.
-  Future<({List<Event> events, bool authoritative})?> _fetchHistoryPage({
+  ///
+  /// `anyRelayAnswered` splits the two shapes a non-authoritative page can
+  /// have. With `true` the relays that could be reached settled and said they
+  /// hold nothing more, and only `unsettledRelays` are unaccounted for; with
+  /// `false` nothing made a claim at all. The first can be waited out forever
+  /// by a relay that is permanently silent, which is what
+  /// [DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion] bounds.
+  Future<
+    ({
+      List<Event> events,
+      bool authoritative,
+      bool anyRelayAnswered,
+      List<String> unsettledRelays,
+    })?
+  >
+  _fetchHistoryPage({
     required int until,
     required int limit,
     required String subscriptionId,
@@ -1448,7 +1476,12 @@ class DmRepository {
       }
       await _maybeYieldDuringDrain(i);
     }
-    return (events: events, authoritative: authoritative);
+    return (
+      events: events,
+      authoritative: authoritative,
+      anyRelayAnswered: result.anyRelayAnswered,
+      unsettledRelays: result.unsettledRelays,
+    );
   }
 
   /// Recovers the user's OWN outgoing NIP-04 (kind-4) messages after a wipe.
@@ -1470,7 +1503,11 @@ class DmRepository {
   /// drain complete, mirroring the gift-wrap drain's authoritative-page guard
   /// so a momentary outage in this window doesn't silently skip recovery *and*
   /// permanently strand the user's outgoing NIP-04 history. See #5304, #8209.
-  Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
+  Future<bool> _recoverOutgoingNip04(
+    String pubkey,
+    int generation, {
+    bool tolerateSilentHoldouts = false,
+  }) async {
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
@@ -1491,7 +1528,15 @@ class DmRepository {
         );
         final events = result.events;
         if (_ingestSessionEnded(pubkey, generation)) return false;
-        final authoritative = !result.noRelays && !result.timedOut;
+        // A page the reachable relays settled while a holdout stayed silent
+        // counts as answered once the paged drain has already given up on that
+        // holdout; otherwise the caller's quorum completion would defer here
+        // instead. A page NOTHING answered is never tolerated.
+        final authoritative =
+            (!result.noRelays && !result.timedOut) ||
+            (tolerateSilentHoldouts &&
+                !result.noRelays &&
+                result.anyRelayAnswered);
         if (events.isEmpty) {
           // An empty page is genuine exhaustion only if a relay actually
           // ANSWERED it. Nothing answering — no relay took the REQ, a relay
@@ -1937,6 +1982,17 @@ class DmRepository {
       // one relay in it staying silent — and it must not latch completion
       // either.
       var sawUnansweredPage = !inbox.conclusive;
+      // Set only by a gap that is NOT one relay staying silent: a fan-out no
+      // relay took, or an inbox list this run could not read. Those are
+      // whole-relays-missing defects, and quorum completion must never paper
+      // over them — it is an answer from the relays that spoke, and here
+      // nothing spoke.
+      var sawNonHoldoutGap = !inbox.conclusive;
+      // Set when this run gives up on a permanently silent relay and completes
+      // against the ones that answered. See
+      // [DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion].
+      var completedOnQuorum = false;
+      var silentHoldouts = const <String>[];
       var partialViewReason = 'an earlier page was not fully settled';
       if (sawUnansweredPage) {
         partialViewReason =
@@ -1989,6 +2045,33 @@ class DmRepository {
           // Defer instead: leave historyDrainComplete unset and resume on the
           // next inbox open from the window this run pins below.
           if (!historyPage.authoritative) {
+            if (historyPage.anyRelayAnswered && !sawNonHoldoutGap) {
+              // Every relay that could be reached settled and reported
+              // nothing older; only `unsettledRelays` never spoke. One run of
+              // this proves nothing — a relay that never sends `EOSE` looks
+              // exactly like one that is about to — so the first runs still
+              // defer. But a relay can be silent forever, and deferring
+              // forever never flips the completion latch that gates restoring
+              // read state and splitting message requests, leaving the inbox
+              // permanently marked incomplete over history the reachable
+              // relays already handed over.
+              const budget =
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
+              final runs = await syncState.recordDrainSilentHoldoutRun(pubkey);
+              if (runs >= budget) {
+                completedOnQuorum = true;
+                silentHoldouts = historyPage.unsettledRelays;
+                reachedEnd = true;
+                break;
+              }
+              Log.warning(
+                'DM history drain for ${pubkeyForLogs(pubkey)} was held by '
+                'relays that never settled '
+                '(${historyPage.unsettledRelays.join(', ')}); run $runs of '
+                '$budget before completing on the relays that answered.',
+                category: LogCategory.system,
+              );
+            }
             if (!sawUnansweredPage) {
               // Pin the resume point at this window before giving up on the
               // run. Falling back to the seed is not safe: with no cursor
@@ -1996,21 +2079,34 @@ class DmRepository {
               // run's own persisted messages drag downward (recordSeen), so
               // the window would be skipped by the events it did return.
               await syncState.setHistoryDrainCursor(pubkey, cursor);
-              Log.warning(
-                'DM history drain saw an empty page that no relay answered for '
-                '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
-                '$cursor and deferring completion to the next inbox open.',
-                category: LogCategory.system,
-              );
+              // Only when nothing answered. A holdout page has already logged
+              // who stayed silent, and claiming "no relay answered" beside it
+              // would contradict that line in the same export.
+              if (!historyPage.anyRelayAnswered) {
+                Log.warning(
+                  'DM history drain saw an empty page that no relay answered '
+                  'for ${pubkeyForLogs(pubkey)}; holding the resume cursor at '
+                  '$cursor and deferring completion to the next inbox open.',
+                  category: LogCategory.system,
+                );
+              }
             }
+            if (!historyPage.anyRelayAnswered) sawNonHoldoutGap = true;
             _resumeDrainWhenRelayConnects(pubkey, gen);
             return;
           }
+          // A fully settled page proves every relay — holdouts included —
+          // answered, so no run before this one was blocked by a persistent
+          // silence.
+          await syncState.clearDrainSilentHoldoutRuns(pubkey);
           reachedEnd = true;
           break;
         }
 
-        if (!historyPage.authoritative) {
+        if (historyPage.authoritative) {
+          await syncState.clearDrainSilentHoldoutRuns(pubkey);
+        } else {
+          if (!historyPage.anyRelayAnswered) sawNonHoldoutGap = true;
           // A page that carried events but which not every relay settled: one
           // relay answered while another never did, so this window can still
           // hold events this page did not see. The events it did return are
@@ -2063,7 +2159,13 @@ class DmRepository {
         }
       }
 
-      if (reachedEnd && !sawUnansweredPage) {
+      // `completedOnQuorum` is the one case where a run completes despite
+      // `sawUnansweredPage`. It is reachable only when every gap this run saw
+      // was a relay staying silent (never a fan-out nobody took, and never an
+      // unreadable inbox list), and only after
+      // [DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion]
+      // consecutive runs said the same thing.
+      if (reachedEnd && (!sawUnansweredPage || completedOnQuorum)) {
         // Before declaring history complete, recover the user's OWN outgoing
         // NIP-04 messages. The paged drain above filters `p:[self]`, which
         // matches incoming NIP-04 and the user's NIP-17 self-wraps but never
@@ -2076,7 +2178,14 @@ class DmRepository {
         // (e.g. a momentary disconnect in this window) so a flaky network
         // never silently skips recovery AND marks the drain complete — it
         // resumes on the next inbox open instead.
-        final nip04Recovered = await _recoverOutgoingNip04(pubkey, gen);
+        // A permanently silent relay holds this pass open exactly as it holds
+        // the paged drain open, so a quorum completion that did not extend to
+        // it would defer forever one step later.
+        final nip04Recovered = await _recoverOutgoingNip04(
+          pubkey,
+          gen,
+          tolerateSilentHoldouts: completedOnQuorum,
+        );
         if (nip04Recovered) {
           // This run reached a conclusive answer about the account's own
           // inbox relays — completion is only reachable when it did — so a
@@ -2086,11 +2195,21 @@ class DmRepository {
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
-          Log.info(
-            'DM history drain complete for ${pubkeyForLogs(pubkey)}: '
-            'pages=$pagesRun, eventsFetched=$totalEvents',
-            category: LogCategory.system,
-          );
+          if (completedOnQuorum) {
+            Log.warning(
+              'DM history drain complete for ${pubkeyForLogs(pubkey)} on the '
+              'relays that answered: pages=$pagesRun, '
+              'eventsFetched=$totalEvents. These relays never settled a page '
+              'and were not represented: ${silentHoldouts.join(', ')}.',
+              category: LogCategory.system,
+            );
+          } else {
+            Log.info(
+              'DM history drain complete for ${pubkeyForLogs(pubkey)}: '
+              'pages=$pagesRun, eventsFetched=$totalEvents',
+              category: LogCategory.system,
+            );
+          }
         } else {
           Log.warning(
             'DM history drain reached the end for ${pubkeyForLogs(pubkey)} but '

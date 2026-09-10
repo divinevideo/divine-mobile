@@ -80,8 +80,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       when(() => messageService.canSendTo(any())).thenAnswer((_) async => true);
       when(
@@ -299,8 +304,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(

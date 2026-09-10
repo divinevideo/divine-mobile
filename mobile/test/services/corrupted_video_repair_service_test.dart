@@ -16,16 +16,42 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 /// Shapes a `queryEventsDetailed` answer a relay actually gave, so an empty
 /// [events] list is genuine "this account has no corrupted videos" — the only
 /// result the repair may latch on (#8213).
-({List<Event> events, bool timedOut, bool noRelays}) _answeredScan(
+({
   List<Event> events,
-) => (events: events, timedOut: false, noRelays: false);
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+_answeredScan(
+  List<Event> events,
+) => (
+  events: events,
+  timedOut: false,
+  noRelays: false,
+  anyRelayAnswered: false,
+  unsettledRelays: const <String>[],
+);
 
 /// Shapes a scan nothing answered: a fan-out no relay took ([noRelays]), or a
 /// relay that refused the REQ with `CLOSED` / a partial fan-out ([timedOut]).
-({List<Event> events, bool timedOut, bool noRelays}) _unansweredScan({
+({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+  bool anyRelayAnswered,
+  List<String> unsettledRelays,
+})
+_unansweredScan({
   bool noRelays = false,
   bool timedOut = false,
-}) => (events: const <Event>[], timedOut: timedOut, noRelays: noRelays);
+}) => (
+  events: const <Event>[],
+  timedOut: timedOut,
+  noRelays: noRelays,
+  anyRelayAnswered: false,
+  unsettledRelays: const <String>[],
+);
 
 class _FakeEvent extends Fake implements Event {}
 

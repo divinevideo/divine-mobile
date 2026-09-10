@@ -90,6 +90,8 @@ void main() {
         ],
         timedOut: false,
         noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
       ),
     );
 

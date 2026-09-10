@@ -34,6 +34,7 @@ class DmSyncState {
   static const _groupRecoveryVersionPrefix = 'dm.groupRecoveryVersion.';
   static const _drainInboxCoveredPrefix = 'dm.drainCoveredOwnInbox.';
   static const _drainCompletedBeforePrefix = 'dm.historyDrainCompletedBefore.';
+  static const _drainSilentHoldoutRunsPrefix = 'dm.drainSilentHoldoutRuns.';
   static const _drainCompletionMigrationPrefix =
       'dm.historyDrainCompletionMigration.';
 
@@ -261,6 +262,7 @@ class DmSyncState {
     await _prefs.setBool('$_drainCompletePrefix$pubkey', true);
     await _prefs.setBool('$_drainCompletedBeforePrefix$pubkey', true);
     await _prefs.remove('$_drainCursorPrefix$pubkey');
+    await _prefs.remove('$_drainSilentHoldoutRunsPrefix$pubkey');
   }
 
   /// Whether a full-history drain has completed for [pubkey] at least once
@@ -428,6 +430,36 @@ class DmSyncState {
   /// check at most once and never again.
   bool drainCoveredOwnInbox(String pubkey) =>
       _prefs.getBool('$_drainInboxCoveredPrefix$pubkey') ?? false;
+
+  /// Consecutive drain runs for [pubkey] that ended with every reachable relay
+  /// answering and only a silent holdout unaccounted for.
+  ///
+  /// A relay that never sends `EOSE` is indistinguishable from one that is
+  /// about to, so a single such run proves nothing and must defer — that is
+  /// #8209's guarantee and it is unchanged. What the counter adds is the case
+  /// #8209 could not see: a relay that is *persistently* silent. Deferring
+  /// forever on it never completes, so the completion latch never flips and
+  /// the inbox stays permanently flagged incomplete even though the reachable
+  /// relays have already handed over everything they hold.
+  ///
+  /// Reset to zero by any run that reaches a fully-settled answer, so a
+  /// transient outage can never accumulate toward
+  /// `DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion`.
+  int drainSilentHoldoutRuns(String pubkey) =>
+      _prefs.getInt('$_drainSilentHoldoutRunsPrefix$pubkey') ?? 0;
+
+  /// Records one more consecutive silent-holdout run for [pubkey] and returns
+  /// the new total.
+  Future<int> recordDrainSilentHoldoutRun(String pubkey) async {
+    final next = drainSilentHoldoutRuns(pubkey) + 1;
+    await _prefs.setInt('$_drainSilentHoldoutRunsPrefix$pubkey', next);
+    return next;
+  }
+
+  /// Clears the consecutive silent-holdout run count for [pubkey].
+  Future<void> clearDrainSilentHoldoutRuns(String pubkey) async {
+    await _prefs.remove('$_drainSilentHoldoutRunsPrefix$pubkey');
+  }
 
   /// Records that the drain for [pubkey] reached a conclusive answer about the
   /// user's own DM inbox relays. See [drainCoveredOwnInbox].

@@ -75,8 +75,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
       // The leg OK-confirms its kind 4 (#8262), so it calls
       // `publishEventAwaitOk`. Stubbing `publishEvent` here would leave the
@@ -186,12 +191,26 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           case DmInboxResolution.absent:
-            return (events: const <Event>[], timedOut: false, noRelays: false);
+            return (
+              events: const <Event>[],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           case DmInboxResolution.unreadable:
             // A failed read, not an answer.
-            return (events: const <Event>[], timedOut: true, noRelays: false);
+            return (
+              events: const <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
         }
       });
     }
@@ -377,11 +396,25 @@ void main() {
               ],
               timedOut: false,
               noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
             );
           case DmInboxResolution.absent:
-            return (events: const <Event>[], timedOut: false, noRelays: false);
+            return (
+              events: const <Event>[],
+              timedOut: false,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
           case DmInboxResolution.unreadable:
-            return (events: const <Event>[], timedOut: true, noRelays: false);
+            return (
+              events: const <Event>[],
+              timedOut: true,
+              noRelays: false,
+              anyRelayAnswered: false,
+              unsettledRelays: const <String>[],
+            );
         }
       });
     }

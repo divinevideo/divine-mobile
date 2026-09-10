@@ -21,7 +21,13 @@ class _MockNostrClient extends Mock implements NostrClient {
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer(
-      (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      (_) async => (
+        events: <Event>[],
+        timedOut: false,
+        noRelays: false,
+        anyRelayAnswered: false,
+        unsettledRelays: const <String>[],
+      ),
     );
   }
 }
@@ -204,6 +210,8 @@ void main() {
           events: <Event>[authoritative],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ),
       );
 
@@ -280,6 +288,8 @@ void main() {
           ],
           timedOut: false,
           noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
         ),
       );
 
@@ -344,8 +354,13 @@ void main() {
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
-        (_) async =>
-            (events: <Event>[existing], timedOut: false, noRelays: false),
+        (_) async => (
+          events: <Event>[existing],
+          timedOut: false,
+          noRelays: false,
+          anyRelayAnswered: false,
+          unsettledRelays: const <String>[],
+        ),
       );
 
       final publishedContent = <String>[];

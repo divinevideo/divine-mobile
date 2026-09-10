@@ -123,6 +123,8 @@ void main() {
             events: queryCall == 1 ? [createReaction()] : <Event>[],
             timedOut: false,
             noRelays: false,
+            anyRelayAnswered: false,
+            unsettledRelays: const <String>[],
           );
         });
         final repository = LikesRepository(
