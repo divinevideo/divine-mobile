@@ -16,6 +16,10 @@ abstract class SemanticIds {
 
   static const String videoTitle = 'video_title';
 
+  /// The follow badge on the feed player's author avatar, in both its follow
+  /// and followed states.
+  static const String videoFollowButton = 'follow_button';
+
   static const String humanMadeBadge = 'human_made_badge';
   static const String verificationSection = 'verification_section';
 

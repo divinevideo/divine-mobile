@@ -1,9 +1,12 @@
 // ABOUTME: Tests for VideoFollowButton widget using MyFollowingBloc
 // ABOUTME: Validates follow/unfollow button state, tap behavior, and styling
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -201,6 +204,99 @@ void main() {
         expect(
           (captured.single as MyFollowingToggleRequested).pubkey,
           pubkey,
+        );
+      });
+    });
+
+    group('selected state', () {
+      Finder paintedBadge() => find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+      );
+
+      DivineFollowButton badge(WidgetTester tester) =>
+          tester.widget<DivineFollowButton>(find.byType(DivineFollowButton));
+
+      testWidgets('shows an inert selected badge for a follow made here', (
+        tester,
+      ) async {
+        final otherPubkey = validPubkey('other');
+        when(() => mockMyFollowingBloc.state).thenReturn(
+          MyFollowingState(
+            status: MyFollowingStatus.success,
+            followingPubkeys: [otherPubkey],
+            hasLocalFollowEdit: true,
+          ),
+        );
+
+        await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+        await tester.pump();
+
+        expect(badge(tester).variant, DivineFollowButtonVariant.selected);
+        // A state, not a control: it ignores taps, so there is no way to
+        // unfollow here and the avatar corner beneath it still opens the
+        // profile.
+        expect(badge(tester).onPressed, isNull);
+        final pointer = tester.widget<IgnorePointer>(
+          find.descendant(
+            of: find.byType(DivineFollowButton),
+            matching: find.byType(IgnorePointer),
+          ),
+        );
+        expect(pointer.ignoring, isTrue);
+        expect(find.bySemanticsLabel('Following'), findsOneWidget);
+      });
+
+      testWidgets('cross-fades to selected in 100ms after a tap', (
+        tester,
+      ) async {
+        final otherPubkey = validPubkey('other');
+        final states = StreamController<MyFollowingState>();
+        addTearDown(states.close);
+        whenListen(
+          mockMyFollowingBloc,
+          states.stream,
+          initialState: const MyFollowingState(
+            status: MyFollowingStatus.success,
+          ),
+        );
+        // The bloc marks the local edit before the repository's optimistic
+        // update lands; the badge sees both at once.
+        when(() => mockMyFollowingBloc.add(any())).thenAnswer((_) {
+          states.add(
+            MyFollowingState(
+              status: MyFollowingStatus.success,
+              followingPubkeys: [otherPubkey],
+              hasLocalFollowEdit: true,
+            ),
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+        await tester.pump();
+        expect(badge(tester).variant, DivineFollowButtonVariant.follow);
+
+        await tester.tap(find.byType(GestureDetector));
+        await tester.pump();
+        expect(badge(tester).variant, DivineFollowButtonVariant.selected);
+
+        // Mid-transition both discs are on screen, the old fading out under
+        // the new one fading in.
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(paintedBadge(), findsNWidgets(2));
+
+        // A full fade past the mid-point (the ticker's first tick only sets
+        // the start time) plus the frame in which the switcher drops the old
+        // disc.
+        await tester.pump(DivineFollowButton.crossFadeDuration);
+        await tester.pump();
+        expect(paintedBadge(), findsOneWidget);
+        final disc = tester.widget<Container>(paintedBadge());
+        expect(
+          (disc.decoration! as BoxDecoration).color,
+          VineTheme.onPrimaryButton,
         );
       });
     });

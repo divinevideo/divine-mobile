@@ -1,8 +1,8 @@
 // ABOUTME: Follow button widget for video overlay using BLoC pattern.
 // ABOUTME: Circular 20x20 badge centred in a 44x44 tap target that overhangs
 // ABOUTME: the author avatar's bottom-end corner.
-// ABOUTME: Only rendered when the viewer is NOT following the author; once
-// ABOUTME: following, the button disappears entirely (no "following" state).
+// ABOUTME: Hidden for an author the viewer already follows; a follow made from
+// ABOUTME: the badge cross-fades it to the selected state instead.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
@@ -10,13 +10,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Diameter of the painted follow badge.
-const double followButtonVisualSize = 20;
+const double followButtonVisualSize = DivineFollowButton.badgeSize;
 
 /// Side of the badge's tap target: Apple's HIG minimum of 44pt, as designed
 /// for the feed author row.
@@ -24,7 +25,8 @@ const double followButtonVisualSize = 20;
 /// The painted badge is [followButtonVisualSize], centred in the target with
 /// [followButtonPadding] on every side. The caller places the target so the
 /// badge lands on the avatar's bottom-end corner.
-const double followButtonTapTargetSize = 44;
+const double followButtonTapTargetSize =
+    DivineFollowButton.defaultTapTargetSize;
 
 /// Padding between the painted badge and each edge of its tap target.
 const double followButtonPadding =
@@ -110,7 +112,11 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
 }
 
 /// View widget that consumes [MyFollowingBloc] state and renders the follow
-/// button. Hides itself entirely once the viewer is following the author.
+/// badge.
+///
+/// An author the viewer already followed when this item mounted gets no badge
+/// at all. A follow made from this badge cross-fades it to the selected state,
+/// which then stays for the life of the item.
 class VideoFollowButtonView extends StatelessWidget {
   @visibleForTesting
   const VideoFollowButtonView({required this.pubkey, super.key});
@@ -122,13 +128,17 @@ class VideoFollowButtonView extends StatelessWidget {
     return BlocSelector<
       MyFollowingBloc,
       MyFollowingState,
-      ({bool isFollowing, bool isReady})
+      ({bool isFollowing, bool isReady, bool followedHere})
     >(
       selector: (state) => (
         isFollowing: state.isFollowing(pubkey),
         isReady:
             state.status == MyFollowingStatus.success ||
             state.status == MyFollowingStatus.toggleFailure,
+        // Set by the bloc before a toggle resolves, so it is true for exactly
+        // the follows made from this badge and false for an author the viewer
+        // already followed when the item mounted.
+        followedHere: state.hasLocalFollowEdit,
       ),
       builder: (context, data) {
         // Do not render until the following list has loaded to avoid a
@@ -137,53 +147,36 @@ class VideoFollowButtonView extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        // Hide permanently once following — no "following" affordance.
-        if (data.isFollowing) {
+        // Already following when this item mounted: no badge, no affordance.
+        if (data.isFollowing && !data.followedHere) {
           return const SizedBox.shrink();
         }
 
-        return Semantics(
-          identifier: 'follow_button',
-          label: context.l10n.videoFollowButtonFollow,
-          button: true,
-          child: GestureDetector(
-            // Opaque, so the whole target is tappable rather than only the
-            // painted badge at its centre.
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              Log.info(
-                'Follow button tapped for ${pubkeyForLogs(pubkey)}',
-                name: 'VideoFollowButton',
-                category: LogCategory.ui,
-              );
-              context.read<MyFollowingBloc>().add(
-                MyFollowingToggleRequested(pubkey),
-              );
-            },
-            child: SizedBox(
-              width: followButtonTapTargetSize,
-              height: followButtonTapTargetSize,
-              child: Padding(
-                padding: const EdgeInsets.all(followButtonPadding),
-                child: Container(
-                  width: followButtonVisualSize,
-                  height: followButtonVisualSize,
-                  decoration: const BoxDecoration(
-                    color: VineTheme.cameraButtonGreen,
-                    shape: BoxShape.circle,
-                    boxShadow: VineTheme.buttonBoxShadows,
-                  ),
-                  child: const Center(
-                    child: DivineIcon(
-                      icon: DivineIconName.follow,
-                      size: 13,
-                      color: VineTheme.whiteText,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+        final l10n = context.l10n;
+        if (data.isFollowing) {
+          // A state, not a control: the badge is inert, so a tap on the avatar
+          // corner beneath it opens the profile rather than unfollowing.
+          return DivineFollowButton(
+            variant: DivineFollowButtonVariant.selected,
+            semanticLabel: l10n.profileFollowingLabel,
+            semanticIdentifier: SemanticIds.videoFollowButton,
+          );
+        }
+
+        return DivineFollowButton(
+          variant: DivineFollowButtonVariant.follow,
+          semanticLabel: l10n.videoFollowButtonFollow,
+          semanticIdentifier: SemanticIds.videoFollowButton,
+          onPressed: () {
+            Log.info(
+              'Follow button tapped for ${pubkeyForLogs(pubkey)}',
+              name: 'VideoFollowButton',
+              category: LogCategory.ui,
+            );
+            context.read<MyFollowingBloc>().add(
+              MyFollowingToggleRequested(pubkey),
+            );
+          },
         );
       },
     );
