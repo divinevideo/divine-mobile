@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -6685,7 +6686,10 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          expect(giftWrapPages, 2);
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1,
+          );
           expect(syncState.persistedDrainCursors, [100]);
           expect(syncState.drainCursorOverride, 100);
           expect(syncState.drainCompleteOverride, isFalse);
@@ -7709,7 +7713,11 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          expect(calls, DmHistoryDrainConfig.maxPages);
+          expect(
+            calls,
+            DmHistoryDrainConfig.maxPages +
+                DmHistoryDrainConfig.unsettledPageRetriesPerRun,
+          );
           expect(syncState.persistedDrainCursors, [1000000]);
 
           const loopCursor = 1000000 - DmHistoryDrainConfig.maxPages;
@@ -8296,9 +8304,8 @@ void main() {
         for (final url in urls) url: RelayConnectionStatus.connected(url),
       };
 
-      /// Answers the first gift-wrap page as one nothing answered and every
-      /// later page (gift-wrap and NIP-04 alike) as authoritative and empty,
-      /// so a resumed run can complete.
+      /// Exhausts one run's global retry budget, then lets the resumed run
+      /// complete. NIP-04 pages are authoritative and empty throughout.
       void stubUnansweredThenExhausted() {
         var giftWrapPages = 0;
         when(
@@ -8317,7 +8324,8 @@ void main() {
             return answeredPage(const <Event>[]);
           }
           giftWrapPages++;
-          return giftWrapPages == 1
+          return giftWrapPages <=
+                  DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
               ? unansweredPage(noRelays: true)
               : answeredPage(const <Event>[]);
         });
@@ -8339,6 +8347,206 @@ void main() {
           await Future<void>.delayed(Duration.zero);
         }
       }
+
+      test(
+        'bounds unsettled page retries across the whole drain run',
+        () async {
+          stubRelayStatus();
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return partialPage([deletion(1000 - giftWrapPages)]);
+          });
+          final syncState = armedSyncState();
+          final cursorBefore = syncState.oldestOverride;
+          expect(cursorBefore, isNotNull);
+
+          await createRepository(
+            syncState: syncState,
+          ).backfillHistoryIfNeeded();
+
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.maxPages +
+                DmHistoryDrainConfig.unsettledPageRetriesPerRun,
+          );
+          expect(syncState.drainCursorOverride, cursorBefore);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        },
+      );
+
+      test('timer resumes a deferred drain without a relay status change', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus(
+            connectedNow: connected(['wss://a.example']),
+          );
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(relayStatus.hasListener, isTrue);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+          expect(relayStatus.hasListener, isFalse);
+        });
+      });
+
+      test('relay edge and timer cannot both resume the same deferral', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus();
+          var giftWrapPages = 0;
+          stubUnansweredThenExhausted();
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return giftWrapPages <= 3
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          relayStatus.add(connected(['wss://relay.example']));
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+          expect(giftWrapPages, 4);
+        });
+      });
+
+      test('automatic timer resumes stop at the session cap', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return unansweredPage(noRelays: true);
+          });
+          final syncState = armedSyncState();
+          final cursorBefore = syncState.oldestOverride;
+          expect(cursorBefore, isNotNull);
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          async
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+
+          expect(
+            giftWrapPages,
+            (DmHistoryDrainConfig.deferredRetryDelays.length + 1) *
+                (DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1),
+          );
+          expect(syncState.drainCursorOverride, cursorBefore);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
+      test('teardown cancels the deferred drain timer', () {
+        fakeAsync((async) {
+          stubRelayStatus();
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.stopListening());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
+      test('switching users cancels the deferred drain timer', () {
+        fakeAsync((async) {
+          stubRelayStatus();
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
 
       test(
         'resumes on its own once a relay connects after a page no relay '
@@ -8474,9 +8682,10 @@ void main() {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
-            // Run 1: one relay answered a page, another never did; the next
-            // page is authoritative and empty. Run 2: exhausted at once.
-            return giftWrapPages == 1
+            // Run 1 exhausts its retry budget on a partial first page, then
+            // reaches an authoritative empty page. Run 2 exhausts at once.
+            return giftWrapPages <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
                 ? partialPage([deletion(500)])
                 : answeredPage(const <Event>[]);
           });
