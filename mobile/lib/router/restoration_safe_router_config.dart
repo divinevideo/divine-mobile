@@ -58,8 +58,11 @@ RouterConfig<RouteMatchList> restorationSafeRouterConfig(
 ///
 /// go_router decodes that state whenever a [Router] is mounted again over a
 /// router that already reported a location, and on every `refresh()`; on web,
-/// browser history hands it back too. Thrown from `Router.restoreState`, it
-/// leaves the app with no routes. Still present in go_router 18.0.1
+/// browser history hands it back too. Only the remount throws from
+/// `Router.restoreState` — the other two come through the route-information
+/// listener — so which frame carries it depends on the trigger. Either way
+/// the app is left with no routes. Still present in go_router 18.0.1, the
+/// latest release at the time of writing and ahead of the 16.x this app pins
 /// (flutter/flutter#153258), so a version bump does not remove it.
 @visibleForTesting
 class RestorationSafeRouteInformationParser
