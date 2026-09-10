@@ -221,6 +221,20 @@ void main() {
         expect(() => key.currentState!.animateToPage(0), returnsNormally);
       });
 
+      testWidgets('debugActivatePage is a no-op for empty list', (
+        tester,
+      ) async {
+        final key = GlobalKey<InfiniteVideoFeedState>();
+
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(key: key, videos: const [], cache: cache),
+          ),
+        );
+
+        expect(() => key.currentState!.debugActivatePage(0), returnsNormally);
+      });
+
       testWidgets('pauseActive and resumeActive are no-ops for empty list', (
         tester,
       ) async {
@@ -238,6 +252,28 @@ void main() {
     });
 
     group('with videos', () {
+      testWidgets('debugActivatePage clamps and activates the requested page', (
+        tester,
+      ) async {
+        final key = GlobalKey<InfiniteVideoFeedState>();
+
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(2, (i) => _makeVideo('debug-page-$i')),
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+
+        key.currentState!.debugActivatePage(99);
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
       testWidgets('pagePositionListenable exposes initial page position', (
         tester,
       ) async {
