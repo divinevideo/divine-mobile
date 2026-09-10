@@ -13,10 +13,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -52,7 +53,7 @@ Future<void> _pumpPeopleListScreen(
   await tester.pumpWidget(
     testProviderScope(
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider<PeopleListsBloc>.value(
           value: bloc,
@@ -105,7 +106,7 @@ Future<void> _pumpPushedListRoute(
       child: BlocProvider<PeopleListsBloc>.value(
         value: bloc,
         child: MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
         ),
@@ -142,7 +143,7 @@ List<String> _captureAnnouncements(WidgetTester tester) {
 
 /// Opens the delete confirmation from the overflow menu and confirms it.
 Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
-  await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+  await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
   await tester.pumpAndSettle();
   await tester.tap(find.text(l10n.listDeleteAction));
   await tester.pumpAndSettle();
@@ -177,7 +178,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -218,7 +219,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -262,7 +263,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -296,7 +297,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -339,7 +340,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -375,9 +376,9 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
+      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.listDeleteAction), findsOneWidget);
@@ -404,7 +405,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsNothing);
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
@@ -426,7 +427,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -621,7 +622,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -676,7 +677,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -716,7 +717,7 @@ void main() {
         await tester.pumpWidget(
           testProviderScope(
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
@@ -764,7 +765,7 @@ void main() {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
@@ -839,7 +840,7 @@ void main() {
             child: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -899,7 +900,7 @@ void main() {
             child: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -961,7 +962,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),

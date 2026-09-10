@@ -10,11 +10,12 @@ import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _FakeKeyManagementAuthService extends Fake implements AuthService {
@@ -144,7 +145,7 @@ void main() {
       await pumpSubject(tester);
       final l10n = lookupAppLocalizations(const Locale('en'));
 
-      await tester.tap(find.byTooltip(l10n.keyManagementCopyPublicKeyTooltip));
+      await tester.tap(findByTooltip(l10n.keyManagementCopyPublicKeyTooltip));
       await tester.pumpAndSettle();
 
       expect(clipboardPayload, equals(testNpub));
@@ -692,7 +693,7 @@ void main() {
               ),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
               theme: ThemeData.dark(),

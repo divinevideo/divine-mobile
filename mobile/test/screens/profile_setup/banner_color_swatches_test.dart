@@ -11,8 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/profile_setup/widgets/banner_color_swatches.dart';
+
+import '../../helpers/finders.dart';
 
 class _MockProfileEditorBloc
     extends MockBloc<ProfileEditorEvent, ProfileEditorState>
@@ -38,7 +40,7 @@ void main() {
       final result = <bool?>[];
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<ProfileEditorBloc>.value(
@@ -182,7 +184,7 @@ void main() {
       final result = await openSheet(tester);
       expect(result, isEmpty, reason: 'sheet is still open');
 
-      await tester.tap(find.byTooltip(l10n.commonBack));
+      await tester.tap(findByTooltip(l10n.commonBack));
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.profileSetupBannerColorPickerTitle), findsNothing);

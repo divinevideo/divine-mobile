@@ -10,9 +10,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/blossom_settings/blossom_settings_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
+
+import '../../helpers/finders.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
@@ -63,7 +65,7 @@ void main() {
           blossomUploadServiceProvider.overrideWithValue(mockService),
         ],
         child: MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.lightTheme,
           routerConfig: router,
@@ -76,7 +78,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), url);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Save'));
+      await tester.tap(findByTooltip('Save'));
       await tester.pumpAndSettle();
     }
 

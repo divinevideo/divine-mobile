@@ -10,7 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -18,6 +18,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
@@ -126,7 +127,7 @@ void main() {
           ...extraOverrides,
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: goRouter == null
               ? screen
@@ -160,7 +161,7 @@ void main() {
     }
 
     Future<void> openOwnerSheet(WidgetTester tester) async {
-      await tester.tap(find.byTooltip(l10n.curatedListActionsTooltip));
+      await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
       await tester.pumpAndSettle();
     }
 
@@ -174,7 +175,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
 
         verify(() => goRouter.pop<Object?>()).called(1);
       });
@@ -191,7 +192,7 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          await tester.tap(find.byTooltip('Back'));
+          await tester.tap(findByTooltip('Back'));
 
           verify(() => goRouter.go(defaultSafePopFallback)).called(1);
           verifyNever(() => goRouter.pop<Object?>());
@@ -304,15 +305,15 @@ void main() {
         await tester.pump();
 
         expect(find.text(l10n.listFollowButton), findsOneWidget);
-        expect(find.byTooltip(l10n.listShareAction), findsOneWidget);
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsNothing);
+        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
 
         // Share is the rightmost control in the row, after the follow pill.
         final followRight = tester
             .getTopRight(find.text(l10n.listFollowButton))
             .dx;
         final shareLeft = tester
-            .getTopLeft(find.byTooltip(l10n.listShareAction))
+            .getTopLeft(findByTooltip(l10n.listShareAction))
             .dx;
         expect(shareLeft, greaterThan(followRight));
       });
@@ -347,7 +348,7 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          expect(find.byTooltip(l10n.listShareAction), findsOneWidget);
+          expect(findByTooltip(l10n.listShareAction), findsOneWidget);
           expect(find.text('From the relay.'), findsOneWidget);
         },
       );
@@ -369,7 +370,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byTooltip(l10n.listShareAction), findsNothing);
+        expect(findByTooltip(l10n.listShareAction), findsNothing);
       });
 
       testWidgets('subscribing caches the relay-resolved list', (
@@ -414,7 +415,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byTooltip(l10n.listShareAction), findsNothing);
+        expect(findByTooltip(l10n.listShareAction), findsNothing);
       });
 
       testWidgets('tapping the pill toggles the subscription', (tester) async {
@@ -445,7 +446,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsNothing);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
       });
     });
 
@@ -459,7 +460,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
         expect(find.text(l10n.listFollowButton), findsNothing);
         expect(find.text(l10n.listFollowingButton), findsNothing);
         final appBar = tester.widget<DiVineAppBar>(find.byType(DiVineAppBar));
@@ -933,7 +934,7 @@ void main() {
 
         // Both exit routes are inert while the batch runs: the removals
         // would keep publishing after close() with their completion dropped.
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
         await tester.pump();
         final popScope = tester.widget(
           find.byWidgetPredicate((widget) => widget is PopScope).first,
@@ -941,14 +942,14 @@ void main() {
         popScope.onPopInvokedWithResult!(false, null);
         await tester.pump();
         expect(find.text('Owned List'), findsOneWidget);
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsNothing);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
 
         removal.complete(true);
         await tester.pumpAndSettle();
 
         // The batch settled: completion ran (snackbar) and the mode exited.
         expect(find.text(l10n.listRemoveVideosSuccess(1)), findsOneWidget);
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
       });
 
       testWidgets('back exits manage mode instead of popping the route', (
@@ -971,12 +972,12 @@ void main() {
         await tester.pump();
         await enterManageMode(tester);
 
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
         await tester.pumpAndSettle();
 
         verifyNever(() => goRouter.pop<Object?>());
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
-        expect(find.byTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
       });
     });
   });

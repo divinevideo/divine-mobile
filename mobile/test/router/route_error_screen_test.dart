@@ -5,9 +5,11 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_error_screen.dart';
+
+import '../helpers/finders.dart';
 
 void main() {
   final strings = AppLocalizationsEn();
@@ -41,7 +43,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp.router(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         routerConfig: router,
@@ -100,7 +102,7 @@ void main() {
         errorScreen: const RouteErrorScreen(message: 'boom'),
       );
 
-      expect(find.byTooltip('Back'), findsNothing);
+      expect(findByTooltip('Back'), findsNothing);
     });
 
     testWidgets(
@@ -116,7 +118,7 @@ void main() {
 
         // Reached via `go` (single-entry stack) → nothing to pop → safePop
         // lands on the home feed instead of throwing GoError.
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
         await tester.pumpAndSettle();
 
         expect(find.byType(_HomeMarker), findsOneWidget);
@@ -139,7 +141,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('boom'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Back'));
+      await tester.tap(findByTooltip('Back'));
       await tester.pumpAndSettle();
 
       // Popped back to the pushing screen rather than being forced home.
