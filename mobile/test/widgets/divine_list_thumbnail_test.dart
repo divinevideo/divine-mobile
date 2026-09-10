@@ -690,35 +690,39 @@ void main() {
   });
 
   group(DivineListThumbnailSkeleton, () {
-    testWidgets('stands exactly as tall as a real card of the same width', (
-      tester,
-    ) async {
-      // The gallery's rows stay level when placeholders give way to cards
-      // only if the silhouette reserves the same media box and footer.
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 180,
-                    child: DivineListThumbnail.videos(
-                      curatedList: createList(description: 'Two lines\nof it'),
-                      onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 180,
-                    child: Skeletonizer(child: DivineListThumbnailSkeleton()),
-                  ),
-                ],
-              ),
+    Widget sideBySide({required Widget card, required Widget skeleton}) {
+      return ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 180, child: card),
+                SizedBox(
+                  width: 180,
+                  child: Skeletonizer(ignoreContainers: true, child: skeleton),
+                ),
+              ],
             ),
           ),
+        ),
+      );
+    }
+
+    testWidgets('the video silhouette stands as tall as a video card', (
+      tester,
+    ) async {
+      // Rows stay level when placeholders give way to cards only if the
+      // silhouette reserves the same media box and footer.
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.videos(
+            curatedList: createList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
         ),
       );
 
@@ -727,6 +731,69 @@ void main() {
       expect(card.height, greaterThan(0));
       expect(skeleton.height, equals(card.height));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the people silhouette stands as tall as a people card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.people(
+            userList: createUserList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the video silhouette fans out five slots', (tester) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
+        ),
+      );
+
+      final slots = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byType(Positioned),
+      );
+      expect(slots, findsNWidgets(5));
+    });
+
+    testWidgets('the people silhouette tiles the three-slot collage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      final tiles = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byType(ColoredBox),
+      );
+      expect(tiles, findsNWidgets(3));
+      // The large tile keeps the collage's Figma split.
+      final large = tester.getSize(tiles.first);
+      final media = tester.getSize(
+        find
+            .descendant(
+              of: find.byType(DivineListThumbnailSkeleton),
+              matching: find.byType(AspectRatio),
+            )
+            .first,
+      );
+      expect(large.width / media.width, closeTo(0.661, 0.01));
     });
   });
 }
