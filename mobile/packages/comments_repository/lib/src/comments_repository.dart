@@ -744,7 +744,10 @@ class CommentsRepository {
           ),
       ];
 
-      _watchSubscriptionId = 'comments_watch_$rootEventId';
+      _watchSubscriptionId = scopedSubscriptionId(
+        'comments_watch',
+        rootEventId,
+      );
 
       final eventStream = _nostrClient.subscribe(
         filters,

@@ -1057,7 +1057,10 @@ class RepostsRepository {
   /// updates the local cache.
   void _subscribeToReposts(String currentUserPubkey) {
     // Use a deterministic subscription ID so we can unsubscribe later
-    _repostSubscriptionId = 'reposts_repo_reposts_$currentUserPubkey';
+    _repostSubscriptionId = scopedSubscriptionId(
+      'reposts_repo_reposts',
+      currentUserPubkey,
+    );
 
     final eventStream = _nostrClient.subscribe([
       Filter(
