@@ -8,14 +8,16 @@ import 'package:models/src/video_event.dart';
 ///
 /// A `null` result means the marker is genuinely absent and a viewer-aware
 /// policy may still grant the video's creator access to their own sound.
-/// For an authoritatively verified classic Vine, the server may instead apply
-/// Divine's legacy compatibility presumption. That is a product-policy grant,
-/// not affirmative creator consent.
+/// Verified classic Vine audio is reusable by default while rollout is enabled.
+/// Its imported event marker is not a creator takedown; takedowns are enforced
+/// separately through the action-time server policy.
 bool? originalSoundReuseTerms(VideoEvent video) {
+  if (video.isVerifiedArchive) {
+    return video.archiveAudioReuseEnabled ? true : null;
+  }
   return switch (video.audioReuseConsent) {
     AudioReuseConsent.granted => true,
     AudioReuseConsent.declined || AudioReuseConsent.invalid => false,
-    AudioReuseConsent.unspecified =>
-      video.isVerifiedArchive && video.archiveAudioReuseEnabled ? true : null,
+    AudioReuseConsent.unspecified => null,
   };
 }

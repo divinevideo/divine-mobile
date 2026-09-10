@@ -573,10 +573,10 @@ class VideoStats {
   /// This server-derived classification does not express creator consent.
   final bool isVerifiedArchive;
 
-  /// Whether Funnelcake currently enables Divine's legacy archive audio policy.
+  /// Whether Funnelcake enables audio reuse for this verified classic Vine.
   ///
-  /// Combined with [isVerifiedArchive], this permits presumed reuse when no
-  /// creator preference is recorded. Explicit opt-outs remain authoritative.
+  /// Combined with [isVerifiedArchive], this grants reuse by default. Creator
+  /// takedowns are separate server decisions refreshed at action time.
   final bool archiveAudioReuseEnabled;
 
   /// Deprecated alias for [moderationLabels].

@@ -221,8 +221,6 @@ class VideoEventPublisher {
       return true;
     }
 
-    if (sound.hasExplicitReuseConsent && !sound.allowsReuse) return false;
-
     final checker = _audioReuseConsentChecker;
     if (checker == null) return false;
 

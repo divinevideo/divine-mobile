@@ -1794,25 +1794,37 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches the current server-side audio reuse decision for [sha256].
-  Future<AudioReusePolicy> getAudioReusePolicy(String sha256) async {
+  /// Refreshes the action-time takedown decision for one selected video.
+  Future<AudioReusePolicy> refreshAudioReusePolicy({
+    required int kind,
+    required String pubkey,
+    required String dTag,
+  }) async {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
-    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(sha256)) {
-      throw const FunnelcakeException('SHA-256 must be 64 hexadecimal digits');
+    if (kind != 34235 && kind != 34236) {
+      throw const FunnelcakeException('Unsupported video kind');
+    }
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(pubkey) || dTag.isEmpty) {
+      throw const FunnelcakeException('Invalid video coordinate');
     }
 
-    final normalizedHash = sha256.toLowerCase();
-    final uri = Uri.parse(
-      '$_baseUrl/api/videos/by-sha256/$normalizedHash/audio-reuse',
-    );
+    final uri = Uri.parse('$_baseUrl/api/videos/audio-reuse/bulk');
+    final elapsed = Stopwatch()..start();
     try {
-      final response = await _get(uri);
+      final response = await _post(
+        uri,
+        body: {
+          'videos': [
+            {'kind': kind, 'pubkey': pubkey.toLowerCase(), 'd_tag': dTag},
+          ],
+        },
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return AudioReusePolicy.fromJson(data);
+        return AudioReusePolicy.fromRefreshJson(data, elapsed: elapsed.elapsed);
       }
       throw FunnelcakeApiException(
-        message: 'Failed to fetch audio reuse policy',
+        message: 'Failed to refresh audio reuse policy',
         statusCode: response.statusCode,
         url: uri.toString(),
       );
@@ -1821,7 +1833,7 @@ class FunnelcakeApiClient {
     } on FunnelcakeException {
       rethrow;
     } catch (error) {
-      throw FunnelcakeException('Failed to fetch audio reuse policy: $error');
+      throw FunnelcakeException('Failed to refresh audio reuse policy: $error');
     }
   }
 

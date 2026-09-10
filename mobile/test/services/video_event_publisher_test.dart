@@ -592,10 +592,8 @@ void main() {
 
       final result = await publisher.publishVideoEvent(
         upload: createUpload().copyWith(
-          streamingMp4Url:
-              'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4',
-          streamingHlsUrl:
-              'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
+          streamingMp4Url: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4',
+          streamingHlsUrl: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
           fallbackUrl: 'https://media.divine.video/fa4a90a3.mp4',
           cdnUrl: 'https://stream.divine.video/legacy/playlist.m3u8',
         ),
@@ -748,6 +746,39 @@ void main() {
         expect(classicSound.hasExplicitReuseConsent, isFalse);
         expect(classicSound.requiresCurrentReuseVerification, isTrue);
       });
+
+      test(
+        'does not treat an imported classic false marker as a takedown',
+        () async {
+          stubSignAndPublish();
+          final classicSound = AudioEvent.fromVideoOriginalSound(
+            VideoEvent(
+              id: sourceVideoId,
+              pubkey: sourceCreator,
+              createdAt: 1700000000,
+              content: '',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(
+                1700000000 * 1000,
+              ),
+              videoUrl: 'https://example.com/classic.mp4',
+              addressableDTag: 'classic-vine',
+              rawTags: const {'allow_audio_reuse': 'false'},
+              isVerifiedArchive: true,
+              archiveAudioReuseEnabled: true,
+            ),
+          );
+
+          expect(classicSound.hasExplicitReuseConsent, isTrue);
+          expect(
+            await publisherWithConsent(consent: true).publishVideoEvent(
+              upload: createUpload(),
+              selectedAudio: classicSound,
+              selectedAudioEventId: classicSound.id,
+            ),
+            isTrue,
+          );
+        },
+      );
 
       test('server suppression overrides an explicit reuse grant', () async {
         stubSignAndPublish();
@@ -1034,8 +1065,7 @@ void main() {
             audioFilePath: audioPath,
             duration: 6,
             fileSize: 12345,
-            sha256Hash:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            sha256Hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             mimeType: 'audio/m4a',
           ),
         );
@@ -1052,8 +1082,7 @@ void main() {
             success: true,
             url: 'https://cdn.example.com/audio.m4a',
             fallbackUrl: 'https://cdn.example.com/audio.m4a',
-            videoId:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         );
         when(
@@ -1542,8 +1571,7 @@ void main() {
               success: true,
               url: 'https://cdn.example/audiohash',
               fallbackUrl: 'https://cdn.example/audiohash',
-              videoId:
-                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             ),
           );
 
@@ -1650,8 +1678,7 @@ void main() {
             success: true,
             url: 'https://cdn.example/audiohash',
             fallbackUrl: 'https://cdn.example/audiohash',
-            videoId:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         );
 

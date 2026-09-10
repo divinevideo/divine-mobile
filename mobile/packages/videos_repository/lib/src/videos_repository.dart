@@ -237,13 +237,24 @@ class VideosRepository {
   bool isVideoKnownDeleted(VideoEvent video) =>
       _deletedFilter?.call(video) ?? false;
 
-  /// Returns the authoritative server-side audio reuse policy for [sha256].
-  Future<AudioReusePolicy> getAudioReusePolicy(String sha256) {
+  /// Refreshes the authoritative takedown decision for [video].
+  Future<AudioReusePolicy> refreshAudioReusePolicy(VideoEvent video) {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) {
       throw const FunnelcakeNotConfiguredException();
     }
-    return client.getAudioReusePolicy(sha256);
+    final dTag = video.addressableDTag;
+    if (dTag == null || dTag.isEmpty) {
+      throw const FunnelcakeException('Video is not addressable');
+    }
+    return client.refreshAudioReusePolicy(
+      // This method already requires an addressable d-tag. REST/cache models
+      // can omit eventKind, so use the current addressable short-video kind
+      // rather than letting shareKind fall back to non-addressable kind 22.
+      kind: video.eventKind ?? EventKind.videoVertical,
+      pubkey: video.pubkey,
+      dTag: dTag,
+    );
   }
 
   /// Clears the in-memory feed cache.

@@ -1,5 +1,7 @@
-// ABOUTME: Tests the content-addressed audio reuse policy endpoint contract.
-// ABOUTME: Ensures suppression fields are strict and hashes are normalized.
+// ABOUTME: Tests the selected-video audio reuse refresh contract.
+// ABOUTME: Ensures suppression and lease fields fail closed.
+
+import 'dart:convert';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
@@ -15,7 +17,7 @@ void main() {
 
   late _MockHttpClient httpClient;
   late FunnelcakeApiClient client;
-  final hash = 'A' * 64;
+  final pubkey = 'A' * 64;
 
   setUp(() {
     httpClient = _MockHttpClient();
@@ -28,54 +30,95 @@ void main() {
 
   tearDown(() => client.dispose());
 
-  group('getAudioReusePolicy', () {
-    test('parses the authoritative policy and normalizes the hash', () async {
+  group('refreshAudioReusePolicy', () {
+    test(
+      'posts the selected coordinate and parses a fresh suppression',
+      () async {
+        when(
+          () => httpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"policies":[{"audio_reuse_suppressed":true}],'
+            '"evaluated_at":"2026-09-10T00:00:00Z",'
+            '"valid_until":"2026-09-10T00:01:00Z"}',
+            200,
+          ),
+        );
+
+        final policy = await client.refreshAudioReusePolicy(
+          kind: 34236,
+          pubkey: pubkey,
+          dTag: 'Classic-ID',
+        );
+
+        expect(policy.audioReuseSuppressed, isTrue);
+        expect(policy.validFor, greaterThan(Duration.zero));
+        final captured = verify(
+          () => httpClient.post(
+            captureAny(),
+            headers: any(named: 'headers'),
+            body: captureAny(named: 'body'),
+          ),
+        ).captured;
+        expect((captured[0] as Uri).path, '/api/videos/audio-reuse/bulk');
+        expect(jsonDecode(captured[1] as String), {
+          'videos': [
+            {
+              'kind': 34236,
+              'pubkey': pubkey.toLowerCase(),
+              'd_tag': 'Classic-ID',
+            },
+          ],
+        });
+      },
+    );
+
+    test('rejects an expired policy response', () async {
       when(
-        () => httpClient.get(any(), headers: any(named: 'headers')),
+        () => httpClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
       ).thenAnswer(
         (_) async => http.Response(
-          '{"allow_audio_reuse":false,"audio_reuse_suppressed":true}',
+          '{"policies":[{"audio_reuse_suppressed":false}],'
+          '"evaluated_at":"2026-09-10T00:01:00Z",'
+          '"valid_until":"2026-09-10T00:00:00Z"}',
           200,
         ),
       );
 
-      final policy = await client.getAudioReusePolicy(hash);
-
-      expect(policy.allowAudioReuse, isFalse);
-      expect(policy.audioReuseSuppressed, isTrue);
-      final uri =
-          verify(
-                () => httpClient.get(
-                  captureAny(),
-                  headers: any(named: 'headers'),
-                ),
-              ).captured.single
-              as Uri;
-      expect(
-        uri.path,
-        '/api/videos/by-sha256/${hash.toLowerCase()}/audio-reuse',
-      );
-    });
-
-    test('rejects malformed policy responses', () async {
-      when(
-        () => httpClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response('{"allow_audio_reuse":true}', 200),
-      );
-
       await expectLater(
-        client.getAudioReusePolicy(hash),
+        client.refreshAudioReusePolicy(
+          kind: 34236,
+          pubkey: pubkey,
+          dTag: 'classic-id',
+        ),
         throwsA(isA<FunnelcakeException>()),
       );
     });
 
-    test('rejects a malformed hash before making a request', () async {
+    test('rejects malformed coordinates before making a request', () async {
       await expectLater(
-        client.getAudioReusePolicy('not-a-hash'),
+        client.refreshAudioReusePolicy(
+          kind: 22,
+          pubkey: pubkey,
+          dTag: 'classic-id',
+        ),
         throwsA(isA<FunnelcakeException>()),
       );
-      verifyNever(() => httpClient.get(any(), headers: any(named: 'headers')));
+      verifyNever(
+        () => httpClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      );
     });
   });
 }

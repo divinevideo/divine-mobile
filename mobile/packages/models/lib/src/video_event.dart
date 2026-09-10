@@ -1027,11 +1027,10 @@ class VideoEvent {
   /// itself express creator consent.
   final bool isVerifiedArchive;
 
-  /// Whether Funnelcake currently enables Divine's legacy archive audio policy.
+  /// Whether Funnelcake enables audio reuse for this verified classic Vine.
   ///
-  /// Combined with [isVerifiedArchive], this permits presumed reuse when no
-  /// creator preference is recorded. Explicit opt-outs remain authoritative.
-  /// The server controls this kill switch; absent values fail closed.
+  /// Combined with [isVerifiedArchive], this grants reuse by default. Creator
+  /// takedowns are separate server decisions refreshed at action time.
   final bool archiveAudioReuseEnabled;
 
   /// Generic `p` tags that mark users mentioned by this video.
