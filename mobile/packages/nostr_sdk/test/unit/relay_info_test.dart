@@ -48,6 +48,22 @@ void main() {
 
         expect(info.maxLimit, isNull);
       });
+
+      // A limit below 1 caps nothing, and taken at its word it would make
+      // every query to the relay look capped.
+      for (final (description, maxLimit) in [
+        ('zero', 0),
+        ('negative', -5),
+        ('a fraction below one', 0.5),
+      ]) {
+        test('is null when max_limit is $description', () {
+          final info = RelayInfo.fromJson({
+            'limitation': {'max_limit': maxLimit},
+          });
+
+          expect(info.maxLimit, isNull);
+        });
+      }
     });
 
     group('toJson', () {
