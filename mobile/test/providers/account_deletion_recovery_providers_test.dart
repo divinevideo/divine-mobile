@@ -364,8 +364,8 @@ void main() {
                 .recoveryWatchStartedAt,
             adopted,
           );
-          // Let the backfill write land.
-          await Future<void>.delayed(Duration.zero);
+          // Settle the unawaited backfill write rather than sleeping on it.
+          await pumpEventQueue();
 
           final later = adoptAt(adopted.add(const Duration(hours: 1)));
           expect(
