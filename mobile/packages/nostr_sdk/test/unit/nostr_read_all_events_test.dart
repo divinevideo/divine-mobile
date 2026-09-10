@@ -10,7 +10,8 @@ import 'package:nostr_sdk/relay/relay_info.dart';
 
 /// Relay that answers every `REQ` out of [stored] the way a relay does: newest
 /// first, at most `limit`, its NIP-11 `max_limit` or its [silentCap],
-/// whichever is lowest, at or before `until` unless [ignoresUntil].
+/// whichever is lowest, at or after `since`, and at or before `until` unless
+/// [ignoresUntil].
 class _StoreRelay extends Relay {
   _StoreRelay(String url, this.stored) : super(url, RelayStatus(url));
 
@@ -18,6 +19,10 @@ class _StoreRelay extends Relay {
 
   /// When true, every `REQ` gets the newest events whatever its `until`.
   bool ignoresUntil = false;
+
+  /// When true, a `REQ` whose `until` is below its `since` gets a `CLOSED`,
+  /// the way a relay that checks its filters refuses one nothing can match.
+  bool refusesEmptyRange = false;
 
   /// When set, every `REQ` gets at most this many events, and the relay says
   /// so nowhere: no NIP-11 `max_limit`, no NIP-67 `more`.
@@ -99,9 +104,16 @@ class _StoreRelay extends Relay {
   ) async {
     if (after != null) await after;
     final until = filter['until'] as int?;
+    final since = filter['since'] as int?;
+    if (refusesEmptyRange && until != null && since != null && until < since) {
+      await _deliver(['CLOSED', subId, 'invalid: until is before since']);
+      return;
+    }
     final answer = [
       for (final event in stored)
-        if (ignoresUntil || until == null || event.createdAt <= until) event,
+        if ((ignoresUntil || until == null || event.createdAt <= until) &&
+            (since == null || event.createdAt >= since))
+          event,
     ]..sort(_newestFirst);
     var limit = filter['limit'] as int? ?? answer.length;
     for (final cap in [info?.maxLimit, silentCap].nonNulls) {
@@ -649,6 +661,35 @@ void main() {
               '108 rather than jump past 107, 106 and 105',
         );
         expect(result.isComplete, isTrue);
+      });
+    });
+
+    group("at the filter's since", () {
+      test('ends the walk complete without asking for a page below '
+          'it', () async {
+        final stored = await eventsAt([105, 100, 95]);
+        final relay = await addStore('wss://relay.example', stored)
+          ..refusesEmptyRange = true;
+
+        final result = await nostr.readAllEvents(
+          {..._textNotes(), 'since': 100},
+          pageSize: 2,
+          pageTimeout: _unsettledPageTimeout,
+        );
+
+        expect(
+          result.isComplete,
+          isTrue,
+          reason: 'the second page read the last second at or after 100',
+        );
+        expect(
+          _untilsOf(relay),
+          [null, 100],
+          reason:
+              'a page at 99 could match nothing at or after 100, and this '
+              'relay refuses one',
+        );
+        expect(_idsOf(result.events), unorderedEquals(_idsOf(stored.take(2))));
       });
     });
 

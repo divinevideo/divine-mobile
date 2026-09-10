@@ -403,7 +403,9 @@ class Nostr {
   ///   hold below that second.
   /// * A page on which no relay sent an event ends the walk, complete unless
   ///   a relay may be capped, such as one whose events all fell outside the
-  ///   filter.
+  ///   filter. So does a page whose next `until` would fall below [filter]'s
+  ///   `since`, and that page is never asked for: nothing below `since` can
+  ///   match, and a relay may refuse a filter that says so.
   ///
   /// The walk also ends complete on a settled page confirmed exhaustive by
   /// NIP-67 `finish`, unless a relay it was following missed that page, and
@@ -446,6 +448,7 @@ class Nostr {
     final collected = <Event>[];
     final seenIds = <String>{};
     var until = filter['until'] as int?;
+    final since = filter['since'] as int?;
     var previousRelays = const <QueryRelaySummary>[];
     var pages = 0;
 
@@ -484,6 +487,7 @@ class Nostr {
       ]);
       switch (nextPagedReadStep(
         cursor: until,
+        since: since,
         relays: read.relays,
         previousRelays: previousRelays,
         // Unknown only when the deadline ended the page, which never settles.

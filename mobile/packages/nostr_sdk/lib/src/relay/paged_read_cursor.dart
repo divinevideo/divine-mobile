@@ -35,9 +35,10 @@ final class EndPagedRead extends PagedReadStep {
 /// page before it. None sent anything newer than [cursor], since the pool
 /// drops what the filter does not match. A relay sends its newest events
 /// first, so each one has sent everything it holds after its oldest event.
-/// [sentTo] names the relays that took the page's REQ. [settled],
-/// [confirmedExhaustive] and [possiblyCapped] are the page's
-/// `QueryResult.isComplete`, `confirmedExhaustive` and `possiblyCapped`.
+/// [sentTo] names the relays that took the page's REQ, and [since] is the
+/// filter's `since`, if any. [settled], [confirmedExhaustive] and
+/// [possiblyCapped] are the page's `QueryResult.isComplete`,
+/// `confirmedExhaustive` and `possiblyCapped`.
 ///
 /// * A page that did not settle ends the walk incomplete.
 /// * So does a page whose REQ a relay in [previousRelays] did not take: the
@@ -53,11 +54,13 @@ final class EndPagedRead extends PagedReadStep {
 ///   one second below it: it may still hold more below that second without
 ///   saying so, and one second back is as far as the cursor can move
 ///   without passing it.
-/// * With no relay to go by, the walk ends, complete unless a relay may be
+/// * With no relay to go by, or with the next page below [since], where
+///   nothing can match, the walk ends, complete unless a relay may be
 ///   capped, such as one whose every event fell outside the filter.
 @internal
 PagedReadStep nextPagedReadStep({
   required int? cursor,
+  required int? since,
   required List<QueryRelaySummary> relays,
   required List<QueryRelaySummary> previousRelays,
   required List<String> sentTo,
@@ -79,6 +82,8 @@ PagedReadStep nextPagedReadStep({
     }
     if (next == null || reach > next) next = reach;
   }
-  if (next == null) return EndPagedRead(isComplete: !possiblyCapped);
+  if (next == null || (since != null && next < since)) {
+    return EndPagedRead(isComplete: !possiblyCapped);
+  }
   return ReadPageAt(next);
 }
