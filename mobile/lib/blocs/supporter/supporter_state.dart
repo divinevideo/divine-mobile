@@ -44,6 +44,7 @@ class SupporterState extends Equatable {
     this.entitlement = SupporterEntitlement.inactive,
     this.status = SupporterStatus.idle,
     this.failure,
+    this.awaitingPurchaseConfirmation = false,
   });
 
   /// Purchasable supporter tiers loaded from the store.
@@ -54,6 +55,9 @@ class SupporterState extends Equatable {
 
   final SupporterStatus status;
   final SupporterFailure? failure;
+
+  /// Whether a user-initiated purchase still awaits canonical verification.
+  final bool awaitingPurchaseConfirmation;
 
   bool get isSupporter => entitlement.isSupporter;
   bool get isBusy =>
@@ -70,8 +74,11 @@ class SupporterState extends Equatable {
     SupporterStatus? status,
     SupporterFailure? failure,
     bool clearFailure = false,
+    bool? awaitingPurchaseConfirmation,
   }) {
     return SupporterState(
+      awaitingPurchaseConfirmation:
+          awaitingPurchaseConfirmation ?? this.awaitingPurchaseConfirmation,
       tiers: tiers ?? this.tiers,
       entitlement: entitlement ?? this.entitlement,
       status: status ?? this.status,
@@ -80,5 +87,11 @@ class SupporterState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [tiers, entitlement, status, failure];
+  List<Object?> get props => [
+    tiers,
+    entitlement,
+    status,
+    failure,
+    awaitingPurchaseConfirmation,
+  ];
 }

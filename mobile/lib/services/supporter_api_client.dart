@@ -89,9 +89,14 @@ class SupporterAccountSnapshot {
   /// Parses the normalized `/v1/me` response.
   factory SupporterAccountSnapshot.fromJson(Map<String, dynamic> json) {
     final entitlementJson = json['entitlement'];
-    final entitlement = entitlementJson is Map<String, dynamic>
+    var entitlement = entitlementJson is Map<String, dynamic>
         ? SupporterEntitlement.fromJson(entitlementJson)
         : SupporterEntitlement.inactive;
+    final status = SupporterServerStatus.fromValue(json['status']);
+    final graceThrough = _parseDate(json['graceThroughAt']);
+    if (status == SupporterServerStatus.grace && graceThrough != null) {
+      entitlement = entitlement.copyWith(expirationDate: graceThrough);
+    }
     final recognition = json['recognition'];
     final recognitionJson = recognition is Map<String, dynamic>
         ? recognition
@@ -100,9 +105,9 @@ class SupporterAccountSnapshot {
 
     return SupporterAccountSnapshot(
       entitlement: entitlement,
-      status: SupporterServerStatus.fromValue(json['status']),
+      status: status,
       paidThrough: _parseDate(json['paidThroughAt']),
-      graceThrough: _parseDate(json['graceThroughAt']),
+      graceThrough: graceThrough,
       haloVisible: recognitionJson['haloVisible'] as bool? ?? false,
       discoveryVisible: recognitionJson['discoveryVisible'] as bool? ?? false,
       foundingHistoryVisible:
@@ -219,14 +224,17 @@ class SupporterApiClient {
   }
 
   /// Claims a store purchase for the pubkey represented by the NIP-98 signer.
+  /// [existingOwnerOnly] verifies an already-bound subscription without
+  /// creating new ownership, for background recovery and renewals.
   Future<SupporterAccountSnapshot> claimPurchase(
     SupporterPurchaseClaim claim, {
     required String expectedPubkey,
+    bool existingOwnerOnly = false,
   }) async {
     final body = jsonEncode(claim.toJson());
     final response = await _send(
       HttpMethod.post,
-      '/v1/purchases/claim',
+      existingOwnerOnly ? '/v1/purchases/restore' : '/v1/purchases/claim',
       body: body,
       expectedPubkey: expectedPubkey,
     );
