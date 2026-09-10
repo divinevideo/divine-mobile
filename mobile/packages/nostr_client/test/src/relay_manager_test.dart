@@ -1411,6 +1411,219 @@ void main() {
       });
     });
 
+    group('one dial per relay', () {
+      test('a sweep while the startup connect is pending dials once', () async {
+        // The sweep used to tear down the startup socket mid-handshake and
+        // open a second one to the same relay (#8991).
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final startup = manager.initialize();
+        final sweep = manager.retryDisconnectedRelays();
+        await pumpEventQueue();
+
+        expect(
+          dials,
+          hasLength(1),
+          reason: 'the sweep must join the startup dial',
+        );
+        verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await Future.wait([startup, sweep]);
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connected,
+        );
+      });
+
+      test('a sweep joins the dial addRelay started', () async {
+        await manager.initialize();
+        final dial = Completer<bool>();
+        var dialCount = 0;
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          dialCount++;
+          return dial.future;
+        });
+
+        final adding = manager.addRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        var swept = false;
+        final sweep = manager.retryDisconnectedRelays().then(
+          (_) => swept = true,
+        );
+        await pumpEventQueue();
+
+        expect(
+          dialCount,
+          equals(1),
+          reason: 'the sweep must join the dial in flight',
+        );
+        expect(
+          swept,
+          isFalse,
+          reason: 'a caller must not proceed while the relay is still dialling',
+        );
+
+        dial.complete(true);
+        await Future.wait([adding, sweep]);
+        expect(swept, isTrue);
+      });
+
+      test('an error thrown while dialling reaches the caller', () async {
+        // A shared dial that swallowed this would leave every caller waiting
+        // on it forever.
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenThrow(StateError('dial failed'));
+
+        await expectLater(manager.initialize(), throwsStateError);
+      });
+
+      test(
+        'removing a relay releases the callers waiting on its dial',
+        () async {
+          await manager.initialize();
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) => Completer<bool>().future);
+
+          bool? added;
+          unawaited(
+            manager.addRelay(testCustomRelayUrl).then((ok) => added = ok),
+          );
+          await pumpEventQueue();
+          await manager.removeRelay(
+            testCustomRelayUrl,
+            source: RelayRemoveSource.automatic,
+          );
+          await pumpEventQueue();
+
+          expect(added, isFalse);
+        },
+      );
+
+      test(
+        'a re-added relay dials afresh and ignores the old dial settling late',
+        () async {
+          await manager.initialize();
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          unawaited(manager.addRelay(testCustomRelayUrl));
+          await pumpEventQueue();
+          await manager.removeRelay(
+            testCustomRelayUrl,
+            source: RelayRemoveSource.automatic,
+          );
+          unawaited(manager.addRelay(testCustomRelayUrl));
+          await pumpEventQueue();
+          expect(
+            dials,
+            hasLength(2),
+            reason: "the re-added relay must not join the removed relay's dial",
+          );
+
+          dials.first.complete(false);
+          await pumpEventQueue();
+          expect(
+            manager.getRelayStatus(testCustomRelayUrl)?.state,
+            RelayState.connecting,
+            reason:
+                "the removed relay's late result must not reach its "
+                'successor',
+          );
+        },
+      );
+
+      test('dispose releases the callers waiting on a dial', () async {
+        await manager.initialize();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => Completer<bool>().future);
+
+        bool? added;
+        unawaited(
+          manager.addRelay(testCustomRelayUrl).then((ok) => added = ok),
+        );
+        await pumpEventQueue();
+        await manager.dispose();
+        await pumpEventQueue();
+
+        expect(added, isFalse);
+      });
+
+      test('reconnectRelay replaces a dial in flight', () async {
+        await manager.initialize();
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final adding = manager.addRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        final reconnecting = manager.reconnectRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        expect(dials, hasLength(2));
+
+        dials.last.complete(true);
+        expect(await reconnecting, isTrue);
+        dials.first.complete(false);
+        await pumpEventQueue();
+        expect(
+          manager.getRelayStatus(testCustomRelayUrl)?.state,
+          RelayState.connected,
+          reason: 'the replaced dial cannot overwrite its replacement',
+        );
+        expect(
+          await adding,
+          isTrue,
+          reason: "a caller of the replaced dial gets the replacement's result",
+        );
+      });
+    });
+
     group('reconnectRelay', () {
       setUp(() async {
         await manager.initialize();
@@ -1428,8 +1641,8 @@ void main() {
 
         await manager.reconnectRelay(testCustomRelayUrl);
 
-        // Called twice: once by reconnectRelay and once by _connectToRelay
-        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(2);
+        // The old socket is replaced once, as part of the new dial.
+        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(1);
         verify(
           () => mockRelayPool.add(
             any(),
