@@ -8,7 +8,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/nostr_client.dart'
-    show NostrClient, RelayConnectionStatus, RelayRemoveSource, RelayState;
+    show
+        ForceReconnectOutcome,
+        NostrClient,
+        RelayConnectionStatus,
+        RelayRemoveSource,
+        RelayState;
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -262,12 +267,26 @@ class _RelaySetChangeCoordinator {
       );
 
       try {
-        await attachment.client.forceReconnectAll();
-        Log.info(
-          'Successfully reconnected all relay WebSockets',
-          name: 'RelaySetChangeBridge',
-          category: LogCategory.relay,
-        );
+        final outcome = await attachment.client.forceReconnectAll();
+        // The cycle keeps running past the budget, so this is not a failure —
+        // but it is not a completed reconnect either, and logging it as one
+        // makes a stalled dial indistinguishable from a healthy one in a
+        // support export.
+        if (outcome == ForceReconnectOutcome.completed) {
+          Log.info(
+            'Successfully reconnected all relay WebSockets',
+            name: 'RelaySetChangeBridge',
+            category: LogCategory.relay,
+          );
+        } else {
+          Log.warning(
+            'Relay reconnect did not finish within its budget; dials remain '
+            'in flight. Resetting feeds anyway so they pick up relays as '
+            'those land.',
+            name: 'RelaySetChangeBridge',
+            category: LogCategory.relay,
+          );
+        }
       } catch (e) {
         Log.error(
           'Failed to reconnect relays: $e',
