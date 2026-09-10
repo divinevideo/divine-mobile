@@ -64,6 +64,7 @@ class DivineListThumbnail extends StatelessWidget {
        isPrivate = !curatedList.isPublic,
        _count = curatedList.videoEventIds.length,
        _kind = _ListKind.videos,
+       _memberPubkeys = const [],
        _media = _VideoFanMedia(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
@@ -81,6 +82,7 @@ class DivineListThumbnail extends StatelessWidget {
        thumbnailsPending = false,
        _count = userList.pubkeys.length,
        _kind = _ListKind.people,
+       _memberPubkeys = userList.pubkeys,
        _media = _PeopleCollageMedia(
          memberPubkeys: userList.pubkeys,
          memberCount: userList.pubkeys.length,
@@ -98,6 +100,10 @@ class DivineListThumbnail extends StatelessWidget {
   final bool thumbnailsPending;
   final int _count;
   final _ListKind _kind;
+
+  /// A people list's members, so a card without a description can name
+  /// them in the footer instead of leaving the box blank.
+  final List<String> _memberPubkeys;
   final Widget _media;
 
   /// One spoken sentence for the whole card: the name, its visibility when
@@ -146,6 +152,7 @@ class DivineListThumbnail extends StatelessWidget {
               title: name,
               description: description,
               isPrivate: isPrivate,
+              memberPubkeys: _memberPubkeys,
             ),
           ],
         ),
@@ -524,11 +531,13 @@ class _Footer extends StatelessWidget {
     required this.title,
     required this.description,
     required this.isPrivate,
+    required this.memberPubkeys,
   });
 
   final String title;
   final String? description;
   final bool isPrivate;
+  final List<String> memberPubkeys;
 
   @override
   Widget build(BuildContext context) {
@@ -537,8 +546,59 @@ class _Footer extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _Title(title: title, isPrivate: isPrivate),
-        _Description(description: description),
+        switch (description) {
+          final text? when text.trim().isNotEmpty => _Description(
+            description: text,
+          ),
+          _ when memberPubkeys.isNotEmpty => _MemberNames(
+            pubkeys: memberPubkeys.take(_memberNameCount).toList(),
+          ),
+          _ => const _Description(description: null),
+        },
       ],
+    );
+  }
+}
+
+/// How many members a description-less people card names. Enough to
+/// overflow the two-line box at card width; the rest end in an ellipsis.
+const _memberNameCount = 6;
+
+/// The first members' names, in the description's box and style, for a
+/// people list that has no description of its own.
+///
+/// Names arrive as their profiles resolve, so the line fills in rather
+/// than waiting for the slowest fetch; a member without a profile is
+/// named the way the rest of the app names them.
+class _MemberNames extends ConsumerWidget {
+  const _MemberNames({required this.pubkeys});
+
+  final List<String> pubkeys;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final names = [
+      for (final pubkey in pubkeys)
+        switch (ref.watch(fetchUserProfileProvider(pubkey))) {
+          AsyncData(:final value) =>
+            value?.bestDisplayName ?? UserProfile.defaultDisplayNameFor(pubkey),
+          AsyncError() => UserProfile.defaultDisplayNameFor(pubkey),
+          _ => null,
+        },
+    ].nonNulls.toList();
+    final style = VineTheme.bodySmallFont(
+      color: context.vineColors.secondaryText,
+    );
+    return _DescriptionBox(
+      style: style,
+      child: names.isEmpty
+          ? null
+          : Text(
+              names.join(context.l10n.listMemberNamesSeparator),
+              style: style,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
     );
   }
 }
@@ -601,15 +661,31 @@ class _Description extends StatelessWidget {
     final style = VineTheme.bodySmallFont(
       color: context.vineColors.secondaryText,
     );
-    return SizedBox(
-      height: _scaledLineHeight(context, style) * 2,
-      width: double.infinity,
+    return _DescriptionBox(
+      style: style,
       child: switch (description) {
         final text? when text.isNotEmpty => ClipRect(
           child: _PlainLinkText(text: text, style: style),
         ),
         _ => null,
       },
+    );
+  }
+}
+
+/// The footer's two-line box, sized from [style] whatever it holds.
+class _DescriptionBox extends StatelessWidget {
+  const _DescriptionBox({required this.style, required this.child});
+
+  final TextStyle style;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _scaledLineHeight(context, style) * 2,
+      width: double.infinity,
+      child: child,
     );
   }
 }

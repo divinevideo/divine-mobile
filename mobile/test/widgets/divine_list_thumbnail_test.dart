@@ -62,12 +62,17 @@ void main() {
     updatedAt: DateTime(2026),
   );
 
-  UserProfile profileFor(String pubkey, {String? picture}) => UserProfile(
+  UserProfile profileFor(
+    String pubkey, {
+    String? picture,
+    String? displayName,
+  }) => UserProfile(
     pubkey: pubkey,
     rawData: const {},
     createdAt: DateTime(2026),
     eventId: 'e' * 64,
     picture: picture,
+    displayName: displayName,
   );
 
   group(DivineListThumbnail, () {
@@ -485,6 +490,75 @@ void main() {
           ),
         );
       }
+
+      testWidgets('names its members when the list has no description', (
+        tester,
+      ) async {
+        final alice = 'a' * 64;
+        final bob = 'b' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [alice, bob]),
+            profileOverrides: [
+              fetchUserProfileProvider(alice).overrideWith(
+                (ref) async => profileFor(alice, displayName: 'Alice'),
+              ),
+              fetchUserProfileProvider(bob).overrideWith(
+                (ref) async => profileFor(bob, displayName: 'Bob'),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text('Alice${l10n.listMemberNamesSeparator}Bob'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('keeps its own description over member names', (
+        tester,
+      ) async {
+        final alice = 'a' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [alice], description: 'Crew'),
+            profileOverrides: [
+              fetchUserProfileProvider(alice).overrideWith(
+                (ref) async => profileFor(alice, displayName: 'Alice'),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Crew'), findsOneWidget);
+        expect(find.textContaining('Alice'), findsNothing);
+      });
+
+      testWidgets('names a member without a profile the usual way', (
+        tester,
+      ) async {
+        final ghost = 'f' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [ghost]),
+            profileOverrides: [
+              fetchUserProfileProvider(ghost).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text(UserProfile.defaultDisplayNameFor(ghost)),
+          findsOneWidget,
+        );
+      });
 
       Finder glyphTiles() => find.byWidgetPredicate(
         (widget) => widget is DivineIcon && widget.icon == DivineIconName.user,
