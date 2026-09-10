@@ -466,20 +466,26 @@ class C2paSigningService {
   /// Why [manifest] does not establish that signing worked, or null when it
   /// does.
   ///
-  /// `ValidationStatus.unknown` passes deliberately. The library reports it
-  /// whenever the native read returned no `validation_status` key at all,
-  /// which is what an ordinary clean read looks like — only `invalid` is
-  /// positive evidence that the output is broken
-  /// (`ManifestStoreInfo._determineValidationStatus`). Rejecting `unknown`
-  /// would throw away correctly signed recordings.
+  /// Judged on the failure codes, not on [ManifestStoreInfo.validationStatus]:
+  /// the plugin reports `invalid` for any code at all, and this app loads no
+  /// C2PA trust anchors, so every ProofSign-signed file reads back with
+  /// `signingCredential.untrusted`. c2pa-rs still counts a manifest whose only
+  /// failure is that code as valid (C2PA 2.3, "valid manifest"); any other
+  /// code, such as `assertion.bmffHash.mismatch`, means the output is broken.
   static String? _describeUnusableManifest(ManifestStoreInfo? manifest) {
     if (manifest == null) return 'carries no readable C2PA manifest';
     if (manifest.activeManifest == null) {
       return 'carries no active C2PA manifest';
     }
-    if (manifest.validationStatus == ValidationStatus.invalid) {
+    final failures = manifest.validationErrors
+        .map((error) => error.code)
+        .where(
+          (code) =>
+              code != ValidationStatusCode.signingCredentialUntrusted.code,
+        );
+    if (failures.isNotEmpty) {
       return 'carries a C2PA manifest that failed validation '
-          '(${manifest.validationErrors.length} error(s))';
+          '(${failures.join(', ')})';
     }
     return null;
   }
