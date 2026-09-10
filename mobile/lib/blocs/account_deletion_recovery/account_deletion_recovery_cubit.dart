@@ -44,11 +44,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     required AccountDeletionRecoveryRepository repository,
     required AuthService authService,
     required Future<void> Function() onAttemptResolved,
+    required AccountDeletionRecoveryPollBudgetStore pollBudgetStore,
     Future<void> Function(AccountDeletionAttempt attempt)? onAttemptUpdated,
     String? receiptPubkeyHex,
     String? receiptVanishEventId,
     RecoveryTimerFactory timerFactory = Timer.new,
-    AccountDeletionRecoveryPollBudgetStore? pollBudgetStore,
     DateTime Function() clock = DateTime.now,
   }) : _repository = repository,
        _authService = authService,
@@ -57,8 +57,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
        _receiptPubkeyHex = receiptPubkeyHex,
        _receiptVanishEventId = receiptVanishEventId,
        _timerFactory = timerFactory,
-       _pollBudgetStore =
-           pollBudgetStore ?? InMemoryAccountDeletionRecoveryPollBudgetStore(),
+       _pollBudgetStore = pollBudgetStore,
        _clock = clock,
        super(const AccountDeletionRecoveryState());
 

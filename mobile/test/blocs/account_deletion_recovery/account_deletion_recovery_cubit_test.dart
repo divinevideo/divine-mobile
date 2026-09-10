@@ -116,7 +116,8 @@ void main() {
     receiptPubkeyHex: withReceipt ? 'a' * 64 : null,
     receiptVanishEventId: withReceipt ? 'b' * 64 : null,
     timerFactory: timers.create,
-    pollBudgetStore: pollBudgetStore,
+    pollBudgetStore:
+        pollBudgetStore ?? InMemoryAccountDeletionRecoveryPollBudgetStore(),
     clock: () => timers.now,
   );
 

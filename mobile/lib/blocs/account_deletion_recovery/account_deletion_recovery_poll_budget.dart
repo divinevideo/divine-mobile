@@ -27,8 +27,12 @@ abstract class AccountDeletionRecoveryPollBudgetStore {
   Future<void> clear(String attemptId);
 }
 
-/// Process-local store. The default so a cubit built without wiring behaves as
-/// it did before, and the shape tests use directly.
+/// Process-local store.
+///
+/// Deliberately NOT a default on the cubit: the whole point of this type is
+/// that the budget outlives the process, and a store that silently forgets is
+/// exactly the bug being fixed. Production must pass the durable store, which
+/// the constructor now requires. This exists for tests.
 class InMemoryAccountDeletionRecoveryPollBudgetStore
     implements AccountDeletionRecoveryPollBudgetStore {
   final Map<String, DateTime> _startedAt = <String, DateTime>{};
