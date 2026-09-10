@@ -2791,8 +2791,17 @@ class RelayPool {
         }
       }
 
+      // Ask the socket as well as the status mirror. The mirror is written from
+      // the connection layer's state stream, so it can still read `disconnect`
+      // while a handshake is in flight — and then the only thing left to notice
+      // that this relay was attempted is `deadlineExpired()` after the write
+      // gives up. That check loses a race it cannot win: the wait ends on a
+      // `Timer`, whose duration the VM truncates to whole milliseconds, so it
+      // can return up to a millisecond before the deadline it was measured
+      // against and drop a relay the fan-out spent its whole budget on.
       final sendStartedWhileConnecting =
-          relay.relayStatus.connected == ClientConnected.connecting;
+          relay.relayStatus.connected == ClientConnected.connecting ||
+          relay.isSocketConnecting;
       try {
         // Check if relay requires authentication
         if (relay.relayStatus.alwaysAuth && !relay.relayStatus.authed) {

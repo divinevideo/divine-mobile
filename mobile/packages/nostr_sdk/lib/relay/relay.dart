@@ -102,6 +102,17 @@ abstract class Relay {
   /// the relay replay its stored window again.
   bool get connectionIsFresh => true;
 
+  /// Whether this relay's socket is mid-handshake right now.
+  ///
+  /// [relayStatus] mirrors the connection layer through a stream, so it trails
+  /// the socket it describes. A caller deciding whether a failed write was
+  /// nonetheless *attempted* must ask the socket, not the mirror: a publish
+  /// that waits out an in-flight handshake and gives up reads as "never tried"
+  /// from a mirror that has not caught up yet. Implementations that own a
+  /// connection override this; the default falls back to the mirror.
+  bool get isSocketConnecting =>
+      relayStatus.connected == ClientConnected.connecting;
+
   /// The medhod called after relay connect success.
   ///
   /// Flushes whatever was queued while the socket was down, then — when the

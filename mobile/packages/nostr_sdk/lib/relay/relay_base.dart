@@ -45,6 +45,10 @@ class RelayBase extends Relay {
   bool get connectionIsFresh => _connectionIsFresh;
 
   @override
+  bool get isSocketConnecting =>
+      _connectionManager?.state == ConnectionState.connecting;
+
+  @override
   Future<bool> doConnect() async {
     if (_disposed) {
       log("connect refused: $url - relay is disposed");
