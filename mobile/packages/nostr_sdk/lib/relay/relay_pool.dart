@@ -2639,20 +2639,28 @@ class RelayPool {
   }) {
     final concluded = tracker.conclude(
       atDeadline: atDeadline,
-      hasLostConnection: (relay) => _hasLostQueryConnection(relay, subId),
+      pendingStateOf: (relay) => _pendingRelayState(relay, subId),
     );
     final diagnostic = concluded.diagnostic;
     if (diagnostic != null) emitRelayDiagnostic(diagnosticsSink, diagnostic);
     return concluded.outcome;
   }
 
-  /// Whether [relay], which has sent no terminal frame for [subId], can no
-  /// longer send one: it no longer holds the query, its socket is down, or
-  /// the socket is being force-cycled as a zombie.
-  bool _hasLostQueryConnection(Relay relay, String subId) =>
-      !relay.checkQuery(subId) ||
-      relay.relayStatus.connected != ClientConnected.connected ||
-      _silentRelayRepairsInFlight.contains(relay.url);
+  /// What [relay], which has sent no terminal frame for [subId], can still
+  /// be expected to do about it, by the reasons [_canStillSettleQuery] gives
+  /// for no longer waiting on a relay.
+  PendingRelayState _pendingRelayState(Relay relay, String subId) {
+    if (!relay.checkQuery(subId) ||
+        relay.relayStatus.connected != ClientConnected.connected ||
+        _silentRelayRepairsInFlight.contains(relay.url)) {
+      return PendingRelayState.connectionLost;
+    }
+    // Past the connection checks, a shut NIP-42 gate is the one reason left
+    // for [_canStillSettleQuery] to stop waiting on the relay.
+    return _canStillSettleQuery(relay)
+        ? PendingRelayState.serving
+        : PendingRelayState.authGateShut;
+  }
 
   /// Stands in for `onComplete` when a query asked only for its outcome.
   static void _ignoreQueryComplete() {}

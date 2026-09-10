@@ -30,6 +30,9 @@ class _ScriptedRelay extends Relay {
   /// the pool part-way through settling this relay's `EOSE`.
   Completer<void>? closeGate;
 
+  /// The id of the NIP-42 `AUTH` event the pool last sent this relay.
+  String? capturedAuthEventId;
+
   @override
   Future<bool> doConnect() async {
     relayStatus.connected = ClientConnected.connected;
@@ -49,6 +52,10 @@ class _ScriptedRelay extends Relay {
     DateTime? deadline,
   }) async {
     sentMessages.add(message);
+    final payload = message.length > 1 ? message[1] : null;
+    if (message.firstOrNull == 'AUTH' && payload is Map) {
+      capturedAuthEventId = payload['id'] as String?;
+    }
     final gate = switch (message.firstOrNull) {
       'REQ' => reqGate,
       'CLOSE' => closeGate,
@@ -310,6 +317,37 @@ void main() {
         );
         slow.closeGate!.complete();
         await slowEose;
+      });
+
+      test('is relayClosed when a relay whose NIP-42 gate shut never sent '
+          'CLOSED', () async {
+        final gated = await addRelay('wss://rejects-auth.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        // The relay challenges us and refuses our AUTH event without ever
+        // closing the query, so the pool stops waiting on it.
+        await gated.deliver(['AUTH', 'test-challenge']);
+        expect(gated.capturedAuthEventId, isNotNull);
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          'invalid: bad signature',
+        ]);
+
+        expect((await outcome.future).endedBy, QueryEnd.relayClosed);
+        expect(completionLines(), hasLength(1));
+        expect(
+          completionLines().single.message,
+          contains(
+            'not answered: wss://rejects-auth.example (closed: auth-required',
+          ),
+        );
       });
     });
 

@@ -12,6 +12,22 @@ import '../../relay/query_result.dart';
 import '../../relay/relay.dart';
 import '../../relay/relay_diagnostics.dart';
 
+/// What the pool can still expect from a relay that took the `REQ` and has
+/// sent no terminal frame for it.
+@internal
+enum PendingRelayState {
+  /// The query is live on a connected socket, so an answer may still come.
+  serving,
+
+  /// The relay's NIP-42 gate is shut with the query parked behind it: a
+  /// refusal, as the relay's own `CLOSED auth-required` would have said.
+  authGateShut,
+
+  /// The relay no longer holds the query, its socket is down, or the socket
+  /// is being force-cycled as a zombie.
+  connectionLost,
+}
+
 /// A relay's terminal frame for the query.
 enum _TerminalFrame { eose, closed }
 
@@ -20,6 +36,10 @@ enum _TerminalFrame { eose, closed }
 /// The order is the precedence behind [QueryOutcome.endedBy]: the most severe
 /// relay decides how the whole query ended.
 enum _Standing { answered, noAnswer, closed, dropped }
+
+/// A relay's standing, with the NIP-01 prefix of its refusal when it refused
+/// the query.
+typedef _Judgement = ({_Standing standing, String? closedReason});
 
 /// One relay's part in a query.
 class _RelayTally {
@@ -71,6 +91,9 @@ class QueryOutcomeTracker {
   /// The relay url a line is filed under when the fan-out asked no relay,
   /// after `RelayManager`'s `relay-manager`.
   static const _noRelayUrl = 'relay-pool';
+
+  /// The NIP-01 prefix a relay's own `CLOSED` names a NIP-42 refusal with.
+  static const _authRequiredReason = 'auth-required';
 
   static const _finishHint = 'finish';
   static const _moreHint = 'more';
@@ -147,22 +170,23 @@ class QueryOutcomeTracker {
   /// the query's [RelayDiagnosticSite.queryCompletion] line.
   ///
   /// Set [atDeadline] when the caller's own deadline ended the query rather
-  /// than the pool. [hasLostConnection] says whether a relay that has sent no
-  /// terminal frame can no longer send one. A line is due once per query,
-  /// when it did not end [QueryEnd.complete] or may be capped: the call that
-  /// produces it marks the query reported, and later calls return none.
+  /// than the pool. [pendingStateOf] says what a relay that has sent no
+  /// terminal frame can still be expected to do. A line is due once per
+  /// query, when it did not end [QueryEnd.complete] or may be capped: the
+  /// call that produces it marks the query reported, and later calls return
+  /// none.
   ({QueryOutcome outcome, RelayDiagnostic? diagnostic}) conclude({
     required bool atDeadline,
-    required bool Function(Relay relay) hasLostConnection,
+    required PendingRelayState Function(Relay relay) pendingStateOf,
   }) {
-    final standings = <_RelayTally, _Standing>{
+    final judgements = <_RelayTally, _Judgement>{
       for (final tally in _tallies.values)
-        if (tally.tookPart) tally: _standingOf(tally, hasLostConnection),
+        if (tally.tookPart) tally: _judge(tally, pendingStateOf),
     };
     final outcome = QueryOutcome(
-      endedBy: _endedBy(standings, atDeadline: atDeadline),
-      possiblyCapped: standings.keys.any(_isCapped),
-      confirmedExhaustive: _confirmedExhaustive(standings),
+      endedBy: _endedBy(judgements, atDeadline: atDeadline),
+      possiblyCapped: judgements.keys.any(_isCapped),
+      confirmedExhaustive: _confirmedExhaustive(judgements),
     );
     if (_reported ||
         (outcome.endedBy == QueryEnd.complete && !outcome.possiblyCapped)) {
@@ -174,8 +198,8 @@ class QueryOutcomeTracker {
       diagnostic: RelayDiagnostic(
         site: RelayDiagnosticSite.queryCompletion,
         level: _levelFor(outcome.endedBy),
-        relayUrl: _lineRelayUrl(standings),
-        message: _describe(outcome, standings),
+        relayUrl: _lineRelayUrl(judgements),
+        message: _describe(outcome, judgements),
       ),
     );
   }
@@ -184,27 +208,42 @@ class QueryOutcomeTracker {
       (_tallies[relay.url] ??= _RelayTally(relay, _filters.length))
         ..relay = relay;
 
-  static _Standing _standingOf(
+  static _Judgement _judge(
     _RelayTally tally,
-    bool Function(Relay relay) hasLostConnection,
+    PendingRelayState Function(Relay relay) pendingStateOf,
   ) => switch (tally.terminalFrame) {
-    _TerminalFrame.eose => _Standing.answered,
-    _TerminalFrame.closed => _Standing.closed,
-    null =>
-      hasLostConnection(tally.relay) ? _Standing.dropped : _Standing.noAnswer,
+    _TerminalFrame.eose => (standing: _Standing.answered, closedReason: null),
+    _TerminalFrame.closed => (
+      standing: _Standing.closed,
+      closedReason: tally.closedReason,
+    ),
+    null => switch (pendingStateOf(tally.relay)) {
+      PendingRelayState.serving => (
+        standing: _Standing.noAnswer,
+        closedReason: null,
+      ),
+      PendingRelayState.authGateShut => (
+        standing: _Standing.closed,
+        closedReason: _authRequiredReason,
+      ),
+      PendingRelayState.connectionLost => (
+        standing: _Standing.dropped,
+        closedReason: null,
+      ),
+    },
   };
 
   QueryEnd _endedBy(
-    Map<_RelayTally, _Standing> standings, {
+    Map<_RelayTally, _Judgement> judgements, {
     required bool atDeadline,
   }) {
     // A deadline that beats the fan-out leaves participation unknown: only a
     // finished fan-out proves that no relay took the REQ.
-    if (standings.isEmpty && (_fanoutFinished || !atDeadline)) {
+    if (judgements.isEmpty && (_fanoutFinished || !atDeadline)) {
       return QueryEnd.noRelay;
     }
     if (atDeadline) return QueryEnd.deadline;
-    return switch (_worst(standings.values)) {
+    return switch (_worst(judgements.values)) {
       _Standing.answered => QueryEnd.complete,
       _Standing.noAnswer => QueryEnd.settledEarly,
       _Standing.closed => QueryEnd.relayClosed,
@@ -212,8 +251,9 @@ class QueryOutcomeTracker {
     };
   }
 
-  static _Standing _worst(Iterable<_Standing> standings) =>
-      standings.reduce((a, b) => a.index >= b.index ? a : b);
+  static _Standing _worst(Iterable<_Judgement> judgements) => judgements
+      .map((judgement) => judgement.standing)
+      .reduce((a, b) => a.index >= b.index ? a : b);
 
   /// Whether [tally]'s relay may have stopped at its result-size limit.
   ///
@@ -241,10 +281,10 @@ class QueryOutcomeTracker {
   /// NIP-67: `finish` confirms a relay sent every matching stored event.
   /// `more` beside it contradicts that, and `auth` says more may follow a
   /// NIP-42 handshake, so neither counts as confirmation.
-  static bool _confirmedExhaustive(Map<_RelayTally, _Standing> standings) {
+  static bool _confirmedExhaustive(Map<_RelayTally, _Judgement> judgements) {
     final answered = [
-      for (final MapEntry(key: tally, value: standing) in standings.entries)
-        if (standing == _Standing.answered) tally,
+      for (final MapEntry(key: tally, value: judgement) in judgements.entries)
+        if (judgement.standing == _Standing.answered) tally,
     ];
     return answered.isNotEmpty &&
         answered.every(
@@ -267,18 +307,18 @@ class QueryOutcomeTracker {
   /// query or, when every relay answered, the first that may be capped.
   /// Downstream bounding is per relay, so one relay's repeated trouble stays
   /// bounded without hiding another's.
-  String _lineRelayUrl(Map<_RelayTally, _Standing> standings) {
-    if (standings.isEmpty) {
+  String _lineRelayUrl(Map<_RelayTally, _Judgement> judgements) {
+    if (judgements.isEmpty) {
       return _tallies.isEmpty ? _noRelayUrl : _tallies.values.first.relay.url;
     }
-    final worst = _worst(standings.values);
+    final worst = _worst(judgements.values);
     if (worst == _Standing.answered) {
-      for (final tally in standings.keys) {
+      for (final tally in judgements.keys) {
         if (_isCapped(tally)) return tally.relay.url;
       }
     }
-    return standings.entries
-        .firstWhere((entry) => entry.value == worst)
+    return judgements.entries
+        .firstWhere((entry) => entry.value.standing == worst)
         .key
         .relay
         .url;
@@ -289,19 +329,20 @@ class QueryOutcomeTracker {
   /// filter's ids, authors or tag values.
   String _describe(
     QueryOutcome outcome,
-    Map<_RelayTally, _Standing> standings,
+    Map<_RelayTally, _Judgement> judgements,
   ) {
     final elapsedMs = DateTime.now().difference(_startedAt).inMilliseconds;
     final events = _tallies.values.fold(0, (sum, tally) => sum + tally.events);
     final answered = <String>[];
     final notAnswered = <String>[];
-    for (final MapEntry(key: tally, value: standing) in standings.entries) {
+    for (final MapEntry(key: tally, value: judgement) in judgements.entries) {
+      final answeredIt = judgement.standing == _Standing.answered;
       final details = [
-        if (standing != _Standing.answered) _standingLabel(standing, tally),
+        if (!answeredIt) _standingLabel(judgement),
         'events=${tally.events}',
         if (_isCapped(tally)) 'capped',
       ];
-      (standing == _Standing.answered ? answered : notAnswered).add(
+      (answeredIt ? answered : notAnswered).add(
         '${tally.relay.url} (${details.join(', ')})',
       );
     }
@@ -321,11 +362,11 @@ class QueryOutcomeTracker {
     ].join('; ');
   }
 
-  static String _standingLabel(_Standing standing, _RelayTally tally) =>
-      switch (standing) {
+  static String _standingLabel(_Judgement judgement) =>
+      switch (judgement.standing) {
         _Standing.answered => 'answered',
         _Standing.noAnswer => 'no answer',
-        _Standing.closed => 'closed: ${tally.closedReason}',
+        _Standing.closed => 'closed: ${judgement.closedReason}',
         _Standing.dropped => 'dropped',
       };
 

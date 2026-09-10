@@ -29,9 +29,10 @@ enum QueryEnd {
   /// silent relay(s) held. There is no signal for how much that is.
   settledEarly,
 
-  /// A relay sent a `CLOSED` frame for the subscription before it produced a
-  /// complete answer — for example a policy rejection, an unsupported
-  /// filter, or a rate limit.
+  /// A relay refused the subscription before it produced a complete answer:
+  /// it sent a `CLOSED` frame — for example a policy rejection, an
+  /// unsupported filter, or a rate limit — or its NIP-42 gate shut with the
+  /// query parked behind it.
   ///
   /// The caller may assume that relay's contribution stopped at the point it
   /// was closed, and may be missing entirely.
