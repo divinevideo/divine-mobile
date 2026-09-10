@@ -1,5 +1,5 @@
-// ABOUTME: Pins the saved-route-state guard against the go_router codec bug
-// ABOUTME: Regression coverage for the #7869 launch-loop crash
+// ABOUTME: Pins the route-state guard against the go_router codec bug
+// ABOUTME: Regression coverage for the #7869 crash
 
 import 'dart:async';
 
@@ -60,9 +60,9 @@ GoRouter _buildRouter({required bool withRetiredRoute}) {
   );
 }
 
-/// Produces the saved route state an install would replay on cold start: a
-/// root location that the *next* build no longer serves, with an imperative
-/// push on top of it that still resolves through the shell.
+/// Produces a route state whose root location the router under test no
+/// longer serves, with an imperative push on top of it that still resolves
+/// through the shell.
 Future<RouteInformation> _savedStateFromRetiredLocation(
   WidgetTester tester,
 ) async {
@@ -182,6 +182,39 @@ void main() {
 
         expect(find.text('detail'), findsOneWidget);
         expect(reporter.recorded, isEmpty);
+      });
+    });
+
+    group('restorationSafeRouterConfig', () {
+      testWidgets('keeps a router mounted again alive when its state no longer '
+          'decodes', (tester) async {
+        final saved = await _savedStateFromRetiredLocation(tester);
+
+        final router = _buildRouter(withRetiredRoute: false);
+        addTearDown(router.dispose);
+        final reporter = _RecordingCrashReporter();
+        final config = restorationSafeRouterConfig(
+          router,
+          crashReporter: reporter,
+        );
+        Widget app(Key key) => MaterialApp.router(
+          key: key,
+          routerConfig: config,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        );
+        await tester.pumpWidget(app(const ValueKey(1)));
+        await tester.pumpAndSettle();
+
+        // The router reports every location it lands on, so its provider
+        // holds an encoded state. A Router mounted again over the same
+        // GoRouter decodes it from Router.restoreState — the #7869 stack.
+        router.routeInformationProvider.routerReportsNewRouteInformation(saved);
+        await tester.pumpWidget(app(const ValueKey(2)));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(reporter.recorded, hasLength(1));
       });
     });
 

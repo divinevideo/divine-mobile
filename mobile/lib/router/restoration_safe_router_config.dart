@@ -1,5 +1,5 @@
-// ABOUTME: Router config that survives saved route state go_router cannot decode
-// ABOUTME: Guards the launch-loop crash in RouteMatchListCodec (#7869)
+// ABOUTME: Router config that survives route state go_router cannot decode
+// ABOUTME: Guards the RouteMatchListCodec crash behind #7869
 
 import 'dart:async';
 
@@ -24,13 +24,13 @@ final routerConfigProvider = Provider<RouterConfig<RouteMatchList>>(
   ),
 );
 
-/// Wraps [router] so a saved route state it cannot decode is dropped rather
-/// than thrown out of the launch path.
+/// Wraps [router] so a route state it cannot decode is dropped rather than
+/// thrown out of the widget tree.
 ///
-/// The saved state is an optimization — it restores the imperative push stack
-/// on top of the location. The location itself travels in the URI and is
-/// enough to land the user on the right screen, so falling back to it costs a
-/// pushed route and keeps the app usable.
+/// The state only adds the imperative push stack on top of the location in
+/// the URI, so the fallback navigates to that location. In the known failure
+/// (#7869) that location no longer matches a route either, so the user lands
+/// on the not-found page instead of losing the app.
 RouterConfig<RouteMatchList> restorationSafeRouterConfig(
   GoRouter router, {
   CrashReporter crashReporter = const SilentCrashReporter(),
@@ -56,10 +56,14 @@ RouterConfig<RouteMatchList> restorationSafeRouterConfig(
 /// appends the shell branch its imperative match resolved to, which throws
 /// `type 'ShellRouteMatch' is not a subtype of type 'RouteMatch' of 'value'`.
 ///
-/// The throw lands in `Router.restoreState`, before the app is interactive,
-/// and the same state is replayed on every cold start — so an affected install
-/// loops rather than recovering. Still present in go_router 18.0.1, the latest
-/// release at the time of writing, so a version bump does not remove it.
+/// go_router decodes that state whenever a [Router] is mounted again over a
+/// router that already reported a location, and on every `refresh()`; on web,
+/// browser history hands it back too. Only the remount throws from
+/// `Router.restoreState` — the other two come through the route-information
+/// listener — so which frame carries it depends on the trigger. Either way
+/// the app is left with no routes. Still present in go_router 18.0.1, the
+/// latest release at the time of writing and ahead of the 16.x this app pins
+/// (flutter/flutter#153258), so a version bump does not remove it.
 @visibleForTesting
 class RestorationSafeRouteInformationParser
     extends RouteInformationParser<RouteMatchList> {
