@@ -9219,6 +9219,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Thu phóng từ';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Chạm vào video tại nơi bạn muốn hiệu ứng trượt bắt đầu';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Chạm vào video tại nơi bạn muốn hiệu ứng trượt kết thúc';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Hoàn tất chỉnh sửa timeline';
 

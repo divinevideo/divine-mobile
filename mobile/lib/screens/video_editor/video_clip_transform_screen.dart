@@ -9,6 +9,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/utils/pro_editor_theme.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_chrome.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_configs.dart';
@@ -189,7 +190,7 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
     return CropRotateEditor.video(
       videoController,
       initConfigs: CropRotateEditorInitConfigs(
-        theme: Theme.of(context),
+        theme: proEditorTheme(context),
         // Required so the editor builds the resolution-sized background that
         // gives the crop area its dimensions and renders the live video.
         convertToUint8List: true,

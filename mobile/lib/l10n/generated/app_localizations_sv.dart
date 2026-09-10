@@ -9257,6 +9257,17 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala från';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Egen punkt';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tryck på videon där den ska glida in ifrån';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tryck på videon där den ska glida ut till';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Avsluta redigering av tidslinje';
 

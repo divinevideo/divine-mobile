@@ -8716,6 +8716,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '起始缩放';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => '自定义';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint => '点按视频中你想让它滑入的位置';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint => '点按视频中你想让它滑出的位置';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel => '完成时间线编辑';
 
   @override

@@ -8817,6 +8817,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '시작 크기';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      '슬라이드가 시작될 위치를 영상에서 탭하세요';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      '슬라이드가 끝날 위치를 영상에서 탭하세요';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel => '타임라인 편집 완료';
 
   @override

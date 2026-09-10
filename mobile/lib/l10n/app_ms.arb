@@ -5081,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "Tersuai",
+  "videoEditorLayerAnimationPointEnterHint": "Ketik video pada tempat ia patut meluncur masuk",
+  "videoEditorLayerAnimationPointLeaveHint": "Ketik video pada tempat ia patut meluncur keluar",
   "videoEditorFinishTimelineEditingSemanticLabel": "Selesai menyunting garis masa",
   "videoEditorAudioPlayPreviewSemanticLabel": "Main pratonton",
   "videoEditorAudioPausePreviewSemanticLabel": "Jeda pratonton",

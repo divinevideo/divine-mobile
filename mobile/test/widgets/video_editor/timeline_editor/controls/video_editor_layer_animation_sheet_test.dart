@@ -666,6 +666,10 @@ void main() {
 typedef _LayerAnimationResult = ({
   List<editor.LayerAnimation> enter,
   List<editor.LayerAnimation> leave,
+  Offset? enterPoint,
+  Offset? leavePoint,
+  editor.AnimationPhase phase,
+  bool pickPoint,
 });
 
 /// The decoration of the phase segment labelled [label].

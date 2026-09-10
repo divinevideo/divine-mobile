@@ -9348,6 +9348,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Escalar desde';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Punto personalizado';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tocá el video donde querés que empiece el deslizamiento';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tocá el video donde querés que termine el deslizamiento';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Terminar edición de la línea de tiempo';
 

@@ -9467,6 +9467,17 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Scalare de la';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Punct personalizat';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Atinge videoclipul acolo de unde trebuie să gliseze';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Atinge videoclipul acolo unde trebuie să gliseze';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Finalizează editarea cronologiei';
 

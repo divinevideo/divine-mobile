@@ -9332,6 +9332,17 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Scale mula sa';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Custom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'I-tap ang video kung saan ito dapat mag-slide papasok';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'I-tap ang video kung saan ito dapat mag-slide palabas';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Tapusin ang pag-edit ng timeline';
 

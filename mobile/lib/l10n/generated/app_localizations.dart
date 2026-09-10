@@ -15788,6 +15788,24 @@ abstract class AppLocalizations {
   /// **'Scale from'**
   String get videoEditorLayerAnimationScaleFrom;
 
+  /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get videoEditorLayerAnimationCustomPoint;
+
+  /// Instruction shown over the video while the creator picks the point an enter slide animation starts from.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the video where this should slide in from'**
+  String get videoEditorLayerAnimationPointEnterHint;
+
+  /// Instruction shown over the video while the creator picks the point a leave slide animation ends at.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the video where this should slide out to'**
+  String get videoEditorLayerAnimationPointLeaveHint;
+
   /// No description provided for @videoEditorFinishTimelineEditingSemanticLabel.
   ///
   /// In en, this message translates to:

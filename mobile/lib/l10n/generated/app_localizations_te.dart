@@ -9536,6 +9536,17 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'స్కేల్ నుండి';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ఇది ఎక్కడి నుండి జారి రావాలో వీడియోలో నొక్కండి';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ఇది ఎక్కడికి జారి పోవాలో వీడియోలో నొక్కండి';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'టైమ్‌లైన్ సవరణను ముగించండి';
 

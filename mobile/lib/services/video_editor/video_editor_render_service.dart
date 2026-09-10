@@ -1326,21 +1326,21 @@ class VideoEditorRenderService {
             image: EditorLayerImage.memory(item.bytes),
             startTime: timelineMap.editorToOutputOrNull(item.layer.startTime),
             endTime: timelineMap.editorToOutputOrNull(item.layer.endTime),
-            offset: Offset(
-              (bodySize.width / 2 +
-                      item.layer.offset.dx -
-                      item.logicalSize.width / 2) *
-                  scale,
-              (bodySize.height / 2 +
-                      item.layer.offset.dy -
-                      item.logicalSize.height / 2) *
-                  scale,
+            offset: exportedLayerTopLeft(
+              anchor: item.layer.offset,
+              bodySize: bodySize,
+              logicalSize: item.logicalSize,
+              scale: scale,
             ),
             size: Size(
               item.logicalSize.width * scale,
               item.logicalSize.height * scale,
             ),
-            animations: item.layer.divineAnimations,
+            animations: item.layer.divineAnimationsForExport(
+              bodySize: bodySize,
+              logicalSize: item.logicalSize,
+              scale: scale,
+            ),
           ),
     ];
   }

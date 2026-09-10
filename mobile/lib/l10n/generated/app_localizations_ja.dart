@@ -8802,6 +8802,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '開始スケール';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'カスタム';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'スライドを始める位置を動画でタップしてください';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'スライドを終える位置を動画でタップしてください';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel => 'タイムライン編集を終了';
 
   @override

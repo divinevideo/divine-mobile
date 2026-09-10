@@ -180,3 +180,17 @@ class VideoEditorMarkerModeChanged extends VideoEditorMainEvent {
   @override
   List<Object?> get props => [isActive];
 }
+
+/// Enters or exits the mode that places a layer's custom slide point.
+///
+/// While active the editor gives the canvas the whole screen: the timeline and
+/// the editor's own actions step aside so the video is as large as it can be
+/// and no chrome sits between the finger and the frame.
+class VideoEditorSlidePointPlacementChanged extends VideoEditorMainEvent {
+  const VideoEditorSlidePointPlacementChanged({required this.isPlacing});
+
+  final bool isPlacing;
+
+  @override
+  List<Object?> get props => [isPlacing];
+}

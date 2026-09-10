@@ -119,6 +119,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   final _editorKey = GlobalKey<ProImageEditorState>();
   final GlobalKey<State<StatefulWidget>> _removeAreaKey = GlobalKey();
 
+  /// Marks the canvas body so a full-screen tool laid over the editor can map
+  /// a touch back into layer coordinates.
+  final GlobalKey _canvasBodyKey = GlobalKey();
+
   late final _isLoadingDraft = ValueNotifier<bool>(widget.draftId != null);
 
   /// Manually managed instead of using [BlocProvider.create] so we can reuse
@@ -1038,6 +1042,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
             return VideoEditorScope(
               editorKey: _editorKey,
               removeAreaKey: _removeAreaKey,
+              canvasBodyKey: _canvasBodyKey,
               originalClipAspectRatio: clip?.originalAspectRatio ?? 9 / 16,
               targetClipAspectRatio: clip?.targetAspectRatio.value,
               bodySizeNotifier: _bodySizeNotifier,

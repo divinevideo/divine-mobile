@@ -9255,6 +9255,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'اسکیل آغاز';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ویڈیو پر وہاں ٹیپ کریں جہاں سے یہ سلائیڈ ہو کر آئے';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ویڈیو پر وہاں ٹیپ کریں جہاں یہ سلائیڈ ہو کر جائے';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'ٹائم لائن ترمیم مکمل کریں';
 
