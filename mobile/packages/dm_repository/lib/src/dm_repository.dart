@@ -135,8 +135,13 @@ abstract class DmHistoryDrainConfig {
   /// unchanged. But a relay can be silent *permanently*, and deferring forever
   /// on that never flips the completion latch, which is what gates restoring
   /// read state and splitting message requests. Three runs is the smallest
-  /// count that is not a single flap, and the drain re-arms and re-reads the
-  /// held window whenever the holdout speaks again.
+  /// count that is not a single flap, and the count restarts whenever the set
+  /// of silent relays changes, so a rotating cast of holdouts cannot reach it.
+  ///
+  /// A completion reached this way is not the end of the story: it records
+  /// which relays it excluded and the window they never answered, and
+  /// [DmRepository.backfillHistoryIfNeeded] clears the completion latch and
+  /// re-reads that window once one of those relays is reachable again.
   static const int silentHoldoutRunsBeforeQuorumCompletion = 3;
 
   /// Maximum NIP-44 decryption attempts for a single gift wrap before the
@@ -1893,6 +1898,40 @@ class DmRepository {
         }
       }
     }
+    // A previous run completed against the relays that answered while a
+    // holdout stayed silent. If that holdout is reachable again, the window it
+    // never answered is readable again — so clear the latch and re-drain from
+    // exactly that window. Without this the completion latch would hide the
+    // window permanently, trading the stall this feature fixes for a silent
+    // gap, which is the worse of the two.
+    final quorumHoldouts = syncState.drainQuorumHoldouts(pubkey);
+    if (syncState.historyDrainComplete(pubkey) && quorumHoldouts.isNotEmpty) {
+      final connected = <String>{
+        for (final entry in _nostrClient.relayStatuses.entries)
+          if (entry.value.isConnected) entry.key,
+      };
+      final returned = quorumHoldouts.where(connected.contains).toList();
+      if (returned.isNotEmpty) {
+        // Cleared before the re-drain, not after: a holdout that goes silent
+        // again mid-pass records a fresh completion of its own, so dropping
+        // the old record here is what keeps a permanently flaky relay from
+        // re-arming the drain on every inbox open.
+        // Read the held window BEFORE clearing the record that stores it.
+        final heldWindow = syncState.drainQuorumCursor(pubkey);
+        await syncState.clearDrainQuorumCompletion(pubkey);
+        await syncState.clearDrainSilentHoldoutRuns(pubkey);
+        await syncState.rearmDrainFromCursor(
+          pubkey,
+          heldWindow ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        Log.info(
+          'Re-arming the DM history drain for ${pubkeyForLogs(pubkey)}: '
+          'previously skipped relays are reachable again '
+          '(${returned.join(', ')})',
+          category: LogCategory.system,
+        );
+      }
+    }
     if (syncState.historyDrainComplete(pubkey)) {
       Log.info(
         'DM history drain skipped for ${pubkeyForLogs(pubkey)}: already '
@@ -1993,6 +2032,9 @@ class DmRepository {
       // [DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion].
       var completedOnQuorum = false;
       var silentHoldouts = const <String>[];
+      // The window a quorum completion stops at, kept so a holdout that comes
+      // back can have exactly that window re-requested.
+      var quorumCursor = 0;
       var partialViewReason = 'an earlier page was not fully settled';
       if (sawUnansweredPage) {
         partialViewReason =
@@ -2057,10 +2099,14 @@ class DmRepository {
               // relays already handed over.
               const budget =
                   DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
-              final runs = await syncState.recordDrainSilentHoldoutRun(pubkey);
+              final runs = await syncState.recordDrainSilentHoldoutRun(
+                pubkey,
+                holdouts: historyPage.unsettledRelays,
+              );
               if (runs >= budget) {
                 completedOnQuorum = true;
                 silentHoldouts = historyPage.unsettledRelays;
+                quorumCursor = cursor;
                 reachedEnd = true;
                 break;
               }
@@ -2196,6 +2242,13 @@ class DmRepository {
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
           if (completedOnQuorum) {
+            // After markHistoryDrainComplete, which clears the cursor — this
+            // is the only remaining record of what was skipped.
+            await syncState.recordDrainQuorumCompletion(
+              pubkey,
+              holdouts: silentHoldouts,
+              cursor: quorumCursor,
+            );
             Log.warning(
               'DM history drain complete for ${pubkeyForLogs(pubkey)} on the '
               'relays that answered: pages=$pagesRun, '

@@ -35,6 +35,9 @@ class DmSyncState {
   static const _drainInboxCoveredPrefix = 'dm.drainCoveredOwnInbox.';
   static const _drainCompletedBeforePrefix = 'dm.historyDrainCompletedBefore.';
   static const _drainSilentHoldoutRunsPrefix = 'dm.drainSilentHoldoutRuns.';
+  static const _drainSilentHoldoutRelaysPrefix = 'dm.drainSilentHoldoutRelays.';
+  static const _drainQuorumHoldoutsPrefix = 'dm.drainQuorumHoldouts.';
+  static const _drainQuorumCursorPrefix = 'dm.drainQuorumCursor.';
   static const _drainCompletionMigrationPrefix =
       'dm.historyDrainCompletionMigration.';
 
@@ -448,10 +451,33 @@ class DmSyncState {
   int drainSilentHoldoutRuns(String pubkey) =>
       _prefs.getInt('$_drainSilentHoldoutRunsPrefix$pubkey') ?? 0;
 
-  /// Records one more consecutive silent-holdout run for [pubkey] and returns
-  /// the new total.
-  Future<int> recordDrainSilentHoldoutRun(String pubkey) async {
-    final next = drainSilentHoldoutRuns(pubkey) + 1;
+  /// The relays that were silent across the counted runs for [pubkey].
+  List<String> drainSilentHoldoutRelays(String pubkey) =>
+      _prefs.getStringList('$_drainSilentHoldoutRelaysPrefix$pubkey') ??
+      const <String>[];
+
+  /// Records one more silent-holdout run for [pubkey] and returns the new
+  /// total, restarting the count when [holdouts] differs from the previous
+  /// run's.
+  ///
+  /// The count means "the SAME relay has been silent this many runs", not
+  /// "some relay was silent this many times". Those differ: a run whose
+  /// holdout answered an earlier window is no evidence about the window this
+  /// run is holding, so letting a rotating cast of holdouts accumulate could
+  /// complete over a window the final holdout never answered.
+  Future<int> recordDrainSilentHoldoutRun(
+    String pubkey, {
+    required List<String> holdouts,
+  }) async {
+    final key = '$_drainSilentHoldoutRelaysPrefix$pubkey';
+    final previous = drainSilentHoldoutRelays(pubkey);
+    final sorted = [...holdouts]..sort();
+    var unchanged = previous.length == sorted.length;
+    for (var i = 0; unchanged && i < sorted.length; i++) {
+      unchanged = previous[i] == sorted[i];
+    }
+    final next = unchanged ? drainSilentHoldoutRuns(pubkey) + 1 : 1;
+    await _prefs.setStringList(key, sorted);
     await _prefs.setInt('$_drainSilentHoldoutRunsPrefix$pubkey', next);
     return next;
   }
@@ -459,6 +485,52 @@ class DmSyncState {
   /// Clears the consecutive silent-holdout run count for [pubkey].
   Future<void> clearDrainSilentHoldoutRuns(String pubkey) async {
     await _prefs.remove('$_drainSilentHoldoutRunsPrefix$pubkey');
+    await _prefs.remove('$_drainSilentHoldoutRelaysPrefix$pubkey');
+  }
+
+  /// Relays a quorum completion for [pubkey] finished without, or empty when
+  /// the last completion represented every relay.
+  ///
+  /// Kept so a holdout that later comes back can be noticed and the window it
+  /// never answered re-read. Without it the completion latch would hide that
+  /// window permanently, which is the same unreachable-history symptom the
+  /// quorum completion exists to end.
+  List<String> drainQuorumHoldouts(String pubkey) =>
+      _prefs.getStringList('$_drainQuorumHoldoutsPrefix$pubkey') ??
+      const <String>[];
+
+  /// The window a quorum completion stopped at, for the re-read above.
+  int? drainQuorumCursor(String pubkey) =>
+      _prefs.getInt('$_drainQuorumCursorPrefix$pubkey');
+
+  /// Records that the drain for [pubkey] completed without [holdouts], holding
+  /// [cursor] as the window they never answered.
+  Future<void> recordDrainQuorumCompletion(
+    String pubkey, {
+    required List<String> holdouts,
+    required int cursor,
+  }) async {
+    await _prefs.setStringList(
+      '$_drainQuorumHoldoutsPrefix$pubkey',
+      holdouts,
+    );
+    await _prefs.setInt('$_drainQuorumCursorPrefix$pubkey', cursor);
+  }
+
+  /// Forgets the recorded quorum completion for [pubkey].
+  Future<void> clearDrainQuorumCompletion(String pubkey) async {
+    await _prefs.remove('$_drainQuorumHoldoutsPrefix$pubkey');
+    await _prefs.remove('$_drainQuorumCursorPrefix$pubkey');
+  }
+
+  /// Clears the completion latch for [pubkey] and re-drains from [cursor].
+  ///
+  /// Unlike [rearmDrainForOwnInbox] this resumes at a specific window rather
+  /// than from now, because the window a quorum completion skipped is exactly
+  /// what this pass has to re-request.
+  Future<void> rearmDrainFromCursor(String pubkey, int cursor) async {
+    await _prefs.remove('$_drainCompletePrefix$pubkey');
+    await _prefs.setInt('$_drainCursorPrefix$pubkey', cursor);
   }
 
   /// Records that the drain for [pubkey] reached a conclusive answer about the
@@ -504,6 +576,10 @@ class DmSyncState {
     await _prefs.remove('$_drainInboxCoveredPrefix$pubkey');
     await _prefs.remove('$_drainCompletedBeforePrefix$pubkey');
     await _prefs.remove('$_drainCompletionMigrationPrefix$pubkey');
+    await _prefs.remove('$_drainSilentHoldoutRunsPrefix$pubkey');
+    await _prefs.remove('$_drainSilentHoldoutRelaysPrefix$pubkey');
+    await _prefs.remove('$_drainQuorumHoldoutsPrefix$pubkey');
+    await _prefs.remove('$_drainQuorumCursorPrefix$pubkey');
   }
 
   /// Removes all DM sync state entries for every pubkey.
@@ -525,7 +601,11 @@ class DmSyncState {
               key.startsWith(_groupRecoveryVersionPrefix) ||
               key.startsWith(_drainInboxCoveredPrefix) ||
               key.startsWith(_drainCompletedBeforePrefix) ||
-              key.startsWith(_drainCompletionMigrationPrefix),
+              key.startsWith(_drainCompletionMigrationPrefix) ||
+              key.startsWith(_drainSilentHoldoutRunsPrefix) ||
+              key.startsWith(_drainSilentHoldoutRelaysPrefix) ||
+              key.startsWith(_drainQuorumHoldoutsPrefix) ||
+              key.startsWith(_drainQuorumCursorPrefix),
         )
         .toList();
     for (final key in keysToRemove) {

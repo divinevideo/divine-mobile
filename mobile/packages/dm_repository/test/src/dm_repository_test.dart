@@ -535,6 +535,12 @@ class _FakeDmSyncState implements DmSyncState {
   final List<String> rearmedForInboxPubkeys = <String>[];
   final List<String> drainPreambleOperations = <String>[];
   final Map<String, int> silentHoldoutRunsOverride = <String, int>{};
+  final Map<String, List<String>> silentHoldoutRelaysOverride =
+      <String, List<String>>{};
+  final Map<String, List<String>> quorumHoldoutsOverride =
+      <String, List<String>>{};
+  final Map<String, int> quorumCursorOverride = <String, int>{};
+  final List<int> rearmedFromCursors = <int>[];
   final List<String> clearedSilentHoldoutPubkeys = <String>[];
 
   @override
@@ -565,8 +571,22 @@ class _FakeDmSyncState implements DmSyncState {
       silentHoldoutRunsOverride[pubkey] ?? 0;
 
   @override
-  Future<int> recordDrainSilentHoldoutRun(String pubkey) async {
-    final next = drainSilentHoldoutRuns(pubkey) + 1;
+  List<String> drainSilentHoldoutRelays(String pubkey) =>
+      silentHoldoutRelaysOverride[pubkey] ?? const <String>[];
+
+  @override
+  Future<int> recordDrainSilentHoldoutRun(
+    String pubkey, {
+    required List<String> holdouts,
+  }) async {
+    final previous = drainSilentHoldoutRelays(pubkey);
+    final sorted = [...holdouts]..sort();
+    var unchanged = previous.length == sorted.length;
+    for (var i = 0; unchanged && i < sorted.length; i++) {
+      unchanged = previous[i] == sorted[i];
+    }
+    final next = unchanged ? drainSilentHoldoutRuns(pubkey) + 1 : 1;
+    silentHoldoutRelaysOverride[pubkey] = sorted;
     silentHoldoutRunsOverride[pubkey] = next;
     return next;
   }
@@ -574,7 +594,38 @@ class _FakeDmSyncState implements DmSyncState {
   @override
   Future<void> clearDrainSilentHoldoutRuns(String pubkey) async {
     silentHoldoutRunsOverride.remove(pubkey);
+    silentHoldoutRelaysOverride.remove(pubkey);
     clearedSilentHoldoutPubkeys.add(pubkey);
+  }
+
+  @override
+  List<String> drainQuorumHoldouts(String pubkey) =>
+      quorumHoldoutsOverride[pubkey] ?? const <String>[];
+
+  @override
+  int? drainQuorumCursor(String pubkey) => quorumCursorOverride[pubkey];
+
+  @override
+  Future<void> recordDrainQuorumCompletion(
+    String pubkey, {
+    required List<String> holdouts,
+    required int cursor,
+  }) async {
+    quorumHoldoutsOverride[pubkey] = holdouts;
+    quorumCursorOverride[pubkey] = cursor;
+  }
+
+  @override
+  Future<void> clearDrainQuorumCompletion(String pubkey) async {
+    quorumHoldoutsOverride.remove(pubkey);
+    quorumCursorOverride.remove(pubkey);
+  }
+
+  @override
+  Future<void> rearmDrainFromCursor(String pubkey, int cursor) async {
+    drainCompleteOverride = false;
+    drainCursorOverride = cursor;
+    rearmedFromCursors.add(cursor);
   }
 
   @override
@@ -6745,6 +6796,104 @@ void main() {
             }
 
             expect(syncState.markedCompletePubkeys, contains(_validPubkeyA));
+          },
+        );
+
+        test(
+          'a rotating cast of holdouts never reaches the budget, because each '
+          'run only speaks for the window its own holdout was silent on',
+          () async {
+            // A different relay is silent on each run. Three such runs are NOT
+            // three runs of evidence about one window: the relay silent on the
+            // final window may have answered only earlier ones, so completing
+            // here would latch over history it never reported.
+            final holdouts = <List<String>>[
+              const ['wss://a'],
+              const ['wss://b'],
+              const ['wss://c'],
+            ];
+            var run = 0;
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async => unansweredPage(
+                timedOut: true,
+                anyRelayAnswered: true,
+                unsettledRelays: holdouts[run % holdouts.length],
+              ),
+            );
+
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+            for (
+              run = 0;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion +
+                      2;
+              run++
+            ) {
+              await repository.backfillHistoryIfNeeded();
+            }
+
+            expect(syncState.markedCompletePubkeys, isEmpty);
+            // Restarted every run, never accumulated.
+            expect(syncState.drainSilentHoldoutRuns(_validPubkeyA), 1);
+          },
+        );
+
+        test(
+          're-reads the held window once a skipped relay is reachable again, '
+          'so the completion latch cannot hide it permanently',
+          () async {
+            stubSilentHoldout();
+            final syncState = freshSyncState();
+            final repository = createRepository(syncState: syncState);
+            for (
+              var run = 0;
+              run <
+                  DmHistoryDrainConfig.silentHoldoutRunsBeforeQuorumCompletion;
+              run++
+            ) {
+              await repository.backfillHistoryIfNeeded();
+            }
+            expect(syncState.markedCompletePubkeys, contains(_validPubkeyA));
+            expect(
+              syncState.drainQuorumHoldouts(_validPubkeyA),
+              const ['wss://silent'],
+            );
+            final heldWindow = syncState.drainQuorumCursor(_validPubkeyA);
+            expect(heldWindow, isNotNull);
+
+            // The holdout comes back. The next inbox open must re-drain from
+            // exactly the window it never answered.
+            when(() => mockNostrClient.relayStatuses).thenReturn({
+              'wss://silent': const RelayConnectionStatus(
+                url: 'wss://silent',
+                state: RelayState.connected,
+              ),
+            });
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) async => answeredPage(const <Event>[]));
+
+            await repository.backfillHistoryIfNeeded();
+
+            expect(syncState.rearmedFromCursors, contains(heldWindow));
+            // The record is consumed, so a relay that goes quiet again cannot
+            // re-arm the drain on every inbox open.
+            expect(syncState.drainQuorumHoldouts(_validPubkeyA), isEmpty);
           },
         );
 

@@ -767,5 +767,187 @@ void main() {
         expect(state.newestWireSyncedAt(pkB), isNull);
       });
     });
+    group('silent-holdout run counting', () {
+      test('starts at zero', () {
+        expect(state.drainSilentHoldoutRuns(pkA), 0);
+        expect(state.drainSilentHoldoutRelays(pkA), isEmpty);
+      });
+
+      test('accumulates while the same relay stays silent', () async {
+        expect(
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://a'],
+          ),
+          1,
+        );
+        expect(
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://a'],
+          ),
+          2,
+        );
+        expect(state.drainSilentHoldoutRuns(pkA), 2);
+      });
+
+      test('ignores the order the relays are reported in', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a', 'wss://b'],
+        );
+        expect(
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://b', 'wss://a'],
+          ),
+          2,
+        );
+      });
+
+      test(
+        'restarts when a different relay is the holdout, so a rotating cast '
+        'never accumulates toward the budget',
+        () async {
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://a'],
+          );
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://a'],
+          );
+
+          expect(
+            await state.recordDrainSilentHoldoutRun(
+              pkA,
+              holdouts: const ['wss://b'],
+            ),
+            1,
+            reason: 'run 2 said nothing about the window wss://b held',
+          );
+          expect(state.drainSilentHoldoutRelays(pkA), const ['wss://b']);
+        },
+      );
+
+      test('restarts when the holdout set grows', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        expect(
+          await state.recordDrainSilentHoldoutRun(
+            pkA,
+            holdouts: const ['wss://a', 'wss://b'],
+          ),
+          1,
+        );
+      });
+
+      test('is scoped per pubkey', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        expect(state.drainSilentHoldoutRuns(pkB), 0);
+      });
+
+      test('clear resets both the count and the recorded set', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        await state.clearDrainSilentHoldoutRuns(pkA);
+
+        expect(state.drainSilentHoldoutRuns(pkA), 0);
+        expect(state.drainSilentHoldoutRelays(pkA), isEmpty);
+      });
+
+      test('markHistoryDrainComplete clears the count', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        await state.markHistoryDrainComplete(pkA);
+
+        expect(state.drainSilentHoldoutRuns(pkA), 0);
+      });
+    });
+
+    group('quorum completion record', () {
+      test('round-trips the excluded relays and the held window', () async {
+        await state.recordDrainQuorumCompletion(
+          pkA,
+          holdouts: const ['wss://silent'],
+          cursor: tsMid,
+        );
+
+        expect(state.drainQuorumHoldouts(pkA), const ['wss://silent']);
+        expect(state.drainQuorumCursor(pkA), tsMid);
+      });
+
+      test(
+        'rearmDrainFromCursor clears the latch and seeds the window',
+        () async {
+          await state.markHistoryDrainComplete(pkA);
+          expect(state.historyDrainComplete(pkA), isTrue);
+
+          await state.rearmDrainFromCursor(pkA, tsMid);
+
+          expect(state.historyDrainComplete(pkA), isFalse);
+          expect(state.historyDrainCursor(pkA), tsMid);
+        },
+      );
+
+      test('clear removes the record', () async {
+        await state.recordDrainQuorumCompletion(
+          pkA,
+          holdouts: const ['wss://silent'],
+          cursor: tsMid,
+        );
+        await state.clearDrainQuorumCompletion(pkA);
+
+        expect(state.drainQuorumHoldouts(pkA), isEmpty);
+        expect(state.drainQuorumCursor(pkA), isNull);
+      });
+    });
+
+    group('account-boundary cleanup', () {
+      test('clear removes every drain key this account owns', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        await state.recordDrainQuorumCompletion(
+          pkA,
+          holdouts: const ['wss://a'],
+          cursor: tsMid,
+        );
+
+        await state.clear(pkA);
+
+        expect(state.drainSilentHoldoutRuns(pkA), 0);
+        expect(state.drainSilentHoldoutRelays(pkA), isEmpty);
+        expect(state.drainQuorumHoldouts(pkA), isEmpty);
+        expect(state.drainQuorumCursor(pkA), isNull);
+      });
+
+      test('clearAll removes them for every account', () async {
+        await state.recordDrainSilentHoldoutRun(
+          pkA,
+          holdouts: const ['wss://a'],
+        );
+        await state.recordDrainQuorumCompletion(
+          pkB,
+          holdouts: const ['wss://b'],
+          cursor: tsMid,
+        );
+
+        await state.clearAll();
+
+        expect(state.drainSilentHoldoutRuns(pkA), 0);
+        expect(state.drainQuorumHoldouts(pkB), isEmpty);
+      });
+    });
   });
 }
