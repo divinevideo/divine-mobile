@@ -151,6 +151,31 @@ void main() {
       expect(find.text(l10n.keyManagementPublicKeyCopied), findsOneWidget);
     });
 
+    testWidgets('copies npub from the control the key backup journey taps', (
+      tester,
+    ) async {
+      // backupYourKey.yaml overwrites the private key it copied by tapping
+      // this id, so the id has to stay on a control that writes the npub.
+      String? clipboardPayload;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardPayload = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+
+      await pumpSubject(tester);
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.keyManagementCopyNpubButton),
+      );
+      await tester.pumpAndSettle();
+
+      expect(clipboardPayload, equals(testNpub));
+    });
+
     testWidgets(
       'shows private key copy action when Keycast account has a local nsec',
       (tester) async {

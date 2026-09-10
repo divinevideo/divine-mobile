@@ -409,6 +409,7 @@ class _NpubDisplayBlock extends ConsumerWidget {
             foregroundColor: context.vineColors.onSurface,
             showShadow: false,
             tooltip: l10n.keyManagementCopyPublicKeyTooltip,
+            semanticIdentifier: SemanticIds.keyManagementCopyNpubButton,
             onPressed: () => _copyNpub(context, npub),
           ),
         ],

@@ -1,9 +1,10 @@
-// ABOUTME: Pins that a Maestro flow copying the private key also clears it.
+// ABOUTME: Pins that a Maestro flow copying the private key also overwrites it.
 // ABOUTME: The copy is the journey under test; the key left behind is not.
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:yaml/yaml.dart';
 
 /// The control whose tap puts the signed-in account's `nsec` on the device
@@ -11,12 +12,16 @@ import 'package:yaml/yaml.dart';
 ///
 /// Asserting the button is *visible* is harmless and several flows do it;
 /// only a tap moves key material, so this guard keys on the tap.
-const _copyPrivateKeyId = 'copy_nsec_button';
+const String _copyPrivateKeyId = SemanticIds.keyManagementCopyNsecButton;
 
-/// Maestro's command for overwriting the clipboard with a literal.
+/// The public key copy on the same screen: the control a flow taps to
+/// overwrite the device clipboard.
 ///
-/// Present in the pinned CLI (`MAESTRO_VERSION` in `codemagic.yaml`).
-const _setClipboard = 'setClipboard';
+/// Maestro cannot do that itself. Its `setClipboard` only sets Maestro's own
+/// copied text, which `pasteText` reads back, and never reaches the device
+/// (`Orchestra.setClipboardCommand` in the `MAESTRO_VERSION` codemagic.yaml
+/// pins).
+const String _copyPublicKeyId = SemanticIds.keyManagementCopyNpubButton;
 
 /// The flow-config key whose commands Maestro runs from a `finally`.
 ///
@@ -24,7 +29,7 @@ const _setClipboard = 'setClipboard';
 /// between the copy and the end of the flow leaves the key on the clipboard —
 /// which is the state #8828 is about. The hook runs pass or fail, for a direct
 /// run and for a subflow reached through `runFlow:` alike, so the guard
-/// requires the clear there rather than anywhere in the command list.
+/// requires the overwrite there rather than anywhere in the command list.
 const _onFlowComplete = 'onFlowComplete';
 
 const _maestroDir = 'e2e/maestro';
@@ -58,14 +63,9 @@ bool _tapsId(Object? node, String id) {
   return node.values.any((child) => _tapsId(child, id));
 }
 
-bool _isSetClipboard(Object? command) =>
-    command is YamlMap && command.containsKey(_setClipboard);
-
-/// Whether [header] overwrites the clipboard from its `onFlowComplete` hook.
-bool _clearsClipboardOnComplete(YamlMap? header) {
-  final hook = header?[_onFlowComplete];
-  return hook is YamlList && hook.any(_isSetClipboard);
-}
+/// Whether [header]'s `onFlowComplete` hook overwrites the device clipboard.
+bool _overwritesClipboardOnComplete(YamlMap? header) =>
+    _tapsId(header?[_onFlowComplete], _copyPublicKeyId);
 
 void main() {
   group('Maestro clipboard hygiene', () {
@@ -88,9 +88,10 @@ void main() {
     });
 
     test('a flow still taps the control the guard watches', () {
-      // The guard below skips every flow that does not tap the button, so
-      // renaming the control turns it green while the copy still happens —
-      // #8777's shape exactly. Pin that the detector has something to check.
+      // The guard below skips every flow that does not tap the button, so a
+      // flow that stops reaching it by id turns the guard green while the
+      // copy still happens — #8777's shape exactly. Pin that the detector has
+      // something to check.
       expect(
         flows.where(
           (flow) => _tapsId(_documentsOf(flow).commands, _copyPrivateKeyId),
@@ -98,28 +99,29 @@ void main() {
         isNotEmpty,
         reason:
             'no flow under $_maestroDir taps $_copyPrivateKeyId, so the '
-            'clipboard guard checks nothing. If the control was renamed, '
-            'point $_copyPrivateKeyId at the new '
-            '`SemanticIds.keyManagementCopyNsecButton`; if the copy journey '
-            'was deleted, delete this guard with it (#8828).',
+            'clipboard guard checks nothing. If the copy journey reaches the '
+            'button another way, target it by '
+            '`SemanticIds.keyManagementCopyNsecButton`; if the journey was '
+            'deleted, delete this guard with it (#8828).',
       );
     });
 
-    test('a flow that copies the private key clears it on completion', () {
+    test('a flow that copies the private key overwrites it on completion', () {
       for (final flow in flows) {
         final (:header, :commands) = _documentsOf(flow);
         if (!_tapsId(commands, _copyPrivateKeyId)) continue;
 
         expect(
-          _clearsClipboardOnComplete(header),
+          _overwritesClipboardOnComplete(header),
           isTrue,
           reason:
               '${flow.path} taps $_copyPrivateKeyId, which copies a live '
               "account's private key to the device clipboard. The flow must "
-              'overwrite it from an `$_onFlowComplete` hook, which Maestro '
-              'runs pass or fail — a trailing `$_setClipboard` is skipped by '
-              'any failure after the copy and leaves the key on a shared '
-              'device (#8828).',
+              'tap $_copyPublicKeyId from an `$_onFlowComplete` hook, which '
+              'Maestro runs pass or fail, so the app overwrites the key. '
+              "Maestro's own `setClipboard` never reaches the device, and a "
+              'trailing command is skipped by any failure after the copy '
+              '(#8828).',
         );
       }
     });
@@ -150,24 +152,53 @@ void main() {
         expect(_tapsId(commands, _copyPrivateKeyId), isFalse);
       });
 
-      test('rejects a header whose hook does not clear the clipboard', () {
-        final withHook = loadYaml('''
+      test('accepts only a hook that taps the public key copy', () {
+        final tapsPublicKeyCopy = loadYaml('''
 appId: co.openvine.app.staging
 $_onFlowComplete:
-  - $_setClipboard: "cleared"
+  - runFlow:
+      when:
+        visible:
+          id: "$_copyPrivateKeyId"
+      commands:
+        - scrollUntilVisible:
+            element:
+              id: "$_copyPublicKeyId"
+            direction: UP
+            optional: true
+        - tapOn:
+            id: "$_copyPublicKeyId"
+            optional: true
+''') as YamlMap;
+        final scrollsWithoutTapping = loadYaml('''
+appId: co.openvine.app.staging
+$_onFlowComplete:
+  - scrollUntilVisible:
+      element:
+        id: "$_copyPublicKeyId"
+      direction: UP
+''') as YamlMap;
+        final setsMaestroClipboard = loadYaml('''
+appId: co.openvine.app.staging
+$_onFlowComplete:
+  - setClipboard: "cleared"
+''') as YamlMap;
+        final tapsPrivateKeyCopy = loadYaml('''
+appId: co.openvine.app.staging
+$_onFlowComplete:
+  - tapOn:
+      id: "$_copyPrivateKeyId"
 ''') as YamlMap;
         final withoutHook =
             loadYaml('appId: co.openvine.app.staging') as YamlMap;
-        final emptyHook = loadYaml('''
-appId: co.openvine.app.staging
-$_onFlowComplete:
-  - back
-''') as YamlMap;
 
-        expect(_clearsClipboardOnComplete(withHook), isTrue);
-        expect(_clearsClipboardOnComplete(withoutHook), isFalse);
-        expect(_clearsClipboardOnComplete(emptyHook), isFalse);
-        expect(_clearsClipboardOnComplete(null), isFalse);
+        expect(_overwritesClipboardOnComplete(tapsPublicKeyCopy), isTrue);
+        expect(_overwritesClipboardOnComplete(scrollsWithoutTapping), isFalse);
+        // Sets Maestro's copied text only; the device keeps the key.
+        expect(_overwritesClipboardOnComplete(setsMaestroClipboard), isFalse);
+        expect(_overwritesClipboardOnComplete(tapsPrivateKeyCopy), isFalse);
+        expect(_overwritesClipboardOnComplete(withoutHook), isFalse);
+        expect(_overwritesClipboardOnComplete(null), isFalse);
       });
     });
   });
