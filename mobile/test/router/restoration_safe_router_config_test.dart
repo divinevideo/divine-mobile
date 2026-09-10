@@ -1,5 +1,5 @@
-// ABOUTME: Pins the saved-route-state guard against the go_router codec bug
-// ABOUTME: Regression coverage for the #7869 launch-loop crash
+// ABOUTME: Pins the route-state guard against the go_router codec bug
+// ABOUTME: Regression coverage for the #7869 crash
 
 import 'dart:async';
 
@@ -60,9 +60,9 @@ GoRouter _buildRouter({required bool withRetiredRoute}) {
   );
 }
 
-/// Produces the saved route state an install would replay on cold start: a
-/// root location that the *next* build no longer serves, with an imperative
-/// push on top of it that still resolves through the shell.
+/// Produces a route state whose root location the router under test no
+/// longer serves, with an imperative push on top of it that still resolves
+/// through the shell.
 Future<RouteInformation> _savedStateFromRetiredLocation(
   WidgetTester tester,
 ) async {

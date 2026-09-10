@@ -42,9 +42,9 @@ class DivineMaterialApp extends ConsumerWidget {
         theme: VineTheme.lightTheme,
         darkTheme: VineTheme.theme,
         themeMode: themeMode,
-        // A saved route state go_router cannot decode must not take the
-        // launch path down with it — the same state replays on every cold
-        // start, so the crash loops instead of recovering (#7869).
+        // go_router can fail to decode the route state it reported itself when
+        // this router is mounted again or refreshed; unguarded, that leaves
+        // the app with no routes (#7869).
         routerConfig: ref.read(routerConfigProvider),
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
