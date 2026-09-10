@@ -38,63 +38,78 @@ void main() {
     });
 
     group('stale session detection', () {
+      test('discards a session older than the maximum age', () {
+        var now = DateTime(2026, 9, 10, 12);
+        tracker = FeedPerformanceTracker(
+          sink: const NoOpAnalyticsEventSink(),
+          now: () => now,
+        );
+        final handle = tracker.startFeedLoad('home');
+        now = now.add(const Duration(seconds: 61));
+
+        tracker.markFirstVideosReceived(handle, 5);
+
+        expect(tracker.activeSessionCount, 0);
+      });
+
       test('markFirstVideosReceived processes fresh session normally', () {
-        tracker.startFeedLoad('home');
+        final handle = tracker.startFeedLoad('home');
         expect(tracker.activeSessionCount, 1);
 
-        tracker.markFirstVideosReceived('home', 5);
+        tracker.markFirstVideosReceived(handle, 5);
 
         // Session should still be active (not yet displayed)
         expect(tracker.activeSessionCount, 1);
       });
 
       test('markFeedDisplayed removes session on completion', () {
-        tracker.startFeedLoad('home');
+        final handle = tracker.startFeedLoad('home');
         expect(tracker.activeSessionCount, 1);
 
-        tracker.markFeedDisplayed('home', 5);
+        tracker.markFeedDisplayed(handle, 5);
 
         expect(tracker.activeSessionCount, 0);
       });
 
-      test('markFirstVideosReceived is no-op for unknown feed type', () {
-        tracker.markFirstVideosReceived('unknown', 5);
-        expect(tracker.activeSessionCount, 0);
-      });
-
-      test('markFeedDisplayed is no-op for unknown feed type', () {
-        tracker.markFeedDisplayed('unknown', 5);
+      test('milestones are no-ops after reset', () {
+        final handle = tracker.startFeedLoad('home');
+        tracker.resetAllSessions();
+        tracker
+          ..markFirstVideosReceived(handle, 5)
+          ..markFeedDisplayed(handle, 5);
         expect(tracker.activeSessionCount, 0);
       });
     });
 
     group('session lifecycle', () {
       test('sessions do not leak between instances', () {
-        tracker.startFeedLoad('home');
+        final handle = tracker.startFeedLoad('home');
 
         final other = FeedPerformanceTracker(
           sink: const NoOpAnalyticsEventSink(),
         );
+        final otherHandle = other.startFeedLoad('home');
 
         // Guards the reason the app resolves one shared instance through
         // `feedPerformanceTrackerProvider`: a second instance cannot complete
         // a session the first one started.
-        expect(other.activeSessionCount, 0);
-        other.markFeedDisplayed('home', 3);
+        expect(other.activeSessionCount, 1);
+        other.markFeedDisplayed(handle, 3);
         expect(tracker.activeSessionCount, 1);
+        expect(other.activeSessionCount, 1);
+        other.abandonFeedLoad(otherHandle);
       });
 
       test('tracks multiple independent sessions', () {
-        tracker
-          ..startFeedLoad('home')
-          ..startFeedLoad('explore');
+        final home = tracker.startFeedLoad('home');
+        final explore = tracker.startFeedLoad('explore');
 
         expect(tracker.activeSessionCount, 2);
 
-        tracker.markFeedDisplayed('home', 5);
+        tracker.markFeedDisplayed(home, 5);
         expect(tracker.activeSessionCount, 1);
 
-        tracker.markFeedDisplayed('explore', 10);
+        tracker.markFeedDisplayed(explore, 10);
         expect(tracker.activeSessionCount, 0);
       });
     });

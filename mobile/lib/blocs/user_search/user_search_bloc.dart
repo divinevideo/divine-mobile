@@ -118,7 +118,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
       ),
     );
 
-    _feedTracker?.startFeedLoad('user_search');
+    final feedLoad = _feedTracker?.startFeedLoad('user_search');
     var trackedFirst = false;
     var latestUnfilteredCount = 0;
     int? nextRestOffset;
@@ -174,10 +174,12 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
           final visibleProfiles = _visibleProfiles(result.profiles);
           if (!trackedFirst && visibleProfiles.isNotEmpty) {
             trackedFirst = true;
-            _feedTracker?.markFirstVideosReceived(
-              'user_search',
-              visibleProfiles.length,
-            );
+            if (feedLoad != null) {
+              _feedTracker?.markFirstVideosReceived(
+                feedLoad,
+                visibleProfiles.length,
+              );
+            }
           }
           for (final entry in result.sources.entries) {
             if (entry.value is! SearchSourcePending &&
@@ -210,7 +212,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
         ),
       );
 
-      _feedTracker?.markFeedDisplayed('user_search', state.results.length);
+      if (feedLoad != null) {
+        _feedTracker?.markFeedDisplayed(feedLoad, state.results.length);
+      }
       reachedTerminalState = true;
     } on TimeoutException {
       // Outer stream timed out. Promote every source still in pending
@@ -260,6 +264,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
       emit(state.copyWith(status: UserSearchStatus.failure));
       reachedTerminalState = true;
     } finally {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
       cancellationToken.cancel();
       Log.debug(
         '${cancellationToken.correlationId} '

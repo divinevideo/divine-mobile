@@ -33,6 +33,12 @@ location fields to this event contract.
 `feed_load_complete` remains emitted for dashboard compatibility. Its duration
 now ends at the fresh result; new analysis should use the phase-specific event.
 
+Each accepted load owns an independent telemetry session, including concurrent
+loads for the same feed type. A superseded, cancelled, failed, or disposed load
+is abandoned without a completion event, so `feed_load_started` and completion
+counts are deliberately not one-to-one. Compare phase latency only across
+completed loads, and monitor the completion ratio separately.
+
 ## Initial service target
 
 For each feed type, initiation reason, cache state, platform, and coarse region:
