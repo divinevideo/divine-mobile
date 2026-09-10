@@ -1097,5 +1097,44 @@ void main() {
         expect(repoB.isSupporter, isFalse);
       },
     );
+
+    test('preflight rejects a purchase when another account holds the pending '
+        'marker', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final clientA = buildApiClient();
+      final clientB = buildApiClient(pubkey: pubkeyB);
+      addTearDown(clientA.dispose);
+      addTearDown(clientB.dispose);
+      // Account A leaves a pending marker by starting (not finishing) a buy.
+      final repoA = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: clientA,
+      );
+      await repoA.purchase('divine.supporter.monthly');
+      repoA.dispose();
+      final purchasesBefore = validator.purchaseCallCount;
+
+      final repoB = SupporterRepository(
+        pubkey: pubkeyB,
+        validator: validator,
+        prefs: prefs,
+        apiClient: clientB,
+      );
+      addTearDown(repoB.dispose);
+      await expectLater(
+        repoB.purchase('divine.supporter.monthly'),
+        throwsA(
+          isA<SupporterApiException>().having(
+            (error) => error.kind,
+            'kind',
+            SupporterApiFailureKind.ownershipConflict,
+          ),
+        ),
+      );
+      // B never reached the store: preflight refused before billing started.
+      expect(validator.purchaseCallCount, purchasesBefore);
+    });
   });
 }
