@@ -318,6 +318,23 @@ void main() {
         expect(emitted, isEmpty);
       });
 
+      test(
+        'passive renewal delivers proof without entering interactive purchase state',
+        () async {
+          final lifecycle = <EntitlementLifecycle>[];
+          validator.lifecycleChanges.listen(lifecycle.add);
+          validator.startListening();
+          final proofFuture = validator.purchaseProofChanges.first;
+          streamController.add([
+            _purchase('divine.supporter.monthly', purchaseID: 'renewal-123'),
+          ]);
+          final proof = await proofFuture;
+          expect(proof.transactionId, 'renewal-123');
+          expect(proof.capturedPubkey, isNull);
+          expect(lifecycle, isEmpty);
+        },
+      );
+
       test('emits pending and confirming lifecycle states', () async {
         final emitted = <EntitlementLifecycle>[];
         validator.lifecycleChanges.listen(emitted.add);

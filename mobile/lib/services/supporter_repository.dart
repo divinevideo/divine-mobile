@@ -285,7 +285,11 @@ class SupporterRepository {
     final pendingKey = '$_pendingOwnerPrefix${proof.productId}';
     final owner =
         _prefs.getString(proofOwnerKey) ?? _prefs.getString(pendingKey);
-    if (owner != null ? owner != _pubkey : proof.capturedPubkey != _pubkey) {
+    final background = proof.silent || proof.capturedPubkey == null;
+    final existingOwnerOnly = owner == null && background;
+    if (owner != null
+        ? owner != _pubkey
+        : !existingOwnerOnly && proof.capturedPubkey != _pubkey) {
       if (!proof.silent && proof.capturedPubkey == _pubkey) {
         _handleValidatorError(
           const SupporterApiException(
@@ -295,14 +299,6 @@ class SupporterRepository {
           StackTrace.current,
         );
       }
-      return;
-    }
-    if (owner == null && proof.silent) {
-      Log.info(
-        'Unbound supporter purchase requires an explicit restore.',
-        name: 'SupporterRepository',
-        category: LogCategory.system,
-      );
       return;
     }
 
@@ -343,6 +339,7 @@ class SupporterRepository {
           proof: proof.toJson(),
         ),
         expectedPubkey: _pubkey,
+        existingOwnerOnly: existingOwnerOnly,
       );
       await _rememberOwner(proofOwnerKey);
       _handleChange(snapshot.entitlement);
@@ -367,7 +364,7 @@ class SupporterRepository {
         name: 'SupporterRepository',
         category: LogCategory.system,
       );
-      if (!proof.silent) _handleValidatorError(error, stackTrace);
+      if (!background) _handleValidatorError(error, stackTrace);
       // Keep the purchase unacknowledged so the store can redeliver it after
       // the Worker or signer becomes available.
     }

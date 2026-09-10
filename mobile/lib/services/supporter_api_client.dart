@@ -224,14 +224,17 @@ class SupporterApiClient {
   }
 
   /// Claims a store purchase for the pubkey represented by the NIP-98 signer.
+  /// [existingOwnerOnly] verifies an already-bound subscription without
+  /// creating new ownership, for background recovery and renewals.
   Future<SupporterAccountSnapshot> claimPurchase(
     SupporterPurchaseClaim claim, {
     required String expectedPubkey,
+    bool existingOwnerOnly = false,
   }) async {
     final body = jsonEncode(claim.toJson());
     final response = await _send(
       HttpMethod.post,
-      '/v1/purchases/claim',
+      existingOwnerOnly ? '/v1/purchases/restore' : '/v1/purchases/claim',
       body: body,
       expectedPubkey: expectedPubkey,
     );

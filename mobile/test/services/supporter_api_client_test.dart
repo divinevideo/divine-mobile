@@ -123,53 +123,64 @@ void main() {
       },
     );
 
-    test(
-      'claim sends idempotency key and opaque proof without changing it',
-      () async {
-        late String requestBody;
-        when(
-          () => httpClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          ),
-        ).thenAnswer((invocation) async {
-          requestBody = invocation.namedArguments[#body] as String;
-          return http.Response(
-            jsonEncode({
-              'status': 'active',
-              'entitlement': {
-                'productId': 'divine.supporter.monthly',
-                'source': 'server',
-                'isActive': true,
-              },
-              'recognition': {},
-            }),
-            200,
+    for (final existingOwnerOnly in [false, true]) {
+      test(
+        'signs the exact proof and endpoint (existingOwnerOnly=$existingOwnerOnly)',
+        () async {
+          late String requestBody;
+          late Uri requestUri;
+          when(
+            () => httpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((invocation) async {
+            requestUri = invocation.positionalArguments.first as Uri;
+            requestBody = invocation.namedArguments[#body] as String;
+            return http.Response(
+              jsonEncode({
+                'status': 'active',
+                'entitlement': {
+                  'productId': 'divine.supporter.monthly',
+                  'source': 'server',
+                  'isActive': true,
+                },
+                'recognition': {},
+              }),
+              200,
+            );
+          });
+
+          final proof = {'signed_payload': 'opaque-proof-material'};
+          await buildClient().claimPurchase(
+            SupporterPurchaseClaim(
+              store: 'apple',
+              productId: 'divine.supporter.monthly',
+              idempotencyKey: 'attempt-1234567890',
+              proof: proof,
+            ),
+            existingOwnerOnly: existingOwnerOnly,
+            expectedPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           );
-        });
 
-        final proof = {'signed_payload': 'opaque-proof-material'};
-        await buildClient().claimPurchase(
-          SupporterPurchaseClaim(
-            store: 'apple',
-            productId: 'divine.supporter.monthly',
-            idempotencyKey: 'attempt-1234567890',
-            proof: proof,
-          ),
-          expectedPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        );
-
-        expect(jsonDecode(requestBody), {
-          'store': 'apple',
-          'product_id': 'divine.supporter.monthly',
-          'idempotency_key': 'attempt-1234567890',
-          'proof': proof,
-        });
-        expect(authCalls.single.method, HttpMethod.post);
-        expect(authCalls.single.payload, requestBody);
-      },
-    );
+          expect(jsonDecode(requestBody), {
+            'store': 'apple',
+            'product_id': 'divine.supporter.monthly',
+            'idempotency_key': 'attempt-1234567890',
+            'proof': proof,
+          });
+          final endpoint = existingOwnerOnly ? 'restore' : 'claim';
+          expect(
+            requestUri.toString(),
+            'https://supporters.test/v1/purchases/$endpoint',
+          );
+          expect(authCalls.single.url, requestUri.toString());
+          expect(authCalls.single.method, HttpMethod.post);
+          expect(authCalls.single.payload, requestBody);
+        },
+      );
+    }
 
     test('rejects a claim signed by a different account', () async {
       final client = SupporterApiClient(

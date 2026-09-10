@@ -866,41 +866,115 @@ void main() {
       },
     );
 
-    test('does not silently assign an unbound legacy purchase', () async {
-      final prefs = await SharedPreferences.getInstance();
-      var claims = 0;
-      final apiClient = SupporterApiClient(
-        baseUri: Uri.parse('https://supporters.test'),
-        httpClient: MockClient((_) async {
-          claims++;
-          return http.Response('{}', 200);
-        }),
-        authHeaderProvider: ({required url, required method, payload}) async =>
-            (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+    for (final status in [404, 503]) {
+      test(
+        'unbound automatic restore uses only the owned endpoint ($status)',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          final paths = <String>[];
+          final apiClient = SupporterApiClient(
+            baseUri: Uri.parse('https://supporters.test'),
+            httpClient: MockClient((request) async {
+              paths.add(request.url.path);
+              return http.Response('{}', status);
+            }),
+            authHeaderProvider:
+                ({required url, required method, payload}) async =>
+                    (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+          );
+          addTearDown(apiClient.dispose);
+          final repo = SupporterRepository(
+            pubkey: pubkeyA,
+            validator: validator,
+            prefs: prefs,
+            apiClient: apiClient,
+          );
+          addTearDown(repo.dispose);
+          final errors = <Object>[];
+          repo.changes.listen((_) {}, onError: errors.add);
+          validator.proofController.add(
+            const SupporterPurchaseProof(
+              attemptId: 'unbound-legacy-attempt',
+              store: 'apple',
+              productId: 'divine.supporter.monthly',
+              serverVerificationData: 'opaque-proof',
+              localVerificationData: '',
+              capturedPubkey: pubkeyA,
+              silent: true,
+            ),
+          );
+          await pumpEventQueue();
+          expect(paths, ['/v1/purchases/restore']);
+          expect(validator.completePurchaseCallCount, 0);
+          expect(errors, isEmpty);
+          expect(
+            prefs.getString(
+              'divine_supporter_proof_owner:unbound-legacy-attempt',
+            ),
+            isNull,
+          );
+        },
       );
-      addTearDown(apiClient.dispose);
-      final repo = SupporterRepository(
-        pubkey: pubkeyA,
-        validator: validator,
-        prefs: prefs,
-        apiClient: apiClient,
+    }
+
+    for (final passive in [false, true]) {
+      test(
+        'recovers a server-owned renewal with a new transaction ID (passive=$passive)',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          final paths = <String>[];
+          final apiClient = SupporterApiClient(
+            baseUri: Uri.parse('https://supporters.test'),
+            httpClient: MockClient((request) async {
+              paths.add(request.url.path);
+              return http.Response(
+                jsonEncode({
+                  'status': 'active',
+                  'entitlement': {
+                    'productId': 'divine.supporter.monthly',
+                    'source': 'server',
+                    'isActive': true,
+                  },
+                }),
+                200,
+              );
+            }),
+            authHeaderProvider:
+                ({required url, required method, payload}) async =>
+                    (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+          );
+          addTearDown(apiClient.dispose);
+          final repo = SupporterRepository(
+            pubkey: pubkeyA,
+            validator: validator,
+            prefs: prefs,
+            apiClient: apiClient,
+          );
+          addTearDown(repo.dispose);
+          validator.proofController.add(
+            SupporterPurchaseProof(
+              attemptId: 'new-renewal-transaction',
+              store: 'apple',
+              productId: 'divine.supporter.monthly',
+              serverVerificationData: 'opaque-proof',
+              localVerificationData: '',
+              capturedPubkey: passive ? null : pubkeyA,
+              silent: !passive,
+            ),
+          );
+          await pumpEventQueue();
+          expect(paths, ['/v1/purchases/restore']);
+          expect(repo.isSupporter, isTrue);
+          expect(validator.completePurchaseCallCount, 1);
+          expect(
+            prefs.getString(
+              'divine_supporter_proof_owner:new-renewal-transaction',
+            ),
+            pubkeyA,
+          );
+        },
       );
-      addTearDown(repo.dispose);
-      validator.proofController.add(
-        const SupporterPurchaseProof(
-          attemptId: 'unbound-legacy-attempt',
-          store: 'apple',
-          productId: 'divine.supporter.monthly',
-          serverVerificationData: 'opaque-proof',
-          localVerificationData: '',
-          capturedPubkey: pubkeyA,
-          silent: true,
-        ),
-      );
-      await pumpEventQueue();
-      expect(claims, 0);
-      expect(validator.completePurchaseCallCount, 0);
-    });
+    }
 
     test('checks authenticated server state before starting billing', () async {
       final prefs = await SharedPreferences.getInstance();

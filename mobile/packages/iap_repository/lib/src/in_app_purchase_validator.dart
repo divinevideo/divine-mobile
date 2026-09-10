@@ -97,7 +97,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
     switch (purchase.status) {
       case PurchaseStatus.purchased:
       case PurchaseStatus.restored:
-        if (context?.silent != true) {
+        if (context != null && !context.silent) {
           _lifecycleController.add(EntitlementLifecycle.confirming);
         }
         final proof = _proofFromPurchase(purchase, context);
@@ -127,7 +127,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
         if (pending != null) {
           _pendingPurchases[purchase.productID] = pending;
         }
-        if (context?.silent != true) {
+        if (context != null && !context.silent) {
           _lifecycleController.add(EntitlementLifecycle.pending);
         }
     }

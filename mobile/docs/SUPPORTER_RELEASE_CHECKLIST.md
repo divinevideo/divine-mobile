@@ -19,7 +19,7 @@ ledger, and renewal events are not a count of distinct supporters.
   product list currently offers the monthly plan; do not advertise additional
   plans before the app can deliver them.
 - Deploy and verify the supporter service's transient-claim retry and current
-  snapshot replay behavior before enabling the mobile recovery changes.
+  snapshot replay behavior and the existing-owner restore endpoint before enabling the mobile recovery changes.
 - Keep sandbox/TestFlight/test purchases separate from paid production reporting.
   Verify receipt environment on the server; do not infer it from a release build
   or the configured Apple endpoint alone. The verifier can fall back to sandbox.
@@ -40,7 +40,7 @@ and widget tests cover the failure modes but do not replace these checks.
 | Account switch during or after purchase | Purchase remains bound to its initiating account; another account cannot claim it |
 | Canceled purchase or store refuses to start | No entitlement; no leftover pending account lock |
 | Existing subscription on a fresh installation | Explicit Restore claims the purchase with the intended account; a rejected wrong-account restore does not block the rightful owner |
-| Automatic restore with no known local owner | Does not silently assign a legacy purchase to the current account |
+| Automatic restore with no known local owner | Server verifies existing subscription ownership; never creates a new account binding |
 | Renewal, billing grace, expiry, refund/revocation | UI follows current canonical state; replaying an old claim cannot restore an obsolete entitlement |
 | Active supporter presses subscribe | Server preflight returns existing entitlement without opening billing |
 | Analytics unavailable or consent declined | Purchase and restoration still work |
@@ -49,10 +49,13 @@ Verify both Settings entry visibility and the supporter screen in the actual
 release artifact. Existing purchasers need a reachable Restore path and clear
 account-selection guidance. Do not enable purchase access more broadly than the
 restore and entitlement display paths have been tested. A renewal can have a new
-store transaction identifier without a saved local owner. Such proofs currently
-require explicit Restore; this change does not establish unattended renewal
-acknowledgment. Test that case before rollout, including a stale canonical account
-and termination before StoreKit finishes the transaction.
+store transaction identifier without a saved local owner. Background recovery
+uses `/v1/purchases/restore`, which verifies the canonical subscription owner
+before updating entitlement or acknowledging the transaction. An unbound legacy
+purchase still needs explicit Restore. Older servers without this endpoint fail
+closed; the app never falls back to first-time binding during background recovery.
+Test new renewal IDs, stale canonical state, and process termination before
+StoreKit finishes the transaction.
 
 ## Reconciliation and monitoring
 
