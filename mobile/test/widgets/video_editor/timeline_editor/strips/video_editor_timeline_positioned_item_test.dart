@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for TimelineOverlayPositionedItem.
 // ABOUTME: Verifies base positioning and tap interaction.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/constants/video_editor_timeline_constants.dart';

@@ -2,10 +2,10 @@
 // ABOUTME: Pins safety actions that remain reachable when a profile is hidden.
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/moderation_providers.dart';

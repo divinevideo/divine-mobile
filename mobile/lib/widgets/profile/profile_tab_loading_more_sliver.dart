@@ -1,7 +1,7 @@
 // ABOUTME: Shared loading-more sliver for profile tab grids
 // ABOUTME: Shows a spinner at the bottom of the grid during pagination
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
 /// A [SliverToBoxAdapter] spinner displayed at the bottom of a profile

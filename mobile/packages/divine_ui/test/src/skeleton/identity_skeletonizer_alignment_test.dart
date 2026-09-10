@@ -2,8 +2,8 @@
 // ABOUTME: which AnimatedSwitcher's centring default silently took away.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _leadingInset = 76.0;
 const _trailingInset = 60.0;

@@ -2,8 +2,8 @@
 // ABOUTME: Subtitle states the request, or that the thread is closed.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';

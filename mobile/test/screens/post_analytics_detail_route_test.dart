@@ -1,10 +1,10 @@
 // ABOUTME: Route tests for the per-post analytics screen (#6481).
 // ABOUTME: Covers the warm extra path and the cold-entry refetch path.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';

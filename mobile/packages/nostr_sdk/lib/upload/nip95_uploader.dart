@@ -1,6 +1,7 @@
+import 'dart:io';
+
 import 'package:mime/mime.dart';
 import 'package:nostr_sdk/utils/path_type_util.dart';
-import 'dart:io';
 
 import '../event.dart';
 import '../event_kind.dart';

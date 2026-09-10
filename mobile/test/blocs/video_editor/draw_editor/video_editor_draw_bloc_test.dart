@@ -2,8 +2,8 @@
 // ABOUTME: Covers initial state, draw events, and state transitions.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';

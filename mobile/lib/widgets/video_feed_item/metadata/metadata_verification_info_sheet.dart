@@ -3,7 +3,7 @@
 // ABOUTME: not mean.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';

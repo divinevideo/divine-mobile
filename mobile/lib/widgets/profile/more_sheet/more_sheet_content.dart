@@ -1,7 +1,7 @@
 // ABOUTME: Content widget for the More sheet with animated transitions
 // ABOUTME: Manages menu and block/unblock confirmation states
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:openvine/widgets/profile/more_sheet/block_confirmation_view.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_menu.dart';

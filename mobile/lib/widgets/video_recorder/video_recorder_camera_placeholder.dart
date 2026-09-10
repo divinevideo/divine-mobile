@@ -2,7 +2,7 @@
 // ABOUTME: Plain dark surface while initializing, icon + message on error
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Fallback preview widget for when camera is not available.
 ///

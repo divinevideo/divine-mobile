@@ -2,7 +2,7 @@
 // ABOUTME: Customizable size, colors, and shadow styling
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Rounded icon button for video editor controls.
 ///

@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs, Icon names are self-documenting
 
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Icon names from the Divine design system icon set.
 ///

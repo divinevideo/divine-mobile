@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 

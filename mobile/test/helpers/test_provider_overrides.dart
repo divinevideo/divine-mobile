@@ -5,9 +5,9 @@ import 'dart:async';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:cache_sync/cache_sync.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';

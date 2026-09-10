@@ -1,8 +1,8 @@
 // ABOUTME: Renders a category's SVG mascot, degrading to its emoji on a missing asset.
 // ABOUTME: Prevents the asset-not-found crash (#4398) when backend category names lack a bundled SVG.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Renders the SVG at [assetPath], falling back to [emoji] when no bundled
 /// asset is available.

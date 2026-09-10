@@ -1,7 +1,7 @@
 // ABOUTME: Reusable PageController sync mixin for URL-driven router screens
 // ABOUTME: Eliminates code duplication across home, explore, and profile router screens
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Mixin that provides PageController synchronization logic for router screens.

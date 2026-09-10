@@ -2,7 +2,7 @@
 // ABOUTME: Safety Standards, DMCA, and Open Source Licenses
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:unified_logger/unified_logger.dart';

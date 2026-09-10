@@ -1,8 +1,8 @@
 // ABOUTME: Tests for NotificationListItem dispatcher — verifies the
 // ABOUTME: correct row widget is rendered for each NotificationItem subtype.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/actor_notification_row.dart';

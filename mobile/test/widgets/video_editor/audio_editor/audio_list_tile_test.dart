@@ -1,8 +1,8 @@
 // ABOUTME: Tests for AudioListTile widget
 // ABOUTME: Validates rendering, selected state, and tap callback
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

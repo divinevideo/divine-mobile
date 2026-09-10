@@ -2,7 +2,7 @@
 // ABOUTME: widget (VideoNotificationRow / ActorNotificationRow) via an
 // ABOUTME: exhaustive sealed switch.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/notifications/widgets/actor_notification_row.dart';
 import 'package:openvine/notifications/widgets/video_notification_row.dart';

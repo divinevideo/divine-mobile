@@ -4,10 +4,10 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/avatar_svg/avatar_svg_cubit.dart';
 import 'package:openvine/providers/avatar_svg_repository_provider.dart';
 import 'package:openvine/repositories/avatar_svg_repository.dart';

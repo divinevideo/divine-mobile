@@ -2,7 +2,7 @@
 // ABOUTME: Shown while thumbnails load or when the image URL is missing
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Flat color placeholder used as loading and error fallback for
 /// profile grid thumbnails.

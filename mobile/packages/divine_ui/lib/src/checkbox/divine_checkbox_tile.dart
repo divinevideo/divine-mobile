@@ -1,6 +1,6 @@
 import 'package:divine_ui/src/checkbox/divine_checkbox.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A settings row pairing a label (and optional supporting copy) with a
 /// [DivineSpriteCheckbox].

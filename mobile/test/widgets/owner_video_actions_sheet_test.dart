@@ -1,8 +1,8 @@
 // ABOUTME: Tests the shared owner-video action sheet helper.
 // ABOUTME: Pins the onDeleted contract that lets the two grids differ.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';

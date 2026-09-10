@@ -2,9 +2,9 @@
 // ABOUTME: Verifies the video branch's serialized player policy.
 
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'

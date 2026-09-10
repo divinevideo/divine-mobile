@@ -1,6 +1,6 @@
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/feed/feed_tuning_snackbar.dart';
 

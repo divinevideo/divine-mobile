@@ -4,10 +4,10 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
@@ -18,10 +18,10 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart'
-    hide executeAccountDeletion;
-import 'package:openvine/widgets/delete_account_dialog.dart'
     as dialog_api
     show executeAccountDeletion;
+import 'package:openvine/widgets/delete_account_dialog.dart'
+    hide executeAccountDeletion;
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockAccountDeletionService extends Mock

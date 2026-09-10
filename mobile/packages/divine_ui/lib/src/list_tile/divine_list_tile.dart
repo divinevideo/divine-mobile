@@ -1,6 +1,6 @@
 import 'package:divine_ui/src/icon/divine_icon.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A navigational settings row: leading icon, label, optional supporting copy,
 /// and a trailing affordance.

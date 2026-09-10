@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for the categories discovery surface.
 // ABOUTME: Verifies loading/error/empty states and the redesigned pinned-first list.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/categories/categories_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';

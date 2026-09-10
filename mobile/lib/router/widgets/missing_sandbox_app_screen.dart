@@ -2,7 +2,7 @@
 // ABOUTME: resolved from the approved-integrations directory.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';

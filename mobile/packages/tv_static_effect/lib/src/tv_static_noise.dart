@@ -4,8 +4,8 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A function that creates a [CustomPainter] for the given [time] and

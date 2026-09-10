@@ -1,7 +1,7 @@
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

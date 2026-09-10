@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A sliver that adds bottom padding equal to the system navigation bar
 /// height, ensuring scroll content is not obscured on devices with gesture

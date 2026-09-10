@@ -2,7 +2,7 @@
 // ABOUTME: Provides contextual Mute, Report, Block, and Remove actions.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Actions available from the conversation long-press sheet.

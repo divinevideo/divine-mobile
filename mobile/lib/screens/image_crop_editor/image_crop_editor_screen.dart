@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/image_crop_editor/widgets/image_crop_editor_bottom_bar.dart';
 import 'package:openvine/screens/image_crop_editor/widgets/image_crop_editor_toolbar.dart';

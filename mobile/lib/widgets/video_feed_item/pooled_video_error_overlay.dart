@@ -3,11 +3,11 @@
 // ABOUTME: missing (404), and generic playback errors.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart'
     show VideoErrorType;
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/extensions/video_event_content_type_extension.dart';

@@ -1,8 +1,8 @@
 // ABOUTME: Tests bounded route-to-surface product analytics navigation.
 // ABOUTME: Guards against sending raw route names or parameters.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/router/product_analytics_navigation_observer.dart';
 import 'package:openvine/services/analytics_service.dart';

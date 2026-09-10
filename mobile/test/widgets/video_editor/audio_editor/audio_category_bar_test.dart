@@ -1,8 +1,8 @@
 // ABOUTME: Tests for AudioCategoryBar widget
 // ABOUTME: Validates rendering of category chips and selection callback
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 

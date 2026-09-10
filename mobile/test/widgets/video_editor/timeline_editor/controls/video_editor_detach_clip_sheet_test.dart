@@ -1,9 +1,9 @@
 // ABOUTME: Widget tests for the detach-clip chooser sheet.
 // ABOUTME: Covers the options offered, the lone-clip case, and what it returns.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
 

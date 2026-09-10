@@ -2,7 +2,7 @@
 // ABOUTME: Green circular FAB with + icon, matching Figma design.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Green FAB for starting a new conversation.
 ///

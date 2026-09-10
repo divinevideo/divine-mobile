@@ -1,6 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';

@@ -1,9 +1,9 @@
 // ABOUTME: Image goldens for the divine_ui components the app renders most.
 // ABOUTME: Run only by the dedicated `Goldens` CI job / scripts/golden.sh.
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// These render `divine_ui` components from the *app's* test context on
 /// purpose: `divine_ui` bundles no fonts of its own, so `VineTheme`

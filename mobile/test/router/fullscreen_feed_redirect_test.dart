@@ -2,9 +2,9 @@
 // ABOUTME: in-memory `extra`, including durable selected-video URL fallback.
 
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/router/pooled_fullscreen_feed_route.dart'

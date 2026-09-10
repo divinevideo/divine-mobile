@@ -2,9 +2,9 @@
 // ABOUTME: Absent means absent — no placeholder, no disabled tab.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/explore/widgets/explore_tab_bar.dart';

@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Shared scaffold for the timeline multi-select action bars (clip and
 /// draw-layer): a shadowed panel with a selection-count header above a

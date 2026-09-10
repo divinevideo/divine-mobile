@@ -2,7 +2,7 @@
 // ABOUTME: Sits above the form so the disclosure is read before anything is typed
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Warns that a support submission is published to a public repository.

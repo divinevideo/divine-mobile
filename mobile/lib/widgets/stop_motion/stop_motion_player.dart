@@ -3,8 +3,8 @@
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 
 /// Plays a stop-motion clip by looping through its captured stills, holding

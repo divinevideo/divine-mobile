@@ -4,9 +4,9 @@
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/clip_manager_provider.dart';

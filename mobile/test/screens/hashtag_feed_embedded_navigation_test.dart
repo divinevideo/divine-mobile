@@ -1,10 +1,10 @@
 // ABOUTME: Verifies the hashtag feed hands a tapped video to its embedding host,
 // ABOUTME: and pushes the anchored fullscreen route when it owns the screen.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

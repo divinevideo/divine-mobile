@@ -2,10 +2,10 @@
 // ABOUTME: Displays a masonry grid of video clip thumbnails with selection support
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';

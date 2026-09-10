@@ -1,8 +1,8 @@
 // ABOUTME: Reusable test helpers for widget tests with common provider overrides
 // ABOUTME: Reduces boilerplate in widget tests by providing configured ProviderScope
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

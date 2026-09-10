@@ -1,8 +1,8 @@
 // ABOUTME: Tests for VideoEditorVerticalSlider widget.
 // ABOUTME: Validates slider rendering, drag interactions, and value updates.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 

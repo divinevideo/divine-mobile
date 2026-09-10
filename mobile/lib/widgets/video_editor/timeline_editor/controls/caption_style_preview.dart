@@ -5,7 +5,7 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';

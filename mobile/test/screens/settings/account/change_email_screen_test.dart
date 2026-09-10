@@ -2,11 +2,11 @@
 // ABOUTME: Covers the current address, refusal copy, and the confirmation panel
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/change_email/change_email_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

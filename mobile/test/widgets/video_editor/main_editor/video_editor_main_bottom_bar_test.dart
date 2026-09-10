@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for VideoEditorMainBottomBar.
 // ABOUTME: Verifies visible actions and callback wiring via VideoEditorScope.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';

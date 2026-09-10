@@ -1,6 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Duration for the floating-label / input-position transition animation.
 const Duration _fieldAnimationDuration = Duration(milliseconds: 200);

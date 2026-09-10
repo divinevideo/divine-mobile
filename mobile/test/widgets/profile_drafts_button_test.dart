@@ -1,8 +1,8 @@
 // ABOUTME: TDD widget test for Clips button in profile action buttons
 // ABOUTME: Tests that Clips button is prominently displayed and navigates correctly
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

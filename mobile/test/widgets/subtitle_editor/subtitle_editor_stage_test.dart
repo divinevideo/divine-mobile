@@ -5,10 +5,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/subtitle_editor/subtitle_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';

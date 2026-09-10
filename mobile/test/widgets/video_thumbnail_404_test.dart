@@ -1,8 +1,8 @@
 // ABOUTME: Test that verifies VideoThumbnailWidget handles 404 thumbnail errors gracefully
 // ABOUTME: Ensures the app doesn't crash when thumbnail URLs return 404 errors
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';

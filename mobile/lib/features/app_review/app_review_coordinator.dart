@@ -1,8 +1,8 @@
 // ABOUTME: Mounts once in the widget tree to evaluate the in-app review
 // ABOUTME: gate on auth settle, profile-stats load, and app foreground.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/app_review/app_review_coordinator_cubit.dart';
 import 'package:openvine/features/app_review/app_review_profile_stats_loader.dart';

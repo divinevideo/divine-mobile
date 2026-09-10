@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for the shared caption cue editing row.
 // ABOUTME: Covers focus notification and external text resync.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 
 void main() {

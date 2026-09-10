@@ -1,9 +1,9 @@
 // ABOUTME: Tests for the report sheet's post-submission confirmation state.
 // ABOUTME: Pins the safety-link semantics so the URL is announced once.
 
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/report_content_confirmation.dart';
 

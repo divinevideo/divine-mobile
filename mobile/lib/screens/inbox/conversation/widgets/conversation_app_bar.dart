@@ -2,7 +2,7 @@
 // ABOUTME: Wraps DiVineAppBar with back button, user name/handle, and options.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Top app bar for the conversation detail screen.

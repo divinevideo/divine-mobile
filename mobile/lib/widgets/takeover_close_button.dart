@@ -2,7 +2,7 @@
 // ABOUTME: Keeps the TV-static, loading, and permission screens in step
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The top-left X that dismisses a full-screen takeover.
 ///

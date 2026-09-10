@@ -3,9 +3,9 @@
 
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

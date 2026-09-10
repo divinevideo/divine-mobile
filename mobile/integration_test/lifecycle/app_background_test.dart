@@ -1,8 +1,8 @@
 // ABOUTME: Tests app backgrounding and state restoration using Patrol native
 // ABOUTME: Verifies app state is preserved after pressHome and reopen
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:patrol/patrol.dart';
 

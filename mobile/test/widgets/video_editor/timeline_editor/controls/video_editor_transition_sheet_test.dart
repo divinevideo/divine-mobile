@@ -1,9 +1,9 @@
 // ABOUTME: Behavior tests for the transition picker view (preview + controls).
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/transition_boundary/transition_boundary_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart';

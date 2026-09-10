@@ -3,9 +3,9 @@
 // ABOUTME: This is the canonical ConsumerWidget Page + BlocProvider pattern —
 // ABOUTME: see docs/BLOC_UI_MIGRATION_PRD.md "Canonical Template Screens".
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_view.dart';

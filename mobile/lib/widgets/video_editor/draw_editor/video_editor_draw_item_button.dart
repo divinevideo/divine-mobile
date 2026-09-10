@@ -1,7 +1,7 @@
 // ABOUTME: Reusable button widget for draw tool selection.
 // ABOUTME: Displays a CustomPainter icon that animates vertically when selected.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 
 /// A reusable button widget for draw tool selection.

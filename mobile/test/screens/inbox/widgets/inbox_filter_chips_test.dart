@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for InboxFilterChips.
 // ABOUTME: Verifies chip labels render, Blocked is gated, and taps report.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';

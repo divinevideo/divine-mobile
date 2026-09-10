@@ -2,7 +2,7 @@
 // ABOUTME: Conditional import keeps package:web / dart:ui_web off non-web builds.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 
 class WebIframeSandboxScreen extends StatelessWidget {

@@ -2,8 +2,8 @@
 // ABOUTME: Shows the confirmed collaborators' names on a selection tile and
 // ABOUTME: opens UserPickerSheet for inviting via mutual-follow search
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';

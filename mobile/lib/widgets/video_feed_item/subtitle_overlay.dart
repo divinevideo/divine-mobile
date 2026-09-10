@@ -1,8 +1,8 @@
 // ABOUTME: Overlay widget displaying subtitle text on video playback.
 // ABOUTME: Uses subtitleCuesProvider for dual-fetch (REST embedded or relay).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/services/subtitle_service.dart';

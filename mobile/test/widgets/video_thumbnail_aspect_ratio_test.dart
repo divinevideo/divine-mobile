@@ -2,8 +2,8 @@
 // ABOUTME: Ensures thumbnails prevent visual jump when video loads by matching video dimensions
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/blurhash_display.dart';

@@ -1,9 +1,9 @@
 // ABOUTME: Pins UserName's fallback precedence — the signed-in user must
 // ABOUTME: never be shown a generated "Adjective Animal NN" name (#6423).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

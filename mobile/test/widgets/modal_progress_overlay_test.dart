@@ -1,8 +1,8 @@
 // ABOUTME: Tests the blocking progress overlay's modality and lifetime contract
 // ABOUTME: dismiss() must be safe twice and after the host tree is gone
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/modal_progress_overlay.dart';
 

@@ -2,7 +2,7 @@
 // ABOUTME: Offers to open system settings or skip gallery saves permanently.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';

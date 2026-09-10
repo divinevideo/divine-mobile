@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for environment indicator components
 // ABOUTME: Tests badge, banner visibility and behavior across environments
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/environment_provider.dart';

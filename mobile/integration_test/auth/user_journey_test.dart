@@ -2,8 +2,8 @@
 // ABOUTME: Requires: local Docker stack running (mise run local_up) + Android emulator
 // ABOUTME: Run with: mise run e2e_test (passes --dart-define=DEFAULT_ENV=LOCAL automatically)
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:patrol/patrol.dart';

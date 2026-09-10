@@ -1,8 +1,9 @@
 // Need to decide header
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
-import 'package:clock/clock.dart';
+
 import 'package:bip340/bip340.dart' as schnorr;
+import 'package:clock/clock.dart';
+import 'package:crypto/crypto.dart';
 import 'package:hex/hex.dart';
 
 import 'client_utils/keys.dart';

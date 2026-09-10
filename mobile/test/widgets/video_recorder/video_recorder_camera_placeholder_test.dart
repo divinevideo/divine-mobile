@@ -1,8 +1,8 @@
 // ABOUTME: Tests for VideoRecorderCameraPlaceholder widget
 // ABOUTME: Validates placeholder rendering, icons, and recording states
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 

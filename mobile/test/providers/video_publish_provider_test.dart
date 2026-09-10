@@ -6,9 +6,9 @@ import 'dart:convert';
 
 import 'package:dm_repository/dm_repository.dart'
     show CollaboratorInviteRetrySummary;
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';

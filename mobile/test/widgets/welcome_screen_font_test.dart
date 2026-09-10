@@ -2,8 +2,8 @@
 // ABOUTME: Verifies that the hero tagline text renders correctly
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
 

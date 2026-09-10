@@ -1,9 +1,9 @@
 // ABOUTME: Bottom-nav StatefulShellRoute (home/explore/inbox/profile branches)
 // ABOUTME: Split from app_router.dart (#4508); owns per-branch pageContext scoping
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';

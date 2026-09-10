@@ -23,8 +23,8 @@ import 'publish_outcome.dart';
 import 'query_outcome.dart';
 import 'relay.dart';
 import 'relay_base.dart';
-import 'relay_type.dart';
 import 'relay_diagnostics.dart';
+import 'relay_type.dart';
 import 'signature_verification_policy.dart';
 
 class _AuthRequiredPublishRetry {

@@ -1,7 +1,7 @@
 // ABOUTME: Intercepts 401 unauthorized media requests and handles viewer authentication
 // ABOUTME: Coordinates age verification and signed auth header creation for age-restricted content
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';

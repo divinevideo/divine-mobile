@@ -2,11 +2,11 @@
 // ABOUTME: Split out of _DivineAppState.build() (#3337)
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show Intl;
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/app_review/app_review_coordinator.dart';
 import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';

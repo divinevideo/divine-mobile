@@ -2,9 +2,9 @@
 // ABOUTME: Tests hashtag parsing, tap interactions, navigation, styling, and edge cases
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';

@@ -2,7 +2,7 @@
 // ABOUTME: Displays count or dot for high numbers with animation support
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class NotificationBadge extends StatelessWidget {
   const NotificationBadge({

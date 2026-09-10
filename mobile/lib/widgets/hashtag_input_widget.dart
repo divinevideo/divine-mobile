@@ -1,7 +1,7 @@
 // ABOUTME: Widget for hashtag input with parsing and suggestion functionality
 // ABOUTME: Handles hashtag extraction, validation, and visual feedback for video metadata
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 class HashtagInputWidget extends StatefulWidget {

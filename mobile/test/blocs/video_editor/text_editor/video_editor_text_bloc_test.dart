@@ -2,8 +2,8 @@
 // ABOUTME: Covers initial state, text events, panel toggling, and state transitions.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 

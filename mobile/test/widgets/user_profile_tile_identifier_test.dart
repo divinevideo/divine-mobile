@@ -1,9 +1,9 @@
 // ABOUTME: Widget tests for the user tile's secondary identifier line.
 // ABOUTME: Pins NIP-05 precedence and the social-proof fallback over npubs.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';

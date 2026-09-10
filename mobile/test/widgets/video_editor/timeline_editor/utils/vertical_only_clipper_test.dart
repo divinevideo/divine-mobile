@@ -1,8 +1,8 @@
 // ABOUTME: Unit tests for VerticalOnlyClipper.
 // ABOUTME: Verifies horizontal overflow clipping and reclip behavior.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/utils/vertical_only_clipper.dart';
 
 void main() {

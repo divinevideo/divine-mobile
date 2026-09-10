@@ -23,8 +23,8 @@
 // exactly the constraint this pattern works around, so this file pins the
 // POSITIVE contract instead. If a future refactor drops the inline
 // ErrorWidget.builder restore, the first test below fails loudly.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   group('integration_test error-handler restore contract (#5839)', () {

@@ -2,8 +2,8 @@
 // ABOUTME: Supports base64 and file path inputs with content type detection.
 
 import 'package:dio/dio.dart';
-import 'package:nostr_sdk/upload/upload_util.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:nostr_sdk/upload/upload_util.dart';
 
 import '../utils/base64.dart';
 import 'nostr_build_uploader.dart';

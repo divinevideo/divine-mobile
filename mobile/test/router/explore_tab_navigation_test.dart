@@ -1,9 +1,9 @@
 // ABOUTME: Test that verifies Explore tab always resets to grid mode when tapped
 // ABOUTME: Prevents bug where returning to Explore shows "No videos available" in feed mode
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';

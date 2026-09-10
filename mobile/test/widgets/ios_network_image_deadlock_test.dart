@@ -1,7 +1,7 @@
 // ABOUTME: Regression coverage for concurrent thumbnail loading through VineCachedImage
 // ABOUTME: Ensures placeholders and transport settings stay stable under load
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';

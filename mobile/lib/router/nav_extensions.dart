@@ -1,8 +1,8 @@
 // ABOUTME: BuildContext extensions for common navigation patterns
 // ABOUTME: Provides type-safe, reusable navigation helpers
 
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 

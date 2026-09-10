@@ -3,9 +3,9 @@
 // ABOUTME: Submits directly to Zendesk REST API with custom fields
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/bug_report/bug_report_cubit.dart';
 import 'package:openvine/blocs/bug_report/bug_report_state.dart';
 import 'package:openvine/config/bug_report_config.dart';

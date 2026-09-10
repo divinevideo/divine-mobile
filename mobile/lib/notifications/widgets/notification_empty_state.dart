@@ -2,7 +2,7 @@
 // ABOUTME: Displays a centered icon, title, and descriptive message.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Centered empty state for the notifications list.

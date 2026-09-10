@@ -1,6 +1,6 @@
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The state of a checkbox.
 enum DivineCheckboxState {

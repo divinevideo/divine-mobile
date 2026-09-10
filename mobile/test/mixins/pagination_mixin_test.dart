@@ -1,8 +1,8 @@
 // ABOUTME: Tests for PaginationMixin to verify throttling and pagination behavior
 // ABOUTME: Ensures loadMore calls are throttled correctly
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/mixins/pagination_mixin.dart';
 
 void main() {

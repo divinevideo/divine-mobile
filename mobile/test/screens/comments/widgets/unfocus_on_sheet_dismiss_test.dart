@@ -1,8 +1,8 @@
 // ABOUTME: Verifies UnfocusOnSheetDismiss drops the keyboard when the sheet
 // ABOUTME: starts closing, so iOS does not strand an orphaned keyboard (#5604).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/widgets/unfocus_on_sheet_dismiss.dart';
 

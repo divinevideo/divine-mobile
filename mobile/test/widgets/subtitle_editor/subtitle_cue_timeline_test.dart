@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for SubtitleCueTimeline — the ruler and filmstrip
 // ABOUTME: that scrub the preview from under a fixed playhead.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';

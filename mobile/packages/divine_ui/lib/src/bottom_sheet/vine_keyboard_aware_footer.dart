@@ -1,7 +1,7 @@
 // ABOUTME: Bottom-anchored sheet slot that rides above the software keyboard.
 // ABOUTME: Backs VineBottomSheet's bottomInput and custom sheet footers.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Bottom-anchored slot that stays above the software keyboard.
 ///

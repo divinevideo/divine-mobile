@@ -2,7 +2,7 @@ import 'package:divine_ui/src/app_bar/divine_app_bar.dart' show DiVineAppBar;
 import 'package:divine_ui/src/app_bar/divine_app_bar_icon_button.dart';
 import 'package:divine_ui/src/app_bar/divine_app_bar_style.dart';
 import 'package:divine_ui/src/app_bar/icon_source.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Widget handling leading button rendering for [DiVineAppBar].
 ///
@@ -107,7 +107,7 @@ class DiVineAppBarLeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (showBackButton) {
-      // divine_ui stays free of the app's AppLocalizations, but Flutter's own
+      // divine_ui stays free of the app's AppLocalizations, but material_ui's
       // MaterialLocalizations is already translated for every supported locale
       // and is registered by any app that ships GlobalMaterialLocalizations.
       // Defaulting here fixes all 92 call sites at once; before this the

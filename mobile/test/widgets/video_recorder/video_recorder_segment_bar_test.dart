@@ -1,9 +1,9 @@
 // ABOUTME: Tests for VideoRecorderSegmentBar widget
 // ABOUTME: Validates segment bar rendering, duration display, and clip visualization
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';

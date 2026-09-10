@@ -2,8 +2,8 @@
 // ABOUTME: Covers trusted hosts, mailto normalization, scheme prepending, and confirmation.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';

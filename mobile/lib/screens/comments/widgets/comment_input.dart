@@ -2,7 +2,7 @@
 // ABOUTME: Text field with send button for posting new top-level comments
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_suggestion.dart';

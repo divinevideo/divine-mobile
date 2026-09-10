@@ -4,8 +4,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_timeline_thumbnails.dart';
 

@@ -1,9 +1,9 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart' hide AspectRatio;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart' show AspectRatio;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' hide AspectRatio;
 import 'package:models/models.dart' as models;
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/clip_manager_state.dart';

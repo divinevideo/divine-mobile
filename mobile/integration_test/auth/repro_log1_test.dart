@@ -7,10 +7,10 @@
 // ABOUTME: see its lazily granted invite allocation before any code is minted.
 // ABOUTME: Requires: local Docker stack (mise run local_up)
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invite_api_client/invite_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

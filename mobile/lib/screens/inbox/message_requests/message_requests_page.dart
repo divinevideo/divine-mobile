@@ -2,9 +2,9 @@
 // ABOUTME: Provides MessageRequestActionsCubit and ConversationListBloc
 // ABOUTME: for the message requests list view.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';

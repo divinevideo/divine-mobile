@@ -1,10 +1,10 @@
 // ABOUTME: Tests for VideoEditorFilterBottomBar widget.
 // ABOUTME: Validates filter list rendering, selection, and thumbnails.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

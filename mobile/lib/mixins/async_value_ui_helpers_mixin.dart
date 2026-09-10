@@ -2,8 +2,8 @@
 // ABOUTME: Eliminates .when() boilerplate across 6+ router and feed screens
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Mixin that provides consistent AsyncValue UI handling with default loading/error widgets.

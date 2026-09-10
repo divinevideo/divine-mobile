@@ -3,10 +3,10 @@
 // ABOUTME: options screen instead of bouncing to home feed.
 // ABOUTME: Requires: local Docker stack (mise run local_up)
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
