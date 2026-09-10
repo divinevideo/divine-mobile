@@ -72,10 +72,13 @@ abstract final class Nip51PeopleListCodec {
   /// * `mute`: per-client mute sets.
   /// * `dm-contacts`: DM address books.
   /// * `dm-archive`: archived DM threads.
+  /// * `blindoracle-v1-health`: a service's health-check set, one member
+  ///   with no profile, seen in discovery on 2026-09-10.
   static const Set<String> machineryDTags = {
     'mute',
     'dm-contacts',
     'dm-archive',
+    'blindoracle-v1-health',
   };
 
   /// Encodes [list] into a [PeopleListEventPayload].

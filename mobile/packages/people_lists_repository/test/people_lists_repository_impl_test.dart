@@ -1564,6 +1564,12 @@ void main() {
               title: 'Archive crew',
               pubkeys: const [_memberA],
             ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'blindoracle-v1-health',
+              title: 'Health crew',
+              pubkeys: const [_memberA],
+            ),
           ],
         );
 
