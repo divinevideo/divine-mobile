@@ -28,8 +28,8 @@ typedef LocalAudioReferences = ({Set<String> filenames, bool isComplete});
 
 /// Reference sweep over every store that can name a draft-local audio file.
 ///
-/// Draft-local audio — imported tracks under `draft_audio_imports/`, committed
-/// voice-over takes, and audio extracted from a draft's own clips — is
+/// Local audio — library-owned imports, committed voice-over takes, and audio
+/// extracted from a draft's own clips — is
 /// persisted inside the draft `data` blob and inside the My Sounds buckets,
 /// neither of which is an indexed file column. So the indexed clip/draft
 /// reference check that [FileCleanupService] applies to video and thumbnail
@@ -116,13 +116,12 @@ class LocalAudioCleanupService {
 
   /// Deletes [audioFilePath] once nothing on this device references it.
   ///
-  /// Called after a My Sounds entry is removed. Audio imported from the
-  /// Library is written under whichever draft was open at the time, so the
-  /// file the entry pointed at can equally be a draft's own track, a track a
-  /// second saved sound shares, or nobody's — only the sweep can tell them
-  /// apart. #8011 taught the draft side to keep a file My Sounds still names;
-  /// without this the same file simply became a permanent orphan when the
-  /// saved sound went instead.
+  /// Called after a My Sounds entry is removed. The file it pointed at can
+  /// equally be a track a draft still uses, a track a second saved sound
+  /// shares, or nobody's — only the sweep can tell them apart. #8011 taught
+  /// the draft side to keep a file My Sounds still names; without this the
+  /// same file simply became a permanent orphan when the saved sound went
+  /// instead.
   ///
   /// Refuses to delete whenever the sweep is incomplete: an unreadable store
   /// means the reference set is a lower bound, and a leaked file costs disk

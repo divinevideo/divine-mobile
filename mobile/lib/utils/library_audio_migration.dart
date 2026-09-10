@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -17,12 +18,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// place.
 ///
 /// **The tail below the root is preserved exactly**, per-draft subdirectory
-/// included. That is not tidiness left undone. Audio reclaim decides what to
-/// delete by matching *basenames* against the references it finds in drafts
-/// and My Sounds (`LocalAudioCleanupService`), so a rename would make a file
-/// the user still plays look unreferenced. Preserving the tail also makes
-/// [resolveAudioPath]'s rewrite of persisted paths a pure segment swap, which
-/// is what keeps a stored path and its file pointing at the same place.
+/// included. That is not tidiness left undone: it makes [resolveAudioPath]'s
+/// rewrite of persisted paths a pure segment swap, which keeps a stored path
+/// and its file pointing at the same place. It also prevents imports from
+/// different drafts that share a basename from colliding during migration.
 ///
 /// Directories are merged rather than skipped, for the same reason: a stored
 /// path resolves to the library root whether or not this ran, so a source left
@@ -42,6 +41,8 @@ import 'package:unified_logger/unified_logger.dart';
 Future<void> migrateDraftOwnedAudioImports({
   Directory? documentsDirectory,
 }) async {
+  if (kIsWeb) return;
+
   try {
     final documents =
         documentsDirectory ?? await getApplicationDocumentsDirectory();
@@ -63,8 +64,8 @@ Future<void> migrateDraftOwnedAudioImports({
     }
     await _deleteIfEmpty(source);
   } catch (e, stackTrace) {
-    // Best-effort: a failed migration leaves every file readable at its old
-    // path, so it must never take the launch down with it.
+    // Best-effort: a failed migration is retried next launch and must never
+    // take startup down with it.
     Log.error(
       'Imported-audio migration failed: $e',
       name: 'LibraryAudioMigration',

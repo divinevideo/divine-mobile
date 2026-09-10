@@ -13,9 +13,8 @@ import 'package:path/path.dart' as p;
 /// [libraryAudioImportsDirName] and existing trees are moved there by
 /// `migrateDraftOwnedAudioImports`.
 ///
-/// The name stays a known audio root so a path persisted before the move
-/// still resolves, and so audio reclaim still recognizes anything the move
-/// could not relocate.
+/// The name stays a known audio root so paths persisted before the move can be
+/// recognized and rebased onto library storage.
 const String draftAudioImportsDirName = 'draft_audio_imports';
 
 /// Documents-relative directory holding audio files the user imported.
@@ -54,13 +53,13 @@ const Set<String> _draftLocalMarkers = {
 /// iOS rewrites the app container path on every app update, so an absolute
 /// audio path baked into a saved draft dangles from then on: the video still
 /// plays — clip paths are persisted as basenames and rejoined on load — while
-/// every sound goes silent. Imported audio lives in per-draft subdirectories,
-/// so unlike a clip it keeps the whole subpath below the documents directory
-/// instead of just the basename. Paths outside a known audio directory are
+/// every sound goes silent. Audio paths keep their whole subpath below the
+/// documents directory rather than only the basename because some audio roots
+/// contain nested directories. Paths outside a known audio directory are
 /// returned unchanged.
 String toPortableAudioPath(String path) => _belowAudioRoot(path) ?? path;
 
-/// Whether [path] names a file inside one of the three directories this app
+/// Whether [path] names a file inside one of the four directories this app
 /// writes draft-local audio into.
 ///
 /// Bounds what an audio-reclaim path is allowed to delete. Every producer —

@@ -123,8 +123,9 @@ void main() {
       'leaves a file alone rather than overwrite a same-named one',
       () async {
         seedDraftImport('draft_1', 'a.m4a', const [1]);
-        Directory(p.join(newRoot().path, 'draft_1'))
-            .createSync(recursive: true);
+        Directory(
+          p.join(newRoot().path, 'draft_1'),
+        ).createSync(recursive: true);
         File(
           p.join(newRoot().path, 'draft_1', 'a.m4a'),
         ).writeAsBytesSync(const [7]);
@@ -141,7 +142,7 @@ void main() {
           equals([1]),
           reason:
               'and it must not delete what it could not move — the old root '
-              'stays a known audio root, so the file is still reclaimable',
+              'retains the blocked source rather than losing its bytes',
         );
       },
     );

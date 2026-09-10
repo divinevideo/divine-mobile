@@ -50,8 +50,8 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
 
   // Relocate imported audio that older builds stored under whichever draft
   // was open at the time. A track saved to My Sounds outlives that draft, so
-  // no draft owns it (#8024). Best-effort and idempotent; a file it cannot
-  // move still resolves at its old path.
+  // no draft owns it (#8024). Best-effort and idempotent; transient failures
+  // are retried on the next launch.
   await migrateDraftOwnedAudioImports();
   Log.info(
     '[INIT] ✅ Imported-audio storage checked',
