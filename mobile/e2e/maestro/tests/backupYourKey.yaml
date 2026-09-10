@@ -6,6 +6,7 @@ appId: co.openvine.app.staging
 # 1. Open Settings, then Nostr Settings
 # 2. Open Key Management and verify the Nostr Keys screen
 # 3. Copy the private key and verify the confirmation
+# 4. Overwrite the copy so the key does not outlive the run
 
 # 1. Settings -> Nostr Settings
 - runFlow: ../utils/openSettings.yaml
@@ -31,3 +32,10 @@ appId: co.openvine.app.staging
 - tapOn:
     id: "copy_nsec_button"
 - runFlow: ../asserts/assertPrivKeyCopied.yaml
+
+# 4. Overwrite the key the step above put on the device clipboard.
+#
+# The copy is the behaviour under test; the key left behind is not. #8777
+# removed the deletion flow that used to consume it, so without this a run
+# ends with a live account's nsec readable by every app on the device.
+- setClipboard: "divine-e2e-clipboard-cleared"
