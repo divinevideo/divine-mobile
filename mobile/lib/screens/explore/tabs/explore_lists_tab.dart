@@ -145,6 +145,7 @@ class _VideoListsColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return _DiscoveryColumn(
       status: status,
+      placeholder: const DivineListThumbnailSkeleton.videos(),
       isColumnEmpty: lists.isEmpty,
       children: [
         for (final list in lists)
@@ -184,6 +185,7 @@ class _PeopleListsColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return _DiscoveryColumn(
       status: status,
+      placeholder: const DivineListThumbnailSkeleton.people(),
       isColumnEmpty: lists.isEmpty,
       children: [
         for (final result in lists)
@@ -216,11 +218,15 @@ class _DiscoveryColumn extends StatelessWidget {
   const _DiscoveryColumn({
     required this.status,
     required this.isColumnEmpty,
+    required this.placeholder,
     required this.children,
   });
 
   final ListsDiscoveryColumnStatus status;
   final bool isColumnEmpty;
+
+  /// The card silhouette this column shows while its lists load.
+  final DivineListThumbnailSkeleton placeholder;
   final List<Widget> children;
 
   @override
@@ -228,7 +234,7 @@ class _DiscoveryColumn extends StatelessWidget {
     if (isColumnEmpty) {
       return switch (status) {
         ListsDiscoveryColumnStatus.initial ||
-        ListsDiscoveryColumnStatus.loading => const _LoadingColumn(),
+        ListsDiscoveryColumnStatus.loading => _LoadingColumn(card: placeholder),
         ListsDiscoveryColumnStatus.failure => Padding(
           padding: const EdgeInsets.only(top: 48),
           child: Text(
@@ -260,7 +266,9 @@ const _loadingCardCount = 4;
 /// Stands in for a column whose lists have not arrived yet, in the same
 /// slot and with the same card geometry, so nothing shifts when they do.
 class _LoadingColumn extends StatelessWidget {
-  const _LoadingColumn();
+  const _LoadingColumn({required this.card});
+
+  final DivineListThumbnailSkeleton card;
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +276,10 @@ class _LoadingColumn extends StatelessWidget {
       label: context.l10n.listsDiscoveryLoadingLabel,
       child: Skeletonizer(
         effect: vineSkeletonEffectOf(context),
-        child: const _SkeletonCards(),
+        // Only the leaves the silhouettes mark are bones; the seams and
+        // outlines between them keep painting so the structure shows.
+        ignoreContainers: true,
+        child: _SkeletonCards(card: card),
       ),
     );
   }
@@ -287,14 +298,23 @@ class _LoadingGallery extends StatelessWidget {
         label: context.l10n.listsDiscoveryLoadingLabel,
         child: Skeletonizer(
           effect: vineSkeletonEffectOf(context),
+          ignoreContainers: true,
           child: const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 16,
               children: [
-                Expanded(child: _SkeletonCards()),
-                Expanded(child: _SkeletonCards()),
+                Expanded(
+                  child: _SkeletonCards(
+                    card: DivineListThumbnailSkeleton.videos(),
+                  ),
+                ),
+                Expanded(
+                  child: _SkeletonCards(
+                    card: DivineListThumbnailSkeleton.people(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -305,17 +325,16 @@ class _LoadingGallery extends StatelessWidget {
 }
 
 class _SkeletonCards extends StatelessWidget {
-  const _SkeletonCards();
+  const _SkeletonCards({required this.card});
+
+  final DivineListThumbnailSkeleton card;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 20,
-      children: List.filled(
-        _loadingCardCount,
-        const DivineListThumbnailSkeleton(),
-      ),
+      children: List.filled(_loadingCardCount, card),
     );
   }
 }
