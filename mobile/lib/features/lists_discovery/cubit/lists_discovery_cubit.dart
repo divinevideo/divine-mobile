@@ -103,6 +103,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
               state.copyWith(
                 videoStatus: ListsDiscoveryColumnStatus.success,
                 videoLists: latest,
+                videoThumbnailsPending: true,
               ),
             );
           },
@@ -147,7 +148,11 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     List<CuratedList> lists, {
     required Completer<void> generation,
   }) async {
-    if (lists.isEmpty || isClosed) return;
+    if (isClosed) return;
+    if (lists.isEmpty) {
+      emitIfOpen(state.copyWith(videoThumbnailsPending: false));
+      return;
+    }
     if (!identical(_videoStreamSettled, generation)) return;
     try {
       final enriched = await _curatedListRepository.resolveListThumbnails(
@@ -158,11 +163,19 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
         maxThumbnails: kListsDiscoveryThumbnails,
       );
       if (!identical(_videoStreamSettled, generation)) return;
-      emitIfOpen(state.copyWith(videoLists: _sortedVideoLists(enriched)));
+      emitIfOpen(
+        state.copyWith(
+          videoLists: _sortedVideoLists(enriched),
+          videoThumbnailsPending: false,
+        ),
+      );
     } catch (error, stackTrace) {
       // Thumbnails are progressive enhancement: the cards already render
-      // with placeholders, so a failed resolve changes nothing on screen.
+      // with placeholders, so a failed resolve only stops their shimmer.
       addError(error, stackTrace);
+      if (identical(_videoStreamSettled, generation)) {
+        emitIfOpen(state.copyWith(videoThumbnailsPending: false));
+      }
     }
   }
 

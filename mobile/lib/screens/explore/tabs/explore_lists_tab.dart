@@ -116,6 +116,7 @@ class ExploreListsView extends StatelessWidget {
                     child: _VideoListsColumn(
                       status: state.videoStatus,
                       lists: state.videoLists,
+                      thumbnailsPending: state.videoThumbnailsPending,
                     ),
                   ),
                   Expanded(
@@ -136,10 +137,15 @@ class ExploreListsView extends StatelessWidget {
 
 /// Left column: discovered kind-30005 video lists.
 class _VideoListsColumn extends StatelessWidget {
-  const _VideoListsColumn({required this.status, required this.lists});
+  const _VideoListsColumn({
+    required this.status,
+    required this.lists,
+    required this.thumbnailsPending,
+  });
 
   final ListsDiscoveryColumnStatus status;
   final List<CuratedList> lists;
+  final bool thumbnailsPending;
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +160,7 @@ class _VideoListsColumn extends StatelessWidget {
             // the key keeps each card's image state with its list.
             key: ValueKey(list.authorScopedId),
             curatedList: list,
+            thumbnailsPending: thumbnailsPending,
             onTap: () {
               Log.info(
                 'Opening discovered video list: ${list.id}',
@@ -275,7 +282,7 @@ class _LoadingColumn extends StatelessWidget {
     return Semantics(
       label: context.l10n.listsDiscoveryLoadingLabel,
       child: Skeletonizer(
-        effect: vineSkeletonEffectOf(context),
+        effect: listSkeletonEffectOf(context),
         // Only the leaves the silhouettes mark are bones; the seams and
         // outlines between them keep painting so the structure shows.
         ignoreContainers: true,
@@ -297,7 +304,7 @@ class _LoadingGallery extends StatelessWidget {
       child: Semantics(
         label: context.l10n.listsDiscoveryLoadingLabel,
         child: Skeletonizer(
-          effect: vineSkeletonEffectOf(context),
+          effect: listSkeletonEffectOf(context),
           ignoreContainers: true,
           child: const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 24),

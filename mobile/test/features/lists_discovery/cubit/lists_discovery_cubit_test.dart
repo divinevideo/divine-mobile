@@ -318,6 +318,69 @@ void main() {
         );
       });
 
+      test('marks thumbnails pending until the resolver returns', () async {
+        when(
+          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        ).thenAnswer((_) => Stream.value([_videoList('a')]));
+        final resolve = Completer<List<CuratedList>>();
+        when(
+          () => curatedRepository.resolveListThumbnails(
+            any(),
+            maxThumbnails: any(named: 'maxThumbnails'),
+          ),
+        ).thenAnswer((_) => resolve.future);
+        when(
+          () => peopleRepository.discoverPublicLists(
+            limit: any(named: 'limit'),
+            excludeAuthor: any(named: 'excludeAuthor'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        final load = cubit.load();
+        await Future<void>(() {});
+        await Future<void>(() {});
+
+        expect(cubit.state.videoLists, hasLength(1));
+        expect(cubit.state.videoThumbnailsPending, isTrue);
+
+        resolve.complete([
+          _videoList('a', thumbnailUrls: const ['https://example.com/t.jpg']),
+        ]);
+        await load;
+
+        expect(cubit.state.videoThumbnailsPending, isFalse);
+        expect(cubit.state.videoLists.single.thumbnailUrls, isNotEmpty);
+      });
+
+      test('stops the shimmer when the resolver throws', () async {
+        when(
+          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        ).thenAnswer((_) => Stream.value([_videoList('a')]));
+        when(
+          () => curatedRepository.resolveListThumbnails(
+            any(),
+            maxThumbnails: any(named: 'maxThumbnails'),
+          ),
+        ).thenThrow(Exception('relay down'));
+        when(
+          () => peopleRepository.discoverPublicLists(
+            limit: any(named: 'limit'),
+            excludeAuthor: any(named: 'excludeAuthor'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.videoLists, hasLength(1));
+        expect(cubit.state.videoThumbnailsPending, isFalse);
+      });
+
       test('keeps placeholder lists when thumbnail hydration throws', () async {
         when(
           () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
