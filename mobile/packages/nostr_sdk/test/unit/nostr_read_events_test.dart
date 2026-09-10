@@ -58,6 +58,41 @@ class _ScriptedRelay extends Relay {
   }
 }
 
+/// Holds back the first timer a read creates, its deadline timer: the
+/// deadline never fires, so no ordering of microtasks and timers decides
+/// whether it beats the pool.
+class _DeadlineHold {
+  _HeldTimer? timer;
+
+  Future<T> run<T>(Future<T> Function() read) => runZoned(
+    read,
+    zoneSpecification: ZoneSpecification(
+      createTimer: (self, parent, zone, duration, callback) {
+        if (timer != null) return parent.createTimer(zone, duration, callback);
+        return timer = _HeldTimer(duration);
+      },
+    ),
+  );
+}
+
+/// A timer that is never scheduled; it only records what it was asked for.
+class _HeldTimer implements Timer {
+  _HeldTimer(this.duration);
+
+  final Duration duration;
+
+  bool _active = true;
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => 0;
+
+  @override
+  void cancel() => _active = false;
+}
+
 const _privateKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 
@@ -389,23 +424,46 @@ void main() {
           expect(completionLines().single.message, contains('ended deadline'));
         });
 
-        test('returns the outcome the pool delivered before a deadline '
-            'already past', () async {
+        test('returns the outcome the pool delivered while a deadline already '
+            'past was still pending, and lets that deadline go', () async {
           final relay = await addRelay('wss://send-fails.example');
           relay.sendSucceeds = false;
+          final hold = _DeadlineHold();
 
-          final result = await nostr.readEvents(
-            _filters(),
-            id: _readId,
-            deadline: DateTime.now().subtract(const Duration(seconds: 1)),
+          final result = await hold
+              .run(
+                () => nostr.readEvents(
+                  _filters(),
+                  id: _readId,
+                  deadline: DateTime.now().subtract(const Duration(seconds: 1)),
+                ),
+              )
+              .timeout(
+                _guard,
+                onTimeout: () => fail('the pool never completed the read'),
+              );
+
+          final deadline = hold.timer!;
+          expect(
+            deadline.duration.isNegative,
+            isTrue,
+            reason:
+                'the timer held back is the deadline, already past when the '
+                'read began',
           );
-
           expect(
             result.endedBy,
             QueryEnd.noRelay,
             reason:
-                'the pool completed the read as its fan-out ended, before the '
-                'deadline could be acted on',
+                'the pool completed the read as its fan-out ended, while the '
+                'deadline was still pending',
+          );
+          expect(
+            deadline.isActive,
+            isFalse,
+            reason:
+                'once the pool has answered, the read cancels its deadline, '
+                'so a deadline already due can no longer end it',
           );
           expect(completionLines(), hasLength(1));
           expect(completionLines().single.message, contains('ended noRelay'));

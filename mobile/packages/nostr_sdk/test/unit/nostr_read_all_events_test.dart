@@ -142,8 +142,9 @@ class _BlockedIds implements EventFilter {
 const _privateKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 
-/// How long a page that never settles holds the walk. Nothing races it: the
-/// page is never going to be answered in full.
+/// How long a page that never settles holds the walk. The frames such a page
+/// does get race it: they arrive within a few event-loop turns of its `REQ`,
+/// well inside this, and the tests that keep them rely on that margin.
 const _unsettledPageTimeout = Duration(milliseconds: 300);
 
 /// Bounds a wait that only a regression could stretch.
