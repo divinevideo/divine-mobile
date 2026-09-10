@@ -448,6 +448,10 @@ void main() {
           '# Frozen baseline\nlib/services/old_service.dart\t20\n',
         );
         commit('base');
+        // The harness inits without -b, so the first branch is named by the
+        // runner's init.defaultBranch: main here, master on a stock CI image.
+        // This test names the base branch three times, so pin it.
+        git(['branch', '-M', 'main']);
         git(['checkout', '-b', 'pr']);
         serviceFile(
           'old_service.dart',
