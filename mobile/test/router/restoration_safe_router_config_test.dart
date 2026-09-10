@@ -1,6 +1,8 @@
 // ABOUTME: Pins the saved-route-state guard against the go_router codec bug
 // ABOUTME: Regression coverage for the #7869 launch-loop crash
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -76,7 +78,9 @@ Future<RouteInformation> _savedStateFromRetiredLocation(
   await tester.pumpAndSettle();
   previousBuild.go('/retired');
   await tester.pumpAndSettle();
-  previousBuild.push('/home/detail');
+  // Fire-and-forget: the future completes when the pushed route pops, and
+  // this one never does.
+  unawaited(previousBuild.push('/home/detail'));
   await tester.pumpAndSettle();
   final saved = previousBuild.routeInformationParser.restoreRouteInformation(
     previousBuild.routerDelegate.currentConfiguration,
@@ -144,15 +148,17 @@ void main() {
         await tester.pumpAndSettle();
         final context = tester.element(find.byType(Navigator).first);
 
-        // Pins the defect the guard exists for. The decode runs before the
-        // parser's first await, so the throw is synchronous. When a future
-        // go_router release fixes `_createNewMatchUntilIncompatible`, this
-        // fails and the guard can go.
-        expect(
-          () => router.routeInformationParser
-              .parseRouteInformationWithDependencies(saved, context),
-          throwsA(isA<TypeError>()),
-        );
+        // Pins the defect the guard exists for. When a future go_router
+        // release fixes `_createNewMatchUntilIncompatible`, this fails and
+        // tells us the guard can go.
+        Object? thrown;
+        try {
+          await router.routeInformationParser
+              .parseRouteInformationWithDependencies(saved, context);
+        } catch (error) {
+          thrown = error;
+        }
+        expect(thrown, isA<TypeError>());
       });
 
       testWidgets('leaves an ordinary navigation untouched', (tester) async {
