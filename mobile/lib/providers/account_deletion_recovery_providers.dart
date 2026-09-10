@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -31,6 +32,13 @@ final accountDeletionRecoveryRepositoryProvider =
         currentPubkey: () => ref.read(authServiceProvider).currentPublicKeyHex,
       );
     });
+
+final accountDeletionRecoveryPollBudgetProvider =
+    Provider<AccountDeletionRecoveryPollBudgetStore>(
+      (ref) => SharedPreferencesAccountDeletionRecoveryPollBudgetStore(
+        ref.watch(sharedPreferencesProvider),
+      ),
+    );
 
 /// Durable receipt for a deletion this installation submitted.
 final class SubmittedAccountDeletionAttempt {
@@ -100,9 +108,7 @@ class SubmittedAccountDeletionAttemptNotifier
     Map<String, dynamic>? decoded;
     try {
       decoded = jsonDecode(encoded) as Map<String, dynamic>;
-      return SubmittedAccountDeletionAttempt.fromJson(
-        decoded,
-      );
+      return SubmittedAccountDeletionAttempt.fromJson(decoded);
     } on Object catch (error) {
       final encodedPubkey = decoded?['pubkey_hex'];
       Log.error(
@@ -149,21 +155,21 @@ class SubmittedAccountDeletionAttemptNotifier
       vanishEventId: vanishEventId,
       submissionOwnedLocally: submissionOwnedLocally,
     );
-    final saved = await ref
-        .read(sharedPreferencesProvider)
-        .setString(_storageKey, jsonEncode(receipt.toJson()));
-    if (!saved) throw StateError('Could not persist account deletion receipt');
-    state = receipt;
+    await _persist(receipt);
   }
 
   Future<void> updateAttempt(AccountDeletionAttempt attempt) async {
     final receipt = state;
     if (receipt == null || receipt.attempt.id != attempt.id) return;
-    await record(
-      pubkeyHex: receipt.pubkeyHex,
-      attempt: attempt,
-      vanishEventId: receipt.vanishEventId,
-    );
+    await _persist(receipt.copyWith(attempt: attempt));
+  }
+
+  Future<void> _persist(SubmittedAccountDeletionAttempt receipt) async {
+    final saved = await ref
+        .read(sharedPreferencesProvider)
+        .setString(_storageKey, jsonEncode(receipt.toJson()));
+    if (!saved) throw StateError('Could not persist account deletion receipt');
+    state = receipt;
   }
 
   void releaseSubmissionOwnership() {
@@ -224,6 +230,9 @@ submittedAccountDeletionMonitorProvider =
       );
       var disposed = false;
       final cubit = AccountDeletionRecoveryCubit(
+        pollBudgetStore: ref.watch(
+          accountDeletionRecoveryPollBudgetProvider,
+        ),
         repository: ref.watch(accountDeletionRecoveryRepositoryProvider),
         authService: ref.watch(authServiceProvider),
         onAttemptResolved: () async {

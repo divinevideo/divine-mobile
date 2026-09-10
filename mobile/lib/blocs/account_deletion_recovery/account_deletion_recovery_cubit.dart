@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyStorageException;
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
@@ -26,7 +27,7 @@ abstract class AccountDeletionRecoveryPolling {
     Duration(seconds: 21),
   ];
   static const cap = Duration(seconds: 30);
-  static const sessionBound = Duration(minutes: 15);
+  static const supportEscapeAfter = Duration(minutes: 15);
 
   static Duration delayForTick(int tickIndex) =>
       tickIndex < schedule.length ? schedule[tickIndex] : cap;
@@ -43,17 +44,21 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     required AccountDeletionRecoveryRepository repository,
     required AuthService authService,
     required Future<void> Function() onAttemptResolved,
+    required AccountDeletionRecoveryPollBudgetStore pollBudgetStore,
     Future<void> Function(AccountDeletionAttempt attempt)? onAttemptUpdated,
     String? receiptPubkeyHex,
     String? receiptVanishEventId,
     RecoveryTimerFactory timerFactory = Timer.new,
+    DateTime Function() now = DateTime.now,
   }) : _repository = repository,
        _authService = authService,
        _onAttemptResolved = onAttemptResolved,
        _onAttemptUpdated = onAttemptUpdated,
        _receiptPubkeyHex = receiptPubkeyHex,
        _receiptVanishEventId = receiptVanishEventId,
+       _pollBudgetStore = pollBudgetStore,
        _timerFactory = timerFactory,
+       _now = now,
        super(const AccountDeletionRecoveryState());
 
   final AccountDeletionRecoveryRepository _repository;
@@ -63,11 +68,15 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   _onAttemptUpdated;
   final String? _receiptPubkeyHex;
   final String? _receiptVanishEventId;
+  final AccountDeletionRecoveryPollBudgetStore _pollBudgetStore;
   final RecoveryTimerFactory _timerFactory;
+  final DateTime Function() _now;
 
   Timer? _pollTimer;
   var _generation = 0;
-  Duration _pollingElapsed = Duration.zero;
+  var _overdueRefreshUsed = false;
+  String? _pollBudgetAttemptId;
+  DateTime? _pollBudgetStartedAt;
 
   Future<void> load() async {
     final generation = _beginOperation();
@@ -79,6 +88,8 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     try {
       final attempt = await _repository.fetchCurrent();
       if (!_isCurrent(generation)) return;
+      // A fresh load does not need the overdue refresh reserved for resume.
+      _overdueRefreshUsed = true;
       await _handleAttempt(attempt, generation: generation);
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
@@ -209,18 +220,14 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     }
   }
 
-  Future<void> completeLocalCleanup({
-    bool preservePollingProgress = false,
-  }) async {
+  Future<void> completeLocalCleanup() async {
     final attempt = state.attempt;
     if (attempt?.status != AccountDeletionAttemptStatus.completed) return;
     if (state.failure == AccountDeletionRecoveryFailure.receiptClear) {
       await _retryReceiptClear(attempt!);
       return;
     }
-    final generation = _beginOperation(
-      resetPollingProgress: !preservePollingProgress,
-    );
+    final generation = _beginOperation();
     final pollTickIndex = state.pollTickIndex;
     emitIfOpen(
       AccountDeletionRecoveryState(
@@ -252,21 +259,21 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       if (deletingInactiveAccount) await _resolve();
     } on SecureKeyStorageException catch (error, stackTrace) {
       addError(error, stackTrace);
-      _emitCleanupFailure(
+      await _emitCleanupFailure(
         generation,
         attempt!,
         AccountDeletionRecoveryFailure.keychainCleanup,
       );
     } on UserDataCleanupException catch (error, stackTrace) {
       addError(error, stackTrace);
-      _emitCleanupFailure(
+      await _emitCleanupFailure(
         generation,
         attempt!,
         AccountDeletionRecoveryFailure.localDataCleanup,
       );
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
-      _emitCleanupFailure(
+      await _emitCleanupFailure(
         generation,
         attempt!,
         AccountDeletionRecoveryFailure.localDataCleanup,
@@ -307,7 +314,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   }
 
   Future<void> _retryReceiptClear(AccountDeletionAttempt attempt) async {
-    final generation = _beginOperation(resetPollingProgress: false);
+    final generation = _beginOperation();
     final pollTickIndex = state.pollTickIndex;
     emitIfOpen(
       AccountDeletionRecoveryState(
@@ -329,7 +336,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
           pollTickIndex: pollTickIndex,
         ),
       );
-      if (_receiptPubkeyHex != null) _schedulePoll(generation);
+      if (_receiptPubkeyHex != null) await _schedulePoll(generation);
     }
   }
 
@@ -346,7 +353,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     try {
       await _authService.signOut();
       if (!_isCurrent(generation)) return false;
-      _emitPollingState(
+      await _emitPollingState(
         AccountDeletionRecoveryStatus.processing,
         attempt,
         generation,
@@ -377,7 +384,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     try {
       await _authService.signOut();
       if (!_isCurrent(generation)) return;
-      _emitPollingState(
+      await _emitPollingState(
         AccountDeletionRecoveryStatus.processing,
         attempt,
         generation,
@@ -424,7 +431,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
       if (!_isCurrent(generation)) return;
-      _schedulePoll(generation);
+      await _schedulePoll(generation);
     }
   }
 
@@ -475,7 +482,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     switch (attempt.status) {
       case AccountDeletionAttemptStatus.preparing:
         if (attempt.isCancellationInFlight) {
-          _emitPollingState(
+          await _emitPollingState(
             AccountDeletionRecoveryStatus.cancelInFlight,
             attempt,
             generation,
@@ -497,7 +504,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
         );
       case AccountDeletionAttemptStatus.processing:
         if (!await _updateAttemptOrRetry(attempt, generation)) return;
-        _emitPollingState(
+        await _emitPollingState(
           AccountDeletionRecoveryStatus.processing,
           attempt,
           generation,
@@ -515,7 +522,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
             pollTickIndex: state.pollTickIndex,
           ),
         );
-        await completeLocalCleanup(preservePollingProgress: true);
+        await completeLocalCleanup();
       case AccountDeletionAttemptStatus.terminalFailure:
         emitIfOpen(
           AccountDeletionRecoveryState(
@@ -538,7 +545,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
       if (_isCurrent(generation)) {
-        _emitPollingState(
+        await _emitPollingState(
           AccountDeletionRecoveryStatus.processing,
           attempt,
           generation,
@@ -548,11 +555,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     }
   }
 
-  void _emitPollingState(
+  Future<void> _emitPollingState(
     AccountDeletionRecoveryStatus status,
     AccountDeletionAttempt attempt,
     int generation,
-  ) {
+  ) async {
     emitIfOpen(
       AccountDeletionRecoveryState(
         status: status,
@@ -561,14 +568,27 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
         pollTickIndex: state.pollTickIndex,
       ),
     );
-    _schedulePoll(generation);
+    await _schedulePoll(generation);
   }
 
-  void _schedulePoll(int generation) {
+  Future<void> _schedulePoll(int generation) async {
     _pollTimer?.cancel();
+    await _loadPollBudget();
+    if (!_isCurrent(generation)) return;
     final tickIndex = state.pollTickIndex;
     final delay = AccountDeletionRecoveryPolling.delayForTick(tickIndex);
-    if (_pollingElapsed + delay > AccountDeletionRecoveryPolling.sessionBound) {
+    final elapsed = _now().toUtc().difference(_pollBudgetStartedAt!);
+    final nonNegativeElapsed = elapsed.isNegative ? Duration.zero : elapsed;
+    if (nonNegativeElapsed + delay >
+        AccountDeletionRecoveryPolling.supportEscapeAfter) {
+      if (!_overdueRefreshUsed) {
+        _overdueRefreshUsed = true;
+        _pollTimer = _timerFactory(
+          Duration.zero,
+          () => _poll(generation),
+        );
+        return;
+      }
       emitIfOpen(
         AccountDeletionRecoveryState(
           status: state.status,
@@ -580,7 +600,6 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       );
       return;
     }
-    _pollingElapsed += delay;
     _pollTimer = _timerFactory(delay, () => _poll(generation));
   }
 
@@ -610,7 +629,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
             pollTickIndex: tickIndex,
           ),
         );
-        _schedulePoll(generation);
+        await _schedulePoll(generation);
         return;
       }
       if (current.id != expectedAttemptId) {
@@ -655,24 +674,23 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
           pollTickIndex: tickIndex,
         ),
       );
-      _schedulePoll(generation);
+      await _schedulePoll(generation);
     }
   }
 
-  int _beginOperation({bool resetPollingProgress = true}) {
+  int _beginOperation() {
     _pollTimer?.cancel();
     _pollTimer = null;
-    if (resetPollingProgress) _pollingElapsed = Duration.zero;
     return ++_generation;
   }
 
   bool _isCurrent(int generation) => !isClosed && generation == _generation;
 
-  void _emitCleanupFailure(
+  Future<void> _emitCleanupFailure(
     int generation,
     AccountDeletionAttempt attempt,
     AccountDeletionRecoveryFailure failure,
-  ) {
+  ) async {
     if (!_isCurrent(generation)) return;
     emitIfOpen(
       AccountDeletionRecoveryState(
@@ -682,11 +700,21 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
         pollTickIndex: state.pollTickIndex,
       ),
     );
-    if (_receiptPubkeyHex != null) _schedulePoll(generation);
+    if (_receiptPubkeyHex != null) await _schedulePoll(generation);
   }
 
   Future<void> _resolve() async {
     _pollTimer?.cancel();
+    final resolvedAttemptId = state.attempt?.id;
+    if (resolvedAttemptId != null) {
+      try {
+        await _pollBudgetStore.clear(resolvedAttemptId);
+      } on Object catch (error, stackTrace) {
+        addError(error, stackTrace);
+      }
+    }
+    _pollBudgetAttemptId = null;
+    _pollBudgetStartedAt = null;
     await _onAttemptResolved();
     if (isClosed) return;
     emitIfOpen(
@@ -694,6 +722,27 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
         status: AccountDeletionRecoveryStatus.resolved,
       ),
     );
+  }
+
+  Future<void> _loadPollBudget() async {
+    final attemptId = state.attempt?.id;
+    if (attemptId == null) {
+      throw StateError('Cannot schedule deletion polling without an attempt');
+    }
+    if (_pollBudgetAttemptId == attemptId && _pollBudgetStartedAt != null) {
+      return;
+    }
+    final now = _now().toUtc();
+    _pollBudgetAttemptId = attemptId;
+    _pollBudgetStartedAt = now;
+    try {
+      await _pollBudgetStore.recordStartIfAbsent(attemptId, now);
+      _pollBudgetStartedAt = await _pollBudgetStore.startedAt(attemptId) ?? now;
+    } on Object catch (error, stackTrace) {
+      // Keep polling with the process-local fallback while surfacing the
+      // durability failure through the Cubit's normal error channel.
+      addError(error, stackTrace);
+    }
   }
 
   @override
