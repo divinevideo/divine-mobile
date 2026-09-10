@@ -46,6 +46,18 @@ class ConformingTitles(unittest.TestCase):
         long_summary = "the editor drops the last second of every clip when " * 3
         self.assertEqual(codes(f"fix(editor): {long_summary}".strip()), [])
 
+    def test_breaking_change_marker_allowed(self):
+        # Conventional-Commit `!` is valid and accepted by the org's PR check.
+        self.assertEqual(codes("feat!: drop the legacy upload path for everyone"), [])
+        self.assertEqual(
+            codes("feat(auth)!: require re-login after a password reset now"), []
+        )
+        # ...but `!` does not excuse an unknown type — it's still a type error.
+        self.assertEqual(
+            codes("wibble!: change something in a way nobody can route"),
+            ["unknown_type"],
+        )
+
 
 class NonConformingTitles(unittest.TestCase):
     def test_support_scope_flagged(self):

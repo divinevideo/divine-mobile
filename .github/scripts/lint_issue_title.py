@@ -62,12 +62,16 @@ FORBIDDEN_SCOPES = frozenset({"support"})
 # so an occasional terse-but-valid summary costs a comment, not a merge.
 MIN_SUMMARY_LENGTH = 12
 
-# type, optional (scope), then `: summary`. Type is captured permissively so a
-# wrong-case type ("Fix") is reported as an unknown type rather than as an
-# unparseable title. A space after the colon is required by the convention.
+# type, optional (scope), an optional Conventional-Commit breaking-change `!`,
+# then `: summary`. Type is captured permissively so a wrong-case type ("Fix") is
+# reported as an unknown type rather than as an unparseable title. The `!` is
+# allowed so a valid Conventional-Commit title (`feat!:`, `feat(auth)!:`) is not
+# flagged — the org's PR check (commitlint) accepts it too. A space after the
+# colon is required by the convention.
 _TITLE_RE = re.compile(
     r"^(?P<type>[A-Za-z][A-Za-z]*)"
     r"(?:\((?P<scope>[^)]*)\))?"
+    r"!?"
     r":[ \t]+(?P<summary>\S.*)$"
 )
 
