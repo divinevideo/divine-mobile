@@ -35,6 +35,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     String? inviteCode,
     String? inviteSourceSlug,
     bool requirePasswordConfirmation = false,
+    String? appVersion,
     AnalyticsEventSink analytics = const NoOpAnalyticsEventSink(),
   }) : _oauthClient = oauthClient,
        _authService = authService,
@@ -46,6 +47,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
        _inviteSourceSlug = inviteSourceSlug,
        _validationMessages = validationMessages,
        _requirePasswordConfirmation = requirePasswordConfirmation,
+       _appVersion = appVersion,
        _analytics = analytics,
        super(const DivineAuthInitial());
 
@@ -57,6 +59,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final String? _inviteSourceSlug;
   final AuthValidationMessages _validationMessages;
   final bool _requirePasswordConfirmation;
+  final String? _appVersion;
   final AnalyticsEventSink _analytics;
 
   /// Initialize form with default state (sign up mode)
@@ -292,6 +295,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       password: password,
       scope: 'policy:full',
       marketingConsent: marketingConsent,
+      appVersion: _appVersion,
     );
 
     if (!result.success) {

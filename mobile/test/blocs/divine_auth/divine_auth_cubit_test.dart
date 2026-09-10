@@ -115,13 +115,14 @@ void main() {
       );
     });
 
-    DivineAuthCubit buildCubit({String? inviteCode}) {
+    DivineAuthCubit buildCubit({String? inviteCode, String? appVersion}) {
       return DivineAuthCubit(
         oauthClient: mockOAuth,
         authService: mockAuthService,
         pendingVerificationService: mockPendingVerification,
         inviteApiClient: mockInviteApiClient,
         inviteCode: inviteCode,
+        appVersion: appVersion,
         validationMessages: AuthValidationMessages.englishDefaults,
         analytics: analytics,
       );
@@ -1003,6 +1004,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer((_) => registered.future);
             when(
@@ -1040,6 +1042,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).called(1);
 
@@ -1048,7 +1051,7 @@ void main() {
         );
 
         test(
-          'forwards marketingConsent to headlessRegister when opted in',
+          'forwards consent provenance to headlessRegister when opted in',
           () async {
             when(
               () => mockOAuth.headlessRegister(
@@ -1056,6 +1059,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                appVersion: any(named: 'appVersion'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1078,7 +1082,7 @@ void main() {
               ),
             ).thenAnswer((_) async {});
 
-            final cubit = buildCubit()
+            final cubit = buildCubit(appVersion: '1.2.3')
               ..initialize()
               ..updateEmail(testEmail)
               ..updatePassword(testPassword)
@@ -1092,6 +1096,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: true,
+                appVersion: '1.2.3',
               ),
             ).called(1);
 
@@ -1107,6 +1112,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1167,6 +1173,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1201,6 +1208,7 @@ void main() {
                 email: testEmail,
                 password: testPassword,
                 scope: 'policy:full',
+                marketingConsent: false,
               ),
             ).called(1);
             verify(
@@ -1222,6 +1230,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1271,6 +1280,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1312,6 +1322,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1354,6 +1365,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1393,6 +1405,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1429,6 +1442,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1468,6 +1482,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1507,6 +1522,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1546,6 +1562,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1585,6 +1602,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1628,6 +1646,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1668,6 +1687,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1708,6 +1728,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenThrow(Exception('network failure'));
           },
@@ -1745,6 +1766,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
               ),
             ).thenAnswer((_) => registered.future);
             when(

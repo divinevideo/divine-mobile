@@ -20,6 +20,7 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/utils/validators.dart';
@@ -82,6 +83,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         inviteSourceSlug: inviteAccessGrant?.creatorSlug,
         validationMessages: AuthValidationMessages.fromL10n(l10n),
         requirePasswordConfirmation: true,
+        appVersion: ref.watch(appVersionProvider),
         analytics: ref.read(analyticsEventSinkProvider),
       )..initialize(),
       child: _CreateAccountView(inviteAccessGrant: inviteAccessGrant),

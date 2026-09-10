@@ -439,10 +439,11 @@ void main() {
         );
       });
 
-      test('sends marketing_consent true in body when opted in', () async {
+      test('sends consent and app version when opted in', () async {
         final mockClient = MockClient((request) async {
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['marketing_consent'], isTrue);
+          expect(body['app_version'], '1.2.3');
           return http.Response(
             jsonEncode({
               'success': true,
@@ -458,13 +459,37 @@ void main() {
           email: 'test@example.com',
           password: 'password123',
           marketingConsent: true,
+          appVersion: '1.2.3',
         );
       });
 
-      test('sends marketing_consent false in body by default', () async {
+      test('sends marketing_consent false when declined', () async {
         final mockClient = MockClient((request) async {
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['marketing_consent'], isFalse);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'pubkey': 'pubkey',
+              'verification_required': true,
+            }),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+          marketingConsent: false,
+        );
+      });
+
+      test('omits consent provenance when the flow did not ask', () async {
+        final mockClient = MockClient((request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, isNot(contains('marketing_consent')));
+          expect(body, isNot(contains('app_version')));
           return http.Response(
             jsonEncode({
               'success': true,

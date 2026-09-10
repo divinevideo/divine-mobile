@@ -380,6 +380,8 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              marketingConsent: any(named: 'marketingConsent'),
+              appVersion: any(named: 'appVersion'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -487,6 +489,8 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              marketingConsent: any(named: 'marketingConsent'),
+              appVersion: any(named: 'appVersion'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -593,6 +597,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -643,6 +649,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
       });
@@ -685,6 +693,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
       });
@@ -696,6 +706,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -750,6 +762,8 @@ void main() {
             email: 'test@example.com',
             password: 'SecurePass123!',
             scope: 'policy:full',
+            marketingConsent: false,
+            appVersion: 'test',
           ),
         ).called(1);
       });
@@ -766,6 +780,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer((_) => registered.future);
 
@@ -817,6 +833,8 @@ void main() {
             email: 'test@example.com',
             password: 'SecurePass123!',
             scope: 'policy:full',
+            marketingConsent: false,
+            appVersion: 'test',
           ),
         ).called(1);
 

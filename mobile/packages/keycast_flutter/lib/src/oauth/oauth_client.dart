@@ -347,15 +347,17 @@ class KeycastOAuth {
   /// [exchangeCode].
   ///
   /// [nsec] - Optional: import existing Nostr key instead of generating new one
-  /// [marketingConsent] - Whether the user opted in to marketing
-  /// communications at sign-up. Recorded on the account by keycast.
+  /// [marketingConsent] - The answer from a marketing consent prompt. Omit
+  /// when the registration flow did not show one.
+  /// [appVersion] - The app version that displayed the consent wording.
   Future<(HeadlessRegisterResult, String verifier)> headlessRegister({
     required String email,
     required String password,
     String scope = 'policy:social',
     String? nsec,
     String? state,
-    bool marketingConsent = false,
+    bool? marketingConsent,
+    String? appVersion,
   }) async {
     String? byokPubkey;
     if (nsec != null) {
@@ -374,8 +376,15 @@ class KeycastOAuth {
         'scope': scope,
         'code_challenge': challenge,
         'code_challenge_method': 'S256',
-        'marketing_consent': marketingConsent,
       };
+
+      if (marketingConsent != null) {
+        body['marketing_consent'] = marketingConsent;
+      }
+
+      if (appVersion != null) {
+        body['app_version'] = appVersion;
+      }
 
       if (byokPubkey != null) {
         body['nsec'] = nsec;
@@ -988,10 +997,7 @@ class KeycastOAuth {
   }
 
   /// One `DELETE /api/user/account` attempt carrying [authorization].
-  Future<http.Response> _sendAccountDeletion(
-    String url,
-    String authorization,
-  ) {
+  Future<http.Response> _sendAccountDeletion(String url, String authorization) {
     return _client
         .delete(
           Uri.parse(url),
@@ -1335,19 +1341,16 @@ class KeycastOAuth {
 
       if (response.statusCode == 401) {
         final probe = await _probeAccount(token);
-        return ChangePasswordResult.failure(
-          switch (probe) {
-            // A probe that never answered proves nothing, so neither cause may
-            // be reported as a verdict.
-            null => ChangePasswordFailure.unknown,
-            // The token still authenticates, so what the 401 rejected was the
-            // submitted current password.
-            (authenticated: true, status: _) =>
-              ChangePasswordFailure.wrongPassword,
-            _ => ChangePasswordFailure.needsSignIn,
-          },
-          message: message,
-        );
+        return ChangePasswordResult.failure(switch (probe) {
+          // A probe that never answered proves nothing, so neither cause may
+          // be reported as a verdict.
+          null => ChangePasswordFailure.unknown,
+          // The token still authenticates, so what the 401 rejected was the
+          // submitted current password.
+          (authenticated: true, status: _) =>
+            ChangePasswordFailure.wrongPassword,
+          _ => ChangePasswordFailure.needsSignIn,
+        }, message: message);
       }
 
       // The server enforces its own minimum on the new password. The client
@@ -1422,15 +1425,11 @@ class KeycastOAuth {
 
       if (response.statusCode == 401) {
         final probe = await _probeAccount(token);
-        return ChangeEmailResult.failure(
-          switch (probe) {
-            null => ChangeEmailFailure.unknown,
-            (authenticated: true, status: _) =>
-              ChangeEmailFailure.wrongPassword,
-            _ => ChangeEmailFailure.needsSignIn,
-          },
-          message: message,
-        );
+        return ChangeEmailResult.failure(switch (probe) {
+          null => ChangeEmailFailure.unknown,
+          (authenticated: true, status: _) => ChangeEmailFailure.wrongPassword,
+          _ => ChangeEmailFailure.needsSignIn,
+        }, message: message);
       }
 
       if (response.statusCode == 400) {
