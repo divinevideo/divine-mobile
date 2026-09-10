@@ -78,8 +78,8 @@ class MoreSheetContent extends StatefulWidget {
 
   /// Whether to show the "Get embed code" action.
   ///
-  /// Own-profile only. Defaults to false. Also suppresses the Block row —
-  /// see [MoreSheetMenu.showEmbedCode].
+  /// Own-profile only. Defaults to false. Independent of [showBlock] — a
+  /// caller that wants both sets both explicitly.
   final bool showEmbedCode;
 
   @override
@@ -220,6 +220,7 @@ class _MoreSheetContentState extends State<MoreSheetContent>
       onReport: widget.showReport
           ? () => Navigator.of(context).pop(MoreSheetResult.report)
           : null,
+      showBlock: widget.showBlock,
       showEmbedCode: widget.showEmbedCode,
       onEmbedCode: widget.showEmbedCode
           ? () => Navigator.of(context).pop(MoreSheetResult.embedCode)

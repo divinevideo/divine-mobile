@@ -19,6 +19,7 @@ class MoreSheetMenu extends StatelessWidget {
     this.onBlockTap,
     this.onAddToList,
     this.onReport,
+    this.showBlock = true,
     this.showEmbedCode = false,
     this.onEmbedCode,
     super.key,
@@ -58,10 +59,18 @@ class MoreSheetMenu extends StatelessWidget {
   /// yourself is meaningless).
   final VoidCallback? onReport;
 
+  /// Whether to show the "Block"/"Unblock" action.
+  ///
+  /// Independent of [onBlockTap]'s own null gate — both must hold for the
+  /// row to render. Defaults to true so most callers only need to pass
+  /// `onBlockTap`; a caller with no block target for its whole audience
+  /// (e.g. own profile) sets this to false explicitly instead of leaning on
+  /// an unrelated flag like [showEmbedCode].
+  final bool showBlock;
+
   /// Whether to show the "Get embed code" action.
   ///
-  /// Own-profile only. Also gates the Block row off — the two are mutually
-  /// exclusive audiences, so Block never renders alongside embed code.
+  /// Own-profile only. Does not affect Block visibility — see [showBlock].
   final bool showEmbedCode;
 
   /// Called when "Get embed code" is tapped.
@@ -107,7 +116,7 @@ class MoreSheetMenu extends StatelessWidget {
             label: l10n.profileReportDisplayName(displayName),
             onTap: onReport!,
           ),
-        if (onBlockTap != null && !showEmbedCode)
+        if (onBlockTap != null && showBlock)
           _MoreSheetMenuItem(
             icon: isBlocked
                 ? DivineIconName.prohibitInset

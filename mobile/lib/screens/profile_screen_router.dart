@@ -259,6 +259,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
             '', // unused on own profile (no Report/Block/Unfollow labels)
         isFollowing: false,
         isBlocked: false,
+        showBlock: false,
         showEmbedCode: true,
       ),
       children: const [],

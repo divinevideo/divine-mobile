@@ -224,6 +224,7 @@ void main() {
       WidgetTester tester, {
       required bool showReport,
       required bool showEmbedCode,
+      bool showBlock = true,
     }) async {
       await tester.pumpWidget(
         testMaterialApp(
@@ -234,6 +235,7 @@ void main() {
               isFollowing: false,
               isBlocked: false,
               showReport: showReport,
+              showBlock: showBlock,
               showEmbedCode: showEmbedCode,
             ),
           ),
@@ -245,7 +247,12 @@ void main() {
     testWidgets(
       'own profile shows Copy and Get embed code, hides Report and Block',
       (tester) async {
-        await pumpContent(tester, showReport: false, showEmbedCode: true);
+        await pumpContent(
+          tester,
+          showReport: false,
+          showBlock: false,
+          showEmbedCode: true,
+        );
 
         expect(find.text(l10n.profileCopyPublicKey), findsOneWidget);
         expect(find.text(l10n.profileGetEmbedCode), findsOneWidget);
