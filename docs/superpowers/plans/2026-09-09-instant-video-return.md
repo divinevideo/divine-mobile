@@ -1,6 +1,6 @@
 # Instant video return implementation plan
 
-> For agentic workers: use superpowers:executing-plans to implement this plan task by task. Each implementation task starts with reproduction and a failing regression test. This document plans the work; it does not claim implementation or performance results.
+> For agentic workers: use the `implement-plan` skill to implement this plan task by task. Each implementation task starts with reproduction and a failing regression test. This document plans the work; it does not claim implementation or performance results.
 
 **Goal:** Return viewers to the same video and playback position quickly, including after process death, while fresh content loads without interrupting them.
 
