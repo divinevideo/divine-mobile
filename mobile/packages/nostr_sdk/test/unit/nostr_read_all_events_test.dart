@@ -6,9 +6,11 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 
 /// Relay that answers every `REQ` out of [stored] the way a relay does: newest
-/// first, at most `limit`, at or before `until` unless [ignoresUntil].
+/// first, at most `limit` or its NIP-11 `max_limit` when that is lower, at or
+/// before `until` unless [ignoresUntil].
 class _StoreRelay extends Relay {
   _StoreRelay(String url, this.stored) : super(url, RelayStatus(url));
 
@@ -20,12 +22,24 @@ class _StoreRelay extends Relay {
   /// When true, every `EOSE` carries the NIP-67 `finish` hint.
   bool sendsFinish = false;
 
+  /// When set, this relay serves events the way a local cache relay does,
+  /// each one naming these relays as the ones it first came from.
+  List<String>? cachedFrom;
+
   /// The 1-based numbers of the `REQ`s this relay sends events for but never
   /// an `EOSE`.
   final Set<int> withholdsEoseFor = {};
 
   /// The filter of every `REQ` this relay was sent, in order.
   final List<Map<String, dynamic>> requests = [];
+
+  /// When set, this relay answers each `REQ` only after [answersAfter] has
+  /// answered its own, so an event both hold reaches the pool from that
+  /// relay first.
+  _StoreRelay? answersAfter;
+
+  /// This relay's answer to its latest `REQ`.
+  Future<void> _latestAnswer = Future<void>.value();
 
   @override
   Future<bool> doConnect() async {
@@ -49,10 +63,20 @@ class _StoreRelay extends Relay {
       final filter = Map<String, dynamic>.from(message[2] as Map);
       requests.add(filter);
       final withEose = !withholdsEoseFor.contains(requests.length);
+      final after = answersAfter?._latestAnswer;
+      final answered = Completer<void>();
+      _latestAnswer = answered.future;
       // Answered once the pool has saved the query, which it does only after
       // this write returns.
       Timer.run(
-        () => unawaited(_answer(message[1] as String, filter, withEose)),
+        () => unawaited(
+          _answer(
+            message[1] as String,
+            filter,
+            withEose,
+            after,
+          ).whenComplete(answered.complete),
+        ),
       );
     }
     return true;
@@ -62,15 +86,25 @@ class _StoreRelay extends Relay {
     String subId,
     Map<String, dynamic> filter,
     bool withEose,
+    Future<void>? after,
   ) async {
+    if (after != null) await after;
     final until = filter['until'] as int?;
     final answer = [
       for (final event in stored)
         if (ignoresUntil || until == null || event.createdAt <= until) event,
     ]..sort(_newestFirst);
-    final limit = filter['limit'] as int? ?? answer.length;
+    final requested = filter['limit'] as int? ?? answer.length;
+    final maxLimit = info?.maxLimit;
+    final limit = maxLimit != null && maxLimit < requested
+        ? maxLimit
+        : requested;
     for (final event in answer.take(limit)) {
-      await _deliver(['EVENT', subId, event.toJson()]);
+      await _deliver([
+        'EVENT',
+        subId,
+        {...event.toJson(), if (cachedFrom != null) 'sources': cachedFrom},
+      ]);
     }
     if (withEose) {
       await _deliver([
@@ -127,9 +161,26 @@ void main() {
       );
     });
 
-    Future<_StoreRelay> addStore(String url, List<Event> stored) async {
-      final relay = _StoreRelay(url, stored);
-      expect(await nostr.relayPool.add(relay), isTrue);
+    Future<_StoreRelay> addStore(
+      String url,
+      List<Event> stored, {
+      int relayType = RelayType.normal,
+      int? maxLimit,
+    }) async {
+      final relay = _StoreRelay(url, stored)..relayStatus.relayType = relayType;
+      if (maxLimit != null) {
+        relay.info = RelayInfo(
+          '',
+          '',
+          '',
+          '',
+          const [],
+          '',
+          '',
+          maxLimit: maxLimit,
+        );
+      }
+      expect(await nostr.relayPool.add(relay, relayType: relayType), isTrue);
       return relay;
     }
 
@@ -149,6 +200,55 @@ void main() {
           ))!,
       ];
     }
+
+    group('with a NIP-11 max_limit', () {
+      test('counts a relay that stops at its max_limit as filling the '
+          'page', () async {
+        final clamped = await eventsAt([110, 109, 108, 107, 106]);
+        final sparse = await eventsAt([100]);
+        await addStore('wss://clamped.example', clamped, maxLimit: 2);
+        await addStore('wss://sparse.example', sparse);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 5);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([...clamped, ...sparse])),
+          reason:
+              'two events fill a page for a relay whose NIP-11 max_limit is '
+              '2, so the cursor has to follow it rather than jump past the '
+              'events it has not sent yet',
+        );
+        expect(result.isComplete, isTrue);
+      });
+    });
+
+    group('with a cache relay', () {
+      test('does not let cached copies move the cursor', () async {
+        final live = await eventsAt([110, 109, 108, 107]);
+        final stale = await eventsAt([90, 80]);
+        final relay = await addStore('wss://relay.example', live);
+        (await addStore(
+          'wss://cache.example',
+          stale,
+          relayType: RelayType.cache,
+        )).cachedFrom = [
+          relay.url,
+        ];
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([...live, ...stale])),
+          reason:
+              'the cached copies name the relay they came from, so counting '
+              "them as that relay's answer would move the cursor to 80 and "
+              'skip 108 and 107',
+        );
+        expect(result.isComplete, isTrue);
+      });
+    });
 
     group('across page breaks', () {
       test('returns events that share the boundary created_at exactly '
@@ -176,6 +276,40 @@ void main() {
         expect(result.pages, 4);
       });
 
+      test('steps past a second that fills a whole page, and ends the walk '
+          'incomplete', () async {
+        final stored = await eventsAt([105, 104, 104, 104, 103]);
+        final relay = await addStore('wss://relay.example', stored);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(
+          _untilsOf(relay),
+          [null, 104, 103, 102],
+          reason:
+              'a page that sits wholly inside the cursor second cannot be '
+              'paged within it, so the walk moves on to older history',
+        );
+        expect(
+          _idsOf(result.events),
+          containsAll(_idsOf([stored.first, stored.last])),
+          reason: 'the walk still reads the history on either side of it',
+        );
+        expect(
+          result.events,
+          hasLength(stored.length - 1),
+          reason: 'no page could reach the third event at 104',
+        );
+        expect(result.isComplete, isFalse);
+        expect(
+          result.stoppedBy,
+          isNull,
+          reason: 'no single page stopped the walk; a skipped second did',
+        );
+      });
+    });
+
+    group('across relays', () {
       test('keeps one copy of an event two relays both return', () async {
         final [newest, shared, oldest] = await eventsAt([103, 102, 101]);
         await addStore('wss://first.example', [newest, shared]);
@@ -189,6 +323,107 @@ void main() {
         );
         expect(result.isComplete, isTrue);
       });
+
+      test('reads every event of a relay that fills its pages while another '
+          'relay reaches further back', () async {
+        final dense = await eventsAt([110, 109, 108, 107, 106, 105]);
+        final sparse = await eventsAt([100]);
+        final denseRelay = await addStore('wss://dense.example', dense);
+        await addStore('wss://sparse.example', sparse);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 3);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([...dense, ...sparse])),
+          reason:
+              "the sparse relay's older event must not pull the cursor past "
+              'events the dense relay has not sent yet',
+        );
+        expect(
+          _untilsOf(denseRelay),
+          [null, 108, 106, 99],
+          reason:
+              'the cursor follows the relay that filled the page, then one '
+              'more page asks past everything returned',
+        );
+        expect(result.isComplete, isTrue);
+      });
+
+      test('counts an event two relays both return toward each of '
+          'them', () async {
+        final [newest, shared, second108, second107, first105, first104] =
+            await eventsAt([110, 109, 108, 107, 105, 104]);
+        final first = await addStore('wss://first.example', [
+          shared,
+          first105,
+          first104,
+        ]);
+        (await addStore('wss://second.example', [
+          newest,
+          shared,
+          second108,
+          second107,
+        ])).answersAfter = first;
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(
+            _idsOf([newest, shared, second108, second107, first105, first104]),
+          ),
+          reason:
+              'the second relay filled its first page only by counting the '
+              'event the first relay sent too; crediting that event to the '
+              'first relay alone would move the cursor past 108 and 107',
+        );
+        expect(result.isComplete, isTrue);
+      });
+
+      test('pages a single relay exactly as before', () async {
+        final stored = await eventsAt([106, 105, 104, 103, 102, 101]);
+        final relay = await addStore('wss://relay.example', stored);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(_idsOf(result.events), unorderedEquals(_idsOf(stored)));
+        expect(_untilsOf(relay), [
+          null,
+          105,
+          104,
+          103,
+          102,
+          101,
+          100,
+        ], reason: "a lone relay's cursor is still each page's oldest second");
+        expect(result.isComplete, isTrue);
+      });
+
+      test(
+        "does not stall on a relay whose history ends below the others'",
+        () async {
+          final busy = await eventsAt([110, 109, 108, 107]);
+          final [early] = await eventsAt([50]);
+          await addStore('wss://busy.example', busy);
+          await addStore('wss://early.example', [early]);
+
+          final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+          expect(
+            _idsOf(result.events),
+            unorderedEquals(_idsOf([...busy, early])),
+          );
+          expect(
+            result.pages,
+            5,
+            reason:
+                'once no relay fills a page, one page past everything returned '
+                'ends the walk, not a page per second down to 50',
+          );
+          expect(result.isComplete, isTrue);
+        },
+      );
     });
 
     group('when the walk is done', () {
@@ -201,15 +436,14 @@ void main() {
         expect(_idsOf(result.events), unorderedEquals(_idsOf(stored)));
         expect(
           _untilsOf(relay),
-          [null, 101, 100],
+          [null, 100],
           reason:
-              'a short page is not taken as the end: the walk asks again at '
-              'its oldest second, then past it, and only that empty page '
-              'ends it',
+              'a short page is not taken as the end: the walk asks once more, '
+              'past everything returned, and only that empty page ends it',
         );
         expect(result.isComplete, isTrue);
         expect(result.stoppedBy, isNull);
-        expect(result.pages, 3);
+        expect(result.pages, 2);
       });
 
       test('stops early on a settled page confirmed exhaustive', () async {

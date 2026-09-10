@@ -378,35 +378,37 @@ class Nostr {
   }
 
   /// Reads every event [filter] matches, a page of [pageSize] at a time,
-  /// walking back through the relays' history with an inclusive `until`
-  /// cursor.
+  /// walking back through the relays' history with an `until` cursor.
   ///
-  /// Each page is a [readEvents] that every relay taking its REQ must settle,
-  /// asking for events at or before the oldest `created_at` the page before it
-  /// returned. Asking for that second again, rather than for the one before
-  /// it, keeps the events that share it on both sides of a page break; the
-  /// ones collected twice are dropped by event id. A page that brings back
-  /// only events at the cursor — one second holding more than a page, or a
-  /// relay that ignores `until` — moves the cursor one second back rather
-  /// than asking for the same page again.
+  /// Each page is a [readEvents] that every relay taking its REQ must settle.
+  /// Where the next page starts depends on which relays filled this one, by
+  /// sending `min(pageSize, max_limit)` events with `max_limit` from their
+  /// NIP-11 document when known, since only a relay that filled its page may
+  /// hold more:
   ///
-  /// The walk is complete once a settled page brings no event it had not
-  /// already collected, or a settled page is confirmed exhaustive by NIP-67
-  /// `finish`. A short page is not taken as the end: a relay may send fewer
-  /// events than it holds. The walk stops incomplete, keeping what it
-  /// collected, on the first page that does not settle — whose [QueryEnd] is
+  /// * When a relay filled the page, the cursor moves to the newest of those
+  ///   relays' oldest `created_at`, inclusive. Every relay has then sent all
+  ///   it holds above the cursor, and the events asked for again are dropped
+  ///   by event id. When that is the cursor's own second, a relay filled the
+  ///   page inside one second, which no `until` can page within: the cursor
+  ///   steps one second back and the walk ends incomplete, since that second
+  ///   may hold more.
+  /// * When no relay filled the page, one more page asks for anything older
+  ///   than every event returned. A relay may send fewer events than it
+  ///   holds, so the walk is complete only once such a page comes back empty.
+  ///
+  /// An event counts for every relay that sent it; cached events do not move
+  /// the cursor.
+  ///
+  /// The walk also ends complete on a settled page confirmed exhaustive by
+  /// NIP-67 `finish`. It stops incomplete, keeping what it collected, on the
+  /// first page that does not settle — whose [QueryEnd] is
   /// [PagedQueryResult.stoppedBy] — after [maxPages] pages, or once
   /// [deadline] has passed. Each page gets [pageTimeout], cut short by
   /// [deadline].
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
-  ///
-  /// One cursor serves every relay a page reaches, so a relay whose history
-  /// reaches further back can move it past events that another relay, stopped
-  /// at its limit, has not sent yet. A walk that must not miss any reads one
-  /// relay at a time, naming it in [tempRelays] with
-  /// `relayTypes: [RelayType.temp]`.
   ///
   /// Throws [ArgumentError] when [pageSize] or [maxPages] is below 1.
   Future<PagedQueryResult> readAllEvents(
@@ -428,6 +430,7 @@ class Nostr {
     final seenIds = <String>{};
     var until = filter['until'] as int?;
     var pages = 0;
+    var skippedPartOfASecond = false;
 
     PagedQueryResult walked({required bool isComplete, QueryEnd? stoppedBy}) =>
         PagedQueryResult(
@@ -464,19 +467,68 @@ class Nostr {
       if (!page.isComplete) {
         return walked(isComplete: false, stoppedBy: page.endedBy);
       }
-      if (page.confirmedExhaustive) return walked(isComplete: true);
-      if (newEvents.isNotEmpty) {
-        until = page.events.map((event) => event.createdAt).reduce(math.min);
-      } else if (page.events.isEmpty) {
-        return walked(isComplete: true);
+      if (page.confirmedExhaustive) {
+        return walked(isComplete: !skippedPartOfASecond);
+      }
+      final cursor = until;
+      final reach = _pageReach(page.events, pageSize);
+      final frontier = reach.fullFrontier;
+      if (frontier != null && (cursor == null || frontier < cursor)) {
+        until = frontier;
+      } else if (frontier != null && cursor != null) {
+        // A relay filled the page inside the cursor's own second, which no
+        // `until` can page within.
+        skippedPartOfASecond = true;
+        until = cursor - 1;
       } else {
-        // Nothing new came back, so every event on the page sits at the
-        // cursor: the pool's filter gate keeps out anything newer, and nothing
-        // older has been collected yet.
-        until = until! - 1;
+        final oldest = reach.oldestContribution;
+        if (oldest == null) return walked(isComplete: !skippedPartOfASecond);
+        until = oldest - 1;
       }
     }
     return walked(isComplete: false);
+  }
+
+  /// How far back each relay reached on one page of [readAllEvents], judged
+  /// by the relays each event came from.
+  ///
+  /// `fullFrontier` is the latest of the oldest `created_at`s sent by the
+  /// relays that filled the page, or null when none did. `oldestContribution`
+  /// is the oldest `created_at` any relay sent, or null when none sent one.
+  /// Cached events carry the relays they first came from rather than this
+  /// page's, so they are left out.
+  ({int? fullFrontier, int? oldestContribution}) _pageReach(
+    List<Event> events,
+    int pageSize,
+  ) {
+    final reach = <String, ({int count, int oldest})>{};
+    for (final event in events) {
+      if (event.cacheEvent) continue;
+      for (final url in event.sources) {
+        final seen = reach[url];
+        reach[url] = seen == null
+            ? (count: 1, oldest: event.createdAt)
+            : (
+                count: seen.count + 1,
+                oldest: math.min(seen.oldest, event.createdAt),
+              );
+      }
+    }
+    int? fullFrontier;
+    int? oldestContribution;
+    for (final MapEntry(key: url, value: (:count, :oldest)) in reach.entries) {
+      if (oldestContribution == null || oldest < oldestContribution) {
+        oldestContribution = oldest;
+      }
+      final maxLimit = (getRelay(url) ?? getTempRelay(url))?.info?.maxLimit;
+      final fillsAt = maxLimit == null
+          ? pageSize
+          : math.min(pageSize, maxLimit);
+      if (count >= fillsAt && (fullFrontier == null || oldest > fullFrontier)) {
+        fullFrontier = oldest;
+      }
+    }
+    return (fullFrontier: fullFrontier, oldestContribution: oldestContribution);
   }
 
   /// Set [requireAllRelaysSettled] when an incomplete answer must be reported
