@@ -62,6 +62,21 @@ void main() {
     // `const` literal on purpose: a const collection already throws on
     // `clear()`, so a const fixture would keep these tests green even if the
     // getters stopped wrapping at all.
+    test('remain deeply comparable across distinct collection instances', () {
+      expect(
+        VideoFeedState(
+          videos: mutableList<VideoEvent>([]),
+          hasMoreContent: false,
+          listOnlyVideoIds: mutableSet(['one']),
+        ),
+        VideoFeedState(
+          videos: mutableList<VideoEvent>([]),
+          hasMoreContent: false,
+          listOnlyVideoIds: mutableSet(['one']),
+        ),
+      );
+    });
+
     test('curation lists remain unmodifiable', () {
       final state = CurationState(
         editorsPicks: mutableList<VideoEvent>([]),
