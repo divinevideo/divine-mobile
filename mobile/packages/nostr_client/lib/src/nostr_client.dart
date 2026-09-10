@@ -1609,10 +1609,11 @@ class NostrClient {
     await _relayManager.retryDisconnectedRelays();
   }
 
-  /// Force reconnect all relays (disconnect first, then reconnect)
+  /// Redials every relay on a fresh socket, replacing any dial in flight.
   ///
   /// Use this when WebSocket connections may have been silently dropped
-  /// (e.g., after app backgrounding).
+  /// (e.g., after app backgrounding). Concurrent callers share one cycle;
+  /// see [RelayManager.forceReconnectAll].
   Future<void> forceReconnectAll() async {
     await _relayManager.forceReconnectAll();
   }

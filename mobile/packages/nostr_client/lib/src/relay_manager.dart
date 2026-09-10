@@ -486,7 +486,8 @@ class RelayManager {
   // Reconnection
   // ---------------------------------------------------------------------------
 
-  /// Aggregate bound on how long a caller waits for one reconnect sweep.
+  /// Aggregate bound on how long a caller waits for one reconnect sweep or
+  /// [forceReconnectAll] cycle.
   ///
   /// Parallelising already bounds a healthy sweep at roughly one connect
   /// (a 10s handshake timeout plus a 2s orphan close), but nothing below here
@@ -524,15 +525,25 @@ class RelayManager {
   Future<void>? _retryInFlight;
   DateTime? _retryDeadline;
 
-  Future<void> _waitForRetrySweep(Future<void> sweep) async {
+  Future<void> _waitForRetrySweep(Future<void> sweep) {
     final deadline = _retryDeadline;
     if (deadline == null) return sweep;
+    return _waitUntil(sweep, deadline, 'Reconnect sweep');
+  }
+
+  /// Waits for [work] until [deadline]. Work still running afterwards keeps
+  /// going and keeps writing its relays' status.
+  Future<void> _waitUntil(
+    Future<void> work,
+    DateTime deadline,
+    String label,
+  ) async {
     final remaining = deadline.difference(DateTime.now());
     try {
-      await sweep.timeout(remaining.isNegative ? Duration.zero : remaining);
+      await work.timeout(remaining.isNegative ? Duration.zero : remaining);
     } on TimeoutException {
       _log(
-        'Reconnect sweep exceeded ${reconnectSweepBudget.inSeconds}s; '
+        '$label exceeded ${reconnectSweepBudget.inSeconds}s; '
         'hosts still dialling remain in flight',
       );
     }
@@ -609,44 +620,64 @@ class RelayManager {
         relay.relayStatus.connected == ClientConnected.connecting;
   }
 
-  /// Force reconnect all relays (disconnect first, then reconnect)
+  /// Redials every configured relay on a fresh socket, replacing any dial in
+  /// flight.
   ///
   /// Use this when WebSocket connections may have been silently dropped
-  /// (e.g., after app backgrounding).
-  Future<void> forceReconnectAll() async {
-    _log('Force reconnecting all relays');
-
-    // Create a copy to avoid concurrent modification during async iteration
-    final relaysToReconnect = List<String>.from(_configuredRelays);
-
-    // First disconnect all
-    for (final url in relaysToReconnect) {
-      _relayPool.remove(url);
-      _updateRelayStatus(url, RelayState.connecting);
+  /// (e.g., after app backgrounding). Concurrent callers share one cycle and
+  /// stop waiting at its [reconnectSweepBudget] deadline; a call after that
+  /// deadline starts a new cycle, which replaces any dial still hanging.
+  Future<void> forceReconnectAll() {
+    final running = _forceCycle;
+    final runningDeadline = _forceCycleDeadline;
+    if (running != null &&
+        runningDeadline != null &&
+        DateTime.now().isBefore(runningDeadline)) {
+      return _waitUntil(running, runningDeadline, 'Force reconnect');
     }
-    _notifyStatusChange();
-
-    // Then reconnect all
-    for (final url in relaysToReconnect) {
-      final success = await _connectToRelay(url);
-      if (success) {
-        _updateRelayStatus(url, RelayState.connected);
-        _log('Force reconnected', relayUrl: url);
-      } else {
-        _updateRelayStatus(
-          url,
-          RelayState.error,
-          errorMessage: 'Force reconnection failed',
-        );
-        _log(
-          'Force reconnection failed',
-          relayUrl: url,
-          level: RelayDiagnosticLevel.warning,
-        );
+    final deadline = DateTime.now().add(reconnectSweepBudget);
+    late final Future<void> cycle;
+    cycle = _runForceReconnect().whenComplete(() {
+      if (identical(_forceCycle, cycle)) {
+        _forceCycle = null;
+        _forceCycleDeadline = null;
       }
-    }
+    });
+    _forceCycle = cycle;
+    _forceCycleDeadline = deadline;
+    return _waitUntil(cycle, deadline, 'Force reconnect');
+  }
 
+  Future<void>? _forceCycle;
+  DateTime? _forceCycleDeadline;
+
+  Future<void> _runForceReconnect() async {
+    _log('Force reconnecting all relays');
+    final attempts = [
+      for (final url in List<String>.from(_configuredRelays))
+        _dial(
+          url,
+          supersede: true,
+          failureMessage: 'Force reconnection failed',
+        ).then((success) => _logForceReconnect(url, connected: success)),
+    ];
     _notifyStatusChange();
+    await Future.wait(attempts);
+    _notifyStatusChange();
+  }
+
+  void _logForceReconnect(String url, {required bool connected}) {
+    // A relay removed mid-cycle was released, not failed.
+    if (!_configuredRelays.contains(url)) return;
+    if (connected) {
+      _log('Force reconnected', relayUrl: url);
+    } else {
+      _log(
+        'Force reconnection failed',
+        relayUrl: url,
+        level: RelayDiagnosticLevel.warning,
+      );
+    }
   }
 
   /// Reconnect to a specific relay
