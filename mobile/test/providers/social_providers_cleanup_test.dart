@@ -15,6 +15,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -115,7 +116,8 @@ void main() {
       // circuits initialize() past Hive.openBox entirely, so this suite can
       // inherit a previous suite's box -- and the non-destructive test below
       // then asserts on rows it never wrote.
-      await TestHelpers.cleanupHiveBox('pending_uploads');
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
 
       uploadManager = UploadManager(
         backgroundActivityManager: BackgroundActivityManager(),
@@ -147,7 +149,8 @@ void main() {
       await db.close();
       PathProviderPlatform.instance = originalPathProviderInstance;
       try {
-        await TestHelpers.cleanupHiveBox('pending_uploads');
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
       } finally {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
