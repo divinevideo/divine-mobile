@@ -11,7 +11,6 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
@@ -125,7 +124,6 @@ void main() {
           appReadyProvider.overrideWith((ref) => true),
           isDiscoveryTabActiveProvider.overrideWith((ref) => true),
           isExploreTabActiveProvider.overrideWith((ref) => false),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -170,7 +168,6 @@ void main() {
           appReadyProvider.overrideWith((ref) => true),
           isDiscoveryTabActiveProvider.overrideWith((ref) => true),
           isExploreTabActiveProvider.overrideWith((ref) => false),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -240,7 +237,6 @@ void main() {
           appReadyProvider.overrideWith((ref) => true),
           isDiscoveryTabActiveProvider.overrideWith((ref) => true),
           isExploreTabActiveProvider.overrideWith((ref) => false),
-          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 

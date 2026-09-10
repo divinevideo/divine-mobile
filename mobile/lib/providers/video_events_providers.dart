@@ -8,12 +8,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -44,7 +42,17 @@ class VideoEvents extends _$VideoEvents {
   BehaviorSubject<List<VideoEvent>>? _subject;
   Timer? _debounceTimer;
   List<VideoEvent>? _pendingEvents;
-  List<VideoEvent>? _lastEmittedEvents;
+
+  /// The list [_subject] currently holds, or `null` when it holds none.
+  ///
+  /// Derived from the subject rather than mirrored in a field. `build()`
+  /// installs a fresh [BehaviorSubject] on every rebuild while the notifier
+  /// instance — and therefore any field on it — survives, so a mirrored copy
+  /// outlives the subject it described. The equality guards below would then
+  /// suppress the first emission into the replacement subject, which never
+  /// receives a value and leaves the provider in `AsyncLoading` for good.
+  /// A fresh subject reports `null` here, so that emission always lands.
+  List<VideoEvent>? get _lastEmittedEvents => _subject?.valueOrNull;
   bool get _canEmit => _subject != null && !_subject!.isClosed;
 
   // Buffer for new videos that arrive while user is browsing
@@ -95,7 +103,6 @@ class VideoEvents extends _$VideoEvents {
     // Emit updated list
     if (_canEmit) {
       _subject!.add(currentVideos);
-      _lastEmittedEvents = currentVideos;
     }
 
     // Notify listeners that buffer was cleared
@@ -115,32 +122,31 @@ class VideoEvents extends _$VideoEvents {
     ref.watch(contentFilterVersionProvider);
     final isAppReady = ref.watch(appReadyProvider);
     final isTabActive = ref.watch(isDiscoveryTabActiveProvider);
-    final seenVideosState = ref.watch(seenVideosProvider);
 
-    Log.error(
-      '🔥🔥🔥 VideoEvents: Provider REBUILDING (appReady: $isAppReady, tabActive: $isTabActive, cached: ${videoEventService.discoveryVideos.length}) 🔥🔥🔥',
+    Log.debug(
+      'VideoEvents: rebuilding (appReady: $isAppReady, tabActive: $isTabActive, cached: ${videoEventService.discoveryVideos.length})',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
 
     // Extra debug logging to understand state
-    Log.error(
-      '  🔍 appReadyProvider state: $isAppReady',
+    Log.debug(
+      'VideoEvents: appReady=$isAppReady',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 isDiscoveryTabActiveProvider state: $isTabActive',
+    Log.debug(
+      'VideoEvents: discoveryTabActive=$isTabActive',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 discoveryVideos cached: ${videoEventService.discoveryVideos.length}',
+    Log.debug(
+      'VideoEvents: cached discoveryVideos=${videoEventService.discoveryVideos.length}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 VideoEventService instance: ${videoEventService.hashCode}',
+    Log.debug(
+      'VideoEvents: service instance=${videoEventService.hashCode}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
@@ -153,13 +159,13 @@ class VideoEvents extends _$VideoEvents {
 
     // Register cleanup handler ONCE at the top
     ref.onDispose(() {
-      Log.error(
-        '🔥🔥🔥 VideoEvents: DISPOSING provider 🔥🔥🔥',
+      Log.debug(
+        'VideoEvents: disposing provider',
         name: 'VideoEventsProvider',
         category: LogCategory.video,
       );
-      Log.error(
-        '  🔍 Cached videos before dispose: ${videoEventService.discoveryVideos.length}',
+      Log.debug(
+        'VideoEvents: cached videos before dispose=${videoEventService.discoveryVideos.length}',
         name: 'VideoEventsProvider',
         category: LogCategory.video,
       );
@@ -171,21 +177,18 @@ class VideoEvents extends _$VideoEvents {
     });
 
     // Setup listeners to react to gate changes
-    _setupGateListeners(videoEventService, seenVideosState);
+    _setupGateListeners(videoEventService);
 
     // ALWAYS start subscription to load videos (database-first + Nostr)
     // This works even when gates are false - it will load from database
     // and skip Nostr subscription until gates flip true
-    _startSubscription(videoEventService, seenVideosState);
+    _startSubscription(videoEventService);
 
     return _subject!.stream;
   }
 
   /// Setup listeners on gate providers to start/stop subscription
-  void _setupGateListeners(
-    VideoEventService service,
-    SeenVideosState seenState,
-  ) {
+  void _setupGateListeners(VideoEventService service) {
     Log.debug(
       '🎧 VideoEvents: Setting up gate listeners...',
       name: 'VideoEventsProvider',
@@ -206,7 +209,7 @@ class VideoEvents extends _$VideoEvents {
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
-        _startSubscription(service, seenState);
+        _startSubscription(service);
       }
       if (!next) {
         Log.debug(
@@ -232,7 +235,7 @@ class VideoEvents extends _$VideoEvents {
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
-        _startSubscription(service, seenState);
+        _startSubscription(service);
       }
       if (!next) {
         Log.debug(
@@ -252,22 +255,19 @@ class VideoEvents extends _$VideoEvents {
   }
 
   /// Start subscription and emit initial events
-  void _startSubscription(
-    VideoEventService service,
-    SeenVideosState seenState,
-  ) {
+  void _startSubscription(VideoEventService service) {
     // Use service's isSubscribed() to check actual subscription state
     // This prevents the bug where we skip retrying after a failed initial subscription
     final isAlreadySubscribed = service.isSubscribed(
       SubscriptionType.discovery,
     );
-    Log.error(
-      '🔥🔥🔥 VideoEvents: _startSubscription called (serviceSubscribed: $isAlreadySubscribed) 🔥🔥🔥',
+    Log.debug(
+      'VideoEvents: starting subscription (serviceSubscribed: $isAlreadySubscribed)',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 VideoEventService.discoveryVideos.length: ${service.discoveryVideos.length}',
+    Log.debug(
+      'VideoEvents: discoveryVideos=${service.discoveryVideos.length}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
@@ -276,8 +276,8 @@ class VideoEvents extends _$VideoEvents {
     // This prevents duplicate listeners and ensures clean state
     service.removeListener(_onVideoEventServiceChange);
     service.addListener(_onVideoEventServiceChange);
-    Log.error(
-      '  🔍 Listener attached to service ${service.hashCode}',
+    Log.debug(
+      'VideoEvents: listener attached to service ${service.hashCode}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
@@ -286,8 +286,8 @@ class VideoEvents extends _$VideoEvents {
     // We check the service's state directly to avoid the race condition where
     // subscription fails (NostrService not ready) but we incorrectly mark as subscribed
     if (!isAlreadySubscribed) {
-      Log.error(
-        '  🔍 Starting NEW discovery subscription with NIP-50 search (sort:hot)',
+      Log.debug(
+        'VideoEvents: starting new discovery subscription (NIP-50 sort:hot)',
         name: 'VideoEventsProvider',
         category: LogCategory.video,
       );
@@ -312,8 +312,8 @@ class VideoEvents extends _$VideoEvents {
       // NOTE: We don't set a local _isSubscribed flag here because we rely on
       // service.isSubscribed() which accurately tracks actual subscription state
     } else {
-      Log.error(
-        '  🔍 Already subscribed in service - skipping subscription call',
+      Log.debug(
+        'VideoEvents: already subscribed in service, skipping subscribe call',
         name: 'VideoEventsProvider',
         category: LogCategory.video,
       );
@@ -323,40 +323,40 @@ class VideoEvents extends _$VideoEvents {
     // Create defensive copy, applying the shared feed filters.
     final currentEvents = service.filterVideoList(service.discoveryVideos);
 
-    Log.error(
-      '  🔍 About to emit ${currentEvents.length} current events (canEmit: $_canEmit)',
+    Log.debug(
+      'VideoEvents: about to emit ${currentEvents.length} events (canEmit: $_canEmit)',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 _lastEmittedEvents is null: ${_lastEmittedEvents == null}',
+    Log.debug(
+      'VideoEvents: subject holds no value: ${_lastEmittedEvents == null}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
-    Log.error(
-      '  🔍 Lists equal: ${_listEquals(currentEvents, _lastEmittedEvents)}',
+    Log.debug(
+      'VideoEvents: lists equal: ${_listEquals(currentEvents, _lastEmittedEvents)}',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
 
     Future.microtask(() {
-      Log.error(
-        '  🔍 Inside Future.microtask - canEmit: $_canEmit',
+      Log.debug(
+        'VideoEvents: emitting on microtask (canEmit: $_canEmit)',
         name: 'VideoEventsProvider',
         category: LogCategory.video,
       );
       if (_canEmit && !_listEquals(currentEvents, _lastEmittedEvents)) {
+        // The subject keeps the reference, not a copy, so identical() checks
+        // downstream still hold.
         _subject!.add(currentEvents);
-        // Store reference (not copy) to enable identical() checks downstream
-        _lastEmittedEvents = currentEvents;
-        Log.error(
-          '  ✅ EMITTED ${currentEvents.length} events to stream!',
+        Log.debug(
+          'VideoEvents: emitted ${currentEvents.length} events',
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
       } else {
-        Log.error(
-          '  ❌ SKIPPED emission - canEmit: $_canEmit, listsEqual: ${_listEquals(currentEvents, _lastEmittedEvents)}',
+        Log.debug(
+          'VideoEvents: skipped emission (canEmit: $_canEmit, listsEqual: ${_listEquals(currentEvents, _lastEmittedEvents)})',
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
@@ -431,8 +431,6 @@ class VideoEvents extends _$VideoEvents {
             category: LogCategory.video,
           );
           _subject!.add(_pendingEvents!);
-          // Store reference (not copy) to enable identical() checks downstream
-          _lastEmittedEvents = _pendingEvents;
         }
         _pendingEvents = null;
       }
