@@ -27,7 +27,7 @@ void main() {
     });
 
     Widget pump({int totalDurationMs = 8000}) => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(

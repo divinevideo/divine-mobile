@@ -68,7 +68,7 @@ void main() {
       return ProviderScope(
         overrides: [nostrServiceProvider.overrideWithValue(mockNostrClient)],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MultiBlocProvider(
@@ -268,7 +268,7 @@ void main() {
               nostrServiceProvider.overrideWithValue(mockNostrClient),
             ],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MultiBlocProvider(

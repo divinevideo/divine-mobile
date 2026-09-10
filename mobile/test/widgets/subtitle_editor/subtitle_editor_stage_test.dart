@@ -53,7 +53,7 @@ void main() {
       SubtitlePreviewControllerInitializer? initializePreviewController,
       SubtitlePreviewSourceLoader? loadPreviewSources,
     }) => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(

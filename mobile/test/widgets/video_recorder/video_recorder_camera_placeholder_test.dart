@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 
 void main() {
@@ -13,7 +13,7 @@ void main() {
     testWidgets('renders placeholder widget', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: VideoRecorderCameraPlaceholder()),
         ),
@@ -25,7 +25,7 @@ void main() {
     testWidgets('shows no icon while initializing (no error)', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: VideoRecorderCameraPlaceholder()),
         ),
@@ -39,7 +39,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: VideoRecorderCameraPlaceholder(
@@ -56,7 +56,7 @@ void main() {
       const errorMessage = 'No camera found. Please connect a camera.';
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: VideoRecorderCameraPlaceholder(errorMessage: errorMessage),
@@ -70,7 +70,7 @@ void main() {
     testWidgets('does not display error text when no error', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: VideoRecorderCameraPlaceholder()),
         ),

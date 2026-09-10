@@ -12,7 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show BugReportData;
 import 'package:openvine/blocs/bug_report/bug_report_cubit.dart';
 import 'package:openvine/config/bug_report_config.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/support_public_submission_notice.dart';
@@ -104,7 +104,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
         ),

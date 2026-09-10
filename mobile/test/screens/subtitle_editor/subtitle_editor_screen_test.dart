@@ -111,7 +111,7 @@ void main() {
   /// exercise the cue list without standing up a native player. The stage's
   /// own behaviour is covered by its widget test.
   Widget pump({String? videoUrl}) => MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: BlocProvider<SubtitleEditorCubit>.value(
       value: cubit,
@@ -645,7 +645,7 @@ void main() {
             subtitleRepositoryProvider.overrideWithValue(repository),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: SubtitleEditorScreen(videoId: video.id),
           ),
@@ -672,7 +672,7 @@ void main() {
         ProviderScope(
           overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: SubtitleEditorScreen(videoId: videoId),
           ),

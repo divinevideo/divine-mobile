@@ -13,7 +13,7 @@ import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dar
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/repositories/invite_availability_repository.dart';
 import 'package:openvine/screens/auth/invite_gate_screen.dart';
@@ -69,7 +69,7 @@ void main() {
           BlocProvider(create: (_) => InviteGateBloc(inviteApiClient: client)),
         ],
         child: MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           routerConfig: GoRouter(
@@ -347,7 +347,7 @@ void main() {
                 ),
               ],
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 routerConfig: GoRouter(
@@ -444,7 +444,7 @@ void main() {
               ),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: GoRouter(
@@ -532,7 +532,7 @@ void main() {
               ),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: GoRouter(

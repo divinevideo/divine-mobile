@@ -148,7 +148,7 @@ class DatabaseBootstrapFailureApp extends StatelessWidget {
       // shipped entirely in English to all 21 other locales without them.
       // AppLocalizations does not touch the database, so it is safe here.
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: resolveAppUiLocale,
       home: _FailureScreen(

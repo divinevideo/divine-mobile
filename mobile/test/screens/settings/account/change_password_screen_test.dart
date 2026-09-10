@@ -10,7 +10,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/change_password/change_password_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/repositories/account_credentials_repository.dart';
 import 'package:openvine/screens/settings/account/change_password_screen.dart';
 
@@ -81,7 +81,7 @@ void main() {
       );
 
       return MaterialApp.router(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         routerConfig: router,

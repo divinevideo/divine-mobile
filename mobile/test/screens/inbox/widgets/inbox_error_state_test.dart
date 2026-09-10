@@ -3,14 +3,14 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_error_state.dart';
 
 void main() {
   group(InboxErrorState, () {
     Widget buildSubject({required VoidCallback onRetry}) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: InboxErrorState(onRetry: onRetry)),
       );

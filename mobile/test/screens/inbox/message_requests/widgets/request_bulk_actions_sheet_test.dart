@@ -60,7 +60,7 @@ void main() {
       return MaterialApp.router(
         routerConfig: router,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
       );

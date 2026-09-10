@@ -26,7 +26,7 @@ void main() {
 
     Widget buildSubject() {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(scaffoldBackgroundColor: VineTheme.backgroundColor),
         home: BlocProvider<LocaleCubit>.value(

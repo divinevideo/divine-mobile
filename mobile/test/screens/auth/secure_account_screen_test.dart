@@ -15,7 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
@@ -98,7 +98,7 @@ void main() {
             authService: mockAuthService,
           ),
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: SecureAccountScreen(),
           ),
@@ -423,8 +423,7 @@ void main() {
                         value: verificationCubit,
                         child: MaterialApp.router(
                           theme: VineTheme.theme,
-                          localizationsDelegates:
-                              AppLocalizations.localizationsDelegates,
+                          localizationsDelegates: appLocalizationsDelegates,
                           supportedLocales: AppLocalizations.supportedLocales,
                           routerConfig: router,
                         ),
@@ -730,7 +729,7 @@ void main() {
               authServiceProvider.overrideWithValue(mockAuthService),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),

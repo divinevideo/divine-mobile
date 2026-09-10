@@ -5,7 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/actor_notification_row.dart';
 import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
 import 'package:openvine/notifications/widgets/video_notification_row.dart';
@@ -204,7 +204,7 @@ Future<void> _pumpScenario(
   await tester.pumpWidget(
     MaterialApp(
       theme: VineTheme.theme,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       // Scrollable so the column's height is unbounded. VineTheme renders
       // through google_fonts, which registers its families asynchronously:

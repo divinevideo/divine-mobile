@@ -10,7 +10,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,7 +58,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),
@@ -128,7 +128,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Column(
@@ -193,7 +193,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: FeatureFlagScreen(),
           ),
@@ -238,7 +238,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: TestContentScreen(),
           ),
@@ -269,7 +269,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Column(
@@ -340,7 +340,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: FeatureFlagScreen(),
           ),
@@ -418,7 +418,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),

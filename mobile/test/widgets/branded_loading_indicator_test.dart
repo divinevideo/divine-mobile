@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:yaml/yaml.dart';
 
@@ -54,7 +54,7 @@ void main() {
       return tester.pumpWidget(
         MaterialApp(
           theme: theme ?? VineTheme.theme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: indicator),
         ),
@@ -179,7 +179,7 @@ void main() {
         data: MediaQueryData(disableAnimations: disableAnimations),
         child: MaterialApp(
           theme: VineTheme.theme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(body: BrandedLoadingIndicator()),
         ),

@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';
 import 'package:openvine/features/appearance/models/appearance_mode.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/settings/appearance_settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,7 +23,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider.value(
@@ -59,7 +59,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlocProvider.value(
             value: cubit,
@@ -88,7 +88,7 @@ void main() {
       await expectMeetsAccessibilityGuidelinesInBothAppearances(
         tester,
         (theme) => MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: theme,
           home: BlocProvider.value(

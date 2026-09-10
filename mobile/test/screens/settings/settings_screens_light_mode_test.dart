@@ -10,7 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -81,7 +81,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<LocaleCubit>.value(
               value: localeCubit,
@@ -120,7 +120,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlocProvider.value(
             value: cubit,
@@ -157,7 +157,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<LocaleCubit>.value(
               value: localeCubit,
@@ -203,7 +203,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const CrosspostingSettingsScreen(),
           ),
@@ -280,7 +280,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const CrosspostingSettingsScreen(),
           ),
@@ -310,7 +310,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlocProvider.value(
             value: cubit,

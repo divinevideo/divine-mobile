@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_stack.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
@@ -45,7 +45,7 @@ Widget _buildSubject(SharedPreferences preferences) {
   return ProviderScope(
     overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: VideoMetadataEditStack(
         video: VideoEvent(

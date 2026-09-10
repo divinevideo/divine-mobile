@@ -8,7 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/clip_recovery/clip_recovery_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_recovery.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
@@ -37,7 +37,7 @@ void main() {
   setUp(() => service = _MockService());
 
   Widget wrap(ClipRecoveryCubit cubit) => MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: BlocProvider.value(value: cubit, child: const ClipRecoveryView()),
   );

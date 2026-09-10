@@ -10,7 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 
 class MockVideoEditorStickerBloc
@@ -58,7 +58,7 @@ void main() {
       );
 
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData.dark(),
         home: Scaffold(

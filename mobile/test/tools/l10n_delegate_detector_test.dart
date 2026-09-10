@@ -83,6 +83,22 @@ void main() {
       expect(sites, isEmpty);
     });
 
+    test('does not count a MaterialApp using appLocalizationsDelegates', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('counts a MaterialApp with delegates that omit AppLocalizations', () {
       final sites = scan('''
 void main() {

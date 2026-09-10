@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
 
 class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
@@ -41,8 +41,7 @@ void main() {
           child: withApp
               ? MaterialApp(
                   navigatorKey: NavigatorKeys.root,
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   home: const Scaffold(body: Text('Home')),
                 )

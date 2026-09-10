@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 
@@ -54,7 +54,7 @@ void main() {
           testProviderScope(
             mockAuthService: mockAuth,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: VineBottomNav(currentIndex: 0)),
             ),
@@ -70,7 +70,7 @@ void main() {
           testProviderScope(
             mockAuthService: mockAuth,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MediaQuery(
                 data: MediaQueryData(disableAnimations: true),
@@ -92,7 +92,7 @@ void main() {
           testProviderScope(
             mockAuthService: mockAuth,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MockGoRouterProvider(
                 goRouter: router,

@@ -14,7 +14,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -608,7 +608,7 @@ Widget testMaterialApp({
     mockVideoEventService: mockVideoEventService,
     child: MaterialApp(
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,
       routes: routes ?? {},

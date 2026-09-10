@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/outage_notice/outage_notice_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/outage_diagnosis_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page/feed_error_widget.dart';
 import 'package:openvine/services/outage_diagnosis_service.dart';
@@ -35,7 +35,7 @@ void main() {
             outageDiagnosisServiceProvider.overrideWithValue(diagnosisService),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: FeedErrorWidget(onRetry: () async {})),
           ),
@@ -68,7 +68,7 @@ void main() {
               outageDiagnosisServiceProvider.overrideWithValue(service),
             ],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: FeedErrorWidget(onRetry: () async {})),
             ),
@@ -102,7 +102,7 @@ void main() {
       when(() => cubit.state).thenReturn(state);
       return tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BlocProvider<OutageNoticeCubit>.value(
@@ -191,7 +191,7 @@ void main() {
       when(() => cubit.state).thenReturn(const OutageNoticeState());
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BlocProvider<OutageNoticeCubit>.value(

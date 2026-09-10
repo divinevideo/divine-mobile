@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/explore/widgets/explore_tab_bar.dart';
 
 FeaturedTabConfig _featured({
@@ -51,7 +51,7 @@ void main() {
         MaterialApp(
           theme: theme ?? VineTheme.theme,
           locale: locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: DefaultTabController(
             length: tabsState.tabCount,
