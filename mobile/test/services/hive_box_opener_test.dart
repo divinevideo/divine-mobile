@@ -42,39 +42,41 @@ void main() {
     }
   });
 
-  test('a fake-async caller cannot strand Hive opening state', () async {
-    final observer = SharedHiveBoxOpenObserver(Zone.current);
-    HiveBoxOpener.observerForTesting = observer;
+  group('HiveBoxOpener.open', () {
+    test('a fake-async caller cannot strand Hive opening state', () async {
+      final observer = SharedHiveBoxOpenObserver(Zone.current);
+      HiveBoxOpener.observerForTesting = observer;
 
-    late Future<Box<dynamic>> open;
-    fakeAsync((_) {
-      open = HiveBoxOpener.open<dynamic>(HiveBoxNames.pendingUploads);
+      late Future<Box<dynamic>> open;
+      fakeAsync((_) {
+        open = HiveBoxOpener.open<dynamic>(HiveBoxNames.pendingUploads);
+      });
+
+      final box = await open;
+      expect(box.isOpen, isTrue);
+      expect(observer.pending, isEmpty);
+
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+      final reopened = await HiveBoxOpener.open<dynamic>(
+        HiveBoxNames.pendingUploads,
+      );
+      expect(reopened.isOpen, isTrue);
     });
 
-    final box = await open;
-    expect(box.isOpen, isTrue);
-    expect(observer.pending, isEmpty);
+    test('an open error remains owned by the calling test zone', () async {
+      final observer = SharedHiveBoxOpenObserver(Zone.current);
+      HiveBoxOpener.observerForTesting = observer;
+      final pathBlocker = File('${tempDir.path}/not_a_directory')
+        ..writeAsStringSync('file');
 
-    await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
-    final reopened = await HiveBoxOpener.open<dynamic>(
-      HiveBoxNames.pendingUploads,
-    );
-    expect(reopened.isOpen, isTrue);
-  });
-
-  test('an open error remains owned by the calling test zone', () async {
-    final observer = SharedHiveBoxOpenObserver(Zone.current);
-    HiveBoxOpener.observerForTesting = observer;
-    final pathBlocker = File('${tempDir.path}/not_a_directory')
-      ..writeAsStringSync('file');
-
-    await expectLater(
-      HiveBoxOpener.open<dynamic>(
-        HiveBoxNames.pendingUploads,
-        path: '${pathBlocker.path}/nested',
-      ),
-      throwsA(isA<FileSystemException>()),
-    );
-    expect(observer.pending, isEmpty);
+      await expectLater(
+        HiveBoxOpener.open<dynamic>(
+          HiveBoxNames.pendingUploads,
+          path: '${pathBlocker.path}/nested',
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(observer.pending, isEmpty);
+    });
   });
 }
