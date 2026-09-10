@@ -319,7 +319,7 @@ void main() {
       });
 
       test(
-        'passive renewal delivers proof without entering interactive purchase state',
+        'passive renewal delivers proof without interactive progress',
         () async {
           final lifecycle = <EntitlementLifecycle>[];
           validator.lifecycleChanges.listen(lifecycle.add);
