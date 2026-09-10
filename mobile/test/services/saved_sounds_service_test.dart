@@ -554,30 +554,33 @@ void main() {
         expect(service.loadSounds().single.url, '$newContainer/$relativePath');
       });
 
-      test('rebases a path stored under the retired draft-import root', () {
-        // Written before imports moved out of draft-owned storage; the file
-        // was relocated by `migrateDraftOwnedAudioImports` (#8024).
-        sharedPreferences.setString(
-          'saved_reusable_sounds_anon',
-          jsonEncode([
-            _importedSound(
-              id: 'local_import_1',
-              filePath:
-                  '$oldContainer/draft_audio_imports/draft_autosave/old.m4a',
-            ).toJson(),
-          ]),
-        );
+      test(
+        'rebases a path stored under the retired draft-import root',
+        () async {
+          // Written before imports moved out of draft-owned storage; the file
+          // was relocated by `migrateDraftOwnedAudioImports` (#8024).
+          await sharedPreferences.setString(
+            'saved_reusable_sounds_anon',
+            jsonEncode([
+              _importedSound(
+                id: 'local_import_1',
+                filePath:
+                    '$oldContainer/draft_audio_imports/draft_autosave/old.m4a',
+              ).toJson(),
+            ]),
+          );
 
-        final service = SavedSoundsService(
-          sharedPreferences,
-          documentsPath: newContainer,
-        );
+          final service = SavedSoundsService(
+            sharedPreferences,
+            documentsPath: newContainer,
+          );
 
-        expect(
-          service.loadSounds().single.url,
-          '$newContainer/library_audio_imports/draft_autosave/old.m4a',
-        );
-      });
+          expect(
+            service.loadSounds().single.url,
+            '$newContainer/library_audio_imports/draft_autosave/old.m4a',
+          );
+        },
+      );
 
       test('leaves a published sound url alone', () async {
         // A remote url that happens to carry an audio-root segment: without
