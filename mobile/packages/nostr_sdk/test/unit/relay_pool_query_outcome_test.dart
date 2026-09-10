@@ -402,6 +402,40 @@ void main() {
         expect((await outcome.future).possiblyCapped, isTrue);
       });
 
+      test('is set when a relay reaches the filter limit below its NIP-11 '
+          'max_limit', () async {
+        final relay = await addRelay('wss://relay.example', maxLimit: 10);
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEvents(relay, 2);
+        await relay.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).possiblyCapped,
+          isTrue,
+          reason: 'the smaller of the filter limit and max_limit applies',
+        );
+      });
+
+      test('with no filter limit, is set at a known max_limit', () async {
+        final relay = await addRelay('wss://relay.example', maxLimit: 2);
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+          },
+        ]);
+
+        await sendEvents(relay, 2);
+        await relay.deliver(['EOSE', _queryId]);
+
+        expect((await outcome.future).possiblyCapped, isTrue);
+      });
+
       test('with no filter limit, is clear below a known max_limit', () async {
         final relay = await addRelay('wss://relay.example', maxLimit: 5);
         final outcome = await startQuery([
