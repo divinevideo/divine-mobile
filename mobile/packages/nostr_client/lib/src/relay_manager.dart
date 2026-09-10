@@ -135,6 +135,9 @@ class RelayManager {
   /// Whether the manager has been initialized
   bool _initialized = false;
 
+  /// Whether [dispose] has run.
+  bool _disposed = false;
+
   /// Whether persisted user-removal intent has been loaded.
   bool _userRemovedRelaysLoaded = false;
 
@@ -650,25 +653,39 @@ class RelayManager {
 
   Future<void>? _forceCycle;
   DateTime? _forceCycleDeadline;
+  int _forceCycleCount = 0;
 
   Future<void> _runForceReconnect() async {
     _log('Force reconnecting all relays');
+    final cycle = ++_forceCycleCount;
     final attempts = [
       for (final url in List<String>.from(_configuredRelays))
         _dial(
           url,
           supersede: true,
           failureMessage: 'Force reconnection failed',
-        ).then((success) => _logForceReconnect(url, connected: success)),
+        ).then(
+          (success) =>
+              _logForceReconnect(url, connected: success, cycle: cycle),
+        ),
     ];
     _notifyStatusChange();
     await Future.wait(attempts);
     _notifyStatusChange();
   }
 
-  void _logForceReconnect(String url, {required bool connected}) {
-    // A relay removed mid-cycle was released, not failed.
-    if (!_configuredRelays.contains(url)) return;
+  void _logForceReconnect(
+    String url, {
+    required bool connected,
+    required int cycle,
+  }) {
+    // A relay released by removal or dispose did not fail, and a cycle that a
+    // later one replaced leaves the report to that one.
+    if (_disposed ||
+        cycle != _forceCycleCount ||
+        !_configuredRelays.contains(url)) {
+      return;
+    }
     if (connected) {
       _log('Force reconnected', relayUrl: url);
     } else {
@@ -708,6 +725,7 @@ class RelayManager {
   /// Dispose of resources
   Future<void> dispose() async {
     _log('Disposing RelayManager');
+    _disposed = true;
     _statusPollTimer?.cancel();
     _statusPollTimer = null;
     List<String>.from(_dials.keys).forEach(_releaseDial);
@@ -768,7 +786,18 @@ class RelayManager {
           dial.result.complete(success);
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (!_isLatestDial(url, dial, generation)) return;
+          if (!_isLatestDial(url, dial, generation)) {
+            // Nobody waits on a replaced or released attempt any more, but a
+            // programming error in it still has to be seen.
+            _diagnose(
+              message: 'Relay connection threw after it was replaced',
+              relayUrl: url,
+              level: RelayDiagnosticLevel.error,
+              error: error,
+              stackTrace: stackTrace,
+            );
+            return;
+          }
           _dials.remove(url);
           dial.result.completeError(error, stackTrace);
         },

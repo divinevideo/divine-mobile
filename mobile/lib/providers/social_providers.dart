@@ -300,9 +300,9 @@ OutgoingDmRetryService? outgoingDmRetryService(Ref ref) {
   // would otherwise sit undelivered until the app is backgrounded and
   // re-foregrounded. `offline` runs the service's offline pass, which surfaces
   // unconfirmed pending rows as failed the moment the network drops (#6046).
-  // `online` arrives only after the connectivity owner has repaired the relay
-  // pool, so the sweep publishes on fresh sockets instead of the zombies the
-  // old network left behind, and the pool is not reconnected twice (#8990).
+  // `online` arrives only after the connectivity owner's repair attempt has
+  // finished, failed or hit its cap, so the sweep runs after that reconnect
+  // instead of racing it, and the pool is not reconnected twice (#8990).
   final retryTriggerStream = ref
       .watch(connectivityRelayReconnectProvider)
       .map<void>((_) {});

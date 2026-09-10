@@ -1670,6 +1670,50 @@ void main() {
           reason: 'the replaced dial cannot overwrite the cycle',
         );
       });
+
+      test(
+        'a replaced attempt that throws cannot fail its replacement',
+        () async {
+          final diagnostics = <RelayDiagnostic>[];
+          final dialManager = RelayManager(
+            config: config,
+            relayPool: mockRelayPool,
+            diagnosticsSink: diagnostics.add,
+          );
+          await dialManager.initialize();
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          final adding = dialManager.addRelay(testCustomRelayUrl);
+          await pumpEventQueue();
+          final reconnecting = dialManager.reconnectRelay(testCustomRelayUrl);
+          await pumpEventQueue();
+          expect(dials, hasLength(2));
+
+          dials.first.completeError(StateError('replaced attempt failed'));
+          await pumpEventQueue();
+          dials.last.complete(true);
+
+          expect(await reconnecting, isTrue);
+          expect(await adding, isTrue);
+          expect(
+            diagnostics
+                .where((entry) => entry.level == RelayDiagnosticLevel.error)
+                .map((entry) => entry.error),
+            contains(isA<StateError>()),
+            reason: "the replaced attempt's error is still reported",
+          );
+        },
+      );
     });
 
     group('health check', () {
@@ -2042,6 +2086,71 @@ void main() {
           );
         },
       );
+
+      test('a cycle cut short by dispose reports no failure', () async {
+        final diagnostics = <RelayDiagnostic>[];
+        final cycleManager = RelayManager(
+          config: config,
+          relayPool: mockRelayPool,
+          diagnosticsSink: diagnostics.add,
+        );
+        await cycleManager.initialize();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => Completer<bool>().future);
+
+        unawaited(cycleManager.forceReconnectAll());
+        await pumpEventQueue();
+        await cycleManager.dispose();
+        await pumpEventQueue();
+
+        final messages = diagnostics.map((entry) => entry.message);
+        expect(messages, contains('Force reconnecting all relays'));
+        expect(messages, isNot(contains('Force reconnection failed')));
+      });
+
+      test('a replaced cycle does not report its relay twice', () async {
+        final original = RelayManager.reconnectSweepBudget;
+        RelayManager.reconnectSweepBudget = Duration.zero;
+        addTearDown(() => RelayManager.reconnectSweepBudget = original);
+        final diagnostics = <RelayDiagnostic>[];
+        final cycleManager = RelayManager(
+          config: config,
+          relayPool: mockRelayPool,
+          diagnosticsSink: diagnostics.add,
+        );
+        await cycleManager.initialize();
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        await cycleManager.forceReconnectAll();
+        await cycleManager.forceReconnectAll();
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await pumpEventQueue();
+
+        expect(
+          diagnostics.where(
+            (entry) =>
+                entry.message == 'Force reconnected' &&
+                entry.relayUrl == testDefaultRelayUrl,
+          ),
+          hasLength(1),
+        );
+      });
 
       test('reconnects all relays after disconnecting', () async {
         clearInteractions(mockRelayPool);

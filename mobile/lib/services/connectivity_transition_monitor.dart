@@ -12,7 +12,7 @@ enum ConnectivityTransition {
   offline,
 
   /// The device regained a network, or switched interfaces while online, and
-  /// the relay pool has been repaired for it.
+  /// a repair of the relay pool for it has finished, failed or hit its cap.
   online,
 }
 

@@ -89,6 +89,24 @@ void main() {
           expect(harness.repairs, equals(1));
         });
       });
+
+      test('keeps a report that beats the seed as the baseline', () {
+        // A slow seed must not overwrite it, or the next duplicate report
+        // would read as a change and reconnect every relay (#8990).
+        fakeAsync((async) {
+          final seed = Completer<List<ConnectivityResult>>();
+          final harness = _Harness(check: () => seed.future);
+          harness.report(_mobile);
+          async.flushMicrotasks();
+          seed.complete(_wifi);
+          async.flushMicrotasks();
+
+          harness.report(_mobile);
+          async.elapse(const Duration(seconds: 5));
+
+          expect(harness.repairs, isZero);
+        });
+      });
     });
 
     group('repair', () {
@@ -292,6 +310,26 @@ void main() {
           async.elapse(const Duration(seconds: 5));
 
           expect(harness.repairs, isZero);
+        });
+      });
+
+      test('during a repair stops it reporting or repairing again', () {
+        fakeAsync((async) {
+          final gate = Completer<void>();
+          final harness = _Harness(repair: () => gate.future);
+          async.flushMicrotasks();
+
+          harness.report(_mobile);
+          async.elapse(const Duration(seconds: 2));
+          harness.report(_wifi);
+          async.flushMicrotasks();
+          unawaited(harness.monitor.dispose());
+          async.flushMicrotasks();
+          gate.complete();
+          async.elapse(const Duration(seconds: 5));
+
+          expect(harness.repairs, equals(1));
+          expect(harness.transitions, isEmpty);
         });
       });
     });

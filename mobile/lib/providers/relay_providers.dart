@@ -731,7 +731,7 @@ final connectivityRelayReconnectProvider =
         repair: () async {
           await ref.read(nostrServiceProvider).forceReconnectAll();
           Log.info(
-            'Reconnected relays after a connectivity change',
+            'Relay reconnect attempt after a connectivity change ended',
             name: 'ConnectivityRelayReconnect',
             category: LogCategory.relay,
           );
