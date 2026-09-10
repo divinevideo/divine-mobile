@@ -210,7 +210,7 @@ void main() {
       expect(proofData, isNotNull);
       expect(proofData!.c2paManifestId, 'urn:c2pa:existing');
       expect(c2paService.readManifestCallCount, 1);
-      expect(c2paService.signVideoCallCount, 0);
+      expect(c2paService.signVideoInPlaceCallCount, 0);
     });
 
     test('preserves the active manifest ID after generating a proof', () async {
@@ -258,7 +258,7 @@ void main() {
 
       expect(proofData, isNotNull);
       expect(proofData!.c2paManifestId, 'urn:c2pa:generated');
-      expect(c2paService.signVideoCallCount, 1);
+      expect(c2paService.signVideoInPlaceCallCount, 1);
       // Signing already read the manifest back to decide it was safe to
       // replace the recording, so proofFile reuses that read rather than
       // performing a second one over the same file (#8799).
@@ -385,7 +385,7 @@ class _FailingC2paSigningService extends C2paSigningService {
 
 class _ExistingProofC2paSigningService extends C2paSigningService {
   int readManifestCallCount = 0;
-  int signVideoCallCount = 0;
+  int signVideoInPlaceCallCount = 0;
 
   @override
   Future<C2paSigningResult> signVideoInPlace({
@@ -394,7 +394,7 @@ class _ExistingProofC2paSigningService extends C2paSigningService {
     Map<String, dynamic>? cawgIdentityAssertion,
     bool enableAdvancedCawgEmbedding = false,
   }) async {
-    signVideoCallCount += 1;
+    signVideoInPlaceCallCount += 1;
     throw StateError('Existing proof must not be signed again');
   }
 
@@ -410,7 +410,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
 
   final String videoPath;
   int readManifestCallCount = 0;
-  int signVideoCallCount = 0;
+  int signVideoInPlaceCallCount = 0;
 
   @override
   Future<C2paSigningResult> signVideoInPlace({
@@ -419,7 +419,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
     Map<String, dynamic>? cawgIdentityAssertion,
     bool enableAdvancedCawgEmbedding = false,
   }) async {
-    signVideoCallCount += 1;
+    signVideoInPlaceCallCount += 1;
     return C2paSigningResult(
       signedFilePath: this.videoPath,
       success: true,

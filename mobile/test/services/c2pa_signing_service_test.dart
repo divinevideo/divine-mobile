@@ -187,7 +187,7 @@ void main() {
       );
     });
 
-    group('signVideo', () {
+    group('signVideoInPlace', () {
       test(
         'deletes the partial output when the native call throws (#7739)',
         () async {
