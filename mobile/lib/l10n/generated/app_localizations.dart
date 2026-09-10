@@ -8347,6 +8347,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Couldn\'t remove 1 video. Try again.} other{Couldn\'t remove {count} videos. Try again.}}'**
   String listRemoveVideosFailure(int count);
 
+  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lists'**
+  String get listsDiscoveryLoadingLabel;
+
   /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
   ///
   /// In en, this message translates to:

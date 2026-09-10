@@ -17,6 +17,7 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -685,6 +686,47 @@ void main() {
         await tester.tap(find.text('Divine Team'));
         expect(tapped, isTrue);
       });
+    });
+  });
+
+  group(DivineListThumbnailSkeleton, () {
+    testWidgets('stands exactly as tall as a real card of the same width', (
+      tester,
+    ) async {
+      // The gallery's rows stay level when placeholders give way to cards
+      // only if the silhouette reserves the same media box and footer.
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 180,
+                    child: DivineListThumbnail.videos(
+                      curatedList: createList(description: 'Two lines\nof it'),
+                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 180,
+                    child: Skeletonizer(child: DivineListThumbnailSkeleton()),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
     });
   });
 }

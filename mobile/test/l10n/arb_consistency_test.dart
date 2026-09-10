@@ -526,6 +526,7 @@ const _knownUntranslatedDebt = <String>{
   'bugReportImageInsertionRejected',
   'featureRequestImageInsertionRejected',
   'listsDiscoveryEmpty',
+  'listsDiscoveryLoadingLabel',
   // List-card screen-reader count and the discovered-list load failure
   // (#8540). Deferred to the next human translation pass rather than
   // machine-translated: the count has to agree with each locale's plural

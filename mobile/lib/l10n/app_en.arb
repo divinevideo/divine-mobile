@@ -3054,6 +3054,10 @@
     "description": "Snackbar when selected videos are still in the list after a removal batch.",
     "placeholders": { "count": { "type": "int" } }
   },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
   "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
   "@listsDiscoveryEmpty": {
     "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."

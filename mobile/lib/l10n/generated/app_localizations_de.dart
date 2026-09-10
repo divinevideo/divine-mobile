@@ -4959,6 +4959,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
   String get listsDiscoveryEmpty =>
       'No lists turned up this time. Pull to refresh.';
 
