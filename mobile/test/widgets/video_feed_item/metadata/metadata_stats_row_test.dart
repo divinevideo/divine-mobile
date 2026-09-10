@@ -121,6 +121,23 @@ void main() {
       expect(find.text('2.1M'), findsOneWidget);
     });
 
+    testWidgets('shows unknown interaction counts without fabricating zero', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<VideoInteractionsState>.empty(),
+        initialState: const VideoInteractionsState(
+          status: VideoInteractionsStatus.success,
+        ),
+      );
+
+      await _pump(tester, video: _video(), bloc: bloc);
+
+      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('0'), findsOneWidget);
+    });
+
     testWidgets('shows the Vine and diVine breakdown for a classic Vine', (
       tester,
     ) async {

@@ -219,11 +219,9 @@ class _StatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayValue = isLoading
+    final displayValue = isLoading || count == null
         ? '—'
-        : count != null
-        ? StringUtils.formatCompactNumber(count!)
-        : '0';
+        : StringUtils.formatCompactNumber(count!);
 
     return Column(
       children: [
