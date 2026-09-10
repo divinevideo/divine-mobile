@@ -96,13 +96,19 @@ class QueryResult {
   /// reached that relay's own result-size limit, rather than the relay
   /// having no more events to send.
   ///
+  /// A relay that sent events outside the read's filters counts too: it did
+  /// not honour them, so it may have spent its limit on events nobody asked
+  /// for. A cache relay never counts, since it serves the pool's own copies
+  /// of what relays sent.
+  ///
   /// Can be `true` even when [isComplete] is also `true`: a relay can answer
   /// fully within its own cap and still call that "done".
   final bool possiblyCapped;
 
   /// `true` when every relay that answered explicitly confirmed it had no
   /// further matching events (a NIP-67 `finish` hint), rather than merely
-  /// going quiet after its last event.
+  /// going quiet after its last event. A relay that also sent `more` or
+  /// `auth`, or answered outside the read's filters, has not confirmed it.
   final bool confirmedExhaustive;
 
   /// `true` only when every relay in the read finished on its own before the

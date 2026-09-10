@@ -664,12 +664,12 @@ void main() {
         },
       );
 
-      test('does not count events outside the query filters', () async {
+      test('is set by an event outside the query filters', () async {
         final relay = await addRelay('wss://relay.example');
         final outcome = await startQuery([
           {
             'kinds': [EventKind.textNote],
-            'limit': 1,
+            'limit': 10,
           },
         ]);
 
@@ -678,9 +678,113 @@ void main() {
 
         expect(
           (await outcome.future).possiblyCapped,
-          isFalse,
-          reason: 'the relay sent nothing the filter asked for',
+          isTrue,
+          reason:
+              'a relay that does not honour the filter may have spent its '
+              'limit on events the query never asked for',
         );
+      });
+
+      test('is clear when only a cache relay reaches the filter '
+          'limit', () async {
+        final cache = _ScriptedRelay('wss://cache.example')
+          ..relayStatus.relayType = RelayType.cache;
+        expect(
+          await nostr.relayPool.add(cache, relayType: RelayType.cache),
+          isTrue,
+        );
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEvents(cache, 2);
+        await cache.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).possiblyCapped,
+          isFalse,
+          reason:
+              "a cache relay serves the pool's own copies of what relays "
+              'sent, so reaching the limit says nothing a relay withheld',
+        );
+        expect(completionLines(), isEmpty);
+      });
+    });
+
+    group('events outside the filters', () {
+      test('are counted in the completion line', () async {
+        final relay = await addRelay('wss://relay.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 10,
+          },
+        ]);
+
+        await sendEvents(relay, 2, kind: EventKind.reaction);
+        await relay.deliver(['EOSE', _queryId]);
+        await outcome.future;
+
+        expect(completionLines(), hasLength(1));
+        expect(
+          completionLines().single.message,
+          contains(
+            'wss://relay.example (events=0, 2 events outside the filter, '
+            'capped)',
+          ),
+        );
+      });
+
+      test('keep a finish hint from confirming the relay exhaustive', () async {
+        final relay = await addRelay('wss://relay.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 10,
+          },
+        ]);
+
+        await sendEvents(relay, 1, kind: EventKind.reaction);
+        await relay.deliver([
+          'EOSE',
+          _queryId,
+          ['finish'],
+        ]);
+
+        final ended = await outcome.future;
+        expect(
+          ended.confirmedExhaustive,
+          isFalse,
+          reason: 'the relay did not honour the filter it says it finished',
+        );
+        expect(ended.possiblyCapped, isTrue);
+      });
+
+      test('leave out events a filter field is not judged on '
+          'locally', () async {
+        final relay = await addRelay('wss://relay.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'search': 'a term these events do not contain',
+            'limit': 10,
+          },
+        ]);
+
+        await sendEvents(relay, 1);
+        await relay.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).possiblyCapped,
+          isFalse,
+          reason:
+              'NIP-50 search is judged by the relay, so an event it returns '
+              'for one is not outside the filter',
+        );
+        expect(completionLines(), isEmpty);
       });
     });
 

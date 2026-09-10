@@ -150,14 +150,17 @@ List<int?> _untilsOf(_StoreRelay relay) => [
 
 void main() {
   group('Nostr.readAllEvents', () {
+    late List<RelayDiagnostic> diagnostics;
     late Nostr nostr;
     var eventNumber = 0;
 
     setUp(() {
+      diagnostics = [];
       nostr = Nostr(
         LocalNostrSigner(_privateKey),
         const [],
         (url) => RelayBase(url, RelayStatus(url)),
+        diagnosticsSink: diagnostics.add,
       );
     });
 
@@ -536,21 +539,46 @@ void main() {
     });
 
     group('when a relay ignores until', () {
-      test('steps past the boundary instead of asking for the same page '
-          'again', () async {
+      test('stops incomplete, and the completion line counts the events '
+          'outside the filter', () async {
         final stored = await eventsAt([103, 102, 101]);
         final relay = await addStore('wss://ignores-until.example', stored)
           ..ignoresUntil = true;
 
         final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
 
-        // Every page gets the same two newest events back. The pool's filter
-        // gate drops the ones above `until`, so all that reaches the walk is
-        // the event at the cursor, which it has already collected; stepping
-        // past it is what ends the walk rather than spinning to `maxPages`.
-        expect(_untilsOf(relay), [null, 102, 101]);
-        expect(result.pages, 3);
+        // Every page gets the same two newest events back, and the pool's
+        // filter gate drops the one above `until`. What is left brings
+        // nothing new, from a relay that did not honour the filter.
+        expect(_untilsOf(relay), [null, 102]);
+        expect(result.isComplete, isFalse);
+        expect(
+          result.stoppedBy,
+          QueryEnd.complete,
+          reason:
+              'the page settled; it stopped the walk by bringing nothing new '
+              'from a relay that may be capped',
+        );
         expect(_idsOf(result.events), unorderedEquals(_idsOf(stored.take(2))));
+        expect([
+          for (final entry in diagnostics)
+            if (entry.site == RelayDiagnosticSite.queryCompletion)
+              entry.message,
+        ], contains(contains('1 event outside the filter')));
+      });
+
+      test('ends the same walk complete for a relay that honours '
+          'until', () async {
+        final stored = await eventsAt([103, 102, 101]);
+        await addStore('wss://relay.example', stored);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(_idsOf(result.events), unorderedEquals(_idsOf(stored)));
+        expect(result.isComplete, isTrue);
+        expect([
+          for (final entry in diagnostics) entry.message,
+        ], everyElement(isNot(contains('outside the filter'))));
       });
     });
 

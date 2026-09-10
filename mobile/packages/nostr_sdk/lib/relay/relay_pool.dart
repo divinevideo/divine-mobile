@@ -1721,6 +1721,11 @@ class RelayPool {
             'Dropping relay event that does not match subscription filter '
             'from ${relay.url}: eventId=${event.id}, subId=$subId',
           );
+          if (querySubscription != null) {
+            // A relay that does not honour the filter may have spent its
+            // limit on events the query never asked for.
+            _queryOutcomes[subId]?.recordOffFilterEvent(relay);
+          }
           return;
         }
 

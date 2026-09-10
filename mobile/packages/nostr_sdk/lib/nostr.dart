@@ -402,10 +402,12 @@ class Nostr {
   ///
   /// The walk also ends complete on a settled page confirmed exhaustive by
   /// NIP-67 `finish`. It stops incomplete, keeping what it collected, on the
-  /// first page that does not settle — whose [QueryEnd] is
-  /// [PagedQueryResult.stoppedBy] — after [maxPages] pages, or once
-  /// [deadline] has passed. Each page gets [pageTimeout], cut short by
-  /// [deadline].
+  /// first page that does not settle, and on a settled page that brought
+  /// nothing new while a relay may be capped, such as one that answered
+  /// outside the filter the way a relay ignoring `until` does. Either way
+  /// that page's [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also
+  /// stops incomplete after [maxPages] pages, or once [deadline] has passed.
+  /// Each page gets [pageTimeout], cut short by [deadline].
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
@@ -475,7 +477,14 @@ class Nostr {
       final frontier = reach.fullFrontier;
       if (frontier != null && (cursor == null || frontier < cursor)) {
         until = frontier;
-      } else if (frontier != null && cursor != null) {
+        continue;
+      }
+      if (newEvents.isEmpty && page.possiblyCapped) {
+        // Nothing new, from a relay that may be capped or did not honour the
+        // filter, and nothing moves the cursor: another page would repeat it.
+        return walked(isComplete: false, stoppedBy: page.endedBy);
+      }
+      if (frontier != null && cursor != null) {
         // A relay filled the page inside the cursor's own second, which no
         // `until` can page within.
         skippedPartOfASecond = true;
