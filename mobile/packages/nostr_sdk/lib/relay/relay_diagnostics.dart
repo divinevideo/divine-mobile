@@ -29,8 +29,17 @@ class RelayDiagnostic {
     this.stackTrace,
   });
 
+  /// Reserved [relayUrl] value for a diagnostic about the pool as a whole.
+  ///
+  /// Real relay diagnostics always carry their WebSocket URL. Pool-level
+  /// summaries use this stable key so consumers can group and rate-limit them
+  /// without presenting it as a configured relay.
+  static const String poolScope = 'relay-pool';
+
   final RelayDiagnosticSite site;
   final RelayDiagnosticLevel level;
+
+  /// The relay WebSocket URL, or [poolScope] for a pool-level summary.
   final String relayUrl;
   final String message;
   final Object? error;

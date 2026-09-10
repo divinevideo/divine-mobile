@@ -1252,6 +1252,7 @@ class RelayPool {
   ];
 
   void _completeQuery(String subId, Function callback) {
+    _diagnoseInconclusiveFullSettlementQuery(subId);
     _queryCompleteCallbacks.remove(subId);
     _queryAnswered.remove(subId);
     _queryClosedWithoutAnswer.remove(subId);
@@ -2310,6 +2311,7 @@ class RelayPool {
       _repairRelaysThatNeverServedSubscription(id);
       _releaseSubscription(id);
     } else {
+      _diagnoseInconclusiveFullSettlementQuery(id);
       // No matching subscription — treat [id] as a one-shot query. Drop its
       // completion callback so a query cancelled before EOSE doesn't leak a
       // never-fired callback in [_queryCompleteCallbacks].
@@ -2322,6 +2324,59 @@ class RelayPool {
       _querySettleTimers.remove(id)?.cancel();
       _releaseQuery(id);
     }
+  }
+
+  /// Reports settlement evidence before query teardown destroys it.
+  ///
+  /// Full-settlement queries reach this path when their caller's deadline
+  /// expires. Socket repair and observability deliberately have different
+  /// gates: a relay can remain connected and receive unrelated frames while
+  /// still never settling this request, which makes it ineligible for zombie
+  /// repair but no less important in a support export. See #9030.
+  void _diagnoseInconclusiveFullSettlementQuery(String subId) {
+    if (!_queriesRequiringFullSettlement.contains(subId)) return;
+
+    final relays = [
+      ..._relaysSnapshot(),
+      ..._tempRelaysSnapshot(),
+      ..._cacheRelaysSnapshot(),
+    ];
+    final unsettled = <Relay>[];
+    for (final relay in relays) {
+      if (relay.checkQuery(subId)) unsettled.add(relay);
+    }
+    for (final relay in unsettled) {
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        RelayDiagnosticLevel.warning,
+        relay.url,
+        'Relay did not settle request $subId within the caller window',
+      );
+    }
+
+    final answered = _queryAnswered.contains(subId);
+    final closedWithoutAnswer = _queryClosedWithoutAnswer.contains(subId);
+    final noRelayTookRequest = _queryReachedNoRelay.contains(subId);
+    final strandedOnBlockedRelay = unsettled.any(
+      (relay) => !_canStillSettleQuery(relay),
+    );
+    if (answered &&
+        !closedWithoutAnswer &&
+        !noRelayTookRequest &&
+        !strandedOnBlockedRelay &&
+        unsettled.isEmpty) {
+      return;
+    }
+    _diagnose(
+      RelayDiagnosticSite.requestSettlement,
+      RelayDiagnosticLevel.warning,
+      RelayDiagnostic.poolScope,
+      'Full-settlement request $subId ended inconclusively '
+      '(answered=$answered, closedWithoutAnswer=$closedWithoutAnswer, '
+      'noRelayTookRequest=$noRelayTookRequest, '
+      'strandedOnBlockedRelay=$strandedOnBlockedRelay, '
+      'unsettledRelays=${unsettled.length})',
+    );
   }
 
   // different relay use different filter

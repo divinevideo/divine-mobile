@@ -127,6 +127,19 @@ abstract class DmHistoryDrainConfig {
   /// Maximum pages fetched in a single drain (≈ [pageSize] × this events).
   static const int maxPages = 50;
 
+  /// Additional attempts shared by the whole drain run when a page does not
+  /// fully settle. This is deliberately a run budget, not a per-page budget:
+  /// one bad relay must not multiply the 5-second query deadline by every
+  /// page in a large history. See #9030.
+  static const int unsettledPageRetriesPerRun = 2;
+
+  /// Automatic retries after a drain defers without a relay status edge.
+  static const List<Duration> deferredRetryDelays = [
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+  ];
+
   /// Maximum NIP-44 decryption attempts for a single gift wrap before the
   /// failed-decrypt retry queue gives up on it. Generous so a transient
   /// remote-signer (Keycast RPC) outage spanning several inbox opens still
@@ -625,6 +638,23 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
+  /// Backoff retry paired with [_drainRelayReadySubscription]. Whichever fires
+  /// first cancels the other. The finite delay list bounds consecutive
+  /// no-progress deferrals; durable cursor progress or completion replenishes
+  /// the budget for a later, independent outage. #9030.
+  Timer? _drainRetryTimer;
+  int _automaticDrainRetryCount = 0;
+
+  /// Replenishes deferred retries only after the drain durably made progress.
+  ///
+  /// An authoritative empty gift-wrap page is not enough on its own: outgoing
+  /// NIP-04 recovery can still fail immediately afterward. Resetting before
+  /// that pass would turn a permanent NIP-04 outage into an unbounded sequence
+  /// of first-delay retries.
+  void _resetAutomaticDrainRetriesAfterProgress() {
+    _automaticDrainRetryCount = 0;
+  }
+
   /// One-shot relay-status listener armed by a deferred history drain, so
   /// the drain resumes when a relay connects instead of waiting for the next
   /// inbox open. See [_resumeDrainWhenRelayConnects].
@@ -1006,6 +1036,9 @@ class DmRepository {
     _eventLock = null;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1965,18 +1998,35 @@ class DmRepository {
       }
       var pagesRun = 0;
       var totalEvents = 0;
+      var unsettledRetriesRemaining =
+          DmHistoryDrainConfig.unsettledPageRetriesPerRun;
       for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
         // Bail if the user switched or the repository was torn down.
         if (_ingestSessionEnded(pubkey, gen)) return;
-        final historyPage = await _fetchHistoryPage(
+        final subscriptionId = dmHistoryDrainSubscriptionId(pubkey, page);
+        final firstHistoryPage = await _fetchHistoryPage(
           until: cursor,
           limit: DmHistoryDrainConfig.pageSize,
-          subscriptionId: dmHistoryDrainSubscriptionId(pubkey, page),
+          subscriptionId: subscriptionId,
           pubkey: pubkey,
           generation: gen,
           tempRelays: ownInbox,
         );
-        if (historyPage == null) return;
+        if (firstHistoryPage == null) return;
+        var historyPage = firstHistoryPage;
+        while (!historyPage.authoritative && unsettledRetriesRemaining > 0) {
+          unsettledRetriesRemaining--;
+          final retryPage = await _fetchHistoryPage(
+            until: cursor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: subscriptionId,
+            pubkey: pubkey,
+            generation: gen,
+            tempRelays: ownInbox,
+          );
+          if (retryPage == null) return;
+          historyPage = retryPage;
+        }
         final events = historyPage.events;
         // _fetchHistoryPage's own guard sits at the top of its persist loop,
         // so the last event's persist and the yield after it are both
@@ -2006,7 +2056,8 @@ class DmRepository {
               // the window would be skipped by the events it did return.
               await syncState.setHistoryDrainCursor(pubkey, cursor);
               Log.warning(
-                'DM history drain saw an empty page that no relay answered for '
+                'DM history drain request $subscriptionId saw an empty page '
+                'that no relay answered for '
                 '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
                 '$cursor and deferring completion to the next inbox open.',
                 category: LogCategory.system,
@@ -2042,7 +2093,8 @@ class DmRepository {
             // already dragged below the window we still need to re-read.
             await syncState.setHistoryDrainCursor(pubkey, cursor);
             Log.warning(
-              'DM history drain saw a page not every relay settled for '
+              'DM history drain request $subscriptionId saw a page not every '
+              'relay settled for '
               '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
               '$cursor and deferring completion to the next inbox open.',
               category: LogCategory.system,
@@ -2069,6 +2121,7 @@ class DmRepository {
         // point never moves below a window that page may not have seen whole.
         if (!sawUnansweredPage) {
           await syncState.setHistoryDrainCursor(pubkey, cursor);
+          _resetAutomaticDrainRetriesAfterProgress();
         }
       }
 
@@ -2092,6 +2145,7 @@ class DmRepository {
           // later session never has to spend a read finding that out.
           await syncState.setDrainCoveredOwnInbox(pubkey);
           await syncState.markHistoryDrainComplete(pubkey);
+          _resetAutomaticDrainRetriesAfterProgress();
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
@@ -2198,6 +2252,8 @@ class DmRepository {
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
     if (_ingestSessionEnded(pubkey, generation)) return;
     final lastConnected = <String>{
       for (final entry in _nostrClient.relayStatuses.entries)
@@ -2225,6 +2281,8 @@ class DmRepository {
       if (!newlyConnected) return;
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
+      _drainRetryTimer?.cancel();
+      _drainRetryTimer = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
@@ -2233,6 +2291,23 @@ class DmRepository {
       );
       unawaited(backfillHistoryIfNeeded());
     });
+    if (_automaticDrainRetryCount <
+        DmHistoryDrainConfig.deferredRetryDelays.length) {
+      final delay =
+          DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
+      _drainRetryTimer = Timer(delay, () {
+        _drainRetryTimer = null;
+        unawaited(_drainRelayReadySubscription?.cancel());
+        _drainRelayReadySubscription = null;
+        if (_ingestSessionEnded(pubkey, generation)) return;
+        Log.info(
+          'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
+          'bounded retry delay',
+          category: LogCategory.system,
+        );
+        unawaited(backfillHistoryIfNeeded());
+      });
+    }
   }
 
   /// Stops listening for incoming DMs and tears this repository down.
@@ -2258,6 +2333,9 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass
