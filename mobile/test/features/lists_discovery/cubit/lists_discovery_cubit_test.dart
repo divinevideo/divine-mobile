@@ -26,12 +26,13 @@ CuratedList _videoList(
   String id, {
   String? pubkey,
   int createdAtYear = 2026,
+  List<String> videoEventIds = const ['v1'],
   List<String> thumbnailUrls = const [],
 }) => CuratedList(
   id: id,
   name: 'List $id',
   pubkey: pubkey ?? _author,
-  videoEventIds: const ['v1'],
+  videoEventIds: videoEventIds,
   createdAt: DateTime(createdAtYear),
   updatedAt: DateTime(createdAtYear),
   thumbnailUrls: thumbnailUrls,
@@ -211,6 +212,45 @@ void main() {
             excludeAuthor: _viewer,
           ),
         ).called(1);
+      });
+
+      test('hides streamed lists that have no videos', () async {
+        final bare = _videoList('bare', videoEventIds: const []);
+        final full = _videoList('full');
+        when(
+          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        ).thenAnswer((_) => Stream.value([bare, full]));
+        when(
+          () => curatedRepository.resolveListThumbnails(
+            any(),
+            maxThumbnails: any(named: 'maxThumbnails'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.first as List<CuratedList>,
+        );
+        when(
+          () => peopleRepository.discoverPublicLists(
+            limit: any(named: 'limit'),
+            excludeAuthor: any(named: 'excludeAuthor'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.videoLists.map((l) => l.id), equals(['full']));
+        final resolved =
+            verify(
+                  () => curatedRepository.resolveListThumbnails(
+                    captureAny(),
+                    maxThumbnails: any(named: 'maxThumbnails'),
+                  ),
+                ).captured.single
+                as List<CuratedList>;
+        expect(resolved.map((l) => l.id), equals(['full']));
       });
 
       test(

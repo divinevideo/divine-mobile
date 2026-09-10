@@ -103,6 +103,16 @@ void main() {
       });
     });
 
+    group('hasVideos', () {
+      test('is true when the list references a video', () {
+        expect(createSubject().hasVideos, isTrue);
+      });
+
+      test('is false when the list references no videos', () {
+        expect(createSubject(videoEventIds: const []).hasVideos, isFalse);
+      });
+    });
+
     group('copyWith', () {
       test('returns same instance when no fields changed', () {
         final list = createSubject();

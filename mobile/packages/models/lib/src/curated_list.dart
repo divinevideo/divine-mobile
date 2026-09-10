@@ -146,6 +146,12 @@ class CuratedList extends Equatable {
   /// coordinates (`kind:pubkey:d-tag`).
   final List<String> videoEventIds;
 
+  /// Whether the list references at least one video.
+  ///
+  /// Discovery, search and other creators' profiles hide a list with no
+  /// videos; only the viewer's own My Lists tab shows one.
+  bool get hasVideos => videoEventIds.isNotEmpty;
+
   /// When the list was created.
   final DateTime createdAt;
 

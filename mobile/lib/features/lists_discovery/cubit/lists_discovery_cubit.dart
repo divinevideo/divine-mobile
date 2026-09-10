@@ -29,7 +29,7 @@ const kListsDiscoveryThumbnails = 5;
 /// relay stream and are enriched with thumbnails once the stream settles,
 /// while kind-30000 people lists come from a one-shot relay query. The
 /// viewer's own lists are excluded — those live on the profile's My Lists
-/// tab instead.
+/// tab instead — and so is any list that has no videos yet.
 class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     with CloseGuardedEmit<ListsDiscoveryState> {
   ListsDiscoveryCubit({
@@ -182,10 +182,13 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   List<CuratedList> _sortedVideoLists(List<CuratedList> lists) {
     final visible = [
       for (final list in lists)
-        if (_viewerPubkey == null || list.pubkey != _viewerPubkey) list,
+        if (list.hasVideos && !_isOwn(list)) list,
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return List.unmodifiable(visible.take(kListsDiscoveryColumnCap));
   }
+
+  bool _isOwn(CuratedList list) =>
+      _viewerPubkey != null && list.pubkey == _viewerPubkey;
 
   Future<void> _loadPeopleLists() async {
     emitIfOpen(
