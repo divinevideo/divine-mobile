@@ -4935,6 +4935,9 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
 
   @override
