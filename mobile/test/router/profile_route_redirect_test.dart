@@ -30,6 +30,7 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/profile/profile_grid.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:reposts_repository/reposts_repository.dart';
@@ -151,8 +152,10 @@ void main() {
     repostsRepository = _MockRepostsRepository();
     commentsRepository = _MockCommentsRepository();
 
-    // Other's author feed carries one video so feed mode
-    // (ProfileVideoFeedView) has something to show; everyone else's is empty.
+    // Every author's feed carries one video by default, so a feed-mode URL
+    // (own or other's) has something for ProfileVideoFeedView to show. The
+    // zero-video regression test below re-stubs this to an empty list to
+    // exercise ProfileViewSwitcher's grid fallback.
     when(
       () => videosRepository.getAuthorFeed(
         authorPubkey: any(named: 'authorPubkey'),
@@ -164,9 +167,7 @@ void main() {
       final pubkey = invocation.namedArguments[#authorPubkey] as String;
       return AuthorFeedResult(
         authorPubkey: pubkey,
-        videos: pubkey == otherHex
-            ? [videoFor('other-video-0', otherHex)]
-            : const [],
+        videos: [videoFor('$pubkey-video-0', pubkey)],
         hasMore: false,
       );
     });
@@ -423,16 +424,69 @@ void main() {
         expect(find.byType(OtherProfileView), findsNothing);
       });
 
+      testWidgets('own feed visit stays on the tab wrapper', (tester) async {
+        await pumpRouter(
+          tester,
+          buildRouter(ProfileScreenRouter.pathForIndex(meNpub, 0)),
+        );
+
+        expect(find.byType(ProfileVideoFeedView), findsOneWidget);
+        expect(find.byType(OtherProfileView), findsNothing);
+      });
+
       testWidgets(
-        'other-user feed visit stays on the tab wrapper (no redirect)',
+        'other-user feed visit also redirects to the fullscreen viewer',
         (tester) async {
           await pumpRouter(
             tester,
             buildRouter(ProfileScreenRouter.pathForIndex(otherNpub, 0)),
           );
 
-          expect(find.byType(ProfileVideoFeedView), findsOneWidget);
-          expect(find.byType(OtherProfileView), findsNothing);
+          expect(find.byType(OtherProfileView), findsOneWidget);
+          expect(find.byType(ProfileVideoFeedView), findsNothing);
+          expect(find.byType(ProfileViewSwitcher), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'other-user feed visit with zero videos redirects instead of '
+        'falling back to the grid (#9013 regression)',
+        (tester) async {
+          // The bug this pins: ProfileViewSwitcher only shows
+          // ProfileVideoFeedView when videoIndex != null AND videos is
+          // non-empty; otherwise it falls back to ProfileGridView. A
+          // grid-mode-only redirect guard missed this fallback, so a feed
+          // URL to a zero-video account leaked the actionless own-profile
+          // menu. Re-stub every author to zero videos to force that
+          // fallback path if the guard did not also cover feed mode.
+          when(
+            () => videosRepository.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              offset: any(named: 'offset'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((invocation) async {
+            final pubkey = invocation.namedArguments[#authorPubkey] as String;
+            return AuthorFeedResult(authorPubkey: pubkey, hasMore: false);
+          });
+
+          await pumpRouter(
+            tester,
+            buildRouter(ProfileScreenRouter.pathForIndex(otherNpub, 0)),
+          );
+
+          expect(find.byType(OtherProfileView), findsOneWidget);
+          // Not ProfileViewSwitcher: that widget is exclusively the
+          // tab-wrapper's render path (own-profile-menu territory), so its
+          // absence proves this landed on the fullscreen viewer instead of
+          // leaking through the grid-fallback bug. OtherProfileView renders
+          // its own ProfileGridView (with the real Report/Block menu via
+          // isOwnProfile: false) — a different instance of the same widget
+          // type, present here to confirm the zero-video cold-render
+          // actually completed rather than erroring out.
+          expect(find.byType(ProfileViewSwitcher), findsNothing);
+          expect(find.byType(ProfileGridView), findsOneWidget);
         },
       );
 

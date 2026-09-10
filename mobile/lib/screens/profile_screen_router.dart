@@ -396,9 +396,11 @@ class _ProfileContentView extends ConsumerWidget {
     // Other users' profiles belong on the dedicated fullscreen viewer, which
     // carries the full Report/Block/Unfollow/Message menu. The tab wrapper is
     // the own-profile screen; rendering another user here yields the own-profile
-    // menu with no way to report or block them (#9013). Scope to grid mode only:
-    // feed mode (/profile/:npub/:index) is the video swiper and stays here.
-    if (!isOwnProfile && routeContext.videoIndex == null) {
+    // menu with no way to report or block them (#9013). Not scoped to grid mode:
+    // ProfileViewSwitcher falls back to the grid whenever videos is empty (a
+    // zero-video account, or a cold-loading feed), so a feed-mode URL
+    // (/profile/:npub/:index) can land on that same actionless menu too.
+    if (!isOwnProfile) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
         context.pushReplacement(OtherProfileScreen.pathForNpub(npub));
