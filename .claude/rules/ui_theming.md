@@ -2,6 +2,16 @@
 
 Flutter uses Material Design with Material 3 enabled by default (since Flutter 3.16).
 
+Material and Cupertino ship as the `material_ui` and `cupertino_ui` pub
+packages, not as part of the framework (#8916). Import
+`package:material_ui/material_ui.dart` and
+`package:cupertino_ui/cupertino_ui.dart`; use `package:flutter/widgets.dart`
+for a file that touches no design-system widget.
+`package:flutter/material.dart` still resolves in Flutter 3.47.2 and is frozen
+at zero by `mobile/scripts/check_legacy_design_imports.sh` — importing it gives
+you a second, incompatible `ThemeData` / `MaterialLocalizations`, and the type
+error lands somewhere other than the import.
+
 ---
 
 ## ThemeData

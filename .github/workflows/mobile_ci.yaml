@@ -404,6 +404,15 @@ jobs:
           # cannot see this shape at all. Fix with AsyncScope from
           # lib/utils/async_utils.dart.
           bash scripts/check_uncancellable_timer_wait.sh
+      - name: 🎨 Verify no legacy Material/Cupertino imports (frozen at zero)
+        run: |
+          # Issue #8916. Material and Cupertino ship as the material_ui and
+          # cupertino_ui pub packages now. `package:flutter/material.dart` still
+          # exists in Flutter 3.47.2, so a reintroduced import compiles,
+          # analyzes and tests clean until its ThemeData or MaterialLocalizations
+          # meets ours -- and the type error then surfaces in a file that does
+          # not contain the mistake. Nothing else here reads import URIs.
+          bash scripts/check_legacy_design_imports.sh
       - name: 🧷 Verify shared-setUp stubs do not accrete (inherited-stub ratchet)
         run: |
           # Issue #8399, follow-up to #8170 / #7324. A stub in a shared setUp is
