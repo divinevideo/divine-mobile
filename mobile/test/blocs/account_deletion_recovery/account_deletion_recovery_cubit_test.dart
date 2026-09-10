@@ -42,6 +42,9 @@ class _ManualTimer implements Timer {
 }
 
 class _ManualTimers {
+  _ManualTimers(this._advance);
+
+  final void Function(Duration duration) _advance;
   final timers = <_ManualTimer>[];
 
   Timer create(Duration delay, void Function() callback) {
@@ -51,7 +54,9 @@ class _ManualTimers {
   }
 
   Future<void> fireNext() async {
-    timers.firstWhere((timer) => timer.isActive).fire();
+    final timer = timers.firstWhere((timer) => timer.isActive);
+    _advance(timer.delay);
+    timer.fire();
     await Future<void>.delayed(Duration.zero);
   }
 }
@@ -90,9 +95,11 @@ void main() {
   late _MockAuthService authService;
   late _ManualTimers timers;
   late int resolvedCalls;
+  late DateTime now;
 
   AccountDeletionRecoveryCubit buildCubit({
     bool withReceipt = false,
+    DateTime? recoveryWatchStartedAt,
     Future<void> Function()? onAttemptResolved,
     Future<void> Function(AccountDeletionAttempt)? onAttemptUpdated,
   }) => AccountDeletionRecoveryCubit(
@@ -102,7 +109,9 @@ void main() {
     onAttemptUpdated: onAttemptUpdated,
     receiptPubkeyHex: withReceipt ? 'a' * 64 : null,
     receiptVanishEventId: withReceipt ? 'b' * 64 : null,
+    recoveryWatchStartedAt: recoveryWatchStartedAt,
     timerFactory: timers.create,
+    now: () => now,
   );
 
   setUpAll(() {
@@ -112,13 +121,12 @@ void main() {
   setUp(() {
     repository = _MockRepository();
     authService = _MockAuthService();
-    timers = _ManualTimers();
+    now = DateTime.utc(2026, 9, 10, 12);
+    timers = _ManualTimers((duration) => now = now.add(duration));
     resolvedCalls = 0;
     when(() => authService.signerReadiness).thenReturn(SignerReadiness.ready);
     when(() => authService.currentPublicKeyHex).thenReturn(null);
-    when(
-      () => authService.deleteLocalAccount(any()),
-    ).thenAnswer((_) async {});
+    when(() => authService.deleteLocalAccount(any())).thenAnswer((_) async {});
   });
 
   group('signer readiness', () {
@@ -210,9 +218,7 @@ void main() {
       when(
         () => authService.signerReadiness,
       ).thenReturn(SignerReadiness.unavailable);
-      when(
-        authService.tryRefreshExpiredSession,
-      ).thenAnswer((_) async => false);
+      when(authService.tryRefreshExpiredSession).thenAnswer((_) async => false);
       when(authService.signOut).thenAnswer((_) async {});
       final cubit = buildCubit();
       addTearDown(cubit.close);
@@ -575,10 +581,7 @@ void main() {
       expect(cubit.state.status, AccountDeletionRecoveryStatus.completed);
       verify(() => authService.deleteLocalAccount('a' * 64)).called(1);
       verifyNever(
-        () => authService.signOut(
-          deleteKeys: true,
-          deleteLocalUserData: true,
-        ),
+        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
       );
       await cubit.close();
     });
@@ -593,10 +596,8 @@ void main() {
 
         verify(() => authService.deleteLocalAccount('a' * 64)).called(1);
         verifyNever(
-          () => authService.signOut(
-            deleteKeys: true,
-            deleteLocalUserData: true,
-          ),
+          () =>
+              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
         );
         expect(resolvedCalls, 1);
         expect(cubit.state.status, AccountDeletionRecoveryStatus.resolved);
@@ -633,7 +634,7 @@ void main() {
     });
 
     test(
-      'different active account pauses polling at the session bound',
+      'different active account pauses polling at the support threshold',
       () async {
         when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
         when(
@@ -654,6 +655,69 @@ void main() {
         await cubit.close();
       },
     );
+
+    test(
+      'expired durable watch refreshes once before exposing support',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final cubit = buildCubit(
+          withReceipt: true,
+          recoveryWatchStartedAt: now.subtract(const Duration(minutes: 16)),
+        );
+
+        await cubit.resume(_processing);
+
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          Duration.zero,
+        );
+        await timers.fireNext();
+
+        expect(cubit.state.pollingPaused, isTrue);
+        verify(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).called(1);
+        expect(timers.timers.any((timer) => timer.isActive), isFalse);
+        await cubit.close();
+      },
+    );
+
+    test('resume does not renew the overdue refresh allowance', () async {
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => repository.fetchStatus(
+          attemptId: _processing.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _processing);
+      final cubit = buildCubit(
+        withReceipt: true,
+        recoveryWatchStartedAt: now.subtract(const Duration(minutes: 16)),
+      );
+
+      await cubit.resume(_processing);
+      await timers.fireNext();
+      await cubit.resume(_processing);
+
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(timers.timers.any((timer) => timer.isActive), isFalse);
+      verify(
+        () => repository.fetchStatus(
+          attemptId: _processing.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).called(1);
+      await cubit.close();
+    });
 
     test('unknown public status stays gated and pauses at the bound', () async {
       when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
@@ -769,10 +833,7 @@ void main() {
 
       await cubit.acknowledgeCompletion();
       expect(cubit.state.status, AccountDeletionRecoveryStatus.cleanupFailed);
-      expect(
-        cubit.state.failure,
-        AccountDeletionRecoveryFailure.receiptClear,
-      );
+      expect(cubit.state.failure, AccountDeletionRecoveryFailure.receiptClear);
       await timers.fireNext();
 
       expect(clearCalls, 2);
@@ -783,7 +844,7 @@ void main() {
     });
 
     test(
-      'polling pauses at the session bound and keeps manual retry',
+      'polling pauses at the support threshold and keeps manual retry',
       () async {
         when(repository.fetchCurrent).thenAnswer((_) async => _processing);
         final cubit = buildCubit();
@@ -804,7 +865,7 @@ void main() {
     );
 
     test(
-      'submission confirmation exposes actions at the session bound',
+      'submission confirmation exposes actions at the support threshold',
       () async {
         when(
           () => repository.submit(
@@ -824,9 +885,7 @@ void main() {
         final firstDelay = timers.timers.single.delay;
         await timers.fireNext();
         final secondDelay = timers.timers
-            .singleWhere(
-              (timer) => timer.isActive,
-            )
+            .singleWhere((timer) => timer.isActive)
             .delay;
         expect(secondDelay, greaterThan(firstDelay));
         while (timers.timers.any((timer) => timer.isActive)) {
@@ -848,10 +907,8 @@ void main() {
         var attempts = 0;
         when(repository.fetchCurrent).thenAnswer((_) async => _completed);
         when(
-          () => authService.signOut(
-            deleteKeys: true,
-            deleteLocalUserData: true,
-          ),
+          () =>
+              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
         ).thenAnswer((_) async {});
         final cubit = buildCubit(
           onAttemptResolved: () async {
