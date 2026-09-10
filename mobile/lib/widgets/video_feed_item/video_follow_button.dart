@@ -1,6 +1,6 @@
 // ABOUTME: Follow button widget for video overlay using BLoC pattern.
-// ABOUTME: Circular 20x20 badge inside a 48x48 tap target, positioned near
-// ABOUTME: the author avatar.
+// ABOUTME: Circular 20x20 badge centred in a 44x44 tap target that overhangs
+// ABOUTME: the author avatar's bottom-end corner.
 // ABOUTME: Only rendered when the viewer is NOT following the author; once
 // ABOUTME: following, the button disappears entirely (no "following" state).
 
@@ -18,14 +18,17 @@ import 'package:unified_logger/unified_logger.dart';
 /// Diameter of the painted follow badge.
 const double followButtonVisualSize = 20;
 
-/// Side of the badge's tap target.
+/// Side of the badge's tap target: Apple's HIG minimum of 44pt, as designed
+/// for the feed author row.
 ///
-/// The painted badge is [followButtonVisualSize]; it sits at the top-start
-/// corner of a target this size, which is the Android minimum and clears the
-/// iOS one. Growing away from the avatar rather than centring on the badge is
-/// deliberate: a target centred on a 20dp badge 31dp inside a 48dp avatar
-/// would cover 63% of it.
-const double followButtonTapTargetSize = kMinInteractiveDimension;
+/// The painted badge is [followButtonVisualSize], centred in the target with
+/// [followButtonPadding] on every side. The caller places the target so the
+/// badge lands on the avatar's bottom-end corner.
+const double followButtonTapTargetSize = 44;
+
+/// Padding between the painted badge and each edge of its tap target.
+const double followButtonPadding =
+    (followButtonTapTargetSize - followButtonVisualSize) / 2;
 
 /// Page widget that creates the [MyFollowingBloc] and provides it to the view.
 ///
@@ -37,21 +40,10 @@ const double followButtonTapTargetSize = kMinInteractiveDimension;
 /// not yet follow. Once the viewer follows the author, the button hides for
 /// good.
 class VideoFollowButton extends ConsumerStatefulWidget {
-  const VideoFollowButton({
-    required this.pubkey,
-    this.visualInsetTop = 0,
-    super.key,
-  });
+  const VideoFollowButton({required this.pubkey, super.key});
 
   /// The public key of the video author to follow.
   final String pubkey;
-
-  /// How far the painted badge sits below the top of its tap target.
-  ///
-  /// The target is larger than the badge and its owner decides where the
-  /// badge lands inside it, so the caller passes the offset rather than the
-  /// button assuming one.
-  final double visualInsetTop;
 
   @override
   ConsumerState<VideoFollowButton> createState() => _VideoFollowButtonState();
@@ -112,10 +104,7 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
 
     return BlocProvider.value(
       value: _bloc!,
-      child: VideoFollowButtonView(
-        pubkey: widget.pubkey,
-        visualInsetTop: widget.visualInsetTop,
-      ),
+      child: VideoFollowButtonView(pubkey: widget.pubkey),
     );
   }
 }
@@ -124,16 +113,9 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
 /// button. Hides itself entirely once the viewer is following the author.
 class VideoFollowButtonView extends StatelessWidget {
   @visibleForTesting
-  const VideoFollowButtonView({
-    required this.pubkey,
-    this.visualInsetTop = 0,
-    super.key,
-  });
+  const VideoFollowButtonView({required this.pubkey, super.key});
 
   final String pubkey;
-
-  /// How far the painted badge sits below the top of its tap target.
-  final double visualInsetTop;
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +148,7 @@ class VideoFollowButtonView extends StatelessWidget {
           button: true,
           child: GestureDetector(
             // Opaque, so the whole target is tappable rather than only the
-            // badge painted in its corner.
+            // painted badge at its centre.
             behavior: HitTestBehavior.opaque,
             onTap: () {
               Log.info(
@@ -181,26 +163,21 @@ class VideoFollowButtonView extends StatelessWidget {
             child: SizedBox(
               width: followButtonTapTargetSize,
               height: followButtonTapTargetSize,
-              child: Align(
-                alignment: AlignmentDirectional.topStart,
-                child: Padding(
-                  // The badge keeps the exact corner it has always painted in;
-                  // the target is placed around it by the caller.
-                  padding: EdgeInsetsDirectional.only(top: visualInsetTop),
-                  child: Container(
-                    width: followButtonVisualSize,
-                    height: followButtonVisualSize,
-                    decoration: const BoxDecoration(
-                      color: VineTheme.cameraButtonGreen,
-                      shape: BoxShape.circle,
-                      boxShadow: VineTheme.buttonBoxShadows,
-                    ),
-                    child: const Center(
-                      child: DivineIcon(
-                        icon: DivineIconName.follow,
-                        size: 13,
-                        color: VineTheme.whiteText,
-                      ),
+              child: Padding(
+                padding: const EdgeInsets.all(followButtonPadding),
+                child: Container(
+                  width: followButtonVisualSize,
+                  height: followButtonVisualSize,
+                  decoration: const BoxDecoration(
+                    color: VineTheme.cameraButtonGreen,
+                    shape: BoxShape.circle,
+                    boxShadow: VineTheme.buttonBoxShadows,
+                  ),
+                  child: const Center(
+                    child: DivineIcon(
+                      icon: DivineIconName.follow,
+                      size: 13,
+                      color: VineTheme.whiteText,
                     ),
                   ),
                 ),

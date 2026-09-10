@@ -819,7 +819,7 @@ void main() {
       expect(feed.canAutoPlay!(video), isTrue);
     });
 
-    testWidgets('the author row is a 48dp tap target', (tester) async {
+    testWidgets('the author row is a 44dp tap target', (tester) async {
       final semantics = tester.ensureSemantics();
       try {
         InfiniteVideoFeed.debugIsSupportedOverride = true;
@@ -853,10 +853,12 @@ void main() {
           isNotNull,
           reason: 'the author row must expose a profile tap action',
         );
+        // 44dp is Apple's HIG minimum and the designed row height; the
+        // row is the avatar's height, with the name column centred on it.
         expect(
           authorRow!.rect.height,
-          greaterThanOrEqualTo(48),
-          reason: 'the author row must be at least 48dp tall',
+          greaterThanOrEqualTo(44),
+          reason: 'the author row must be at least 44dp tall',
         );
       } finally {
         semantics.dispose();
@@ -888,8 +890,8 @@ void main() {
       final targetRect = tester.getRect(target);
       expect(
         targetRect.height,
-        greaterThanOrEqualTo(48),
-        reason: 'sanity: this is the 48dp profile target, not an inner one',
+        greaterThanOrEqualTo(44),
+        reason: 'sanity: this is the 44dp profile target, not an inner one',
       );
 
       // The surface returns false from its own hit test — both of its
@@ -911,13 +913,13 @@ void main() {
           .path
           .any((entry) => surface.contains(entry.target));
 
-      // Inside the target the profile wins, across the FULL 58dp — 2dp above
+      // Inside the target the profile wins, across the FULL 44dp — 2dp above
       // the bottom edge is below the meta text, so deferring to the child
       // would drop it and leave only the ~20dp name line really tappable.
       expect(
         videoOwns(Offset(targetRect.left + 4, targetRect.bottom - 2)),
         isFalse,
-        reason: 'the whole 48dp target must navigate to the profile',
+        reason: 'the whole 44dp target must navigate to the profile',
       );
 
       // Past its trailing edge the video takes over again. An opaque detector

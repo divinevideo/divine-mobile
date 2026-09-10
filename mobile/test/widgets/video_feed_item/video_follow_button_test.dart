@@ -121,7 +121,7 @@ void main() {
         ).thenAnswer((_) => const Stream.empty());
       }
 
-      testWidgets('advertises a target that meets the Android guideline', (
+      testWidgets('advertises a target that meets the iOS guideline', (
         tester,
       ) async {
         final handle = tester.ensureSemantics();
@@ -148,7 +148,7 @@ void main() {
         );
         await tester.pump();
 
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
         handle.dispose();
       });
 
@@ -162,12 +162,18 @@ void main() {
         await tester.pump();
 
         expect(tester.getSize(paintedBadge()), const Size(20, 20));
+        // Centred in the target: one padding in on both axes.
+        expect(
+          tester.getTopLeft(paintedBadge()) -
+              tester.getTopLeft(find.byType(VideoFollowButtonView)),
+          const Offset(followButtonPadding, followButtonPadding),
+        );
       });
 
       testWidgets('follows from the corner of the target, not just the badge', (
         tester,
       ) async {
-        // The guideline reads the semantics rect, so a node can advertise 48dp
+        // The guideline reads the semantics rect, so a node can advertise 44dp
         // while only 20dp of it responds. Tap 40dp in from the origin — inside
         // the target, well outside the painted badge — and require the event.
         final pubkey = validPubkey('corner-tap');
