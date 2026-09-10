@@ -656,6 +656,7 @@ const _knownUntranslatedDebt = <String>{
   'analyticsFollowerCountsBody',
   'analyticsBlockingHeading',
   'analyticsBlockingBody',
+  'analyticsSocialCountsLearnMore',
   // Account restore failure copy is new; translation pass tracked in #7659.
   'authAccountRestoreFailed',
   'settingsAccountRestoreFailed',

@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/external_link_launcher.dart';
 
 /// Bottom sheet explaining social-count calculation and blocking.
 ///
@@ -13,6 +14,10 @@ import 'package:openvine/l10n/l10n.dart';
 class SocialCountsInfoSheet extends StatelessWidget {
   @visibleForTesting
   const SocialCountsInfoSheet({super.key});
+
+  /// The public FAQ answer this sheet links out to. Anchors to the
+  /// `follower-counts` entry the whole site's FAQ links point at. #8276 AC#4.
+  static const _faqUrl = 'https://about.divine.video/faqs/#follower-counts';
 
   /// Opens the explanation over Creator Analytics.
   static Future<void> show(BuildContext context) {
@@ -63,6 +68,16 @@ class SocialCountsInfoSheet extends StatelessWidget {
           l10n.analyticsBlockingBody,
           style: VineTheme.bodyMediumFont(
             color: context.vineColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: () => openExternalLink(context, _faqUrl),
+          child: Text(
+            l10n.analyticsSocialCountsLearnMore,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.primaryText,
+            ).copyWith(decoration: TextDecoration.underline),
           ),
         ),
       ],

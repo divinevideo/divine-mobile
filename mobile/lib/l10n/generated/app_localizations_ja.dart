@@ -2791,6 +2791,9 @@ class AppLocalizationsJa extends AppLocalizations {
       'When you block someone, Divine stops showing you their content and hides their interactions with you. Because Nostr is a public network, blocking doesn’t remove their follow or change public follower counts, and it can’t stop them from finding your public posts through another app or relay.';
 
   @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
   String get analyticsRetention => 'リテンション';
 
   @override
