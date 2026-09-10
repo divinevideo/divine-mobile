@@ -1124,6 +1124,36 @@ void main() {
         expect((await outcome.future).endedBy, QueryEnd.complete);
         expect(completions, 1);
       });
+
+      test('alone still gets the query judged and its line emitted', () async {
+        final refusing = await addRelay('wss://refuses.example');
+        var completions = 0;
+        await nostr.relayPool.query(
+          [
+            {
+              'kinds': [1],
+              'limit': 5,
+            },
+          ],
+          (_) {},
+          id: _queryId,
+          onComplete: () => completions++,
+        );
+
+        await refusing.deliver([
+          'CLOSED',
+          _queryId,
+          'error: too many concurrent REQs',
+        ]);
+
+        expect(completions, 1);
+        expect(
+          completionLines(),
+          hasLength(1),
+          reason: 'the legacy read path is judged like any other',
+        );
+        expect(completionLines().single.message, contains('relayClosed'));
+      });
     });
   });
 }
