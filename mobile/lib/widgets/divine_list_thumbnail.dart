@@ -161,6 +161,25 @@ class _VideoFanMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _FanFrame(
+      slotBuilder: (index) => _FanSlot(imageUrl: _urlAt(index)),
+      badge: _CountBadge(icon: DivineIconName.play, count: videoCount),
+    );
+  }
+}
+
+/// The fan's geometry, shared by the card and its loading silhouette.
+///
+/// [_fanSlotCount] portrait slots step across the media box edge to edge,
+/// index 0 on top, with an optional [badge] in the bottom-left corner.
+class _FanFrame extends StatelessWidget {
+  const _FanFrame({required this.slotBuilder, this.badge});
+
+  final Widget Function(int index) slotBuilder;
+  final Widget? badge;
+
+  @override
+  Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: _mediaAspectRatio,
       child: ClipRRect(
@@ -170,7 +189,6 @@ class _VideoFanMedia extends StatelessWidget {
             final totalWidth = constraints.maxWidth;
             final cardHeight = constraints.maxHeight;
             final cardWidth = cardHeight * _fanSlotAspectRatio;
-            // The five slots fan out to fill the media box edge to edge.
             final step = (totalWidth - cardWidth) / (_fanSlotCount - 1);
 
             return Stack(
@@ -182,16 +200,10 @@ class _VideoFanMedia extends StatelessWidget {
                     top: 0,
                     width: cardWidth,
                     height: cardHeight,
-                    child: _FanSlot(imageUrl: _urlAt(i)),
+                    child: slotBuilder(i),
                   ),
-                Positioned(
-                  left: 8,
-                  bottom: 9,
-                  child: _CountBadge(
-                    icon: DivineIconName.play,
-                    count: videoCount,
-                  ),
-                ),
+                if (badge case final badge?)
+                  Positioned(left: 8, bottom: 9, child: badge),
               ],
             );
           },
@@ -258,70 +270,81 @@ class _PeopleCollageMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Seam structure from Figma: the large tile carries the vertical seam
-    // (right 2), the two small tiles split the horizontal seam (bottom 1 /
-    // top 1), and the whole collage wears a 2px outline.
-    final seamColor = context.vineColors.surface;
-    final seam = BorderSide(width: _seamWidth, color: seamColor);
+    return _CollageFrame(
+      tileBuilder: (slot, seams) =>
+          _MemberTile(pubkey: _pubkeyAt(slot), slot: slot, seams: seams),
+      badge: _CountBadge(icon: DivineIconName.users, count: memberCount),
+    );
+  }
+}
+
+/// The collage's geometry, shared by the card and its loading silhouette.
+///
+/// Seam structure from Figma: the large tile (slot 0) carries the vertical
+/// seam (right 2), the two small tiles (slots 1 and 2) split the horizontal
+/// seam (bottom 1 / top 1), and the whole collage wears a 2px outline. The
+/// outline is kept out of skeletonization so a silhouette still reads as
+/// three tiles.
+class _CollageFrame extends StatelessWidget {
+  const _CollageFrame({required this.tileBuilder, this.badge});
+
+  final Widget Function(int slot, Border seams) tileBuilder;
+  final Widget? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final seam = BorderSide(
+      width: _seamWidth,
+      color: context.vineColors.surface,
+    );
     final halfSeam = seam.copyWith(width: _seamWidth / 2);
 
     return AspectRatio(
       aspectRatio: _mediaAspectRatio,
-      child: DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: BoxDecoration(
-          border: Border.fromBorderSide(seam),
-          borderRadius: BorderRadius.circular(_mediaRadius),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(_mediaRadius),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: (_largeTileFraction * 1000).round(),
-                    child: _MemberTile(
-                      pubkey: _pubkeyAt(0),
-                      slot: 0,
-                      seams: Border(right: seam),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(_mediaRadius),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: (_largeTileFraction * 1000).round(),
+                      child: tileBuilder(0, Border(right: seam)),
                     ),
-                  ),
-                  Expanded(
-                    flex: ((1 - _largeTileFraction) * 1000).round(),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: _MemberTile(
-                            pubkey: _pubkeyAt(1),
-                            slot: 1,
-                            seams: Border(bottom: halfSeam),
+                    Expanded(
+                      flex: ((1 - _largeTileFraction) * 1000).round(),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: tileBuilder(1, Border(bottom: halfSeam)),
                           ),
-                        ),
-                        Expanded(
-                          child: _MemberTile(
-                            pubkey: _pubkeyAt(2),
-                            slot: 2,
-                            seams: Border(top: halfSeam),
+                          Expanded(
+                            child: tileBuilder(2, Border(top: halfSeam)),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                left: 8,
-                bottom: 9,
-                child: _CountBadge(
-                  icon: DivineIconName.users,
-                  count: memberCount,
+                  ],
                 ),
-              ),
-            ],
+                if (badge case final badge?)
+                  Positioned(left: 8, bottom: 9, child: badge),
+              ],
+            ),
           ),
-        ),
+          Skeleton.keep(
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                border: Border.fromBorderSide(seam),
+                borderRadius: BorderRadius.circular(_mediaRadius),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -549,18 +572,26 @@ class _PlainLinkText extends StatelessWidget {
 
 /// The card's silhouette while its list is still on its way.
 ///
-/// Same media box, gap and footer boxes as [DivineListThumbnail], so a
-/// gallery column keeps its rows when the placeholders give way to cards.
-/// Paints as bones under an enclosing [Skeletonizer]; the caller owns the
-/// shimmer effect and the semantics label for the loading column.
+/// Same media geometry, gap and footer boxes as [DivineListThumbnail], so
+/// a gallery column keeps its rows when the placeholders give way to cards,
+/// and the same structure inside the media box: the five-slot fan for a
+/// video list, the three-tile collage for a people list. Paints as bones
+/// under an enclosing [Skeletonizer] with `ignoreContainers` on; the
+/// caller owns the shimmer effect and the semantics label for the column.
 class DivineListThumbnailSkeleton extends StatelessWidget {
-  /// Creates the placeholder.
-  const DivineListThumbnailSkeleton({super.key});
+  /// Silhouette of a video list card: the thumbnail fan.
+  const DivineListThumbnailSkeleton.videos({super.key})
+    : _kind = _ListKind.videos;
+
+  /// Silhouette of a people list card: the avatar collage.
+  const DivineListThumbnailSkeleton.people({super.key})
+    : _kind = _ListKind.people;
+
+  final _ListKind _kind;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final bone = colors.skeleton;
     // The styles only size the bones; the colours match what the real
     // footer paints so the metrics come from the same styles.
     final titleLine = _scaledLineHeight(
@@ -575,21 +606,70 @@ class DivineListThumbnailSkeleton extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Skeleton.leaf(
-          child: AspectRatio(
-            aspectRatio: _mediaAspectRatio,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: bone,
-                borderRadius: BorderRadius.circular(_mediaRadius),
-              ),
-            ),
+        switch (_kind) {
+          _ListKind.videos => _FanFrame(
+            slotBuilder: (_) => const _FanSlotBone(),
           ),
-        ),
+          _ListKind.people => _CollageFrame(
+            tileBuilder: (_, seams) => _TileBone(seams: seams),
+          ),
+        },
         const SizedBox(height: 8),
         _TextBone(lineHeight: titleLine, widthFactor: 0.6),
         _TextBone(lineHeight: descriptionLine, widthFactor: 0.9),
         _TextBone(lineHeight: descriptionLine, widthFactor: 0.7),
+      ],
+    );
+  }
+}
+
+/// A fan slot as a bone: the shimmer fills the card shape, the seam stays
+/// painted so neighbouring slots read as separate cards.
+class _FanSlotBone extends StatelessWidget {
+  const _FanSlotBone();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Skeleton.leaf(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.skeleton,
+              borderRadius: BorderRadius.circular(_mediaRadius),
+            ),
+          ),
+        ),
+        Skeleton.keep(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(width: _seamWidth, color: colors.surface),
+              borderRadius: BorderRadius.circular(_mediaRadius),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A collage tile as a bone, with its share of the seams kept painted.
+class _TileBone extends StatelessWidget {
+  const _TileBone({required this.seams});
+
+  final Border seams;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Skeleton.leaf(child: ColoredBox(color: context.vineColors.skeleton)),
+        Skeleton.keep(
+          child: DecoratedBox(decoration: BoxDecoration(border: seams)),
+        ),
       ],
     );
   }

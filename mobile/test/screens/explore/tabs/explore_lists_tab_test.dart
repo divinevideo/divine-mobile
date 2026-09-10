@@ -150,8 +150,15 @@ void main() {
 
       expect(find.byType(DivineListThumbnail), findsOneWidget);
       // The loading column is card silhouettes, announced once, not a
-      // spinner.
+      // spinner — and people-shaped: three collage tiles per card.
       expect(find.byType(DivineListThumbnailSkeleton), findsNWidgets(4));
+      expect(
+        find.descendant(
+          of: find.byType(DivineListThumbnailSkeleton),
+          matching: find.byType(ColoredBox),
+        ),
+        findsNWidgets(12),
+      );
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
         find.bySemanticsLabel(l10n.listsDiscoveryLoadingLabel),
