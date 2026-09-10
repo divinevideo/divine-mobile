@@ -29,6 +29,9 @@ const double _badgeOffset = 31;
 /// The target is bottom-aligned to the cluster, so it fits inside the row.
 const double _targetTop = _clusterSize - followButtonTapTargetSize;
 
+/// The avatar's painted size, which is smaller than the cluster it sits in.
+const double _avatarSize = 48;
+
 void main() {
   late _MockVideoInteractionsBloc mockInteractionsBloc;
   late VideoEvent testVideo;
@@ -124,6 +127,22 @@ void main() {
       // The target is larger than the row's avatar block and still costs
       // nothing: it is positioned, so it does not size its parent.
       expect(tester.getSize(authorRow()).height, _clusterSize);
+    });
+
+    testWidgets('the avatar paints at 48dp inside its 58dp slot', (
+      tester,
+    ) async {
+      await pumpOverlay(tester, alreadyFollowing: false);
+
+      // The cluster is 58dp so the row keeps its height and the name keeps
+      // its x, but the avatar itself must stay the 48dp it has always been.
+      // A tight 58dp parent would override UserAvatar(size: 48) and repaint
+      // every author 10dp larger.
+      expect(tester.getSize(authorRow()).height, _clusterSize);
+      expect(
+        tester.getSize(find.byType(UserAvatar)),
+        const Size(_avatarSize, _avatarSize),
+      );
     });
 
     testWidgets('the row is identical whether or not the badge shows', (

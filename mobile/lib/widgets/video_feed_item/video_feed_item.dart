@@ -364,19 +364,26 @@ class VideoOverlayActions extends ConsumerWidget {
                           // detach from the badge that belongs to it.
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Avatar block. The badge is not a child of this
-                            // Stack: a 48dp target inside it would either grow
+                            // Avatar block. The badge is not nested in here:
+                            // a 48dp target inside this slot would either grow
                             // the row or be clipped back by it.
                             SizedBox(
                               width: _avatarClusterSize,
                               height: _avatarClusterSize,
-                              child: UserAvatar(
-                                imageUrl: avatarUrl,
-                                name: displayName,
-                                size: 48,
-                                semanticLabel:
-                                    context.l10n.videoAuthorAvatarSemanticLabel,
-                                onTap: navigateToProfile,
+                              child: Align(
+                                // Loosens the slot's tight constraints, which
+                                // would otherwise override the avatar's own
+                                // 48dp and repaint every author larger.
+                                alignment: AlignmentDirectional.topStart,
+                                child: UserAvatar(
+                                  imageUrl: avatarUrl,
+                                  name: displayName,
+                                  size: 48,
+                                  semanticLabel: context
+                                      .l10n
+                                      .videoAuthorAvatarSemanticLabel,
+                                  onTap: navigateToProfile,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
