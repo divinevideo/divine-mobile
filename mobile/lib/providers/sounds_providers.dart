@@ -125,16 +125,16 @@ Future<List<AudioEvent>> soundsByCreator(Ref ref, String pubkey) async {
 
 /// Family provider for video usage count of a specific sound.
 ///
-/// Returns the number of Kind 34236 video events that reference the audio event.
-/// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+/// Returns the number of Kind 34236 video events that reference the audio
+/// event, or `null` when the count is unknown because no relay answered.
 ///
 /// Usage:
 /// ```dart
 /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-/// final count = countAsync.valueOrNull ?? 0;
+/// final count = countAsync.value; // null while loading or when unknown
 /// ```
 @riverpod
-Future<int> soundUsageCount(Ref ref, String audioEventId) async {
+Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
   if (audioEventId.isEmpty) return 0;
 
   final repository = ref.watch(soundsRepositoryProvider);

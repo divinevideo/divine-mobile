@@ -425,10 +425,7 @@ class CommentsRepository {
     }
   }
 
-  /// Gets the comment count for an event.
-  ///
-  /// Uses NIP-45 COUNT requests if supported by relays,
-  /// otherwise falls back to querying and counting.
+  /// Gets the comment count for an event from NIP-45 COUNT requests.
   ///
   /// Parameters:
   /// - [rootEventId]: The ID of the event to count comments for
@@ -439,10 +436,15 @@ class CommentsRepository {
   ///   the count. Defaults to `false` so flag-off callers do not inflate the
   ///   comment badge with reply-only videos.
   ///
-  /// Returns the number of comments on the event.
+  /// Returns the number of comments on the event, or `null` when the count is
+  /// unknown because a relay did not answer. When both the E and A counts are
+  /// needed and only one answers, the result is `null` too: the answer is the
+  /// larger of the two, and one side alone is only a floor. Nothing is cached
+  /// for an unknown count, so the next call asks again.
   ///
-  /// Throws [CountCommentsFailedException] if counting fails.
-  Future<int> getCommentsCount(
+  /// Throws [CountCommentsFailedException] if counting fails for any other
+  /// reason.
+  Future<int?> getCommentsCount(
     String rootEventId, {
     String? rootAddressableId,
     bool includeVideoReplies = false,
@@ -494,6 +496,8 @@ class CommentsRepository {
         rootAddressableId: rootAddressableId,
       );
       return count;
+    } on CountUnavailableException {
+      return null;
     } on Exception catch (e) {
       throw CountCommentsFailedException('Failed to count comments: $e');
     }

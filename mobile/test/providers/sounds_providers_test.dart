@@ -469,6 +469,27 @@ void main() {
         expect(count, equals(42));
       });
 
+      test('returns null when the repository cannot tell', () async {
+        when(
+          () => mockRepository.fetchVideosUsingSoundCount('audio-123'),
+        ).thenAnswer((_) async => null);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final count = await container.read(
+          soundUsageCountProvider('audio-123').future,
+        );
+
+        expect(count, isNull);
+      });
+
       test('returns 0 for empty audioEventId', () async {
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});

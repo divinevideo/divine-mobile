@@ -2132,6 +2132,52 @@ void main() {
         );
       });
 
+      test('returns null and caches nothing when no relay answered', () async {
+        when(() => mockNostrClient.countEvents(any())).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        final first = await repository.getCommentsCount(testRootEventId);
+        final second = await repository.getCommentsCount(testRootEventId);
+
+        expect(first, isNull);
+        expect(second, isNull);
+        verify(() => mockNostrClient.countEvents(any())).called(2);
+      });
+
+      test(
+        'returns null rather than a floor when only one of the E and A '
+        'counts is answered',
+        () async {
+          const testAddressableId =
+              '34236:$testRootAuthorPubkey'
+              ':video-dtag';
+
+          var callCount = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            callCount++;
+            // The E count answers and the A count does not.
+            if (callCount.isOdd) return const CountResult(count: 5);
+            throw const CountUnavailableException(
+              'No relay responded to COUNT',
+            );
+          });
+
+          final first = await repository.getCommentsCount(
+            testRootEventId,
+            rootAddressableId: testAddressableId,
+          );
+          final second = await repository.getCommentsCount(
+            testRootEventId,
+            rootAddressableId: testAddressableId,
+          );
+
+          expect(first, isNull);
+          expect(second, isNull);
+          verify(() => mockNostrClient.countEvents(any())).called(4);
+        },
+      );
+
       test('returns cached count on second call without relay query', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
           (_) async => const CountResult(count: 42),
