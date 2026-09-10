@@ -1,9 +1,17 @@
 // ABOUTME: Tests the layer-animation bridge between pro_image_editor's typed
 // ABOUTME: Layer.animations and the pro_video_editor models used at export.
 
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
+// The two packages each declare a `SlideDirection`, so the one an in-editor
+// animation carries has to be named apart from the one an exported animation
+// does.
+import 'package:pro_image_editor/core/models/layers/layer_animation.dart'
+    as in_editor;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
@@ -136,6 +144,279 @@ void main() {
           );
         }
       }
+    });
+
+    // The two packages measure `slideFrom` in different spaces —
+    // pro_image_editor in canvas pixels from the canvas centre,
+    // pro_video_editor in video pixels from the frame's top-left — so it is
+    // the one field that must never cross the bridge as-is, in either
+    // direction.
+    group('slideFrom', () {
+      const slideIn = editor.LayerAnimation(
+        type: editor.LayerAnimationType.slide,
+        phase: editor.AnimationPhase.animateIn,
+        duration: Duration(milliseconds: 400),
+        slideDirection: editor.SlideDirection.left,
+        slideFrom: Offset(-500, 120),
+      );
+
+      test('is dropped on the way out to pro_video_editor', () {
+        final layer = Layer(
+          animations: [slideIn].toLayerAnimations(),
+        );
+
+        expect(layer.divineAnimations.single.slideFrom, isNull);
+      });
+
+      test('is dropped on the way in when the phase has no point', () {
+        final animations = [slideIn].toLayerAnimations(
+          canvasSize: const Size(400, 800),
+        );
+
+        expect(animations.single.slideFrom, isNull);
+        expect(
+          animations.single.slideDirection,
+          equals(in_editor.SlideDirection.left),
+        );
+      });
+
+      test('is rebuilt from the phase point in canvas pixels', () {
+        final animations = [slideIn].toLayerAnimations(
+          points: const LayerSlidePoints(enter: Offset(-0.25, 0.5)),
+          canvasSize: const Size(400, 800),
+        );
+
+        expect(animations.single.slideFrom, equals(const Offset(-100, 400)));
+      });
+
+      test('only the phase that carries a point gets one', () {
+        const slideOut = editor.LayerAnimation(
+          type: editor.LayerAnimationType.slide,
+          phase: editor.AnimationPhase.animateOut,
+          duration: Duration(milliseconds: 400),
+          slideDirection: editor.SlideDirection.right,
+        );
+
+        final animations = [slideIn, slideOut].toLayerAnimations(
+          points: const LayerSlidePoints(enter: Offset(0.25, 0.25)),
+          canvasSize: const Size(400, 800),
+        );
+
+        expect(animations.first.slideFrom, equals(const Offset(100, 200)));
+        expect(animations.last.slideFrom, isNull);
+      });
+
+      test('a non-slide animation never gets one', () {
+        const fadeIn = editor.LayerAnimation(
+          type: editor.LayerAnimationType.fade,
+          phase: editor.AnimationPhase.animateIn,
+          duration: Duration(milliseconds: 400),
+        );
+
+        final animations = [fadeIn].toLayerAnimations(
+          points: const LayerSlidePoints(enter: Offset(0.25, 0.25)),
+          canvasSize: const Size(400, 800),
+        );
+
+        expect(animations.single.slideFrom, isNull);
+      });
+
+      test('a degenerate canvas leaves the slide on its edge', () {
+        final animations = [slideIn].toLayerAnimations(
+          points: const LayerSlidePoints(enter: Offset(0.25, 0.25)),
+        );
+
+        expect(animations.single.slideFrom, isNull);
+        expect(
+          animations.single.slideDirection,
+          equals(in_editor.SlideDirection.left),
+        );
+      });
+    });
+  });
+
+  group('exportedLayerTopLeft', () {
+    test('maps a centred layer onto the middle of the video', () {
+      expect(
+        exportedLayerTopLeft(
+          anchor: Offset.zero,
+          bodySize: const Size(400, 800),
+          logicalSize: const Size(100, 50),
+          scale: 2,
+        ),
+        equals(const Offset(300, 750)),
+      );
+    });
+
+    test('is the layer top-left, so the layer size shifts it', () {
+      const bodySize = Size(400, 800);
+      final small = exportedLayerTopLeft(
+        anchor: Offset.zero,
+        bodySize: bodySize,
+        logicalSize: const Size(100, 100),
+        scale: 1,
+      );
+      final large = exportedLayerTopLeft(
+        anchor: Offset.zero,
+        bodySize: bodySize,
+        logicalSize: const Size(200, 200),
+        scale: 1,
+      );
+
+      expect(large, equals(small - const Offset(50, 50)));
+    });
+
+    test('scales the body offset into video pixels', () {
+      expect(
+        exportedLayerTopLeft(
+          anchor: const Offset(50, -100),
+          bodySize: const Size(400, 800),
+          logicalSize: Size.zero,
+          scale: 3,
+        ),
+        equals(const Offset(750, 900)),
+      );
+    });
+  });
+
+  group('LayerExportAnimations', () {
+    const bodySize = Size(400, 800);
+    const logicalSize = Size(100, 50);
+    const scale = 2.0;
+
+    const slideIn = editor.LayerAnimation(
+      type: editor.LayerAnimationType.slide,
+      phase: editor.AnimationPhase.animateIn,
+      duration: Duration(milliseconds: 400),
+      slideDirection: editor.SlideDirection.left,
+    );
+
+    List<editor.LayerAnimation> exportOf(Layer layer) =>
+        layer.divineAnimationsForExport(
+          bodySize: bodySize,
+          logicalSize: logicalSize,
+          scale: scale,
+        );
+
+    test('leaves a layer without points on its edge slide', () {
+      final layer = Layer(animations: [slideIn].toLayerAnimations());
+
+      expect(exportOf(layer).single.slideFrom, isNull);
+      expect(
+        exportOf(layer).single.slideDirection,
+        equals(editor.SlideDirection.left),
+      );
+    });
+
+    // The layer must land exactly on its resting offset, which only holds
+    // while the travel start and the resting place go through the same
+    // transform.
+    test('resolves the point through the same transform as the offset', () {
+      const points = LayerSlidePoints(enter: Offset(-0.25, 0.25));
+      final layer = Layer(
+        offset: const Offset(20, -40),
+        meta: points.applyTo(null),
+        animations: [slideIn].toLayerAnimations(),
+      );
+
+      expect(
+        exportOf(layer).single.slideFrom,
+        equals(
+          exportedLayerTopLeft(
+            anchor: points.resolve(editor.AnimationPhase.animateIn, bodySize)!,
+            bodySize: bodySize,
+            logicalSize: logicalSize,
+            scale: scale,
+          ),
+        ),
+      );
+    });
+
+    // A direction is kept alongside the point so the animation stays valid for
+    // pro_image_editor, which requires one on every slide.
+    test('keeps the slide direction the point overrides', () {
+      final layer = Layer(
+        meta: const LayerSlidePoints(enter: Offset(-0.25, 0.25)).applyTo(null),
+        animations: [slideIn].toLayerAnimations(),
+      );
+
+      expect(
+        exportOf(layer).single.slideDirection,
+        equals(editor.SlideDirection.left),
+      );
+    });
+
+    test('carries every other field of the animation over', () {
+      const decorated = editor.LayerAnimation(
+        type: editor.LayerAnimationType.slide,
+        phase: editor.AnimationPhase.animateIn,
+        duration: Duration(milliseconds: 720),
+        curve: editor.AnimationCurve.elasticOut,
+        slideDirection: editor.SlideDirection.bottom,
+      );
+      final layer = Layer(
+        meta: const LayerSlidePoints(enter: Offset(0.1, 0.1)).applyTo(null),
+        animations: [decorated].toLayerAnimations(),
+      );
+
+      final exported = exportOf(layer).single;
+
+      expect(exported.type, equals(decorated.type));
+      expect(exported.phase, equals(decorated.phase));
+      expect(exported.duration, equals(decorated.duration));
+      expect(exported.curve, equals(decorated.curve));
+      expect(exported.slideDirection, equals(decorated.slideDirection));
+      expect(exported.slideFrom, isNotNull);
+    });
+
+    test('leaves the phase that carries no point alone', () {
+      const fadeOut = editor.LayerAnimation(
+        type: editor.LayerAnimationType.fade,
+        phase: editor.AnimationPhase.animateOut,
+        duration: Duration(milliseconds: 300),
+      );
+      final layer = Layer(
+        meta: const LayerSlidePoints(enter: Offset(0.1, 0.1)).applyTo(null),
+        animations: [slideIn, fadeOut].toLayerAnimations(),
+      );
+
+      final exported = exportOf(layer);
+
+      expect(exported.first.slideFrom, isNotNull);
+      expect(exported.last, equals(fadeOut));
+    });
+
+    test('a point on a phase whose animation is a fade changes nothing', () {
+      const fadeIn = editor.LayerAnimation(
+        type: editor.LayerAnimationType.fade,
+        phase: editor.AnimationPhase.animateIn,
+        duration: Duration(milliseconds: 300),
+      );
+      final layer = Layer(
+        meta: const LayerSlidePoints(enter: Offset(0.1, 0.1)).applyTo(null),
+        animations: [fadeIn].toLayerAnimations(),
+      );
+
+      expect(exportOf(layer).single, equals(fadeIn));
+    });
+
+    test('a degenerate body leaves the slide on its edge', () {
+      final layer = Layer(
+        meta: const LayerSlidePoints(enter: Offset(0.1, 0.1)).applyTo(null),
+        animations: [slideIn].toLayerAnimations(),
+      );
+
+      final exported = layer.divineAnimationsForExport(
+        bodySize: Size.zero,
+        logicalSize: logicalSize,
+        scale: scale,
+      );
+
+      expect(exported.single.slideFrom, isNull);
+      expect(
+        exported.single.slideDirection,
+        equals(editor.SlideDirection.left),
+      );
     });
   });
 }

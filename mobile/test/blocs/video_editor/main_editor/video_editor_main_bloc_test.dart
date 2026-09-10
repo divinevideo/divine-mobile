@@ -496,6 +496,62 @@ void main() {
       );
     });
 
+    group(VideoEditorSlidePointPlacementChanged, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'hands the screen to the canvas when placement starts',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorSlidePointPlacementChanged(isPlacing: true),
+        ),
+        expect: () => [
+          isA<VideoEditorMainState>().having(
+            (s) => s.isPlacingSlidePoint,
+            'isPlacingSlidePoint',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'gives the screen back when placement ends',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(isPlacingSlidePoint: true),
+        act: (bloc) => bloc.add(
+          const VideoEditorSlidePointPlacementChanged(isPlacing: false),
+        ),
+        expect: () => [
+          isA<VideoEditorMainState>().having(
+            (s) => s.isPlacingSlidePoint,
+            'isPlacingSlidePoint',
+            isFalse,
+          ),
+        ],
+      );
+
+      // The picker pauses playback through its own event, so entering
+      // placement must not disturb anything else the editor is doing.
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'leaves the rest of the editor state alone',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          canUndo: true,
+          isPlaying: true,
+          isMarkerMode: true,
+        ),
+        act: (bloc) => bloc.add(
+          const VideoEditorSlidePointPlacementChanged(isPlacing: true),
+        ),
+        expect: () => [
+          const VideoEditorMainState(
+            canUndo: true,
+            isPlaying: true,
+            isMarkerMode: true,
+            isPlacingSlidePoint: true,
+          ),
+        ],
+      );
+    });
+
     group(VideoEditorReorderingChanged, () {
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'emits state with isReordering true',
