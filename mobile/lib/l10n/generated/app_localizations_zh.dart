@@ -6608,6 +6608,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountDeletionFinishingBody => '你的账号删除请求仍在处理中。处理完成前，你可以使用其他账号。';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       '此设备上另一个账号的删除仍在处理中。请等待处理完成后再删除此账号。';
 

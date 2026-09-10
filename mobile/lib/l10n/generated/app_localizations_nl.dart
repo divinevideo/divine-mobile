@@ -7050,6 +7050,19 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je verwijderverzoek wordt nog verwerkt. Je kunt een ander account gebruiken terwijl wij dit afronden.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'De verwijdering van een ander account wordt nog verwerkt op dit apparaat. Wacht tot die is afgerond voordat je dit account verwijdert.';
 

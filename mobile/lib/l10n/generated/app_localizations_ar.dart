@@ -6970,6 +6970,19 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يزال طلب حذف حسابك قيد المعالجة. يمكنك استخدام حساب آخر إلى أن ننتهي.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'لا تزال عملية حذف حساب آخر قيد المعالجة على هذا الجهاز. انتظر حتى تنتهي قبل حذف هذا الحساب.';
 

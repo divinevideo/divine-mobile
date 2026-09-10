@@ -53,6 +53,9 @@ class AccountDeletionRecoveryScreen extends ConsumerWidget {
       create: (_) {
         final expectedPubkeyHex = authService.currentPublicKeyHex;
         final cubit = AccountDeletionRecoveryCubit(
+          pollBudgetStore: ref.read(
+            accountDeletionRecoveryPollBudgetProvider,
+          ),
           repository: repository,
           authService: authService,
           onAttemptResolved: () async {
@@ -203,6 +206,7 @@ class _RecoveryStateContent extends StatelessWidget {
         state.pollingPaused
             ? _RecoveryContent(
                 body: context.l10n.accountDeletionFinishingBody,
+                detail: _elapsedDetail(context, state),
                 actionLabel: context.l10n.supportContactSupport,
                 onPressed: () => context.push(RoutePaths.supportCenter),
                 secondaryActionLabel: context.l10n.authUseAnotherAccount,
@@ -210,6 +214,7 @@ class _RecoveryStateContent extends StatelessWidget {
               )
             : _RecoveryContent(
                 body: context.l10n.accountDeletionFinishingBody,
+                detail: _elapsedDetail(context, state),
                 actionLabel: context.l10n.authUseAnotherAccount,
                 onPressed: () => _switchAccount(context, cubit),
               ),
@@ -341,16 +346,31 @@ String _failureBody(
   _ => context.l10n.accountDeletionTerminalFailureBody,
 };
 
+/// How long the server has been working, in whole minutes.
+///
+/// Deliberately not an estimate or a countdown: the remaining work is
+/// server-side with no client-visible bound, so anything that looked like a
+/// deadline would be invented. Elapsed time is the honest thing to show, and
+/// it is what tells the user the wait is real rather than a stuck screen.
+String _elapsedDetail(
+  BuildContext context,
+  AccountDeletionRecoveryState state,
+) => context.l10n.accountDeletionFinishingElapsed(
+  state.pollingElapsed.inMinutes,
+);
+
 class _RecoveryContent extends StatelessWidget {
   const _RecoveryContent({
     required this.body,
     required this.actionLabel,
     required this.onPressed,
+    this.detail,
     this.secondaryActionLabel,
     this.onSecondaryPressed,
   });
 
   final String body;
+  final String? detail;
   final String actionLabel;
   final VoidCallback? onPressed;
   final String? secondaryActionLabel;
@@ -369,6 +389,14 @@ class _RecoveryContent extends StatelessWidget {
           textAlign: TextAlign.center,
           style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
         ),
+        if (detail != null)
+          Text(
+            detail!,
+            textAlign: TextAlign.center,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.secondaryText,
+            ),
+          ),
         DivineButton(
           label: actionLabel,
           onPressed: onPressed,

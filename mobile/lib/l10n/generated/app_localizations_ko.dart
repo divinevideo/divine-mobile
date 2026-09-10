@@ -6672,6 +6672,19 @@ class AppLocalizationsKo extends AppLocalizations {
       '계정 삭제 요청이 아직 처리 중이에요. 처리가 완료될 때까지 다른 계정을 사용할 수 있어요.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       '이 기기에서 다른 계정의 삭제가 아직 처리 중이에요. 처리가 완료된 후 이 계정을 삭제해 주세요.';
 

@@ -489,6 +489,11 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Elapsed-wait copy on the account-deletion recovery screen. Deferred to the
+  // next human pass rather than machine-translated: it is an ICU plural whose
+  // wording has to stay reassuring in each locale, and the English is likely to
+  // be revised once we can show a real server-side estimate.
+  'accountDeletionFinishingElapsed',
   // Discord proof-rejection reasons (verifier PR #43). Each names a distinct
   // way a Discord proof can fail, replacing one message that blamed the npub
   // for all of them. Deferred to the next human pass rather than

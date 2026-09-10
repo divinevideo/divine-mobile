@@ -7012,6 +7012,19 @@ class AppLocalizationsSv extends AppLocalizations {
       'Din begäran om radering behandlas fortfarande. Du kan använda ett annat konto medan vi slutför processen.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'Raderingen av ett annat konto behandlas fortfarande på den här enheten. Vänta tills den är klar innan du raderar det här kontot.';
 

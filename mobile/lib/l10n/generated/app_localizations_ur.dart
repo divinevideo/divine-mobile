@@ -7016,6 +7016,19 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کے اکاؤنٹ کو حذف کرنے کی درخواست پر ابھی کارروائی ہو رہی ہے۔ ہمارے مکمل کرنے تک آپ کوئی دوسرا اکاؤنٹ استعمال کر سکتے ہیں۔';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'اس ڈیوائس پر کسی دوسرے اکاؤنٹ کو حذف کرنے کی کارروائی ابھی جاری ہے۔ اس اکاؤنٹ کو حذف کرنے سے پہلے اس کے مکمل ہونے کا انتظار کریں۔';
 

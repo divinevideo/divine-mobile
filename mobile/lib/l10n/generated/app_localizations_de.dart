@@ -7107,6 +7107,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine Löschanfrage wird noch bearbeitet. Währenddessen kannst du ein anderes Konto verwenden.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'Die Löschung eines anderen Kontos wird auf diesem Gerät noch bearbeitet. Warte, bis sie abgeschlossen ist, bevor du dieses Konto löschst.';
 

@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -16,6 +17,18 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// Durable store for the recovery polling budget.
+///
+/// Wired here rather than defaulted inside the cubit so the budget is measured
+/// against wall-clock time that survives a relaunch; the cubit's in-memory
+/// fallback would restart it on every launch.
+final accountDeletionRecoveryPollBudgetProvider =
+    Provider<AccountDeletionRecoveryPollBudgetStore>(
+      (ref) => SharedPreferencesAccountDeletionRecoveryPollBudgetStore(
+        ref.watch(sharedPreferencesProvider),
+      ),
+    );
 
 final accountDeletionRecoveryRepositoryProvider =
     Provider<AccountDeletionRecoveryRepository>((ref) {
@@ -224,6 +237,7 @@ submittedAccountDeletionMonitorProvider =
       );
       var disposed = false;
       final cubit = AccountDeletionRecoveryCubit(
+        pollBudgetStore: ref.watch(accountDeletionRecoveryPollBudgetProvider),
         repository: ref.watch(accountDeletionRecoveryRepositoryProvider),
         authService: ref.watch(authServiceProvider),
         onAttemptResolved: () async {

@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyStorageException;
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
@@ -47,6 +48,8 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     String? receiptPubkeyHex,
     String? receiptVanishEventId,
     RecoveryTimerFactory timerFactory = Timer.new,
+    AccountDeletionRecoveryPollBudgetStore? pollBudgetStore,
+    DateTime Function() clock = DateTime.now,
   }) : _repository = repository,
        _authService = authService,
        _onAttemptResolved = onAttemptResolved,
@@ -54,6 +57,9 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
        _receiptPubkeyHex = receiptPubkeyHex,
        _receiptVanishEventId = receiptVanishEventId,
        _timerFactory = timerFactory,
+       _pollBudgetStore =
+           pollBudgetStore ?? InMemoryAccountDeletionRecoveryPollBudgetStore(),
+       _clock = clock,
        super(const AccountDeletionRecoveryState());
 
   final AccountDeletionRecoveryRepository _repository;
@@ -64,10 +70,29 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   final String? _receiptPubkeyHex;
   final String? _receiptVanishEventId;
   final RecoveryTimerFactory _timerFactory;
+  final AccountDeletionRecoveryPollBudgetStore _pollBudgetStore;
+  final DateTime Function() _clock;
 
   Timer? _pollTimer;
   var _generation = 0;
-  Duration _pollingElapsed = Duration.zero;
+
+  /// Wall-clock start of this attempt's polling budget, cached from
+  /// [_pollBudgetStore]. Null until an attempt that polls has been handled.
+  DateTime? _pollBudgetStartedAt;
+
+  /// How much of [AccountDeletionRecoveryPolling.sessionBound] this attempt
+  /// has spent, measured in elapsed time rather than in timer delays this
+  /// process happened to run. That distinction is the fix: the old
+  /// accumulator only advanced while the app was foregrounded and alive, so
+  /// backgrounding — the natural thing to do while waiting on a server — reset
+  /// the budget on every launch and the "contact support" message was
+  /// unreachable no matter how long the wait actually was.
+  Duration get _pollingSpent {
+    final startedAt = _pollBudgetStartedAt;
+    if (startedAt == null) return Duration.zero;
+    final spent = _clock().difference(startedAt);
+    return spent.isNegative ? Duration.zero : spent;
+  }
 
   Future<void> load() async {
     final generation = _beginOperation();
@@ -93,6 +118,10 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   }
 
   Future<void> retry() async {
+    // An explicit retry is the user asking for another round, so it restarts
+    // the budget. A relaunch is not — that path goes through [load], which
+    // re-reads the same attempt's persisted start and keeps counting.
+    await _restartPollBudget();
     if (_authService.signerReadiness == SignerReadiness.unavailable) {
       final attempt = state.attempt;
       final generation = _beginOperation();
@@ -475,6 +504,8 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     switch (attempt.status) {
       case AccountDeletionAttemptStatus.preparing:
         if (attempt.isCancellationInFlight) {
+          await _loadPollBudget(attempt.id);
+          if (!_isCurrent(generation)) return;
           _emitPollingState(
             AccountDeletionRecoveryStatus.cancelInFlight,
             attempt,
@@ -496,6 +527,8 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
           ),
         );
       case AccountDeletionAttemptStatus.processing:
+        await _loadPollBudget(attempt.id);
+        if (!_isCurrent(generation)) return;
         if (!await _updateAttemptOrRetry(attempt, generation)) return;
         _emitPollingState(
           AccountDeletionRecoveryStatus.processing,
@@ -548,6 +581,26 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     }
   }
 
+  /// Forgets this attempt's polling budget so the next poll starts a new one.
+  Future<void> _restartPollBudget() async {
+    final attemptId = state.attempt?.id;
+    if (attemptId != null) await _pollBudgetStore.clear(attemptId);
+    _pollBudgetStartedAt = null;
+  }
+
+  /// Reads this attempt's polling start, beginning one on first sight.
+  ///
+  /// Keyed by attempt id, so a relaunch against the same attempt continues the
+  /// budget it already spent while a genuinely new attempt starts fresh.
+  Future<void> _loadPollBudget(String attemptId) async {
+    await _pollBudgetStore.recordStartIfAbsent(attemptId, _clock());
+    // Always take the store's value, never the cache: [_schedulePoll] can seed
+    // the cache with `now` on a path that reached it before this ran, and the
+    // store is the one that knows when a previous launch started. Earliest
+    // wins, which is what `recordStartIfAbsent` guarantees.
+    _pollBudgetStartedAt = await _pollBudgetStore.startedAt(attemptId);
+  }
+
   void _emitPollingState(
     AccountDeletionRecoveryStatus status,
     AccountDeletionAttempt attempt,
@@ -559,6 +612,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
         attempt: attempt,
         failure: state.failure,
         pollTickIndex: state.pollTickIndex,
+        pollingElapsed: _pollingSpent,
       ),
     );
     _schedulePoll(generation);
@@ -566,9 +620,25 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
 
   void _schedulePoll(int generation) {
     _pollTimer?.cancel();
+    // Polling is also scheduled from paths that never went through the
+    // `processing` branch of [_handleAttempt] — a failed submission confirm,
+    // a cleanup failure — so the budget has to start here too. Without this
+    // the budget on those paths would read as zero forever and the bound
+    // would never be reached, which is the same trap in a different place.
+    if (_pollBudgetStartedAt == null) {
+      final startedAt = _clock();
+      _pollBudgetStartedAt = startedAt;
+      final attemptId = state.attempt?.id;
+      if (attemptId != null) {
+        unawaited(
+          _pollBudgetStore.recordStartIfAbsent(attemptId, startedAt),
+        );
+      }
+    }
     final tickIndex = state.pollTickIndex;
     final delay = AccountDeletionRecoveryPolling.delayForTick(tickIndex);
-    if (_pollingElapsed + delay > AccountDeletionRecoveryPolling.sessionBound) {
+    final spent = _pollingSpent;
+    if (spent + delay > AccountDeletionRecoveryPolling.sessionBound) {
       emitIfOpen(
         AccountDeletionRecoveryState(
           status: state.status,
@@ -576,11 +646,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
           failure: state.failure,
           pollTickIndex: tickIndex,
           pollingPaused: true,
+          pollingElapsed: spent,
         ),
       );
       return;
     }
-    _pollingElapsed += delay;
     _pollTimer = _timerFactory(delay, () => _poll(generation));
   }
 
@@ -662,7 +732,9 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   int _beginOperation({bool resetPollingProgress = true}) {
     _pollTimer?.cancel();
     _pollTimer = null;
-    if (resetPollingProgress) _pollingElapsed = Duration.zero;
+    // Drops the CACHE, not the record. A reload re-reads the same attempt's
+    // persisted start, so only a different attempt gets a fresh budget.
+    if (resetPollingProgress) _pollBudgetStartedAt = null;
     return ++_generation;
   }
 
@@ -687,6 +759,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
 
   Future<void> _resolve() async {
     _pollTimer?.cancel();
+    final resolvedAttemptId = state.attempt?.id;
+    if (resolvedAttemptId != null) {
+      await _pollBudgetStore.clear(resolvedAttemptId);
+    }
+    _pollBudgetStartedAt = null;
     await _onAttemptResolved();
     if (isClosed) return;
     emitIfOpen(

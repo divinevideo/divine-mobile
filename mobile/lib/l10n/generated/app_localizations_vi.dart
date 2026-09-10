@@ -6988,6 +6988,19 @@ class AppLocalizationsVi extends AppLocalizations {
       'Yêu cầu xóa tài khoản của bạn vẫn đang được xử lý. Bạn có thể dùng một tài khoản khác trong lúc chúng tôi hoàn tất.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'Việc xóa một tài khoản khác vẫn đang được xử lý trên thiết bị này. Hãy đợi quá trình đó hoàn tất trước khi xóa tài khoản này.';
 

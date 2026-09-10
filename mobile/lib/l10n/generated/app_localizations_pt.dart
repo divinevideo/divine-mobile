@@ -7071,6 +7071,19 @@ class AppLocalizationsPt extends AppLocalizations {
       'Seu pedido de exclusão ainda está sendo processado. Você pode usar outra conta enquanto concluímos.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'A exclusão de outra conta ainda está sendo processada neste dispositivo. Aguarde a conclusão antes de excluir esta conta.';
 

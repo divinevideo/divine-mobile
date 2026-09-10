@@ -34,6 +34,7 @@ final class AccountDeletionRecoveryState extends Equatable {
     this.failure,
     this.pollTickIndex = 0,
     this.pollingPaused = false,
+    this.pollingElapsed = Duration.zero,
   });
 
   final AccountDeletionRecoveryStatus status;
@@ -42,6 +43,13 @@ final class AccountDeletionRecoveryState extends Equatable {
   final int pollTickIndex;
   final bool pollingPaused;
 
+  /// How long this deletion attempt has been waiting on the server.
+  ///
+  /// Surfaced so the recovery screen can show the wait it is asking for. There
+  /// is deliberately no estimate: the remaining work is server-side and has no
+  /// client-visible bound, so a countdown here would be invented.
+  final Duration pollingElapsed;
+
   @override
   List<Object?> get props => [
     status,
@@ -49,5 +57,6 @@ final class AccountDeletionRecoveryState extends Equatable {
     failure,
     pollTickIndex,
     pollingPaused,
+    pollingElapsed,
   ];
 }

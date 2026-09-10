@@ -7090,6 +7090,19 @@ class AppLocalizationsBg extends AppLocalizations {
       'Заявката ти за изтриване все още се обработва. Можеш да използваш друг акаунт, докато приключим.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'Изтриването на друг акаунт все още се обработва на това устройство. Изчакай да приключи, преди да изтриеш този акаунт.';
 

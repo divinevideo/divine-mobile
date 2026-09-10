@@ -6942,6 +6942,19 @@ class AppLocalizationsTr extends AppLocalizations {
       'Silme isteğin hâlâ işleniyor. Biz işlemi tamamlarken başka bir hesap kullanabilirsin.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'Bu cihazda başka bir hesabın silme işlemi hâlâ devam ediyor. Bu hesabı silmeden önce işlemin tamamlanmasını bekle.';
 

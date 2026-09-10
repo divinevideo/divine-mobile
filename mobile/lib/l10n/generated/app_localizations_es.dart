@@ -7088,6 +7088,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu solicitud de eliminación todavía se está procesando. Podés usar otra cuenta mientras terminamos.';
 
   @override
+  String accountDeletionFinishingElapsed(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Waiting on our servers for $minutes minutes. It is safe to close the app — this finishes without you.',
+      one: 'Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.',
+      zero: 'This finishes on our servers, so it is safe to close the app.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get accountDeletionOtherAccountPending =>
       'En este dispositivo todavía se está procesando la eliminación de otra cuenta. Esperá a que termine antes de eliminar esta cuenta.';
 

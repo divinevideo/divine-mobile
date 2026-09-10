@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_poll_budget.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
@@ -44,6 +45,15 @@ class _ManualTimer implements Timer {
 class _ManualTimers {
   final timers = <_ManualTimer>[];
 
+  /// Virtual clock the cubit reads for its polling budget.
+  ///
+  /// The budget is measured in elapsed wall-clock time so it survives a
+  /// relaunch, so a harness that fires timers instantly would never advance it
+  /// and every "pauses at the bound" test would spin forever. Firing a timer
+  /// advances this by that timer's own delay, which is what real time would
+  /// have done.
+  DateTime now = DateTime.utc(2026);
+
   Timer create(Duration delay, void Function() callback) {
     final timer = _ManualTimer(delay, callback);
     timers.add(timer);
@@ -51,7 +61,9 @@ class _ManualTimers {
   }
 
   Future<void> fireNext() async {
-    timers.firstWhere((timer) => timer.isActive).fire();
+    final timer = timers.firstWhere((timer) => timer.isActive);
+    now = now.add(timer.delay);
+    timer.fire();
     await Future<void>.delayed(Duration.zero);
   }
 }
@@ -93,6 +105,7 @@ void main() {
 
   AccountDeletionRecoveryCubit buildCubit({
     bool withReceipt = false,
+    AccountDeletionRecoveryPollBudgetStore? pollBudgetStore,
     Future<void> Function()? onAttemptResolved,
     Future<void> Function(AccountDeletionAttempt)? onAttemptUpdated,
   }) => AccountDeletionRecoveryCubit(
@@ -103,6 +116,8 @@ void main() {
     receiptPubkeyHex: withReceipt ? 'a' * 64 : null,
     receiptVanishEventId: withReceipt ? 'b' * 64 : null,
     timerFactory: timers.create,
+    pollBudgetStore: pollBudgetStore,
+    clock: () => timers.now,
   );
 
   setUpAll(() {
@@ -780,6 +795,102 @@ void main() {
       verify(() => authService.deleteLocalAccount('a' * 64)).called(1);
       expect(cubit.state.status, AccountDeletionRecoveryStatus.resolved);
       await cubit.close();
+    });
+
+    group('polling budget across launches', () {
+      /// Drives one cubit to the session bound and returns the store it used,
+      /// so a second cubit can be built against the same durable state the way
+      /// a relaunch would.
+      Future<AccountDeletionRecoveryPollBudgetStore> spendBudget(
+        AccountDeletionRecoveryPollBudgetStore store,
+      ) async {
+        final cubit = buildCubit(pollBudgetStore: store);
+        await cubit.load();
+        while (timers.timers.any((timer) => timer.isActive)) {
+          await timers.fireNext();
+        }
+        expect(
+          cubit.state.pollingPaused,
+          isTrue,
+          reason: 'the first run must reach the bound',
+        );
+        await cubit.close();
+        return store;
+      }
+
+      test(
+        'a relaunch keeps the budget already spent, so the support message '
+        'stays reachable for someone who backgrounds the app',
+        () async {
+          when(repository.fetchCurrent).thenAnswer((_) async => _processing);
+          final store = await spendBudget(
+            InMemoryAccountDeletionRecoveryPollBudgetStore(),
+          );
+
+          // The user backgrounds the app and comes back later. Nothing runs in
+          // between, which is exactly the time the old timer-delay accumulator
+          // could not see pass.
+          timers.now = timers.now.add(const Duration(minutes: 5));
+
+          // Same attempt, same durable store, fresh cubit: a relaunch.
+          final relaunched = buildCubit(pollBudgetStore: store);
+          addTearDown(relaunched.close);
+          await relaunched.load();
+
+          expect(
+            relaunched.state.pollingElapsed,
+            greaterThan(AccountDeletionRecoveryPolling.sessionBound),
+            reason: 'the wait carries across the relaunch',
+          );
+          expect(
+            relaunched.state.pollingPaused,
+            isTrue,
+            reason:
+                'the budget was already spent before this launch started, so '
+                'the support message must be reachable immediately',
+          );
+        },
+      );
+
+      test(
+        'a different attempt starts its own budget, so a new deletion is not '
+        'charged for the previous one',
+        () async {
+          when(repository.fetchCurrent).thenAnswer((_) async => _processing);
+          final store = await spendBudget(
+            InMemoryAccountDeletionRecoveryPollBudgetStore(),
+          );
+
+          const laterAttempt = AccountDeletionAttempt(
+            id: 'a-different-attempt',
+            status: AccountDeletionAttemptStatus.processing,
+          );
+          when(repository.fetchCurrent).thenAnswer((_) async => laterAttempt);
+          final fresh = buildCubit(pollBudgetStore: store);
+          addTearDown(fresh.close);
+          await fresh.load();
+
+          expect(fresh.state.pollingPaused, isFalse);
+          expect(fresh.state.pollingElapsed, Duration.zero);
+        },
+      );
+
+      test('surfaces the elapsed wait so the screen can show it', () async {
+        when(repository.fetchCurrent).thenAnswer((_) async => _processing);
+        final cubit = buildCubit(
+          pollBudgetStore: InMemoryAccountDeletionRecoveryPollBudgetStore(),
+        );
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+        expect(cubit.state.pollingElapsed, Duration.zero);
+        await timers.fireNext();
+        await timers.fireNext();
+
+        // Two ticks of the schedule have elapsed on the virtual clock.
+        expect(cubit.state.pollingElapsed, greaterThan(Duration.zero));
+      });
     });
 
     test(

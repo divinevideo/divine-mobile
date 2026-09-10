@@ -12010,6 +12010,12 @@ abstract class AppLocalizations {
   /// **'Your deletion request is still being processed. You can use another account while we finish.'**
   String get accountDeletionFinishingBody;
 
+  /// How long an account deletion has been waiting on the server. There is deliberately no estimate: the remaining work is server-side with no client-visible bound.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =0{This finishes on our servers, so it is safe to close the app.} =1{Waiting on our servers for 1 minute. It is safe to close the app — this finishes without you.} other{Waiting on our servers for {minutes} minutes. It is safe to close the app — this finishes without you.}}'**
+  String accountDeletionFinishingElapsed(int minutes);
+
   /// Snackbar shown when this installation already holds a pending deletion receipt for a different account.
   ///
   /// In en, this message translates to:
