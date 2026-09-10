@@ -5,10 +5,13 @@ divergence from the issue body is scope: #8337 rule 3 made a scope mandatory
 (2026-08-29), but its author later codified the org-wide policy in
 divine-context PR_REVIEW.md / title-conventions.json (2026-09-02) as
 `type(scope): summary` OR `type: summary` when no scope applies. The later,
-org-canonical policy wins, so a missing scope is NOT a failure here. A scope
-that IS present must still not be the `support` intake channel (#8335).
+org-canonical policy wins, so a missing scope is NOT a failure here. `support`
+is also a real product area, while intake provenance belongs on the `zendesk`
+label (#8335).
 """
 
+import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -42,6 +45,16 @@ class ConformingTitles(unittest.TestCase):
             codes("fix(verify): TikTok verification fails with non_sandbox_target"), []
         )
 
+    def test_support_product_scope_passes(self):
+        self.assertEqual(
+            codes("epic(support): make the support and bug-report pipeline trustworthy"),
+            [],
+        )
+
+    def test_short_complete_summary_passes(self):
+        self.assertEqual(codes("feat: 機能要望"), [])
+        self.assertEqual(codes("fix: Audio Delays"), [])
+
     def test_long_title_not_flagged_for_length(self):
         long_summary = "the editor drops the last second of every clip when " * 3
         self.assertEqual(codes(f"fix(editor): {long_summary}".strip()), [])
@@ -60,10 +73,16 @@ class ConformingTitles(unittest.TestCase):
 
 
 class NonConformingTitles(unittest.TestCase):
-    def test_support_scope_flagged(self):
+    def test_digit_type_flagged_as_unknown(self):
         self.assertEqual(
-            codes("fix(support): the app crashes on the upload screen every time"),
-            ["support_scope"],
+            codes("l10n(inbox): review machine-translated strings from PR #6286"),
+            ["unknown_type"],
+        )
+
+    def test_hyphenated_type_flagged_as_unknown(self):
+        self.assertEqual(
+            codes("release-candidate: prepare the next mobile release"),
+            ["unknown_type"],
         )
 
     def test_empty_scope_flagged(self):
@@ -90,14 +109,32 @@ class NonConformingTitles(unittest.TestCase):
             ["unparseable"],
         )
 
-    def test_short_summary_flagged(self):
-        self.assertEqual(codes("fix: Y"), ["summary_too_short"])
 
-    def test_support_scope_and_short_summary(self):
-        self.assertEqual(
-            sorted(codes("fix(support): Y")),
-            ["summary_too_short", "support_scope"],
+class CommandLineInterface(unittest.TestCase):
+    def run_linter(self, title: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env["ISSUE_TITLE"] = title
+        return subprocess.run(
+            ["python3", str(Path(__file__).resolve().parents[1] / "lint_issue_title.py")],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
         )
+
+    def test_environment_title_succeeds_silently(self):
+        result = self.run_linter("fix(auth): restore account recovery after logout")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+    def test_environment_title_prints_findings_and_fails(self):
+        result = self.run_linter("l10n(inbox): review translated strings")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("`l10n` is not an allowed type", result.stdout)
+        self.assertEqual(result.stderr, "")
 
 
 if __name__ == "__main__":

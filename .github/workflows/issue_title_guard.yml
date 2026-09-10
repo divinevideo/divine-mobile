@@ -21,7 +21,9 @@ jobs:
   lint-title:
     name: lint-issue-title
     runs-on: ubuntu-24.04
-    if: github.actor != 'dependabot[bot]'
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event.action == 'opened' || github.event.changes.title != null)
     steps:
       - uses: actions/checkout@v7
 

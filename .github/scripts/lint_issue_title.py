@@ -8,7 +8,7 @@ directions. This is that real linter, run as an `issues`-triggered guard that
 comments once on a non-conforming title rather than a push-triggered CI
 ratchet (issue titles are metadata, not files in the tree).
 
-Scope is the one place this diverges from #8337 as written. Rule 3 in the
+Scope is one place this diverges from #8337 as written. Rule 3 in the
 issue (2026-08-29) made a scope mandatory. Its author, Liz Sweigart,
 subsequently codified the org-wide policy in divine-context
 (`PR_REVIEW.md`, `title-conventions.json`, commit 3234369, 2026-09-02) as
@@ -18,13 +18,15 @@ scope is not a defect here. It also keeps the guard from re-failing every
 Zendesk-bridged issue once divine-mobile#8335 drops the `(support)` scope
 (which produces scopeless titles) — enforcing a stricter-than-policy rule
 would recreate the "train people to ignore it" failure #8337 itself warns of.
-A scope that IS present must still not be the `support` intake channel; that
-provenance belongs on the `zendesk` label (#8335).
+The linter does not infer intake provenance from a scope name. `support` is
+also a real product area in divine-mobile, while Zendesk provenance belongs on
+the `zendesk` label (#8335).
 
 The allowed types mirror divine-context's `title-conventions.json`
 (`pull_request_types` + `issue_only_types`). That file in divine-context is
-the source of truth; this list is a local copy kept aligned the same way the
-prose copies in AGENTS.md and PR_REVIEW.md are.
+the source of truth. The workflow cannot read that private sibling repository
+with this repository's `GITHUB_TOKEN`, so this runtime list is a deliberately
+manual mirror and changes to it must be checked against the canonical manifest.
 """
 
 from __future__ import annotations
@@ -54,22 +56,12 @@ ALLOWED_TYPES = frozenset(
     }
 )
 
-# Intake provenance belongs on the `zendesk` label, not the scope slot (#8335).
-FORBIDDEN_SCOPES = frozenset({"support"})
-
-# A summary shorter than this reads as a reporter's raw fragment ("Y"), not a
-# description. Approximate by design (#8337); the guard comments, never blocks,
-# so an occasional terse-but-valid summary costs a comment, not a merge.
-MIN_SUMMARY_LENGTH = 12
-
 # type, optional (scope), an optional Conventional-Commit breaking-change `!`,
-# then `: summary`. Type is captured permissively so a wrong-case type ("Fix") is
-# reported as an unknown type rather than as an unparseable title. The `!` is
-# allowed so a valid Conventional-Commit title (`feat!:`, `feat(auth)!:`) is not
-# flagged — the org's PR check (commitlint) accepts it too. A space after the
-# colon is required by the convention.
+# then `: summary`. Type is captured permissively according to the canonical
+# type-token grammar so wrong-case and unsupported types such as `Fix`, `l10n`,
+# and `release-candidate` are reported as unknown rather than unparseable.
 _TITLE_RE = re.compile(
-    r"^(?P<type>[A-Za-z][A-Za-z]*)"
+    r"^(?P<type>[A-Za-z][A-Za-z0-9-]*)"
     r"(?:\((?P<scope>[^)]*)\))?"
     r"!?"
     r":[ \t]+(?P<summary>\S.*)$"
@@ -114,27 +106,6 @@ def check_issue_title(title: str) -> list[Finding]:
             findings.append(
                 Finding("empty_scope", "Scope parentheses are empty; drop them or name a scope.")
             )
-        elif scope.strip().lower() in FORBIDDEN_SCOPES:
-            findings.append(
-                Finding(
-                    "support_scope",
-                    "`support` is an intake channel, not a product scope. Put "
-                    "intake provenance on the `zendesk` label and use a real "
-                    "scope, or drop the scope.",
-                )
-            )
-
-    summary = match.group("summary").strip()
-    if len(summary) <= MIN_SUMMARY_LENGTH:
-        findings.append(
-            Finding(
-                "summary_too_short",
-                f"Summary is too short (needs more than {MIN_SUMMARY_LENGTH} "
-                "characters). Describe what the issue gets someone, not the "
-                "reporter's raw words.",
-            )
-        )
-
     return findings
 
 
