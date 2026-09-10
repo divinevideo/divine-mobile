@@ -96,8 +96,8 @@ the manifest rules and the release checklist.
 | D3 — bug-report attachment location | Approved; implemented in #9049 | Strip attachment metadata instead of declaring Precise Location. | The bug-report picker strips EXIF explicitly and fails closed (#9049); Precise Location is omitted. |
 | D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
 | D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
-| D6 — Performance Data | Pending | Proposed: linked (conservative), purposes Analytics and App Functionality, tracking false. | Not authoritative until approved; the manifest value is provisional. |
-| D7 — Shorebird | Pending | Proposed: not linked, not tracking, conditional on neither Divine nor Shorebird joining the installation identifier to Divine account data. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); do not duplicate them in the Runner manifest. |
+| D6 — Performance Data | Approved | Linked (conservative), purposes Analytics and App Functionality, tracking false. | Performance Data declared linked. |
+| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. |
 
 ### Tracking posture before each candidate
 
