@@ -28,7 +28,7 @@ void main() {
         'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
     const oldContainer = '/var/mobile/Containers/Data/Application/OLD';
     const newContainer = '/var/mobile/Containers/Data/Application/NEW';
-    const relativePath = 'draft_audio_imports/draft_autosave/imported.m4a';
+    const relativePath = 'library_audio_imports/imported.m4a';
 
     late SharedPreferences preferences;
     late _MockAuthService authService;

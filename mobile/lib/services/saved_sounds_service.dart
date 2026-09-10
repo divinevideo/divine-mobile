@@ -264,11 +264,10 @@ class SavedSoundsService {
   /// Basenames of draft-local audio files a saved sound points at, across
   /// *every* account bucket on this device.
   ///
-  /// Audio imported from the Library still lands under the draft that was open
-  /// at the time (`draft_audio_imports/<draftId>/`), so a file a My Sounds
-  /// entry depends on can be owned by a draft the user later deletes. Draft
-  /// cleanup consults this and keeps such a file: a dangling path heals on the
-  /// next load, a deleted file does not (#7977).
+  /// Imported audio lives in library storage, but a draft can still reference
+  /// the same file as a My Sounds entry. Draft cleanup consults this and keeps
+  /// such a file: a dangling path can heal on load, while a deleted file cannot
+  /// (#7977).
   ///
   /// All accounts, not just the signed-in one — draft cleanup already scans
   /// drafts device-wide, and a saved sound outlives the account switch that

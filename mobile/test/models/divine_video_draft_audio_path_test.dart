@@ -113,21 +113,25 @@ void main() {
       );
     });
 
+    // The import root moved out of draft-owned storage (#8024): a path
+    // persisted under the retired root resolves to library storage, where
+    // `migrateDraftOwnedAudioImports` put the file. The portable form is
+    // left as stored and heals on the next save.
     test('rebases draft-local audio onto the current container on load', () {
       final restored = DivineVideoDraft.fromJson(_draft().toJson(), _newDocs);
 
       expect(_historyAudioUrls(restored), [
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
         '$_newDocs/voice_over_recordings/take_1.m4a',
         '$_newDocs/extracted_clip_audio/extracted_audio_1.wav',
       ]);
       expect(
         _parametersAudioUrl(restored),
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
       );
       expect(
         restored.selectedSound?.localFilePath,
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
       );
     });
 
@@ -151,7 +155,7 @@ void main() {
       final restored = DivineVideoDraft.fromJson(legacyJson, _newDocs);
 
       expect(_historyAudioUrls(restored), [
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
       ]);
     });
 
@@ -181,7 +185,7 @@ void main() {
       final restored = DivineVideoDraft.fromJson(_draft().toJson(), _newDocs);
 
       expect(restored.localAudioFilePaths, {
-        '$_newDocs/draft_audio_imports/draft_1/song.m4a',
+        '$_newDocs/library_audio_imports/draft_1/song.m4a',
         '$_newDocs/voice_over_recordings/take_1.m4a',
         '$_newDocs/extracted_clip_audio/extracted_audio_1.wav',
       });

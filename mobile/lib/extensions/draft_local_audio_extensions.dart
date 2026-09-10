@@ -6,10 +6,10 @@ import 'package:openvine/models/divine_video_draft.dart';
 extension DraftLocalAudioPaths on DivineVideoDraft {
   /// Absolute file paths of draft-local audio referenced by this draft.
   ///
-  /// Covers imported audio created by `LocalAudioImportService` (stored under
-  /// `draft_audio_imports/<draftId>`), committed voice-over recordings, and
-  /// audio extracted from the draft's own clips — all persisted as draft-local
-  /// [AudioEvent]s. Sweeps every history entry's audio metadata in
+  /// Covers library-owned audio created by `LocalAudioImportService`, committed
+  /// voice-over recordings, and audio extracted from the draft's own clips —
+  /// all persisted as local [AudioEvent]s. Sweeps every history entry's audio
+  /// metadata in
   /// [DivineVideoDraft.editorStateHistory], the completed-editor snapshot in
   /// [DivineVideoDraft.editorEditingParameters], plus the legacy
   /// [DivineVideoDraft.selectedSound], collecting [AudioEvent.localFilePath]
