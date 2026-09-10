@@ -98,8 +98,9 @@ class QueryResult {
   ///
   /// A relay that sent events outside the read's filters counts too: it did
   /// not honour them, so it may have spent its limit on events nobody asked
-  /// for. A cache relay never counts, since it serves the pool's own copies
-  /// of what relays sent.
+  /// for. So does a relay that sent a frame the pool rejected, one that is
+  /// not an event or not validly signed. A cache relay never counts, since it
+  /// serves the pool's own copies of what relays sent.
   ///
   /// Can be `true` even when [isComplete] is also `true`: a relay can answer
   /// fully within its own cap and still call that "done".
@@ -108,7 +109,8 @@ class QueryResult {
   /// `true` when every relay that answered explicitly confirmed it had no
   /// further matching events (a NIP-67 `finish` hint), rather than merely
   /// going quiet after its last event. A relay that also sent `more` or
-  /// `auth`, or answered outside the read's filters, has not confirmed it.
+  /// `auth`, answered outside the read's filters, or sent a frame the pool
+  /// rejected, has not confirmed it.
   final bool confirmedExhaustive;
 
   /// `true` only when every relay in the read finished on its own before the

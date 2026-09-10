@@ -384,6 +384,8 @@ class Nostr {
   /// each relay that sent it an event, the relay pool reports the oldest
   /// `created_at` among what it sent and whether the relay may have stopped
   /// at its result-size limit, counting events the block list hid. A relay
+  /// that sent a frame the pool rejected, one that is not an event or not
+  /// validly signed, may have: that frame took a slot of its limit. A relay
   /// sends its newest events first, so it has sent everything it holds after
   /// that oldest event. Cache relays do not count, and events already
   /// collected are dropped by event id.
@@ -406,10 +408,10 @@ class Nostr {
   /// The walk also ends complete on a settled page confirmed exhaustive by
   /// NIP-67 `finish`, unless a relay it was following missed that page, and
   /// stops incomplete, keeping what it collected, on the first page that
-  /// does not settle. Whenever a page stops the walk
-  /// incomplete, its [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also
-  /// stops incomplete after [maxPages] pages, or once [deadline] has passed.
-  /// Each page gets [pageTimeout], cut short by [deadline].
+  /// does not settle. Whenever a page stops the walk incomplete, its
+  /// [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also stops
+  /// incomplete after [maxPages] pages, or once [deadline] has passed. Each
+  /// page gets [pageTimeout], cut short by [deadline].
   ///
   /// One case can still lose events: a relay that stops short of [pageSize]
   /// without saying so, and holds more events in one second than it sends a

@@ -74,6 +74,10 @@ class _RelayTally {
   /// filters.
   int outsideFilter = 0;
 
+  /// `EVENT` frames from this relay that the pool rejected before judging
+  /// them against the filters: not an event, or not validly signed.
+  int rejected = 0;
+
   /// Whether the relay took part: it took the `REQ`, may still be taking it,
   /// or answered it.
   bool get tookPart => tookReq != false || terminalFrame != null || events > 0;
@@ -165,6 +169,13 @@ class QueryOutcomeTracker {
   /// the relay returned for one of those still counts as matching.
   void recordOffFilterEvent(Relay relay) {
     _tallyFor(relay).outsideFilter += 1;
+  }
+
+  /// Records an `EVENT` frame [relay] sent for the query that the pool
+  /// rejected: its payload is not an event, its id does not match its
+  /// content, or its signature is missing or does not verify.
+  void recordRejectedEvent(Relay relay) {
+    _tallyFor(relay).rejected += 1;
   }
 
   /// Records [relay]'s `EOSE` [frame] for the query, keeping the NIP-67
@@ -305,8 +316,8 @@ class QueryOutcomeTracker {
   ///
   /// A cache relay never has: it serves the pool's own copies of what relays
   /// sent, so reaching a limit says nothing a relay withheld. Any other relay
-  /// may when it sent events outside the query's filters: it did not honour
-  /// them, so it may have spent its limit on events nobody asked for.
+  /// may when it sent events outside the query's filters, or frames the pool
+  /// rejected: either may have spent its limit on something nobody can use.
   /// Otherwise a NIP-67 `more` hint settles it as capped and `finish` as not.
   /// Failing both, it may when its events for some filter reached
   /// `min(limit ?? max_limit, max_limit)`, with `max_limit` from the relay's
@@ -315,7 +326,7 @@ class QueryOutcomeTracker {
   /// least one.
   bool _isCapped(_RelayTally tally) {
     if (tally.relay.relayStatus.relayType == RelayType.cache) return false;
-    if (tally.outsideFilter > 0) return true;
+    if (tally.outsideFilter > 0 || tally.rejected > 0) return true;
     if (tally.hints.contains(_moreHint)) return true;
     if (tally.hints.contains(_finishHint)) return false;
     final maxLimit = tally.relay.info?.maxLimit;
@@ -333,8 +344,9 @@ class QueryOutcomeTracker {
 
   /// NIP-67: `finish` confirms a relay sent every matching stored event.
   /// `more` beside it contradicts that, `auth` says more may follow a NIP-42
-  /// handshake, and a relay that answered outside the filter did not honour
-  /// it, so none of them counts as confirmation.
+  /// handshake, a relay that answered outside the filter did not honour it,
+  /// and one that sent a frame the pool rejected sent something nobody can
+  /// use, so none of them counts as confirmation.
   static bool _confirmedExhaustive(Map<_RelayTally, _Judgement> judgements) {
     final answered = [
       for (final MapEntry(key: tally, value: judgement) in judgements.entries)
@@ -346,7 +358,8 @@ class QueryOutcomeTracker {
               tally.hints.contains(_finishHint) &&
               !tally.hints.contains(_moreHint) &&
               !tally.hints.contains(_authHint) &&
-              tally.outsideFilter == 0,
+              tally.outsideFilter == 0 &&
+              tally.rejected == 0,
         );
   }
 
@@ -380,8 +393,9 @@ class QueryOutcomeTracker {
   }
 
   /// The line's text: relay urls, event counts including events outside the
-  /// filter, `CLOSED` reason prefixes and each filter's kinds and limit.
-  /// Never a pubkey, an event id, or a filter's ids, authors or tag values.
+  /// filter and rejected ones, `CLOSED` reason prefixes and each filter's
+  /// kinds and limit. Never a pubkey, an event id, or a filter's ids,
+  /// authors or tag values.
   String _describe(
     QueryOutcome outcome,
     Map<_RelayTally, _Judgement> judgements,
@@ -396,6 +410,7 @@ class QueryOutcomeTracker {
         if (!answeredIt) judgement.label,
         'events=${tally.events}',
         if (tally.outsideFilter > 0) _outsideFilter(tally.outsideFilter),
+        if (tally.rejected > 0) _rejected(tally.rejected),
         if (_isCapped(tally)) 'capped',
       ];
       (answeredIt ? answered : notAnswered).add(
@@ -420,6 +435,9 @@ class QueryOutcomeTracker {
 
   static String _outsideFilter(int count) =>
       '$count ${count == 1 ? 'event' : 'events'} outside the filter';
+
+  static String _rejected(int count) =>
+      '$count ${count == 1 ? 'event' : 'events'} rejected';
 
   static String _listOrNone(List<String> entries) =>
       entries.isEmpty ? 'none' : entries.join(', ');

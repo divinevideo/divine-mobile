@@ -119,6 +119,19 @@ class _BlockEverything implements EventFilter {
   bool check(Event e) => true;
 }
 
+/// Verify worker that turns down the events whose ids it holds, the way the
+/// verify isolate turns down a forged signature.
+class _VerifyWorker implements EventVerifyWorker {
+  final Set<String> rejects = {};
+
+  @override
+  Future<bool> verify(Map<String, dynamic> eventJson) async =>
+      !rejects.contains(eventJson['id']);
+
+  @override
+  void close() {}
+}
+
 const _privateKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 
@@ -820,6 +833,143 @@ void main() {
         );
         expect(completionLines(), isEmpty);
       });
+    });
+
+    group('events the pool rejects', () {
+      const url = 'wss://relay.example';
+
+      /// Has a relay answer a query with room for ten events: an event the
+      /// pool accepts, at 110, then an `EVENT` frame carrying [rejected],
+      /// then an `EOSE` with [hints].
+      Future<QueryOutcome> answerWith(
+        Object? rejected, {
+        List<String>? hints,
+      }) async {
+        final relay = await addRelay(url);
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 10,
+          },
+        ]);
+        await sendEventsAt(relay, [110]);
+        await relay.deliver(['EVENT', _queryId, rejected]);
+        await relay.deliver(['EOSE', _queryId, ?hints]);
+        return outcome.future;
+      }
+
+      /// The relay may have spent a slot of its limit on the rejected frame,
+      /// so its page of one event may not be all it holds.
+      void expectCapped(QueryOutcome ended) {
+        expect(ended.possiblyCapped, isTrue);
+        expect(ended.relays, [
+          _summary(url: url, events: 1, oldestCreatedAt: 110, capped: true),
+        ]);
+      }
+
+      test('mark the relay capped when an event id does not match its '
+          'content', () async {
+        final event = await signedEvent(createdAt: 105);
+
+        expectCapped(
+          await answerWith({...event.toJson(), 'content': 'forged'}),
+        );
+      });
+
+      test(
+        'mark the relay capped when an event carries no signature',
+        () async {
+          final event = await signedEvent(createdAt: 105);
+
+          expectCapped(await answerWith({...event.toJson(), 'sig': ''}));
+        },
+      );
+
+      test('mark the relay capped when an event signature does not '
+          'verify', () async {
+        final event = await signedEvent(createdAt: 105);
+        final sig = event.sig;
+        final forged =
+            '${sig.substring(0, sig.length - 1)}'
+            '${sig.endsWith('0') ? '1' : '0'}';
+
+        expectCapped(await answerWith({...event.toJson(), 'sig': forged}));
+      });
+
+      test('mark the relay capped when the verify worker turns an event '
+          'down', () async {
+        final worker = _VerifyWorker();
+        nostr.relayPool.eventVerifyWorker = worker;
+        final event = await signedEvent(createdAt: 105);
+        worker.rejects.add(event.id);
+
+        expectCapped(await answerWith(event.toJson()));
+      });
+
+      test('mark the relay capped when a frame carries something other than '
+          'an object', () async {
+        expectCapped(await answerWith('not an event'));
+      });
+
+      test('mark the relay capped when a frame carries an object that is not '
+          'an event', () async {
+        expectCapped(await answerWith({'kind': EventKind.textNote}));
+      });
+
+      test('are counted in the completion line', () async {
+        final event = await signedEvent(createdAt: 105);
+
+        await answerWith({...event.toJson(), 'sig': ''});
+
+        expect(completionLines(), hasLength(1));
+        expect(
+          completionLines().single.message,
+          contains('$url (events=1, 1 event rejected, capped)'),
+        );
+      });
+
+      test('keep a finish hint from confirming the relay exhaustive', () async {
+        final event = await signedEvent(createdAt: 105);
+
+        final ended = await answerWith(
+          {...event.toJson(), 'sig': ''},
+          hints: ['finish'],
+        );
+
+        expect(
+          ended.confirmedExhaustive,
+          isFalse,
+          reason: 'the relay says it finished, yet sent a frame nobody can use',
+        );
+        expect(ended.possiblyCapped, isTrue);
+      });
+
+      test(
+        'are not counted from a relay that does not hold the query',
+        () async {
+          final asked = await addRelay(url);
+          final outcome = await startQuery([
+            {
+              'kinds': [EventKind.textNote],
+              'limit': 10,
+            },
+          ]);
+          final late = await addRelay('wss://late.example');
+          final event = await signedEvent(createdAt: 105);
+
+          await late.deliver(['EVENT', _queryId, event.toJson()..['sig'] = '']);
+          await asked.deliver(['EOSE', _queryId]);
+
+          final ended = await outcome.future;
+          expect(
+            ended.endedBy,
+            QueryEnd.complete,
+            reason:
+                'the fan-out never asked the late relay, so it owes nothing',
+          );
+          expect(ended.possiblyCapped, isFalse);
+        },
+      );
     });
 
     group('NIP-67 EOSE hints', () {

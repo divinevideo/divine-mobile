@@ -1631,6 +1631,16 @@ class RelayPool {
     return _dispatchTypedFrame(relay, json, messageType);
   }
 
+  /// Records that [relay] sent one-shot query [subId] an `EVENT` frame the
+  /// pool rejected. The frame may have taken a slot of the relay's `limit`,
+  /// so the query's outcome treats the relay as possibly capped, as it does
+  /// one that answered outside the filter.
+  void _recordRejectedQueryEvent(Relay relay, String subId) {
+    if (_subscriptions[subId] != null) return;
+    if (relay.getRequestSubscription(subId) == null) return;
+    _queryOutcomes[subId]?.recordRejectedEvent(relay);
+  }
+
   Future<void> _dispatchTypedFrame(
     Relay relay,
     List<dynamic> json,
@@ -1642,9 +1652,19 @@ class RelayPool {
         if (subId == null) return;
 
         final eventJson = _mapAt(relay, json, 2, 'EVENT payload');
-        if (eventJson == null) return;
+        if (eventJson == null) {
+          _recordRejectedQueryEvent(relay, subId);
+          return;
+        }
 
-        final event = Event.fromJson(eventJson);
+        final Event event;
+        try {
+          event = Event.fromJson(eventJson);
+        } catch (err) {
+          log('Dropping malformed relay event from ${relay.url}: $err');
+          _recordRejectedQueryEvent(relay, subId);
+          return;
+        }
 
         // Cheap integrity check first: [Event.isValid] recomputes the
         // sha256 id from the event's own content, so a tampered payload is
@@ -1654,6 +1674,7 @@ class RelayPool {
             'Dropping relay event with invalid id '
             'from ${relay.url}: eventId=${event.id}',
           );
+          _recordRejectedQueryEvent(relay, subId);
           return;
         }
 
@@ -1672,6 +1693,7 @@ class RelayPool {
             'Dropping relay event with empty signature '
             'from ${relay.url}: eventId=${event.id}',
           );
+          _recordRejectedQueryEvent(relay, subId);
           return;
         }
 
@@ -1689,6 +1711,10 @@ class RelayPool {
               'Dropping relay event with invalid signature '
               'from ${relay.url}: eventId=${event.id}',
             );
+            // Decided after an await, off the main isolate when a verify
+            // worker is wired; the query may have ended meanwhile, and then
+            // there is no outcome left to record on.
+            _recordRejectedQueryEvent(relay, subId);
             return;
           }
         } else {

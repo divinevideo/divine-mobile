@@ -166,6 +166,17 @@ List<int?> _untilsOf(_StoreRelay relay) => [
   for (final filter in relay.requests) filter['until'] as int?,
 ];
 
+/// [event] with the last digit of its signature changed, so the relay pool
+/// rejects it the way it rejects a forged event.
+Event _forged(Event event) {
+  final sig = event.sig;
+  return Event.fromJson({
+    ...event.toJson(),
+    'sig':
+        '${sig.substring(0, sig.length - 1)}${sig.endsWith('0') ? '1' : '0'}',
+  });
+}
+
 void main() {
   group('Nostr.readAllEvents', () {
     late List<RelayDiagnostic> diagnostics;
@@ -638,6 +649,31 @@ void main() {
               '108 rather than jump past 107, 106 and 105',
         );
         expect(result.isComplete, isTrue);
+      });
+    });
+
+    group('when the pool rejects an event a relay sends', () {
+      test('stops incomplete, rather than read the page it took a slot of '
+          'as short', () async {
+        final stored = await eventsAt([105, 104, 104, 104, 103]);
+        final at104 = stored.where((event) => event.createdAt == 104).toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
+        // The relay's first event at 104, in the order it sends them.
+        stored[stored.indexOf(at104.first)] = _forged(at104.first);
+        final relay = await addStore('wss://relay.example', stored);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(_untilsOf(relay), [null, 105]);
+        expect(_idsOf(result.events), [stored.first.id]);
+        expect(
+          result.isComplete,
+          isFalse,
+          reason:
+              'each page came back full, one slot taken by the forged event, '
+              'so the relay may hold more at 105 than any until can reach',
+        );
+        expect(result.stoppedBy, QueryEnd.complete);
       });
     });
 
