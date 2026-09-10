@@ -1,6 +1,7 @@
 // ABOUTME: Tests the heal-and-blame harness for shared process-wide Hive boxes.
 // ABOUTME: Each test heals within itself so the root tearDown sees no leak.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -67,11 +68,42 @@ void main() {
     });
 
     group('healAndBlameSharedHiveBoxes', () {
+      test(
+        'fails promptly with the name of a stranded observed open',
+        () async {
+          final completer = Completer<Box<dynamic>>();
+          final observer = SharedHiveBoxOpenObserver(Zone.current);
+          observer.observe<Box<dynamic>>(
+            HiveBoxNames.pendingUploads,
+            () => completer.future,
+          );
+          expect(observer.pending, hasLength(1));
+
+          await expectLater(
+            healAndBlameSharedHiveBoxes(
+              strict: false,
+              openObserver: observer,
+              pendingOpenTimeout: const Duration(milliseconds: 10),
+            ),
+            throwsA(
+              isA<TestFailure>().having(
+                (failure) => failure.message,
+                'message',
+                allOf(
+                  contains(HiveBoxNames.pendingUploads),
+                  contains('did not settle'),
+                ),
+              ),
+            ),
+          );
+
+          completer.completeError(StateError('synthetic stranded open'));
+          await expectLater(completer.future, throwsStateError);
+        },
+      );
+
       test('does nothing when every shared box is closed', () async {
-        await expectLater(
-          healAndBlameSharedHiveBoxes(strict: true),
-          completes,
-        );
+        await expectLater(healAndBlameSharedHiveBoxes(strict: true), completes);
       });
 
       test('closes the leaked box and fails in strict mode', () async {
