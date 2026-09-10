@@ -2,12 +2,12 @@
 // ABOUTME: standing on their own profile, and that the page context survives
 // ABOUTME: alongside the other consumer of the router location.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -283,7 +283,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),

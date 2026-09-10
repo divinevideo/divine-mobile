@@ -66,7 +66,7 @@ Future<RouteInformation> _undecodableState(WidgetTester tester) async {
   await tester.pumpWidget(
     MaterialApp.router(
       routerConfig: previous,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
   );

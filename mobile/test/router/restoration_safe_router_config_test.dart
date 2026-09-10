@@ -3,9 +3,9 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/router/restoration_safe_router_config.dart';
@@ -71,7 +71,7 @@ Future<RouteInformation> _savedStateFromRetiredLocation(
   await tester.pumpWidget(
     MaterialApp.router(
       routerConfig: previousBuild,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
   );
@@ -107,7 +107,7 @@ void main() {
               router,
               crashReporter: reporter,
             ),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
@@ -141,7 +141,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp.router(
             routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
@@ -171,7 +171,7 @@ void main() {
               router,
               crashReporter: reporter,
             ),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
@@ -192,7 +192,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp.router(
             routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
