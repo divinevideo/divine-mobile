@@ -1,5 +1,5 @@
 // ABOUTME: Verifies viewer-independent original-sound reuse policy.
-// ABOUTME: Preserves classic Vine compatibility without overriding declines.
+// ABOUTME: Makes classic Vine audio reusable unless a server takedown applies.
 
 import 'package:models/models.dart';
 import 'package:test/test.dart';
@@ -39,21 +39,21 @@ void main() {
         );
       });
 
-      test('honors explicit decline for $source', () {
+      test('interprets an explicit decline correctly for $source', () {
         expect(
           originalSoundReuseTerms(
             video(marker: 'false', isVerifiedArchive: isVerifiedArchive),
           ),
-          isFalse,
+          isVerifiedArchive ? isTrue : isFalse,
         );
       });
 
-      test('fails closed for a malformed marker on $source', () {
+      test('interprets a malformed marker correctly for $source', () {
         expect(
           originalSoundReuseTerms(
             video(marker: 'invalid', isVerifiedArchive: isVerifiedArchive),
           ),
-          isFalse,
+          isVerifiedArchive ? isTrue : isFalse,
         );
       });
     }

@@ -454,7 +454,7 @@ void main() {
         expect(_divineIcon(DivineIconName.caretRight), findsNothing);
       });
 
-      testWidgets('honors an explicit decline on a classic Vine', (
+      testWidgets('ignores imported reuse markers on a classic Vine', (
         tester,
       ) async {
         final video = createVideoWithoutAudio(
@@ -463,7 +463,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          buildTestWidget(video: video, viewerPubkey: testPubkey),
+          buildTestWidget(video: video),
         );
         await tester.pumpAndSettle();
 

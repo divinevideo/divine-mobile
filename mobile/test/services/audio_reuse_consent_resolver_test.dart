@@ -10,6 +10,8 @@ import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
+class _FakeVideoEvent extends Fake implements VideoEvent {}
+
 const _pubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -64,18 +66,18 @@ VideoEvent _video({
 }
 
 void main() {
+  setUpAll(() => registerFallbackValue(_FakeVideoEvent()));
+
   late _MockVideosRepository videosRepository;
   late AudioReuseConsentResolver resolver;
 
   setUp(() {
     videosRepository = _MockVideosRepository();
     resolver = AudioReuseConsentResolver(videosRepository: videosRepository);
-    when(
-      () => videosRepository.getAudioReusePolicy(any()),
-    ).thenAnswer(
+    when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
       (_) async => const AudioReusePolicy(
-        allowAudioReuse: true,
         audioReuseSuppressed: false,
+        validFor: Duration(seconds: 60),
       ),
     );
   });
@@ -100,36 +102,32 @@ void main() {
         verify(
           () => videosRepository.getVideosByAddressableIds([_sourceAddress]),
         ).called(1);
-        verify(() => videosRepository.getAudioReusePolicy(_sha256)).called(1);
+        verify(() => videosRepository.refreshAudioReusePolicy(any())).called(1);
       },
     );
 
     test('suppression overrides explicit true', () async {
       stubSource([_video()]);
-      when(
-        () => videosRepository.getAudioReusePolicy(_sha256),
-      ).thenAnswer(
+      when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
         (_) async => const AudioReusePolicy(
-          allowAudioReuse: false,
           audioReuseSuppressed: true,
+          validFor: Duration(seconds: 60),
         ),
       );
 
       expect(
-        await resolver.verify(
-          _sound(allowsReuse: true, sha256: _audioSha256),
-        ),
+        await resolver.verify(_sound(allowsReuse: true, sha256: _audioSha256)),
         isFalse,
       );
     });
 
-    test('honors explicit false without a legacy lookup', () async {
+    test('honors explicit false on the current ordinary source', () async {
+      stubSource([_video(reuseMarker: 'false')]);
       expect(
         await resolver.verify(_sound(hasExplicitReuseConsent: true)),
         isFalse,
       );
-      verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
-      verifyNever(() => videosRepository.getAudioReusePolicy(any()));
+      verifyNever(() => videosRepository.refreshAudioReusePolicy(any()));
     });
 
     test('grants reuse from the source video the sound points at', () async {
@@ -149,7 +147,7 @@ void main() {
     });
 
     test(
-      'applies legacy reuse policy to an enabled verified archive',
+      'allows an enabled verified classic without an event grant',
       () async {
         stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
 
@@ -163,10 +161,10 @@ void main() {
       expect(await resolver.verify(_sound()), isFalse);
     });
 
-    test('honors an explicit decline on a classic Vine source', () async {
+    test('does not treat an imported classic marker as a takedown', () async {
       stubSource([_video(reuseMarker: 'false', isVerifiedArchive: true)]);
 
-      expect(await resolver.verify(_sound()), isFalse);
+      expect(await resolver.verify(_sound()), isTrue);
     });
 
     test('ignores a video at a different address', () async {
@@ -205,7 +203,7 @@ void main() {
 
     test('fails closed when the suppression lookup throws', () async {
       when(
-        () => videosRepository.getAudioReusePolicy(_sha256),
+        () => videosRepository.refreshAudioReusePolicy(any()),
       ).thenThrow(StateError('policy unavailable'));
       stubSource([_video()]);
 

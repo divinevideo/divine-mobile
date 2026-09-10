@@ -511,7 +511,7 @@ void main() {
         final granted = AudioEvent.fromVideoOriginalSound(
           video(marker: 'true'),
         );
-        final declined = AudioEvent.fromVideoOriginalSound(
+        final classicWithImportedFalse = AudioEvent.fromVideoOriginalSound(
           video(marker: 'false', isVerifiedArchive: true),
         );
         final classicCompatibility = AudioEvent.fromVideoOriginalSound(
@@ -521,8 +521,8 @@ void main() {
 
         expect(granted.allowsReuse, isTrue);
         expect(granted.hasExplicitReuseConsent, isTrue);
-        expect(declined.allowsReuse, isFalse);
-        expect(declined.hasExplicitReuseConsent, isTrue);
+        expect(classicWithImportedFalse.allowsReuse, isTrue);
+        expect(classicWithImportedFalse.hasExplicitReuseConsent, isTrue);
         expect(classicCompatibility.allowsReuse, isTrue);
         expect(classicCompatibility.hasExplicitReuseConsent, isFalse);
         expect(classicCompatibility.requiresCurrentReuseVerification, isTrue);

@@ -1,5 +1,5 @@
-// ABOUTME: Verifies reuse consent for legacy audio events without consent tags.
-// ABOUTME: Fails closed unless the sound's source video grants reuse.
+// ABOUTME: Verifies audio reuse terms and fresh creator takedown decisions.
+// ABOUTME: Allows verified classic Vine audio unless explicitly suppressed.
 
 import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -16,12 +16,10 @@ class AudioReuseConsentResolver {
     if (sound.externalSource case final external?) {
       return external.license.allowsDerivatives;
     }
-    if (sound.hasExplicitReuseConsent && !sound.allowsReuse) return false;
-
     final sourceAddress = sound.sourceVideoReference;
     if (sourceAddress == null || sourceAddress.isEmpty) return false;
 
-    String? sha256;
+    VideoEvent? source;
     try {
       // Read the source video straight off the address the sound already
       // carries. Resolving it the other way round — asking which videos
@@ -43,10 +41,9 @@ class AudioReuseConsentResolver {
       // `VideoEventPublisher` publishes the Kind 1063 before the video event
       // because the video needs the audio id for its `e` tag, so an unedited
       // source is never older than its own sound.
-      final source = matching.first;
+      source = matching.first;
       if (source.createdAt < sound.createdAt) return false;
       if (originalSoundReuseTerms(source) != true) return false;
-      sha256 = source.sha256;
     } catch (error) {
       Log.warning(
         'Reuse consent lookup failed for source $sourceAddress: $error',
@@ -56,11 +53,9 @@ class AudioReuseConsentResolver {
       return false;
     }
 
-    if (sha256 == null || sha256.isEmpty) return false;
-
     try {
-      final policy = await _videosRepository.getAudioReusePolicy(sha256);
-      return policy.allowAudioReuse && !policy.audioReuseSuppressed;
+      final policy = await _videosRepository.refreshAudioReusePolicy(source);
+      return !policy.audioReuseSuppressed;
     } catch (error) {
       Log.warning(
         'Audio reuse policy lookup failed; blocking reuse: $error',
