@@ -13,6 +13,7 @@ import '../event.dart';
 import '../event_kind.dart';
 import '../filter.dart';
 import '../nostr.dart';
+import '../src/relay/query_outcome_tracker.dart';
 import '../subscription.dart';
 import '../utils/string_util.dart';
 import 'client_connected.dart';
