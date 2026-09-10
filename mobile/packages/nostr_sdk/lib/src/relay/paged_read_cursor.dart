@@ -1,9 +1,9 @@
 // ABOUTME: The until cursor Nostr.readAllEvents walks back through relay
-// ABOUTME: history with: what a settled page means for the next one.
+// ABOUTME: history with: what one page means for the next.
 
 import 'package:meta/meta.dart';
 
-import '../../event.dart';
+import '../../relay/query_outcome.dart';
 
 /// What [nextPagedReadStep] tells a paged read to do after a page.
 @internal
@@ -27,61 +27,49 @@ final class EndPagedRead extends PagedReadStep {
   final bool isComplete;
 }
 
-/// Where a paged read goes after a page that settled without NIP-67
-/// confirming it exhaustive.
+/// Where a paged read goes after a page read at `until: cursor`, null when
+/// the walk started without one.
 ///
-/// [cursor] is the page's `until`, null when the walk started without one.
-/// [events] is what the page delivered, each naming the relays that sent it;
-/// none is newer than [cursor], since the pool drops what a filter does not
-/// match. [broughtNew] says whether any of them had not been collected
-/// before, and [possiblyCapped] is the page's `QueryResult.possiblyCapped`.
+/// [relays] are the relays that sent the page an event, cache relays aside,
+/// as the relay pool counted them. None sent anything newer than [cursor],
+/// since the pool drops what the filter does not match. A relay sends its
+/// newest events first, so each one has sent everything it holds after its
+/// oldest event. [settled], [confirmedExhaustive] and [possiblyCapped] are
+/// the page's `QueryResult.isComplete`, `confirmedExhaustive` and
+/// `possiblyCapped`.
 ///
-/// A relay sends its newest events first, so each one has sent everything it
-/// holds after the oldest `created_at` it sent. The frontier is the latest of
-/// those, so every relay in [events] has sent all it holds after it. An event
-/// counts for each relay that sent it. Cached copies do not count: they name
-/// the relays they first came from, not this page's.
-///
-/// * No relay sent an event: the walk ends, complete unless a relay may be
-///   capped.
-/// * The page brought something new: the next page starts at the frontier,
-///   inclusive, so a second the page split is asked for again.
-/// * Nothing new, with the frontier below the cursor: the cursor drops to it.
-/// * Nothing new at the cursor's own second: the cursor steps one second
-///   back, unless a relay may be capped. A capped relay may hold more events
-///   in that second than any `until` can reach, so the walk ends incomplete.
+/// * A page that did not settle ends the walk incomplete; a settled page
+///   every relay confirmed exhaustive ends it complete.
+/// * A capped relay whose oldest event is in the cursor's second ends the walk
+///   incomplete: it may hold more events in that second than any `until` can
+///   reach.
+/// * Otherwise the next page starts at the latest of the relays' oldest
+///   `created_at`, inclusive, so a second the page split is asked for again.
+///   An uncapped relay whose oldest event is in the cursor's second counts
+///   one second below it: it may still hold more below that second without
+///   saying so, and one second back is as far as the cursor can move
+///   without passing it.
+/// * With no relay to go by, the walk ends, complete unless a relay may be
+///   capped, such as one whose every event fell outside the filter.
 @internal
 PagedReadStep nextPagedReadStep({
   required int? cursor,
-  required List<Event> events,
-  required bool broughtNew,
+  required List<QueryRelaySummary> relays,
+  required bool settled,
+  required bool confirmedExhaustive,
   required bool possiblyCapped,
 }) {
-  final frontier = _frontier(events);
-  if (frontier == null) return EndPagedRead(isComplete: !possiblyCapped);
-  if (broughtNew || cursor == null || frontier < cursor) {
-    return ReadPageAt(frontier);
-  }
-  if (possiblyCapped) return const EndPagedRead(isComplete: false);
-  return ReadPageAt(cursor - 1);
-}
-
-/// The latest of the oldest `created_at` each relay sent, or null when no
-/// relay sent an event.
-int? _frontier(List<Event> events) {
-  final oldestByRelay = <String, int>{};
-  for (final event in events) {
-    if (event.cacheEvent) continue;
-    for (final url in event.sources) {
-      final oldest = oldestByRelay[url];
-      if (oldest == null || event.createdAt < oldest) {
-        oldestByRelay[url] = event.createdAt;
-      }
+  if (!settled) return const EndPagedRead(isComplete: false);
+  if (confirmedExhaustive) return const EndPagedRead(isComplete: true);
+  int? next;
+  for (final relay in relays) {
+    var reach = relay.oldestCreatedAt;
+    if (cursor != null && reach >= cursor) {
+      if (relay.capped) return const EndPagedRead(isComplete: false);
+      reach = cursor - 1;
     }
+    if (next == null || reach > next) next = reach;
   }
-  int? frontier;
-  for (final oldest in oldestByRelay.values) {
-    if (frontier == null || oldest > frontier) frontier = oldest;
-  }
-  return frontier;
+  if (next == null) return EndPagedRead(isComplete: !possiblyCapped);
+  return ReadPageAt(next);
 }

@@ -237,7 +237,32 @@ void main() {
               'the next page has to ask for 104 again rather than start '
               'below it',
         );
-        expect(_untilsOf(relay), [null, 104, 104, 103]);
+        expect(_untilsOf(relay), [null, 104, 103]);
+        expect(result.isComplete, isTrue);
+      });
+
+      test('steps one second back, not past, from such a relay whose page '
+          'sits in the cursor second', () async {
+        final [firstNewest, firstOlder] = await eventsAt([110, 105]);
+        final [secondNewest, secondOlder] = await eventsAt([110, 108]);
+        await addStore('wss://first.example', [firstNewest, firstOlder]);
+        (await addStore('wss://second.example', [
+          secondNewest,
+          secondOlder,
+        ])).silentCap = 1;
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 3);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(
+            _idsOf([firstNewest, firstOlder, secondNewest, secondOlder]),
+          ),
+          reason:
+              'asked at 110, the second relay sent only its event there, '
+              "uncapped as far as the pool can tell; the first relay's 105 "
+              'must not pull the cursor past its event at 108',
+        );
         expect(result.isComplete, isTrue);
       });
 
@@ -311,10 +336,10 @@ void main() {
 
         expect(
           _untilsOf(relay),
-          [null, 104, 104],
+          [null, 104],
           reason:
-              'the third page brought nothing new at the cursor second, from '
-              'a relay that sent as many events as its max_limit allows',
+              'the second page sat wholly in the cursor second, from a relay '
+              'that sent as many events as its max_limit allows',
         );
         expect(
           result.events,
@@ -330,8 +355,8 @@ void main() {
           result.stoppedBy,
           QueryEnd.complete,
           reason:
-              'the page that stopped the walk settled; it stopped it by '
-              'bringing nothing new from a relay that may be capped',
+              'the page that stopped the walk settled; a relay that may be '
+              'capped inside the cursor second stopped it',
         );
       });
     });
@@ -354,10 +379,14 @@ void main() {
         expect(
           _idsOf(result.events),
           unorderedEquals(_idsOf([...live, ...stale])),
+        );
+        expect(
+          _untilsOf(relay),
+          [null, 109, 108, 107, 106],
           reason:
-              'the cached copies name the relay they came from, so counting '
-              "them as that relay's answer would move the cursor to 80 and "
-              'skip 108 and 107',
+              "the pool's own copies say nothing about a relay's history: "
+              'counted as a relay, the cache would hold the walk open to 80 '
+              'and 79 once the live relay has run out',
         );
         expect(result.isComplete, isTrue);
       });
@@ -452,15 +481,47 @@ void main() {
           _untilsOf(denseRelay),
           [null, 108, 106, 105, 104, 100, 99],
           reason:
-              'the cursor follows the dense relay, the one reaching least '
-              'far back, down to its last event; then it drops to the sparse '
-              "relay's, and steps past that",
+              'the cursor follows the dense relay, which reaches least far '
+              'back, to its last event and one second past it; then it drops '
+              "to the sparse relay's and steps past that",
         );
         expect(result.isComplete, isTrue);
       });
 
-      test('counts an event two relays both return toward each of '
-          'them', () async {
+      test("reads every event of a dense relay around a sparse relay's event "
+          'inside its history', () async {
+        final dense = await eventsAt([
+          110,
+          109,
+          108,
+          107,
+          106,
+          105,
+          104,
+          103,
+          102,
+          101,
+        ]);
+        final [inside] = await eventsAt([105]);
+        await addStore('wss://dense.example', dense);
+        await addStore('wss://sparse.example', [inside]);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 3);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([...dense, inside])),
+        );
+        expect(
+          result.isComplete,
+          isTrue,
+          reason:
+              'at 105 the sparse relay is not capped and the capped dense '
+              'relay reaches below that second, so nothing stops the walk',
+        );
+      });
+
+      test('counts an event two relays both send for each of them', () async {
         final [shared, older, early] = await eventsAt([110, 108, 105]);
         final first = await addStore('wss://first.example', [shared, early]);
         (await addStore('wss://second.example', [shared, older]))
@@ -473,10 +534,10 @@ void main() {
           _idsOf(result.events),
           unorderedEquals(_idsOf([shared, older, early])),
           reason:
-              'the second relay sent only the event both relays hold, and the '
-              "first relay's copy of it arrived first. Counted for the first "
-              'relay alone, the second relay would seem to have sent nothing, '
-              'and the cursor would jump to 105, past its event at 108',
+              'the second relay sent only the event both relays hold, after '
+              "the first relay's copy. Counted for the first relay alone, the "
+              'second would seem to have sent nothing, and the cursor would '
+              'jump to 105, past its event at 108',
         );
         expect(result.isComplete, isTrue);
       });
@@ -528,6 +589,28 @@ void main() {
     });
 
     group('with block-listed events', () {
+      test('follows a capped relay whose whole page the block list '
+          'hid', () async {
+        final hiddenPage = await eventsAt([110, 109, 108]);
+        final rest = await eventsAt([107, 106, 105]);
+        final [early] = await eventsAt([100]);
+        blockList.ids.addAll(_idsOf(hiddenPage));
+        await addStore('wss://hidden.example', [...hiddenPage, ...rest]);
+        await addStore('wss://early.example', [early]);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 3);
+
+        expect(
+          _idsOf(result.events),
+          unorderedEquals(_idsOf([...rest, early])),
+          reason:
+              'the relay filled its first page with events the block list '
+              'hid; it still reached back only to 108, so the cursor must '
+              "not jump to the other relay's 100",
+        );
+        expect(result.isComplete, isTrue);
+      });
+
       test('keeps following a relay whose page the block list '
           'thinned', () async {
         final thinned = await eventsAt([110, 109, 108, 107, 106, 105]);

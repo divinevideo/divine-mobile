@@ -380,22 +380,22 @@ class Nostr {
   /// Reads every event [filter] matches, a page of [pageSize] at a time,
   /// walking back through the relays' history with an `until` cursor.
   ///
-  /// Each page is a [readEvents] that every relay taking its REQ must settle.
-  /// A relay sends its newest events first, so each one that sent an event
-  /// has sent everything it holds after the oldest `created_at` it sent. The
-  /// page's frontier is the latest of those, so each of those relays has sent
-  /// all it holds after it. An event counts for every relay that sent it, and
-  /// cached copies do not count. Events already collected are dropped by
-  /// event id.
+  /// Each page is a read that every relay taking its REQ must settle. For
+  /// each relay that sent it an event, the relay pool reports the oldest
+  /// `created_at` among what it sent and whether the relay may have stopped
+  /// at its result-size limit, counting events the block list hid. A relay
+  /// sends its newest events first, so it has sent everything it holds after
+  /// that oldest event. Cache relays do not count, and events already
+  /// collected are dropped by event id.
   ///
-  /// * A page that brought an event not collected before moves the cursor to
-  ///   the frontier, inclusive, so a second the page split is asked for
-  ///   again.
-  /// * A page that brought nothing new moves the cursor down to the frontier
-  ///   when that lies below it. At the cursor's own second it steps one
-  ///   second back, unless a relay may be capped
-  ///   ([QueryResult.possiblyCapped]): a capped relay may hold more events in
-  ///   that second than any `until` can reach, so the walk stops incomplete.
+  /// * A relay whose oldest event is in the cursor's second, and that may be
+  ///   capped, stops the walk incomplete: it may hold more events in that
+  ///   second than any `until` can reach.
+  /// * Otherwise the next page starts at the latest of the relays' oldest
+  ///   `created_at`, inclusive, so a second a page split is asked for again.
+  ///   An uncapped relay whose oldest event is in the cursor's second counts
+  ///   one second below it, so the walk never moves past what it may still
+  ///   hold below that second.
   /// * A page on which no relay sent an event ends the walk, complete unless
   ///   a relay may be capped, such as one whose events all fell outside the
   ///   filter.
@@ -407,14 +407,11 @@ class Nostr {
   /// stops incomplete after [maxPages] pages, or once [deadline] has passed.
   /// Each page gets [pageTimeout], cut short by [deadline].
   ///
-  /// Two cases can still lose events. One is a relay that stops short of
-  /// [pageSize] without saying so, and holds more events in one second than
-  /// it sends a page: nothing marks its page capped, so the cursor steps past
-  /// that second with the rest of it unread. A NIP-11 `max_limit` or a NIP-67
-  /// `more` hint from the relay removes that ambiguity. The other is a relay
-  /// whose whole page the event filters hid, on a page where another relay
-  /// brought something new: none of its events reach the frontier, which can
-  /// then fall past the ones it has not sent yet.
+  /// One case can still lose events: a relay that stops short of [pageSize]
+  /// without saying so, and holds more events in one second than it sends a
+  /// page, can lose the rest of that second, since nothing marks its page
+  /// capped. A NIP-11 `max_limit` or a NIP-67 `more` hint from the relay
+  /// removes that ambiguity.
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
@@ -457,29 +454,27 @@ class Nostr {
       }
 
       pages++;
-      final page = await readEvents(
+      final read = await _read(
         [
           {...filter, 'limit': pageSize, if (until != null) 'until': until},
         ],
+        id: null,
         tempRelays: tempRelays,
         relayTypes: relayTypes,
+        sendAfterAuth: false,
         deadline: pageDeadline,
         requireAllRelaysSettled: true,
       );
-      final newEvents = [
+      final page = read.result;
+      collected.addAll([
         for (final event in page.events)
           if (seenIds.add(event.id)) event,
-      ];
-      collected.addAll(newEvents);
-
-      if (!page.isComplete) {
-        return walked(isComplete: false, stoppedBy: page.endedBy);
-      }
-      if (page.confirmedExhaustive) return walked(isComplete: true);
+      ]);
       switch (nextPagedReadStep(
         cursor: until,
-        events: page.events,
-        broughtNew: newEvents.isNotEmpty,
+        relays: read.relays,
+        settled: page.isComplete,
+        confirmedExhaustive: page.confirmedExhaustive,
         possiblyCapped: page.possiblyCapped,
       )) {
         case ReadPageAt(until: final next):
@@ -561,9 +556,13 @@ class Nostr {
     return result.events;
   }
 
-  /// Runs one read for [readEvents] and its wrappers, and says whether the
-  /// caller's deadline is what ended it.
-  Future<({QueryResult result, bool endedAtDeadline})> _read(
+  /// Runs one read for [readEvents], its wrappers and [readAllEvents]. It
+  /// says whether the caller's deadline is what ended it, and what each
+  /// relay sent, as the pool counted it.
+  Future<
+    ({QueryResult result, bool endedAtDeadline, List<QueryRelaySummary> relays})
+  >
+  _read(
     List<Map<String, dynamic>> filters, {
     required String? id,
     required List<String>? tempRelays,
@@ -632,6 +631,7 @@ class Nostr {
           confirmedExhaustive: outcome.confirmedExhaustive,
         ),
         endedAtDeadline: endedAtDeadline,
+        relays: outcome.relays,
       );
     } finally {
       deadlineTimer.cancel();

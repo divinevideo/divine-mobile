@@ -1,29 +1,39 @@
-// ABOUTME: Tests the until cursor of Nostr.readAllEvents one page at a time,
-// ABOUTME: including the pages it once walked past unread events on.
+// ABOUTME: Tests the until cursor of Nostr.readAllEvents: each rule on one
+// ABOUTME: page, then whole walks over model relays, review repros included.
+
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/query_outcome.dart';
 import 'package:nostr_sdk/src/relay/paged_read_cursor.dart';
-
-final _pubkey = getPublicKey(
-  '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
-);
 
 const _first = 'wss://first.example';
 const _second = 'wss://second.example';
 
-var _contentNumber = 0;
+QueryRelaySummary _relay(
+  String url, {
+  required int oldest,
+  int events = 1,
+  bool capped = false,
+}) => QueryRelaySummary(
+  url: url,
+  events: events,
+  oldestCreatedAt: oldest,
+  capped: capped,
+);
 
-/// A text note at [createdAt] as a page delivers it: naming the relays in
-/// [from] that sent it or, when [cached], the ones a cache relay's copy first
-/// came from.
-Event _at(
-  int createdAt, {
-  List<String> from = const [_first],
-  bool cached = false,
-}) => Event(_pubkey, 1, [], 'page-${_contentNumber++}', createdAt: createdAt)
-  ..sources = [...from]
-  ..cacheEvent = cached;
+/// The step after a settled page that no relay confirmed exhaustive.
+PagedReadStep _afterSettledPage(
+  int? cursor,
+  List<QueryRelaySummary> relays, {
+  bool possiblyCapped = false,
+}) => nextPagedReadStep(
+  cursor: cursor,
+  relays: relays,
+  settled: true,
+  confirmedExhaustive: false,
+  possiblyCapped: possiblyCapped,
+);
 
 Matcher _readsAt(int until) =>
     isA<ReadPageAt>().having((step) => step.until, 'until', until);
@@ -34,188 +44,482 @@ Matcher _ends({required bool complete}) => isA<EndPagedRead>().having(
   complete,
 );
 
+/// An event a model relay holds. Relays holding the same [id] hold the same
+/// event.
+typedef _Held = ({String id, int createdAt});
+
+/// Events `<prefix>-0`, `<prefix>-1`, …, one per entry of [createdAts].
+List<_Held> _held(String prefix, List<int> createdAts) => [
+  for (var i = 0; i < createdAts.length; i++)
+    (id: '$prefix-$i', createdAt: createdAts[i]),
+];
+
+Set<String> _idsOf(Iterable<_Held> events) => {
+  for (final event in events) event.id,
+};
+
+/// A relay as the cursor rule meets it: it answers a page with its newest
+/// events at or before the page's `until`, ties in id order, at most the
+/// page size, its NIP-11 [maxLimit] or its [silentCap], whichever is lowest.
+class _ModelRelay {
+  _ModelRelay(
+    this.url,
+    this.held, {
+    this.maxLimit,
+    this.silentCap,
+    this.ignoresUntil = false,
+  });
+
+  final String url;
+  final List<_Held> held;
+
+  /// The limit the relay publishes, so a page it fills to it counts as
+  /// capped.
+  final int? maxLimit;
+
+  /// A limit the relay keeps to itself.
+  final int? silentCap;
+
+  /// When true, every page gets the relay's newest events whatever `until`
+  /// asked for.
+  final bool ignoresUntil;
+
+  List<_Held> answer(int? until, int limit) {
+    final eligible = [
+      for (final event in held)
+        if (ignoresUntil || until == null || event.createdAt <= until) event,
+    ]..sort(_newestFirst);
+    var take = limit;
+    for (final cap in [maxLimit, silentCap].nonNulls) {
+      take = math.min(take, cap);
+    }
+    return eligible.take(take).toList();
+  }
+}
+
+int _newestFirst(_Held a, _Held b) {
+  final byAge = b.createdAt.compareTo(a.createdAt);
+  return byAge != 0 ? byAge : a.id.compareTo(b.id);
+}
+
+/// A whole paged read over [relays], every page settling, with only
+/// [nextPagedReadStep] choosing where each page starts. Each page is judged
+/// the way the relay pool judges it: events after `until` fall outside the
+/// filter and are not counted, [hidden] events are counted but never
+/// delivered, and a relay may be capped when it answered outside the filter
+/// or filled the page or its published limit.
+({Set<String> collected, bool isComplete, List<int?> untils}) _walk(
+  List<_ModelRelay> relays, {
+  required int pageSize,
+  int? until,
+  Set<String> hidden = const {},
+}) {
+  final collected = <String>{};
+  final untils = <int?>[];
+  var cursor = until;
+  while (untils.length < 50) {
+    untils.add(cursor);
+    final summaries = <QueryRelaySummary>[];
+    var possiblyCapped = false;
+    for (final relay in relays) {
+      final sent = relay.answer(cursor, pageSize);
+      final counted = [
+        for (final event in sent)
+          if (cursor == null || event.createdAt <= cursor) event,
+      ];
+      final capped =
+          counted.length < sent.length ||
+          counted.length >= math.min(pageSize, relay.maxLimit ?? pageSize);
+      possiblyCapped = possiblyCapped || capped;
+      if (counted.isEmpty) continue;
+      summaries.add(
+        QueryRelaySummary(
+          url: relay.url,
+          events: counted.length,
+          oldestCreatedAt: counted.last.createdAt,
+          capped: capped,
+        ),
+      );
+      collected.addAll([
+        for (final event in counted)
+          if (!hidden.contains(event.id)) event.id,
+      ]);
+    }
+    switch (nextPagedReadStep(
+      cursor: cursor,
+      relays: summaries,
+      settled: true,
+      confirmedExhaustive: false,
+      possiblyCapped: possiblyCapped,
+    )) {
+      case ReadPageAt(until: final next):
+        cursor = next;
+      case EndPagedRead(:final isComplete):
+        return (collected: collected, isComplete: isComplete, untils: untils);
+    }
+  }
+  return (collected: collected, isComplete: false, untils: untils);
+}
+
 void main() {
   group('nextPagedReadStep', () {
-    group('on a page no relay sent an event to', () {
-      test('ends the walk complete', () {
+    group('on a page that did not settle', () {
+      test('ends the walk incomplete', () {
         expect(
           nextPagedReadStep(
-            cursor: 100,
-            events: const [],
-            broughtNew: false,
+            cursor: 110,
+            relays: [_relay(_first, oldest: 100)],
+            settled: false,
+            confirmedExhaustive: false,
             possiblyCapped: false,
-          ),
-          _ends(complete: true),
-        );
-      });
-
-      test('ends the walk incomplete when a relay may be capped', () {
-        // A relay whose every event fell outside the filter sent nothing the
-        // walk can see, yet may be holding events back.
-        expect(
-          nextPagedReadStep(
-            cursor: 100,
-            events: const [],
-            broughtNew: false,
-            possiblyCapped: true,
           ),
           _ends(complete: false),
         );
       });
 
-      test('counts a page of cached copies alone as empty', () {
+      test('ends the walk incomplete even when every relay that answered '
+          'confirmed it exhaustive', () {
         expect(
           nextPagedReadStep(
-            cursor: 100,
-            events: [_at(90, cached: true)],
-            broughtNew: true,
+            cursor: 110,
+            relays: [_relay(_first, oldest: 100)],
+            settled: false,
+            confirmedExhaustive: true,
+            possiblyCapped: false,
+          ),
+          _ends(complete: false),
+        );
+      });
+    });
+
+    group('on a settled page', () {
+      test('ends the walk complete when every relay confirmed it '
+          'exhaustive', () {
+        expect(
+          nextPagedReadStep(
+            cursor: 110,
+            relays: [_relay(_first, oldest: 100)],
+            settled: true,
+            confirmedExhaustive: true,
             possiblyCapped: false,
           ),
           _ends(complete: true),
         );
       });
-    });
 
-    group('when the page brought new events', () {
-      test('starts the next page inside the second the page split', () {
-        // A relay that stops at two events without saying so, holding 105
-        // and two events at 104, sent 105 and one of them.
+      test('ends the walk complete when no relay sent an event', () {
+        expect(_afterSettledPage(100, const []), _ends(complete: true));
+      });
+
+      test('ends the walk incomplete when no relay sent an event and one may '
+          'be capped', () {
+        // A relay whose every event fell outside the filter sent nothing the
+        // walk can page by, yet may be holding events back.
         expect(
-          nextPagedReadStep(
-            cursor: null,
-            events: [_at(105), _at(104)],
-            broughtNew: true,
-            possiblyCapped: false,
-          ),
-          _readsAt(104),
+          _afterSettledPage(100, const [], possiblyCapped: true),
+          _ends(complete: false),
         );
       });
 
-      test('stays on the cursor second while it brings something new', () {
-        // The same relay, asked at 104, sent both events there.
+      test("after the first page, starts at the latest of the relays' oldest "
+          'created_at', () {
         expect(
-          nextPagedReadStep(
-            cursor: 104,
-            events: [_at(104), _at(104)],
-            broughtNew: true,
-            possiblyCapped: false,
-          ),
-          _readsAt(104),
-        );
-      });
-
-      test("takes the latest of the relays' oldest created_at, not the "
-          'earliest', () {
-        // A relay that stops at three events without saying so, beside one
-        // whose only event is far older: the older one must not pull the
-        // cursor past the events the first has not sent yet.
-        expect(
-          nextPagedReadStep(
-            cursor: null,
-            events: [
-              _at(110),
-              _at(109),
-              _at(108),
-              _at(50, from: const [_second]),
-            ],
-            broughtNew: true,
-            possiblyCapped: false,
-          ),
+          _afterSettledPage(null, [
+            _relay(_first, oldest: 108, events: 3),
+            _relay(_second, oldest: 50),
+          ]),
           _readsAt(108),
         );
       });
 
-      test('follows a relay whose page the block list thinned', () {
-        // The relay sent 110, 109 and 108, and the block list hid 109. How
-        // many events a relay delivered says nothing about where it stopped.
+      test('moves to the latest oldest created_at below the cursor', () {
         expect(
-          nextPagedReadStep(
-            cursor: null,
-            events: [
-              _at(110),
-              _at(108),
-              _at(100, from: const [_second]),
-            ],
-            broughtNew: true,
-            possiblyCapped: true,
-          ),
-          _readsAt(108),
+          _afterSettledPage(108, [
+            _relay(_first, oldest: 106, events: 3),
+            _relay(_second, oldest: 50),
+          ]),
+          _readsAt(106),
         );
       });
 
-      test('counts an event for every relay that sent it', () {
-        // The second relay sent only the event both relays hold. Counted for
-        // the first relay alone, the second would seem to have sent nothing.
+      test('stops at a capped relay whose page sits in the cursor second, '
+          'even while another reaches further back', () {
+        // It may hold more events in that second than any until can reach.
         expect(
-          nextPagedReadStep(
-            cursor: null,
-            events: [
-              _at(110, from: const [_first, _second]),
-              _at(105),
-            ],
-            broughtNew: true,
-            possiblyCapped: false,
-          ),
-          _readsAt(110),
+          _afterSettledPage(104, [
+            _relay(_first, oldest: 104, events: 2, capped: true),
+            _relay(_second, oldest: 90),
+          ], possiblyCapped: true),
+          _ends(complete: false),
         );
       });
 
-      test('leaves cached copies out of the frontier', () {
+      test('steps one second back from an uncapped relay whose page sits in '
+          'the cursor second, even while another reaches further back', () {
+        // Uncapped may still mean capped without saying so: whatever the
+        // relay holds below this second is only safe from a page at 109.
         expect(
-          nextPagedReadStep(
-            cursor: null,
-            events: [_at(110), _at(109), _at(80, cached: true)],
-            broughtNew: true,
-            possiblyCapped: false,
-          ),
+          _afterSettledPage(110, [
+            _relay(_first, oldest: 105, events: 2),
+            _relay(_second, oldest: 110),
+          ]),
           _readsAt(109),
         );
       });
     });
 
-    group('when the page brought nothing new', () {
-      test('drops the cursor to a frontier below it', () {
-        // The capped relay has run out; only the older relay's 50 came back.
+    group('over a whole walk', () {
+      test('reads every event of a relay that stops short of the page size '
+          'without saying so', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [105, 104, 104]),
+          silentCap: 2,
+        );
+
+        final walk = _walk([relay], pageSize: 5);
+
+        expect(walk.collected, _idsOf(relay.held));
+        expect(walk.untils, [null, 104, 103]);
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('reads every event of such a relay while another reaches further '
+          'back', () {
+        final capped = _ModelRelay(
+          _first,
+          _held('x', [110, 109, 108, 107, 106, 105, 104, 103, 102, 101]),
+          silentCap: 3,
+        );
+        final sparse = _ModelRelay(_second, _held('y', [50]));
+
+        final walk = _walk([capped, sparse], pageSize: 5);
+
+        expect(walk.collected, {
+          ..._idsOf(capped.held),
+          ..._idsOf(sparse.held),
+        });
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('stops incomplete when the newest second holds more than a '
+          'page', () {
+        final relay = _ModelRelay(_first, _held('a', [104, 104, 104, 103]));
+
+        final walk = _walk([relay], pageSize: 2);
+
+        expect(walk.untils, [null, 104]);
+        expect(walk.collected, hasLength(2));
+        expect(walk.isComplete, isFalse);
+      });
+
+      test('keeps following a relay whose page the block list thinned', () {
+        final thinned = _ModelRelay(
+          _first,
+          _held('a', [110, 109, 108, 107, 106, 105]),
+        );
+        final early = _ModelRelay(_second, _held('b', [100]));
+        final hidden = {thinned.held[1].id};
+
+        final walk = _walk([thinned, early], pageSize: 3, hidden: hidden);
+
         expect(
-          nextPagedReadStep(
-            cursor: 100,
-            events: [
-              _at(50, from: const [_second]),
-            ],
-            broughtNew: false,
-            possiblyCapped: false,
-          ),
-          _readsAt(50),
+          walk.collected,
+          {..._idsOf(thinned.held), ..._idsOf(early.held)}.difference(hidden),
+        );
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('follows a capped relay whose whole page the block list hid', () {
+        final hiddenFirst = _ModelRelay(
+          _first,
+          _held('a', [110, 109, 108, 107, 106, 105]),
+        );
+        final early = _ModelRelay(_second, _held('b', [100]));
+        final hidden = _idsOf(hiddenFirst.held.take(3));
+
+        final walk = _walk([hiddenFirst, early], pageSize: 3, hidden: hidden);
+
+        expect(
+          walk.collected,
+          {
+            ..._idsOf(hiddenFirst.held),
+            ..._idsOf(early.held),
+          }.difference(hidden),
+          reason:
+              'the relay sent 110, 109 and 108 and the block list hid all '
+              'three; its reach is still 108, so the cursor cannot jump to '
+              'the other relay at 100 past 107, 106 and 105',
+        );
+        expect(walk.isComplete, isTrue);
+      });
+
+      test("reads every event of a dense relay around a sparse relay's event "
+          'inside its history', () {
+        final dense = _ModelRelay(
+          _first,
+          _held('d', [110, 109, 108, 107, 106, 105, 104, 103, 102, 101]),
+        );
+        final sparse = _ModelRelay(_second, _held('s', [105]));
+
+        final walk = _walk([dense, sparse], pageSize: 3);
+
+        expect(walk.collected, {..._idsOf(dense.held), ..._idsOf(sparse.held)});
+        expect(
+          walk.isComplete,
+          isTrue,
+          reason:
+              "the sparse relay at the cursor second is not capped, and the "
+              'dense relay, capped below it, is not in that second',
         );
       });
 
-      test('steps one second back from a frontier at the cursor', () {
-        // The relay that stops at two events without saying so sent the same
-        // two events at 104 again.
-        expect(
-          nextPagedReadStep(
-            cursor: 104,
-            events: [_at(104), _at(104)],
-            broughtNew: false,
-            possiblyCapped: false,
-          ),
-          _readsAt(103),
+      test('pages a single relay the way the labeler history pager (#8817) '
+          'does, then confirms the end', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [106, 105, 104, 103, 102, 101]),
         );
+
+        final walk = _walk([relay], pageSize: 2);
+
+        expect(walk.collected, _idsOf(relay.held));
+        expect(walk.untils, [null, 105, 104, 103, 102, 101, 100]);
+        expect(walk.isComplete, isTrue);
       });
 
-      test('ends the walk incomplete at the cursor second when a relay may be '
-          'capped', () {
-        // Asked for two events, the relay sent the same two at 104 again: a
-        // third may be there, and no until can page within one second.
-        expect(
-          nextPagedReadStep(
-            cursor: 104,
-            events: [_at(104), _at(104)],
-            broughtNew: false,
-            possiblyCapped: true,
-          ),
-          _ends(complete: false),
+      test('reads a dense relay and a sparse relay that reaches further '
+          'back', () {
+        final dense = _ModelRelay(
+          _first,
+          _held('d', [110, 109, 108, 107, 106, 105]),
         );
+        final sparse = _ModelRelay(_second, _held('s', [100]));
+
+        final walk = _walk([dense, sparse], pageSize: 3);
+
+        expect(walk.collected, {..._idsOf(dense.held), ..._idsOf(sparse.held)});
+        expect(walk.untils, [null, 108, 106, 105, 104, 100, 99]);
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('counts an event two relays both send for each of them', () {
+        const shared = (id: 'shared', createdAt: 110);
+        final first = _ModelRelay(_first, [
+          shared,
+          (id: 'first', createdAt: 105),
+        ]);
+        final second = _ModelRelay(_second, [
+          shared,
+          (id: 'second', createdAt: 108),
+        ], silentCap: 1);
+
+        final walk = _walk([first, second], pageSize: 3);
+
+        expect(walk.collected, {'shared', 'first', 'second'});
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('steps one second back, not past, from a relay that may hold more '
+          'below the cursor second', () {
+        final first = _ModelRelay(_first, _held('a', [110, 105]));
+        final second = _ModelRelay(
+          _second,
+          _held('b', [110, 108]),
+          silentCap: 1,
+        );
+
+        final walk = _walk([first, second], pageSize: 3);
+
+        expect(
+          walk.collected,
+          {..._idsOf(first.held), ..._idsOf(second.held)},
+          reason:
+              'at 110 the second relay sent only its event there, uncapped '
+              'as far as anyone can tell; moving the cursor to the first '
+              "relay's 105 would skip its event at 108",
+        );
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('loses only the rest of a second a relay silently caps within, '
+          'the limit readAllEvents documents', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [105, 104, 104, 104, 103]),
+          silentCap: 2,
+        );
+
+        final walk = _walk([relay], pageSize: 5);
+
+        expect(
+          walk.collected,
+          _idsOf(relay.held).difference({'a-3'}),
+          reason:
+              'nothing marks a page of two capped when five were asked for, '
+              'so the cursor steps past 104 with its third event unread',
+        );
+        expect(walk.isComplete, isTrue);
+      });
+
+      test('stops incomplete, rather than skip part of a second, at a relay '
+          'that publishes the limit it stopped at', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [105, 104, 104, 104, 103]),
+          maxLimit: 2,
+        );
+
+        final walk = _walk([relay], pageSize: 5);
+
+        expect(walk.untils, [null, 104]);
+        expect(walk.collected, hasLength(3));
+        expect(walk.isComplete, isFalse);
+      });
+
+      test('stops incomplete at a relay that answers outside the filter', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [103, 102, 101]),
+          ignoresUntil: true,
+        );
+
+        final walk = _walk([relay], pageSize: 2);
+
+        expect(walk.untils, [null, 102]);
+        expect(walk.isComplete, isFalse);
+      });
+
+      test('stops incomplete on a page whose events all fell outside the '
+          'filter', () {
+        final relay = _ModelRelay(
+          _first,
+          _held('a', [103, 102]),
+          ignoresUntil: true,
+        );
+
+        final walk = _walk([relay], pageSize: 5, until: 100);
+
+        expect(walk.untils, [100]);
+        expect(walk.collected, isEmpty);
+        expect(walk.isComplete, isFalse);
+      });
+
+      test("reaches a relay's early event in a bounded number of pages", () {
+        final busy = _ModelRelay(_first, _held('a', [110, 109, 108, 107]));
+        final early = _ModelRelay(_second, _held('b', [50]));
+
+        final walk = _walk([busy, early], pageSize: 2);
+
+        expect(walk.collected, {..._idsOf(busy.held), ..._idsOf(early.held)});
+        expect(
+          walk.untils,
+          hasLength(7),
+          reason:
+              "once the busy relay runs out the cursor drops to the early "
+              "relay's event, not a page per second down to 50",
+        );
+        expect(walk.isComplete, isTrue);
       });
     });
   });
