@@ -437,6 +437,81 @@ void main() {
           expect(res.stdout, isNot(contains('claimed more than once')));
         },
       );
+
+      test('verifies a rename claim in a shallow CI checkout', () {
+        // Mobile CI checks out at actions/checkout's default fetch-depth of 1
+        // and fetches the base ref with --depth=1, so the two grafts share no
+        // ancestor. Every other test here runs against full local history,
+        // where the probe cannot fail this way.
+        writeDistinctLines('old_service.dart', 20);
+        File(baselinePath).writeAsStringSync(
+          '# Frozen baseline\nlib/services/old_service.dart\t20\n',
+        );
+        commit('base');
+        git(['checkout', '-b', 'pr']);
+        serviceFile(
+          'old_service.dart',
+        ).renameSync(serviceFile('new_service.dart').path);
+        writeDistinctLines('new_service.dart', 8);
+        File(baselinePath).writeAsStringSync(
+          '# Frozen baseline\n'
+          'lib/services/new_service.dart\t8 '
+          '# renamed-from: lib/services/old_service.dart\n',
+        );
+        commit('rename');
+        // The ref GitHub builds for a pull request: the branch merged into the
+        // base tip. main itself stays where it was.
+        git(['checkout', '-b', 'pr-merge', 'main']);
+        git(['merge', '--no-ff', '-m', 'merge', 'pr']);
+        git(['checkout', 'main']);
+
+        final ws = Directory.systemTemp.createTempSync('service_god_file_ws');
+        addTearDown(() {
+          if (ws.existsSync()) ws.deleteSync(recursive: true);
+        });
+        void wsGit(List<String> args) {
+          final result = Process.runSync('git', ['-C', ws.path, ...args]);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        }
+
+        wsGit(['init']);
+        wsGit(['config', 'user.email', 'test@example.invalid']);
+        wsGit(['config', 'user.name', 'Ratchet Test']);
+        wsGit(['remote', 'add', 'origin', tmp.path]);
+        wsGit(['fetch', '--no-tags', '--depth=1', 'origin', 'pr-merge']);
+        wsGit(['checkout', '--detach', 'FETCH_HEAD']);
+        wsGit(['fetch', '--depth=1', 'origin', 'main']);
+        expect(
+          Process.runSync('git', [
+            '-C',
+            ws.path,
+            'merge-base',
+            'origin/main',
+            'HEAD',
+          ]).exitCode,
+          isNot(0),
+          reason: 'the checkout under test must start without a merge base',
+        );
+
+        final res = Process.runSync(
+          'bash',
+          ['${ws.path}/mobile/scripts/check_service_god_file_ceiling.sh'],
+          environment: {
+            'SERVICE_GOD_FILE_SCAN_DIR': '${ws.path}/mobile/lib/services',
+            'SERVICE_GOD_FILE_PATH_PREFIX': '${ws.path}/mobile',
+            'SERVICE_GOD_FILE_BASELINE_FILE':
+                '${ws.path}/mobile/scripts/baseline/test.txt',
+            'SERVICE_GOD_FILE_BASELINE_REPO_PATH':
+                'mobile/scripts/baseline/test.txt',
+            'SERVICE_GOD_FILE_THRESHOLD': '5',
+            'SERVICE_GOD_FILE_BASELINE_BASE_REF': 'origin/main',
+            'SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE': '0',
+          },
+        );
+
+        expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+        expect(res.stderr, contains('honoured rename claim'));
+      });
     });
   });
 }

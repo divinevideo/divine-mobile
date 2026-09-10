@@ -119,10 +119,39 @@ service_god_file_unsettled_claims() {
   ' <(printf '%s\n' "$base_claims") <(printf '%s\n' "$claims")
 }
 
+# A rename claim is the only thing in this guard that needs history rather than
+# a single blob, and CI has none: actions/checkout defaults to fetch-depth 1
+# and the workflow fetches the base ref with --depth=1 too, so the two grafts
+# share no ancestor and the probe below has nothing to diff. Deepen on demand
+# instead of falling back to a two-dot diff, which a branch behind the base ref
+# can satisfy with a rename it never made.
+service_god_file_merge_base() {
+  local repo_root="$1" merge_base remote branch
+  merge_base="$(git -C "$repo_root" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
+  if [[ -n "$merge_base" ]]; then
+    printf '%s\n' "$merge_base"
+    return 0
+  fi
+  [[ "$(git -C "$repo_root" rev-parse --is-shallow-repository 2>/dev/null || true)" == "true" ]] || return 1
+  case "$BASE_REF" in
+    */*) remote="${BASE_REF%%/*}"; branch="${BASE_REF#*/}" ;;
+    *) return 1 ;;
+  esac
+  git -C "$repo_root" remote get-url "$remote" >/dev/null 2>&1 || return 1
+  git -C "$repo_root" fetch --quiet --deepen=200 "$remote" "$branch" 2>/dev/null || true
+  merge_base="$(git -C "$repo_root" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
+  if [[ -z "$merge_base" ]]; then
+    git -C "$repo_root" fetch --quiet --unshallow "$remote" 2>/dev/null || true
+    merge_base="$(git -C "$repo_root" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
+  fi
+  [[ -n "$merge_base" ]] || return 1
+  printf '%s\n' "$merge_base"
+}
+
 validate_baseline_growth_policy() {
   local main_f="$1" base_f="$2" cur_f="$3" repo_root="$4" base_status="$5"
   local claims claim_kind new_key new_count old_key old_count current_count base_new_count
-  local old_path new_path rename_status merge_base fail=0
+  local old_path new_path rename_status fail=0
   SERVICE_GOD_FILE_VALID_RENAME_KEYS=""
 
   if [[ "$PATH_PREFIX" != "$repo_root" && "$PATH_PREFIX" != "$repo_root"/* ]]; then
@@ -188,9 +217,9 @@ validate_baseline_growth_policy() {
     fi
     old_path="$(service_god_file_repo_path "$repo_root" "$old_key")"
     new_path="$(service_god_file_repo_path "$repo_root" "$new_key")"
-    merge_base="$(git -C "$repo_root" merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
-    if [[ -z "$merge_base" ]]; then
+    if ! service_god_file_merge_base "$repo_root" >/dev/null; then
       echo "FAIL [$RATCHET_LABEL]: cannot verify rename claim without a merge base for $BASE_REF"
+      echo "  -> fetch enough history for $BASE_REF (locally: git fetch --deepen=200 origin main)"
       fail=1
       continue
     fi
