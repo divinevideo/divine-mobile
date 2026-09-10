@@ -1,5 +1,5 @@
 // ABOUTME: Unified async resolver for fetching a VideoEvent by event id.
-// ABOUTME: Tries in-memory VideoEventService, then personal Hive cache, then relay.
+// ABOUTME: Tries in-memory VideoEventService, then personal event cache, then relay.
 
 import 'dart:async';
 
@@ -17,7 +17,7 @@ typedef NostrSubscribeById = Stream<Event> Function(List<Filter> filters);
 /// Resolves a [VideoEvent] for a given event id, with a layered fallback:
 ///
 /// 1. In-memory feeds via [VideoEventService.getVideoEventById]
-/// 2. Personal Hive cache via [PersonalEventCacheService.getEventById]
+/// 2. Personal event cache via [PersonalEventCacheService.getEventById]
 /// 3. Relay fetch via [Filter.ids]
 ///
 /// When [allowOwnContentBypass] is true and the resolved video's author
@@ -62,7 +62,7 @@ class VideoEventResolver {
       return cached;
     }
 
-    // 2) Personal Hive cache.
+    // 2) Personal event cache.
     final cachedEvent = _personalEventCache.getEventById(eventId);
     if (cachedEvent != null) {
       final parsed = _tryParse(cachedEvent);

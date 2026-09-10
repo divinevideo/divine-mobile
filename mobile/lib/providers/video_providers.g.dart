@@ -112,7 +112,7 @@ final class PersonalEventCacheServiceProvider
 }
 
 String _$personalEventCacheServiceHash() =>
-    r'f8fbeaaa8db79abff62ce85e3ca683320c5f0e50';
+    r'35ba74612e96c106f5c1967d44ab2ac9cb97d4fb';
 
 /// Seen videos service for tracking viewed content.
 ///

@@ -36,9 +36,13 @@ class StorageManagementPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.watch(storageManagementServiceProvider);
+    final recoverAllCaches = ref.watch(recoverAllCachesProvider);
     return BlocProvider(
-      key: ValueKey(service),
-      create: (_) => StorageCubit(service: service)..loadCacheSize(),
+      key: ValueKey((service, recoverAllCaches)),
+      create: (_) => StorageCubit(
+        service: service,
+        recoverAllCaches: recoverAllCaches,
+      )..loadCacheSize(),
       child: const StorageManagementView(),
     );
   }

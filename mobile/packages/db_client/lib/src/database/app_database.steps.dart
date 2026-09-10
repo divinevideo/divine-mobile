@@ -9277,6 +9277,734 @@ i1.GeneratedColumn<String> _column_183(String aliasedName) =>
       $customConstraints: 'NOT NULL DEFAULT \'\'',
       defaultValue: const i1.CustomExpression('\'\''),
     );
+
+final class Schema13 extends i0.VersionedSchema {
+  Schema13({required super.database}) : super(version: 13);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    event,
+    userProfiles,
+    videoMetrics,
+    profileStatistics,
+    hashtagStats,
+    notifications,
+    pendingUploads,
+    personalReactions,
+    personalReposts,
+    personalEvents,
+    pendingActions,
+    nip05Verifications,
+    drafts,
+    clips,
+    clipCategories,
+    directMessages,
+    dmMessageReactions,
+    conversations,
+    outgoingDms,
+    pendingViewEvents,
+    pendingProductEvents,
+    pendingGiftWraps,
+    processedGiftWraps,
+    removedConversations,
+    pendingProfileSaves,
+    identityEvents,
+    identityVerifications,
+    seenVideos,
+    vanishedProfiles,
+    idxMetricsLoopCount,
+    idxMetricsLikes,
+    idxMetricsViews,
+    idxHashtagVideoCount,
+    idxNotificationTimestamp,
+    idxNotificationIsRead,
+    idxNotificationOwnerTimestamp,
+    idxPendingUploadStatus,
+    idxPendingUploadCreated,
+    idxPersonalReactionsUser,
+    idxPersonalReactionsReactionId,
+    idxPersonalReactionsAddressableId,
+    idxPersonalRepostsUser,
+    idxPersonalRepostsRepostId,
+    idxPersonalRepostsUserCreated,
+    idxPersonalEventsPubkeyKindCreatedAt,
+    idxPersonalEventsPubkeyCreatedAt,
+  ];
+  late final Shape0 event = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'event',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+        _column_9,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 userProfiles = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'user_profiles',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [
+        _column_1,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+        _column_19,
+        _column_2,
+        _column_20,
+        _column_21,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape2 videoMetrics = Shape2(
+    source: i0.VersionedTable(
+      entityName: 'video_metrics',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(event_id)',
+        'FOREIGN KEY(event_id)REFERENCES event(id)ON DELETE CASCADE',
+      ],
+      columns: [
+        _column_20,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+        _column_26,
+        _column_27,
+        _column_28,
+        _column_29,
+        _column_30,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape26 profileStatistics = Shape26(
+    source: i0.VersionedTable(
+      entityName: 'profile_statistics',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [
+        _column_1,
+        _column_31,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_35,
+        _column_36,
+        _column_170,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 hashtagStats = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'hashtag_stats',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(hashtag)'],
+      columns: [_column_37, _column_31, _column_34, _column_35, _column_36],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 notifications = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'notifications',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id, owner_pubkey)'],
+      columns: [
+        _column_0,
+        _column_38,
+        _column_39,
+        _column_40,
+        _column_41,
+        _column_42,
+        _column_43,
+        _column_44,
+        _column_45,
+        _column_46,
+        _column_36,
+        _column_47,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 pendingUploads = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'pending_uploads',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_48,
+        _column_49,
+        _column_50,
+        _column_2,
+        _column_51,
+        _column_52,
+        _column_53,
+        _column_54,
+        _column_55,
+        _column_56,
+        _column_57,
+        _column_58,
+        _column_59,
+        _column_60,
+        _column_61,
+        _column_62,
+        _column_63,
+        _column_64,
+        _column_65,
+        _column_66,
+        _column_67,
+        _column_68,
+        _column_69,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 personalReactions = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'personal_reactions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(target_event_id, user_pubkey)'],
+      columns: [_column_70, _column_71, _column_72, _column_2, _column_73],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 personalReposts = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'personal_reposts',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(addressable_id, user_pubkey)'],
+      columns: [_column_74, _column_75, _column_76, _column_72, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape36 personalEvents = Shape36(
+    source: i0.VersionedTable(
+      entityName: 'personal_events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_3,
+        _column_2,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_184,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 pendingActions = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'pending_actions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_38,
+        _column_77,
+        _column_78,
+        _column_73,
+        _column_79,
+        _column_50,
+        _column_72,
+        _column_2,
+        _column_62,
+        _column_80,
+        _column_81,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape10 nip05Verifications = Shape10(
+    source: i0.VersionedTable(
+      entityName: 'nip05_verifications',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [_column_1, _column_82, _column_50, _column_83, _column_84],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape11 drafts = Shape11(
+    source: i0.VersionedTable(
+      entityName: 'drafts',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_85,
+        _column_86,
+        _column_87,
+        _column_88,
+        _column_89,
+        _column_2,
+        _column_90,
+        _column_91,
+        _column_92,
+        _column_93,
+        _column_94,
+        _column_47,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape28 clips = Shape28(
+    source: i0.VersionedTable(
+      entityName: 'clips',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(id)',
+        'FOREIGN KEY(draft_id)REFERENCES drafts(id)ON DELETE CASCADE',
+      ],
+      columns: [
+        _column_0,
+        _column_95,
+        _column_96,
+        _column_97,
+        _column_98,
+        _column_91,
+        _column_99,
+        _column_56,
+        _column_47,
+        _column_100,
+        _column_173,
+        _column_174,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape29 clipCategories = Shape29(
+    source: i0.VersionedTable(
+      entityName: 'clip_categories',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_0, _column_175, _column_96, _column_2, _column_47],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape35 directMessages = Shape35(
+    source: i0.VersionedTable(
+      entityName: 'direct_messages',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id, owner_pubkey)'],
+      columns: [
+        _column_0,
+        _column_101,
+        _column_102,
+        _column_5,
+        _column_2,
+        _column_103,
+        _column_104,
+        _column_105,
+        _column_106,
+        _column_107,
+        _column_108,
+        _column_109,
+        _column_110,
+        _column_111,
+        _column_112,
+        _column_113,
+        _column_114,
+        _column_115,
+        _column_116,
+        _column_117,
+        _column_118,
+        _column_182,
+        _column_183,
+        _column_119,
+        _column_180,
+        _column_181,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape14 dmMessageReactions = Shape14(
+    source: i0.VersionedTable(
+      entityName: 'dm_message_reactions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id, owner_pubkey)'],
+      columns: [
+        _column_0,
+        _column_101,
+        _column_120,
+        _column_121,
+        _column_122,
+        _column_123,
+        _column_2,
+        _column_124,
+        _column_125,
+        _column_118,
+        _column_126,
+        _column_127,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape15 conversations = Shape15(
+    source: i0.VersionedTable(
+      entityName: 'conversations',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id, owner_pubkey)'],
+      columns: [
+        _column_0,
+        _column_128,
+        _column_129,
+        _column_130,
+        _column_131,
+        _column_132,
+        _column_105,
+        _column_133,
+        _column_134,
+        _column_135,
+        _column_2,
+        _column_183,
+        _column_136,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 outgoingDms = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'outgoing_dms',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_101,
+        _column_137,
+        _column_5,
+        _column_2,
+        _column_138,
+        _column_107,
+        _column_103,
+        _column_139,
+        _column_140,
+        _column_141,
+        _column_142,
+        _column_62,
+        _column_143,
+        _column_144,
+        _column_81,
+        _column_145,
+        _column_125,
+        _column_119,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape32 pendingViewEvents = Shape32(
+    source: i0.VersionedTable(
+      entityName: 'pending_view_events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_146,
+        _column_147,
+        _column_148,
+        _column_176,
+        _column_177,
+        _column_72,
+        _column_149,
+        _column_150,
+        _column_22,
+        _column_178,
+        _column_151,
+        _column_152,
+        _column_50,
+        _column_62,
+        _column_80,
+        _column_81,
+        _column_2,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 pendingProductEvents = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'pending_product_events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_153,
+        _column_154,
+        _column_50,
+        _column_155,
+        _column_156,
+        _column_80,
+        _column_2,
+        _column_47,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape19 pendingGiftWraps = Shape19(
+    source: i0.VersionedTable(
+      entityName: 'pending_gift_wraps',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(gift_wrap_id, owner_pubkey)'],
+      columns: [
+        _column_104,
+        _column_125,
+        _column_157,
+        _column_2,
+        _column_158,
+        _column_81,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape20 processedGiftWraps = Shape20(
+    source: i0.VersionedTable(
+      entityName: 'processed_gift_wraps',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(gift_wrap_id)'],
+      columns: [_column_104, _column_159, _column_47],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape33 removedConversations = Shape33(
+    source: i0.VersionedTable(
+      entityName: 'removed_conversations',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(conversation_id, owner_pubkey)'],
+      columns: [_column_101, _column_125, _column_179],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape21 pendingProfileSaves = Shape21(
+    source: i0.VersionedTable(
+      entityName: 'pending_profile_saves',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(user_pubkey)'],
+      columns: [
+        _column_72,
+        _column_154,
+        _column_160,
+        _column_161,
+        _column_62,
+        _column_81,
+        _column_145,
+        _column_80,
+        _column_162,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape27 identityEvents = Shape27(
+    source: i0.VersionedTable(
+      entityName: 'identity_events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [_column_1, _column_163, _column_164, _column_171, _column_172],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape23 identityVerifications = Shape23(
+    source: i0.VersionedTable(
+      entityName: 'identity_verifications',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [_column_1, _column_165, _column_166],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape24 seenVideos = Shape24(
+    source: i0.VersionedTable(
+      entityName: 'seen_videos',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(video_id)'],
+      columns: [_column_146, _column_167, _column_168],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape25 vanishedProfiles = Shape25(
+    source: i0.VersionedTable(
+      entityName: 'vanished_profiles',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [_column_1, _column_169],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index idxMetricsLoopCount = i1.Index(
+    'idx_metrics_loop_count',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
+  );
+  final i1.Index idxMetricsLikes = i1.Index(
+    'idx_metrics_likes',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_likes ON video_metrics (likes)',
+  );
+  final i1.Index idxMetricsViews = i1.Index(
+    'idx_metrics_views',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
+  );
+  final i1.Index idxHashtagVideoCount = i1.Index(
+    'idx_hashtag_video_count',
+    'CREATE INDEX IF NOT EXISTS idx_hashtag_video_count ON hashtag_stats (video_count DESC)',
+  );
+  final i1.Index idxNotificationTimestamp = i1.Index(
+    'idx_notification_timestamp',
+    'CREATE INDEX IF NOT EXISTS idx_notification_timestamp ON notifications (timestamp DESC)',
+  );
+  final i1.Index idxNotificationIsRead = i1.Index(
+    'idx_notification_is_read',
+    'CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notifications (is_read)',
+  );
+  final i1.Index idxNotificationOwnerTimestamp = i1.Index(
+    'idx_notification_owner_timestamp',
+    'CREATE INDEX IF NOT EXISTS idx_notification_owner_timestamp ON notifications (owner_pubkey, timestamp DESC)',
+  );
+  final i1.Index idxPendingUploadStatus = i1.Index(
+    'idx_pending_upload_status',
+    'CREATE INDEX IF NOT EXISTS idx_pending_upload_status ON pending_uploads (status)',
+  );
+  final i1.Index idxPendingUploadCreated = i1.Index(
+    'idx_pending_upload_created',
+    'CREATE INDEX IF NOT EXISTS idx_pending_upload_created ON pending_uploads (created_at DESC)',
+  );
+  final i1.Index idxPersonalReactionsUser = i1.Index(
+    'idx_personal_reactions_user',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reactions_user ON personal_reactions (user_pubkey)',
+  );
+  final i1.Index idxPersonalReactionsReactionId = i1.Index(
+    'idx_personal_reactions_reaction_id',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reactions_reaction_id ON personal_reactions (reaction_event_id)',
+  );
+  final i1.Index idxPersonalReactionsAddressableId = i1.Index(
+    'idx_personal_reactions_addressable_id',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reactions_addressable_id ON personal_reactions (addressable_id)',
+  );
+  final i1.Index idxPersonalRepostsUser = i1.Index(
+    'idx_personal_reposts_user',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reposts_user ON personal_reposts (user_pubkey)',
+  );
+  final i1.Index idxPersonalRepostsRepostId = i1.Index(
+    'idx_personal_reposts_repost_id',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reposts_repost_id ON personal_reposts (repost_event_id)',
+  );
+  final i1.Index idxPersonalRepostsUserCreated = i1.Index(
+    'idx_personal_reposts_user_created',
+    'CREATE INDEX IF NOT EXISTS idx_personal_reposts_user_created ON personal_reposts (user_pubkey, created_at DESC)',
+  );
+  final i1.Index idxPersonalEventsPubkeyKindCreatedAt = i1.Index(
+    'idx_personal_events_pubkey_kind_created_at',
+    'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_kind_created_at ON personal_events (pubkey, kind, created_at DESC)',
+  );
+  final i1.Index idxPersonalEventsPubkeyCreatedAt = i1.Index(
+    'idx_personal_events_pubkey_created_at',
+    'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_created_at ON personal_events (pubkey, created_at DESC)',
+  );
+}
+
+class Shape36 extends i0.VersionedTable {
+  Shape36({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get pubkey =>
+      columnsByName['pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get kind =>
+      columnsByName['kind']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get tags =>
+      columnsByName['tags']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get content =>
+      columnsByName['content']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get sig =>
+      columnsByName['sig']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get retention =>
+      columnsByName['retention']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<int> _column_184(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'retention',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
@@ -9289,6 +10017,7 @@ i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
   required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
   required Future<void> Function(i1.Migrator m, Schema12 schema) from11To12,
+  required Future<void> Function(i1.Migrator m, Schema13 schema) from12To13,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -9347,6 +10076,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from11To12(migrator, schema);
         return 12;
+      case 12:
+        final schema = Schema13(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from12To13(migrator, schema);
+        return 13;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -9365,6 +10099,7 @@ i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
   required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
   required Future<void> Function(i1.Migrator m, Schema12 schema) from11To12,
+  required Future<void> Function(i1.Migrator m, Schema13 schema) from12To13,
 }) => i0.VersionedSchema.stepByStepHelper(
   step: migrationSteps(
     from1To2: from1To2,
@@ -9378,5 +10113,6 @@ i1.OnUpgrade stepByStep({
     from9To10: from9To10,
     from10To11: from10To11,
     from11To12: from11To12,
+    from12To13: from12To13,
   ),
 );

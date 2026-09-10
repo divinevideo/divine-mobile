@@ -1,29 +1,30 @@
 // ABOUTME: Clears personal-event storage without constructing auth-dependent services.
-// ABOUTME: Covers both open Hive boxes and caches left on disk between sessions.
+// ABOUTME: Scopes the delete to the departing owner, or wipes it when signed out.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/providers/database_provider.dart';
 
-/// Clears the device-wide personal-event cache during account cleanup.
+/// Clears the departing account's personal events during account cleanup.
 ///
 /// Reading the auth-dependent cache service from the cleanup callback would
 /// recreate a provider cycle (#7389). Its own `clearCache()` also returns early
-/// before initialization, leaving on-disk events intact. Clear the boxes
-/// directly so the departing account's events cannot survive cleanup (#8314).
-final personalEventCacheClearProvider = Provider<Future<void> Function()>((
-  ref,
-) {
-  return () async {
-    // Keep literal box names visible to the Hive wipe-policy guard.
-    final events = Hive.isBoxOpen(HiveBoxNames.personalEvents)
-        ? Hive.box<dynamic>(HiveBoxNames.personalEvents)
-        : await Hive.openBox<dynamic>(HiveBoxNames.personalEvents);
-    await events.clear();
-
-    final metadata = Hive.isBoxOpen(HiveBoxNames.personalEventsMetadata)
-        ? Hive.box<dynamic>(HiveBoxNames.personalEventsMetadata)
-        : await Hive.openBox<dynamic>(HiveBoxNames.personalEventsMetadata);
-    await metadata.clear();
-  };
-});
+/// before initialization, leaving stored events intact. Go straight to the DAO
+/// so the departing account's events cannot survive cleanup (#8314).
+///
+/// Personal events moved from a Hive box to the `personal_events` table
+/// (#6986), and the table carries an owner column. That changes the correct
+/// scope: the box held one account's events and was cleared whole, whereas
+/// deleting every row here would destroy a *surviving* account's cache during
+/// an ordinary account switch. Pass the departing pubkey and only its rows go.
+///
+/// A null pubkey means there is no identity to scope by — a signed-out wipe —
+/// so the table is emptied, which is what clearing the box did.
+final personalEventCacheClearProvider =
+    Provider<Future<void> Function(String? pubkey)>((ref) {
+      return (pubkey) async {
+        final dao = ref.read(databaseProvider).personalEventsDao;
+        await (pubkey == null
+            ? dao.deleteAll()
+            : dao.deleteAllForOwner(pubkey));
+      };
+    });
