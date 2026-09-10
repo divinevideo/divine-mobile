@@ -95,7 +95,7 @@ the manifest rules and the release checklist.
 | D2 — linked set | Approved as listed. | Name, Email Address, Contacts, public profile/user content, Photos or Videos, Audio Data, Customer Support, User ID, Device ID, Product Interaction, Crash Data, and Other Diagnostic Data are declared linked. |
 | D3 — bug-report attachment location | Strip attachment metadata instead of declaring Precise Location. | Implemented in #9049 (`requestFullMetadata: false` on the bug-report picker). Precise Location is omitted. |
 | D4 — Search History | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
-| D5 — private-message linkage | Pending. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays and the signer's key custody is unverified. | `Emails or Text Messages` stays declared; the linked value is settled once both confirmations are signed off. |
+| D5 — private-message linkage | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
 | D6 — Performance Data | Linked (conservative). | Performance Data declared linked, tracking false. |
 | D7 — Shorebird | SDK-owned collection, disclosed in App Store Connect only. | Do not duplicate Shorebird's Device ID / Product Interaction / Other Diagnostic Data in the Runner manifest. |
 
