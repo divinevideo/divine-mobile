@@ -1,5 +1,5 @@
-// ABOUTME: Verifies the shared skeleton effect follows Divine appearance.
-// ABOUTME: Covers semantic colors and reduced-motion behavior.
+// ABOUTME: Verifies the shared skeleton effect honors reduced motion.
+// ABOUTME: Prevents Skeletonizer's shimmer ticker from blocking UI quiescence.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,20 +9,23 @@ import 'package:skeletonizer/skeletonizer.dart';
 void main() {
   Widget subject({
     required bool disableAnimations,
-    ThemeData? theme,
-    Brightness platformBrightness = Brightness.light,
     Color? baseColor,
+    AlignmentGeometry? begin,
+    AlignmentGeometry? end,
   }) {
     return MaterialApp(
-      theme: theme,
       home: MediaQuery(
-        data: MediaQueryData(
-          disableAnimations: disableAnimations,
-          platformBrightness: platformBrightness,
-        ),
+        data: MediaQueryData(disableAnimations: disableAnimations),
         child: Builder(
           builder: (context) => Skeletonizer(
-            effect: vineSkeletonEffectOf(context, baseColor: baseColor),
+            effect: begin == null || end == null
+                ? vineSkeletonEffectOf(context, baseColor: baseColor)
+                : vineSkeletonEffectOf(
+                    context,
+                    baseColor: baseColor,
+                    begin: begin,
+                    end: end,
+                  ),
             child: const Text('Loading'),
           ),
         ),
@@ -55,41 +58,26 @@ void main() {
       expect(skeletonizer.effect, isA<ShimmerEffect>());
     });
 
-    testWidgets('uses dark semantic colors when the platform is light', (
+    testWidgets('sweeps in the direction the caller asks for', (
       tester,
     ) async {
       await tester.pumpWidget(
         subject(
           disableAnimations: false,
-          theme: VineTheme.theme,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
       );
 
-      final skeletonizer = tester.widget<Skeletonizer>(
-        find.byWidgetPredicate((widget) => widget is Skeletonizer),
-      );
-      final effect = skeletonizer.effect! as ShimmerEffect;
-      final base = VineTheme.darkColors.skeleton;
-      expect(effect.colors, [base, base.withValues(alpha: 0.6), base]);
-    });
-
-    testWidgets('uses light semantic colors when the platform is dark', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        subject(
-          disableAnimations: false,
-          theme: VineTheme.lightTheme,
-          platformBrightness: Brightness.dark,
-        ),
-      );
-
-      final skeletonizer = tester.widget<Skeletonizer>(
-        find.byWidgetPredicate((widget) => widget is Skeletonizer),
-      );
-      final effect = skeletonizer.effect! as ShimmerEffect;
-      final base = VineTheme.lightColors.skeleton;
-      expect(effect.colors, [base, base.withValues(alpha: 0.6), base]);
+      final shimmer =
+          tester
+                  .widget<Skeletonizer>(
+                    find.byWidgetPredicate((widget) => widget is Skeletonizer),
+                  )
+                  .effect!
+              as ShimmerEffect;
+      expect(shimmer.begin, Alignment.topCenter);
+      expect(shimmer.end, Alignment.bottomCenter);
     });
 
     testWidgets('paints a caller-supplied base colour in both modes', (
