@@ -42,7 +42,17 @@ class VideoEvents extends _$VideoEvents {
   BehaviorSubject<List<VideoEvent>>? _subject;
   Timer? _debounceTimer;
   List<VideoEvent>? _pendingEvents;
-  List<VideoEvent>? _lastEmittedEvents;
+
+  /// The list [_subject] currently holds, or `null` when it holds none.
+  ///
+  /// Derived from the subject rather than mirrored in a field. `build()`
+  /// installs a fresh [BehaviorSubject] on every rebuild while the notifier
+  /// instance — and therefore any field on it — survives, so a mirrored copy
+  /// outlives the subject it described. The equality guards below would then
+  /// suppress the first emission into the replacement subject, which never
+  /// receives a value and leaves the provider in `AsyncLoading` for good.
+  /// A fresh subject reports `null` here, so that emission always lands.
+  List<VideoEvent>? get _lastEmittedEvents => _subject?.valueOrNull;
   bool get _canEmit => _subject != null && !_subject!.isClosed;
 
   // Buffer for new videos that arrive while user is browsing
@@ -93,7 +103,6 @@ class VideoEvents extends _$VideoEvents {
     // Emit updated list
     if (_canEmit) {
       _subject!.add(currentVideos);
-      _lastEmittedEvents = currentVideos;
     }
 
     // Notify listeners that buffer was cleared
@@ -337,9 +346,9 @@ class VideoEvents extends _$VideoEvents {
         category: LogCategory.video,
       );
       if (_canEmit && !_listEquals(currentEvents, _lastEmittedEvents)) {
+        // The subject keeps the reference, not a copy, so identical() checks
+        // downstream still hold.
         _subject!.add(currentEvents);
-        // Store reference (not copy) to enable identical() checks downstream
-        _lastEmittedEvents = currentEvents;
         Log.error(
           '  ✅ EMITTED ${currentEvents.length} events to stream!',
           name: 'VideoEventsProvider',
@@ -422,8 +431,6 @@ class VideoEvents extends _$VideoEvents {
             category: LogCategory.video,
           );
           _subject!.add(_pendingEvents!);
-          // Store reference (not copy) to enable identical() checks downstream
-          _lastEmittedEvents = _pendingEvents;
         }
         _pendingEvents = null;
       }
