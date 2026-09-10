@@ -73,6 +73,46 @@ class _ScriptedRelay extends Relay {
   }
 }
 
+/// A relay that stays connected yet reads as silent, so the pool force-cycles
+/// it as a half-open zombie; that force-cycle stays in flight until
+/// [reconnectGate] completes.
+class _ZombieRelay extends RelayBase {
+  _ZombieRelay(String url) : super(url, RelayStatus(url));
+
+  final reconnectGate = Completer<bool>();
+
+  /// Force-cycles the pool has started on this relay.
+  int reconnectsStarted = 0;
+
+  @override
+  Future<bool> doConnect() async {
+    relayStatus.connected = ClientConnected.connected;
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async => true;
+
+  @override
+  bool isSilentSince(DateTime since) => true;
+
+  @override
+  Future<bool> forceReconnect() {
+    reconnectsStarted++;
+    return reconnectGate.future;
+  }
+}
+
 /// Hides every event from the caller, the way a block list does.
 class _BlockEverything implements EventFilter {
   @override
@@ -348,6 +388,76 @@ void main() {
             'not answered: wss://rejects-auth.example (closed: auth-required',
           ),
         );
+      });
+
+      test('a post-AUTH replay that answers replaces the earlier '
+          'auth-required CLOSED', () async {
+        final gated = await addRelay('wss://gated.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        // The relay challenges us and refuses the REQ until we authenticate,
+        // which parks the query for the post-AUTH replay.
+        await gated.deliver(['AUTH', 'test-challenge']);
+        await gated.deliver(['CLOSED', _queryId, 'auth-required: sign in']);
+        expect(gated.capturedAuthEventId, isNotNull);
+        await gated.deliver(['OK', gated.capturedAuthEventId, true, '']);
+        expect(
+          gated.sentMessages.where((message) => message.first == 'REQ'),
+          hasLength(2),
+          reason: 'the accepted AUTH replays the parked query',
+        );
+
+        await gated.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).endedBy,
+          QueryEnd.complete,
+          reason: 'the answer to the replay supersedes the refusal',
+        );
+      });
+
+      test('is socketDropped when a relay is being force-cycled as a '
+          'zombie', () async {
+        final answering = await addRelay('wss://answers.example');
+        final zombie = _ZombieRelay('wss://zombie.example');
+        expect(await nostr.relayPool.add(zombie), isTrue);
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        // Abandoning another query the zombie never answered starts the
+        // force-cycle, which stays in flight until the gate completes.
+        await nostr.relayPool.query(
+          [
+            {
+              'kinds': [7],
+            },
+          ],
+          (_) {},
+          id: 'abandoned-query',
+          targetRelays: [zombie.url],
+          onComplete: () {},
+        );
+        nostr.relayPool.unsubscribe('abandoned-query');
+        expect(zombie.reconnectsStarted, 1);
+
+        await answering.deliver(['EOSE', _queryId]);
+
+        expect((await outcome.future).endedBy, QueryEnd.socketDropped);
+        expect(completionLines(), hasLength(1));
+        expect(
+          completionLines().single.message,
+          contains('not answered: wss://zombie.example (dropped'),
+        );
+        zombie.reconnectGate.complete(true);
       });
     });
 
@@ -964,6 +1074,7 @@ void main() {
           final relay = await addRelay('wss://slow-to-refuse.example')
             ..sendSucceeds = false
             ..reqGate = Completer<void>();
+          var outcomes = 0;
           final fanout = nostr.relayPool.query(
             [
               {
@@ -972,7 +1083,7 @@ void main() {
             ],
             (_) {},
             id: _queryId,
-            onOutcome: (_) {},
+            onOutcome: (_) => outcomes++,
           );
           expect(
             relay.sentMessages.where((message) => message.first == 'REQ'),
@@ -998,6 +1109,16 @@ void main() {
             reason:
                 'a fan-out that finishes after its caller left must not '
                 'revive the record',
+          );
+          expect(
+            completionLines(),
+            hasLength(1),
+            reason: 'the deadline line stays the only one for this read',
+          );
+          expect(
+            outcomes,
+            0,
+            reason: 'the caller ended this read, so the pool delivers nothing',
           );
         },
       );
