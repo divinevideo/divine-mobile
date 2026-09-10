@@ -3,6 +3,7 @@
 
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service for persistent caching of hashtag statistics
@@ -24,7 +25,7 @@ class HashtagCacheService {
 
     try {
       // Open the hashtag box
-      _hashtagBox = await Hive.openBox(_boxName);
+      _hashtagBox = await HiveBoxOpener.open(_boxName);
       _isInitialized = true;
 
       Log.info(

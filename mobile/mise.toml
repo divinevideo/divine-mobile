@@ -139,10 +139,13 @@ fi
 flutter pub get
 # DIVINE_STRICT_CHANNELS matches Mobile CI: a test that leaves a shared
 # MethodChannel handler replaced fails here rather than being healed silently.
+# DIVINE_STRICT_HIVE_BOXES likewise attributes an app-owned box open or leak to
+# the test that started it, before a later suite can inherit or await it.
 PATH="$PUB_CACHE_BIN:$PATH" "$VERY_GOOD_BIN" test \
   --optimization \
   --concurrency=4 \
   --exclude-tags "integration || golden" \
   --dart-define=DIVINE_STRICT_CHANNELS=true \
+  --dart-define=DIVINE_STRICT_HIVE_BOXES=true \
   --test-randomize-ordering-seed random
 """

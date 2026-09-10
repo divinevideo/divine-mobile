@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
 
 import 'helpers/shared_channel_override.dart';
@@ -16,8 +17,8 @@ import 'helpers/shared_hive_box_guard.dart';
 import 'test_setup.dart';
 
 const _runGoldenSetup = bool.fromEnvironment('DIVINE_GOLDEN_TESTS');
-// Heal during the initial soak; opt into blame once pending-open behavior has
-// been observed across the merged suite.
+// CI and `mise run test` enable blame after #9053 made pending opens observable.
+// Bare single-file runs keep healing without failing on an already-open box.
 const _strictHiveBoxes = bool.fromEnvironment('DIVINE_STRICT_HIVE_BOXES');
 
 /// When set (via `--dart-define=DIVINE_STRICT_CHANNELS=true`), the
@@ -28,6 +29,8 @@ const _strictHiveBoxes = bool.fromEnvironment('DIVINE_STRICT_HIVE_BOXES');
 const _strictChannels = bool.fromEnvironment('DIVINE_STRICT_CHANNELS');
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  final hiveOpenObserver = SharedHiveBoxOpenObserver(Zone.current);
+  HiveBoxOpener.observerForTesting = hiveOpenObserver;
   // Set up test environment with plugin mocks (secure_storage, path_provider, etc.)
   setupTestEnvironment();
 
@@ -66,10 +69,15 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
   // Hive registers boxes process-globally by name, so a box one suite leaves
   // open is the same box the next suite gets back from openBox — rows and
-  // backing directory included (#6748). This root tearDown closes and deletes
-  // any shared box a test left open. Blame is gated while the guard soaks,
-  // because Hive does not expose opens still pending in `_openingBoxes`.
-  tearDown(() => healAndBlameSharedHiveBoxes(strict: _strictHiveBoxes));
+  // backing directory included (#6748). The observer also starts app-owned
+  // opens outside testWidgets fake async and exposes them to this root
+  // tearDown, which waits before healing or attributes the leak (#9053).
+  tearDown(
+    () => healAndBlameSharedHiveBoxes(
+      strict: _strictHiveBoxes,
+      openObserver: hiveOpenObserver,
+    ),
+  );
 
   // UserAvatar records broken image URLs in a process-global negative cache.
   // In the merged optimizer isolate that state would otherwise leak a failed
