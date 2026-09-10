@@ -75,6 +75,17 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   Timer? _pollTimer;
   var _generation = 0;
 
+  /// Whether this cubit has spent its one refresh against an already-exhausted
+  /// budget.
+  ///
+  /// A durable budget means a relaunch can find it already spent, and pausing
+  /// immediately would then never notice a deletion that finished while the app
+  /// was closed — the screen would offer "contact support" for an account the
+  /// server had already deleted. One status read on the way to pausing closes
+  /// that, and belongs to the cubit's lifetime rather than the budget, so
+  /// resume and account-transition operations do not renew it.
+  var _overdueRefreshUsed = false;
+
   /// Wall-clock start of this attempt's polling budget, cached from
   /// [_pollBudgetStore]. Null until an attempt that polls has been handled.
   DateTime? _pollBudgetStartedAt;
@@ -638,6 +649,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     final delay = AccountDeletionRecoveryPolling.delayForTick(tickIndex);
     final spent = _pollingSpent;
     if (spent + delay > AccountDeletionRecoveryPolling.sessionBound) {
+      if (!_overdueRefreshUsed) {
+        _overdueRefreshUsed = true;
+        _pollTimer = _timerFactory(Duration.zero, () => _poll(generation));
+        return;
+      }
       emitIfOpen(
         AccountDeletionRecoveryState(
           status: state.status,

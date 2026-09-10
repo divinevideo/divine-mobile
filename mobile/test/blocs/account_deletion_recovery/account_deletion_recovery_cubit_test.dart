@@ -843,12 +843,30 @@ void main() {
             greaterThan(AccountDeletionRecoveryPolling.sessionBound),
             reason: 'the wait carries across the relaunch',
           );
+
+          // A spent budget does not pause on the spot. The deletion may have
+          // finished while the app was closed, and pausing without looking
+          // would offer "contact support" for an account the server had
+          // already deleted — so one status read comes first.
+          expect(relaunched.state.pollingPaused, isFalse);
+          expect(
+            timers.timers.where((timer) => timer.isActive),
+            hasLength(1),
+            reason: 'the overdue refresh is scheduled',
+          );
+          await timers.fireNext();
+
           expect(
             relaunched.state.pollingPaused,
             isTrue,
             reason:
                 'the budget was already spent before this launch started, so '
-                'the support message must be reachable immediately',
+                'the support message must be reachable after that one read',
+          );
+          expect(
+            timers.timers.any((timer) => timer.isActive),
+            isFalse,
+            reason: 'the allowance is spent once per cubit, not renewed',
           );
         },
       );
