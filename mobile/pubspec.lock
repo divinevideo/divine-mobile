@@ -434,6 +434,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  cupertino_ui:
+    dependency: "direct main"
+    description:
+      name: cupertino_ui
+      sha256: e9dfe7fac704028f8928cbe4028a0be5e8a709498e8daf8247de99e99a32aef3
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   dart_style:
     dependency: transitive
     description:
@@ -1012,10 +1020,10 @@ packages:
     dependency: "direct main"
     description:
       name: go_router
-      sha256: d8f590a69729f719177ea68eb1e598295e8dbc41bbc247fed78b2c8a25660d7c
+      sha256: "008ab21d89d0de8ccd79586838f7533f126c2d894f50bf25f2947888d3c225b5"
       url: "https://pub.dev"
     source: hosted
-    version: "16.3.0"
+    version: "18.0.1"
   golden_toolkit:
     dependency: "direct dev"
     description:
@@ -1397,6 +1405,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  material_ui:
+    dependency: "direct main"
+    description:
+      name: material_ui
+      sha256: fbfb53cab6c4629438feeade5f3d305f72944bc9d9f25786b19106d32b80ec45
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   media_kit:
     dependency: transitive
     description:
@@ -1809,10 +1825,10 @@ packages:
     dependency: "direct main"
     description:
       name: pro_image_editor
-      sha256: "573b441ebfc51891e477dfb2dc629d76c83079cbd4002295b506cf1526e1cefc"
+      sha256: "579a9712c1e62fec3e91c585ee527e88782a0ddf158368ef0fcaa0f72eb5dae8"
       url: "https://pub.dev"
     source: hosted
-    version: "13.5.0"
+    version: "14.1.0"
   pro_video_editor:
     dependency: "direct main"
     description:

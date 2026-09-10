@@ -12,6 +12,7 @@ dependencies:
   equatable: ^2.0.8
   flutter:
     sdk: flutter
+  material_ui: ^1.2.0
   plugin_platform_interface: ^2.0.2
   unified_logger:
     path: ../unified_logger
