@@ -34,6 +34,13 @@ const int _videoKind = EventKind.videoVertical;
 /// Default number of videos to fetch per page.
 const int _defaultLimit = 25;
 
+class _FollowingFetchResult {
+  const _FollowingFetchResult({required this.videos, this.pageCount = 0});
+
+  final List<VideoEvent> videos;
+  final int pageCount;
+}
+
 /// Author-feed REST page size used for the `hasMore` fallback heuristic when
 /// the v2 envelope omits the flag. Mirrors `AppConstants.paginationBatchSize`
 /// (50) in the app layer — kept here as a package-local const so the
@@ -284,7 +291,7 @@ class VideosRepository {
     }
 
     // 1. Fetch following videos (Funnelcake API → Nostr relay waterfall)
-    final videos = await _fetchFollowingVideos(
+    final following = await _fetchFollowingVideos(
       authors: authors,
       userPubkey: userPubkey,
       limit: limit,
@@ -293,14 +300,17 @@ class VideosRepository {
 
     // 2. If no list refs, return following-only result (with seen demotion)
     if (videoRefs.isEmpty) {
-      final ordered = await _orderBySeenFreshness(videos);
-      final result = HomeFeedResult(videos: ordered);
+      final ordered = await _orderBySeenFreshness(following.videos);
+      final result = HomeFeedResult(
+        videos: ordered,
+        followingPageCount: following.pageCount,
+      );
       return result;
     }
 
     // 3. Merge list videos with following videos
     final merged = await _mergeListVideos(
-      followingVideos: videos,
+      followingVideos: following.videos,
       videoRefs: videoRefs,
     );
     final orderedVideos = await _orderBySeenFreshness(merged.videos);
@@ -308,12 +318,13 @@ class VideosRepository {
       videos: orderedVideos,
       videoListSources: merged.videoListSources,
       listOnlyVideoIds: merged.listOnlyVideoIds,
+      followingPageCount: following.pageCount,
     );
     return result;
   }
 
   /// Fetches videos from followed users via Funnelcake API or Nostr relays.
-  Future<List<VideoEvent>> _fetchFollowingVideos({
+  Future<_FollowingFetchResult> _fetchFollowingVideos({
     required List<String> authors,
     String? userPubkey,
     int limit = _defaultLimit,
@@ -345,7 +356,7 @@ class VideosRepository {
     );
   }
 
-  Future<List<VideoEvent>> _fetchVisibleHomeVideosFromStatsApi({
+  Future<_FollowingFetchResult> _fetchVisibleHomeVideosFromStatsApi({
     required String userPubkey,
     required int limit,
     int? until,
@@ -353,11 +364,13 @@ class VideosRepository {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
+    var pageCount = 0;
 
     // Intentionally walk until we have enough visible videos or the upstream
     // feed is exhausted. A hard page cap caused premature EOF on reply-dense
     // feeds by hiding visible videos behind reply-only raw pages.
     while (visible.length < limit) {
+      pageCount++;
       final response = await _funnelcakeApiClient!.getHomeFeed(
         pubkey: userPubkey,
         limit: limit,
@@ -379,23 +392,28 @@ class VideosRepository {
       cursor = nextCursor;
     }
 
-    return visible.take(limit).toList();
+    return _FollowingFetchResult(
+      videos: visible.take(limit).toList(),
+      pageCount: pageCount,
+    );
   }
 
-  Future<List<VideoEvent>> _fetchVisibleHomeVideosFromRelays({
+  Future<_FollowingFetchResult> _fetchVisibleHomeVideosFromRelays({
     required List<String> authors,
     required int limit,
     int? until,
   }) async {
     // Nostr fallback — skip when authors list is empty (fast-path startup
     // before follow list is ready).
-    if (authors.isEmpty) return <VideoEvent>[];
+    if (authors.isEmpty) return const _FollowingFetchResult(videos: []);
 
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
+    var pageCount = 0;
 
     while (visible.length < limit) {
+      pageCount++;
       final filter = Filter(
         kinds: [_videoKind],
         authors: authors,
@@ -419,7 +437,10 @@ class VideosRepository {
       cursor = nextCursor;
     }
 
-    return visible.take(limit).toList();
+    return _FollowingFetchResult(
+      videos: visible.take(limit).toList(),
+      pageCount: pageCount,
+    );
   }
 
   Future<List<VideoEvent>> _hydrateVideosWithBulkStats(
@@ -3067,6 +3088,7 @@ class VideosRepository {
     var nextCursor = currentResponse.nextCursor;
     var hasMore = currentResponse.hasMore;
     var fetchedCursor = recommendationCursor;
+    var pageCount = 1;
 
     while (true) {
       _appendUniqueVideos(
@@ -3093,6 +3115,7 @@ class VideosRepository {
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
+      pageCount++;
       nextCursor = currentResponse.nextCursor;
       hasMore = currentResponse.hasMore;
     }
@@ -3104,6 +3127,7 @@ class VideosRepository {
       ),
       paginationCursor: nextCursor,
       hasMore: hasMore,
+      recommendationPageCount: pageCount,
     );
   }
 

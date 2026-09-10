@@ -3652,7 +3652,7 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'calls markFirstVideosReceived and markFeedDisplayed on success',
+        'records first-visible and fresh-result milestones on success',
         setUp: () {
           final videos = createTestVideos(3);
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -3664,7 +3664,12 @@ void main() {
               limit: any(named: 'limit'),
               until: any(named: 'until'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: videos,
+              followingPageCount: 2,
+            ),
+          );
         },
         build: createBlocWithTracker,
         act: (bloc) =>
@@ -3673,7 +3678,20 @@ void main() {
           verify(
             () => mockTracker.markFirstVideosReceived('following', 3),
           ).called(1);
-          verify(() => mockTracker.markFeedDisplayed('following', 3)).called(1);
+          verify(
+            () => mockTracker.markFirstVisibleContent(
+              'following',
+              3,
+              servedFromCache: false,
+            ),
+          ).called(1);
+          verify(
+            () => mockTracker.markFreshResultCompleted(
+              'following',
+              3,
+              followingPageCount: 2,
+            ),
+          ).called(1);
         },
       );
 
@@ -3703,7 +3721,9 @@ void main() {
             ),
           ).called(1);
           verifyNever(() => mockTracker.markFirstVideosReceived(any(), any()));
-          verifyNever(() => mockTracker.markFeedDisplayed(any(), any()));
+          verifyNever(
+            () => mockTracker.markFreshResultCompleted(any(), any()),
+          );
         },
       );
 
@@ -3727,7 +3747,9 @@ void main() {
           verify(
             () => mockTracker.markFirstVideosReceived('latest', 3),
           ).called(1);
-          verify(() => mockTracker.markFeedDisplayed('latest', 3)).called(1);
+          verify(
+            () => mockTracker.markFreshResultCompleted('latest', 3),
+          ).called(1);
         },
       );
     });
