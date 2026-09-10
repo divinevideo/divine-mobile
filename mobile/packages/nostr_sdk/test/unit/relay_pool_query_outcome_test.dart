@@ -968,6 +968,45 @@ void main() {
         },
       );
 
+      test('a deadline during the fan-out names the relays still being '
+          'asked', () async {
+        await addRelay('wss://fast.example');
+        final slow = await addRelay('wss://slow.example')
+          ..reqGate = Completer<void>();
+        final fanout = nostr.relayPool.query(
+          [
+            {
+              'kinds': [1],
+            },
+          ],
+          (_) {},
+          id: _queryId,
+          onOutcome: (_) {},
+        );
+        // `fast` takes the REQ while `slow` is still writing it.
+        await pumpEventQueue();
+
+        nostr.relayPool.reportQueryDeadline(_queryId);
+        nostr.relayPool.unsubscribe(_queryId);
+        slow.reqGate!.complete();
+        await fanout;
+
+        expect(completionLines(), hasLength(1));
+        final line = completionLines().single;
+        expect(
+          line.relayUrl,
+          isIn(['wss://fast.example', 'wss://slow.example']),
+          reason: 'the line is filed under a relay the query asked',
+        );
+        expect(
+          line.message,
+          allOf(
+            contains('wss://fast.example (no answer, events=0)'),
+            contains('wss://slow.example (REQ in flight, events=0)'),
+          ),
+        );
+      });
+
       test('returns null once the pool has completed the query', () async {
         final relay = await addRelay('wss://relay.example');
         final outcome = await startQuery([

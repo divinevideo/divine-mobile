@@ -37,9 +37,8 @@ enum _TerminalFrame { eose, closed }
 /// relay decides how the whole query ended.
 enum _Standing { answered, noAnswer, closed, dropped }
 
-/// A relay's standing, with the NIP-01 prefix of its refusal when it refused
-/// the query.
-typedef _Judgement = ({_Standing standing, String? closedReason});
+/// A relay's standing, and how the diagnostic line describes it.
+typedef _Judgement = ({_Standing standing, String label});
 
 /// One relay's part in a query.
 class _RelayTally {
@@ -55,8 +54,9 @@ class _RelayTally {
   /// `EVENT` frames from this relay that matched any filter.
   int events = 0;
 
-  /// Whether this relay took the `REQ`, according to the fan-out.
-  bool tookReq = false;
+  /// Whether this relay took the `REQ`; null while the fan-out is still
+  /// writing it.
+  bool? tookReq;
 
   _TerminalFrame? terminalFrame;
 
@@ -66,8 +66,9 @@ class _RelayTally {
   /// NIP-67 hints from the relay's latest `EOSE`.
   Set<String> hints = const <String>{};
 
-  /// Whether the relay took part: it took the `REQ`, or answered it.
-  bool get tookPart => tookReq || terminalFrame != null || events > 0;
+  /// Whether the relay took part: it took the `REQ`, may still be taking it,
+  /// or answered it.
+  bool get tookPart => tookReq != false || terminalFrame != null || events > 0;
 }
 
 /// Records how every relay answered one one-shot query, and turns that into
@@ -114,16 +115,19 @@ class QueryOutcomeTracker {
   bool _fanoutFinished = false;
   bool _reported = false;
 
-  /// Records the finished fan-out: every relay it [asked], and the urls of
-  /// those that took the `REQ` ([sentTo]).
-  void recordFanout({
-    required List<Relay> asked,
-    required List<String> sentTo,
-  }) {
+  /// Records that the fan-out is writing the `REQ` to [relay].
+  void recordDispatch(Relay relay) {
+    _tallyFor(relay);
+  }
+
+  /// Records whether [relay] took the `REQ` the fan-out wrote to it.
+  void recordReqTaken(Relay relay, {required bool taken}) {
+    _tallyFor(relay).tookReq = taken;
+  }
+
+  /// Records that the fan-out has heard back from every relay it asked.
+  void recordFanoutFinished() {
     _fanoutFinished = true;
-    for (final relay in asked) {
-      _tallyFor(relay).tookReq = sentTo.contains(relay.url);
-    }
   }
 
   /// Records an `EVENT` frame [relay] sent for the query.
@@ -211,27 +215,36 @@ class QueryOutcomeTracker {
   static _Judgement _judge(
     _RelayTally tally,
     PendingRelayState Function(Relay relay) pendingStateOf,
-  ) => switch (tally.terminalFrame) {
-    _TerminalFrame.eose => (standing: _Standing.answered, closedReason: null),
-    _TerminalFrame.closed => (
-      standing: _Standing.closed,
-      closedReason: tally.closedReason,
-    ),
-    null => switch (pendingStateOf(tally.relay)) {
-      PendingRelayState.serving => (
-        standing: _Standing.noAnswer,
-        closedReason: null,
-      ),
-      PendingRelayState.authGateShut => (
-        standing: _Standing.closed,
-        closedReason: _authRequiredReason,
-      ),
-      PendingRelayState.connectionLost => (
-        standing: _Standing.dropped,
-        closedReason: null,
-      ),
-    },
-  };
+  ) {
+    switch (tally.terminalFrame) {
+      case _TerminalFrame.eose:
+        return (standing: _Standing.answered, label: 'answered');
+      case _TerminalFrame.closed:
+        return (
+          standing: _Standing.closed,
+          label: 'closed: ${tally.closedReason}',
+        );
+      case null:
+        // Nothing can have been lost yet: the fan-out is still writing it.
+        if (tally.tookReq == null) {
+          return (standing: _Standing.noAnswer, label: 'REQ in flight');
+        }
+        return switch (pendingStateOf(tally.relay)) {
+          PendingRelayState.serving => (
+            standing: _Standing.noAnswer,
+            label: 'no answer',
+          ),
+          PendingRelayState.authGateShut => (
+            standing: _Standing.closed,
+            label: 'closed: $_authRequiredReason',
+          ),
+          PendingRelayState.connectionLost => (
+            standing: _Standing.dropped,
+            label: 'dropped',
+          ),
+        };
+    }
+  }
 
   QueryEnd _endedBy(
     Map<_RelayTally, _Judgement> judgements, {
@@ -338,7 +351,7 @@ class QueryOutcomeTracker {
     for (final MapEntry(key: tally, value: judgement) in judgements.entries) {
       final answeredIt = judgement.standing == _Standing.answered;
       final details = [
-        if (!answeredIt) _standingLabel(judgement),
+        if (!answeredIt) judgement.label,
         'events=${tally.events}',
         if (_isCapped(tally)) 'capped',
       ];
@@ -361,14 +374,6 @@ class QueryOutcomeTracker {
       'filters: ${_filters.map(_describeFilter).join(', ')}',
     ].join('; ');
   }
-
-  static String _standingLabel(_Judgement judgement) =>
-      switch (judgement.standing) {
-        _Standing.answered => 'answered',
-        _Standing.noAnswer => 'no answer',
-        _Standing.closed => 'closed: ${judgement.closedReason}',
-        _Standing.dropped => 'dropped',
-      };
 
   static String _listOrNone(List<String> entries) =>
       entries.isEmpty ? 'none' : entries.join(', ');

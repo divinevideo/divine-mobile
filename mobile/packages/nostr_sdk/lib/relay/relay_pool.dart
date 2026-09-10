@@ -2530,19 +2530,24 @@ class RelayPool {
     // is actually able to answer.
     final queryFutures = <Future<String?>>[];
     final queriedRelayIdentities = <String>{};
-    final askedRelays = <Relay>[];
 
+    // Recorded on this call's own outcome record, never a newer one under
+    // the same id, so a deadline that beats the fan-out can still name the
+    // relays being asked.
     Future<String?> sendQueryTo(
       Relay relay, {
       bool runBeforeConnected = false,
     }) {
-      askedRelays.add(relay);
+      outcomeTracker?.recordDispatch(relay);
       return relayDoQuery(
         relay,
         subscription,
         sendAfterAuth,
         runBeforeConnected: runBeforeConnected,
-      ).then((accepted) => accepted ? relay.url : null);
+      ).then((accepted) {
+        outcomeTracker?.recordReqTaken(relay, taken: accepted);
+        return accepted ? relay.url : null;
+      });
     }
 
     // tempRelay, only query those relay which has bean provide
@@ -2596,9 +2601,7 @@ class RelayPool {
       }
     }
     final sentTo = fanout.nonNulls.toList();
-    // This call's own record, never a newer one under the same id: a fan-out
-    // can outlive a caller that has already given up.
-    outcomeTracker?.recordFanout(asked: askedRelays, sentTo: sentTo);
+    outcomeTracker?.recordFanoutFinished();
 
     if (completionRequested) {
       _fireQueryCompleteIfSettled(
