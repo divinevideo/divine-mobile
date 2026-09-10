@@ -313,14 +313,15 @@ class SoundsRepository {
     return _cache[eventId];
   }
 
-  /// Fetch the count of videos using a specific sound.
-  ///
-  /// Uses NIP-45 COUNT if the relay supports it, otherwise falls back to
-  /// fetching events and counting client-side.
+  /// Fetch the count of videos using a specific sound, via NIP-45 COUNT.
   ///
   /// The count is based on Kind 34236 video events that reference the
   /// audio event ID in their tags.
-  Future<int> fetchVideosUsingSoundCount(String audioEventId) async {
+  ///
+  /// Returns `null` when the count is unknown, because no relay answered or
+  /// the query failed. An empty [audioEventId] cannot be referenced by any
+  /// video, so it returns 0.
+  Future<int?> fetchVideosUsingSoundCount(String audioEventId) async {
     if (audioEventId.isEmpty) {
       Log.debug(
         'Empty audioEventId provided to fetchVideosUsingSoundCount',
@@ -353,13 +354,20 @@ class SoundsRepository {
       );
 
       return result.count;
+    } on CountUnavailableException catch (e) {
+      Log.debug(
+        'Video count for audio $audioEventId unavailable: ${e.reason}',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
     } on Exception catch (e) {
       Log.error(
         'Error fetching video count for audio: $e',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
-      return 0;
+      return null;
     }
   }
 

@@ -1457,8 +1457,12 @@ class LikesRepository {
   /// moderation, so it can legitimately be wider or narrower than this count
   /// (#6021). The two denominators are reconciled in divine-funnelcake#626.
   ///
+  /// Returns `null` when the COUNT for a non-addressable event gets no
+  /// answer from any relay. Nothing is cached then, so the next call asks
+  /// again.
+  ///
   /// Note: This counts all likes, not just the current user's.
-  Future<int> getLikeCount(String eventId, {String? addressableId}) async {
+  Future<int?> getLikeCount(String eventId, {String? addressableId}) async {
     final cached = _readCachedLikeCount(eventId, addressableId: addressableId);
     if (cached != null) return cached;
 
@@ -1477,8 +1481,12 @@ class LikesRepository {
     } else {
       // Query relays for the count of Kind 7 reactions on this event.
       final filterByE = Filter(kinds: const [EventKind.reaction], e: [eventId]);
-      final result = await _nostrClient.countEvents([filterByE]);
-      count = result.count;
+      try {
+        final result = await _nostrClient.countEvents([filterByE]);
+        count = result.count;
+      } on CountUnavailableException {
+        return null;
+      }
     }
 
     _writeCachedLikeCount(eventId, count, addressableId: addressableId);

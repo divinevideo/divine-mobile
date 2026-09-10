@@ -443,7 +443,25 @@ void main() {
         expect(filters.first.e, contains(testEventId1));
       });
 
-      test('returns 0 on error', () async {
+      test('returns null when no relay answered the count', () async {
+        when(
+          () => mockNostrClient.countEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        final count = await repository.fetchVideosUsingSoundCount(testEventId1);
+
+        expect(count, isNull);
+      });
+
+      test('returns null rather than zero on error', () async {
         when(
           () => mockNostrClient.countEvents(
             any(),
@@ -456,7 +474,7 @@ void main() {
 
         final count = await repository.fetchVideosUsingSoundCount(testEventId1);
 
-        expect(count, 0);
+        expect(count, isNull);
       });
     });
 

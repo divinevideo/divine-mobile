@@ -1350,6 +1350,18 @@ void main() {
     });
 
     group('getRepostCount', () {
+      test('returns null and caches nothing when no relay answered', () async {
+        when(() => mockNostrClient.countEvents(any())).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        expect(await repository.getRepostCount(testAddressableId), isNull);
+        expect(await repository.getRepostCount(testAddressableId), isNull);
+        verify(() => mockNostrClient.countEvents(any())).called(2);
+      });
+
       test('queries relays for repost count', () async {
         when(
           () => mockNostrClient.countEvents(any()),
@@ -1541,6 +1553,18 @@ void main() {
         final count = await repository.getRepostCountByEventId(testEventId);
 
         expect(count, equals(0));
+      });
+
+      test('returns null and caches nothing when no relay answered', () async {
+        when(() => mockNostrClient.countEvents(any())).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        expect(await repository.getRepostCountByEventId(testEventId), isNull);
+        expect(await repository.getRepostCountByEventId(testEventId), isNull);
+        verify(() => mockNostrClient.countEvents(any())).called(2);
       });
     });
 

@@ -2657,6 +2657,17 @@ void main() {
     });
 
     group('getLikeCount', () {
+      test('returns null and caches nothing when no relay answered', () async {
+        when(() => mockNostrClient.countEvents(any())).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        repository = createRepository();
+        expect(await repository.getLikeCount(testEventId), isNull);
+        expect(await repository.getLikeCount(testEventId), isNull);
+        verify(() => mockNostrClient.countEvents(any())).called(2);
+      });
+
       test('queries relay for like count by event ID', () async {
         when(
           () => mockNostrClient.countEvents(any()),

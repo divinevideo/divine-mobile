@@ -184,6 +184,91 @@ void main() {
       when(() => mockVideoEventService.getVideoById(any())).thenReturn(null);
     });
 
+    group('Usage count', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Future<void> pumpWithUsageCount(
+        WidgetTester tester,
+        AudioEvent sound,
+        Future<int?> usageCount,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(sound: sound),
+            overrides: [
+              soundUsageCountProvider(
+                sound.id,
+              ).overrideWith((ref) => usageCount),
+              videosUsingSoundProvider(
+                sound.id,
+              ).overrideWith((ref) => Future.value(<String>[])),
+              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets('shows how many videos reuse the sound', (tester) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future.value(3));
+
+        expect(
+          find.textContaining(l10n.soundVideoCount(3)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says there are no videos only for a real zero', (
+        tester,
+      ) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future.value(0));
+
+        expect(
+          find.text('6.0s · ${l10n.soundNoVideoCount}'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('leaves the count out while it is unknown', (tester) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future<int?>.value());
+
+        expect(find.text('6.0s'), findsOneWidget);
+        expect(find.textContaining('6.0s ·'), findsNothing);
+        expect(find.textContaining('null'), findsNothing);
+      });
+
+      testWidgets('leaves the count out while it is still loading', (
+        tester,
+      ) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Completer<int?>().future);
+
+        expect(find.text('6.0s'), findsOneWidget);
+        expect(find.textContaining('6.0s ·'), findsNothing);
+      });
+
+      testWidgets(
+        'drops the metadata line when neither the duration nor the count is '
+        'known',
+        (tester) async {
+          final sound = createTestAudioEvent(id: 'sound1', duration: 0);
+
+          await pumpWithUsageCount(tester, sound, Future<int?>.value());
+
+          expect(find.text(sound.title!), findsOneWidget);
+          expect(find.text(''), findsNothing);
+        },
+      );
+    });
+
     group('Widget Structure', () {
       testWidgets('renders with correct title in AppBar', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');

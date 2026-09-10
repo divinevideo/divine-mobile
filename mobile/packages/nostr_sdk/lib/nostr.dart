@@ -428,7 +428,9 @@ class Nostr {
   /// Unlike [queryEvents], this returns a single count rather than
   /// a list of events. Useful for follower counts, reaction counts, etc.
   ///
-  /// Throws [CountNotSupportedException] if no relay supports NIP-45.
+  /// Throws [CountNotSentException] when no relay accepted the COUNT, and
+  /// [CountNotSupportedException] when relays accepted it but none answered.
+  /// See [RelayPool.count].
   Future<CountResponse> countEvents(
     List<Map<String, dynamic>> filters, {
     String? id,

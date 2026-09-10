@@ -13,9 +13,6 @@ enum CountSource {
 
   /// Count came from WebSocket relay (NIP-45)
   websocket,
-
-  /// Count was computed client-side by fetching events
-  clientSide,
 }
 
 /// Result of a COUNT query (NIP-45)
@@ -60,4 +57,20 @@ class CountResult extends Equatable {
 
   @override
   List<Object?> get props => [count, approximate, source];
+}
+
+/// Thrown by `NostrClient.countEvents` when no relay produced a NIP-45 COUNT
+/// answer: every relay was unreachable, too slow, refused the COUNT with
+/// CLOSED, or does not implement it.
+///
+/// The count is unknown. Callers must not substitute a number for it.
+class CountUnavailableException implements Exception {
+  /// Creates an exception carrying the relay layer's [reason].
+  const CountUnavailableException(this.reason);
+
+  /// Why no count came back, as reported by the relay layer.
+  final String reason;
+
+  @override
+  String toString() => 'CountUnavailableException: $reason';
 }

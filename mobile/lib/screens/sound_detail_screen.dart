@@ -385,7 +385,7 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
                 SliverToBoxAdapter(
                   child: _SoundHeader(
                     sound: widget.sound,
-                    usageCount: usageCountAsync.value ?? 0,
+                    usageCount: usageCountAsync.value,
                     isPlaying: _isPlayingPreview,
                     isLoadingPreview: _isLoadingPreview,
                     onPreviewTap: _togglePreview,
@@ -462,7 +462,9 @@ class _SoundHeader extends ConsumerStatefulWidget {
   });
 
   final AudioEvent sound;
-  final int usageCount;
+
+  /// How many videos reuse this sound, or `null` while unknown.
+  final int? usageCount;
   final bool isPlaying;
   final bool isLoadingPreview;
   final VoidCallback onPreviewTap;
@@ -530,10 +532,13 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
     return '$minutes:${remainingSeconds.padLeft(2, '0')}';
   }
 
-  String _videoCountText(AppLocalizations l10n) {
-    if (widget.usageCount == 0) return l10n.soundNoVideoCount;
-    if (widget.usageCount == 1) return l10n.soundOneVideo;
-    return l10n.soundVideoCount(widget.usageCount);
+  String? _videoCountText(AppLocalizations l10n) {
+    return switch (widget.usageCount) {
+      null => null,
+      0 => l10n.soundNoVideoCount,
+      1 => l10n.soundOneVideo,
+      final count => l10n.soundVideoCount(count),
+    };
   }
 
   @override
@@ -598,12 +603,14 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      _metadataText(context.l10n),
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.secondaryText,
+                    if (_metadataText(context.l10n) case final metadata
+                        when metadata.isNotEmpty)
+                      Text(
+                        metadata,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.secondaryText,
+                        ),
                       ),
-                    ),
                     if (profileCreditPubkey != null &&
                         profileCreditName != null)
                       _ProfileAttributionInfo(
@@ -701,7 +708,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
     final duration = _formattedDuration;
     return [
       if (duration.isNotEmpty) duration,
-      _videoCountText(l10n),
+      ?_videoCountText(l10n),
     ].join(' · ');
   }
 

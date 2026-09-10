@@ -73,6 +73,11 @@ class FakeWebSocketChannel implements WebSocketChannel {
 
   void simulateMessage(dynamic message) => _streamController.add(message);
 
+  /// Ends the stream as a relay dropping the socket would. The connection
+  /// manager handles this through the same `_handleDisconnect()` its idle
+  /// heartbeat uses, so it also stands in for an idle drop.
+  Future<void> closeFromRemote() => _streamController.close();
+
   List<dynamic> get sentMessages => _sink.messages;
 
   /// Whether the sink was closed — i.e. whether the socket this channel
