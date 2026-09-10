@@ -43,26 +43,13 @@ class AudioAttributionRow extends ConsumerWidget {
     return audioAsync.when(
       data: (audio) {
         if (audio == null) {
-          Log.warning(
-            'Audio event not found for video ${video.id} '
-            '(audioEventId: ${video.audioEventId})',
-            name: 'AudioAttributionRow',
-            category: LogCategory.ui,
-          );
           return _UnresolvedAudioAttribution(video: video);
         }
 
         return _AudioAttributionContent(audio: audio, sourceVideo: video);
       },
       loading: () => const _AudioAttributionSkeleton(),
-      error: (error, stack) {
-        Log.error(
-          'Failed to load audio for video ${video.id}: $error',
-          name: 'AudioAttributionRow',
-          category: LogCategory.ui,
-        );
-        return _UnresolvedAudioAttribution(video: video);
-      },
+      error: (error, stack) => _UnresolvedAudioAttribution(video: video),
     );
   }
 }

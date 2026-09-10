@@ -10,6 +10,7 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   group(AudioAttributionRow, () {
@@ -71,7 +72,9 @@ void main() {
       bool resolvesAudio = true,
       Object? audioError,
       List<Override> additionalOverrides = const [],
+      ValueNotifier<int>? rebuilds,
     }) {
+      final attribution = AudioAttributionRow(video: video);
       return ProviderScope(
         overrides: [
           if (video.hasAudioReference)
@@ -87,11 +90,31 @@ void main() {
           theme: VineTheme.theme,
           home: Scaffold(
             backgroundColor: Colors.black,
-            body: AudioAttributionRow(video: video),
+            body: rebuilds == null
+                ? attribution
+                : ValueListenableBuilder<int>(
+                    valueListenable: rebuilds,
+                    builder: (context, rebuild, child) => Column(
+                      children: [
+                        Text('Rebuild $rebuild'),
+                        attribution,
+                      ],
+                    ),
+                  ),
           ),
         ),
       );
     }
+
+    int renderPathLogCount() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              entry.name == 'AudioAttributionRow' &&
+              (entry.message.startsWith('Audio event not found') ||
+                  entry.message.startsWith('Failed to load audio')),
+        )
+        .length;
 
     group('Original sound (no audio reference)', () {
       testWidgets('renders nothing for videos without audio reference', (
@@ -224,6 +247,58 @@ void main() {
     // referenced event can't be fetched the credit must degrade rather than
     // vanish (#6185).
     group('Unresolvable audio reference', () {
+      testWidgets('does not log when the null fallback rebuilds', (
+        tester,
+      ) async {
+        final rebuilds = ValueNotifier<int>(0);
+        addTearDown(rebuilds.dispose);
+        final logsBefore = renderPathLogCount();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            resolvesAudio: false,
+            rebuilds: rebuilds,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Sound unavailable'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+
+        rebuilds.value = 1;
+        await tester.pump();
+
+        expect(find.text('Rebuild 1'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+      });
+
+      testWidgets('does not log when the error fallback rebuilds', (
+        tester,
+      ) async {
+        final rebuilds = ValueNotifier<int>(0);
+        addTearDown(rebuilds.dispose);
+        final logsBefore = renderPathLogCount();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            audioError: StateError('relay unavailable'),
+            rebuilds: rebuilds,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Sound unavailable'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+
+        rebuilds.value = 1;
+        await tester.pump();
+
+        expect(find.text('Rebuild 1'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+      });
+
       testWidgets('shows a neutral label when the audio event is null', (
         tester,
       ) async {

@@ -54,6 +54,9 @@ class SoundsRepository {
   /// In-memory cache of audio events by event ID
   final Map<String, AudioEvent> _cache = {};
 
+  /// Event IDs whose stable unresolved result was already reported.
+  final Set<String> _loggedUnresolvedSoundIds = {};
+
   /// Active subscription for real-time updates
   StreamSubscription<Event>? _subscription;
   String? _subscriptionId;
@@ -123,6 +126,7 @@ class SoundsRepository {
     }
     await _soundsSubject.close();
     _cache.clear();
+    _loggedUnresolvedSoundIds.clear();
   }
 
   /// Fetch trending/recent sounds from relays.
@@ -242,11 +246,7 @@ class SoundsRepository {
       final event = await _nostrClient.fetchEventById(eventId);
 
       if (event == null) {
-        Log.debug(
-          'Sound not found: $eventId',
-          name: 'SoundsRepository',
-          category: LogCategory.api,
-        );
+        _logUnresolvedSoundOnce(eventId, 'Sound not found: $eventId');
         return null;
       }
 
@@ -279,21 +279,19 @@ class SoundsRepository {
           // strictly typed), so this is unreachable in practice; kept to
           // downgrade a hypothetical parse failure to a warning + null instead
           // of the outer error + rethrow.
-          Log.warning(
+          _logUnresolvedSoundOnce(
+            eventId,
             'Failed to synthesize original sound from video $eventId: $e',
-            name: 'SoundsRepository',
-            category: LogCategory.api,
           );
           return null;
           // coverage:ignore-end
         }
       }
 
-      Log.warning(
+      _logUnresolvedSoundOnce(
+        eventId,
         'Event $eventId is not a Kind $audioEventKind audio event '
         '(got Kind ${event.kind})',
-        name: 'SoundsRepository',
-        category: LogCategory.api,
       );
       return null;
     } catch (e) {
@@ -311,6 +309,15 @@ class SoundsRepository {
   /// Returns null if the sound is not in the cache.
   AudioEvent? getSoundFromCache(String eventId) {
     return _cache[eventId];
+  }
+
+  void _logUnresolvedSoundOnce(String eventId, String message) {
+    if (!_loggedUnresolvedSoundIds.add(eventId)) return;
+    Log.warning(
+      message,
+      name: 'SoundsRepository',
+      category: LogCategory.api,
+    );
   }
 
   /// Fetch the count of videos using a specific sound, via NIP-45 COUNT.
@@ -603,6 +610,7 @@ class SoundsRepository {
   /// Useful for debugging or forcing a refresh.
   void clearCache() {
     _cache.clear();
+    _loggedUnresolvedSoundIds.clear();
     _emitSounds();
   }
 

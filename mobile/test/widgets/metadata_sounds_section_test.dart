@@ -15,6 +15,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -90,10 +91,14 @@ void main() {
       required VideoEvent video,
       AudioEvent? audioOverride,
       String? viewerPubkey,
+      Object? audioError,
+      ValueNotifier<int>? rebuilds,
     }) {
+      final soundsSection = MetadataSoundsSection(video: video);
       return ProviderScope(
         overrides: [
           soundByIdProvider(testAudioEventId).overrideWith((ref) async {
+            if (audioError != null) throw audioError;
             return audioOverride ?? testAudio;
           }),
           authServiceProvider.overrideWithValue(
@@ -106,13 +111,58 @@ void main() {
           theme: VineTheme.theme,
           home: Scaffold(
             backgroundColor: Colors.black,
-            body: MetadataSoundsSection(video: video),
+            body: rebuilds == null
+                ? soundsSection
+                : ValueListenableBuilder<int>(
+                    valueListenable: rebuilds,
+                    builder: (context, rebuild, child) => Column(
+                      children: [
+                        Text('Rebuild $rebuild'),
+                        soundsSection,
+                      ],
+                    ),
+                  ),
           ),
         ),
       );
     }
 
+    int renderPathLogCount() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              entry.name == 'MetadataSoundsSection' &&
+              entry.message.startsWith('Failed to load audio'),
+        )
+        .length;
+
     group('Shared audio', () {
+      testWidgets('does not log when the error fallback rebuilds', (
+        tester,
+      ) async {
+        final rebuilds = ValueNotifier<int>(0);
+        addTearDown(rebuilds.dispose);
+        final logsBefore = renderPathLogCount();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            audioError: StateError('relay unavailable'),
+            rebuilds: rebuilds,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Original sound'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+
+        rebuilds.value = 1;
+        await tester.pump();
+
+        expect(find.text('Rebuild 1'), findsOneWidget);
+        expect(renderPathLogCount(), logsBefore);
+      });
+
       testWidgets('shows sound title for video with audio reference', (
         tester,
       ) async {
