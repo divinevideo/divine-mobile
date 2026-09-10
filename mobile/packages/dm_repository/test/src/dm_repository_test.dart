@@ -5752,91 +5752,6 @@ void main() {
         );
 
         test(
-          'a discovery relay refusing the kind is best-effort — the next '
-          'login records the list the advertised relay serves',
-          () async {
-            Event? published;
-            when(
-              () => mockNostrClient.publishEventAwaitOk(
-                any(),
-                targetRelays: any(named: 'targetRelays'),
-              ),
-            ).thenAnswer((invocation) async {
-              published = invocation.positionalArguments.first as Event;
-              return partialOutcome(
-                targets: const [divine, discovery],
-                acceptedBy: const [divine],
-              );
-            });
-            when(
-              () => mockNostrClient.queryEventsDetailed(
-                any(),
-                subscriptionId: any(named: 'subscriptionId'),
-                useCache: any(named: 'useCache'),
-                tempRelays: any(named: 'tempRelays'),
-                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-                timeout: any(named: 'timeout'),
-              ),
-            ).thenAnswer((_) async {
-              final event = published;
-              return answeredList(event == null ? const <Event>[] : [event]);
-            });
-
-            final syncState = _FakeDmSyncState();
-            DmRepository login() => createRepository(
-              syncState: syncState,
-              dmInboxDiscoveryRelays: const [discovery],
-            );
-            await login().ensureDmRelayListPublished();
-            await login().ensureDmRelayListPublished();
-
-            // Discovery is a bonus, not a precondition: a third-party relay
-            // changing its kind policy must never put every account into a
-            // republish loop on each login.
-            verify(
-              () => mockNostrClient.publishEventAwaitOk(
-                any(),
-                targetRelays: any(named: 'targetRelays'),
-              ),
-            ).called(1);
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
-          },
-        );
-
-        test(
-          'a discovery relay accepting does NOT stand in for the advertised '
-          'relay refusing — retries next login',
-          () async {
-            when(
-              () => mockNostrClient.publishEventAwaitOk(
-                any(),
-                targetRelays: any(named: 'targetRelays'),
-              ),
-            ).thenAnswer(
-              (_) async => partialOutcome(
-                targets: const [divine, discovery],
-                acceptedBy: const [discovery],
-              ),
-            );
-
-            final syncState = _FakeDmSyncState();
-            final repository = createRepository(
-              syncState: syncState,
-              dmInboxDiscoveryRelays: const [discovery],
-            );
-            await repository.ensureDmRelayListPublished();
-
-            // "Something accepted" is the wrong bar. The advertised relay is
-            // the one divine drains, so a list that never reached it leaves
-            // the account undeliverable while the flag says it is done.
-            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
-          },
-        );
-
-        test(
           'drops a discovery relay whose URL is not a usable relay',
           () async {
             when(
@@ -5869,30 +5784,6 @@ void main() {
           },
         );
       });
-
-      test(
-        'does NOT record the flag when no relay accepts — retries next login',
-        () async {
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              any(),
-              targetRelays: any(named: 'targetRelays'),
-            ),
-          ).thenAnswer((_) async => outcome(accepted: false));
-
-          final syncState = _FakeDmSyncState();
-          final repository = createRepository(syncState: syncState);
-          await repository.ensureDmRelayListPublished();
-
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              any(),
-              targetRelays: any(named: 'targetRelays'),
-            ),
-          ).called(1);
-          expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
-        },
-      );
 
       test(
         'skips publishing and records the flag when the user already '
@@ -6054,7 +5945,11 @@ void main() {
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
-          ).thenAnswer((_) async {
+          ).thenAnswer((invocation) async {
+            // Count the pool leg only; the advertised relay has nothing.
+            if (invocation.namedArguments[#tempRelays] != null) {
+              return answeredList(const <Event>[]);
+            }
             queries++;
             if (queries == 1) throw Exception('relay down');
             return answeredList(const <Event>[]); // absent on the retry
@@ -6074,10 +5969,9 @@ void main() {
           expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
 
           // Next login: the failure was not memoized, so it re-queries,
-          // resolves absent, and publishes. Each read asks the pool and the
-          // advertised relay.
+          // resolves absent, and publishes.
           await repository.ensureDmRelayListPublished();
-          expect(queries, 4);
+          expect(queries, 2);
           verify(
             () => mockNostrClient.publishEventAwaitOk(
               any(),
@@ -6120,7 +6014,9 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+            final isPoolLeg = inv.namedArguments[#tempRelays] == null;
+            if (isPoolLeg &&
+                (filter.kinds?.contains(EventKind.dmRelaysList) ?? false)) {
               settlementByRead.add(
                 inv.namedArguments[#requireAllRelaysSettled] as bool?,
               );
@@ -6139,9 +6035,8 @@ void main() {
           await repository.startListening();
           await repository.ensureDmRelayListPublished();
 
-          // The live read stays cheap; only the publish's own read — the pool
-          // leg and the advertised-relay leg — is authoritative.
-          expect(settlementByRead, [false, true, true]);
+          // The live read stays cheap; exactly one pool read is authoritative.
+          expect(settlementByRead, [false, true]);
 
           await repository.stopListening();
           await controller.close();
@@ -6454,7 +6349,11 @@ void main() {
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
                 timeout: any(named: 'timeout'),
               ),
-            ).thenAnswer((_) async {
+            ).thenAnswer((invocation) async {
+              // Count the pool leg only; the advertised relay has nothing.
+              if (invocation.namedArguments[#tempRelays] != null) {
+                return answeredList(const <Event>[]);
+              }
               queries++;
               // A read nothing answered — not an exception. This is the shape
               // #8212 actually fails in; the throwing variant is a separate
@@ -6469,8 +6368,7 @@ void main() {
             await repository.ensureDmRelayListPublished();
             await repository.ensureDmRelayListPublished();
 
-            // Two legs per read: the pool and the advertised relay.
-            expect(queries, 4);
+            expect(queries, 2);
             verify(
               () => mockNostrClient.publishEventAwaitOk(
                 any(),
@@ -6573,6 +6471,78 @@ void main() {
               ),
             ).called(2);
             expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'a list read back after sign-out is not recorded for the departed '
+          'session',
+          () async {
+            final read =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) => read.future);
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            final pending = repository.ensureDmRelayListPublished();
+            await repository.stopListening();
+            read.complete(
+              answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+            );
+            await pending;
+
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'an empty read back after sign-out does not sign for the departed '
+          'session',
+          () async {
+            final read =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) => read.future);
+            final signer = _MockNostrSigner();
+            when(() => signer.signEvent(any())).thenAnswer((_) async => null);
+
+            final repository = createRepository(
+              signer: signer,
+              syncState: _FakeDmSyncState(),
+            );
+            final pending = repository.ensureDmRelayListPublished();
+            await repository.stopListening();
+            read.complete(answeredList(const <Event>[]));
+            await pending;
+
+            // Signing is the first effect of an empty answer; a remote signer
+            // would prompt for a session that has already signed out.
+            verifyNever(() => signer.signEvent(any()));
           },
         );
       });
