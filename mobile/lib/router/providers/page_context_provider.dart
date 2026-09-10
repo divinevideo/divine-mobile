@@ -1,6 +1,8 @@
 // ABOUTME: Derived provider that parses router location into structured context
 // ABOUTME: Single source of truth for "what page are we on?" with route types and parsing
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/router/providers/router_location_provider.dart';
@@ -904,19 +906,31 @@ String buildRoute(RouteContext context) {
 ///   error: (e, s) => ErrorWidget(e),
 /// );
 /// ```
-final pageContextProvider = StreamProvider<RouteContext>((ref) async* {
-  // Get the raw location stream (overridable in tests)
-  final locations = ref.watch(routerLocationStreamProvider);
+final pageContextProvider = StreamProvider<RouteContext>((ref) {
+  // Derived from routerLocationProvider rather than from the raw location
+  // stream, because that stream is single-subscription and this is not its
+  // only consumer: supportRouteTrailProvider takes the same locations, and
+  // AppRootSideEffects activates it during the first frame — long before the
+  // shell route builds and anything reads this provider. Subscribing to the
+  // raw stream here as well threw `Stream has already been listened to` at
+  // whichever came second, which is this one, and left it in a permanent
+  // error state that read as a null route context app-wide. Going through the
+  // StreamProvider lets Riverpod multiplex the one subscription instead.
+  final contexts = StreamController<RouteContext>();
 
-  // Emit a context immediately if the stream is a single-value Stream.value(...)
-  // (In tests we often use Stream.value('/profile/npub...'))
-  await for (final loc in locations) {
-    final ctx = parseRoute(loc);
+  ref.listen(routerLocationProvider, (_, next) {
+    final location = next.asData?.value;
+    if (location == null || contexts.isClosed) return;
+    final ctx = parseRoute(location);
     Log.info(
       'CTX derive: type=${ctx.type} npub=${pubkeyForLogs(ctx.npub)} index=${ctx.videoIndex}',
       name: 'Route',
       category: LogCategory.system,
     );
-    yield ctx;
-  }
+    contexts.add(ctx);
+  }, fireImmediately: true);
+
+  ref.onDispose(contexts.close);
+
+  return contexts.stream;
 });
