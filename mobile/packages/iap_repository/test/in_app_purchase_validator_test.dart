@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -432,6 +433,38 @@ void main() {
           expect(firstAttemptId, (await secondProof).attemptId);
         },
       );
+
+      for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+        test(
+          'completes verified restored transactions appropriately on $platform',
+          () async {
+            debugDefaultTargetPlatformOverride = platform;
+            addTearDown(() => debugDefaultTargetPlatformOverride = null);
+            final purchase = _purchase(
+              'divine.supporter.monthly',
+              status: PurchaseStatus.restored,
+              purchaseID: '12345',
+            );
+            when(
+              () => store.completePurchase(purchase),
+            ).thenAnswer((_) async {});
+            validator.startListening();
+            final proofFuture = validator.purchaseProofChanges.first;
+            streamController.add([purchase]);
+            final proof = await proofFuture;
+            verifyNever(() => store.completePurchase(purchase));
+
+            await validator.completePurchase(proof);
+            await validator.completePurchase(proof);
+
+            if (platform == TargetPlatform.iOS) {
+              verify(() => store.completePurchase(purchase)).called(1);
+            } else {
+              verifyNever(() => store.completePurchase(purchase));
+            }
+          },
+        );
+      }
 
       test(
         'silent restore does not emit interactive lifecycle state',

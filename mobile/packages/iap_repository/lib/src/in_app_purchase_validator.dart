@@ -267,7 +267,13 @@ class InAppPurchaseValidator implements EntitlementValidator {
   @override
   Future<void> completePurchase(SupporterPurchaseProof proof) async {
     final purchase = _unacknowledgedPurchases[proof.attemptId];
-    if (purchase == null || !purchase.pendingCompletePurchase) return;
+    if (purchase == null) return;
+    // StoreKit 2 sets pendingCompletePurchase=false for restored transactions,
+    // including those redelivered after a crash before finishTransaction.
+    final restoredApplePurchase =
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        purchase.status == PurchaseStatus.restored;
+    if (!purchase.pendingCompletePurchase && !restoredApplePurchase) return;
     await _store.completePurchase(purchase);
     _unacknowledgedPurchases.remove(proof.attemptId);
   }

@@ -48,7 +48,11 @@ and widget tests cover the failure modes but do not replace these checks.
 Verify both Settings entry visibility and the supporter screen in the actual
 release artifact. Existing purchasers need a reachable Restore path and clear
 account-selection guidance. Do not enable purchase access more broadly than the
-restore and entitlement display paths have been tested.
+restore and entitlement display paths have been tested. A renewal can have a new
+store transaction identifier without a saved local owner. Such proofs currently
+require explicit Restore; this change does not establish unattended renewal
+acknowledgment. Test that case before rollout, including a stale canonical account
+and termination before StoreKit finishes the transaction.
 
 ## Reconciliation and monitoring
 
