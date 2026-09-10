@@ -1,5 +1,5 @@
 // ABOUTME: How a one-shot query ended, as RelayPool reports it to a caller:
-// ABOUTME: the end reason, whether a relay may have capped it, NIP-67 finish.
+// ABOUTME: the end reason, caps and NIP-67 finish, and what each relay sent.
 
 import 'query_result.dart';
 
@@ -15,6 +15,7 @@ class QueryOutcome {
     required this.endedBy,
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
+    this.relays = const [],
   });
 
   /// Why the query ended.
@@ -35,4 +36,33 @@ class QueryOutcome {
   /// hint, that it sent every matching stored event; see
   /// [QueryResult.confirmedExhaustive].
   final bool confirmedExhaustive;
+
+  /// Every relay that sent an event matching the query's filters, cache
+  /// relays aside.
+  final List<QueryRelaySummary> relays;
+}
+
+/// What one relay sent for a one-shot query, as the relay pool counted it.
+class QueryRelaySummary {
+  /// Creates the summary of one relay's part in a query.
+  const QueryRelaySummary({
+    required this.url,
+    required this.events,
+    required this.oldestCreatedAt,
+    required this.capped,
+  });
+
+  /// The relay's url.
+  final String url;
+
+  /// How many `EVENT` frames from the relay matched the query's filters,
+  /// block-listed ones included: the count its cap is judged on.
+  final int events;
+
+  /// The oldest `created_at` among those events.
+  final int oldestCreatedAt;
+
+  /// Whether the relay may have stopped at its result-size limit rather than
+  /// run out of matching events; see [QueryResult.possiblyCapped].
+  final bool capped;
 }

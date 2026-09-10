@@ -55,6 +55,9 @@ class _RelayTally {
   /// `EVENT` frames from this relay that matched any filter.
   int events = 0;
 
+  /// The oldest `created_at` among those frames; null while there are none.
+  int? oldestCreatedAt;
+
   /// Whether this relay took the `REQ`; null while the fan-out is still
   /// writing it.
   bool? tookReq;
@@ -141,6 +144,10 @@ class QueryOutcomeTracker {
   /// counts it without matching it again.
   void recordEvent(Relay relay, Event event) {
     final tally = _tallyFor(relay)..events += 1;
+    final oldest = tally.oldestCreatedAt;
+    if (oldest == null || event.createdAt < oldest) {
+      tally.oldestCreatedAt = event.createdAt;
+    }
     if (_filters.length == 1) {
       tally.eventsPerFilter[0] += 1;
       return;
@@ -206,6 +213,17 @@ class QueryOutcomeTracker {
       endedBy: _endedBy(judgements, atDeadline: atDeadline),
       possiblyCapped: judgements.keys.any(_isCapped),
       confirmedExhaustive: _confirmedExhaustive(judgements),
+      relays: [
+        for (final tally in _tallies.values)
+          if (tally.oldestCreatedAt case final oldest?
+              when tally.relay.relayStatus.relayType != RelayType.cache)
+            QueryRelaySummary(
+              url: tally.relay.url,
+              events: tally.events,
+              oldestCreatedAt: oldest,
+              capped: _isCapped(tally),
+            ),
+      ],
     );
     if (_reported ||
         (outcome.endedBy == QueryEnd.complete && !outcome.possiblyCapped)) {

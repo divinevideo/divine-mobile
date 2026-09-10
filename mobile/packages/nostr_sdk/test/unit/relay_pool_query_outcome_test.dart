@@ -124,6 +124,21 @@ const _privateKey =
 
 const _queryId = 'outcome-query';
 
+Matcher _summary({
+  required String url,
+  required int events,
+  required int oldestCreatedAt,
+  required bool capped,
+}) => isA<QueryRelaySummary>()
+    .having((summary) => summary.url, 'url', url)
+    .having((summary) => summary.events, 'events', events)
+    .having(
+      (summary) => summary.oldestCreatedAt,
+      'oldestCreatedAt',
+      oldestCreatedAt,
+    )
+    .having((summary) => summary.capped, 'capped', capped);
+
 void main() {
   group('RelayPool query outcome', () {
     late List<RelayDiagnostic> diagnostics;
@@ -172,12 +187,31 @@ void main() {
     Future<Event> signedEvent({
       int kind = EventKind.textNote,
       List<List<String>> tags = const [],
+      int? createdAt,
     }) async {
       final pubkey = await nostr.ensurePublicKey();
       final event = await nostr.nostrSigner.signEvent(
-        Event(pubkey, kind, tags, 'outcome-event-${eventNumber++}'),
+        Event(
+          pubkey,
+          kind,
+          tags,
+          'outcome-event-${eventNumber++}',
+          createdAt: createdAt,
+        ),
       );
       return event!;
+    }
+
+    /// Sends [relay]'s text notes for the query, one per entry of
+    /// [createdAts].
+    Future<void> sendEventsAt(
+      _ScriptedRelay relay,
+      List<int> createdAts,
+    ) async {
+      for (final createdAt in createdAts) {
+        final event = await signedEvent(createdAt: createdAt);
+        await relay.deliver(['EVENT', _queryId, event.toJson()]);
+      }
     }
 
     Future<void> sendEvents(
@@ -1323,6 +1357,186 @@ void main() {
           isNull,
           reason: 'nothing would ever complete it and release the record',
         );
+      });
+    });
+
+    group('relays', () {
+      test('names each relay that sent events, with how many, the oldest '
+          'created_at and whether it may be capped', () async {
+        final full = await addRelay('wss://full.example');
+        final short = await addRelay('wss://short.example');
+        final empty = await addRelay('wss://empty.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEventsAt(full, [103, 101]);
+        await sendEventsAt(short, [102]);
+        for (final relay in [full, short, empty]) {
+          await relay.deliver(['EOSE', _queryId]);
+        }
+
+        expect(
+          (await outcome.future).relays,
+          unorderedMatches([
+            _summary(
+              url: 'wss://full.example',
+              events: 2,
+              oldestCreatedAt: 101,
+              capped: true,
+            ),
+            _summary(
+              url: 'wss://short.example',
+              events: 1,
+              oldestCreatedAt: 102,
+              capped: false,
+            ),
+          ]),
+          reason: 'a relay that sent nothing has nothing to report',
+        );
+      });
+
+      test('counts events the block list hides from the caller', () async {
+        nostr = newNostr(eventFilters: [_BlockEverything()]);
+        final relay = await addRelay('wss://relay.example');
+        final delivered = <Event>[];
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 2,
+          },
+        ], onEvent: delivered.add);
+
+        await sendEventsAt(relay, [105, 104]);
+        await relay.deliver(['EOSE', _queryId]);
+
+        expect(delivered, isEmpty, reason: 'the block list hid both events');
+        expect((await outcome.future).relays, [
+          _summary(
+            url: 'wss://relay.example',
+            events: 2,
+            oldestCreatedAt: 104,
+            capped: true,
+          ),
+        ]);
+      });
+
+      test('judges each relay by its own hints and events outside the '
+          'filter', () async {
+        final finishes = await addRelay('wss://finishes.example');
+        final more = await addRelay('wss://more.example');
+        final offFilter = await addRelay('wss://off-filter.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEventsAt(finishes, [110, 109]);
+        await finishes.deliver([
+          'EOSE',
+          _queryId,
+          ['finish'],
+        ]);
+        await sendEventsAt(more, [108]);
+        await more.deliver([
+          'EOSE',
+          _queryId,
+          ['more'],
+        ]);
+        await sendEventsAt(offFilter, [107]);
+        await sendEvents(offFilter, 1, kind: EventKind.reaction);
+        await offFilter.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).relays,
+          unorderedMatches([
+            _summary(
+              url: 'wss://finishes.example',
+              events: 2,
+              oldestCreatedAt: 109,
+              capped: false,
+            ),
+            _summary(
+              url: 'wss://more.example',
+              events: 1,
+              oldestCreatedAt: 108,
+              capped: true,
+            ),
+            _summary(
+              url: 'wss://off-filter.example',
+              events: 1,
+              oldestCreatedAt: 107,
+              capped: true,
+            ),
+          ]),
+          reason:
+              'finish clears the cap its count would set, more sets one, '
+              'and so does an event outside the filter, which is not counted',
+        );
+      });
+
+      test('leaves out a cache relay', () async {
+        final relay = await addRelay('wss://relay.example');
+        final cache = _ScriptedRelay('wss://cache.example')
+          ..relayStatus.relayType = RelayType.cache;
+        expect(
+          await nostr.relayPool.add(cache, relayType: RelayType.cache),
+          isTrue,
+        );
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 5,
+          },
+        ]);
+
+        await sendEventsAt(relay, [103]);
+        await sendEventsAt(cache, [90]);
+        await relay.deliver(['EOSE', _queryId]);
+        await cache.deliver(['EOSE', _queryId]);
+
+        expect(
+          (await outcome.future).relays,
+          [
+            _summary(
+              url: 'wss://relay.example',
+              events: 1,
+              oldestCreatedAt: 103,
+              capped: false,
+            ),
+          ],
+          reason:
+              "a cache relay serves the pool's own copies, which say nothing "
+              "about any relay's history",
+        );
+      });
+
+      test('come with the outcome reportQueryDeadline returns', () async {
+        final relay = await addRelay('wss://streams.example');
+        await startQuery([
+          {
+            'kinds': [1],
+            'limit': 5,
+          },
+        ]);
+        await sendEventsAt(relay, [103, 102]);
+
+        final atDeadline = nostr.relayPool.reportQueryDeadline(_queryId);
+        nostr.relayPool.unsubscribe(_queryId);
+
+        expect(atDeadline?.relays, [
+          _summary(
+            url: 'wss://streams.example',
+            events: 2,
+            oldestCreatedAt: 102,
+            capped: false,
+          ),
+        ]);
       });
     });
 
