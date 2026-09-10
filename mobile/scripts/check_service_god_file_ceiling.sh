@@ -71,6 +71,8 @@ service_god_file_repo_path() {
 }
 
 service_god_file_rename_claims() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
   awk -F '\t' '
     /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
     $2 ~ /;[[:space:]]*renamed-from:/ {
@@ -90,7 +92,31 @@ service_god_file_rename_claims() {
       sub(/[[:space:]]*$/, "", old)
       print "CLAIM\t" $1 "\t" count "\t" old
     }
-  ' "$BASELINE_FILE"
+  ' "$file"
+}
+
+# Claims already recorded on the base ref are settled. Their key is not an
+# added row, so the claim grants nothing, and re-checking it makes the renamed
+# service a tripwire: the next line-count change breaks the count equality the
+# settled test used to rely on and the row reports a rename chain instead —
+# including after UPDATE_BASELINE, which carries the annotation forward by key.
+# A settled claim also went on reserving its old key against a later, genuine
+# move. Matched on the path pair rather than the count, so a shrink stays
+# settled; a claim the branch introduces on a key the base ref already has is
+# still a chain or a swap and still fails below.
+service_god_file_unsettled_claims() {
+  local claims="$1" repo_root="$2" base_baseline base_claims=""
+  base_baseline="$(mktemp)"
+  if git -C "$repo_root" show "$BASE_REF:$BASELINE_REPO_PATH" > "$base_baseline" 2>/dev/null; then
+    base_claims="$(service_god_file_rename_claims "$base_baseline")"
+  fi
+  rm -f "$base_baseline"
+  awk -F "$TAB" '
+    NR == FNR { if ($1 == "CLAIM") settled[$2 SUBSEP $4] = 1; next }
+    NF == 0 { next }
+    $1 == "CLAIM" && (($2 SUBSEP $4) in settled) { next }
+    { print }
+  ' <(printf '%s\n' "$base_claims") <(printf '%s\n' "$claims")
 }
 
 validate_baseline_growth_policy() {
@@ -98,11 +124,15 @@ validate_baseline_growth_policy() {
   local claims claim_kind new_key new_count old_key old_count current_count base_new_count
   local old_path new_path rename_status merge_base fail=0
   SERVICE_GOD_FILE_VALID_RENAME_KEYS=""
-  claims="$(service_god_file_rename_claims)"
 
   if [[ "$PATH_PREFIX" != "$repo_root" && "$PATH_PREFIX" != "$repo_root"/* ]]; then
     echo "FAIL [$RATCHET_LABEL]: service path prefix is outside the Git repository: $PATH_PREFIX"
     return 1
+  fi
+
+  claims="$(service_god_file_rename_claims "$BASELINE_FILE")"
+  if [[ "$base_status" -eq 0 ]]; then
+    claims="$(service_god_file_unsettled_claims "$claims" "$repo_root")"
   fi
 
   while IFS="$TAB" read -r claim_kind new_key new_count old_key; do
@@ -129,10 +159,6 @@ validate_baseline_growth_policy() {
     fi
     base_new_count="$(awk -F "$TAB" -v key="$new_key" '$1 == key { print $2; exit }' "$main_f")"
     current_count="$(awk -F "$TAB" -v key="$new_key" '$1 == key { print $2; exit }' "$cur_f")"
-    if [[ -n "$base_new_count" && "$new_count" == "$base_new_count" && "$current_count" == "$base_new_count" ]]; then
-      # A landed annotation grants no growth and must not reserve its old key.
-      continue
-    fi
     if [[ -n "$base_new_count" ]]; then
       echo "FAIL [$RATCHET_LABEL]: rename chains and swaps are not supported: $new_key already exists on $BASE_REF"
       fail=1

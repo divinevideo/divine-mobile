@@ -352,6 +352,91 @@ void main() {
           contains('rename chains and swaps are not supported'),
         );
       });
+
+      /// Commits a base whose baseline already carries a settled annotation,
+      /// the state every rename reaches once it merges. `UPDATE_BASELINE`
+      /// carries the annotation forward by key, so the row outlives the move.
+      void seedLandedAnnotation({int lines = 8}) {
+        writeDistinctLines('new_service.dart', lines);
+        File(baselinePath).writeAsStringSync(
+          '# Frozen baseline\n'
+          'lib/services/new_service.dart\t$lines '
+          '# renamed-from: lib/services/old_service.dart\n',
+        );
+        commit('landed');
+        git(['branch', 'base']);
+      }
+
+      test('a landed annotation does not block a later shrink', () {
+        seedLandedAnnotation();
+        writeDistinctLines('new_service.dart', 6);
+        commit('shrink');
+
+        final res = runAgainstBase();
+
+        expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+        expect(res.stdout, isNot(contains('rename chains')));
+      });
+
+      test('a landed annotation survives regenerating after a shrink', () {
+        seedLandedAnnotation();
+        writeDistinctLines('new_service.dart', 6);
+        run(update: true);
+        commit('shrink');
+
+        expect(
+          baselineRows().single,
+          'lib/services/new_service.dart\t6 '
+          '# renamed-from: lib/services/old_service.dart',
+        );
+        final res = runAgainstBase();
+
+        expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+      });
+
+      test('a landed annotation still reports growth, and only growth', () {
+        seedLandedAnnotation();
+        writeDistinctLines('new_service.dart', 12);
+        commit('grow');
+
+        final res = runAgainstBase();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('GREW past the frozen ceiling'));
+        expect(res.stdout, isNot(contains('rename chains')));
+      });
+
+      test(
+        'a settled claim does not reserve its old key for a later move',
+        () {
+          writeDistinctLines('c_service.dart', 6, prefix: 'c');
+          writeDistinctLines('a_service.dart', 10, prefix: 'a');
+          File(baselinePath).writeAsStringSync(
+            '# Frozen baseline\n'
+            'lib/services/a_service.dart\t10\n'
+            'lib/services/c_service.dart\t6 '
+            '# renamed-from: lib/services/a_service.dart\n',
+          );
+          commit('base');
+          git(['branch', 'base']);
+          serviceFile(
+            'a_service.dart',
+          ).renameSync(serviceFile('e_service.dart').path);
+          File(baselinePath).writeAsStringSync(
+            '# Frozen baseline\n'
+            'lib/services/c_service.dart\t6 '
+            '# renamed-from: lib/services/a_service.dart\n'
+            'lib/services/e_service.dart\t10 '
+            '# renamed-from: lib/services/a_service.dart\n',
+          );
+          commit('move');
+
+          final res = runAgainstBase();
+
+          expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+          expect(res.stdout, isNot(contains('claimed more than once')));
+        },
+      );
     });
   });
 }
