@@ -3094,6 +3094,24 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫన్నెల్‌కేక్ ఆడియన్స్ అనలిటిక్స్ ఎండ్ పాయింట్‌లను జోడిస్తుంది కాబట్టి ప్రేక్షకుల మూలం/భూగోళం/సమయం బ్రేక్‌డౌన్‌లు జనాదరణ పొందుతాయి.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'నిలుపుదల';
 
   @override

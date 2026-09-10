@@ -5089,6 +5089,36 @@ abstract class AppLocalizations {
   /// **'Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.'**
   String get analyticsAudiencePlaceholder;
 
+  /// No description provided for @analyticsSocialCountsInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'About your follower count'**
+  String get analyticsSocialCountsInfoLabel;
+
+  /// No description provided for @analyticsSocialCountsInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About your follower count'**
+  String get analyticsSocialCountsInfoTitle;
+
+  /// No description provided for @analyticsFollowerCountsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your follower count shows the people who follow you on Divine.'**
+  String get analyticsFollowerCountsBody;
+
+  /// No description provided for @analyticsSocialCountsLearnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more'**
+  String get analyticsSocialCountsLearnMore;
+
+  /// No description provided for @analyticsSocialCountsLearnMoreSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more at {url}'**
+  String analyticsSocialCountsLearnMoreSemantics(String url);
+
   /// No description provided for @analyticsRetention.
   ///
   /// In en, this message translates to:

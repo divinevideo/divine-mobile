@@ -3066,6 +3066,24 @@ class AppLocalizationsRo extends AppLocalizations {
       'Detaliile despre sursa/geografia/timpul audienței se vor popula pe măsură ce Funnelcake adaugă endpoint-uri de statistici de audiență.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retenție';
 
   @override

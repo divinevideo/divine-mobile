@@ -1922,6 +1922,18 @@
     }
   },
   "analyticsAudiencePlaceholder": "Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.",
+  "analyticsSocialCountsInfoLabel": "About your follower count",
+  "analyticsSocialCountsInfoTitle": "About your follower count",
+  "analyticsFollowerCountsBody": "Your follower count shows the people who follow you on Divine.",
+  "analyticsSocialCountsLearnMore": "Learn more",
+  "analyticsSocialCountsLearnMoreSemantics": "Learn more at {url}",
+  "@analyticsSocialCountsLearnMoreSemantics": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "analyticsRetention": "Retention",
   "analyticsRetentionWithViews": "Retention curve and watch-time breakdown will appear once per-second/per-bucket retention arrives from Funnelcake.",
   "analyticsRetentionWithoutViews": "Retention data unavailable until view+watch-time analytics are returned by Funnelcake.",

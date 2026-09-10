@@ -441,5 +441,36 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'explains social counts from an accessible info affordance on the '
+      'audience snapshot card (#8276)',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        // The Audience Snapshot card sits low in the lazy ListView; a tall
+        // viewport builds the whole list so the affordance is present.
+        tester.view.physicalSize = const Size(1200, 4000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await pumpAnalyticsScreen(
+          tester,
+          videos: [analyticsVideo(id: 'v1', views: 5)],
+        );
+
+        // The affordance carries a clear accessibility label.
+        final affordance = find.bySemanticsLabel(
+          l10n.analyticsSocialCountsInfoLabel,
+        );
+        expect(affordance, findsOneWidget);
+
+        await tester.tap(affordance);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.analyticsFollowerCountsBody), findsOneWidget);
+      },
+    );
   });
 }

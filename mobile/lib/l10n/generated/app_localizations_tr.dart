@@ -2902,6 +2902,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kaynak/coğrafya/zaman ayrıntıları, Funnelcake kitle analitik uç noktalarını ekledikçe doldurulacak.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Elde Tutma';
 
   @override

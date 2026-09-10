@@ -2935,6 +2935,24 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phân tích nguồn/vùng/thời gian của khán giả sẽ xuất hiện khi Funnelcake bổ sung endpoint phân tích khán giả.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Tỷ lệ giữ chân';
 
   @override

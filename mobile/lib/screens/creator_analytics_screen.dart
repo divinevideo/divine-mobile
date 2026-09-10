@@ -16,6 +16,7 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/creator_analytics/social_counts_info_sheet.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -122,6 +123,10 @@ class _CreatorAnalyticsScreenState
   Widget _buildAudienceSnapshotCard(_CreatorAnalyticsData data) {
     return _AnalyticsCard(
       title: context.l10n.analyticsAudienceSnapshot,
+      info: (
+        onPressed: () => SocialCountsInfoSheet.show(context),
+        label: context.l10n.analyticsSocialCountsInfoLabel,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1410,13 +1415,23 @@ class _DailyTrendCard extends StatelessWidget {
 }
 
 class _AnalyticsCard extends StatelessWidget {
-  const _AnalyticsCard({required this.title, required this.child});
+  const _AnalyticsCard({required this.title, required this.child, this.info});
 
   final String title;
   final Widget child;
 
+  /// Optional info affordance rendered as a trailing icon button in the title
+  /// row. [label] is its accessibility label and tooltip. #8276.
+  final ({VoidCallback onPressed, String label})? info;
+
   @override
   Widget build(BuildContext context) {
+    final info = this.info;
+    final titleText = Text(
+      title,
+      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
+    );
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1427,12 +1442,23 @@ class _AnalyticsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: VineTheme.titleSmallFont(
-              color: context.vineColors.primaryText,
+          if (info == null)
+            titleText
+          else
+            Row(
+              children: [
+                Expanded(child: titleText),
+                DivineIconButton(
+                  icon: DivineIconName.info,
+                  onPressed: info.onPressed,
+                  semanticLabel: info.label,
+                  tooltip: info.label,
+                  type: DivineIconButtonType.ghostSecondary,
+                  size: DivineIconButtonSize.small,
+                  showShadow: false,
+                ),
+              ],
             ),
-          ),
           const SizedBox(height: 12),
           child,
         ],
