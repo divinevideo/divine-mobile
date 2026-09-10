@@ -31,9 +31,14 @@ import 'package:unified_logger/unified_logger.dart';
 /// files with the same basename, which cannot happen for two imports — the
 /// name carries the import's millisecond timestamp.
 ///
-/// Idempotent and best-effort: with nothing to move it does nothing, nothing
-/// is ever overwritten or deleted, and [draftAudioImportsDirName] stays a
-/// known audio root so anything left behind still resolves.
+/// Idempotent and best-effort: with nothing to move it does nothing and
+/// nothing is ever overwritten or deleted. It runs on every launch, so a file
+/// a transient I/O error stranded is picked up next time. A file it can never
+/// move — the same-basename standoff — keeps its bytes but stops being
+/// reachable through a persisted path, since [resolveAudioPath] rebases those
+/// onto the library root either way. That is a leak of one file, not a loss
+/// of one; the alternative is overwriting whichever copy the user still
+/// plays.
 Future<void> migrateDraftOwnedAudioImports({
   Directory? documentsDirectory,
 }) async {
