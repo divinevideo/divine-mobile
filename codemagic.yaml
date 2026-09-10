@@ -1492,15 +1492,15 @@ workflows:
           cleanup() {
             {
               echo "## getprop"
-              adb shell getprop
+              timeout 10s adb shell getprop || true
               echo "## cpuinfo"
-              adb shell cat /proc/cpuinfo
+              timeout 10s adb shell cat /proc/cpuinfo || true
               echo "## SurfaceFlinger"
-              adb shell dumpsys SurfaceFlinger
+              timeout 10s adb shell dumpsys SurfaceFlinger || true
               echo "## media.codec"
-              adb shell dumpsys media.codec
+              timeout 10s adb shell dumpsys media.codec || true
               echo "## top"
-              adb shell top -b -n 1
+              timeout 10s adb shell top -b -n 1 || true
             } > test_reports/feed_ttff_emulator.txt 2>&1 || true
             kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
           }
