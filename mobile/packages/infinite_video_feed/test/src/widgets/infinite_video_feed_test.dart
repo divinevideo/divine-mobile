@@ -6,6 +6,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
@@ -220,6 +221,20 @@ void main() {
         expect(() => key.currentState!.animateToPage(0), returnsNormally);
       });
 
+      testWidgets('debugActivatePage is a no-op for empty list', (
+        tester,
+      ) async {
+        final key = GlobalKey<InfiniteVideoFeedState>();
+
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(key: key, videos: const [], cache: cache),
+          ),
+        );
+
+        expect(() => key.currentState!.debugActivatePage(0), returnsNormally);
+      });
+
       testWidgets('pauseActive and resumeActive are no-ops for empty list', (
         tester,
       ) async {
@@ -237,6 +252,28 @@ void main() {
     });
 
     group('with videos', () {
+      testWidgets('debugActivatePage clamps and activates the requested page', (
+        tester,
+      ) async {
+        final key = GlobalKey<InfiniteVideoFeedState>();
+
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(2, (i) => _makeVideo('debug-page-$i')),
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+
+        key.currentState!.debugActivatePage(99);
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
       testWidgets('pagePositionListenable exposes initial page position', (
         tester,
       ) async {
@@ -1095,6 +1132,247 @@ void main() {
             'isFirstFrameRendered': true,
           });
           await tester.pump();
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets('publishes active-video timing on the first native frame', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        const videoId =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+
+          expect(metrics, hasLength(1));
+          expect(metrics.single.index, 0);
+          expect(metrics.single.loadedFromCache, isFalse);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets('does not re-time a video that is already on screen', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const <int>[0]);
+        const videoId =
+            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(metrics, hasLength(1));
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                isActive: false,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expect(metrics, hasLength(1));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets('times a first frame that arrives after reactivation', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        const videoId =
+            'aaaabbbbccccddddaaaabbbbccccddddaaaabbbbccccddddaaaabbbbccccdddd';
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                isActive: false,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(metrics, isEmpty);
+
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+
+          expect(metrics, hasLength(1));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets('does not time a frame that lands while inactive', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        const videoId =
+            'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                isActive: false,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+
+          expect(metrics, isEmpty);
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();

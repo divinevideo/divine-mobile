@@ -156,3 +156,52 @@ slow; check the cheap things first.
    `dvines.org`. Confirm requests appear from **both** platforms and that each
    endpoint shows as one aggregated pattern with placeholders — a list of
    near-identical URLs differing by one segment means a missing rule.
+
+## Feed time to first frame
+
+Feed time to first frame (TTFF) is measured separately from Firebase network
+requests. `InfiniteVideoFeed` starts a monotonic timer when a video becomes the
+active page and stops it when `DivineVideoPlayerController.firstFrameRendered`
+reports that the native player painted a frame. The resulting
+`FeedFirstFrameMetric` carries the full Nostr event id, feed index, elapsed
+time, and whether playback opened from the local media cache. It is published
+through `FeedFirstFrameMetrics.events` and logged under the stable
+`FeedFirstFrame` logger name.
+
+The enforced performance protocol is:
+
+- Android emulator running the production native player widget.
+- Repository-owned MP4 fixtures served over HTTP at 625,000 bytes per second
+  (5 Mbps), with byte-range support and caching disabled.
+- Ten distinct feed activations cycling through the immutable fixtures.
+- One sample per distinct active video, including the initially visible item.
+- Nearest-rank p90 of the ten activation-to-first-frame durations.
+- A 5,000 ms p90 ceiling.
+
+This is a native decode measurement and therefore does not run in the Linux
+service-test lane. The dedicated `perf-feed-ttff` Codemagic workflow uses the
+fixed `linux_x2` Android runner for pull requests that touch feed playback,
+player, cache, performance-test, or Codemagic configuration. Documentation-only
+and unrelated application changes do not start it. The lane stays non-blocking
+while #7504 tracks reconnecting the Codemagic GitHub webhook, and is owned by
+the mobile playback team. Every run retains the JSONL timeline and fixture
+server log plus emulator CPU, rendering, and codec diagnostics. Each sample
+reports the controller-initialized, source-ready, playback-requested, and
+first-frame boundaries; each HTTP request reports bytes, elapsed time, range,
+and whether the player cancelled it. Assertion failures also print the
+per-video table and p90. The harness has no account, backend, Docker, or secret
+dependency.
+
+Run the same protocol locally from `mobile/`:
+
+```bash
+python3 scripts/ci/serve_ttff_fixtures.py \
+  --directory assets/seed_media/videos --rate 625000
+adb reverse tcp:8765 tcp:8765
+flutter test integration_test/perf/feed_ttff_test.dart -d "$(adb get-serialno)" \
+  --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765
+```
+
+Do not adjust the ceiling from a single run. Re-baseline only after at least 30
+successful runs on the fixed runner, and document the old and new p50/p90 plus
+the reason for the change in the pull request.

@@ -136,6 +136,38 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn("--project-directory", pod_install)
         self.assertNotIn("find ", pod_install)
 
+    def test_feed_ttff_workflow_is_selective_and_self_contained(self) -> None:
+        workflow = self._resolved_config()["workflows"]["perf-feed-ttff"]
+        includes = workflow["when"]["changeset"]["includes"]
+
+        self.assertEqual(20, workflow["max_build_duration"])
+        self.assertEqual(["pull_request"], workflow["triggering"]["events"])
+        self.assertNotIn("groups", workflow["environment"])
+        self.assertIn(
+            "mobile/packages/infinite_video_feed/",
+            includes,
+        )
+        self.assertIn("mobile/scripts/ci/serve_ttff_fixtures.py", includes)
+        self.assertIn("mobile/assets/seed_media/videos/", includes)
+        runner = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if step["name"] == "Run deterministic feed TTFF budget"
+        )
+        self.assertIn("serve_ttff_fixtures.py", runner)
+        self.assertIn("adb reverse tcp:8765 tcp:8765", runner)
+        self.assertIn("adb shell input keyevent KEYCODE_WAKEUP", runner)
+        self.assertIn("adb shell wm dismiss-keyguard", runner)
+        self.assertIn("feed_ttff_test.dart", runner)
+        self.assertIn("FIXTURE_PROBE_ATTEMPTS=0", runner)
+        self.assertIn('"$FIXTURE_PROBE_ATTEMPTS" -ge 30', runner)
+        self.assertIn("within 30 seconds", runner)
+        self.assertIn("dumpsys SurfaceFlinger", runner)
+        self.assertIn("dumpsys media.codec", runner)
+        self.assertIn("test_reports/feed_ttff_emulator.txt", workflow["artifacts"])
+        self.assertNotIn("local_stack", runner)
+        self.assertNotIn("GHCR", runner)
+
     def test_android_e2e_excludes_unbounded_maestro_artifacts(self) -> None:
         workflow = self._resolved_config()["workflows"]["e2e-smoke-android"]
 
