@@ -97,7 +97,7 @@ void main() {
     CuratedList createList({
       required String id,
       String name = 'Test List',
-      List<String> videoEventIds = const [],
+      List<String> videoEventIds = const ['fixture-video'],
       String? description,
       String? pubkey,
       bool isPublic = true,
@@ -440,6 +440,26 @@ void main() {
         expect(results, hasLength(1));
         expect(results.first.id, equals('b'));
       });
+
+      test('excludes lists with no videos, own or subscribed', () {
+        repository
+          ..setOwnLists([
+            createList(
+              id: 'mine',
+              name: 'Dance Drafts',
+              pubkey: _testPubkey,
+              videoEventIds: const [],
+            ),
+          ])
+          ..setSubscribedLists([
+            createList(id: 'bare', name: 'Dance Bare', videoEventIds: const []),
+            createList(id: 'full', name: 'Dance Full'),
+          ]);
+
+        final results = repository.searchLists('dance');
+
+        expect(results.map((l) => l.id), equals(['full']));
+      });
     });
 
     group('getListsByTag', () {
@@ -613,7 +633,7 @@ void main() {
       });
 
       test('leaves a list without videos untouched', () async {
-        final list = createList(id: 'list-1');
+        final list = createList(id: 'list-1', videoEventIds: const []);
 
         final enriched = await repository.resolveListThumbnails([list]);
 

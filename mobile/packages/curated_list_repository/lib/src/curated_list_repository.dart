@@ -147,14 +147,17 @@ class CuratedListRepository {
   /// subscribed ones, by [query] against name, description, and tags
   /// (case-insensitive).
   ///
-  /// Returns an empty list when [query] is blank.
+  /// A list with no videos is left out, as it is from relay results: search
+  /// only surfaces lists with something to watch. Returns an empty list when
+  /// [query] is blank.
   List<CuratedList> searchLists(String query) {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
     final matches = <String, CuratedList>{};
     for (final list in [..._ownLists.values, ..._subscribedLists.values]) {
-      if (!list.isPublic || _isBlocked(list.pubkey)) continue;
+      if (!list.isPublic || !list.hasVideos) continue;
+      if (_isBlocked(list.pubkey)) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
       matches.putIfAbsent(list.authorScopedId, () => list);
     }
@@ -259,8 +262,7 @@ class CuratedListRepository {
       if (list == null) continue;
       final key = list.authorScopedId;
       if (excluded.contains(key)) continue;
-      if (!list.isPublic) continue;
-      if (list.videoEventIds.isEmpty) continue;
+      if (!list.isPublic || !list.hasVideos) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
 
       // Dedup per author and d-tag, keep newest
