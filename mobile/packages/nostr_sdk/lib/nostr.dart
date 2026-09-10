@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:math' as math;
 
 import 'count_response.dart';
 import 'event.dart';
@@ -18,6 +17,7 @@ import 'relay/relay_type.dart';
 import 'relay/signature_verification_policy.dart';
 import 'relay/web_socket_connection_manager.dart';
 import 'signer/nostr_signer.dart';
+import 'src/relay/paged_read_cursor.dart';
 import 'utils/string_util.dart';
 
 class Nostr {
@@ -381,33 +381,40 @@ class Nostr {
   /// walking back through the relays' history with an `until` cursor.
   ///
   /// Each page is a [readEvents] that every relay taking its REQ must settle.
-  /// Where the next page starts depends on which relays filled this one, by
-  /// sending `min(pageSize, max_limit)` events with `max_limit` from their
-  /// NIP-11 document when known, since only a relay that filled its page may
-  /// hold more:
+  /// A relay sends its newest events first, so each one that sent an event
+  /// has sent everything it holds after the oldest `created_at` it sent. The
+  /// page's frontier is the latest of those, so each of those relays has sent
+  /// all it holds after it. An event counts for every relay that sent it, and
+  /// cached copies do not count. Events already collected are dropped by
+  /// event id.
   ///
-  /// * When a relay filled the page, the cursor moves to the newest of those
-  ///   relays' oldest `created_at`, inclusive. Every relay has then sent all
-  ///   it holds above the cursor, and the events asked for again are dropped
-  ///   by event id. When that is the cursor's own second, a relay filled the
-  ///   page inside one second, which no `until` can page within: the cursor
-  ///   steps one second back and the walk ends incomplete, since that second
-  ///   may hold more.
-  /// * When no relay filled the page, one more page asks for anything older
-  ///   than every event returned. A relay may send fewer events than it
-  ///   holds, so the walk is complete only once such a page comes back empty.
-  ///
-  /// An event counts for every relay that sent it; cached events do not move
-  /// the cursor.
+  /// * A page that brought an event not collected before moves the cursor to
+  ///   the frontier, inclusive, so a second the page split is asked for
+  ///   again.
+  /// * A page that brought nothing new moves the cursor down to the frontier
+  ///   when that lies below it. At the cursor's own second it steps one
+  ///   second back, unless a relay may be capped
+  ///   ([QueryResult.possiblyCapped]): a capped relay may hold more events in
+  ///   that second than any `until` can reach, so the walk stops incomplete.
+  /// * A page on which no relay sent an event ends the walk, complete unless
+  ///   a relay may be capped, such as one whose events all fell outside the
+  ///   filter.
   ///
   /// The walk also ends complete on a settled page confirmed exhaustive by
-  /// NIP-67 `finish`. It stops incomplete, keeping what it collected, on the
-  /// first page that does not settle, and on a settled page that brought
-  /// nothing new while a relay may be capped, such as one that answered
-  /// outside the filter the way a relay ignoring `until` does. Either way
-  /// that page's [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also
+  /// NIP-67 `finish`, and stops incomplete, keeping what it collected, on the
+  /// first page that does not settle. Whenever a page stops the walk
+  /// incomplete, its [QueryEnd] is [PagedQueryResult.stoppedBy]. The walk also
   /// stops incomplete after [maxPages] pages, or once [deadline] has passed.
   /// Each page gets [pageTimeout], cut short by [deadline].
+  ///
+  /// Two cases can still lose events. One is a relay that stops short of
+  /// [pageSize] without saying so, and holds more events in one second than
+  /// it sends a page: nothing marks its page capped, so the cursor steps past
+  /// that second with the rest of it unread. A NIP-11 `max_limit` or a NIP-67
+  /// `more` hint from the relay removes that ambiguity. The other is a relay
+  /// whose whole page the event filters hid, on a page where another relay
+  /// brought something new: none of its events reach the frontier, which can
+  /// then fall past the ones it has not sent yet.
   ///
   /// [filter]'s own `limit` gives way to [pageSize], and its own `until`, if
   /// any, starts the walk.
@@ -432,7 +439,6 @@ class Nostr {
     final seenIds = <String>{};
     var until = filter['until'] as int?;
     var pages = 0;
-    var skippedPartOfASecond = false;
 
     PagedQueryResult walked({required bool isComplete, QueryEnd? stoppedBy}) =>
         PagedQueryResult(
@@ -469,75 +475,22 @@ class Nostr {
       if (!page.isComplete) {
         return walked(isComplete: false, stoppedBy: page.endedBy);
       }
-      if (page.confirmedExhaustive) {
-        return walked(isComplete: !skippedPartOfASecond);
-      }
-      final cursor = until;
-      final reach = _pageReach(page.events, pageSize);
-      final frontier = reach.fullFrontier;
-      if (frontier != null && (cursor == null || frontier < cursor)) {
-        until = frontier;
-        continue;
-      }
-      if (newEvents.isEmpty && page.possiblyCapped) {
-        // Nothing new, from a relay that may be capped or did not honour the
-        // filter, and nothing moves the cursor: another page would repeat it.
-        return walked(isComplete: false, stoppedBy: page.endedBy);
-      }
-      if (frontier != null && cursor != null) {
-        // A relay filled the page inside the cursor's own second, which no
-        // `until` can page within.
-        skippedPartOfASecond = true;
-        until = cursor - 1;
-      } else {
-        final oldest = reach.oldestContribution;
-        if (oldest == null) return walked(isComplete: !skippedPartOfASecond);
-        until = oldest - 1;
+      if (page.confirmedExhaustive) return walked(isComplete: true);
+      switch (nextPagedReadStep(
+        cursor: until,
+        events: page.events,
+        broughtNew: newEvents.isNotEmpty,
+        possiblyCapped: page.possiblyCapped,
+      )) {
+        case ReadPageAt(until: final next):
+          until = next;
+        case EndPagedRead(isComplete: true):
+          return walked(isComplete: true);
+        case EndPagedRead():
+          return walked(isComplete: false, stoppedBy: page.endedBy);
       }
     }
     return walked(isComplete: false);
-  }
-
-  /// How far back each relay reached on one page of [readAllEvents], judged
-  /// by the relays each event came from.
-  ///
-  /// `fullFrontier` is the latest of the oldest `created_at`s sent by the
-  /// relays that filled the page, or null when none did. `oldestContribution`
-  /// is the oldest `created_at` any relay sent, or null when none sent one.
-  /// Cached events carry the relays they first came from rather than this
-  /// page's, so they are left out.
-  ({int? fullFrontier, int? oldestContribution}) _pageReach(
-    List<Event> events,
-    int pageSize,
-  ) {
-    final reach = <String, ({int count, int oldest})>{};
-    for (final event in events) {
-      if (event.cacheEvent) continue;
-      for (final url in event.sources) {
-        final seen = reach[url];
-        reach[url] = seen == null
-            ? (count: 1, oldest: event.createdAt)
-            : (
-                count: seen.count + 1,
-                oldest: math.min(seen.oldest, event.createdAt),
-              );
-      }
-    }
-    int? fullFrontier;
-    int? oldestContribution;
-    for (final MapEntry(key: url, value: (:count, :oldest)) in reach.entries) {
-      if (oldestContribution == null || oldest < oldestContribution) {
-        oldestContribution = oldest;
-      }
-      final maxLimit = (getRelay(url) ?? getTempRelay(url))?.info?.maxLimit;
-      final fillsAt = maxLimit == null
-          ? pageSize
-          : math.min(pageSize, maxLimit);
-      if (count >= fillsAt && (fullFrontier == null || oldest > fullFrontier)) {
-        fullFrontier = oldest;
-      }
-    }
-    return (fullFrontier: fullFrontier, oldestContribution: oldestContribution);
   }
 
   /// Set [requireAllRelaysSettled] when an incomplete answer must be reported
