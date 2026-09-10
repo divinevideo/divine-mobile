@@ -88,6 +88,122 @@ void main() {
       );
     });
 
+    test('reports a full-settlement relay that never settles', () async {
+      final relay = _DiagnosticRelay('wss://silent.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      await nostr.relayPool.query(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'silent-full-settlement-id',
+        onComplete: () {},
+        requireAllRelaysSettled: true,
+      );
+      nostr.unsubscribe('silent-full-settlement-id');
+
+      final settlements = diagnostics.where(
+        (entry) => entry.site == RelayDiagnosticSite.requestSettlement,
+      );
+      expect(
+        settlements.where(
+          (entry) =>
+              entry.relayUrl == relay.url &&
+              entry.message.contains('did not settle request'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        settlements.map((entry) => entry.message),
+        contains(
+          contains(
+            'answered=false, closedWithoutAnswer=false, '
+            'noRelayTookRequest=false',
+          ),
+        ),
+      );
+    });
+
+    test('reports a full-settlement query that no relay took', () async {
+      await nostr.relayPool.query(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'no-relay-full-settlement-id',
+        onComplete: () {},
+        requireAllRelaysSettled: true,
+      );
+
+      expect(
+        diagnostics.map((entry) => entry.message),
+        contains(contains('noRelayTookRequest=true')),
+      );
+    });
+
+    test(
+      'classifies a refused full-settlement query before teardown',
+      () async {
+        final relay = _DiagnosticRelay('wss://refused.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+
+        await nostr.relayPool.query(
+          const [
+            {
+              'kinds': [1],
+            },
+          ],
+          (_) {},
+          id: 'refused-full-settlement-id',
+          onComplete: () {},
+          requireAllRelaysSettled: true,
+        );
+        await relay.deliver([
+          'CLOSED',
+          'refused-full-settlement-id',
+          'error: unavailable',
+        ]);
+        nostr.unsubscribe('refused-full-settlement-id');
+
+        expect(
+          diagnostics.map((entry) => entry.message),
+          contains(contains('closedWithoutAnswer=true')),
+        );
+      },
+    );
+
+    test('does not warn when every full-settlement relay settles', () async {
+      final relay = _DiagnosticRelay('wss://settled.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      await nostr.relayPool.query(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'settled-full-settlement-id',
+        onComplete: () {},
+        requireAllRelaysSettled: true,
+      );
+      await relay.deliver(['EOSE', 'settled-full-settlement-id']);
+
+      expect(
+        diagnostics.where(
+          (entry) =>
+              entry.site == RelayDiagnosticSite.requestSettlement &&
+              entry.level == RelayDiagnosticLevel.warning,
+        ),
+        isEmpty,
+      );
+    });
+
     test(
       'does not copy raw NOTICE or CLOSED bodies into diagnostics',
       () async {
