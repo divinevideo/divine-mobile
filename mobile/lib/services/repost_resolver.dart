@@ -283,7 +283,7 @@ class RepostResolver {
       return await query;
     } finally {
       if (identical(_inFlightQueries[queryKey], query)) {
-        _inFlightQueries.remove(queryKey);
+        final _ = _inFlightQueries.remove(queryKey);
       }
     }
   }
