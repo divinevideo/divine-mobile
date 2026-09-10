@@ -778,11 +778,37 @@ void main() {
         ),
       );
 
+      // A tile bone is a filled box that rounds an outer corner of the
+      // collage; the skeletonizer paints bones outside the frame's clip,
+      // so the four corners have to come from the tiles themselves.
+      const corner = Radius.circular(16);
+      bool isTileBone(Widget w) =>
+          w is DecoratedBox &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).color != null &&
+          [
+            (w.decoration as BoxDecoration).borderRadius,
+          ].whereType<BorderRadius>().any(
+            (r) =>
+                r.topLeft == corner ||
+                r.topRight == corner ||
+                r.bottomLeft == corner ||
+                r.bottomRight == corner,
+          );
       final tiles = find.descendant(
         of: find.byType(DivineListThumbnailSkeleton),
-        matching: find.byType(ColoredBox),
+        matching: find.byWidgetPredicate(isTileBone),
       );
       expect(tiles, findsNWidgets(3));
+      final radii = tester
+          .widgetList<DecoratedBox>(tiles)
+          .map((w) => (w.decoration as BoxDecoration).borderRadius!)
+          .cast<BorderRadius>()
+          .toList();
+      expect(radii.where((r) => r.topLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.topRight == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomRight == corner), hasLength(1));
       // The large tile keeps the collage's Figma split.
       final large = tester.getSize(tiles.first);
       final media = tester.getSize(

@@ -611,7 +611,7 @@ class DivineListThumbnailSkeleton extends StatelessWidget {
             slotBuilder: (_) => const _FanSlotBone(),
           ),
           _ListKind.people => _CollageFrame(
-            tileBuilder: (_, seams) => _TileBone(seams: seams),
+            tileBuilder: (slot, seams) => _TileBone(slot: slot, seams: seams),
           ),
         },
         const SizedBox(height: 8),
@@ -656,17 +656,36 @@ class _FanSlotBone extends StatelessWidget {
 }
 
 /// A collage tile as a bone, with its share of the seams kept painted.
+///
+/// The card's tiles are square and the frame's clip rounds the collage; a
+/// bone is painted by the skeletonizer outside that clip, so each tile
+/// rounds the outer corner it owns itself and nothing shows past the
+/// outline.
 class _TileBone extends StatelessWidget {
-  const _TileBone({required this.seams});
+  const _TileBone({required this.slot, required this.seams});
 
+  final int slot;
   final Border seams;
 
   @override
   Widget build(BuildContext context) {
+    const corner = Radius.circular(_mediaRadius);
+    final corners = switch (slot) {
+      0 => const BorderRadius.horizontal(left: corner),
+      1 => const BorderRadius.only(topRight: corner),
+      _ => const BorderRadius.only(bottomRight: corner),
+    };
     return Stack(
       fit: StackFit.expand,
       children: [
-        Skeleton.leaf(child: ColoredBox(color: context.vineColors.skeleton)),
+        Skeleton.leaf(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.vineColors.skeleton,
+              borderRadius: corners,
+            ),
+          ),
+        ),
         Skeleton.keep(
           child: DecoratedBox(decoration: BoxDecoration(border: seams)),
         ),
