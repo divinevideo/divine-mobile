@@ -1922,13 +1922,18 @@
     }
   },
   "analyticsAudiencePlaceholder": "Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.",
-  "analyticsSocialCountsInfoLabel": "How social counts are calculated",
-  "analyticsSocialCountsInfoTitle": "How social counts work",
-  "analyticsFollowerCountsHeading": "How follower counts work",
-  "analyticsFollowerCountsBody": "Divine counts the accounts that currently follow you. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.",
-  "analyticsBlockingHeading": "What blocking does",
-  "analyticsBlockingBody": "When you block someone, Divine stops showing you their content and hides their interactions with you. Because Nostr is a public network, blocking doesn’t remove their follow or change public follower counts, and it can’t stop them from finding your public posts through another app or relay.",
+  "analyticsSocialCountsInfoLabel": "About your follower count",
+  "analyticsSocialCountsInfoTitle": "About your follower count",
+  "analyticsFollowerCountsBody": "Your follower count shows the people who follow you on Divine.",
   "analyticsSocialCountsLearnMore": "Learn more",
+  "analyticsSocialCountsLearnMoreSemantics": "Learn more at {url}",
+  "@analyticsSocialCountsLearnMoreSemantics": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "analyticsRetention": "Retention",
   "analyticsRetentionWithViews": "Retention curve and watch-time breakdown will appear once per-second/per-bucket retention arrives from Funnelcake.",
   "analyticsRetentionWithoutViews": "Retention data unavailable until view+watch-time analytics are returned by Funnelcake.",

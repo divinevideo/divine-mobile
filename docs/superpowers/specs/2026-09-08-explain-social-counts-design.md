@@ -1,8 +1,8 @@
 # Explain social counts in Creator Analytics (#8276) — design
 
-**Problem.** Creator Analytics shows follower/following totals but never explains
-how they are calculated. The totals deliberately exclude blocked accounts and can
-differ from other Nostr clients (indexing differences), which surprises creators.
+**Problem.** Creator Analytics shows a follower total without defining what it
+represents. The app needs a short explanation while leaving detailed questions
+about blocking and count differences to the public FAQ.
 
 ## Approved design (bounded)
 
@@ -14,25 +14,29 @@ differ from other Nostr clients (indexing differences), which surprises creators
 
 2. **Explanation surface.** New `SocialCountsInfoSheet`, opened via
    `VineBottomSheet.show<void>` (the standard non-video sheet), built like
-   `MetadataVerificationInfoSheet`: a title plus two headed sections, using
-   `VineTheme` fonts and `vineColors` adaptive tokens. Two paragraphs are too much
-   for a tooltip.
+   `MetadataVerificationInfoSheet`: a title, one plain-language sentence, and an
+   accessible link to the detailed FAQ, using `VineTheme` fonts and `vineColors`
+   adaptive tokens.
 
-3. **Copy** (verbatim from the issue), new `app_en.arb` keys, English now and added
+3. **Copy**, using new `app_en.arb` keys, English now and added
    to the `_knownUntranslatedDebt` allowlist per repo convention:
    - `analyticsSocialCountsInfoLabel` — affordance a11y label / tooltip
    - `analyticsSocialCountsInfoTitle` — sheet title
-   - `analyticsFollowerCountsHeading` / `analyticsFollowerCountsBody`
-   - `analyticsBlockingHeading` / `analyticsBlockingBody`
+   - `analyticsFollowerCountsBody` — the in-app definition
+   - `analyticsSocialCountsLearnMore` — visible FAQ link text
+   - `analyticsSocialCountsLearnMoreSemantics` — accessible FAQ link label
 
 4. **Tests (TDD).** Widget tests: tapping the affordance opens the sheet and renders
-   both copy blocks; the affordance exposes its accessibility label.
+   the localized definition; the affordance and FAQ link expose localized
+   accessibility labels; the FAQ link has a 48 dp tap target and opens the stable
+   deep link.
 
-## Deferred (with Matt's sign-off)
+## Detailed FAQ follow-up
 
-**AC #4 — link to the public FAQ.** The FAQ is `divine-web#690`, which has not
-shipped (no live anchor). The link is deferred as an explicit follow-up gated on
-#690 (also assigned to Matt; to be done next), rather than ship a dead link.
+Blocking, unblocking, propagation delay, and cross-app count differences belong
+in the public FAQ rather than this compact in-app surface. That content is tracked
+in #9055. The app links to the stable `https://divine.video/faq#follower-counts`
+anchor.
 
 ## Files
 

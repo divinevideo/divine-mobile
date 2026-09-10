@@ -446,6 +446,8 @@ void main() {
       'explains social counts from an accessible info affordance on the '
       'audience snapshot card (#8276)',
       (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
         // The Audience Snapshot card sits low in the lazy ListView; a tall
         // viewport builds the whole list so the affordance is present.
         tester.view.physicalSize = const Size(1200, 4000);
@@ -460,22 +462,14 @@ void main() {
 
         // The affordance carries a clear accessibility label.
         final affordance = find.bySemanticsLabel(
-          'How social counts are calculated',
+          l10n.analyticsSocialCountsInfoLabel,
         );
         expect(affordance, findsOneWidget);
 
         await tester.tap(affordance);
         await tester.pumpAndSettle();
 
-        // Both copy blocks are readable in the opened explanation.
-        expect(
-          find.textContaining('counts the accounts that currently follow you'),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('stops showing you their content'),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.analyticsFollowerCountsBody), findsOneWidget);
       },
     );
   });

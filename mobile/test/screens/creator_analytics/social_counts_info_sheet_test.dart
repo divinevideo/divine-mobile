@@ -15,6 +15,7 @@ void main() {
     testWidgets(
       'Learn more opens the follower-counts FAQ in an external browser',
       (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         final launcher = UrlLauncherTestDouble();
         final originalPlatform = UrlLauncherPlatform.instance;
         UrlLauncherPlatform.instance = launcher;
@@ -32,13 +33,28 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Learn more'));
+        final linkLabel = l10n.analyticsSocialCountsLearnMoreSemantics(
+          'divine.video',
+        );
+        final link = find.bySemanticsLabel(linkLabel);
+        expect(link, findsOneWidget);
+        expect(tester.getSize(link).height, greaterThanOrEqualTo(48));
+
+        final semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.label == linkLabel,
+          ),
+        );
+        expect(semantics.properties.link, isTrue);
+
+        await tester.tap(link);
         await tester.pumpAndSettle();
 
         expect(launcher.launched, hasLength(1));
         expect(
           launcher.launched.single.url,
-          'https://about.divine.video/faqs/#follower-counts',
+          'https://divine.video/faq#follower-counts',
         );
         expect(launcher.launched.single.useExternalApplication, isTrue);
       },

@@ -6,18 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 
-/// Bottom sheet explaining social-count calculation and blocking.
-///
-/// Follower totals deliberately exclude blocked accounts and can differ across
-/// Nostr clients (indexing differences); the raw numbers on the Audience
-/// Snapshot card don't convey that, so this supplies the explanation. #8276.
+const _linkTapSlack = 14.0;
+
+/// Bottom sheet defining the follower count shown in Creator Analytics.
 class SocialCountsInfoSheet extends StatelessWidget {
   @visibleForTesting
   const SocialCountsInfoSheet({super.key});
 
-  /// The public FAQ answer this sheet links out to. Anchors to the
-  /// `follower-counts` entry the whole site's FAQ links point at. #8276 AC#4.
-  static const _faqUrl = 'https://about.divine.video/faqs/#follower-counts';
+  static const _faqUrl = 'https://divine.video/faq#follower-counts';
 
   /// Opens the explanation over Creator Analytics.
   static Future<void> show(BuildContext context) {
@@ -28,7 +24,7 @@ class SocialCountsInfoSheet extends StatelessWidget {
       isScrollControlled: true,
       body: const SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 24 - _linkTapSlack),
           child: SocialCountsInfoSheet(),
         ),
       ),
@@ -44,40 +40,29 @@ class SocialCountsInfoSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          l10n.analyticsFollowerCountsHeading,
-          style: VineTheme.titleSmallFont(
-            color: context.vineColors.primaryText,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
           l10n.analyticsFollowerCountsBody,
           style: VineTheme.bodyMediumFont(
             color: context.vineColors.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 20),
-        Text(
-          l10n.analyticsBlockingHeading,
-          style: VineTheme.titleSmallFont(
-            color: context.vineColors.primaryText,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          l10n.analyticsBlockingBody,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.onSurfaceVariant,
-          ),
-        ),
         const SizedBox(height: 12),
-        GestureDetector(
-          onTap: () => openExternalLink(context, _faqUrl),
-          child: Text(
-            l10n.analyticsSocialCountsLearnMore,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.primaryText,
-            ).copyWith(decoration: TextDecoration.underline),
+        Semantics(
+          link: true,
+          label: l10n.analyticsSocialCountsLearnMoreSemantics('divine.video'),
+          child: GestureDetector(
+            onTap: () => openExternalLink(context, _faqUrl),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: _linkTapSlack),
+              child: ExcludeSemantics(
+                child: Text(
+                  l10n.analyticsSocialCountsLearnMore,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.primaryText,
+                  ).copyWith(decoration: TextDecoration.underline),
+                ),
+              ),
+            ),
           ),
         ),
       ],

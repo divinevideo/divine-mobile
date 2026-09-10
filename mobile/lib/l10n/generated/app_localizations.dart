@@ -5092,44 +5092,32 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsSocialCountsInfoLabel.
   ///
   /// In en, this message translates to:
-  /// **'How social counts are calculated'**
+  /// **'About your follower count'**
   String get analyticsSocialCountsInfoLabel;
 
   /// No description provided for @analyticsSocialCountsInfoTitle.
   ///
   /// In en, this message translates to:
-  /// **'How social counts work'**
+  /// **'About your follower count'**
   String get analyticsSocialCountsInfoTitle;
-
-  /// No description provided for @analyticsFollowerCountsHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'How follower counts work'**
-  String get analyticsFollowerCountsHeading;
 
   /// No description provided for @analyticsFollowerCountsBody.
   ///
   /// In en, this message translates to:
-  /// **'Divine counts the accounts that currently follow you. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.'**
+  /// **'Your follower count shows the people who follow you on Divine.'**
   String get analyticsFollowerCountsBody;
-
-  /// No description provided for @analyticsBlockingHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'What blocking does'**
-  String get analyticsBlockingHeading;
-
-  /// No description provided for @analyticsBlockingBody.
-  ///
-  /// In en, this message translates to:
-  /// **'When you block someone, Divine stops showing you their content and hides their interactions with you. Because Nostr is a public network, blocking doesn’t remove their follow or change public follower counts, and it can’t stop them from finding your public posts through another app or relay.'**
-  String get analyticsBlockingBody;
 
   /// No description provided for @analyticsSocialCountsLearnMore.
   ///
   /// In en, this message translates to:
   /// **'Learn more'**
   String get analyticsSocialCountsLearnMore;
+
+  /// No description provided for @analyticsSocialCountsLearnMoreSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more at {url}'**
+  String analyticsSocialCountsLearnMoreSemantics(String url);
 
   /// No description provided for @analyticsRetention.
   ///

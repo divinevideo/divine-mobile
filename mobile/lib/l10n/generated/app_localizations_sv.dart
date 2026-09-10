@@ -2961,28 +2961,22 @@ class AppLocalizationsSv extends AppLocalizations {
       'Publikkälla/geografi/tidsuppdelningar kommer att fyllas i när Funnelcake lägger till publikstatistikslutpunkter.';
 
   @override
-  String get analyticsSocialCountsInfoLabel =>
-      'How social counts are calculated';
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'How social counts work';
-
-  @override
-  String get analyticsFollowerCountsHeading => 'How follower counts work';
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Divine counts the accounts that currently follow you. Counts can differ from other Nostr apps because different services may have indexed different parts of the public network.';
-
-  @override
-  String get analyticsBlockingHeading => 'What blocking does';
-
-  @override
-  String get analyticsBlockingBody =>
-      'When you block someone, Divine stops showing you their content and hides their interactions with you. Because Nostr is a public network, blocking doesn’t remove their follow or change public follower counts, and it can’t stop them from finding your public posts through another app or relay.';
+      'Your follower count shows the people who follow you on Divine.';
 
   @override
   String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
 
   @override
   String get analyticsRetention => 'Retention';
