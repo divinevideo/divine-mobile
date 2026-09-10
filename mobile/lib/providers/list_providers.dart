@@ -17,6 +17,7 @@ import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 part 'list_providers.g.dart';
 
@@ -75,39 +76,64 @@ class _LiveDeps {
       _torndown ? null : _ref.read(nostrServiceProvider);
 }
 
-/// Provider for videos from all members of a user list
+/// Provider for the videos published by the members of a user list.
+///
+/// The members' newest videos come from
+/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// holds from those members shows first, so a list of followed people paints
+/// before the round trip returns; the fetched set is then merged in. A fetch
+/// that fails after that first paint keeps the pooled videos; one that fails
+/// with nothing to show surfaces the error, so a network failure never reads
+/// as "no videos yet".
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
 /// touch `Ref`.
 @riverpod
 Stream<List<VideoEvent>> userListMemberVideos(Ref ref, List<String> pubkeys) {
-  // Watch discovery videos and filter to only those from list members
-  final allVideosAsync = ref.watch(videoEventsProvider);
-
-  return _userListMemberVideos(allVideosAsync, pubkeys);
+  final pooled = ref.read(videoEventsProvider).value ?? const <VideoEvent>[];
+  final repository = ref.read(videosRepositoryProvider);
+  return _userListMemberVideos(repository, pooled, pubkeys);
 }
 
 Stream<List<VideoEvent>> _userListMemberVideos(
-  AsyncValue<List<VideoEvent>> allVideosAsync,
+  VideosRepository repository,
+  List<VideoEvent> pooled,
   List<String> pubkeys,
 ) async* {
-  await for (final _ in Stream.value(null)) {
-    if (allVideosAsync.hasValue) {
-      final allVideos = allVideosAsync.value!;
+  final members = pubkeys.toSet();
+  final seeded = _newestFirst([
+    for (final video in pooled)
+      if (members.contains(video.pubkey)) video,
+  ]);
+  if (seeded.isNotEmpty) yield seeded;
 
-      // Filter videos to only those authored by list members
-      final listMemberVideos = allVideos
-          .where((video) => pubkeys.contains(video.pubkey))
-          .toList();
-
-      // Sort by creation time (newest first)
-      listMemberVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      yield listMemberVideos;
-    }
+  final List<VideoEvent> fetched;
+  try {
+    fetched = await repository.getVideosByAuthors(authorPubkeys: pubkeys);
+  } on Object catch (error, stackTrace) {
+    if (seeded.isEmpty) rethrow;
+    Log.warning(
+      'Member videos fetch failed; keeping ${seeded.length} pooled videos',
+      name: 'ListProviders',
+      category: LogCategory.relay,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return;
   }
+
+  final seenIds = fetched.map((video) => video.id).toSet();
+  yield _newestFirst([
+    ...fetched,
+    for (final video in seeded)
+      if (seenIds.add(video.id)) video,
+  ]);
 }
+
+List<VideoEvent> _newestFirst(List<VideoEvent> videos) =>
+    videos..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
 /// Provider that streams public lists containing a specific video
 /// Accumulates results as they arrive from Nostr relays, yielding updated list
