@@ -141,6 +141,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         includes = workflow["when"]["changeset"]["includes"]
 
         self.assertEqual(20, workflow["max_build_duration"])
+        self.assertEqual("linux_x4", workflow["instance_type"])
         self.assertEqual(["pull_request"], workflow["triggering"]["events"])
         self.assertNotIn("groups", workflow["environment"])
         self.assertIn(
