@@ -180,7 +180,7 @@ The enforced performance protocol is:
 
 This is a native decode measurement and therefore does not run in the Linux
 service-test lane. The dedicated `perf-feed-ttff` Codemagic workflow uses the
-fixed `linux_x4` Android runner for pull requests that touch feed playback,
+fixed `linux_x2` Android runner for pull requests that touch feed playback,
 player, cache, performance-test, or Codemagic configuration. Documentation-only
 and unrelated application changes do not start it. The lane stays non-blocking
 while #7504 tracks reconnecting the Codemagic GitHub webhook, and is owned by
