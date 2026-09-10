@@ -20,6 +20,24 @@ class ThrottledFixtureHandler(SimpleHTTPRequestHandler):
     rate_bytes_per_second = 625_000
     chunk_size = 64 * 1024
 
+    def do_GET(self) -> None:  # noqa: N802
+        self._request_started = time.monotonic()
+        self._bytes_sent = 0
+        cancelled = False
+        try:
+            super().do_GET()
+        except (BrokenPipeError, ConnectionResetError):
+            cancelled = True
+        finally:
+            elapsed_ms = round((time.monotonic() - self._request_started) * 1000)
+            print(
+                f"TTFF_HTTP path={self.path} "
+                f"range={self.headers.get('Range', 'none')} "
+                f"bytes={self._bytes_sent} durationMs={elapsed_ms} "
+                f"cancelled={str(cancelled).lower()}",
+                flush=True,
+            )
+
     def send_head(self):  # type: ignore[no-untyped-def]
         path = Path(self.translate_path(self.path))
         if not path.is_file():
@@ -73,6 +91,7 @@ class ThrottledFixtureHandler(SimpleHTTPRequestHandler):
             outputfile.write(chunk)
             outputfile.flush()
             sent += len(chunk)
+            self._bytes_sent = sent
             remaining -= len(chunk)
             target_elapsed = sent / self.rate_bytes_per_second
             delay = target_elapsed - (time.monotonic() - started)

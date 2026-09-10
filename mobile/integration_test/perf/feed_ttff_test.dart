@@ -113,6 +113,10 @@ void main() {
           debugPrint(
             'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
             'durationMs=${metric.duration.inMilliseconds} '
+            'controllerInitializedMs='
+            '${metric.controllerInitializedAt?.inMilliseconds} '
+            'sourceReadyMs=${metric.sourceReadyAt?.inMilliseconds} '
+            'playbackRequestedMs=${metric.playbackRequestedAt?.inMilliseconds} '
             'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
           );
         }

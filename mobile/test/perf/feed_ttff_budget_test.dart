@@ -56,6 +56,9 @@ void main() {
         ),
       );
       expect(output, contains('durationMs=1234'));
+      expect(output, contains('controllerInitializedMs=null'));
+      expect(output, contains('sourceReadyMs=null'));
+      expect(output, contains('playbackRequestedMs=null'));
       expect(output, contains('cache=miss'));
     });
   });

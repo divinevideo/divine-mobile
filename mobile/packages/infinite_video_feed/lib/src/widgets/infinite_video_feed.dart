@@ -901,6 +901,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!allowed) return;
     await controller.setVolume(_volume);
     if (!stillOwnsController()) return;
+    _firstFrameTimerFor(index)?.markPlaybackRequested();
     await controller.play();
     if (!stillOwnsController()) return;
     // Playback resumed cleanly — clear any auto-retry budget spent on this
@@ -934,6 +935,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       videoId: widget.videos[index].id,
       index: index,
     );
+  }
+
+  FeedFirstFrameTimer? _firstFrameTimerFor(int index) {
+    final timer = _activeFirstFrameTimer;
+    return timer?.index == index ? timer : null;
   }
 
   Future<void> _recordFirstFrame(
@@ -1221,6 +1227,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     try {
       await controller.initialize();
       if (!guardInitOwnership('initialize')) return;
+      _firstFrameTimerFor(index)?.markControllerInitialized();
 
       // coverage:ignore-start
       // Native controller initialization and source selection require the
@@ -1329,6 +1336,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           'attempt=$openedSourceIdx',
         );
       }
+      _firstFrameTimerFor(index)?.markSourceReady();
 
       await controller.setLooping(looping: true);
       if (!guardInitOwnership('setLooping')) return;

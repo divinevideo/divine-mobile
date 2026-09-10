@@ -10,6 +10,9 @@ class FeedFirstFrameMetric {
     required this.index,
     required this.duration,
     required this.loadedFromCache,
+    this.controllerInitializedAt,
+    this.sourceReadyAt,
+    this.playbackRequestedAt,
   });
 
   /// Full Nostr event id for the video that rendered.
@@ -23,6 +26,15 @@ class FeedFirstFrameMetric {
 
   /// Whether the player opened a file from the local media cache.
   final bool loadedFromCache;
+
+  /// Time from activation until the native controller was initialized.
+  final Duration? controllerInitializedAt;
+
+  /// Time from activation until the media source was ready.
+  final Duration? sourceReadyAt;
+
+  /// Time from activation until playback was requested.
+  final Duration? playbackRequestedAt;
 }
 
 /// Process-wide stream of completed fullscreen-feed first-frame measurements.
@@ -51,6 +63,10 @@ abstract final class FeedFirstFrameMetrics {
     Log.info(
       'videoId=${metric.videoId} index=${metric.index} '
       'durationMs=${metric.duration.inMilliseconds} '
+      'controllerInitializedMs='
+      '${metric.controllerInitializedAt?.inMilliseconds} '
+      'sourceReadyMs=${metric.sourceReadyAt?.inMilliseconds} '
+      'playbackRequestedMs=${metric.playbackRequestedAt?.inMilliseconds} '
       'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
       name: 'FeedFirstFrame',
       category: LogCategory.video,
@@ -71,6 +87,24 @@ class FeedFirstFrameTimer {
 
   final Stopwatch _stopwatch;
   bool _completed = false;
+  Duration? _controllerInitializedAt;
+  Duration? _sourceReadyAt;
+  Duration? _playbackRequestedAt;
+
+  /// Records that platform-controller initialization completed.
+  void markControllerInitialized() {
+    _controllerInitializedAt ??= _stopwatch.elapsed;
+  }
+
+  /// Records that the player accepted and prepared its media source.
+  void markSourceReady() {
+    _sourceReadyAt ??= _stopwatch.elapsed;
+  }
+
+  /// Records that playback was requested from the initialized player.
+  void markPlaybackRequested() {
+    _playbackRequestedAt ??= _stopwatch.elapsed;
+  }
 
   /// Stops and publishes this measurement once.
   FeedFirstFrameMetric? complete({required bool loadedFromCache}) {
@@ -82,6 +116,9 @@ class FeedFirstFrameTimer {
       index: index,
       duration: _stopwatch.elapsed,
       loadedFromCache: loadedFromCache,
+      controllerInitializedAt: _controllerInitializedAt,
+      sourceReadyAt: _sourceReadyAt,
+      playbackRequestedAt: _playbackRequestedAt,
     );
     FeedFirstFrameMetrics._record(metric);
     return metric;

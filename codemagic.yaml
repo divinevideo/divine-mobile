@@ -1490,6 +1490,18 @@ workflows:
           set -euo pipefail
           mkdir -p test_reports
           cleanup() {
+            {
+              echo "## getprop"
+              adb shell getprop
+              echo "## cpuinfo"
+              adb shell cat /proc/cpuinfo
+              echo "## SurfaceFlinger"
+              adb shell dumpsys SurfaceFlinger
+              echo "## media.codec"
+              adb shell dumpsys media.codec
+              echo "## top"
+              adb shell top -b -n 1
+            } > test_reports/feed_ttff_emulator.txt 2>&1 || true
             kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
           }
           trap cleanup EXIT
@@ -1523,6 +1535,7 @@ workflows:
     artifacts:
       - test_reports/*.jsonl
       - test_reports/feed_ttff_fixture_server.log
+      - test_reports/feed_ttff_emulator.txt
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)

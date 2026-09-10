@@ -162,6 +162,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("FIXTURE_PROBE_ATTEMPTS=0", runner)
         self.assertIn('"$FIXTURE_PROBE_ATTEMPTS" -ge 30', runner)
         self.assertIn("within 30 seconds", runner)
+        self.assertIn("dumpsys SurfaceFlinger", runner)
+        self.assertIn("dumpsys media.codec", runner)
+        self.assertIn("test_reports/feed_ttff_emulator.txt", workflow["artifacts"])
         self.assertNotIn("local_stack", runner)
         self.assertNotIn("GHCR", runner)
 

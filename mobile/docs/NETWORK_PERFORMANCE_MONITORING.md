@@ -185,8 +185,12 @@ player, cache, performance-test, or Codemagic configuration. Documentation-only
 and unrelated application changes do not start it. The lane stays non-blocking
 while #7504 tracks reconnecting the Codemagic GitHub webhook, and is owned by
 the mobile playback team. Every run retains the JSONL timeline and fixture
-server log; assertion failures also print the per-video table and p90. The
-harness has no account, backend, Docker, or secret dependency.
+server log plus emulator CPU, rendering, and codec diagnostics. Each sample
+reports the controller-initialized, source-ready, playback-requested, and
+first-frame boundaries; each HTTP request reports bytes, elapsed time, range,
+and whether the player cancelled it. Assertion failures also print the
+per-video table and p90. The harness has no account, backend, Docker, or secret
+dependency.
 
 Run the same protocol locally from `mobile/`:
 

@@ -7,7 +7,10 @@ void main() {
       const videoId =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       final metricFuture = FeedFirstFrameMetrics.events.first;
-      final timer = FeedFirstFrameMetrics.start(videoId: videoId, index: 4);
+      final timer = FeedFirstFrameMetrics.start(videoId: videoId, index: 4)
+        ..markControllerInitialized()
+        ..markSourceReady()
+        ..markPlaybackRequested();
 
       final first = timer.complete(loadedFromCache: true);
       final second = timer.complete(loadedFromCache: true);
@@ -19,6 +22,9 @@ void main() {
       expect(published.index, 4);
       expect(published.loadedFromCache, isTrue);
       expect(published.duration, greaterThanOrEqualTo(Duration.zero));
+      expect(published.controllerInitializedAt, isNotNull);
+      expect(published.sourceReadyAt, isNotNull);
+      expect(published.playbackRequestedAt, isNotNull);
     });
   });
 }
