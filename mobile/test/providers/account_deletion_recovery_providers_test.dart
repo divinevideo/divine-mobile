@@ -303,7 +303,7 @@ void main() {
 
       final adopted = first.read(submittedAccountDeletionAttemptProvider);
       expect(adopted?.recoveryWatchStartedAt, now);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       now = now.add(const Duration(hours: 1));
       final restarted = ProviderContainer(
