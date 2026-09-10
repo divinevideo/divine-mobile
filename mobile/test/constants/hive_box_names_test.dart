@@ -34,6 +34,10 @@ Iterable<File> _dartSources() sync* {
     for (final entity in root.listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       if (entity.path.contains('/test/')) continue;
+      // This boundary must forward its caller's name into Hive. Its callers
+      // remain covered here, and check_direct_hive_opens.sh makes this the
+      // only production file allowed to invoke Hive directly (#9053).
+      if (entity.path.endsWith('/services/hive_box_opener.dart')) continue;
       yield entity;
     }
   }
