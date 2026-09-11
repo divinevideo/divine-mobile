@@ -222,7 +222,11 @@ void main() {
       // Just past the target, on the name: not the target's.
       expect(followOwns(Offset(target.right + 4, target.center.dy)), isFalse);
       // The avatar's bottom-end corner, under the overhang: the target's.
-      expect(followOwns(Offset(avatarRight - 8, target.bottom - 8)), isTrue);
+      // Measured from the avatar's bottom, not the target's: the target
+      // reaches 16dp below the avatar, so a point measured from its bottom
+      // lies outside the avatar and cannot tell which of the two wins.
+      final avatarBottom = tester.getRect(find.byType(UserAvatar)).bottom;
+      expect(followOwns(Offset(avatarRight - 8, avatarBottom - 8)), isTrue);
     });
 
     testWidgets('the target ends where the caption starts', (tester) async {
