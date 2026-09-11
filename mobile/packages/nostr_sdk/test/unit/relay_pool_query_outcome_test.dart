@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
-import 'package:nostr_sdk/relay/query_outcome.dart';
 import 'package:nostr_sdk/relay/relay_info.dart';
 
 /// Relay that records what it was sent and only answers when the test says so.
