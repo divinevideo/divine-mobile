@@ -970,6 +970,23 @@ class DivineVideoPlayerInstanceTest {
         return posted
     }
 
+    /**
+     * A [BufferProfile.FEED] player over the same mocks as [instance] — the
+     * one surface whose remote track lengths warm behind the load instead of
+     * in front of it.
+     */
+    private fun feedInstance(): DivineVideoPlayerInstance =
+        DivineVideoPlayerInstance(
+            messenger = messenger,
+            context = context,
+            playerId = 3,
+            playerFactory = { _ -> mockPlayer },
+            mainHandler = mockHandler,
+            audioOverlayManagerFactory = { _ -> mockAudioManager },
+            bufferProfile = BufferProfile.FEED,
+            metadataExecutor = DirectExecutorService(),
+        )
+
     @Test
     fun `setClips waits for the track lengths before touching the player`() {
         val result = mockk<MethodChannel.Result>(relaxed = true)
@@ -1070,10 +1087,10 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
-    fun `a remote source starts immediately while track lengths warm in the background`() {
+    fun `a feed player starts a remote source immediately while track lengths warm in the background`() {
         val result = mockk<MethodChannel.Result>(relaxed = true)
 
-        instance.onMethodCall(trimmingSetClipsCall("https://cdn.example/remote.mp4"), result)
+        feedInstance().onMethodCall(trimmingSetClipsCall("https://cdn.example/remote.mp4"), result)
 
         // Remote MediaExtractor reads add a second connection to the feed's
         // first-frame path, so they must not sit in front of the playlist swap.
@@ -1081,6 +1098,28 @@ class DivineVideoPlayerInstanceTest {
         // The same read still runs and posts a continuation that can tighten
         // the current playlist if the metadata lands before the first loop.
         verify(exactly = 1) { mockHandler.post(any()) }
+    }
+
+    @Test
+    fun `a full-buffer player reads a remote source's track lengths before the load`() {
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            instance.onMethodCall(trimmingSetClipsCall("https://cdn.example/preview.mp4"), result)
+
+            // A preview plays on tap, so nothing sits paused for a background
+            // warm to tighten later: the read has to land before the swap or
+            // the play the user just started keeps its seam (#8897).
+            verify(exactly = 0) { mockPlayer.setMediaItems(any(), any(), any()) }
+
+            capturePostedRunnables().forEach { it.run() }
+        }
+
+        val applied = slot<List<MediaItem>>()
+        verify(exactly = 1) { mockPlayer.setMediaItems(capture(applied), any(), any()) }
+        assertEquals(6_000L, applied.captured.single().clippingConfiguration.endPositionMs)
+        verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
+        verify(exactly = 0) { result.error(any(), any(), any()) }
     }
 
     /**
@@ -1119,7 +1158,7 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
 
         withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
-            instance.onMethodCall(
+            feedInstance().onMethodCall(
                 trimmingSetClipsCall("https://cdn.example/warm.mp4"),
                 mockk(relaxed = true),
             )
@@ -1140,7 +1179,7 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.playWhenReady } returns true
 
         withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
-            instance.onMethodCall(
+            feedInstance().onMethodCall(
                 trimmingSetClipsCall("https://cdn.example/playing.mp4"),
                 mockk(relaxed = true),
             )
