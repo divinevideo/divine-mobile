@@ -228,7 +228,7 @@ void main() {
       Widget app(Key key) => MaterialApp.router(
         key: key,
         routerConfig: config,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       );
       await tester.pumpWidget(app(const ValueKey(1)));

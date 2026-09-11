@@ -14,11 +14,11 @@ extension AppLocalizationsX on BuildContext {
 /// gen-l10n`, which has no notion of `material_ui` and always emits
 /// `flutter_localizations`' `Global*Localizations`. Those satisfy the
 /// framework's `MaterialLocalizations`, which since #8916 is a different type
-/// from the one `material_ui` widgets look up — so on its own that list leaves
-/// `MaterialApp` falling back to `DefaultMaterialLocalizations` and shipping
-/// English Material strings to the other 21 locales. `DiVineAppBar`'s back
-/// button reads `MaterialLocalizations.backButtonTooltip` for its semantic
-/// label, so the regression would be silent and screen-reader-only.
+/// from the one `material_ui` widgets look up. On its own, that list leaves
+/// non-English locales without a supported `material_ui`
+/// `MaterialLocalizations` delegate. Widgets such as `DiVineAppBar` read
+/// `MaterialLocalizations.backButtonTooltip` unconditionally, so those
+/// locales would throw when rendering navigation semantics.
 ///
 /// The generated entries stay: third-party widgets still built on
 /// `package:flutter/material.dart` resolve the framework types through them.
