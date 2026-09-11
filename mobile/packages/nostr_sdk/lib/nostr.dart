@@ -427,10 +427,11 @@ class Nostr {
   ///
   /// * A relay that stops short of [pageSize] without saying so, and holds
   ///   more events in one second than its cap, can lose the rest of that
-  ///   second, since nothing marks its page capped. A relay that sends a page
-  ///   nothing at all is that case at its limit: silence reads as holding
-  ///   nothing, so the rule above cannot count it capped. A NIP-11 `max_limit`
-  ///   or a NIP-67 `more` hint from the relay removes that ambiguity.
+  ///   second, since nothing marks its page capped. A NIP-11 `max_limit` or a
+  ///   NIP-67 `more` hint from the relay removes that ambiguity. A relay that
+  ///   sends a page nothing at all is that case at its limit: silence reads
+  ///   as holding nothing, and a `max_limit` has no count to measure against,
+  ///   so only a `more` hint can mark it capped.
   /// * The walk takes a relay's page to be its newest matching events, as
   ///   NIP-01 assumes of a `limit`. A relay that answers with others, as a
   ///   NIP-50 search ranked by relevance may, can have events skipped.
