@@ -1461,7 +1461,7 @@ class NostrClient {
         // Every end the client files for itself is one the relays were never
         // asked about, which is the level the pool gives those too.
         level: RelayDiagnosticLevel.warning,
-        relayUrl: 'nostr-client',
+        relayUrl: RelayDiagnostic.clientScope,
         message:
             'Query ended ${endedBy.name} after ${elapsedMs}ms '
             '(events=$events): $reason; '

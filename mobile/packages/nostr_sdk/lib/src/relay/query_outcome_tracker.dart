@@ -101,10 +101,6 @@ class QueryOutcomeTracker {
   }) : _filters = filters,
        _startedAt = DateTime.now();
 
-  /// The relay url a line is filed under when the fan-out asked no relay,
-  /// after `RelayManager`'s `relay-manager`.
-  static const _noRelayUrl = 'relay-pool';
-
   /// The NIP-01 prefix a relay's own `CLOSED` names a NIP-42 refusal with.
   static const _authRequiredReason = 'auth-required';
 
@@ -384,7 +380,9 @@ class QueryOutcomeTracker {
   /// bounded without hiding another's.
   String _lineRelayUrl(Map<_RelayTally, _Judgement> judgements) {
     if (judgements.isEmpty) {
-      return _tallies.isEmpty ? _noRelayUrl : _tallies.values.first.relay.url;
+      return _tallies.isEmpty
+          ? RelayDiagnostic.poolScope
+          : _tallies.values.first.relay.url;
     }
     final worst = _worst(judgements.values);
     if (worst == _Standing.answered) {
