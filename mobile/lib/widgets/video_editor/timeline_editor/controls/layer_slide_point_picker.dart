@@ -91,10 +91,12 @@ Future<Offset?> pickLayerSlidePoint(
 LayerCanvasProjection? canvasProjectionOf(VideoEditorScope scope) {
   final bodyRect = scope.canvasBodyRect;
   if (bodyRect == null) return null;
+  final geometry = scope.canvasGeometry;
   final projection = LayerCanvasProjection(
     bodyRect: bodyRect,
-    canvasSize: scope.canvasRenderSize,
-    coverScale: scope.fittedBoxScale,
+    canvasSize: geometry.renderSize,
+    coverScale: geometry.fittedBoxScale,
+    canvasOrigin: geometry.canvasOrigin,
     zoom: scope.zoomMatrixNotifier.value,
   );
   return projection.isUsable ? projection : null;
@@ -119,6 +121,7 @@ class LayerCanvasProjection {
     required this.bodyRect,
     required this.canvasSize,
     required this.coverScale,
+    required this.canvasOrigin,
     required this.zoom,
   });
 
@@ -130,6 +133,9 @@ class LayerCanvasProjection {
 
   /// Scale the canvas is cover-fitted into the body with.
   final double coverScale;
+
+  /// Where the cover-fitted canvas surface begins inside [bodyRect].
+  final Offset canvasOrigin;
 
   /// The editor's current zoom transform (identity when not zoomed).
   final Matrix4 zoom;
@@ -148,12 +154,6 @@ class LayerCanvasProjection {
     return Offset(translation.x, translation.y);
   }
 
-  /// Where the canvas surface's own origin (top-left) lands inside [bodyRect].
-  Offset get _canvasOrigin => Offset(
-    (bodyRect.width - coverScale * canvasSize.width) / 2,
-    (bodyRect.height - coverScale * canvasSize.height) / 2,
-  );
-
   /// [point] — a layer coordinate — as a point on screen.
   Offset toScreen(Offset point) {
     final absolute = Offset(
@@ -164,12 +164,12 @@ class LayerCanvasProjection {
       _zoomScale * absolute.dx + _zoomTranslation.dx,
       _zoomScale * absolute.dy + _zoomTranslation.dy,
     );
-    return bodyRect.topLeft + _canvasOrigin + zoomed * coverScale;
+    return bodyRect.topLeft + canvasOrigin + zoomed * coverScale;
   }
 
   /// [point] — a point on screen — as a canvas fraction.
   Offset? toFraction(Offset point) {
-    final local = point - bodyRect.topLeft - _canvasOrigin;
+    final local = point - bodyRect.topLeft - canvasOrigin;
     final zoomed = local / coverScale;
     final absolute = Offset(
       (zoomed.dx - _zoomTranslation.dx) / _zoomScale,

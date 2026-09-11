@@ -6,8 +6,10 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_slide_point_picker.dart';
-import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show Layer, ProImageEditorState;
 import 'package:pro_video_editor/pro_video_editor.dart' show AnimationPhase;
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -37,8 +39,67 @@ void main() {
     bodyRect: rect,
     canvasSize: canvas,
     coverScale: coverScale,
+    canvasOrigin: Offset(
+      (rect.width - coverScale * canvas.width) / 2,
+      (rect.height - coverScale * canvas.height) / 2,
+    ),
     zoom: zoom ?? Matrix4.identity(),
   );
+
+  testWidgets('canvasProjectionOf reads the scope canvas geometry', (
+    tester,
+  ) async {
+    final canvasBodyKey = GlobalKey();
+    final bodySize = ValueNotifier(const Size(400, 600));
+    late VideoEditorScope scope;
+
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: VideoEditorScope(
+          editorKey: GlobalKey<ProImageEditorState>(),
+          removeAreaKey: GlobalKey(),
+          canvasBodyKey: canvasBodyKey,
+          onAddStickers: () {},
+          onOpenCamera: () {},
+          onOpenClipsEditor: () {},
+          onAddEditTextLayer: ([layer]) async => null,
+          onOpenMusicLibrary: () {},
+          onOpenVoiceOver: () {},
+          onOpenCaptions: () {},
+          originalClipAspectRatio: 9 / 16,
+          targetClipAspectRatio: 1,
+          bodySizeNotifier: bodySize,
+          zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+          playTimeNotifier: ValueNotifier(Duration.zero),
+          playheadAdvancingNotifier: ValueNotifier(false),
+          fromLibrary: false,
+          child: Builder(
+            builder: (context) {
+              scope = VideoEditorScope.of(context);
+              return Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox.fromSize(
+                  key: canvasBodyKey,
+                  size: bodySize.value,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    final projection = canvasProjectionOf(scope)!;
+    final geometry = scope.canvasGeometry;
+
+    expect(projection.canvasSize, equals(geometry.renderSize));
+    expect(projection.coverScale, equals(geometry.fittedBoxScale));
+    expect(projection.canvasOrigin, equals(geometry.canvasOrigin));
+    expect(
+      projection.toScreen(-geometry.renderSize.center(Offset.zero)),
+      equals(scope.canvasBodyRect!.topLeft + geometry.canvasOrigin),
+    );
+  });
 
   group(LayerCanvasProjection, () {
     group('isUsable', () {

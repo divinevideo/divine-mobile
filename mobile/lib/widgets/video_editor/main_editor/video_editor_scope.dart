@@ -123,9 +123,12 @@ class VideoEditorScope extends InheritedWidget {
   final Future<void> Function()? awaitPushCoverTransition;
 
   /// FittedBox scale factor between bodySize and renderSize.
-  double get fittedBoxScale => calculateFittedBoxScale(
-    bodySizeNotifier.value,
-    originalClipAspectRatio,
+  double get fittedBoxScale => canvasGeometry.fittedBoxScale;
+
+  /// The single model of the canvas's current render and fit geometry.
+  VideoEditorCanvasGeometry get canvasGeometry => VideoEditorCanvasGeometry(
+    bodySize: bodySizeNotifier.value,
+    originalAspectRatio: originalClipAspectRatio,
     targetAspectRatio: targetClipAspectRatio,
   );
 
@@ -136,11 +139,7 @@ class VideoEditorScope extends InheritedWidget {
   /// this exactly spans the video. Deriving a layer width from [bodySize]
   /// instead is off by `targetSize / bodySize`, which is why a "80% of the
   /// canvas" layer came out wider than the video it sat on.
-  Size get canvasRenderSize => VideoEditorCanvasGeometry(
-    bodySize: bodySizeNotifier.value,
-    originalAspectRatio: originalClipAspectRatio,
-    targetAspectRatio: targetClipAspectRatio,
-  ).renderSize;
+  Size get canvasRenderSize => canvasGeometry.renderSize;
 
   /// Calculates the visible target area fitted inside [bodySize].
   static Size calculateTargetSize(Size bodySize, double targetAspectRatio) =>

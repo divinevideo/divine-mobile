@@ -83,6 +83,15 @@ class VideoEditorCanvasGeometry {
       targetSize.height / renderSize.height,
     );
   }
+
+  /// Where the top-left of the cover-fitted [renderSize] lands in [bodySize].
+  ///
+  /// Consumers that map editor-space coordinates onto the screen must use this
+  /// value rather than reconstructing the centring part of the canvas fit.
+  Offset get canvasOrigin => Offset(
+    (bodySize.width - fittedBoxScale * renderSize.width) / 2,
+    (bodySize.height - fittedBoxScale * renderSize.height) / 2,
+  );
 }
 
 /// Applies [geometry] to the editor canvas.

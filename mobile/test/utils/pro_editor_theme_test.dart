@@ -70,7 +70,7 @@ void main() {
       expect(resolved.colorScheme.surface, equals(const Color(0xFFFBFDF8)));
     });
 
-    testWidgets('carries every colour role the editor paints with', (
+    testWidgets('carries the editor chrome colour roles across', (
       tester,
     ) async {
       const scheme = ColorScheme.dark(

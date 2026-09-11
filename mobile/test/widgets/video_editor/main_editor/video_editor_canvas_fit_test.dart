@@ -124,6 +124,22 @@ void main() {
         expect(uncropped.fittedBoxScale, equals(explicit.fittedBoxScale));
       });
     });
+
+    test('canvasOrigin centres the cover-fitted render surface', () {
+      final geometry = VideoEditorCanvasGeometry(
+        bodySize: const Size(400, 800),
+        originalAspectRatio: 1,
+        targetAspectRatio: 9 / 16,
+      );
+
+      expect(
+        geometry.canvasOrigin,
+        within(
+          distance: 0.001,
+          from: const Offset(-155.5555555556, 44.4444444444),
+        ),
+      );
+    });
   });
 
   group('canvas chain parity', () {
@@ -182,6 +198,10 @@ void main() {
               targetAspectRatio: testCase.targetAspectRatio,
             ),
             closeTo(appliedScale, 0.001),
+          );
+          expect(
+            tester.getRect(renderSurface).topLeft,
+            within(distance: 0.001, from: geometry.canvasOrigin),
           );
         },
       );
