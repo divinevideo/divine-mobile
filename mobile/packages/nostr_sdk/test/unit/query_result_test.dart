@@ -45,15 +45,29 @@ void main() {
         expect(result.confirmedExhaustive, isFalse);
       });
 
-      test('possiblyCapped and confirmedExhaustive can be set explicitly', () {
+      test('possiblyCapped and confirmedExhaustive are set independently '
+          '(possiblyCapped true, confirmedExhaustive false)', () {
         final result = QueryResult(
           events: const [],
           endedBy: QueryEnd.complete,
           possiblyCapped: true,
-          confirmedExhaustive: true,
+          confirmedExhaustive: false,
         );
 
         expect(result.possiblyCapped, isTrue);
+        expect(result.confirmedExhaustive, isFalse);
+      });
+
+      test('possiblyCapped and confirmedExhaustive are set independently '
+          '(possiblyCapped false, confirmedExhaustive true)', () {
+        final result = QueryResult(
+          events: const [],
+          endedBy: QueryEnd.complete,
+          possiblyCapped: false,
+          confirmedExhaustive: true,
+        );
+
+        expect(result.possiblyCapped, isFalse);
         expect(result.confirmedExhaustive, isTrue);
       });
     });
