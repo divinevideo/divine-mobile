@@ -13,9 +13,10 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
+import 'package:openvine/features/people_lists/view/people_list_member_tile.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
-import 'package:openvine/widgets/user_avatar.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -188,10 +189,71 @@ void main() {
         );
 
         await tester.pump();
-
         expect(find.text('Selected List'), findsOneWidget);
       },
     );
+
+    testWidgets('a discovered list that fails to load offers a retry', (
+      tester,
+    ) async {
+      // A relay failure must not read as "this list was deleted": the
+      // viewer gets the failure copy and a retry that re-runs the read.
+      const otherOwner =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      final list = _buildList(id: 'crew', name: 'Crew', isEditable: false);
+      var attempts = 0;
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+        ),
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            publicPeopleListProvider(
+              ownerPubkey: otherOwner,
+              listId: 'crew',
+            ).overrideWith((ref) async {
+              attempts++;
+              if (attempts == 1) throw Exception('relay timed out');
+              return list;
+            }),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: const UserListPeopleScreen(
+                listId: 'crew',
+                ownerPubkey: otherOwner,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.peopleListsLoadFailed), findsOneWidget);
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      await tester.pump();
+      // The hero lives in the video grid, which paints a frame after the
+      // broken-video tracker resolves.
+      await tester.pump();
+
+      expect(attempts, 2);
+      expect(find.text('Crew'), findsOneWidget);
+      expect(find.text(l10n.peopleListsLoadFailed), findsNothing);
+    });
 
     testWidgets(
       'reacts to bloc emitting updated list without rebuilding the route',
@@ -681,8 +743,8 @@ void main() {
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: const Scaffold(
-                  body: PeopleCarousel(
-                    pubkeys: [memberPubkey],
+                  body: PeopleListMemberTile(
+                    pubkey: memberPubkey,
                     listId: 'list-1',
                     canRemove: true,
                   ),
@@ -693,7 +755,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
 
         expect(find.text('Remove'), findsOneWidget);
@@ -721,8 +783,8 @@ void main() {
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: const Scaffold(
-                  body: PeopleCarousel(
-                    pubkeys: [memberPubkey],
+                  body: PeopleListMemberTile(
+                    pubkey: memberPubkey,
                     listId: 'list-1',
                     canRemove: true,
                   ),
@@ -733,7 +795,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Remove'));
         await tester.pumpAndSettle();
@@ -769,8 +831,8 @@ void main() {
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: const Scaffold(
-                body: PeopleCarousel(
-                  pubkeys: [memberPubkey],
+                body: PeopleListMemberTile(
+                  pubkey: memberPubkey,
                   listId: 'list-1',
                   canRemove: true,
                 ),
@@ -781,7 +843,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.longPress(find.byType(UserAvatar).first);
+      await tester.longPress(find.byType(PeopleListMemberTile));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
@@ -819,8 +881,8 @@ void main() {
             GoRoute(
               path: '/',
               builder: (context, state) => const Scaffold(
-                body: PeopleCarousel(
-                  pubkeys: [memberPubkey],
+                body: PeopleListMemberTile(
+                  pubkey: memberPubkey,
                   listId: 'divine-team',
                   canRemove: false,
                 ),
@@ -848,7 +910,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
 
         expect(find.text('Remove'), findsNothing);

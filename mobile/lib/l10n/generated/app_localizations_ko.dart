@@ -1206,35 +1206,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreNoVideosAvailable => '이용 가능한 영상이 없어요';
 
   @override
-  String get exploreDiscoverLists => '리스트 둘러보기';
-
-  @override
-  String get exploreAboutLists => '리스트란?';
-
-  @override
-  String get exploreAboutListsDescription =>
-      '리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:';
-
-  @override
-  String get explorePeopleLists => '사람 리스트';
-
-  @override
-  String get explorePeopleListsDescription =>
-      '크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요';
-
-  @override
-  String get exploreVideoLists => '영상 리스트';
-
-  @override
-  String get exploreVideoListsDescription => '좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요';
-
-  @override
-  String get exploreMyLists => '내 리스트';
-
-  @override
-  String get exploreSubscribedLists => '구독 리스트';
-
-  @override
   String get exploreErrorLoadingLists => '리스트를 불러오지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -3628,9 +3599,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '목록 구성원의 동영상이 여기에 표시됩니다';
 
   @override
-  String get peopleListsNoVideosAvailable => '사용 가능한 동영상 없음';
-
-  @override
   String get peopleListsFailedToLoadVideos => '동영상을 불러오지 못했습니다';
 
   @override
@@ -3658,6 +3626,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => '다시 시도';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => '추가';
@@ -4543,12 +4514,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count명',
-      one: '1명',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4663,6 +4634,44 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => '목록 공유';
@@ -5731,30 +5740,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       '구독 업데이트에 실패했어요. 다시 시도해보세요.';
-
-  @override
-  String get discoverListsTitle => '리스트 둘러보기';
-
-  @override
-  String get discoverListsFailedToLoad => '리스트를 불러오지 못했어요';
-
-  @override
-  String get discoverListsLoading => '공개 리스트를 찾는 중...';
-
-  @override
-  String get discoverListsRelayTimeout => '릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.';
-
-  @override
-  String get discoverListsServiceUnavailable => '서비스를 사용할 수 없어요.';
-
-  @override
-  String get discoverListsEmptyTitle => '공개 리스트를 찾지 못했어요';
-
-  @override
-  String get discoverListsEmptySubtitle => '새 리스트가 올라오면 다시 와봐요';
-
-  @override
-  String get discoverListsByAuthorPrefix => '작성자';
 
   @override
   String get curatedListEmptyTitle => '이 리스트에 영상이 없어요';

@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "Nu am putut încărca această colecție.",
     "featuredTabRetry": "Încearcă din nou",
     "exploreNoVideosAvailable": "Niciun videoclip disponibil",
-    "exploreDiscoverLists": "Descoperă liste",
-    "exploreAboutLists": "Despre liste",
-    "exploreAboutListsDescription": "Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:",
-    "explorePeopleLists": "Liste de oameni",
-    "explorePeopleListsDescription": "Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor",
-    "exploreVideoLists": "Liste de videoclipuri",
-    "exploreVideoListsDescription": "Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu",
-    "exploreMyLists": "Listele mele",
-    "exploreSubscribedLists": "Liste la care ești abonat",
     "exploreErrorLoadingLists": "Eroare la încărcarea listelor. Încearcă din nou.",
     "exploreNewVideosCount": "{count, plural, =1{1 videoclip nou} other{{count} videoclipuri noi}}",
     "@exploreNewVideosCount": {
@@ -2921,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Adaugă persoane pentru a începe",
     "peopleListsNoVideosTitle": "Niciun videoclip încă",
     "peopleListsNoVideosSubtitle": "Videoclipurile membrilor listei vor apărea aici",
-    "peopleListsNoVideosAvailable": "Niciun videoclip disponibil",
     "peopleListsFailedToLoadVideos": "Încărcarea videoclipurilor a eșuat",
     "peopleListsVideoNotAvailable": "Videoclip indisponibil",
     "peopleListsBackToGridTooltip": "Înapoi la grilă",
@@ -3165,14 +3155,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
     "safetySettingsWhatYouSee": "CE VEZI",
     "safetySettingsWhatYouPublish": "CE PUBLICI",
-    "listPersonCount": "{count, plural, =1{1 persoană} few{{count} persoane} other{{count} de persoane}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "De ",
     "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "Descoperă liste",
-    "discoverListsFailedToLoad": "N-am putut încărca listele",
-    "discoverListsLoading": "Se descoperă liste publice...",
-    "discoverListsRelayTimeout": "Releul nu a returnat liste la timp. Încearcă din nou.",
-    "discoverListsServiceUnavailable": "Serviciul nu este disponibil.",
-    "discoverListsEmptyTitle": "Nicio listă publică găsită",
-    "discoverListsEmptySubtitle": "Revino mai târziu pentru liste noi",
-    "discoverListsByAuthorPrefix": "de",
     "curatedListEmptyTitle": "Niciun videoclip în această listă",
     "curatedListEmptySubtitle": "Adaugă câteva videoclipuri ca să începi",
     "curatedListLoadingVideos": "Se încarcă videoclipurile...",

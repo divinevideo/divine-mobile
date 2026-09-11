@@ -27,6 +27,24 @@ enum UserAvatarPlaceholderTone {
   blue,
 }
 
+/// The tone [UserAvatar] picks for [seed], so a surface that draws its own
+/// placeholder (the list-card member collage) gives the same person the
+/// same accent everywhere. An empty seed lands on the first tone.
+UserAvatarPlaceholderTone userAvatarToneForSeed(String seed) =>
+    _Placeholder.toneForSeed(seed);
+
+/// The fill and figure ink [UserAvatar] pairs for [tone].
+///
+/// The ink is chosen per accent for contrast — a white figure on the lime
+/// fill measures 1.16:1 — so anything painting a glyph on one of these
+/// accents should take the figure color from here rather than using white.
+({Color base, Color figure}) userAvatarPlaceholderColors(
+  UserAvatarPlaceholderTone tone,
+) {
+  final palette = _Placeholder._palettes[tone] ?? _Placeholder._fallbackPalette;
+  return (base: palette.base, figure: palette.figure);
+}
+
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,
@@ -378,6 +396,17 @@ class _Placeholder extends StatelessWidget {
   static Color _darken(Color color, double amount) =>
       Color.lerp(color, VineTheme.backgroundColor, amount) ?? color;
 
+  static _AvatarPalette get _fallbackPalette => _palettes.values.first;
+
+  static UserAvatarPlaceholderTone toneForSeed(String seed) {
+    if (seed.isEmpty) return UserAvatarPlaceholderTone.yellow;
+
+    final index =
+        seed.runes.fold<int>(0, (sum, rune) => sum + rune) %
+        _paletteOrder.length;
+    return _paletteOrder[index];
+  }
+
   UserAvatarPlaceholderTone get _effectiveTone {
     if (placeholderTone != UserAvatarPlaceholderTone.auto) {
       return placeholderTone;
@@ -390,18 +419,12 @@ class _Placeholder extends StatelessWidget {
               .whereType<String>()
               .where((value) => value.trim().isNotEmpty)
               .join('|');
-
-    if (seed.isEmpty) return UserAvatarPlaceholderTone.yellow;
-
-    final index =
-        seed.runes.fold<int>(0, (sum, rune) => sum + rune) %
-        _paletteOrder.length;
-    return _paletteOrder[index];
+    return toneForSeed(seed);
   }
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palettes[_effectiveTone] ?? _palettes.values.first;
+    final palette = _palettes[_effectiveTone] ?? _fallbackPalette;
     // Geometry matches Figma node 11251:229419 (profile-setup avatar).
     final headSize = size * 0.46;
     final headHorizontalInset = (size - headSize) / 2;

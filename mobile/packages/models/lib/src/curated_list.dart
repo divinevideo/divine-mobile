@@ -131,6 +131,11 @@ class CuratedList extends Equatable {
   /// Creator's public key for attribution.
   final String? pubkey;
 
+  /// Identity across authors. Every account owns a `my_vine_list`, so the
+  /// d-tag alone conflates lists from different accounts; a local-only list
+  /// has no author yet and keys on its d-tag alone.
+  String get authorScopedId => '${pubkey ?? ''}:$id';
+
   /// Optional description of the list.
   final String? description;
 
@@ -140,6 +145,12 @@ class CuratedList extends Equatable {
   /// Video references — mixed event IDs (64-char hex) and addressable
   /// coordinates (`kind:pubkey:d-tag`).
   final List<String> videoEventIds;
+
+  /// Whether the list references at least one video.
+  ///
+  /// Discovery, search and other creators' profiles hide a list with no
+  /// videos; only the viewer's own My Lists tab shows one.
+  bool get hasVideos => videoEventIds.isNotEmpty;
 
   /// When the list was created.
   final DateTime createdAt;

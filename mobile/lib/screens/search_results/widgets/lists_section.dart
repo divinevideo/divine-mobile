@@ -4,6 +4,8 @@
 // ABOUTME: peopleListSearch feature flag is enabled (injected via BLoC),
 // ABOUTME: people lists (kind 30000).
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,13 +14,13 @@ import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_search_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -148,17 +150,16 @@ class _ResultsGrid extends StatelessWidget {
             if (index < videoResults.length) {
               final list = videoResults[index];
               return _ListCard(
+                key: ValueKey(list.authorScopedId),
                 curatedList: list,
                 onTap: () => _navigateToCuratedList(context, list),
               );
             }
             final peopleResult = peopleResults[index - videoResults.length];
             return _PeopleListCard(
-              userList: peopleResult.list,
-              onTap: () {
-                // Intentionally disabled until public people-list routes
-                // include owner pubkey.
-              },
+              key: ValueKey(peopleResult.addressableId),
+              result: peopleResult,
+              onTap: () => _navigateToPeopleList(context, peopleResult),
             );
           }, childCount: totalCount),
         ),
@@ -180,6 +181,7 @@ class _ResultsGrid extends StatelessWidget {
             if (previewVideo != null)
               Expanded(
                 child: _ListCard(
+                  key: ValueKey(previewVideo.authorScopedId),
                   curatedList: previewVideo,
                   onTap: () => _navigateToCuratedList(context, previewVideo),
                 ),
@@ -187,11 +189,9 @@ class _ResultsGrid extends StatelessWidget {
             if (previewPeople != null)
               Expanded(
                 child: _PeopleListCard(
-                  userList: previewPeople.list,
-                  onTap: () {
-                    // Intentionally disabled until public people-list routes
-                    // include owner pubkey.
-                  },
+                  key: ValueKey(previewPeople.addressableId),
+                  result: previewPeople,
+                  onTap: () => _navigateToPeopleList(context, previewPeople),
                 ),
               ),
             // If only one item, fill the second slot with empty space.
@@ -205,27 +205,31 @@ class _ResultsGrid extends StatelessWidget {
 
 /// Card widget for a curated video list result.
 class _ListCard extends StatelessWidget {
-  const _ListCard({required this.curatedList, required this.onTap});
+  const _ListCard({
+    required this.curatedList,
+    required this.onTap,
+    super.key,
+  });
 
   final CuratedList curatedList;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return CuratedListSearchCard(curatedList: curatedList, onTap: onTap);
+    return DivineListThumbnail.videos(curatedList: curatedList, onTap: onTap);
   }
 }
 
 /// Card widget for a people list result.
 class _PeopleListCard extends StatelessWidget {
-  const _PeopleListCard({required this.userList, required this.onTap});
+  const _PeopleListCard({required this.result, required this.onTap, super.key});
 
-  final UserList userList;
+  final PeopleListSearchResult result;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return PeopleListSearchCard(userList: userList, onTap: onTap);
+    return DivineListThumbnail.people(userList: result.list, onTap: onTap);
   }
 }
 
@@ -345,6 +349,20 @@ class _ListCardSkeletonItem extends StatelessWidget {
       ],
     );
   }
+}
+
+void _navigateToPeopleList(
+  BuildContext context,
+  PeopleListSearchResult result,
+) {
+  unawaited(
+    context.push(
+      RoutePaths.peopleListForId(
+        result.list.id,
+        ownerPubkey: result.ownerPubkey,
+      ),
+    ),
+  );
 }
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {

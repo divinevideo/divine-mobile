@@ -51,6 +51,13 @@ const int _authorFeedPaginationBatchSize = 50;
 /// unavailable). Mirrors `AppConstants.hasMoreContentThreshold` (10).
 const int _authorFeedHasMoreThreshold = 10;
 
+/// How many authors a members feed reads from relays in one filter.
+const int _membersFeedRelayAuthorCap = 100;
+
+/// How many authors the Funnelcake fallback of a members feed pages, one
+/// videos-by-author call each, when the relay read fails.
+const int _membersFeedApiAuthorCap = 20;
+
 /// In-memory cache key prefix for a single author's feed.
 const String _authorFeedCacheKeyPrefix = 'author:';
 
@@ -2373,6 +2380,78 @@ class VideosRepository {
       before: before,
     );
     return _transformVideoStats(result.videos);
+  }
+
+  /// Fetches the newest videos published by any of [authorPubkeys], newest
+  /// first, at most [limit].
+  ///
+  /// This is the feed behind a people list. One relay filter over the first
+  /// [_membersFeedRelayAuthorCap] members answers "what did these people
+  /// post lately" in a single round trip, hydrated with Funnelcake counts
+  /// when the API is up. Funnelcake has no multi-author endpoint, so it is
+  /// the fallback rather than the first source: when the relay read throws
+  /// and the API is available, the first [_membersFeedApiAuthorCap] members
+  /// are paged one videos-by-author call each and merged.
+  ///
+  /// Returns an empty list when [authorPubkeys] is empty.
+  ///
+  /// Throws:
+  ///
+  /// * the relay error, unchanged, when there is no Funnelcake client to
+  ///   fall back to — an empty result would read as "these people have no
+  ///   videos" for what is a network failure.
+  /// * [FunnelcakeException] when the fallback fails as well.
+  Future<List<VideoEvent>> getVideosByAuthors({
+    required List<String> authorPubkeys,
+    int limit = _defaultLimit,
+  }) async {
+    if (authorPubkeys.isEmpty) return const [];
+    final authors = authorPubkeys.take(_membersFeedRelayAuthorCap).toList();
+
+    final List<Event> events;
+    try {
+      events = await _nostrClient.queryEvents([
+        Filter(kinds: [_videoKind], authors: authors, limit: limit),
+      ]);
+    } on Object {
+      final api = _funnelcakeApiClient;
+      if (api == null || !api.isAvailable) rethrow;
+      return _videosByAuthorsFromApi(
+        api,
+        authors.take(_membersFeedApiAuthorCap).toList(),
+        limit: limit,
+      );
+    }
+
+    final videos = <VideoEvent>[];
+    _appendUniqueVideos(
+      videos,
+      await _hydrateVideosWithBulkStats(_transformAndFilter(events)),
+      seenVideoKeys: <String>{},
+    );
+    return videos.take(limit).toList();
+  }
+
+  Future<List<VideoEvent>> _videosByAuthorsFromApi(
+    FunnelcakeApiClient api,
+    List<String> authors, {
+    required int limit,
+  }) async {
+    final pages = await Future.wait([
+      for (final author in authors)
+        api.getVideosByAuthor(pubkey: author, limit: limit),
+    ]);
+    final videos = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    for (final page in pages) {
+      _appendUniqueVideos(
+        videos,
+        _transformVideoStats(page.videos),
+        seenVideoKeys: seenVideoKeys,
+      );
+    }
+    videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return videos.take(limit).toList();
   }
 
   /// Composes a single author's video feed page (profile feed).

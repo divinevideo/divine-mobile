@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "Bu koleksiyon yüklenemedi.",
     "featuredTabRetry": "Tekrar dene",
     "exploreNoVideosAvailable": "Hiç video yok",
-    "exploreDiscoverLists": "Listeleri Keşfet",
-    "exploreAboutLists": "Listeler Hakkında",
-    "exploreAboutListsDescription": "Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:",
-    "explorePeopleLists": "Kişi Listeleri",
-    "explorePeopleListsDescription": "İçerik üretici gruplarını takip et ve en son videolarını gör",
-    "exploreVideoLists": "Video Listeleri",
-    "exploreVideoListsDescription": "Sonra izlemek için favori videolarından oynatma listeleri oluştur",
-    "exploreMyLists": "Listelerim",
-    "exploreSubscribedLists": "Abone Olunan Listeler",
     "exploreErrorLoadingLists": "Listeler yüklenirken hata. Lütfen tekrar dene.",
     "exploreNewVideosCount": "{count, plural, one{1 yeni video} other{{count} yeni video}}",
     "@exploreNewVideosCount": {
@@ -2921,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Başlamak için kişi ekle",
     "peopleListsNoVideosTitle": "Henüz video yok",
     "peopleListsNoVideosSubtitle": "Liste üyelerinin videoları burada görünecek",
-    "peopleListsNoVideosAvailable": "Kullanılabilir video yok",
     "peopleListsFailedToLoadVideos": "Videolar yüklenemedi",
     "peopleListsVideoNotAvailable": "Video kullanılamıyor",
     "peopleListsBackToGridTooltip": "Izgaraya dön",
@@ -3165,14 +3155,6 @@
     "nostrSettingsDeleteAccountSubtitle": "İçeriğin için silme istekleri gönderir ve bu cihazda oturumunu kapatır. Röleler, istemciler, arama dizinleri ve oturum açmış diğer cihazlar kopyaları saklayabilir.",
     "safetySettingsWhatYouSee": "GÖRDÜKLERİN",
     "safetySettingsWhatYouPublish": "PAYLAŞTIKLARIN",
-    "listPersonCount": "{count, plural, =1{1 kişi} other{{count} kişi}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Yazan ",
     "keyManagementYourPublicKeyLabel": "Açık anahtarın (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "Listeleri Keşfet",
-    "discoverListsFailedToLoad": "Listeler yüklenemedi",
-    "discoverListsLoading": "Herkese açık listeler keşfediliyor...",
-    "discoverListsRelayTimeout": "Relay listeleri zamanında döndürmedi. Tekrar dene.",
-    "discoverListsServiceUnavailable": "Hizmet kullanılamıyor.",
-    "discoverListsEmptyTitle": "Herkese açık liste bulunamadı",
-    "discoverListsEmptySubtitle": "Yeni listeler için sonra tekrar bak",
-    "discoverListsByAuthorPrefix": "yazan",
     "curatedListEmptyTitle": "Bu listede video yok",
     "curatedListEmptySubtitle": "Başlamak için birkaç video ekle",
     "curatedListLoadingVideos": "Videolar yükleniyor...",

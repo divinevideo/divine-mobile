@@ -16,7 +16,6 @@ lib/screens/apps/apps_permissions_screen.dart	1
 lib/screens/blossom_settings_screen.dart	1
 lib/screens/content_filters_screen.dart	1
 lib/screens/developer_options_screen.dart	1
-lib/screens/discover_lists_screen.dart	1
 lib/screens/followers/my_followers_screen.dart	1
 lib/screens/followers/others_followers_screen.dart	1
 lib/screens/following/my_following_screen.dart	1

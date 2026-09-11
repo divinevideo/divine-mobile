@@ -440,7 +440,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       ProfileTabKind.lists => (
         semanticId: SemanticIds.profileListsTab,
         label: l10n.profileListsLabel,
-        icon: DivineIconName.playlist,
+        icon: DivineIconName.squaresFour,
       ),
       ProfileTabKind.comments => (
         semanticId: SemanticIds.profileCommentsTab,

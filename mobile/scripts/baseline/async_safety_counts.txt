@@ -72,10 +72,9 @@ discarded_futures|lib/screens/comments/widgets/video_comment_player.dart	2
 discarded_futures|lib/screens/content_filters_screen.dart	2
 discarded_futures|lib/screens/creator_analytics_screen.dart	1
 discarded_futures|lib/screens/curated_list_feed_screen.dart	5
-discarded_futures|lib/screens/discover_lists_screen.dart	5
 discarded_futures|lib/screens/explore/explore_screen.dart	1
 discarded_futures|lib/screens/explore/explore_view.dart	3
-discarded_futures|lib/screens/explore/tabs/explore_lists_tab.dart	4
+discarded_futures|lib/screens/explore/tabs/explore_lists_tab.dart	3
 discarded_futures|lib/screens/explore/tabs/featured_videos_tab.dart	2
 discarded_futures|lib/screens/feed/feed_settings_menu.dart	1
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
@@ -112,7 +111,7 @@ discarded_futures|lib/screens/settings/storage/storage_management_page.dart	1
 discarded_futures|lib/screens/settings/support_center_screen.dart	3
 discarded_futures|lib/screens/sound_detail_screen.dart	4
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
-discarded_futures|lib/screens/user_list_people_screen.dart	5
+discarded_futures|lib/screens/user_list_people_screen.dart	4
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/video_detail_screen.dart	6
 discarded_futures|lib/screens/video_editor/video_audio_editor_timing_screen.dart	6
@@ -179,7 +178,6 @@ discarded_futures|lib/widgets/library/sounds_tab.dart	2
 discarded_futures|lib/widgets/linkified_text/linkified_text_navigation.dart	4
 discarded_futures|lib/widgets/new_videos_tab.dart	1
 discarded_futures|lib/widgets/notification_badge.dart	1
-discarded_futures|lib/widgets/owned_list_card.dart	1
 discarded_futures|lib/widgets/popular_videos_tab.dart	1
 discarded_futures|lib/widgets/profile/profile_action_buttons_widget.dart	2
 discarded_futures|lib/widgets/profile/profile_actions_sheet/profile_actions_sheet_content.dart	1

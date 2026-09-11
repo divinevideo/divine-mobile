@@ -1324,36 +1324,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get exploreDiscoverLists => 'فہرستیں دریافت کریں';
-
-  @override
-  String get exploreAboutLists => 'فہرستوں کے بارے میں';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:';
-
-  @override
-  String get explorePeopleLists => 'لوگوں کی فہرستیں';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں';
-
-  @override
-  String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں';
-
-  @override
-  String get exploreMyLists => 'میری فہرستیں';
-
-  @override
-  String get exploreSubscribedLists => 'سبسکرائب شدہ فہرستیں';
-
-  @override
   String get exploreErrorLoadingLists =>
       'فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
 
@@ -3862,9 +3832,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی';
 
   @override
-  String get peopleListsNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ویڈیوز لوڈ نہیں ہو سکیں';
 
   @override
@@ -3894,6 +3861,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'شامل کریں';
@@ -4822,12 +4792,12 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count لوگ',
-      one: '1 شخص',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4944,6 +4914,44 @@ class AppLocalizationsUr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'فہرست شیئر کریں';
@@ -6037,31 +6045,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsTitle => 'فہرستیں دریافت کریں';
-
-  @override
-  String get discoverListsFailedToLoad => 'فہرستیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get discoverListsLoading => 'عوامی فہرستیں دریافت ہو رہی ہیں...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsServiceUnavailable => 'سروس دستیاب نہیں ہے۔';
-
-  @override
-  String get discoverListsEmptyTitle => 'کوئی عوامی فہرست نہیں ملی';
-
-  @override
-  String get discoverListsEmptySubtitle => 'نئی فہرستوں کے لیے بعد میں دیکھیں';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'از';
 
   @override
   String get curatedListEmptyTitle => 'اس فہرست میں کوئی ویڈیو نہیں';

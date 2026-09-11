@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "Kunde inte läsa in den här samlingen.",
     "featuredTabRetry": "Försök igen",
     "exploreNoVideosAvailable": "Inga videor tillgängliga",
-    "exploreDiscoverLists": "Upptäck listor",
-    "exploreAboutLists": "Om listor",
-    "exploreAboutListsDescription": "Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:",
-    "explorePeopleLists": "Personlistor",
-    "explorePeopleListsDescription": "Följ grupper av kreatörer och se deras senaste videor",
-    "exploreVideoLists": "Videolistor",
-    "exploreVideoListsDescription": "Skapa spellistor med dina favoritvideor för att titta på senare",
-    "exploreMyLists": "Mina listor",
-    "exploreSubscribedLists": "Prenumererade listor",
     "exploreErrorLoadingLists": "Fel vid inläsning av listor. Försök igen.",
     "exploreNewVideosCount": "{count, plural, one{1 ny video} other{{count} nya videor}}",
     "@exploreNewVideosCount": {
@@ -2921,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Lägg till personer för att komma igång",
     "peopleListsNoVideosTitle": "Inga videor än",
     "peopleListsNoVideosSubtitle": "Videor från listmedlemmar visas här",
-    "peopleListsNoVideosAvailable": "Inga videor tillgängliga",
     "peopleListsFailedToLoadVideos": "Det gick inte att läsa in videor",
     "peopleListsVideoNotAvailable": "Video ej tillgänglig",
     "peopleListsBackToGridTooltip": "Tillbaka till rutnät",
@@ -3165,14 +3155,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
     "safetySettingsWhatYouSee": "VAD DU SER",
     "safetySettingsWhatYouPublish": "VAD DU PUBLICERAR",
-    "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Av ",
     "keyManagementYourPublicKeyLabel": "Din publika nyckel (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "Upptäck listor",
-    "discoverListsFailedToLoad": "Kunde inte ladda listor",
-    "discoverListsLoading": "Söker upp publika listor...",
-    "discoverListsRelayTimeout": "Relayen returnerade inga listor i tid. Försök igen.",
-    "discoverListsServiceUnavailable": "Tjänsten är inte tillgänglig.",
-    "discoverListsEmptyTitle": "Inga publika listor hittades",
-    "discoverListsEmptySubtitle": "Kom tillbaka senare för nya listor",
-    "discoverListsByAuthorPrefix": "av",
     "curatedListEmptyTitle": "Inga videor i den här listan",
     "curatedListEmptySubtitle": "Lägg till några videor för att komma igång",
     "curatedListLoadingVideos": "Laddar videor...",

@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "Nie udało się wczytać tej kolekcji.",
     "featuredTabRetry": "Spróbuj ponownie",
     "exploreNoVideosAvailable": "Brak dostępnych filmów",
-    "exploreDiscoverLists": "Odkrywaj listy",
-    "exploreAboutLists": "O listach",
-    "exploreAboutListsDescription": "Listy pomagają ci porządkować i kuratorować treści Divine na dwa sposoby:",
-    "explorePeopleLists": "Listy osób",
-    "explorePeopleListsDescription": "Obserwuj grupy twórców i zobacz ich najnowsze filmy",
-    "exploreVideoLists": "Listy filmów",
-    "exploreVideoListsDescription": "Twórz playlisty ulubionych filmów do oglądania później",
-    "exploreMyLists": "Moje listy",
-    "exploreSubscribedLists": "Subskrybowane listy",
     "exploreErrorLoadingLists": "Błąd wczytywania list. Spróbuj ponownie.",
     "exploreNewVideosCount": "{count, plural, =1{1 nowy film} few{{count} nowe filmy} many{{count} nowych filmów} other{{count} nowego filmu}}",
     "@exploreNewVideosCount": {
@@ -2921,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Dodaj osoby, aby zacząć",
     "peopleListsNoVideosTitle": "Brak filmów",
     "peopleListsNoVideosSubtitle": "Filmy od członków listy pojawią się tutaj",
-    "peopleListsNoVideosAvailable": "Brak dostępnych filmów",
     "peopleListsFailedToLoadVideos": "Nie udało się załadować filmów",
     "peopleListsVideoNotAvailable": "Film niedostępny",
     "peopleListsBackToGridTooltip": "Powrót do siatki",
@@ -3165,14 +3155,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Wysyła żądania usunięcia twoich treści i wylogowuje cię na tym urządzeniu. Przekaźniki, klienty, indeksy wyszukiwania i inne zalogowane urządzenia mogą zachować kopie.",
     "safetySettingsWhatYouSee": "CO WIDZISZ",
     "safetySettingsWhatYouPublish": "CO PUBLIKUJESZ",
-    "listPersonCount": "{count, plural, =1{1 osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Autor: ",
     "keyManagementYourPublicKeyLabel": "Twój klucz publiczny (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "Odkrywaj listy",
-    "discoverListsFailedToLoad": "Nie udało się wczytać list",
-    "discoverListsLoading": "Odkrywanie publicznych list...",
-    "discoverListsRelayTimeout": "Relay nie zwrócił list na czas. Spróbuj ponownie.",
-    "discoverListsServiceUnavailable": "Usługa niedostępna.",
-    "discoverListsEmptyTitle": "Nie znaleziono publicznych list",
-    "discoverListsEmptySubtitle": "Wróć później po nowe listy",
-    "discoverListsByAuthorPrefix": "od",
     "curatedListEmptyTitle": "Brak filmów na tej liście",
     "curatedListEmptySubtitle": "Dodaj kilka filmów, żeby zacząć",
     "curatedListLoadingVideos": "Wczytywanie filmów...",

@@ -1330,36 +1330,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreNoVideosAvailable => 'No videos available';
 
   @override
-  String get exploreDiscoverLists => 'Discover Lists';
-
-  @override
-  String get exploreAboutLists => 'About Lists';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Lists help you organize and curate Divine content in two ways:';
-
-  @override
-  String get explorePeopleLists => 'People Lists';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Follow groups of creators and see their latest videos';
-
-  @override
-  String get exploreVideoLists => 'Video Lists';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Create playlists of your favorite videos to watch later';
-
-  @override
-  String get exploreMyLists => 'My Lists';
-
-  @override
-  String get exploreSubscribedLists => 'Subscribed Lists';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Error loading lists. Please try again.';
 
@@ -3934,9 +3904,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Videos from list members will appear here';
 
   @override
-  String get peopleListsNoVideosAvailable => 'No videos available';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Failed to load videos';
 
   @override
@@ -3965,6 +3932,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Try again';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Add';
@@ -4910,12 +4880,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '1 person',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -5031,6 +5001,44 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Share list';
@@ -6133,31 +6141,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Failed to update subscription. Please try again.';
-
-  @override
-  String get discoverListsTitle => 'Discover Lists';
-
-  @override
-  String get discoverListsFailedToLoad => 'Failed to load lists';
-
-  @override
-  String get discoverListsLoading => 'Discovering public lists...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'The relay did not return lists in time. Try again.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service not available.';
-
-  @override
-  String get discoverListsEmptyTitle => 'No public lists found';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Check back later for new lists';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'by';
 
   @override
   String get curatedListEmptyTitle => 'No videos in this list';

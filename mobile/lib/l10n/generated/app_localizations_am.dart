@@ -1292,36 +1292,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get exploreDiscoverLists => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get exploreAboutLists => 'ስለ ዝርዝሮች';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡';
-
-  @override
-  String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ';
-
-  @override
-  String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ';
-
-  @override
-  String get exploreMyLists => 'የእኔ ዝርዝሮች';
-
-  @override
-  String get exploreSubscribedLists => 'የተመዘገቡ ዝርዝሮች';
-
-  @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
 
   @override
@@ -3771,9 +3741,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => 'ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ';
 
   @override
-  String get peopleListsNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ቪዲዮዎችን መጫን አልተሳካም።';
 
   @override
@@ -3801,6 +3768,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'አክል';
@@ -4697,12 +4667,12 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count ሰዎች',
-      one: '$count ሰው',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4818,6 +4788,44 @@ class AppLocalizationsAm extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'ዝርዝር አጋራ';
@@ -5893,30 +5901,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።';
-
-  @override
-  String get discoverListsTitle => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get discoverListsFailedToLoad => 'ዝርዝሮችን መጫን አልተሳካም';
-
-  @override
-  String get discoverListsLoading => 'የህዝብ ዝርዝሮችን በመፈለግ ላይ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።';
-
-  @override
-  String get discoverListsServiceUnavailable => 'አገልግሎቱ አይገኝም።';
-
-  @override
-  String get discoverListsEmptyTitle => 'ምንም የህዝብ ዝርዝሮች አልተገኙም';
-
-  @override
-  String get discoverListsEmptySubtitle => 'ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'በ';
 
   @override
   String get curatedListEmptyTitle => 'በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም';

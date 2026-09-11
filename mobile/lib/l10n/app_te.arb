@@ -807,15 +807,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
-  "exploreDiscoverLists": "జాబితాలను కనుగొనండి",
-  "exploreAboutLists": "జాబితాల గురించి",
-  "exploreAboutListsDescription": "జాబితాలు Divine కంటెంట్‌ని రెండు విధాలుగా నిర్వహించడానికి మరియు నిర్వహించడంలో మీకు సహాయపడతాయి:",
-  "explorePeopleLists": "వ్యక్తుల జాబితాలు",
-  "explorePeopleListsDescription": "సృష్టికర్తల సమూహాలను అనుసరించండి మరియు వారి తాజా వీడియోలను చూడండి",
-  "exploreVideoLists": "వీడియో జాబితాలు",
-  "exploreVideoListsDescription": "తర్వాత చూడటానికి మీకు ఇష్టమైన వీడియోల ప్లేజాబితాలను సృష్టించండి",
-  "exploreMyLists": "నా జాబితాలు",
-  "exploreSubscribedLists": "సభ్యత్వం పొందిన జాబితాలు",
   "exploreErrorLoadingLists": "జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "exploreNewVideosCount": "{count, plural, =1{1 కొత్త వీడియో} other{{count}కొత్త వీడియోలు}}",
   "@exploreNewVideosCount": {
@@ -2354,7 +2345,6 @@
   "peopleListsNoPeopleSubtitle": "ప్రారంభించడానికి కొంతమంది వ్యక్తులను జోడించండి",
   "peopleListsNoVideosTitle": "ఇంకా వీడియోలు లేవు",
   "peopleListsNoVideosSubtitle": "జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి",
-  "peopleListsNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
   "peopleListsFailedToLoadVideos": "వీడియోలను లోడ్ చేయడంలో విఫలమైంది",
   "peopleListsVideoNotAvailable": "వీడియో అందుబాటులో లేదు",
   "peopleListsBackToGridTooltip": "తిరిగి గ్రిడ్‌కి",
@@ -2934,14 +2924,6 @@
   "listAddToList": "జాబితాకు జోడించండి",
   "listVideoCount": "{count, plural, =1{{count}వీడియో} other{{count}వీడియోలు}}",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 వ్యక్తి} other{{count}వ్యక్తులు}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3804,14 +3786,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "సభ్యత్వాన్ని నవీకరించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "discoverListsTitle": "జాబితాలను కనుగొనండి",
-  "discoverListsFailedToLoad": "జాబితాలను లోడ్ చేయడంలో విఫలమైంది",
-  "discoverListsLoading": "పబ్లిక్ జాబితాలను కనుగొంటోంది...",
-  "discoverListsRelayTimeout": "రిలే సమయానికి జాబితాలను అందించలేదు. మళ్లీ ప్రయత్నించండి.",
-  "discoverListsServiceUnavailable": "సేవ అందుబాటులో లేదు.",
-  "discoverListsEmptyTitle": "పబ్లిక్ జాబితాలు ఏవీ కనుగొనబడలేదు",
-  "discoverListsEmptySubtitle": "కొత్త జాబితాల కోసం తర్వాత మళ్లీ తనిఖీ చేయండి",
-  "discoverListsByAuthorPrefix": "ద్వారా",
   "curatedListEmptyTitle": "ఈ జాబితాలో వీడియోలు లేవు",
   "curatedListEmptySubtitle": "ప్రారంభించడానికి కొన్ని వీడియోలను జోడించండి",
   "curatedListLoadingVideos": "వీడియోలు లోడ్ అవుతోంది...",

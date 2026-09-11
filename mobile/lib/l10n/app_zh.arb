@@ -572,15 +572,6 @@
   "featuredTabLoadFailed": "无法加载此合集。",
   "featuredTabRetry": "重试",
   "exploreNoVideosAvailable": "暂无视频",
-  "exploreDiscoverLists": "发现列表",
-  "exploreAboutLists": "关于列表",
-  "exploreAboutListsDescription": "列表帮你用两种方式整理和策划 Divine 内容：",
-  "explorePeopleLists": "人物列表",
-  "explorePeopleListsDescription": "关注一群创作者，查看他们的最新视频",
-  "exploreVideoLists": "视频列表",
-  "exploreVideoListsDescription": "把喜欢的视频做成播放列表，稍后观看",
-  "exploreMyLists": "我的列表",
-  "exploreSubscribedLists": "订阅的列表",
   "exploreErrorLoadingLists": "加载列表出错，请重试。",
   "exploreNewVideosCount": "{count, plural, =1{1 条新视频} other{{count} 条新视频}}",
   "@exploreNewVideosCount": {
@@ -1942,7 +1933,6 @@
   "peopleListsNoPeopleSubtitle": "加一些人进来吧",
   "peopleListsNoVideosTitle": "还没有视频",
   "peopleListsNoVideosSubtitle": "列表成员的视频会显示在这里",
-  "peopleListsNoVideosAvailable": "暂无视频",
   "peopleListsFailedToLoadVideos": "视频加载失败",
   "peopleListsVideoNotAvailable": "视频不可用",
   "peopleListsBackToGridTooltip": "返回网格",
@@ -2411,14 +2401,6 @@
   "listAddToList": "加入列表",
   "listVideoCount": "{count} 个视频",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 人} other{{count} 人}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3180,14 +3162,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "更新订阅失败，请重试。",
-  "discoverListsTitle": "发现列表",
-  "discoverListsFailedToLoad": "列表加载失败",
-  "discoverListsLoading": "正在发现公开列表...",
-  "discoverListsRelayTimeout": "中继没有及时返回列表。再试一次。",
-  "discoverListsServiceUnavailable": "服务不可用。",
-  "discoverListsEmptyTitle": "没有找到公开列表",
-  "discoverListsEmptySubtitle": "过会儿再来看看新列表",
-  "discoverListsByAuthorPrefix": "来自",
   "curatedListEmptyTitle": "该列表还没有视频",
   "curatedListEmptySubtitle": "加一些视频开始吧",
   "curatedListLoadingVideos": "视频加载中...",

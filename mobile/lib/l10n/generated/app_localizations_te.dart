@@ -1354,36 +1354,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
 
   @override
-  String get exploreDiscoverLists => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get exploreAboutLists => 'జాబితాల గురించి';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'జాబితాలు Divine కంటెంట్‌ని రెండు విధాలుగా నిర్వహించడానికి మరియు నిర్వహించడంలో మీకు సహాయపడతాయి:';
-
-  @override
-  String get explorePeopleLists => 'వ్యక్తుల జాబితాలు';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'సృష్టికర్తల సమూహాలను అనుసరించండి మరియు వారి తాజా వీడియోలను చూడండి';
-
-  @override
-  String get exploreVideoLists => 'వీడియో జాబితాలు';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'తర్వాత చూడటానికి మీకు ఇష్టమైన వీడియోల ప్లేజాబితాలను సృష్టించండి';
-
-  @override
-  String get exploreMyLists => 'నా జాబితాలు';
-
-  @override
-  String get exploreSubscribedLists => 'సభ్యత్వం పొందిన జాబితాలు';
-
-  @override
   String get exploreErrorLoadingLists =>
       'జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
@@ -4004,9 +3974,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి';
 
   @override
-  String get peopleListsNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'వీడియోలను లోడ్ చేయడంలో విఫలమైంది';
 
@@ -4037,6 +4004,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'జోడించండి';
@@ -4996,12 +4966,12 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countవ్యక్తులు',
-      one: '1 వ్యక్తి',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -5118,6 +5088,44 @@ class AppLocalizationsTe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'షేర్ జాబితా';
@@ -6235,32 +6243,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'సభ్యత్వాన్ని నవీకరించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsTitle => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get discoverListsFailedToLoad => 'జాబితాలను లోడ్ చేయడంలో విఫలమైంది';
-
-  @override
-  String get discoverListsLoading => 'పబ్లిక్ జాబితాలను కనుగొంటోంది...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'రిలే సమయానికి జాబితాలను అందించలేదు. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'సేవ అందుబాటులో లేదు.';
-
-  @override
-  String get discoverListsEmptyTitle => 'పబ్లిక్ జాబితాలు ఏవీ కనుగొనబడలేదు';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'కొత్త జాబితాల కోసం తర్వాత మళ్లీ తనిఖీ చేయండి';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ద్వారా';
 
   @override
   String get curatedListEmptyTitle => 'ఈ జాబితాలో వీడియోలు లేవు';

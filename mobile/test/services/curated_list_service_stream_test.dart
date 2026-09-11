@@ -29,6 +29,10 @@ void main() {
     late StreamController<Event> eventController;
 
     /// Creates a mock kind 30005 list event with video references
+    /// The fixture author for [dTag], the same value every list event carries.
+    String authorPubkeyFor(String dTag) =>
+        'author_pubkey_${dTag.hashCode.abs()}';
+
     Event createListEvent({
       required String dTag,
       required String name,
@@ -43,7 +47,7 @@ void main() {
 
       return Event.fromJson({
         'id': 'event_$dTag',
-        'pubkey': 'author_pubkey_${dTag.hashCode.abs()}',
+        'pubkey': authorPubkeyFor(dTag),
         'created_at':
             createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
         'kind': 30005,
@@ -57,7 +61,7 @@ void main() {
     Event createEmptyListEvent({required String dTag, required String name}) {
       return Event.fromJson({
         'id': 'event_$dTag',
-        'pubkey': 'author_pubkey_${dTag.hashCode.abs()}',
+        'pubkey': authorPubkeyFor(dTag),
         'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         'kind': 30005,
         'tags': [
@@ -232,9 +236,12 @@ void main() {
       test('excludeIds parameter skips known lists', () async {
         final receivedLists = <List<CuratedList>>[];
 
-        // Start stream with excludeIds containing 'list2'
+        // excludeIds is keyed by author and d-tag, so a bare d-tag matches
+        // nothing; exclude list2 under its author.
         final subscription = service
-            .streamPublicListsFromRelays(excludeIds: {'list2'})
+            .streamPublicListsFromRelays(
+              excludeIds: {'${authorPubkeyFor('list2')}:list2'},
+            )
             .listen((lists) => receivedLists.add(List.from(lists)));
 
         // Wait for the async generator to reach the await for loop

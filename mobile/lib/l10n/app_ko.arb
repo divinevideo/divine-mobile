@@ -313,15 +313,6 @@
     "featuredTabLoadFailed": "이 컬렉션을 불러오지 못했어요.",
     "featuredTabRetry": "다시 시도",
     "exploreNoVideosAvailable": "이용 가능한 영상이 없어요",
-    "exploreDiscoverLists": "리스트 둘러보기",
-    "exploreAboutLists": "리스트란?",
-    "exploreAboutListsDescription": "리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:",
-    "explorePeopleLists": "사람 리스트",
-    "explorePeopleListsDescription": "크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요",
-    "exploreVideoLists": "영상 리스트",
-    "exploreVideoListsDescription": "좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요",
-    "exploreMyLists": "내 리스트",
-    "exploreSubscribedLists": "구독 리스트",
     "exploreErrorLoadingLists": "리스트를 불러오지 못했어요. 다시 시도해보세요.",
     "exploreNewVideosCount": "{count, plural, other{새 영상 {count}개}}",
     "exploreLoadNewVideosLabel": "{count, plural, other{새 영상 {count}개 불러오기}}",
@@ -2452,7 +2443,6 @@
     "peopleListsNoPeopleSubtitle": "시작하려면 사람을 추가하세요",
     "peopleListsNoVideosTitle": "아직 동영상 없음",
     "peopleListsNoVideosSubtitle": "목록 구성원의 동영상이 여기에 표시됩니다",
-    "peopleListsNoVideosAvailable": "사용 가능한 동영상 없음",
     "peopleListsFailedToLoadVideos": "동영상을 불러오지 못했습니다",
     "peopleListsVideoNotAvailable": "동영상을 사용할 수 없습니다",
     "peopleListsBackToGridTooltip": "그리드로 돌아가기",
@@ -2703,14 +2693,6 @@
     "authConfirmPasswordRequired": "비밀번호를 다시 입력해주세요",
     "authPasswordsDoNotMatch": "비밀번호가 일치하지 않아요",
     "authConfirmNewPasswordLabel": "새 비밀번호 확인",
-    "listPersonCount": "{count, plural, =1{1명} other{{count}명}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "작성자: ",
     "keyManagementYourPublicKeyLabel": "공개 키 (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -2757,14 +2739,6 @@
             }
         }
     },
-    "discoverListsTitle": "리스트 둘러보기",
-    "discoverListsFailedToLoad": "리스트를 불러오지 못했어요",
-    "discoverListsLoading": "공개 리스트를 찾는 중...",
-    "discoverListsRelayTimeout": "릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.",
-    "discoverListsServiceUnavailable": "서비스를 사용할 수 없어요.",
-    "discoverListsEmptyTitle": "공개 리스트를 찾지 못했어요",
-    "discoverListsEmptySubtitle": "새 리스트가 올라오면 다시 와봐요",
-    "discoverListsByAuthorPrefix": "작성자",
     "curatedListEmptyTitle": "이 리스트에 영상이 없어요",
     "curatedListEmptySubtitle": "영상을 추가해서 시작해보세요",
     "curatedListLoadingVideos": "영상 불러오는 중...",

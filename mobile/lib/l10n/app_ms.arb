@@ -572,15 +572,6 @@
   "featuredTabLoadFailed": "Koleksi ini tidak dapat dimuatkan.",
   "featuredTabRetry": "Cuba lagi",
   "exploreNoVideosAvailable": "Tiada video tersedia",
-  "exploreDiscoverLists": "Terokai Senarai",
-  "exploreAboutLists": "Perihal Senarai",
-  "exploreAboutListsDescription": "Senarai membantu anda menyusun dan mengurus kandungan Divine dalam dua cara:",
-  "explorePeopleLists": "Senarai Orang",
-  "explorePeopleListsDescription": "Ikut kumpulan pencipta dan lihat video terbaharu mereka",
-  "exploreVideoLists": "Senarai Video",
-  "exploreVideoListsDescription": "Cipta senarai main video kegemaran anda untuk ditonton nanti",
-  "exploreMyLists": "Senarai Saya",
-  "exploreSubscribedLists": "Senarai Langganan",
   "exploreErrorLoadingLists": "Ralat memuatkan senarai. Sila cuba lagi.",
   "exploreNewVideosCount": "{count, plural, =1{1 video baharu} other{{count} video baharu}}",
   "@exploreNewVideosCount": {
@@ -1942,7 +1933,6 @@
   "peopleListsNoPeopleSubtitle": "Tambah beberapa orang untuk bermula",
   "peopleListsNoVideosTitle": "Belum ada video",
   "peopleListsNoVideosSubtitle": "Video daripada ahli senarai akan muncul di sini",
-  "peopleListsNoVideosAvailable": "Tiada video tersedia",
   "peopleListsFailedToLoadVideos": "Gagal memuatkan video",
   "peopleListsVideoNotAvailable": "Video tidak tersedia",
   "peopleListsBackToGridTooltip": "Kembali ke grid",
@@ -2411,14 +2401,6 @@
   "listAddToList": "Tambah ke Senarai",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3180,14 +3162,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Gagal mengemas kini langganan. Sila cuba lagi.",
-  "discoverListsTitle": "Terokai Senarai",
-  "discoverListsFailedToLoad": "Gagal memuatkan senarai",
-  "discoverListsLoading": "Menemui senarai awam...",
-  "discoverListsRelayTimeout": "Relay tidak memulangkan senarai tepat pada masanya. Cuba lagi.",
-  "discoverListsServiceUnavailable": "Perkhidmatan tidak tersedia.",
-  "discoverListsEmptyTitle": "Tiada senarai awam ditemui",
-  "discoverListsEmptySubtitle": "Semak semula nanti untuk senarai baharu",
-  "discoverListsByAuthorPrefix": "oleh",
   "curatedListEmptyTitle": "Tiada video dalam senarai ini",
   "curatedListEmptySubtitle": "Tambah beberapa video untuk bermula",
   "curatedListLoadingVideos": "Memuatkan video...",

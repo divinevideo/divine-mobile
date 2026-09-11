@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "تعذّر تحميل هذه المجموعة.",
     "featuredTabRetry": "حاول مرة أخرى",
     "exploreNoVideosAvailable": "لا توجد فيديوهات متاحة",
-    "exploreDiscoverLists": "اكتشف القوائم",
-    "exploreAboutLists": "عن القوائم",
-    "exploreAboutListsDescription": "القوائم تساعدك في تنظيم محتوى Divine بطريقتين:",
-    "explorePeopleLists": "قوائم الأشخاص",
-    "explorePeopleListsDescription": "تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم",
-    "exploreVideoLists": "قوائم الفيديو",
-    "exploreVideoListsDescription": "أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا",
-    "exploreMyLists": "قوائمي",
-    "exploreSubscribedLists": "القوائم المشترك بها",
     "exploreErrorLoadingLists": "خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.",
     "exploreNewVideosCount": "{count, plural, zero{لا توجد فيديوهات جديدة} one{فيديو جديد واحد} two{فيديوان جديدان} few{{count} فيديوهات جديدة} many{{count} فيديو جديد} other{{count} فيديو جديد}}",
     "@exploreNewVideosCount": {
@@ -2914,7 +2905,6 @@
     "peopleListsNoPeopleSubtitle": "أضف بعض الأشخاص للبدء",
     "peopleListsNoVideosTitle": "لا توجد مقاطع فيديو بعد",
     "peopleListsNoVideosSubtitle": "ستظهر هنا مقاطع الفيديو من أعضاء القائمة",
-    "peopleListsNoVideosAvailable": "لا تتوفر مقاطع فيديو",
     "peopleListsFailedToLoadVideos": "فشل تحميل مقاطع الفيديو",
     "peopleListsVideoNotAvailable": "الفيديو غير متاح",
     "peopleListsBackToGridTooltip": "العودة إلى الشبكة",
@@ -3165,14 +3155,6 @@
     "authConfirmPasswordRequired": "أكّد كلمة المرور",
     "authPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين",
     "authConfirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
-    "listPersonCount": "{count, plural, zero{لا أحد} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "بقلم ",
     "keyManagementYourPublicKeyLabel": "مفتاحك العام (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "اكتشف القوائم",
-    "discoverListsFailedToLoad": "فشل تحميل القوائم",
-    "discoverListsLoading": "جاري اكتشاف القوائم العامة...",
-    "discoverListsRelayTimeout": "لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.",
-    "discoverListsServiceUnavailable": "الخدمة غير متاحة.",
-    "discoverListsEmptyTitle": "لم يتم العثور على قوائم عامة",
-    "discoverListsEmptySubtitle": "عاود التحقق لاحقًا لرؤية قوائم جديدة",
-    "discoverListsByAuthorPrefix": "بقلم",
     "curatedListEmptyTitle": "لا فيديوهات في هذه القائمة",
     "curatedListEmptySubtitle": "أضف بعض الفيديوهات للبدء",
     "curatedListLoadingVideos": "جاري تحميل الفيديوهات...",

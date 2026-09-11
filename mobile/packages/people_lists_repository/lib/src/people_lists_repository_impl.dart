@@ -288,15 +288,77 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     if (trimmed.isEmpty) return;
 
     final lowerQuery = trimmed.toLowerCase();
+    final results = await _queryPublicLists(
+      limit: limit,
+      logContext: 'for "$trimmed"',
+      where: (list) =>
+          list.name.toLowerCase().contains(lowerQuery) ||
+          (list.description?.toLowerCase().contains(lowerQuery) ?? false),
+    );
 
+    if (results.isNotEmpty) {
+      yield List.unmodifiable(results);
+    }
+  }
+
+  @override
+  Future<List<PeopleListSearchResult>> discoverPublicLists({
+    int limit = 50,
+    String? excludeAuthor,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: limit,
+      logContext: 'for discovery',
+      excludeAuthor: excludeAuthor,
+    );
+    results.sort((a, b) => b.list.updatedAt.compareTo(a.list.updatedAt));
+    return List.unmodifiable(results);
+  }
+
+  @override
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: 10,
+      logContext: 'for ${pubkeyForLogs(ownerPubkey)}/$listId',
+      author: ownerPubkey,
+      dTag: listId,
+    );
+    for (final result in results) {
+      if (result.ownerPubkey == ownerPubkey && result.list.id == listId) {
+        // Someone else's list: the members render, the owner affordances
+        // (add people, delete) must not.
+        return result.list.copyWith(isEditable: false);
+      }
+    }
+    return null;
+  }
+
+  /// Shared relay query + decode + filter + coordinate-dedup pipeline behind
+  /// [searchPublicLists], [discoverPublicLists], and [fetchPublicList].
+  Future<List<PeopleListSearchResult>> _queryPublicLists({
+    required int limit,
+    required String logContext,
+    bool Function(UserList list)? where,
+    String? excludeAuthor,
+    String? author,
+    String? dTag,
+  }) async {
     final List<Event> events;
     try {
       events = await _nostrClient.queryEvents([
-        Filter(kinds: const [Nip51PeopleListCodec.kind], limit: limit),
+        Filter(
+          kinds: const [Nip51PeopleListCodec.kind],
+          limit: limit,
+          authors: author == null ? null : [author],
+          d: dTag == null ? null : [dTag],
+        ),
       ]);
     } on Object catch (error, stackTrace) {
       Log.error(
-        'Failed to query public people lists for "$trimmed"',
+        'Failed to query public people lists $logContext',
         name: _logName,
         category: LogCategory.relay,
         error: error,
@@ -307,17 +369,15 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
     final seen = <String, PeopleListSearchResult>{};
     for (final event in events) {
+      if (excludeAuthor != null && event.pubkey == excludeAuthor) continue;
       final blockFilter = _blockFilter;
       if (blockFilter != null && blockFilter(event.pubkey)) continue;
 
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
       if (list.pubkeys.isEmpty) continue;
-
-      final nameMatches = list.name.toLowerCase().contains(lowerQuery);
-      final descriptionMatches =
-          list.description?.toLowerCase().contains(lowerQuery) ?? false;
-      if (!nameMatches && !descriptionMatches) continue;
+      if (Nip51PeopleListCodec.machineryDTags.contains(list.id)) continue;
+      if (where != null && !where(list)) continue;
 
       final result = PeopleListSearchResult(
         ownerPubkey: event.pubkey,
@@ -330,9 +390,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       seen[result.addressableId] = result;
     }
 
-    if (seen.isNotEmpty) {
-      yield List.unmodifiable(seen.values.toList());
-    }
+    return seen.values.toList();
   }
 
   Future<PeopleListPublishResult> _publishListReplacement({

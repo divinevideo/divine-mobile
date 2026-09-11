@@ -1271,6 +1271,266 @@ void main() {
       );
     });
 
+    group('discoverPublicLists', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        required List<String> pubkeys,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            for (final pk in pubkeys) ['p', pk],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      test("skips other clients' machinery sets", () async {
+        // A titled mute set is still a mute set: nothing to browse.
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mute',
+              title: 'Mute',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-contacts',
+              title: 'dm-contacts',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((r) => r.list.id), equals(['crew']));
+      });
+
+      test('returns lists newest first without a text filter', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'older',
+              title: 'Older crew',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'newer',
+              title: 'Newer crew',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(2));
+        expect(results.first.list.name, equals('Newer crew'));
+        expect(results.last.list.name, equals('Older crew'));
+      });
+
+      test('drops lists authored by excludeAuthor', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mine',
+              title: 'My own list',
+              pubkeys: [secondOwner],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'theirs',
+              title: 'Someone else',
+              pubkeys: [_ownerPubkey],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists(
+          excludeAuthor: _ownerPubkey,
+        );
+
+        expect(results, hasLength(1));
+        expect(results.single.ownerPubkey, equals(secondOwner));
+      });
+
+      test('keeps the newest event per addressable coordinate', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Stale name',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Fresh name',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(1));
+        expect(results.single.list.name, equals('Fresh name'));
+      });
+
+      test('returns empty when the relay has nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(await repository.discoverPublicLists(), isEmpty);
+      });
+    });
+
+    group('fetchPublicList', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            ['p', secondOwner],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      test('queries by author and d tag and returns the match', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNotNull);
+        expect(list!.name, equals('Crew'));
+        // Someone else's list must not surface owner affordances.
+        expect(list.isEditable, isFalse);
+
+        final capturedFilters = verify(
+          () => client.queryEvents(
+            captureAny(),
+            useCache: any(named: 'useCache'),
+          ),
+        ).captured.cast<List<Filter>>();
+        final filter = capturedFilters.single.single;
+        expect(filter.authors, equals([_ownerPubkey]));
+        expect(filter.d, equals(['crew']));
+      });
+
+      test('ignores a same-d list from another author', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: secondOwner, dTag: 'crew', title: 'Impostor'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNull);
+      });
+
+      test('returns null when relays hold nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(
+          await repository.fetchPublicList(
+            ownerPubkey: _ownerPubkey,
+            listId: 'crew',
+          ),
+          isNull,
+        );
+      });
+    });
+
     group('searchPublicLists', () {
       // Second owner pubkey for multi-owner deduplication tests.
       const secondOwner =
@@ -1297,6 +1557,35 @@ void main() {
           createdAt: createdAt,
         );
       }
+
+      test("skips other clients' machinery sets", () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-archive',
+              title: 'Archive crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'blindoracle-v1-health',
+              title: 'Health crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, isEmpty);
+      });
 
       test('issues a kind 30000 relay query with the given limit', () async {
         final client = _MockNostrClient();
@@ -1613,6 +1902,46 @@ void main() {
         expect(emissions, hasLength(1));
         expect(emissions.single, hasLength(1));
         expect(emissions.single.single.list.name, equals('Crew Lower id'));
+      });
+
+      test('keeps the newest event when the newer one arrives first', () async {
+        // Relay/cache merge order is not guaranteed (queryEvents builds
+        // an EventMemBox with sortAfterAdd: false), and the cache holding
+        // the newer version while a lagging relay serves the older one
+        // produces exactly this order. Fed oldest-first only, the dedup
+        // guard can be deleted outright and the sibling test stays green.
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+
+        final older = peopleEvent(
+          pubkey: _ownerPubkey,
+          dTag: 'crew',
+          title: 'Crew',
+          pubkeys: const [_memberA],
+          createdAt: 1710000000,
+        );
+        final newer = peopleEvent(
+          pubkey: _ownerPubkey,
+          dTag: 'crew',
+          title: 'Crew Updated',
+          pubkeys: const [_memberA, _memberB],
+          createdAt: 1710000500,
+        );
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => [newer, older]);
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, hasLength(1));
+        expect(emissions.single, hasLength(1));
+        expect(emissions.single.single.list.name, equals('Crew Updated'));
+        expect(
+          emissions.single.single.list.pubkeys,
+          equals(const [_memberA, _memberB]),
+        );
       });
 
       test('does not yield when no events match the query', () async {

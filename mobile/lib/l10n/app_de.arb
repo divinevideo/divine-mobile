@@ -452,15 +452,6 @@
     "featuredTabLoadFailed": "Diese Sammlung konnte nicht geladen werden.",
     "featuredTabRetry": "Erneut versuchen",
     "exploreNoVideosAvailable": "Keine Videos verfügbar",
-    "exploreDiscoverLists": "Listen entdecken",
-    "exploreAboutLists": "Über Listen",
-    "exploreAboutListsDescription": "Listen helfen dir, Divine-Inhalte auf zwei Arten zu organisieren und zu kuratieren:",
-    "explorePeopleLists": "Personen-Listen",
-    "explorePeopleListsDescription": "Folge Gruppen von Creatorn und sieh ihre neuesten Videos",
-    "exploreVideoLists": "Video-Listen",
-    "exploreVideoListsDescription": "Erstelle Playlists deiner Lieblingsvideos, um sie später anzusehen",
-    "exploreMyLists": "Meine Listen",
-    "exploreSubscribedLists": "Abonnierte Listen",
     "exploreErrorLoadingLists": "Fehler beim Laden der Listen. Bitte versuch es nochmal.",
     "exploreNewVideosCount": "{count, plural, one{1 neues Video} other{{count} neue Videos}}",
     "@exploreNewVideosCount": {
@@ -2921,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Füge Personen hinzu, um loszulegen",
     "peopleListsNoVideosTitle": "Noch keine Videos",
     "peopleListsNoVideosSubtitle": "Videos von Listenmitgliedern erscheinen hier",
-    "peopleListsNoVideosAvailable": "Keine Videos verfügbar",
     "peopleListsFailedToLoadVideos": "Videos konnten nicht geladen werden",
     "peopleListsVideoNotAvailable": "Video nicht verfügbar",
     "peopleListsBackToGridTooltip": "Zurück zum Raster",
@@ -3165,14 +3155,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
     "safetySettingsWhatYouSee": "WAS DU SIEHST",
     "safetySettingsWhatYouPublish": "WAS DU VERÖFFENTLICHST",
-    "listPersonCount": "{count, plural, =1{1 Person} other{{count} Personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Von ",
     "keyManagementYourPublicKeyLabel": "Dein Public Key (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3219,14 +3201,6 @@
             }
         }
     },
-    "discoverListsTitle": "Listen entdecken",
-    "discoverListsFailedToLoad": "Listen konnten nicht geladen werden",
-    "discoverListsLoading": "Öffentliche Listen werden entdeckt...",
-    "discoverListsRelayTimeout": "Das Relay hat nicht rechtzeitig Listen geliefert. Versuch es nochmal.",
-    "discoverListsServiceUnavailable": "Dienst nicht verfügbar.",
-    "discoverListsEmptyTitle": "Keine öffentlichen Listen gefunden",
-    "discoverListsEmptySubtitle": "Schau später nochmal nach neuen Listen",
-    "discoverListsByAuthorPrefix": "von",
     "curatedListEmptyTitle": "Keine Videos in dieser Liste",
     "curatedListEmptySubtitle": "Füg ein paar Videos hinzu, um loszulegen",
     "curatedListLoadingVideos": "Videos werden geladen...",

@@ -1361,36 +1361,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Niciun videoclip disponibil';
 
   @override
-  String get exploreDiscoverLists => 'Descoperă liste';
-
-  @override
-  String get exploreAboutLists => 'Despre liste';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:';
-
-  @override
-  String get explorePeopleLists => 'Liste de oameni';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor';
-
-  @override
-  String get exploreVideoLists => 'Liste de videoclipuri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu';
-
-  @override
-  String get exploreMyLists => 'Listele mele';
-
-  @override
-  String get exploreSubscribedLists => 'Liste la care ești abonat';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Eroare la încărcarea listelor. Încearcă din nou.';
 
@@ -3973,9 +3943,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipurile membrilor listei vor apărea aici';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Niciun videoclip disponibil';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Încărcarea videoclipurilor a eșuat';
 
@@ -4007,6 +3974,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Încearcă din nou';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Adaugă';
@@ -4963,13 +4933,12 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count de persoane',
-      few: '$count persoane',
-      one: '1 persoană',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -5086,6 +5055,44 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Distribuie lista';
@@ -6195,31 +6202,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Nu s-a putut actualiza abonamentul. Încearcă din nou.';
-
-  @override
-  String get discoverListsTitle => 'Descoperă liste';
-
-  @override
-  String get discoverListsFailedToLoad => 'N-am putut încărca listele';
-
-  @override
-  String get discoverListsLoading => 'Se descoperă liste publice...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Releul nu a returnat liste la timp. Încearcă din nou.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviciul nu este disponibil.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nicio listă publică găsită';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Revino mai târziu pentru liste noi';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'de';
 
   @override
   String get curatedListEmptyTitle => 'Niciun videoclip în această listă';
