@@ -68,11 +68,10 @@ declaration described below.
 | App (`Runner`) | *(none)* | — | The Runner target's own Release code calls no required-reason API. Its single `UserDefaults` call is inside `#if DEBUG`. |
 | `divine_quick_actions` | *(none)* | — | No required-reason API detected. |
 
-`NSPrivacyCollectedDataTypes` is empty in the app manifest and is **not** a
-claim that Divine collects nothing. Filling it is a product/legal decision that
-must match the App Store Connect privacy label, and was deliberately out of
-scope for the required-reason API audit. Its outcome is recorded under
-[Privacy-label decisions](#privacy-label-decisions-8850) below.
+The app manifest's `NSPrivacyCollectedDataTypes` is filled in from the
+[Privacy-label decisions](#privacy-label-decisions-8850) below. Choosing those
+values was a product/legal decision that must match the App Store Connect
+privacy label, which is why it was kept out of the required-reason API audit.
 
 `LibProofMode`'s collected-data section is empty because Divine constructs
 `ProofGenerationOptions(showDeviceIds: false, showLocation: false,
