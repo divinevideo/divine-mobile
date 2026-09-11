@@ -1260,12 +1260,14 @@ class NostrClient {
       noRelays: noConnectedRelays || network.endedBy == QueryEnd.noRelay,
       timedOut:
           timedOutOverride ??
-          (network.endedBy == QueryEnd.deadline ||
-              // A read no relay took, ending at or after the deadline, had a
-              // relay still holding the REQ when the deadline fired.
-              (network.endedBy == QueryEnd.noRelay &&
-                  (requireAllRelaysSettled ||
-                      !DateTime.now().isBefore(deadline)))),
+          (requireAllRelaysSettled
+              ? !network.isComplete
+              : network.endedBy == QueryEnd.deadline ||
+                    // A read no relay took, ending at or after the deadline,
+                    // had a relay still holding the REQ when the deadline
+                    // fired.
+                    (network.endedBy == QueryEnd.noRelay &&
+                        !DateTime.now().isBefore(deadline))),
     );
   }
 

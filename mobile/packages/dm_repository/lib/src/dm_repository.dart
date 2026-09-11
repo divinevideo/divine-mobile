@@ -2255,6 +2255,16 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     if (_ingestSessionEnded(pubkey, generation)) return;
+    if (_automaticDrainRetryCount >=
+        DmHistoryDrainConfig.deferredRetryDelays.length) {
+      Log.warning(
+        'DM history drain for ${pubkeyForLogs(pubkey)} exhausted its '
+        'automatic no-progress retry budget; waiting for a manual retry or '
+        'a later session.',
+        category: LogCategory.system,
+      );
+      return;
+    }
     final lastConnected = <String>{
       for (final entry in _nostrClient.relayStatuses.entries)
         if (entry.value.isConnected) entry.key,
@@ -2291,23 +2301,20 @@ class DmRepository {
       );
       unawaited(backfillHistoryIfNeeded());
     });
-    if (_automaticDrainRetryCount <
-        DmHistoryDrainConfig.deferredRetryDelays.length) {
-      final delay =
-          DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
-      _drainRetryTimer = Timer(delay, () {
-        _drainRetryTimer = null;
-        unawaited(_drainRelayReadySubscription?.cancel());
-        _drainRelayReadySubscription = null;
-        if (_ingestSessionEnded(pubkey, generation)) return;
-        Log.info(
-          'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
-          'bounded retry delay',
-          category: LogCategory.system,
-        );
-        unawaited(backfillHistoryIfNeeded());
-      });
-    }
+    final delay =
+        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
+    _drainRetryTimer = Timer(delay, () {
+      _drainRetryTimer = null;
+      unawaited(_drainRelayReadySubscription?.cancel());
+      _drainRelayReadySubscription = null;
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      Log.info(
+        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
+        'bounded retry delay',
+        category: LogCategory.system,
+      );
+      unawaited(backfillHistoryIfNeeded());
+    });
   }
 
   /// Stops listening for incoming DMs and tears this repository down.

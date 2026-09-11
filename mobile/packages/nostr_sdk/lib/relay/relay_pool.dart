@@ -1177,11 +1177,12 @@ class RelayPool {
     }
 
     // Nothing is pending — but for a full-settlement caller that only means
-    // the query is finished if some relay actually answered it, and no relay
-    // refused to answer. A relay that `CLOSED` the REQ has made no data claim,
-    // and a relay that stayed silent may still be about to speak, so a caller
-    // about to replace what it read waits both out rather than read an empty
-    // box as "every relay says there is nothing".
+    // the query is complete if some relay actually answered it and no relay
+    // became stranded. A relay that `CLOSED` the REQ has made no data claim,
+    // but it has terminated its copy of the request: waiting cannot turn that
+    // refusal into an answer. Complete the transport promptly and let the
+    // query outcome report `relayClosed`, which strict compatibility callers
+    // map back to an inconclusive result.
     //
     // A fan-out no relay took is the one shape that cannot improve by waiting
     // — see [_queryReachedNoRelay] — and `sentTo` already tells the caller the
@@ -1192,9 +1193,7 @@ class RelayPool {
     // leaves no relay holding the query, so nothing can be stranded on one.
     if (_queriesRequiringFullSettlement.contains(subId) &&
         !_queryReachedNoRelay.contains(subId) &&
-        (!_queryAnswered.contains(subId) ||
-            _queryClosedWithoutAnswer.contains(subId) ||
-            strandedOnBlockedRelay)) {
+        (!_queryAnswered.contains(subId) || strandedOnBlockedRelay)) {
       return;
     }
 

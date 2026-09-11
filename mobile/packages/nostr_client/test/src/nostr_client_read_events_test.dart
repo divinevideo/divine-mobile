@@ -229,6 +229,44 @@ void main() {
     });
 
     test(
+      'keeps a prompt CLOSED inconclusive for strict legacy callers',
+      () async {
+        final nostr = _newNostr();
+        final relay = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://refuses.example'],
+        );
+
+        final pending = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(seconds: 2),
+          requireAllRelaysSettled: true,
+        );
+        final subId = await relay.awaitReq(0);
+        await relay.deliver([
+          'CLOSED',
+          subId,
+          'error: unsupported filter',
+        ]);
+
+        final result = await pending;
+
+        expect(result.events, isEmpty);
+        expect(
+          result.timedOut,
+          isTrue,
+          reason:
+              'prompt transport completion must not make a refusal '
+              'authoritative for compatibility callers',
+        );
+        expect(result.noRelays, isFalse);
+      },
+    );
+
+    test(
       'reports a relay skipped past the settle window as settledEarly',
       () async {
         final nostr = _newNostr();
