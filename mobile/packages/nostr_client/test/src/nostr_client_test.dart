@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -5519,6 +5520,66 @@ void main() {
         },
         timeout: const Timeout(Duration(seconds: 3)),
       );
+
+      // Deterministic regression guard for the redial deadline. Under
+      // FakeAsync the `.timeout` timer fires on elapse() while the wall
+      // clock that remainingTimeout() reads barely advances, so the
+      // re-sampled residue is reliably positive. That reproduces the
+      // pre-fix bug: the old code read the residue as leftover budget and
+      // dispatched a second COUNT. The onTimeout deadline flag must stop
+      // after one COUNT, so reverting it fails this test on every run,
+      // not only on the rare live-timer race from #9063.
+      test('does not ask again after the redial deadline fires', () {
+        fakeAsync((async) {
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => Completer<void>().future);
+
+          Object? caught;
+          var settled = false;
+          unawaited(
+            client
+                .countEvents(
+                  [
+                    Filter(kinds: [EventKind.textNote]),
+                  ],
+                  timeout: const Duration(milliseconds: 200),
+                )
+                .then<void>(
+                  (_) => settled = true,
+                  onError: (Object error) {
+                    caught = error;
+                    settled = true;
+                  },
+                ),
+          );
+
+          async
+            ..elapse(const Duration(milliseconds: 200))
+            ..flushMicrotasks();
+
+          expect(settled, isTrue);
+          expect(caught, isA<CountUnavailableException>());
+          verify(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        });
+      });
 
       test('asks again after an earlier reconnect timeout', () async {
         var attempts = 0;
