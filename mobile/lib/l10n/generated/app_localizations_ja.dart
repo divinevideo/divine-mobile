@@ -10535,6 +10535,48 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsStorageCleared => 'キャッシュを消去しました';
 
   @override
+  String get settingsStorageContentSectionTitle => 'クリップと下書き';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '自分で作った録画、下書き、サウンド。キャッシュを消してもここには触れません。ここの容量を空けるには、ライブラリからクリップを削除してください。';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '残ったファイルはありません';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '残ったファイル $count 件、$size',
+      one: '残ったファイル $count 件、$size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '残ったファイルを削除';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '残ったファイルを削除しますか？';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'どのクリップ・下書き・アップロードにも使われていないファイル $count 件を削除し、$size を解放します。元に戻せません。',
+      one: 'どのクリップ・下書き・アップロードにも使われていないファイル $count 件を削除し、$size を解放します。元に戻せません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '残ったファイルを削除しました';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'クリップライブラリ';
 
   @override

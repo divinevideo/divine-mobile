@@ -11228,6 +11228,53 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsStorageCleared => 'Zwischenspeicher geleert';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Deine Clips und Entwürfe';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Aufnahmen, Entwürfe und Sounds, die du erstellt hast. Cache leeren rührt sie nie an – lösche Clips aus deiner Bibliothek, um hier Platz zu schaffen.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles =>
+      'Keine übrig gebliebenen Dateien';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count übrig gebliebene Dateien, $size',
+      one: '$count übrig gebliebene Datei, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Übrig gebliebene Dateien entfernen';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Übrig gebliebene Dateien entfernen?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Das löscht $count Dateien, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
+      one:
+          'Das löscht $count Datei, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Übrig gebliebene Dateien entfernt';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Clip-Bibliothek';
 
   @override

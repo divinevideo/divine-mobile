@@ -52,12 +52,82 @@ abstract final class TempRenderPatterns {
     extension: '.wav',
   );
 
+  /// Duration-limit trim output; renamed over its source on success, so one
+  /// left behind belongs to a trim that never finished.
+  static const trimmedVideo = TempRenderPattern(
+    prefix: 'trimmed_',
+    extension: '.mp4',
+  );
+
+  /// Aspect-ratio crop for a gallery save.
+  static const croppedVideo = TempRenderPattern(
+    prefix: 'cropped_',
+    extension: '.mp4',
+  );
+
+  /// Per-clip normalization pass of an export.
+  static const normalizedVideo = TempRenderPattern(
+    prefix: 'normalized_',
+    extension: '.mp4',
+  );
+
+  /// Retimed preview body of a speed-changed clip.
+  static const speedVideo = TempRenderPattern(
+    prefix: 'speed_',
+    extension: '.mp4',
+  );
+
+  /// One-shot audio extraction for caption generation. The copy a draft keeps
+  /// lives under the documents directory and is not a temp render.
+  static const extractedAudio = TempRenderPattern(
+    prefix: 'extracted_audio_',
+    extension: '.wav',
+  );
+
+  /// Timeline strip thumbnail.
+  static const stripThumbnail = TempRenderPattern(
+    prefix: 'strip_',
+    extension: '.jpg',
+  );
+
   /// All temp-render files that are safe to count and clear.
+  ///
+  /// The set the settings "Storage" screen counts and clears. It is wider
+  /// than what any single stale sweep passes explicitly (#7641): the editor
+  /// writes every one of these to the temporary directory, a repair wipe
+  /// already removes them, and a routine clear that skipped them reported a
+  /// fraction of what it could reclaim.
   static const List<TempRenderPattern> all = [
     watermarkedVideo,
     mergedVideo,
     mergedAudio,
+    trimmedVideo,
+    croppedVideo,
+    normalizedVideo,
+    speedVideo,
+    extractedAudio,
+    stripThumbnail,
   ];
+}
+
+/// Temporary-directory subtrees that hold only regenerable render output.
+abstract final class TempRenderDirectories {
+  /// Speed-render cache (`ClipSpeedRenderService`), keyed by clip and speed
+  /// and rebuilt on demand.
+  static const speedClips = 'speed_clips';
+
+  /// Bundled-asset and in-memory media that `divine_video_player` copies to
+  /// disk because native players cannot read from memory. Rewritten by every
+  /// `VideoClip.asset` / `VideoClip.memory` / `AudioTrack` call.
+  static const List<String> playerScratch = [
+    'divine_player_assets',
+    'divine_player_memory',
+    'divine_player_audio_assets',
+    'divine_player_audio_memory',
+  ];
+
+  /// Every directory name that is safe to count and clear wholesale.
+  static const List<String> all = [speedClips, ...playerScratch];
 }
 
 /// Best-effort janitor for regenerable temp render files.

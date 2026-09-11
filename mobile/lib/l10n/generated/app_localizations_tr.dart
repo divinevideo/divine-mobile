@@ -11018,6 +11018,50 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsStorageCleared => 'Önbellek temizlendi';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Kliplerin ve taslakların';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Yaptığın kayıtlar, taslaklar ve sesler. Önbelleği temizlemek bunlara hiç dokunmaz; burada yer açmak için kitaplığından klip sil.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Artık dosya yok';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count artık dosya, $size',
+      one: '$count artık dosya, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Artık dosyaları kaldır';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Artık dosyalar kaldırılsın mı?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+      one:
+          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Artık dosyalar kaldırıldı';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Klip kitaplığı';
 
   @override

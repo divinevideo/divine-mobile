@@ -11205,6 +11205,52 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsStorageCleared => 'Кешът е изчистен';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Твоите клипове и чернови';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Записи, чернови и звуци, които си направил(а). Изчистването на кеша никога не ги пипа – изтрий клипове от библиотеката си, за да освободиш място тук.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Няма останали файлове';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count останали файла, $size',
+      one: '$count останал файл, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Премахни останалите файлове';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Да се премахнат ли останалите файлове?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Това изтрива $count файла, които вече не се използват от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
+      one:
+          'Това изтрива $count файл, който вече не се използва от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Останалите файлове са премахнати';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Библиотека с клипове';
 
   @override

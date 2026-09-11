@@ -11018,6 +11018,60 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsStorageCleared => 'تم مسح ذاكرة التخزين المؤقت';
 
   @override
+  String get settingsStorageContentSectionTitle => 'مقاطعك ومسوداتك';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'التسجيلات والمسودات والأصوات التي أنشأتها. مسح ذاكرة التخزين المؤقت لا يمسّها أبدًا — لتحرير مساحة هنا، يمكن حذف مقاطع من المكتبة.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'لا توجد ملفات متبقية';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ملف متبقٍ، $size',
+      many: '$count ملفًا متبقيًا، $size',
+      few: '$count ملفات متبقية، $size',
+      two: 'ملفان متبقيان، $size',
+      one: 'ملف متبقٍ واحد، $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'إزالة الملفات المتبقية';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'إزالة الملفات المتبقية؟';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'سيؤدي ذلك إلى حذف $count ملف لم يعد يستخدمه أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      many:
+          'سيؤدي ذلك إلى حذف $count ملفًا لم يعد يستخدمها أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      few:
+          'سيؤدي ذلك إلى حذف $count ملفات لم يعد يستخدمها أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      two:
+          'سيؤدي ذلك إلى حذف ملفين لم يعد يستخدمهما أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      one:
+          'سيؤدي ذلك إلى حذف ملف واحد لم يعد يستخدمه أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'تمت إزالة الملفات المتبقية';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'مكتبة المقاطع';
 
   @override

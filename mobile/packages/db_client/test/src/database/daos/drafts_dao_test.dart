@@ -182,6 +182,78 @@ void main() {
       });
     });
 
+    group('referencedDraftFilenames', () {
+      test('resolves indexed columns and the manifest in one call', () async {
+        await dao.saveDraftWithClips(
+          id: 'draft_a',
+          title: 'A',
+          description: '',
+          publishStatus: 'draft',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          renderedFilePath: 'render_a.mp4',
+          renderedThumbnailPath: 'thumb_a.jpeg',
+          customThumbnailPath: 'cover_a.jpeg',
+          data: jsonEncode({
+            draftOwnedFileBasenamesKey: ['layer_a.mp4'],
+          }),
+          clipDataList: const [],
+        );
+        await dao.saveDraftWithClips(
+          id: 'draft_b',
+          title: 'B',
+          description: '',
+          publishStatus: 'draft',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          renderedFilePath: null,
+          renderedThumbnailPath: null,
+          customThumbnailPath: null,
+          data: jsonEncode({
+            draftOwnedFileBasenamesKey: ['layer_b.jpg', 42],
+          }),
+          clipDataList: const [],
+        );
+
+        final referenced = await dao.referencedDraftFilenames({
+          'render_a.mp4',
+          'thumb_a.jpeg',
+          'cover_a.jpeg',
+          'layer_a.mp4',
+          'layer_b.jpg',
+          'orphan.mp4',
+        });
+
+        expect(referenced, {
+          'render_a.mp4',
+          'thumb_a.jpeg',
+          'cover_a.jpeg',
+          'layer_a.mp4',
+          'layer_b.jpg',
+        });
+      });
+
+      test('returns an empty set for no filenames', () async {
+        expect(await dao.referencedDraftFilenames(const {}), isEmpty);
+      });
+
+      test('skips a draft whose data is not valid JSON', () async {
+        await dao.upsertDraft(
+          id: 'draft_corrupt',
+          title: 'Corrupt',
+          description: '',
+          publishStatus: 'draft',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          renderedFilePath: null,
+          renderedThumbnailPath: null,
+          data: '{not json',
+        );
+
+        expect(await dao.referencedDraftFilenames({'x.mp4'}), isEmpty);
+      });
+    });
+
     group('ownerPubkey isolation', () {
       const pubkeyA =
           'aaaa1111aaaa1111aaaa1111aaaa1111'

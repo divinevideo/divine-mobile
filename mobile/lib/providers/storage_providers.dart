@@ -17,17 +17,27 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// Provides the [StorageManagementService], wired to the app's download caches
 /// and the current account's clip library. Rebuilds when the account changes
 /// so the library audit stays scoped to the signed-in user.
+///
+/// The DAOs are handed over unscoped on purpose: the orphan sweep has to see
+/// every row, or a signed-out account's recordings would look unreferenced
+/// and be offered for deletion.
 final storageManagementServiceProvider = Provider<StorageManagementService>(
   (ref) {
     final uploadManager = ref.watch(uploadManagerProvider);
+    final db = ref.watch(databaseProvider);
     return StorageManagementService(
       videoCache: openVineMediaCache,
       imageCache: openVineImageCache,
       clipLibrary: ref.watch(clipLibraryServiceProvider),
+      clipsDao: db.clipsDao,
+      draftsDao: db.draftsDao,
       prefs: ref.watch(sharedPreferencesProvider),
-      protectedTempRenderPaths: () => {
+      protectedPaths: () => {
         for (final upload in uploadManager.pendingUploads)
-          if (upload.status != UploadStatus.published) upload.localVideoPath,
+          if (upload.status != UploadStatus.published) ...[
+            upload.localVideoPath,
+            ?upload.thumbnailPath,
+          ],
       },
     );
   },

@@ -117,6 +117,127 @@ void main() {
       );
     });
 
+    group('loadDocumentsUsage', () {
+      const usage = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 3,
+        orphanedBytes: 1024,
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits loading then ready with the usage',
+        setUp: () =>
+            when(service.documentsUsage).thenAnswer((_) async => usage),
+        build: build,
+        act: (cubit) => cubit.loadDocumentsUsage(),
+        expect: () => const [
+          StorageState(contentStatus: StorageContentStatus.loading),
+          StorageState(
+            contentStatus: StorageContentStatus.ready,
+            documentsUsage: usage,
+          ),
+        ],
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits failure when the measurement throws and leaves the cache '
+        'section alone',
+        setUp: () =>
+            when(service.documentsUsage).thenThrow(Exception('db closed')),
+        build: build,
+        seed: () => const StorageState(
+          cacheStatus: StorageCacheStatus.ready,
+          cacheSizeBytes: 4096,
+        ),
+        act: (cubit) => cubit.loadDocumentsUsage(),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 4096,
+            contentStatus: StorageContentStatus.loading,
+          ),
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 4096,
+            contentStatus: StorageContentStatus.failure,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
+    group('removeOrphanedFiles', () {
+      const before = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 3,
+        orphanedBytes: 1024,
+      );
+      const after = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 0,
+        orphanedBytes: 0,
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits removing then removed with the re-measured usage',
+        setUp: () {
+          when(service.removeOrphanedFiles).thenAnswer((_) async => 1024);
+          when(service.documentsUsage).thenAnswer((_) async => after);
+        },
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: before,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const [
+          StorageState(
+            contentStatus: StorageContentStatus.removing,
+            documentsUsage: before,
+          ),
+          StorageState(
+            contentStatus: StorageContentStatus.removed,
+            documentsUsage: after,
+          ),
+        ],
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'does nothing when there is nothing to remove',
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: after,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const <StorageState>[],
+        verify: (_) => verifyNever(service.removeOrphanedFiles),
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits failure when the sweep throws',
+        setUp: () =>
+            when(service.removeOrphanedFiles).thenThrow(Exception('boom')),
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: before,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const [
+          StorageState(
+            contentStatus: StorageContentStatus.removing,
+            documentsUsage: before,
+          ),
+          StorageState(
+            contentStatus: StorageContentStatus.failure,
+            documentsUsage: before,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
     group('scanLibrary', () {
       blocTest<StorageCubit, StorageState>(
         'emits scanning then scanned with the broken clips',

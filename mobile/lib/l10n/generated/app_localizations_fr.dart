@@ -11257,6 +11257,52 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsStorageCleared => 'Cache vidé';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Tes clips et brouillons';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Enregistrements, brouillons et sons que tu as créés. Vider le cache n\'y touche jamais : supprime des clips de ta bibliothèque pour libérer de la place ici.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Aucun fichier orphelin';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers orphelins, $size',
+      one: '$count fichier orphelin, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Supprimer les fichiers orphelins';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Supprimer les fichiers orphelins ?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Cela supprime $count fichiers qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
+      one:
+          'Cela supprime $count fichier qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Fichiers orphelins supprimés';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Bibliothèque de clips';
 
   @override

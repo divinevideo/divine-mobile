@@ -6082,6 +6082,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "Clip và bản nháp của bạn",
+  "settingsStorageContentDescription": "Bản ghi, bản nháp và âm thanh bạn đã tạo. Xóa bộ nhớ đệm không bao giờ đụng đến chúng — xóa clip khỏi thư viện để giải phóng dung lượng ở đây.",
+  "settingsStorageNoOrphanedFiles": "Không có tệp còn sót lại",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} tệp còn sót lại, {size}} other{{count} tệp còn sót lại, {size}}}",
+  "settingsStorageRemoveOrphanedButton": "Xóa tệp còn sót lại",
+  "settingsStorageRemoveOrphanedConfirmTitle": "Xóa tệp còn sót lại?",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{Thao tác này xóa {count} tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng {size}. Không thể hoàn tác.} other{Thao tác này xóa {count} tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng {size}. Không thể hoàn tác.}}",
+  "settingsStorageOrphanedFilesRemoved": "Đã xóa các tệp còn sót lại",
   "settingsStorageLibrarySectionTitle": "Thư viện clip",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

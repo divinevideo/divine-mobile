@@ -10549,6 +10549,48 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsStorageCleared => '캐시를 지웠습니다';
 
   @override
+  String get settingsStorageContentSectionTitle => '내 클립과 초안';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '직접 만든 녹화, 초안, 사운드예요. 캐시를 지워도 여기는 건드리지 않아요. 여기 공간을 비우려면 라이브러리에서 클립을 삭제하세요.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '남은 파일 없음';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '남은 파일 $count개, $size',
+      one: '남은 파일 $count개, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '남은 파일 제거';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '남은 파일을 제거할까요?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '어떤 클립, 초안, 업로드도 더 이상 쓰지 않는 파일 $count개를 삭제하고 $size를 비워요. 되돌릴 수 없어요.',
+      one: '어떤 클립, 초안, 업로드도 더 이상 쓰지 않는 파일 $count개를 삭제하고 $size를 비워요. 되돌릴 수 없어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '남은 파일을 제거했어요';
+
+  @override
   String get settingsStorageLibrarySectionTitle => '클립 라이브러리';
 
   @override

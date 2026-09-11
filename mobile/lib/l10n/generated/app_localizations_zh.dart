@@ -10413,6 +10413,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStorageCleared => '缓存已清除';
 
   @override
+  String get settingsStorageContentSectionTitle => '你的片段和草稿';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '你制作的录像、草稿和声音。清除缓存从不会动它们——想在这里腾出空间，就从片段库里删除片段。';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '没有残留文件';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个残留文件，$size',
+      one: '$count 个残留文件，$size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '移除残留文件';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '移除残留文件？';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这会删除 $count 个已不被任何片段、草稿或上传使用的文件，释放 $size。无法撤销。',
+      one: '这会删除 $count 个已不被任何片段、草稿或上传使用的文件，释放 $size。无法撤销。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '残留文件已移除';
+
+  @override
   String get settingsStorageLibrarySectionTitle => '片段库';
 
   @override

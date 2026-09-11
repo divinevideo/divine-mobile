@@ -11212,6 +11212,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsStorageCleared => 'Caché borrada';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Tus clips y borradores';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Grabaciones, borradores y sonidos que hiciste. Borrar la caché nunca los toca: eliminá clips de tu biblioteca para liberar espacio acá.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'No hay archivos sobrantes';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count archivos sobrantes, $size',
+      one: '$count archivo sobrante, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Eliminar archivos sobrantes';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      '¿Eliminar archivos sobrantes?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Esto elimina $count archivos que ningún clip, borrador ni subida usa ya, y libera $size. No se puede deshacer.',
+      one:
+          'Esto elimina $count archivo que ningún clip, borrador ni subida usa ya, y libera $size. No se puede deshacer.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Archivos sobrantes eliminados';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Biblioteca de clips';
 
   @override

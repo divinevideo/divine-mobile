@@ -10802,6 +10802,49 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsStorageCleared => 'መሸጎጫ ጸድቷል';
 
   @override
+  String get settingsStorageContentSectionTitle => 'የእርስዎ ክሊፖችና ረቂቆች';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'እርስዎ የሠሯቸው ቅጂዎች፣ ረቂቆችና ድምጾች። መሸጎጫን ማጽዳት እነዚህን በፍጹም አይነካም — እዚህ ቦታ ለማስለቀቅ ከቤተ-መጻሕፍትዎ ክሊፖችን ይሰርዙ።';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'የተረፉ ፋይሎች የሉም';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count የተረፉ ፋይሎች፣ $size',
+      one: '$count የተረፈ ፋይል፣ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'የተረፉ ፋይሎችን ያስወግዱ';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => 'የተረፉ ፋይሎች ይወገዱ?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'ይህ በማንኛውም ክሊፕ፣ ረቂቅ ወይም ስቀላ የማይጠቀምባቸውን $count ፋይሎች ይሰርዛል እና $size ያስለቅቃል። መመለስ አይቻልም።',
+      one:
+          'ይህ በማንኛውም ክሊፕ፣ ረቂቅ ወይም ስቀላ የማይጠቀምበትን $count ፋይል ይሰርዛል እና $size ያስለቅቃል። መመለስ አይቻልም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'የተረፉ ፋይሎች ተወግደዋል';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'የክሊፕ ቤተ-መጻሕፍት';
 
   @override

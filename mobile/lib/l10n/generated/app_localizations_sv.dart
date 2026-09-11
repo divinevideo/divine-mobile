@@ -11092,6 +11092,51 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsStorageCleared => 'Cache rensad';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Dina klipp och utkast';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Inspelningar, utkast och ljud du har skapat. Att rensa cachen rör dem aldrig – radera klipp från ditt bibliotek för att frigöra plats här.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Inga kvarlämnade filer';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kvarlämnade filer, $size',
+      one: '$count kvarlämnad fil, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Ta bort kvarlämnade filer';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Ta bort kvarlämnade filer?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Det raderar $count filer som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+      one:
+          'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Kvarlämnade filer borttagna';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Klippbibliotek';
 
   @override
