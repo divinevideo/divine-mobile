@@ -1,6 +1,7 @@
 import XCTest
 import WebKit
 import divine_camera
+import LibProofMode
 @testable import Runner
 
 /// Native coverage for the Nostr bridge frame-attestation plugin. The plugin's
@@ -270,5 +271,66 @@ final class MediaSessionScopePolicyTests: XCTestCase {
     var policy = MediaSessionScopePolicy()
     XCTAssertFalse(policy.onDisable())
     XCTAssertFalse(policy.isEnabled)
+  }
+}
+
+/// Pins what `AppDelegate`'s ProofMode options keep out of the signed proof
+/// (#9073). Upstream LibProofMode records the Wi-Fi addresses and connection
+/// details whatever the options say, so this fails if a vendor refresh drops
+/// Divine's `showMobileNetwork` gate. The proof is signed, so the fields must
+/// never be written: stripping them later would break verification.
+final class LibProofModeNetworkFieldsTests: XCTestCase {
+  private var folder: URL!
+  private var originalDocumentFolder: URL?
+
+  override func setUpWithError() throws {
+    folder = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: folder, withIntermediateDirectories: true
+    )
+    // Generate the throwaway signing key here, not in the host app's
+    // Documents folder.
+    originalDocumentFolder = Proof.shared.defaultDocumentFolder
+    Proof.shared.defaultDocumentFolder = folder
+    Proof.shared.pgpKey = nil
+  }
+
+  override func tearDownWithError() throws {
+    Proof.shared.pgpKey = nil
+    Proof.shared.defaultDocumentFolder = originalDocumentFolder
+    try? FileManager.default.removeItem(at: folder)
+  }
+
+  func testDivineOptionsKeepNetworkFieldsOutOfTheSignedProof() throws {
+    let item = MediaItem(mediaData: Data("clip".utf8))
+    item.proofFolder = folder
+    let options = ProofGenerationOptions(
+      showDeviceIds: false,
+      showLocation: false,
+      showMobileNetwork: false,
+      notarizationProviders: []
+    )
+
+    let hash = try XCTUnwrap(
+      Proof.shared.getProof(for: item, force: true, options: options)
+    )
+    let csv = try String(
+      contentsOf: folder.appendingPathComponent("\(hash).proof.csv"),
+      encoding: .utf8
+    )
+    let header = try XCTUnwrap(csv.split(separator: "\n").first)
+    let columns = Set(header.split(separator: ",").map(String.init))
+
+    XCTAssertTrue(
+      columns.contains("File Hash SHA256"),
+      "the proof CSV was not written"
+    )
+    for field in ["IPv4", "IPv6", "Network", "NetworkType", "DataType"] {
+      XCTAssertFalse(
+        columns.contains(field),
+        "\(field) must not enter the signed proof"
+      )
+    }
   }
 }
