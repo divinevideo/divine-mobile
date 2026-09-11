@@ -50,6 +50,14 @@ void main() {
     ) async {
       final shellRoute = shellRoutes().single as StatefulShellRoute;
 
+      expect(
+        shellRoute.notifyRootObserver,
+        isFalse,
+        reason:
+            'Branch navigation must not notify the root analytics observers '
+            'until the event model in #9079 is decided.',
+      );
+
       // The shell replaces /welcome on the root navigator when the
       // authenticated redirect lands (startup restore, login), and the
       // startup splash lifts at the start of that navigation. A `builder:`
