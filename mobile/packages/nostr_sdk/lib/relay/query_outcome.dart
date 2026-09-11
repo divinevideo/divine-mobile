@@ -16,6 +16,7 @@ class QueryOutcome {
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
+    this.cappedWithoutEvents = const [],
   });
 
   /// Why the query ended.
@@ -40,6 +41,18 @@ class QueryOutcome {
   /// Every relay that sent an event matching the query's filters, cache
   /// relays aside.
   final List<QueryRelaySummary> relays;
+
+  /// The urls of the relays that may have stopped at their result-size limit
+  /// without sending one event matching the query's filters, cache relays
+  /// aside.
+  ///
+  /// A [QueryRelaySummary] needs an event to carry its `oldestCreatedAt`, so
+  /// [relays] cannot name such a relay at all: a caller paging by those
+  /// summaries would never hear that this one may be holding matching events
+  /// back. A relay that answered entirely outside the filters, entirely with
+  /// frames the pool rejected, or with a NIP-67 `more` hint and no events
+  /// lands here.
+  final List<String> cappedWithoutEvents;
 }
 
 /// What one relay sent for a one-shot query, as the relay pool counted it.

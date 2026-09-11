@@ -234,6 +234,14 @@ class QueryOutcomeTracker {
               capped: _isCapped(tally),
             ),
       ],
+      // No event means no summary above, so nothing else would report that
+      // this relay may be holding matching events back. `_isCapped` leaves
+      // out cache relays, as the summaries do.
+      cappedWithoutEvents: [
+        for (final tally in _tallies.values)
+          if (tally.oldestCreatedAt == null && _isCapped(tally))
+            tally.relay.url,
+      ],
     );
     if (_reported ||
         (outcome.endedBy == QueryEnd.complete && !outcome.possiblyCapped)) {

@@ -19,7 +19,9 @@ QueryRelaySummary _relay(
 /// The step after a settled page that no relay confirmed exhaustive. Unless
 /// [sentTo] says otherwise, every relay in [previousRelays] and [relays] took
 /// the page's REQ, and unless [firstSentTo] says otherwise, every relay that
-/// took this page's REQ took the first page's too.
+/// took this page's REQ took the first page's too. Unless
+/// [cappedWithoutEvents] says otherwise, no relay may have been capped on a
+/// page it sent no matching event to.
 PagedReadStep _afterSettledPage(
   int? cursor,
   List<QueryRelaySummary> relays, {
@@ -28,6 +30,7 @@ PagedReadStep _afterSettledPage(
   List<QueryRelaySummary> previousRelays = const [],
   List<String>? sentTo,
   List<String>? firstSentTo,
+  List<String> cappedWithoutEvents = const [],
 }) {
   final took =
       sentTo ??
@@ -44,6 +47,7 @@ PagedReadStep _afterSettledPage(
     settled: true,
     confirmedExhaustive: false,
     possiblyCapped: possiblyCapped,
+    cappedWithoutEvents: cappedWithoutEvents,
   );
 }
 
@@ -146,6 +150,7 @@ int _newestFirst(_Held a, _Held b) {
     final page = untils.length;
     final summaries = <QueryRelaySummary>[];
     final sentTo = <String>[];
+    final cappedWithoutEvents = <String>[];
     var possiblyCapped = false;
     for (final relay in relays) {
       if (relay.missesPages.contains(page)) continue;
@@ -161,7 +166,10 @@ int _newestFirst(_Held a, _Held b) {
           counted.length < sent.length ||
           counted.length >= math.min(pageSize, relay.maxLimit ?? pageSize);
       possiblyCapped = possiblyCapped || capped;
-      if (counted.isEmpty) continue;
+      if (counted.isEmpty) {
+        if (capped) cappedWithoutEvents.add(relay.url);
+        continue;
+      }
       summaries.add(
         QueryRelaySummary(
           url: relay.url,
@@ -185,6 +193,7 @@ int _newestFirst(_Held a, _Held b) {
       settled: true,
       confirmedExhaustive: false,
       possiblyCapped: possiblyCapped,
+      cappedWithoutEvents: cappedWithoutEvents,
     )) {
       case ReadPageAt(until: final next):
         cursor = next;
@@ -211,6 +220,7 @@ void main() {
             settled: false,
             confirmedExhaustive: false,
             possiblyCapped: false,
+            cappedWithoutEvents: const [],
           ),
           _ends(complete: false),
         );
@@ -229,6 +239,7 @@ void main() {
             settled: false,
             confirmedExhaustive: true,
             possiblyCapped: false,
+            cappedWithoutEvents: const [],
           ),
           _ends(complete: false),
         );
@@ -249,6 +260,7 @@ void main() {
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
+            cappedWithoutEvents: const [],
           ),
           _ends(complete: true),
         );
@@ -311,6 +323,58 @@ void main() {
             _relay(_second, oldest: 110),
           ]),
           _readsAt(109),
+        );
+      });
+    });
+
+    group('when a relay may have been capped on a page it sent no matching '
+        'event to', () {
+      test('ends the walk incomplete', () {
+        // It named no created_at for the cursor to follow, so the page below
+        // is not known to be below what it withheld.
+        expect(
+          _afterSettledPage(
+            null,
+            [_relay(_second, oldest: 1000, capped: true)],
+            sentTo: [_first, _second],
+            possiblyCapped: true,
+            cappedWithoutEvents: [_first],
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('ends the walk incomplete even when every relay that answered '
+          'confirmed it exhaustive', () {
+        expect(
+          nextPagedReadStep(
+            cursor: null,
+            since: null,
+            relays: [_relay(_second, oldest: 1000, capped: true)],
+            previousRelays: const [],
+            sentTo: const [_first, _second],
+            firstSentTo: const [_first, _second],
+            settled: true,
+            confirmedExhaustive: true,
+            possiblyCapped: true,
+            cappedWithoutEvents: const [_first],
+          ),
+          _ends(complete: false),
+        );
+      });
+
+      test('keeps walking when no relay was judged capped without an '
+          'event', () {
+        // A relay that sent the page nothing and said nothing is not capped,
+        // so its silence must not stop the walk.
+        expect(
+          _afterSettledPage(
+            null,
+            [_relay(_second, oldest: 1000, capped: true)],
+            sentTo: [_first, _second],
+            possiblyCapped: true,
+          ),
+          _readsAt(1000),
         );
       });
     });
@@ -378,6 +442,7 @@ void main() {
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
+            cappedWithoutEvents: const [],
           ),
           _ends(complete: false),
         );
@@ -430,6 +495,7 @@ void main() {
             settled: true,
             confirmedExhaustive: true,
             possiblyCapped: false,
+            cappedWithoutEvents: const [],
           ),
           _ends(complete: false),
         );

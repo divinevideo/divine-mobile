@@ -718,6 +718,64 @@ void main() {
         );
         expect(result.stoppedBy, QueryEnd.complete);
       });
+
+      test('stops incomplete on a page that relay sent no matching event '
+          'to, even when it behaves on every later page', () async {
+        final [forged] = await eventsAt([110]);
+        final paged = await eventsAt([110, 109, 108]);
+        final forgedRelay = await addStore('wss://forged.example', [
+          _forged(forged),
+        ]);
+        final pagedRelay = await addStore('wss://paged.example', paged);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(
+          result.isComplete,
+          isFalse,
+          reason:
+              'the forged relay filled its page with a frame the pool threw '
+              'away, so it may hold matching events at 110 that no later '
+              "page's until can reach",
+        );
+        expect(result.stoppedBy, QueryEnd.complete);
+        expect(_untilsOf(forgedRelay), [
+          null,
+        ], reason: 'the walk stopped on the page it was capped on');
+        expect(_untilsOf(pagedRelay), [null]);
+        expect(_idsOf(result.events), unorderedEquals(_idsOf(paged.take(2))));
+      });
+
+      test('keeps walking past a relay that sent a page nothing and said '
+          'nothing', () async {
+        // The control for the rule above: silence is not a cap, whether or
+        // not the relay publishes a NIP-11 max_limit, so a relay holding
+        // nothing must not stop every walk it takes part in.
+        final paged = await eventsAt([110, 109, 108]);
+        final silent = await addStore('wss://silent.example', []);
+        final silentWithMaxLimit = await addStore(
+          'wss://silent-max.example',
+          [],
+          maxLimit: 2,
+        );
+        await addStore('wss://paged.example', paged);
+
+        final result = await nostr.readAllEvents(_textNotes(), pageSize: 2);
+
+        expect(result.isComplete, isTrue);
+        expect(_idsOf(result.events), unorderedEquals(_idsOf(paged)));
+        expect(
+          _untilsOf(silent),
+          [null, 109, 108, 107],
+          reason: 'a silent relay with no published limit was asked every page',
+        );
+        expect(_untilsOf(silentWithMaxLimit), [
+          null,
+          109,
+          108,
+          107,
+        ], reason: 'so was the one that publishes a max_limit the page fills');
+      });
     });
 
     group("when a relay does not take a page's REQ", () {

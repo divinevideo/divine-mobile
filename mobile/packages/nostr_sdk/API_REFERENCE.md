@@ -204,9 +204,12 @@ Future<PagedQueryResult> readAllEvents(
 )
 ```
 Walk every event `filter` matches, a page of `pageSize` at a time, using an
-`until` cursor. Each page requires full relay settlement; the walk stops on
-an empty settled page, a page confirmed exhaustive, `maxPages`, or
-`deadline` — see `PagedQueryResult`.
+`until` cursor. Each page requires full relay settlement. The walk stops
+complete on an empty settled page or a page confirmed exhaustive, and stops
+incomplete at `maxPages`, at `deadline`, or on a page a relay may have been
+capped on without sending one matching event to page by — see
+`PagedQueryResult`. A handful of cases can still lose events while the walk
+reports complete; the `Nostr.readAllEvents` dartdoc lists them.
 
 **Parameters:**
 - `filter`: a single Nostr filter (its `limit` and `until` are set per page)

@@ -1680,6 +1680,67 @@ void main() {
       });
     });
 
+    group('cappedWithoutEvents', () {
+      test('names a relay that may be capped and sent no matching '
+          'event', () async {
+        final offFilter = await addRelay('wss://off-filter.example');
+        final answering = await addRelay('wss://answering.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEvents(offFilter, 2, kind: EventKind.reaction);
+        await offFilter.deliver(['EOSE', _queryId]);
+        await sendEventsAt(answering, [110]);
+        await answering.deliver(['EOSE', _queryId]);
+
+        final ended = await outcome.future;
+
+        expect(
+          ended.cappedWithoutEvents,
+          ['wss://off-filter.example'],
+          reason:
+              'it spent its limit on events nobody asked for, and no summary '
+              'can name it without a created_at to carry',
+        );
+        expect(ended.relays.map((relay) => relay.url), [
+          'wss://answering.example',
+        ]);
+      });
+
+      test('stays empty for a relay that sent nothing at all', () async {
+        final silent = await addRelay('wss://silent.example');
+        final answering = await addRelay('wss://answering.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [EventKind.textNote],
+            'limit': 2,
+          },
+        ]);
+
+        await sendEventsAt(answering, [110, 109]);
+        for (final relay in [silent, answering]) {
+          await relay.deliver(['EOSE', _queryId]);
+        }
+
+        final ended = await outcome.future;
+
+        expect(
+          ended.cappedWithoutEvents,
+          isEmpty,
+          reason: 'silence is not a cap: nothing says it withheld anything',
+        );
+        expect(
+          ended.possiblyCapped,
+          isTrue,
+          reason: 'the other relay did fill the limit, so the page is capped',
+        );
+      });
+    });
+
     group('onComplete', () {
       test('still fires when onOutcome is given too', () async {
         final relay = await addRelay('wss://relay.example');

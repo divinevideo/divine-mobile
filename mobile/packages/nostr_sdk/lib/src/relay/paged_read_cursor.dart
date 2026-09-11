@@ -38,7 +38,8 @@ final class EndPagedRead extends PagedReadStep {
 /// [sentTo] names the relays that took the page's REQ and [firstSentTo] the
 /// relays that took the first page's, and [since] is the filter's `since`, if
 /// any. [settled], [confirmedExhaustive] and [possiblyCapped] are the page's
-/// `QueryResult.isComplete`, `confirmedExhaustive` and `possiblyCapped`.
+/// `QueryResult.isComplete`, `confirmedExhaustive` and `possiblyCapped`, and
+/// [cappedWithoutEvents] is `QueryOutcome.cappedWithoutEvents`.
 ///
 /// * A page that did not settle ends the walk incomplete.
 /// * So does a page whose REQ a relay in [previousRelays] did not take: the
@@ -46,6 +47,9 @@ final class EndPagedRead extends PagedReadStep {
 /// * So does a page whose REQ a relay took that missed the first page's: the
 ///   walk has asked that relay for nothing above this page's cursor, so its
 ///   newer events were never read.
+/// * So does a page a relay in [cappedWithoutEvents] may have been capped on:
+///   it sent the page no event to page by, so no later page's `until` is
+///   known to be below what it withheld.
 /// * Otherwise a page every relay confirmed exhaustive ends the walk
 ///   complete.
 /// * A capped relay whose oldest event is in the cursor's second ends the walk
@@ -71,12 +75,16 @@ PagedReadStep nextPagedReadStep({
   required bool settled,
   required bool confirmedExhaustive,
   required bool possiblyCapped,
+  required List<String> cappedWithoutEvents,
 }) {
   if (!settled) return const EndPagedRead(isComplete: false);
   if (previousRelays.any((relay) => !sentTo.contains(relay.url))) {
     return const EndPagedRead(isComplete: false);
   }
   if (sentTo.any((url) => !firstSentTo.contains(url))) {
+    return const EndPagedRead(isComplete: false);
+  }
+  if (cappedWithoutEvents.isNotEmpty) {
     return const EndPagedRead(isComplete: false);
   }
   if (confirmedExhaustive) return const EndPagedRead(isComplete: true);

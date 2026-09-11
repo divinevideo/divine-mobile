@@ -399,16 +399,21 @@ class Nostr {
   /// * A relay whose oldest event is in the cursor's second, and that may be
   ///   capped, stops the walk incomplete: it may hold more events in that
   ///   second than any `until` can reach.
+  /// * A relay that may be capped on a page it sent no matching event to
+  ///   stops the walk incomplete: it named no `created_at` for the cursor to
+  ///   follow, so no later page's `until` is known to be below what it
+  ///   withheld. A relay that answered a page entirely outside the filter,
+  ///   entirely with frames the pool rejected, or with a NIP-67 `more` hint
+  ///   and no events is such a relay.
   /// * Otherwise the next page starts at the latest of the relays' oldest
   ///   `created_at`, inclusive, so a second a page split is asked for again.
   ///   An uncapped relay whose oldest event is in the cursor's second counts
   ///   one second below it, so the walk never moves past what it may still
   ///   hold below that second.
   /// * A page on which no relay sent an event ends the walk, complete unless
-  ///   a relay may be capped, such as one whose events all fell outside the
-  ///   filter. So does a page whose next `until` would fall below [filter]'s
-  ///   `since`, and that page is never asked for: nothing below `since` can
-  ///   match, and a relay may refuse a filter that says so.
+  ///   a relay may be capped. So does a page whose next `until` would fall
+  ///   below [filter]'s `since`, and that page is never asked for: nothing
+  ///   below `since` can match, and a relay may refuse a filter that says so.
   ///
   /// The walk also ends complete on a settled page confirmed exhaustive by
   /// NIP-67 `finish`, unless a relay it was following missed that page, and
@@ -422,8 +427,10 @@ class Nostr {
   ///
   /// * A relay that stops short of [pageSize] without saying so, and holds
   ///   more events in one second than its cap, can lose the rest of that
-  ///   second, since nothing marks its page capped. A NIP-11 `max_limit` or
-  ///   a NIP-67 `more` hint from the relay removes that ambiguity.
+  ///   second, since nothing marks its page capped. A relay that sends a page
+  ///   nothing at all is that case at its limit: silence reads as holding
+  ///   nothing, so the rule above cannot count it capped. A NIP-11 `max_limit`
+  ///   or a NIP-67 `more` hint from the relay removes that ambiguity.
   /// * The walk takes a relay's page to be its newest matching events, as
   ///   NIP-01 assumes of a `limit`. A relay that answers with others, as a
   ///   NIP-50 search ranked by relevance may, can have events skipped.
@@ -506,6 +513,7 @@ class Nostr {
         settled: page.isComplete,
         confirmedExhaustive: page.confirmedExhaustive,
         possiblyCapped: page.possiblyCapped,
+        cappedWithoutEvents: read.cappedWithoutEvents,
       )) {
         case ReadPageAt(until: final next):
           until = next;
@@ -604,13 +612,15 @@ class Nostr {
 
   /// Runs one read for [readEvents], its wrappers and [readAllEvents]. It
   /// says whether the caller's deadline is what ended it, what each relay
-  /// sent, as the pool counted it, and which relays took the REQ: null when
-  /// the deadline ended the read, which may be before the fan-out finished.
+  /// sent, as the pool counted it, which relays may have been capped without
+  /// sending anything, and which relays took the REQ: null when the deadline
+  /// ended the read, which may be before the fan-out finished.
   Future<
     ({
       QueryResult result,
       bool endedAtDeadline,
       List<QueryRelaySummary> relays,
+      List<String> cappedWithoutEvents,
       List<String>? sentTo,
     })
   >
@@ -683,6 +693,7 @@ class Nostr {
         ),
         endedAtDeadline: endedAtDeadline,
         relays: outcome.relays,
+        cappedWithoutEvents: outcome.cappedWithoutEvents,
         // The pool completes a read only once its fan-out has finished, so
         // this does not wait on a relay.
         sentTo: endedAtDeadline ? null : (await fanout).sentTo,
