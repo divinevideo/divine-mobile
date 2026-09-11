@@ -707,7 +707,10 @@ void main() {
       expect(deadline, isNotNull, reason: 'an omitted timeout still bounds it');
       expect(
         deadline!.difference(before).inSeconds,
-        inInclusiveRange(60, 120),
+        // The budget starts at the client's own `now`, so any stall between
+        // the two lands above 120; the upper bound leaves room rather than
+        // sitting on the expected value.
+        inInclusiveRange(60, 180),
         reason: 'the default budget is minutes, not unbounded and not a page',
       );
     });
@@ -721,8 +724,15 @@ void main() {
         connectedRelays: ['wss://pages.example'],
       );
 
-      await client.readAllEvents(_textNotes(), timeout: null);
+      final result = await client.readAllEvents(_textNotes(), timeout: null);
 
+      // Without this the test passes on a walk that never happened:
+      // `seenDeadline` starts null, and every early return leaves it that way.
+      expect(
+        (result.pages, result.isComplete),
+        (1, true),
+        reason: 'the pager ran, so a null deadline is its account, not a skip',
+      );
       expect(
         nostr.seenDeadline,
         isNull,
