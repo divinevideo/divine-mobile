@@ -12,6 +12,13 @@ import 'package:nostr_sdk/utils/hash_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostr extends Mock implements Nostr {
+  /// What is left of [deadline], never negative — the budget a real read
+  /// spends when it is handed one instead of a duration.
+  static Duration _remainingUntil(DateTime deadline) {
+    final left = deadline.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
   /// Drives the `timedOut` field of the record synthesized below.
   bool timedOut = false;
 
@@ -53,6 +60,44 @@ class _MockNostr extends Mock implements Nostr {
       events: events,
       timedOut: timedOut,
       noRelaysParticipated: noRelaysParticipated,
+    );
+  }
+
+  /// The read the client actually runs. The SDK answers both this and
+  /// [queryEventsDetailed] from one read, so this double runs both from the
+  /// one method tests stub, and maps the two knobs above onto the [QueryEnd]
+  /// each one stands for.
+  @override
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final read = await queryEventsDetailed(
+      filters,
+      id: id,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      // The real read ends at `deadline` when it is handed one, so the double
+      // spends what is left of it. Forwarding the untouched `timeout` instead
+      // hands a caller that passed only a deadline the 5s default, which
+      // outlives the client's own backstop and loses the events it holds.
+      timeout: deadline == null ? timeout : _remainingUntil(deadline),
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    return QueryResult(
+      events: read.events,
+      endedBy: read.noRelaysParticipated
+          ? QueryEnd.noRelay
+          : read.timedOut
+          ? QueryEnd.deadline
+          : QueryEnd.complete,
     );
   }
 }

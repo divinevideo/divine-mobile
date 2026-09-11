@@ -57,7 +57,7 @@ Notes:
 
 ### Core Classes
 
-**`Nostr`** (`lib/nostr.dart`) -- Main client that orchestrates all operations: relay management, event publishing (`sendEvent`, `sendLike`, `sendRepost`), event retrieval (`subscribe`, `query`, `queryEvents`), and relay lifecycle (`addRelay`, `removeRelay`).
+**`Nostr`** (`lib/nostr.dart`) -- Main client that orchestrates all operations: relay management, event publishing (`sendEvent`, `sendLike`, `sendRepost`), event retrieval (`subscribe`, `query`, `readEvents`, `readAllEvents`, `queryEvents`), and relay lifecycle (`addRelay`, `removeRelay`).
 
 **`Event`** (`lib/event.dart`) -- Represents a Nostr event with automatic ID generation, Schnorr signature support, proof-of-work capabilities, and JSON serialization.
 
