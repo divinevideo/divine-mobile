@@ -9033,6 +9033,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Kahit anong nasa likod ng clip, makikita sa pagitan.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.';
 

@@ -3673,6 +3673,7 @@
     "videoEditorChromaKeyBackgroundImage": "صورة",
     "videoEditorChromaKeyBackgroundVideo": "مقطع",
     "videoEditorChromaKeyTransparentHint": "الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.",
+    "videoEditorChromaKeyCanvasTransparentHint": "ما خلف المقطع يظهر من خلاله.",
     "videoEditorChromaKeySurfaceHint": "أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.",
     "videoEditorChromaKeyDetectFailed": "لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.",
     "videoEditorChromaKeyPickClipTitle": "اختر مقطعًا",

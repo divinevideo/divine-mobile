@@ -2643,6 +2643,7 @@
     "videoEditorChromaKeyBackgroundImage": "Larawan",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Kahit anong nasa likod ng clip, makikita sa pagitan.",
     "videoEditorChromaKeySurfaceHint": "Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.",
     "videoEditorChromaKeyDetectFailed": "Walang nahanap na screen: kailangang punuin nito ang buong frame sa likod mo. Pwede ang plain na pader. O pumili ng kulay nang manual.",
     "videoEditorChromaKeyPickClipTitle": "Pumili ng clip",

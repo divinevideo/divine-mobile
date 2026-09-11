@@ -8754,6 +8754,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'ከቅንጥቡ ጀርባ ያለው ነገር በውስጡ ይታያል።';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።';
 

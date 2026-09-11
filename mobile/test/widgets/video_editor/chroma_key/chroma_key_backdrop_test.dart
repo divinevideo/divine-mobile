@@ -36,6 +36,25 @@ void main() {
       expect(find.byType(ChromaKeyTransparencyCheckerboard), findsOneWidget);
     });
 
+    testWidgets('draws nothing for a transparent key on the canvas', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: ChromaKeyBackdrop(
+            chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+            previewTransparency: false,
+          ),
+        ),
+      );
+
+      // On the editor canvas what is underneath the clip *is* the backdrop; a
+      // checkerboard there would hide exactly what the key is meant to reveal.
+      expect(find.byType(ChromaKeyTransparencyCheckerboard), findsNothing);
+      expect(find.byType(ColoredBox), findsNothing);
+    });
+
     testWidgets('fills with the chosen colour', (tester) async {
       await pump(
         tester,

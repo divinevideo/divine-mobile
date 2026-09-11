@@ -8449,6 +8449,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint => '片段后面的内容会透出来。';
+
+  @override
   String get videoEditorChromaKeySurfaceHint => '你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。';
 
   @override

@@ -8912,6 +8912,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'ما خلف المقطع يظهر من خلاله.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.';
 

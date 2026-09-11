@@ -3673,6 +3673,7 @@
     "videoEditorChromaKeyBackgroundImage": "Imagine",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Videoclipul nu poate păstra transparența, așa că la export iese negru.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Ce se află în spatele clipului se vede prin el.",
     "videoEditorChromaKeySurfaceHint": "Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.",
     "videoEditorChromaKeyDetectFailed": "Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.",
     "videoEditorChromaKeyPickClipTitle": "Alege un clip",

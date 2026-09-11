@@ -3673,6 +3673,7 @@
     "videoEditorChromaKeyBackgroundImage": "Afbeelding",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Wat achter de clip zit, schijnt erdoorheen.",
     "videoEditorChromaKeySurfaceHint": "Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.",
     "videoEditorChromaKeyDetectFailed": "Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.",
     "videoEditorChromaKeyPickClipTitle": "Kies een clip",

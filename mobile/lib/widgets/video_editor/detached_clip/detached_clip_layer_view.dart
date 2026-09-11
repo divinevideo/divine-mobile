@@ -4,14 +4,17 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -96,6 +99,13 @@ class DetachedClipLayerView extends StatefulWidget {
 
 class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   DivineVideoClip? _clip;
+
+  /// The layer's live green screen, resolved from the meta alongside the clip.
+  ///
+  /// Held here rather than parsed in `build`: the preview rebuilds its shader
+  /// whenever the key object changes, and a fresh parse per build would hand
+  /// it a new one every frame of a drag.
+  ClipChromaKey? _chromaKey;
   DetachedClipPlayer? _player;
 
   /// The registry key currently held, so the release matches the acquire even
@@ -122,20 +132,30 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // first frame after the remount draws the video and nothing flashes.
     final key = detachedClipPlayerKey(widget.meta);
     final ready = key == null ? null : detachedClipPlayers.acquireIfReady(key);
+    final documentsPath = cachedDocumentsPath;
     if (ready != null) {
       _heldKey = key;
       _player = ready;
       _clip = ready.clip;
       _resumed = true;
+      // The player carries the clip but not the layer's key, which is the
+      // layer's own and has to be read off the meta the remount arrived with.
+      if (documentsPath != null) {
+        _chromaKey = DetachedClipLayerData.chromaKeyOf(
+          widget.meta,
+          documentsPath,
+        );
+      }
       return;
     }
     // No pooled player — but the clip itself is usually resolvable without an
     // await, and drawing its poster in the first frame is what makes an undo
     // put the layer straight back. Without it the layer is an empty box until
     // the decoder opens, which reads as the undo having lost it.
-    final documentsPath = cachedDocumentsPath;
     if (documentsPath != null) {
-      _clip = DetachedClipLayerData.fromMeta(widget.meta, documentsPath)?.clip;
+      final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
+      _clip = data?.clip;
+      _chromaKey = data?.chromaKey;
     }
     unawaited(_load());
   }
@@ -149,7 +169,28 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     if (detachedClipPlayerKey(oldWidget.meta) !=
         detachedClipPlayerKey(widget.meta)) {
       unawaited(_load());
+    } else if (!_chromaKeyEquality.equals(
+      oldWidget.meta[detachedClipLayerChromaKeyKey],
+      widget.meta[detachedClipLayerChromaKeyKey],
+    )) {
+      // Only the green screen changed: re-read it without touching the
+      // player, which would restart the clip on every slider nudge.
+      unawaited(_reloadChromaKey());
     }
+  }
+
+  static const _chromaKeyEquality = DeepCollectionEquality();
+
+  Future<void> _reloadChromaKey() async {
+    final generation = _loadGeneration;
+    final documentsPath = await getDocumentsPath();
+    if (!mounted || generation != _loadGeneration) return;
+    setState(() {
+      _chromaKey = DetachedClipLayerData.chromaKeyOf(
+        widget.meta,
+        documentsPath,
+      );
+    });
   }
 
   @override
@@ -222,15 +263,16 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final documentsPath = await getDocumentsPath();
     if (superseded()) return;
 
-    final clip = DetachedClipLayerData.fromMeta(
-      widget.meta,
-      documentsPath,
-    )?.clip;
+    final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
+    final clip = data?.clip;
     if (clip == null || key == null) {
       if (previousKey != null) detachedClipPlayers.release(previousKey);
       return;
     }
-    setState(() => _clip = clip);
+    setState(() {
+      _clip = clip;
+      _chromaKey = data?.chromaKey;
+    });
 
     final player = await detachedClipPlayers.acquire(
       key,
@@ -263,7 +305,11 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     if (player == null || playhead == null) {
       return _DetachedClipFrame(
         clip: clip,
-        child: _ClipThumbnail(clip: clip),
+        child: ChromaKeyedVideo(
+          chromaKey: _chromaKey,
+          previewTransparency: false,
+          child: _ClipThumbnail(clip: clip),
+        ),
       );
     }
 
@@ -277,25 +323,33 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
       onChanged: _follow,
       child: _DetachedClipFrame(
         clip: clip,
-        // The poster sits under the surface rather than beside it, so a frame
-        // the texture has not painted yet shows the clip's own still instead
-        // of a hole. The player is mounted once and kept: rebuilding it per
-        // playhead tick — 60 times a second — is what a `builder` around it
-        // would do.
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _ClipThumbnail(clip: clip),
-            _WindowVisibility(
-              playhead: playhead,
-              isVisible: player.isWithinWindow,
-              child: DivineVideoPlayer(
-                controller: player.controller,
-                placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
-                crossFadePlaceholder: !_resumed,
+        // The key wraps the poster as well as the surface: both show the same
+        // footage, and a poster left unkeyed would fill the removed area with
+        // the very screen the key takes out. Transparent stays transparent —
+        // the canvas underneath is the backdrop here, not a checkerboard.
+        child: ChromaKeyedVideo(
+          chromaKey: _chromaKey,
+          previewTransparency: false,
+          // The poster sits under the surface rather than beside it, so a
+          // frame the texture has not painted yet shows the clip's own still
+          // instead of a hole. The player is mounted once and kept:
+          // rebuilding it per playhead tick — 60 times a second — is what a
+          // `builder` around it would do.
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _ClipThumbnail(clip: clip),
+              _WindowVisibility(
+                playhead: playhead,
+                isVisible: player.isWithinWindow,
+                child: DivineVideoPlayer(
+                  controller: player.controller,
+                  placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
+                  crossFadePlaceholder: !_resumed,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

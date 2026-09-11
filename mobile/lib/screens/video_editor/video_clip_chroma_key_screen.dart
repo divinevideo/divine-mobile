@@ -31,24 +31,80 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
 
+/// What the green-screen screen hands back for a detached clip.
+///
+/// A timeline clip's screen returns nothing — it bakes through the bloc and
+/// stays up until the render lands. A detached clip's key is never baked, so
+/// the screen pops with the settings instead and the caller writes them onto
+/// the layer.
+sealed class DetachedClipChromaKeyResult {
+  const DetachedClipChromaKeyResult();
+}
+
+/// The user confirmed [chromaKey] for the layer.
+class DetachedClipChromaKeyApplied extends DetachedClipChromaKeyResult {
+  const DetachedClipChromaKeyApplied(this.chromaKey);
+
+  final ClipChromaKey chromaKey;
+}
+
+/// The user took the layer's green screen off again.
+class DetachedClipChromaKeyRemoved extends DetachedClipChromaKeyResult {
+  const DetachedClipChromaKeyRemoved();
+}
+
 /// Sets up a clip's green screen.
 ///
-/// Tuning is free, driven by the preview shader. Confirming dispatches the
-/// bake to [ClipEditorBloc] and keeps the screen up — blocked, with the
-/// render's progress — until the clip's new file lands, so the user sees the
-/// work finish instead of being dropped back onto an unchanged timeline.
+/// Tuning is free, driven by the preview shader. For a timeline clip,
+/// confirming dispatches the bake to [ClipEditorBloc] and keeps the screen up
+/// — blocked, with the render's progress — until the clip's new file lands, so
+/// the user sees the work finish instead of being dropped back onto an
+/// unchanged timeline.
 ///
 /// Re-opening a clip that already has a key restores its settings and previews
 /// the footage as it was *before* the bake, so adjusting the key is a fresh
 /// pass over clean pixels rather than a second key stacked on the first.
+///
+/// [VideoClipChromaKeyScreen.detached] is the same screen for a clip that was
+/// detached onto the canvas. Nothing is baked there: the key stays live on the
+/// layer, applied by the canvas shader and by the export composition, so
+/// confirming pops with a [DetachedClipChromaKeyResult] straight away and the
+/// panel offers only the backdrops a live key can carry.
 class VideoClipChromaKeyScreen extends StatefulWidget {
   const VideoClipChromaKeyScreen({
     required this.clip,
     @visibleForTesting this.detect = ChromaKey.detect,
     super.key,
-  });
+  }) : _layerChromaKey = null,
+       surface = ChromaKeySurface.track;
+
+  /// The screen for a clip detached onto the canvas, starting from the
+  /// [chromaKey] its layer carries — `null` for a layer without one.
+  ///
+  /// The clip's own [DivineVideoClip.chromaKey] is deliberately not consulted:
+  /// if the clip was keyed while still on the timeline, that key is already in
+  /// its footage, and the layer's key goes on top of that.
+  const VideoClipChromaKeyScreen.detached({
+    required this.clip,
+    required ClipChromaKey? chromaKey,
+    @visibleForTesting this.detect = ChromaKey.detect,
+    super.key,
+  }) : _layerChromaKey = chromaKey,
+       surface = ChromaKeySurface.canvas;
 
   final DivineVideoClip clip;
+
+  final ClipChromaKey? _layerChromaKey;
+
+  /// Where the keyed clip sits, which decides how the result leaves the
+  /// screen and which backdrops the panel offers.
+  final ChromaKeySurface surface;
+
+  /// The key the screen opens on, or `null` to measure one off the footage.
+  ClipChromaKey? get initialChromaKey => switch (surface) {
+    ChromaKeySurface.track => clip.chromaKey,
+    ChromaKeySurface.canvas => _layerChromaKey,
+  };
 
   /// The screen-colour measurement implementation.
   ///
@@ -85,23 +141,39 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
     super.initState();
     _cubit = ChromaKeyEditorCubit(
       video: EditorVideo.file(_previewPath),
-      initialChromaKey: widget.clip.chromaKey,
+      initialChromaKey: widget.initialChromaKey,
       detect: widget.detect,
     );
     unawaited(_initializePlayer());
   }
 
+  bool get _isDetached => widget.surface == ChromaKeySurface.canvas;
+
   /// Whether the pre-key footage is still on disk to preview and restore.
+  ///
+  /// Always false for a detached clip: its key is not in the footage, so there
+  /// is no earlier file to go back to.
   late final bool _hasKeySource = () {
+    if (_isDetached) return false;
     final source = widget.clip.chromaKeySourcePath;
     return source != null && File(source).existsSync();
   }();
 
+  /// Whether the clip already has a key this screen can take off again.
+  ///
+  /// Undoing a timeline clip's key is a file swap, so it needs the pre-key
+  /// footage on disk. A detached clip's key is a layer setting and can always
+  /// be removed.
+  bool get _canRemove => _isDetached
+      ? widget.initialChromaKey != null
+      : widget.clip.chromaKey != null && _hasKeySource;
+
   /// The footage the preview and the measurement run on.
   ///
-  /// For an already-keyed clip that is the pre-bake original: keying the baked
-  /// video again would show a key applied twice, and measuring it would sample
-  /// the replaced background instead of the screen.
+  /// For an already-keyed timeline clip that is the pre-bake original: keying
+  /// the baked video again would show a key applied twice, and measuring it
+  /// would sample the replaced background instead of the screen. A detached
+  /// clip's key sits on top of its footage as it is, so that is what is shown.
   String get _previewPath {
     final source = widget.clip.chromaKeySourcePath;
     if (source != null && _hasKeySource) return source;
@@ -292,9 +364,13 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bakingRenderId = context.select<ClipEditorBloc, String?>(
-      (bloc) => _bakeInFlight(bloc.state),
-    );
+    // A detached clip never bakes, and its route carries no clip bloc: the
+    // key leaves through the pop instead.
+    final bakingRenderId = _isDetached
+        ? null
+        : context.select<ClipEditorBloc, String?>(
+            (bloc) => _bakeInFlight(bloc.state),
+          );
     final isBaking = bakingRenderId != null;
 
     return BlocProvider<ChromaKeyEditorCubit>.value(
@@ -326,15 +402,16 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                         .acknowledgeDetectionFailure();
                   },
                 ),
-                BlocListener<ClipEditorBloc, ClipEditorState>(
-                  listenWhen: (previous, current) =>
-                      !identical(
-                        previous.lastChromaKeyResult,
-                        current.lastChromaKeyResult,
-                      ) &&
-                      current.lastChromaKeyResult != null,
-                  listener: _onBakeResult,
-                ),
+                if (!_isDetached)
+                  BlocListener<ClipEditorBloc, ClipEditorState>(
+                    listenWhen: (previous, current) =>
+                        !identical(
+                          previous.lastChromaKeyResult,
+                          current.lastChromaKeyResult,
+                        ) &&
+                        current.lastChromaKeyResult != null,
+                    listener: _onBakeResult,
+                  ),
               ],
               child: Stack(
                 children: [
@@ -358,15 +435,17 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                       ),
                       Expanded(
                         child: _Preview(
-                          aspectRatio: widget.clip.targetAspectRatio.value,
+                          // A detached clip is a free-floating box in its
+                          // own shape; a timeline clip fills the
+                          // composition's frame.
+                          aspectRatio: _isDetached
+                              ? widget.clip.originalAspectRatio
+                              : widget.clip.targetAspectRatio.value,
                           player: _player,
                           backdropSync: _player == null ? null : _backdropSync,
                         ),
                       ),
-                      // Undoing a key is a file swap, not a render — the clip
-                      // kept the footage it was applied to. Only offered when
-                      // that footage is still there to go back to.
-                      if (widget.clip.chromaKey != null && _hasKeySource)
+                      if (_canRemove)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: DivineButton(
@@ -380,6 +459,7 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                       Flexible(
                         child: ChromaKeyControls(
                           onPickBackground: _pickBackground,
+                          surface: widget.surface,
                         ),
                       ),
                     ],
@@ -396,9 +476,16 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
   }
 
   void _confirm(BuildContext context) {
+    final chromaKey = _cubit.state.chromaKey;
+    if (_isDetached) {
+      // Nothing to render: the layer takes the settings as they are, so the
+      // image they point at is the one to keep.
+      _keptImagePath = chromaKey.backgroundImagePath;
+      Navigator.of(context).pop(DetachedClipChromaKeyApplied(chromaKey));
+      return;
+    }
     // The bloc owns the render so it survives this screen; the screen stays up
     // and blocked until the result lands, which is what makes the wait legible.
-    final chromaKey = _cubit.state.chromaKey;
     _pendingImagePath = chromaKey.backgroundImagePath;
     context.read<ClipEditorBloc>().add(
       ClipEditorChromaKeyRequested(
@@ -413,6 +500,10 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
     // no background image survives it — including one an earlier failed bake
     // had queued.
     _pendingImagePath = null;
+    if (_isDetached) {
+      Navigator.of(context).pop(const DetachedClipChromaKeyRemoved());
+      return;
+    }
     context.read<ClipEditorBloc>().add(
       ClipEditorChromaKeyRemoved(widget.clip.id),
     );

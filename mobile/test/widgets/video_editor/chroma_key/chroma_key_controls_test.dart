@@ -35,6 +35,7 @@ void main() {
       ThemeData theme, {
       TextScaler textScaler = TextScaler.noScaling,
       Locale? locale,
+      ChromaKeySurface surface = ChromaKeySurface.track,
     }) async {
       // A phone, not the 800x600 default. The panel is a narrow column of
       // rows, so a surface 2.2x a phone's width cannot show one overflowing
@@ -64,7 +65,10 @@ void main() {
               backgroundColor: theme
                   .extension<VineThemeColors>()!
                   .surfaceContainerHigh,
-              body: ChromaKeyControls(onPickBackground: (_) {}),
+              body: ChromaKeyControls(
+                onPickBackground: (_) {},
+                surface: surface,
+              ),
             ),
           ),
         ),
@@ -99,6 +103,42 @@ void main() {
             'do not know an ordinary wall keys. Epic #8543 ratified that '
             'framing.',
       );
+    });
+
+    testWidgets('offers every backdrop and warns about black on the track', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(en.videoEditorChromaKeyBackgroundVideo), findsOneWidget);
+      // A single H.264 track has nothing under it, so "Nothing" flattens to
+      // black and the panel has to say so.
+      expect(find.text(en.videoEditorChromaKeyTransparentHint), findsOneWidget);
+      expect(
+        find.text(en.videoEditorChromaKeyCanvasTransparentHint),
+        findsNothing,
+      );
+    });
+
+    testWidgets('drops the clip backdrop and reassures on the canvas', (
+      tester,
+    ) async {
+      await pump(tester, VineTheme.theme, surface: ChromaKeySurface.canvas);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      // A live key has no second track to play a library clip on.
+      expect(find.text(en.videoEditorChromaKeyBackgroundVideo), findsNothing);
+      expect(find.text(en.videoEditorChromaKeyBackgroundNone), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeyBackgroundColor), findsOneWidget);
+      expect(find.text(en.videoEditorChromaKeyBackgroundImage), findsOneWidget);
+      // The layer is composited over the track, so "Nothing" really is
+      // see-through — the black warning would be wrong here.
+      expect(
+        find.text(en.videoEditorChromaKeyCanvasTransparentHint),
+        findsOneWidget,
+      );
+      expect(find.text(en.videoEditorChromaKeyTransparentHint), findsNothing);
     });
 
     testWidgets('resolves the hint through l10n rather than a literal', (

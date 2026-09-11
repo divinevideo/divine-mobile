@@ -495,7 +495,14 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
     final layer = editor.activeLayers[index];
     if (layer is! WidgetLayer) return;
 
-    final meta = DetachedClipLayerData(clip: clip, layerId: layerId).toMeta();
+    // Only the clip is swapped. The layer's own settings — where a split tail
+    // starts inside the clip, and its live green screen — describe the layer,
+    // not the footage, and a crop changes neither.
+    final meta = DetachedClipLayerData.withClip(
+      DetachedClipLayerData.metaOf(layer),
+      clip,
+    );
+    if (meta == null) return;
 
     // The layer keeps its width; the crop changes the content's aspect ratio,
     // so the height follows on its own through the frame that lays it out. A

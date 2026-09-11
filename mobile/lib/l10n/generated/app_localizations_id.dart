@@ -8880,6 +8880,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Apa pun yang ada di belakang klip akan terlihat tembus.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.';
 

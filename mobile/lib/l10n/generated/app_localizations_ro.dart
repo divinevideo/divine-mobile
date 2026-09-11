@@ -9170,6 +9170,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Ce se află în spatele clipului se vede prin el.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.';
 

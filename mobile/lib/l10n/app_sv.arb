@@ -3673,6 +3673,7 @@
     "videoEditorChromaKeyBackgroundImage": "Bild",
     "videoEditorChromaKeyBackgroundVideo": "Klipp",
     "videoEditorChromaKeyTransparentHint": "Video kan inte spara transparens, så det här exporteras som svart.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Det som ligger bakom klippet syns igenom.",
     "videoEditorChromaKeySurfaceHint": "Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.",
     "videoEditorChromaKeyDetectFailed": "Hittade ingen bakgrund – den måste fylla hela bilden bakom dig. En slät vägg räcker. Eller välj färgen för hand.",
     "videoEditorChromaKeyPickClipTitle": "Välj ett klipp",

@@ -3673,6 +3673,7 @@
     "videoEditorChromaKeyBackgroundImage": "Immagine",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Il video non supporta la trasparenza, quindi in esportazione diventa nero.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Quello che c'è dietro la clip si vede in trasparenza.",
     "videoEditorChromaKeySurfaceHint": "Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l'inquadratura.",
     "videoEditorChromaKeyDetectFailed": "Nessuno sfondo trovato: deve riempire tutta l'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.",
     "videoEditorChromaKeyPickClipTitle": "Scegli una clip",

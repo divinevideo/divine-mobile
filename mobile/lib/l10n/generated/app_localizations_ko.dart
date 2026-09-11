@@ -8539,6 +8539,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      '클립 뒤에 있는 것이 그대로 비쳐 보여요.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       '뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.';
 

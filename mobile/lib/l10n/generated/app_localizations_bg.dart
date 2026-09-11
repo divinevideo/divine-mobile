@@ -9043,6 +9043,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Каквото е зад клипа, прозира през него.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.';
 

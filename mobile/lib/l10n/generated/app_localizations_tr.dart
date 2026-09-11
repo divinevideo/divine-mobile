@@ -8881,6 +8881,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Klibin arkasında ne varsa görünür.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.';
 

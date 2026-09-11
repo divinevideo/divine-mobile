@@ -8527,6 +8527,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '動画は透明を保持できないため、書き出すと黒くなります。';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'クリップの後ろにあるものが透けて見えます。';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       '後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。';
 

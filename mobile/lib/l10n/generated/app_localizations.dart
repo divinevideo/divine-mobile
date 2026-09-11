@@ -15290,6 +15290,12 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
+  /// Shown under the background chips of the green-screen screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Whatever\'s behind the clip shows through.'**
+  String get videoEditorChromaKeyCanvasTransparentHint;
+
   /// Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register.
   ///
   /// In en, this message translates to:
