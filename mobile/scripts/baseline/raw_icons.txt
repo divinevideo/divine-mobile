@@ -17,7 +17,7 @@ lib/screens/settings/general_settings_screen.dart	1
 lib/screens/settings/legal_screen.dart	4
 lib/screens/settings/nostr_settings_screen.dart	5
 lib/screens/settings/settings_screen.dart	5
-lib/screens/user_list_people_screen.dart	3
+lib/screens/user_list_people_screen.dart	2
 lib/widgets/classic_viners_slider.dart	1
 lib/widgets/classic_vines_tab.dart	2
 lib/widgets/for_you_tab.dart	2
