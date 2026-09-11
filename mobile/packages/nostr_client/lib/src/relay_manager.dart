@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/relay_add_source.dart';
 import 'package:nostr_client/src/models/relay_connection_status.dart';
@@ -526,7 +527,7 @@ class RelayManager {
   Future<void> retryDisconnectedRelays() {
     final inFlight = _retryInFlight;
     if (inFlight != null) return _waitForRetrySweep(inFlight);
-    _retryDeadline = DateTime.now().add(reconnectSweepBudget);
+    _retryDeadline = clock.now().add(reconnectSweepBudget);
     final sweep = _runRetrySweep();
     late final Future<void> tracked;
     tracked = sweep.whenComplete(() {
@@ -562,7 +563,7 @@ class RelayManager {
     DateTime deadline,
     String label,
   ) async {
-    final remaining = deadline.difference(DateTime.now());
+    final remaining = deadline.difference(clock.now());
     try {
       await work.timeout(remaining.isNegative ? Duration.zero : remaining);
       return ForceReconnectOutcome.completed;
@@ -663,10 +664,10 @@ class RelayManager {
     final runningDeadline = _forceCycleDeadline;
     if (running != null &&
         runningDeadline != null &&
-        DateTime.now().isBefore(runningDeadline)) {
+        clock.now().isBefore(runningDeadline)) {
       return _waitUntil(running, runningDeadline, 'Force reconnect');
     }
-    final deadline = DateTime.now().add(reconnectSweepBudget);
+    final deadline = clock.now().add(reconnectSweepBudget);
     late final Future<void> cycle;
     cycle = _runForceReconnect().whenComplete(() {
       if (identical(_forceCycle, cycle)) {

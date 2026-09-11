@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
@@ -1971,6 +1972,91 @@ void main() {
             await manager.forceReconnectAll(),
             ForceReconnectOutcome.completed,
           );
+        },
+      );
+
+      test('a cycle whose dials all failed still reports completed', () async {
+        // completed says every dial finished, not that any of them connected;
+        // the Relays screen decides what to show from the relay count.
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) async => false);
+
+        expect(
+          await manager.forceReconnectAll(),
+          ForceReconnectOutcome.completed,
+        );
+      });
+
+      test('a caller joining is released at the deadline of the cycle it '
+          'joined, not its own', () {
+        // The finding's exact case: with the deadline read off the wall clock
+        // a joiner waited a fresh budget from where it joined, so it could
+        // answer long after the cycle it was waiting on had given up.
+        fakeAsync((async) {
+          var dials = 0;
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            dials++;
+            return Completer<bool>().future;
+          });
+
+          ForceReconnectOutcome? first;
+          ForceReconnectOutcome? joiner;
+          unawaited(manager.forceReconnectAll().then((o) => first = o));
+          async.elapse(const Duration(seconds: 14, milliseconds: 900));
+          unawaited(manager.forceReconnectAll().then((o) => joiner = o));
+          async.elapse(const Duration(milliseconds: 99));
+          expect(joiner, isNull);
+
+          async.elapse(const Duration(milliseconds: 1));
+          expect(first, equals(ForceReconnectOutcome.stillDialling));
+          expect(
+            joiner,
+            equals(ForceReconnectOutcome.stillDialling),
+            reason: 'the joiner waits out the cycle, not a fresh budget',
+          );
+          expect(dials, equals(3), reason: 'the joiner starts no cycle');
+        });
+      });
+
+      test(
+        'a caller joining a cycle that finishes in time hears completed',
+        () {
+          fakeAsync((async) {
+            final dials = <Completer<bool>>[];
+            when(
+              () => mockRelayPool.add(
+                any(),
+                autoSubscribe: any(named: 'autoSubscribe'),
+              ),
+            ).thenAnswer((_) {
+              final dial = Completer<bool>();
+              dials.add(dial);
+              return dial.future;
+            });
+
+            ForceReconnectOutcome? first;
+            ForceReconnectOutcome? joiner;
+            unawaited(manager.forceReconnectAll().then((o) => first = o));
+            async.elapse(const Duration(seconds: 10));
+            unawaited(manager.forceReconnectAll().then((o) => joiner = o));
+            for (final dial in dials) {
+              dial.complete(true);
+            }
+            async.flushMicrotasks();
+
+            expect(dials, hasLength(3));
+            expect(first, equals(ForceReconnectOutcome.completed));
+            expect(joiner, equals(ForceReconnectOutcome.completed));
+          });
         },
       );
 

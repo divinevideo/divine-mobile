@@ -9,6 +9,7 @@ environment:
   flutter: ^3.47.0
 
 dependencies:
+  clock: ^1.1.2
   crypto: ^3.0.7
   db_client:
     path: ../db_client
