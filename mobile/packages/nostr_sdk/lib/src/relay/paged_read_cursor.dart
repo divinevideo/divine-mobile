@@ -63,7 +63,7 @@ final class EndPagedRead extends PagedReadStep {
 ///   without passing it.
 /// * With no relay to go by, or with the next page below [since], where
 ///   nothing can match, the walk ends, complete unless a relay may be
-///   capped, such as one whose every event fell outside the filter.
+///   capped.
 @internal
 PagedReadStep nextPagedReadStep({
   required int? cursor,
