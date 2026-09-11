@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -52,6 +53,10 @@ void main() {
         video: CacheUsageCategory(
           usedBytes: 3 * 1024 * 1024,
           limitBytes: kCacheLimitDefaultBytes,
+        ),
+        player: CacheUsageCategory(
+          usedBytes: 0,
+          limitBytes: kDefaultCacheMaxSizeBytes,
         ),
         images: CacheUsageCategory(usedBytes: 0),
         transitionSeams: CacheUsageCategory(
@@ -417,17 +422,16 @@ void main() {
     ) async {
       final announcements = <String>[];
       tester.binding.defaultBinaryMessenger
-          .setMockDecodedMessageHandler<Object?>(
-            SystemChannels.accessibility,
-            (message) async {
-              if (message is Map) {
-                final data = message['data'] as Map<Object?, Object?>?;
-                final text = data?['message'];
-                if (text is String) announcements.add(text);
-              }
-              return null;
-            },
-          );
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            if (message is Map) {
+              final data = message['data'] as Map<Object?, Object?>?;
+              final text = data?['message'];
+              if (text is String) announcements.add(text);
+            }
+            return null;
+          });
       addTearDown(
         () => tester.binding.defaultBinaryMessenger
             .setMockDecodedMessageHandler<Object?>(

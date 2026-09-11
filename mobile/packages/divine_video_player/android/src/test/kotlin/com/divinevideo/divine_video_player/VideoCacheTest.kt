@@ -10,25 +10,34 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins the transport contract of [AuthAwareCacheBypassDataSource]: gated
+ * Pins the transport contract of [CacheBypassDataSource]: gated
  * (viewer-authenticated) requests attach the auth header AND bypass the disk
- * cache so private bytes are never persisted, while anonymous requests use the
- * cache and add no headers. This is the per-request half of the gated-HLS fix
- * (#4884 / #4897) — the resolver runs on every `open()`, so HLS media segments
- * authenticate alongside the master manifest.
+ * cache so private bytes are never persisted, while anonymous HTTP(S) requests
+ * use the cache and add no headers. This is the per-request half of the
+ * gated-HLS fix (#4884 / #4897) — the resolver runs on every `open()`, so HLS
+ * media segments authenticate alongside the master manifest.
+ *
+ * Local sources bypass the cache too (#8029): a `file://` URI or a bare path
+ * is already on disk, and routing it through the write-through cache stored a
+ * second copy of every feed video played from the Dart-side media cache.
  */
 @UnstableApi
 class VideoCacheTest {
 
     private val authHeaders = mapOf("Authorization" to "Nostr token")
 
-    private fun dataSpec(): DataSpec =
-        DataSpec.Builder().setUri(mockk<Uri>(relaxed = true)).build()
+    private fun dataSpec(uriScheme: String? = "https"): DataSpec {
+        val uri = mockk<Uri>(relaxed = true) {
+            every { scheme } returns uriScheme
+        }
+        return DataSpec.Builder().setUri(uri).build()
+    }
 
     @Test
     fun `open attaches viewer headers and bypasses the cache for gated content`() {
@@ -43,7 +52,7 @@ class VideoCacheTest {
         val openedSpec = slot<DataSpec>()
         every { uncachedDelegate.open(capture(openedSpec)) } returns 0L
 
-        val source = AuthAwareCacheBypassDataSource(
+        val source = CacheBypassDataSource(
             cachedFactory = cachedFactory,
             uncachedFactory = uncachedFactory,
             httpHeadersForUri = { authHeaders },
@@ -74,17 +83,72 @@ class VideoCacheTest {
         val openedSpec = slot<DataSpec>()
         every { cachedDelegate.open(capture(openedSpec)) } returns 0L
 
-        val source = AuthAwareCacheBypassDataSource(
+        val source = CacheBypassDataSource(
             cachedFactory = cachedFactory,
             uncachedFactory = uncachedFactory,
             httpHeadersForUri = { emptyMap() },
         )
 
-        source.open(dataSpec())
+        source.open(dataSpec(uriScheme = "https"))
 
         verify(exactly = 1) { cachedFactory.createDataSource() }
         verify(exactly = 0) { uncachedFactory.createDataSource() }
         assertTrue(openedSpec.captured.httpRequestHeaders.isEmpty())
+    }
+
+    @Test
+    fun `open bypasses the cache for a file URI`() {
+        val cachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+        val uncachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+
+        val source = CacheBypassDataSource(
+            cachedFactory = cachedFactory,
+            uncachedFactory = uncachedFactory,
+            httpHeadersForUri = { emptyMap() },
+        )
+
+        source.open(dataSpec(uriScheme = "file"))
+
+        // The bytes are already on disk; a cache pass would only copy them.
+        verify(exactly = 1) { uncachedFactory.createDataSource() }
+        verify(exactly = 0) { cachedFactory.createDataSource() }
+    }
+
+    @Test
+    fun `open bypasses the cache for a bare path`() {
+        val cachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+        val uncachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+
+        val source = CacheBypassDataSource(
+            cachedFactory = cachedFactory,
+            uncachedFactory = uncachedFactory,
+            httpHeadersForUri = { emptyMap() },
+        )
+
+        // `VideoClip.file(path)` reaches the player as a scheme-less path,
+        // which Media3 resolves to a local file.
+        source.open(dataSpec(uriScheme = null))
+
+        verify(exactly = 1) { uncachedFactory.createDataSource() }
+        verify(exactly = 0) { cachedFactory.createDataSource() }
+    }
+
+    @Test
+    fun `only http and https schemes are cacheable`() {
+        assertTrue(isCacheableScheme("http"))
+        assertTrue(isCacheableScheme("https"))
+        assertTrue(isCacheableScheme("HTTPS"))
+        assertFalse(isCacheableScheme("file"))
+        assertFalse(isCacheableScheme("content"))
+        assertFalse(isCacheableScheme(null))
     }
 
     @Test

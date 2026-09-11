@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_cache/media_cache.dart';
@@ -39,6 +40,7 @@ class CacheUsage extends Equatable {
   /// Creates a cache usage breakdown.
   const CacheUsage({
     required this.video,
+    required this.player,
     required this.images,
     required this.transitionSeams,
     required this.tempRenders,
@@ -50,6 +52,10 @@ class CacheUsage extends Equatable {
       usedBytes: 0,
       limitBytes: kCacheLimitDefaultBytes,
     ),
+    player: CacheUsageCategory(
+      usedBytes: 0,
+      limitBytes: kDefaultCacheMaxSizeBytes,
+    ),
     images: CacheUsageCategory(usedBytes: 0),
     transitionSeams: CacheUsageCategory(
       usedBytes: 0,
@@ -60,6 +66,11 @@ class CacheUsage extends Equatable {
 
   /// Feed video download cache.
   final CacheUsageCategory video;
+
+  /// The native player's own disk cache: what ExoPlayer kept of the HTTP(S)
+  /// sources it streamed on Android, under its separate 500 MB budget. Empty
+  /// on other platforms, apart from what an older iOS build left behind.
+  final CacheUsageCategory player;
 
   /// Image and thumbnail cache.
   final CacheUsageCategory images;
@@ -76,12 +87,19 @@ class CacheUsage extends Equatable {
   /// Total bytes currently held by all clearable categories.
   int get totalBytes =>
       video.usedBytes +
+      player.usedBytes +
       images.usedBytes +
       transitionSeams.usedBytes +
       tempRenders.usedBytes;
 
   @override
-  List<Object?> get props => [video, images, transitionSeams, tempRenders];
+  List<Object?> get props => [
+    video,
+    player,
+    images,
+    transitionSeams,
+    tempRenders,
+  ];
 }
 
 /// Documents-directory usage split by who can reclaim it.
@@ -158,11 +176,12 @@ class _DocumentsScan {
 /// Clears re-downloadable / regenerable media caches, measures and sweeps the
 /// documents directory, and audits the clip library for broken entries.
 ///
-/// What [clearCaches] clears: the feed video download cache, the
-/// image/thumbnail cache, leftover temp render files and scratch directories,
-/// and the regenerable transition previews. What it never touches: the user's
-/// clip-library files (recorded/imported videos), drafts, sounds, keys, or
-/// preferences — those live outside the cleared directories.
+/// What [clearCaches] clears: the feed video download cache, the native
+/// player's disk cache, the image/thumbnail cache, leftover temp render files
+/// and scratch directories, and the regenerable transition previews. What it
+/// never touches: the user's clip-library files (recorded/imported videos),
+/// drafts, sounds, keys, or preferences — those live outside the cleared
+/// directories.
 ///
 /// What [removeOrphanedFiles] removes: media files directly under the
 /// documents root that no clip row, draft row, or pending upload references —
@@ -291,16 +310,19 @@ class StorageManagementService {
   Future<CacheUsage> cacheUsage() async {
     final temp = await _temporaryDirectoryProvider();
     final docs = await _documentsDirectoryProvider();
+    final playerCache = await _playerCacheDirectory();
     final protectedPaths = _normalizedProtectedPaths();
     var transitionBytes = 0;
     for (final dir in _documentsCacheDirs) {
-      transitionBytes += (await _dirSize(Directory(p.join(docs.path, dir))))
-          .bytes;
+      transitionBytes += (await _dirSize(
+        Directory(p.join(docs.path, dir)),
+      )).bytes;
     }
     var tempRenderBytes = await _tempRenderBytes(temp, protectedPaths);
     for (final dir in TempRenderDirectories.all) {
-      tempRenderBytes += (await _dirSize(Directory(p.join(temp.path, dir))))
-          .bytes;
+      tempRenderBytes += (await _dirSize(
+        Directory(p.join(temp.path, dir)),
+      )).bytes;
     }
     return CacheUsage(
       video: CacheUsageCategory(
@@ -308,6 +330,12 @@ class StorageManagementService {
           Directory(p.join(temp.path, kVideoCacheDirectoryName)),
         )).bytes,
         limitBytes: videoCacheLimitBytes(),
+      ),
+      player: CacheUsageCategory(
+        usedBytes: playerCache == null
+            ? 0
+            : (await _dirSize(playerCache)).bytes,
+        limitBytes: kDefaultCacheMaxSizeBytes,
       ),
       images: CacheUsageCategory(
         usedBytes: (await _dirSize(
@@ -335,6 +363,13 @@ class StorageManagementService {
     await _deleteDirContents(
       Directory(p.join(temp.path, kVideoCacheDirectoryName)),
     );
+    final playerCache = await _playerCacheDirectory();
+    if (playerCache != null) {
+      await _deleteDirContents(
+        playerCache,
+        keep: (entity) => entity is File && p.extension(entity.path) == '.uid',
+      );
+    }
     await _deleteDirContents(Directory(p.join(temp.path, _imageCacheDir)));
     final protectedPaths = _normalizedProtectedPaths();
     await _forEachTempRender(
@@ -451,6 +486,32 @@ class StorageManagementService {
     return StorageFootprint(roots: roots);
   }
 
+  /// Where the native player keeps its own disk cache, or null when the
+  /// platform cannot resolve a cache directory.
+  ///
+  /// ExoPlayer writes `<cacheDir>/divine_video_cache` on Android (see
+  /// `VideoCache.kt`, which owns the name through
+  /// [kNativeVideoCacheDirectoryName]). On Apple platforms, this is also the
+  /// best-effort location checked for leftovers from the `URLCache` configured
+  /// by builds before #8029. Foundation chooses its final on-disk placement,
+  /// so no cleanup is claimed when that directory is absent.
+  Future<Directory?> _playerCacheDirectory() async {
+    final caches = await _resolveRoot(
+      'Caches',
+      _applicationCacheDirectoryProvider,
+    );
+    if (caches == null) return null;
+    return Directory(p.join(caches.path, kNativeVideoCacheDirectoryName));
+  }
+
+  /// Empties the native player cache while ExoPlayer may still hold it open.
+  ///
+  /// `SimpleCache` tolerates its span files vanishing underneath it — a read
+  /// that finds a shorter file than the index recorded drops the stale spans
+  /// and falls through to the network — but it identifies its on-disk index
+  /// by a `.uid` marker in the same directory. Deleting that marker would make
+  /// the next launch open a fresh index and orphan the old one in the shared
+  /// ExoPlayer database, so it is the one file left in place.
   /// The directory [provider] points at, or null when the platform has no
   /// such root — a missing root must not fail the whole measurement.
   Future<Directory?> _resolveRoot(
@@ -740,10 +801,14 @@ class StorageManagementService {
 
   String _normalizePath(String filePath) => p.normalize(p.absolute(filePath));
 
-  Future<void> _deleteDirContents(Directory dir) async {
+  Future<void> _deleteDirContents(
+    Directory dir, {
+    bool Function(FileSystemEntity entity)? keep,
+  }) async {
     if (!dir.existsSync()) return;
     try {
       await for (final entity in dir.list(followLinks: false)) {
+        if (keep?.call(entity) ?? false) continue;
         await _deleteQuietly(entity);
       }
     } on Object catch (error) {
