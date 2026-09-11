@@ -64,10 +64,11 @@ extension DivineLayerAnimationList on List<pve.LayerAnimation> {
   /// `slideFrom` is measured in — so the in-editor preview travels the path the
   /// export will. [canvasSize] is the canvas those pixels are relative to.
   ///
-  /// The stored fractions stay the source of truth: pro_image_editor rescales a
-  /// layer's offset when the canvas resizes but leaves `slideFrom` alone, so
-  /// the value written here goes stale the moment the canvas changes size (a
-  /// sub-editor opening is enough). Editing the animation again rewrites it.
+  /// The stored fractions stay the source of truth for the export; the pixel
+  /// copy written here only feeds the preview. pro_image_editor rescales it
+  /// together with the layer's offset when the canvas changes size (since
+  /// 14.1.1), so the two keep describing the same journey until the animation
+  /// is edited again.
   List<LayerAnimation> toLayerAnimations({
     LayerSlidePoints points = const LayerSlidePoints(),
     Size canvasSize = Size.zero,

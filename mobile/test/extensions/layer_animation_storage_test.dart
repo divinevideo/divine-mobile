@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import 'package:flutter/widgets.dart' show BuildContext, Builder, SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
@@ -12,6 +13,12 @@ import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
 // does.
 import 'package:pro_image_editor/core/models/layers/layer_animation.dart'
     as in_editor;
+import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dart'
+    show SizesManager;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show EditorStateHistory, ProImageEditorConfigs;
+import 'package:pro_image_editor/shared/widgets/screen_resize_detector.dart'
+    show ResizeEvent;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
@@ -232,6 +239,57 @@ void main() {
           equals(in_editor.SlideDirection.left),
         );
       });
+
+      // The preview reads the pixel copy, the export reads the fraction. They
+      // only describe the same journey if pro_image_editor rescales the copy
+      // together with the layer's offset when the canvas changes size (the
+      // timeline collapsing, a sub-editor opening) — which 14.1.1 does. This
+      // drives its real resize path so a dependency bump that loses that
+      // behaviour fails here rather than on a device.
+      testWidgets(
+        'keeps matching the stored fraction after the canvas is resized',
+        (tester) async {
+          const canvas = Size(400, 800);
+          const resized = Size(200, 400);
+          const points = LayerSlidePoints(enter: Offset(-0.25, 0.5));
+          final layer = Layer(
+            offset: const Offset(40, 80),
+            meta: points.applyTo(null),
+            animations: [slideIn].toLayerAnimations(
+              points: points,
+              canvasSize: canvas,
+            ),
+          );
+          expect(layer.animations.single.slideFrom, const Offset(-100, 400));
+
+          late BuildContext context;
+          await tester.pumpWidget(
+            Builder(
+              builder: (builderContext) {
+                context = builderContext;
+                return const SizedBox.shrink();
+              },
+            ),
+          );
+          SizesManager(context: context, configs: const ProImageEditorConfigs())
+            ..decodedImageSize = canvas
+            ..recalculateLayerPosition(
+              history: [
+                EditorStateHistory(layers: [layer]),
+              ],
+              resizeEvent: const ResizeEvent(
+                oldContentSize: canvas,
+                newContentSize: resized,
+              ),
+            );
+
+          expect(layer.offset, const Offset(20, 40));
+          expect(
+            layer.animations.single.slideFrom,
+            equals(points.resolve(editor.AnimationPhase.animateIn, resized)),
+          );
+        },
+      );
     });
   });
 

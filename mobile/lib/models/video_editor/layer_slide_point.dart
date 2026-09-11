@@ -23,13 +23,15 @@ const String layerSlidePointLeaveKey = 'animateOut';
 ///
 /// Both packages model the point as `LayerAnimation.slideFrom`, and the layer's
 /// own animation carries a copy of it for the in-editor preview. That copy is
-/// not the source of truth: it is measured in canvas pixels, and
-/// pro_image_editor rescales a layer's *offset* when the canvas resizes without
-/// touching its `slideFrom` — so the moment the canvas changes size (opening a
-/// sub-editor is enough) the copy describes a different journey than the one
-/// that was drawn. `Layer.meta` is a plain map the editor carries through
-/// untouched, so the value kept here survives history, duplication, a canvas
-/// resize and a draft reload, and is what the export reads.
+/// not the source of truth: it is measured in canvas pixels from the canvas
+/// centre, while pro_video_editor measures its own `slideFrom` in video pixels
+/// from the frame's top-left, so the export cannot pass it through and has to
+/// resolve the point against the layer geometry it exports with.
+/// `Layer.meta` is a plain map the editor carries through untouched, so the
+/// value kept here survives history, duplication and a draft reload, and is
+/// what the export reads. The preview copy is kept in step by pro_image_editor
+/// itself, which rescales it with the layer's offset whenever the canvas
+/// changes size.
 ///
 /// ### Coordinates
 ///
