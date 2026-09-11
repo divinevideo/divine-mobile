@@ -41,6 +41,7 @@ class _RecordingCrashReportingService extends Fake
 
 GoRouter _shellRouter({required bool withRetiredRoute}) => GoRouter(
   initialLocation: '/home',
+  errorBuilder: (_, _) => const Text('not found'),
   routes: <RouteBase>[
     if (withRetiredRoute)
       GoRoute(path: '/retired', builder: (_, _) => const Text('retired')),
@@ -119,6 +120,12 @@ void main() {
       await tester.pumpWidget(app(const ValueKey(2)));
       await tester.pumpAndSettle();
 
+      expect(find.byType(Navigator), findsWidgets);
+      expect(find.text('not found'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.path,
+        '/retired',
+      );
       expect(tester.takeException(), isNull);
       expect(crashReporting.reasons, [
         'RestorationSafeRouter.parseRouteInformation',
