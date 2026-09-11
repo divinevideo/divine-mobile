@@ -1,6 +1,8 @@
 // ABOUTME: Tests that a cold start revalidates instead of trusting the cache
 // ABOUTME: Pins the #7719 fix: serve cached content, then fetch fresh
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
@@ -8,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +24,8 @@ class _MockCuratedListRepository extends Mock
     implements CuratedListRepository {}
 
 class _MockFeedTuningRepository extends Mock implements FeedTuningRepository {}
+
+class _MockHomeFeedCache extends Mock implements HomeFeedCache {}
 
 VideoEvent _video(String id) => VideoEvent(
   id: id,
@@ -38,6 +43,8 @@ void main() {
       late _MockFollowRepository followRepository;
       late _MockCuratedListRepository curatedListRepository;
       late _MockFeedTuningRepository feedTuningRepository;
+      late _MockHomeFeedCache homeFeedCache;
+      late Completer<HomeFeedResult> freshResult;
 
       setUp(() async {
         SharedPreferences.setMockInitialValues({});
@@ -45,6 +52,8 @@ void main() {
         followRepository = _MockFollowRepository();
         curatedListRepository = _MockCuratedListRepository();
         feedTuningRepository = _MockFeedTuningRepository();
+        homeFeedCache = _MockHomeFeedCache();
+        freshResult = Completer<HomeFeedResult>();
 
         when(() => followRepository.followingPubkeys).thenReturn([]);
         when(
@@ -62,6 +71,29 @@ void main() {
             revalidate: any(named: 'revalidate'),
           ),
         ).thenAnswer((_) async => HomeFeedResult(videos: [_video('fresh')]));
+        when(() => videosRepository.applyContentPreferences(any())).thenAnswer(
+          (invocation) =>
+              invocation.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => homeFeedCache.readVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+          ),
+        ).thenAnswer((_) async => null);
+        when(
+          () => homeFeedCache.writeVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+            videos: any(named: 'videos'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => homeFeedCache.clearVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+          ),
+        ).thenAnswer((_) async {});
         when(
           () => videosRepository.getClassicVideos(
             limit: any(named: 'limit'),
@@ -84,6 +116,7 @@ void main() {
         followRepository: followRepository,
         curatedListRepository: curatedListRepository,
         feedTuningRepository: feedTuningRepository,
+        homeFeedCache: homeFeedCache,
       );
 
       // The regression this pins (#7719): `_onStarted` used to call
@@ -154,6 +187,76 @@ void main() {
             ),
           ).captured;
           expect(captured, [isFalse]);
+        },
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'switches directly to cached content before revalidation completes',
+        setUp: () {
+          when(
+            () => homeFeedCache.readVideos(pubkey: null, mode: 'latest'),
+          ).thenAnswer((_) async => [_video('cached')]);
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer((_) => freshResult.future);
+          addTearDown(() {
+            if (!freshResult.isCompleted) {
+              freshResult.complete(const HomeFeedResult(videos: []));
+            }
+          });
+        },
+        build: buildBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          mode: FeedMode.classic,
+          videos: [_video('previous-source')],
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoFeedModeChanged(FeedMode.latest));
+          await bloc.stream.firstWhere(
+            (state) => state.videos.singleOrNull?.id == 'cached',
+          );
+          freshResult.complete(HomeFeedResult(videos: [_video('fresh')]));
+        },
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((state) => state.mode, 'mode', FeedMode.latest)
+              .having(
+                (state) => state.status,
+                'status',
+                VideoFeedStatus.success,
+              )
+              .having(
+                (state) => state.videos.map((video) => video.id),
+                'cached videos',
+                ['cached'],
+              ),
+          isA<VideoFeedBlocState>()
+              .having((state) => state.mode, 'mode', FeedMode.latest)
+              .having(
+                (state) => state.status,
+                'status',
+                VideoFeedStatus.success,
+              )
+              .having(
+                (state) => state.videos.map((video) => video.id),
+                'fresh videos spliced after cache',
+                ['cached', 'fresh'],
+              ),
+        ],
+        verify: (_) {
+          verify(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              revalidate: true,
+            ),
+          ).called(1);
         },
       );
 
