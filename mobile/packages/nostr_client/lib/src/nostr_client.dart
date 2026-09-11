@@ -1384,12 +1384,23 @@ class NostrClient {
       );
     }
     try {
-      return await _nostr.readAllEvents(
+      final walked = await _nostr.readAllEvents(
         filter.toJson(),
         pageSize: pageSize,
         maxPages: maxPages,
         pageTimeout: pageTimeout,
         deadline: deadline,
+      );
+      // Relay-supplied events are held to the filter here as they are on
+      // every other read leg. How the walk went is the pager's own account of
+      // it — its per-relay tallies counted the events as they arrived, so
+      // re-deriving that from what survives the filter would report a walk
+      // that never happened.
+      return PagedQueryResult(
+        events: _eventsMatchingAnyFilter(walked.events, [filter]),
+        isComplete: walked.isComplete,
+        pages: walked.pages,
+        stoppedBy: walked.stoppedBy,
       );
     } finally {
       resource.release();
