@@ -1031,7 +1031,9 @@ class NostrClient {
       _reportQueryCompletion(
         filters: filters,
         endedBy: skipped.endedBy,
-        reason: 'the client was disposed before the read started',
+        reason:
+            'the client was disposed before the read started, so no '
+            'relay was asked',
         events: 0,
         startedAt: startedAt,
       );
@@ -1184,7 +1186,9 @@ class NostrClient {
       // That split is what `timedOut` has always carried here, and it is the
       // one place it and `endedBy` disagree on purpose: the read itself never
       // ran, whoever was asking.
-      skippedReason = 'the query pool closed mid-call';
+      skippedReason =
+          'the query pool closed mid-call, so the read was '
+          'skipped';
       timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
@@ -1195,7 +1199,9 @@ class NostrClient {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
         // an inactivity timer reset on every acquire and release, so a busy
         // pool resets it forever while one waiter starves.
-        skippedReason = 'the query pool did not hand over a slot in time';
+        skippedReason =
+            'no query-pool slot arrived inside the budget, so '
+            'the read was skipped';
       } on TimeoutException {
         // The read outlived its own deadline by the whole grace period. The
         // relay pool saw it and files its own line when it concludes, so the
@@ -1345,7 +1351,8 @@ class NostrClient {
     if (_isDisposed) {
       return stopped(
         QueryEnd.noRelay,
-        'the client was disposed before the walk started',
+        'the client was disposed before the walk started, so no relay was '
+        'asked',
       );
     }
 
@@ -1366,7 +1373,7 @@ class NostrClient {
     if (_queryPool.isClosed) {
       return stopped(
         QueryEnd.deadline,
-        'the query pool closed mid-call',
+        'the query pool closed mid-walk, so no page was opened',
       );
     }
     // One slot for the walk rather than one per page: the pager owns its page
@@ -1380,7 +1387,7 @@ class NostrClient {
       unawaited(acquisition.then((resource) => resource.release()));
       return stopped(
         QueryEnd.deadline,
-        'the query pool did not hand over a slot in time',
+        'no query-pool slot arrived inside the budget, so no page was opened',
       );
     }
     try {
@@ -1408,11 +1415,20 @@ class NostrClient {
   }
 
   /// Files the one [RelayDiagnosticSite.queryCompletion] line a read owes when
-  /// the relay pool never saw it.
+  /// the relay pool never saw it — every read the pool did see it files for
+  /// itself.
   ///
-  /// Carries the end reason, why the relays were not asked, the event count,
-  /// the elapsed time and each filter's kinds and limit — never a pubkey, an
-  /// event id, or a filter's `ids`, `authors` or tag values.
+  /// [reason] is the whole explanation and reads as one clause, since what
+  /// stopped the read differs by exit. Beside it the line carries the end
+  /// reason, the event count, the elapsed time and each filter's kinds and
+  /// limit — never a pubkey, an event id, or a filter's `ids`, `authors` or
+  /// tag values.
+  ///
+  /// Every line here is filed under one relay url, and the diagnostics
+  /// adapter rate-limits per relay, site and level, so they all share one
+  /// bucket: three a minute, then a suppression summary. A cold start that
+  /// skips many reads at once surfaces the first three and a count, not one
+  /// line per read.
   void _reportQueryCompletion({
     required List<Filter> filters,
     required QueryEnd endedBy,
@@ -1433,7 +1449,7 @@ class NostrClient {
         relayUrl: 'nostr-client',
         message:
             'Query ended ${endedBy.name} after ${elapsedMs}ms '
-            '(events=$events); the relays were not asked: $reason; '
+            '(events=$events): $reason; '
             'filters: ${filters.map(_describeFilter).join(', ')}',
       ),
     );
