@@ -800,6 +800,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "Verbinden met relays mislukt. Check je netwerkverbinding.",
+    "relaySettingsStillConnecting": "Verbinden met relays is nog bezig. Geef het even de tijd.",
     "relaySettingsSavedLocallyPublishPending": "Op dit apparaat opgeslagen. We synchroniseren het met je account zodra publiceren weer werkt.",
     "relaySettingsAddRelayTitle": "Relay toevoegen",
     "relaySettingsAddRelayPrompt": "Voer de WebSocket-URL in van de relay die je wilt toevoegen:",

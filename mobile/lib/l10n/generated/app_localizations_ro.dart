@@ -2373,7 +2373,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+      'Încă ne conectăm la relay-uri. Mai așteaptă puțin.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

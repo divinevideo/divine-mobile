@@ -2355,7 +2355,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+      'Все още се свързваме с релетата. Изчакай малко.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

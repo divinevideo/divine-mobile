@@ -2286,7 +2286,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+      'Vẫn đang kết nối với relay. Vui lòng chờ một chút.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

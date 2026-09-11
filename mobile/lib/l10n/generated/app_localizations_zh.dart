@@ -2163,8 +2163,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get relaySettingsFailedToConnectCheck => '连接中继失败。请检查网络连接。';
 
   @override
-  String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+  String get relaySettingsStillConnecting => '仍在连接中继。请稍候。';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

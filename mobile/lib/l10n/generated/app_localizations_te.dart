@@ -2368,7 +2368,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+      'ఇంకా రిలేలకు కనెక్ట్ అవుతోంది. దయచేసి కొంచెం సేపు వేచి ఉండండి.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

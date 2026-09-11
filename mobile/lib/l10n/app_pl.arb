@@ -800,6 +800,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "Nie udało się połączyć z przekaźnikami. Sprawdź połączenie z siecią.",
+    "relaySettingsStillConnecting": "Wciąż łączymy się z przekaźnikami. Daj nam chwilę.",
     "relaySettingsSavedLocallyPublishPending": "Zapisano na tym urządzeniu. Zsynchronizujemy to z Twoim kontem, gdy publikowanie znów zadziała.",
     "relaySettingsAddRelayTitle": "Dodaj przekaźnik",
     "relaySettingsAddRelayPrompt": "Wprowadź URL WebSocket przekaźnika, który chcesz dodać:",

@@ -489,10 +489,6 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
-  // Relay reconnect "still working" copy. Deferred to the next human pass
-  // rather than machine-translated: the reassuring register matters and the
-  // English is likely to be revised with the Relays screen.
-  'relaySettingsStillConnecting',
   // Discord proof-rejection reasons (verifier PR #43). Each names a distinct
   // way a Discord proof can fail, replacing one message that blamed the npub
   // for all of them. Deferred to the next human pass rather than

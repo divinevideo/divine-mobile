@@ -1521,6 +1521,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "రిలేలకు కనెక్ట్ చేయడంలో విఫలమైంది. దయచేసి మీ నెట్‌వర్క్ కనెక్షన్‌ని తనిఖీ చేయండి.",
+  "relaySettingsStillConnecting": "ఇంకా రిలేలకు కనెక్ట్ అవుతోంది. దయచేసి కొంచెం సేపు వేచి ఉండండి.",
   "relaySettingsSavedLocallyPublishPending": "ఈ పరికరంలో సేవ్ చేయబడింది. రచనలను మళ్లీ ప్రచురించేటప్పుడు మేము దానిని మీ ఖాతాకు సమకాలీకరిస్తాము.",
   "relaySettingsAddRelayTitle": "రిలేని జోడించండి",
   "relaySettingsAddRelayPrompt": "మీరు జోడించాలనుకుంటున్న రిలే యొక్క WebSocket URLని నమోదు చేయండి:",

@@ -2251,7 +2251,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+      'Rölelere hâlâ bağlanılıyor. Biraz bekle.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>

@@ -2157,8 +2157,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이 연결에 실패했어요. 네트워크 연결을 확인해주세요.';
 
   @override
-  String get relaySettingsStillConnecting =>
-      'Still connecting. This is taking a moment - your relays will show up here when they land.';
+  String get relaySettingsStillConnecting => '아직 릴레이에 연결하고 있어요. 잠시만 기다려 주세요.';
 
   @override
   String get relaySettingsSavedLocallyPublishPending =>
