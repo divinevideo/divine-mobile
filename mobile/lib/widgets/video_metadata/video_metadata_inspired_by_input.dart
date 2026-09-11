@@ -129,11 +129,6 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
     );
     if (result == null || !context.mounted) return;
 
-    if (result.isEmpty) {
-      ref.read(videoEditorProvider.notifier).clearInspiredBy();
-      return;
-    }
-
     // Someone who muted us cannot be credited, but that is no reason to drop
     // the others the author picked — skip them and say so once.
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
@@ -149,8 +144,6 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
         ),
       );
     }
-
-    if (creditable.isEmpty) return;
 
     // Convert hex pubkeys to npubs for the NIP-27 content reference.
     ref

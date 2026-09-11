@@ -10,16 +10,21 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
+import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Mock for FollowRepository
 class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 /// Mock for ContentBlocklistRepository
 class _MockContentBlocklistRepository extends Mock
@@ -59,8 +64,45 @@ _MockFollowRepository _createMockFollowRepository({
   );
   when(() => mock.isInitialized).thenReturn(true);
   when(() => mock.followingCount).thenReturn(followingPubkeys.length);
+  when(mock.getMyFollowers).thenAnswer((_) async => followingPubkeys);
+  when(
+    mock.streamMyFollowers,
+  ).thenAnswer((_) => Stream.value(followingPubkeys));
   return mock;
 }
+
+_MockProfileRepository _createMockProfileRepository() {
+  final mock = _MockProfileRepository();
+  when(
+    () => mock.searchUsersProgressive(
+      query: any(named: 'query'),
+      limit: any(named: 'limit'),
+      offset: any(named: 'offset'),
+      sortBy: any(named: 'sortBy'),
+      hasVideos: any(named: 'hasVideos'),
+      boostPubkeys: any(named: 'boostPubkeys'),
+      cancellationToken: any(named: 'cancellationToken'),
+    ),
+  ).thenAnswer(
+    (_) => Stream.value(
+      const ProgressiveSearchResult(
+        profiles: [],
+        sources: {},
+        isComplete: true,
+      ),
+    ),
+  );
+  when(
+    () => mock.getCachedProfile(pubkey: any(named: 'pubkey')),
+  ).thenAnswer((_) async => null);
+  when(
+    () => mock.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+  ).thenAnswer((_) async => []);
+  return mock;
+}
+
+Override get _noVanishedProfiles =>
+    vanishedProfilePubkeysProvider.overrideWith((ref) => Stream.value({}));
 
 /// Create a mock ContentBlocklistRepository
 _MockContentBlocklistRepository _createMockContentBlocklistRepository({
@@ -73,6 +115,9 @@ _MockContentBlocklistRepository _createMockContentBlocklistRepository({
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(SearchCancellationToken('test-search'));
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('computeEffectiveInspiredByNpubs', () {
@@ -372,6 +417,48 @@ void main() {
       // Neither profile is cached here, which is the point: an uncredited
       // name must still appear, so the author can see both picks.
       expect(tile.value.split(', ').length, equals(2));
+    });
+
+    testWidgets('Done preserves credited creators the picker could not show', (
+      tester,
+    ) async {
+      final unresolved = NostrKeyUtils.encodePubKey('d' * 64);
+      final state = VideoEditorProviderState(inspiredByNpubs: [unresolved]);
+      final notifier = _MockVideoEditorNotifier(state);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            _noVanishedProfiles,
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            profileRepositoryProvider.overrideWithValue(
+              _createMockProfileRepository(),
+            ),
+            followRepositoryProvider.overrideWithValue(
+              _createMockFollowRepository(),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              _createMockContentBlocklistRepository(),
+            ),
+            videoEditorProvider.overrideWith(() => notifier),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoMetadataInspiredByInput()),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(VideoMetadataSelectionTile));
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(
+        find.bySemanticsLabel(l10n.userPickerConfirmSemanticLabel),
+      );
+      await tester.pumpAndSettle();
+
+      expect(notifier.state.inspiredByNpubs, equals([unresolved]));
     });
 
     testWidgets("names the inspiring video's creator once", (tester) async {
