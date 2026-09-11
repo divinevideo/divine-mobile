@@ -14,6 +14,7 @@ import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:patrol/patrol.dart';
 
+import '../../test/helpers/finders.dart';
 import '../helpers/db_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
@@ -618,7 +619,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         // Tap the search icon (IconButton with tooltip 'Search')
-        final searchIcon = find.byTooltip('Search');
+        final searchIcon = findByTooltip('Search');
         if (searchIcon.evaluate().isNotEmpty) {
           await tester.tap(searchIcon);
           await tester.pump(const Duration(seconds: 2));
