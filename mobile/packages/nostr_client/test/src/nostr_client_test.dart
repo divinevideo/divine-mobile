@@ -5520,6 +5520,43 @@ void main() {
         timeout: const Timeout(Duration(seconds: 3)),
       );
 
+      test('asks again after an earlier reconnect timeout', () async {
+        var attempts = 0;
+        when(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          if (attempts == 1) {
+            throw CountNotSentException('No relay accepted COUNT');
+          }
+          return const CountResponse(count: 7);
+        });
+        when(
+          mockRelayManager.retryDisconnectedRelays,
+        ).thenThrow(TimeoutException('Reconnect timed out'));
+
+        final result = await client.countEvents([
+          Filter(kinds: [EventKind.textNote]),
+        ]);
+
+        expect(result.count, equals(7));
+        verify(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(2);
+      });
+
       test('passes subscriptionId parameter', () async {
         final filters = [
           Filter(kinds: [EventKind.textNote]),
