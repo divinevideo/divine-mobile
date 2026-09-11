@@ -18,11 +18,12 @@
   duplicated here.
 
   NSPrivacyCollectedDataTypes is populated from the decisions recorded in
-  #8850 and mirrored in mobile/docs/IOS_PRIVACY_MANIFESTS.md. All entries are
-  declared linked because they are associated with the authenticated account,
-  and all are tracking=false: D1 disabled personalized advertising and removed
-  the ad-tech account link, so NSPrivacyTracking stays false and no ATT prompt
-  is required. Precise Location is deliberately absent because the bug-report
+  #8850 and mirrored in mobile/docs/IOS_PRIVACY_MANIFESTS.md. Every entry
+  except Search History (D4) is declared linked because it is associated with
+  the authenticated account, and all are tracking=false: D1 disabled
+  personalized advertising and removed the ad-tech account link, so
+  NSPrivacyTracking stays false and no ATT prompt is required. Precise
+  Location is deliberately absent because the bug-report
   picker strips attachment metadata (#9049). SDK-owned collection (for example
   Shorebird's Device ID / Product Interaction / Other Diagnostic Data) is
   disclosed in App Store Connect, not repeated here.

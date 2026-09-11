@@ -68,11 +68,10 @@ declaration described below.
 | App (`Runner`) | *(none)* | — | The Runner target's own Release code calls no required-reason API. Its single `UserDefaults` call is inside `#if DEBUG`. |
 | `divine_quick_actions` | *(none)* | — | No required-reason API detected. |
 
-`NSPrivacyCollectedDataTypes` is empty in the app manifest and is **not** a
-claim that Divine collects nothing. Filling it is a product/legal decision that
-must match the App Store Connect privacy label, and was deliberately out of
-scope for the required-reason API audit. Its outcome is recorded under
-[Privacy-label decisions](#privacy-label-decisions-8850) below.
+The app manifest's `NSPrivacyCollectedDataTypes` is filled in from the
+[Privacy-label decisions](#privacy-label-decisions-8850) below. Choosing those
+values was a product/legal decision that must match the App Store Connect
+privacy label, which is why it was kept out of the required-reason API audit.
 
 `LibProofMode`'s collected-data section is empty because Divine constructs
 `ProofGenerationOptions(showDeviceIds: false, showLocation: false,
@@ -97,7 +96,40 @@ the manifest rules and the release checklist.
 | D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
 | D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
 | D6 — Performance Data | Approved | Linked (conservative), purposes Analytics and App Functionality, tracking false. | Performance Data declared linked. |
-| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. |
+| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. Not linked holds only while neither Divine nor Shorebird joins the installation identifier to Divine account data; revisit D7 if that changes. |
+
+### How the App Store Connect label combines these
+
+App Store Connect asks, for each data type, whether it is linked to the user's
+identity "by you and/or your third-party partners"
+([Apple](https://developer.apple.com/app-store/app-privacy-details/)). So each
+data type gets one answer covering the app and every SDK: it is linked if any
+collector links it, and its purposes are the union of every collector's
+purposes. Device ID, Crash Data and Other Diagnostic Data are declared linked
+by the Runner manifest (D2) and not linked by Firebase's own manifests, so the
+label answers linked for all three. D7 works the same way: Shorebird's own
+Device ID, Product Interaction and Other Diagnostic Data stay not linked, but
+the label answers linked for those types because the Runner manifest declares
+them linked.
+
+Xcode's aggregate privacy report only shows collection that some bundle
+declares, and several SDKs in this app declare none. Their collection has to be
+added to the App Store Connect answers by hand, from the vendor's guidance:
+
+- Shorebird (D7): the engine's privacy manifest is Flutter's stock one, which
+  declares no collected data, and the updater ships no manifest.
+- Firebase Analytics (with GoogleAppMeasurement), Google's on-device
+  conversion measurement SDK (GoogleAdsOnDeviceConversion), Firebase
+  Performance and Firebase Sessions ship no privacy manifest. Google's
+  guidance is its
+  [App Store data disclosure page](https://firebase.google.com/docs/ios/app-store-data-collection).
+
+The report does show one type that the Runner manifest does not repeat: Other
+Data Types, declared by Firebase Cloud Messaging (not linked, Analytics). It
+belongs on the label like any other SDK-declared type.
+
+Checked on 2026-09-11 against firebase-ios-sdk 12.12.0, GoogleAppMeasurement
+12.11.0 and Shorebird 1.6.120. Re-check whenever one of them changes.
 
 ### Tracking posture before each candidate
 
