@@ -1,9 +1,10 @@
 // ABOUTME: Manual storage maintenance for the settings "Storage" screen.
-// ABOUTME: Clears re-downloadable/regenerable caches and audits the clip
-// ABOUTME: library for broken entries — never touches user clip files.
+// ABOUTME: Clears regenerable caches, measures the user's own content, sweeps
+// ABOUTME: media no clip or draft references, and audits the library.
 
 import 'dart:io';
 
+import 'package:db_client/db_client.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_cache/media_cache.dart';
@@ -63,10 +64,13 @@ class CacheUsage extends Equatable {
   /// Image and thumbnail cache.
   final CacheUsageCategory images;
 
-  /// Persisted transition-seam previews.
+  /// Persisted transition previews: the seam renders, whose budget
+  /// [CacheUsageCategory.limitBytes] reports, plus the boundary frames the
+  /// transition picker extracts beside them.
   final CacheUsageCategory transitionSeams;
 
-  /// Regenerable temp renders; intentionally unbudgeted.
+  /// Regenerable temp renders and render scratch directories; intentionally
+  /// unbudgeted.
   final CacheUsageCategory tempRenders;
 
   /// Total bytes currently held by all clearable categories.
@@ -80,6 +84,49 @@ class CacheUsage extends Equatable {
   List<Object?> get props => [video, images, transitionSeams, tempRenders];
 }
 
+/// Documents-directory usage split by who can reclaim it.
+///
+/// The documents directory is where the app keeps what it cannot re-create:
+/// recordings, drafts, renders, stills, and sounds. [contentBytes] is what a
+/// clip, draft, pending upload, or sound-library entry still owns; the
+/// orphaned figures are media files nothing points at any more, which the
+/// Storage screen can remove (#7641). The two add up to everything under the
+/// directory except the regenerable caches [CacheUsage] already covers.
+class DocumentsUsage extends Equatable {
+  /// Creates a documents usage breakdown.
+  const DocumentsUsage({
+    required this.contentBytes,
+    required this.orphanedFileCount,
+    required this.orphanedBytes,
+  });
+
+  /// Empty usage for initial UI state.
+  static const empty = DocumentsUsage(
+    contentBytes: 0,
+    orphanedFileCount: 0,
+    orphanedBytes: 0,
+  );
+
+  /// Bytes the user's clips, drafts, and sounds own — plus anything the app
+  /// cannot classify, which is deliberately reported here rather than as
+  /// reclaimable.
+  final int contentBytes;
+
+  /// Media files under the documents root that no clip, draft, or pending
+  /// upload references and that are old enough not to belong to an in-flight
+  /// render.
+  final int orphanedFileCount;
+
+  /// Bytes held by the orphaned files.
+  final int orphanedBytes;
+
+  /// Everything under the documents directory that is not a regenerable cache.
+  int get totalBytes => contentBytes + orphanedBytes;
+
+  @override
+  List<Object?> get props => [contentBytes, orphanedFileCount, orphanedBytes];
+}
+
 class _DirectorySize {
   const _DirectorySize({required this.bytes, this.isIncomplete = false});
 
@@ -87,26 +134,62 @@ class _DirectorySize {
   final bool isIncomplete;
 }
 
-/// Clears re-downloadable / regenerable media caches and audits the clip
-/// library for broken entries.
+/// A regular file under the documents root with the size it had when listed.
+class _DocumentsFile {
+  const _DocumentsFile({required this.file, required this.bytes});
+
+  final File file;
+  final int bytes;
+
+  String get name => p.basename(file.path);
+}
+
+/// One pass over the documents root: what the user's content holds and which
+/// files no row references.
+class _DocumentsScan {
+  const _DocumentsScan({required this.contentBytes, required this.orphans});
+
+  final int contentBytes;
+  final List<_DocumentsFile> orphans;
+
+  int get orphanedBytes => orphans.fold(0, (sum, file) => sum + file.bytes);
+}
+
+/// Clears re-downloadable / regenerable media caches, measures and sweeps the
+/// documents directory, and audits the clip library for broken entries.
 ///
-/// What it clears: the feed video download cache, the image/thumbnail cache,
-/// leftover temp render files, and the regenerable transition-seam previews.
-/// What it never touches: the user's clip-library files (recorded/imported
-/// videos), drafts, keys, or preferences — those live outside the cleared
-/// directories.
+/// What [clearCaches] clears: the feed video download cache, the
+/// image/thumbnail cache, leftover temp render files and scratch directories,
+/// and the regenerable transition previews. What it never touches: the user's
+/// clip-library files (recorded/imported videos), drafts, sounds, keys, or
+/// preferences — those live outside the cleared directories.
+///
+/// What [removeOrphanedFiles] removes: media files directly under the
+/// documents root that no clip row, draft row, or pending upload references —
+/// the abandoned, interrupted, and failed renders that were unreachable from
+/// every other screen. A file younger than [orphanGraceAge] is never swept,
+/// so a render still being written is safe even though its row does not
+/// exist yet.
+///
+/// `docs/STORAGE_MANAGEMENT.md` lists every Storage action with what it
+/// removes and what it leaves alone.
 class StorageManagementService {
   /// Creates a service.
   ///
   /// [videoCache] and [imageCache] are the app's download caches;
-  /// [clipLibrary] is scoped to the current account. The directory providers
-  /// are injectable for tests and otherwise resolve the OS temp and documents
-  /// directories. [protectedTempRenderPaths] supplies upload inputs that still
-  /// need to survive a cache clear.
+  /// [clipLibrary] is scoped to the current account. [clipsDao] and
+  /// [draftsDao] are deliberately unscoped: the orphan sweep judges a file
+  /// against *every* row, so media belonging to a signed-out account is never
+  /// mistaken for junk. The directory providers are injectable for tests and
+  /// otherwise resolve the OS temp and documents directories.
+  /// [protectedPaths] supplies upload inputs that must survive both a cache
+  /// clear and an orphan sweep.
   StorageManagementService({
     required MediaCacheManager videoCache,
     required MediaCacheManager imageCache,
     required ClipLibraryService clipLibrary,
+    required ClipsDao clipsDao,
+    required DraftsDao draftsDao,
     required SharedPreferences prefs,
     @visibleForTesting Future<Directory> Function()? temporaryDirectoryProvider,
     @visibleForTesting Future<Directory> Function()? documentsDirectoryProvider,
@@ -115,10 +198,13 @@ class StorageManagementService {
     @visibleForTesting
     Future<Directory> Function()? applicationCacheDirectoryProvider,
     @visibleForTesting Future<int> Function(File file)? fileLengthProvider,
-    Set<String> Function()? protectedTempRenderPaths,
+    @visibleForTesting DateTime Function()? now,
+    Set<String> Function()? protectedPaths,
   }) : _videoCache = videoCache,
        _imageCache = imageCache,
        _clipLibrary = clipLibrary,
+       _clipsDao = clipsDao,
+       _draftsDao = draftsDao,
        _prefs = prefs,
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
@@ -130,23 +216,70 @@ class StorageManagementService {
        _applicationCacheDirectoryProvider =
            applicationCacheDirectoryProvider ?? getApplicationCacheDirectory,
        _fileLengthProvider = fileLengthProvider,
-       _protectedTempRenderPaths =
-           protectedTempRenderPaths ?? _noProtectedPaths;
+       _now = now ?? DateTime.now,
+       _protectedPaths = protectedPaths ?? _noProtectedPaths;
 
   final MediaCacheManager _videoCache;
   final MediaCacheManager _imageCache;
   final ClipLibraryService _clipLibrary;
+  final ClipsDao _clipsDao;
+  final DraftsDao _draftsDao;
   final SharedPreferences _prefs;
   final Future<Directory> Function() _temporaryDirectoryProvider;
   final Future<Directory> Function() _documentsDirectoryProvider;
   final Future<Directory> Function() _applicationSupportDirectoryProvider;
   final Future<Directory> Function() _applicationCacheDirectoryProvider;
   final Future<int> Function(File file)? _fileLengthProvider;
-  final Set<String> Function() _protectedTempRenderPaths;
+  final DateTime Function() _now;
+  final Set<String> Function() _protectedPaths;
+
+  /// A documents-root file modified more recently than this is never treated
+  /// as orphaned, whatever the database says about it.
+  ///
+  /// A render writes its output before any row points at it — the publish
+  /// flow creates the pending upload only once `divine_<micros>.mp4` is
+  /// complete, and the camera holds a fresh recording in memory until the
+  /// session is saved. Every one of those looks unreferenced for a while, and
+  /// the modification time is the one signal that survives the app being
+  /// backgrounded mid-render. Matches [TempRenderJanitor.staleRenderAge]: an
+  /// hour is longer than any render and shorter than any abandoned session
+  /// the sweep is for.
+  static const Duration orphanGraceAge = TempRenderJanitor.staleRenderAge;
 
   static const String _logName = 'StorageManagementService';
   static const String _imageCacheDir = 'openvine_image_cache';
   static const String _seamDir = 'transition_seams';
+
+  /// Boundary frames the transition picker extracts beside the seams; keyed
+  /// by clip, trim and side, and re-extracted on the next open when missing.
+  static const String _transitionFramesDir = 'transition_frames';
+
+  /// Documents subdirectories that hold only regenerable previews. Counted
+  /// and cleared as cache, never as the user's content.
+  static const Set<String> _documentsCacheDirs = {
+    _seamDir,
+    _transitionFramesDir,
+  };
+
+  /// Extensions of the media the app writes to the documents root — the only
+  /// files the orphan sweep will ever remove. Anything else there (legacy Hive
+  /// boxes, lock files, a database left by an old build) is counted as content
+  /// and left alone, because a wrong guess deletes something irreplaceable
+  /// while a conservative one merely under-reports.
+  static const Set<String> _sweepableMediaExtensions = {
+    '.mp4',
+    '.mov',
+    '.m4v',
+    '.webm',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.wav',
+    '.m4a',
+    '.aac',
+    '.mp3',
+  };
 
   static Set<String> _noProtectedPaths() => const {};
 
@@ -158,7 +291,17 @@ class StorageManagementService {
   Future<CacheUsage> cacheUsage() async {
     final temp = await _temporaryDirectoryProvider();
     final docs = await _documentsDirectoryProvider();
-    final protectedPaths = _normalizedProtectedTempRenderPaths();
+    final protectedPaths = _normalizedProtectedPaths();
+    var transitionBytes = 0;
+    for (final dir in _documentsCacheDirs) {
+      transitionBytes += (await _dirSize(Directory(p.join(docs.path, dir))))
+          .bytes;
+    }
+    var tempRenderBytes = await _tempRenderBytes(temp, protectedPaths);
+    for (final dir in TempRenderDirectories.all) {
+      tempRenderBytes += (await _dirSize(Directory(p.join(temp.path, dir))))
+          .bytes;
+    }
     return CacheUsage(
       video: CacheUsageCategory(
         usedBytes: (await _dirSize(
@@ -173,14 +316,10 @@ class StorageManagementService {
         limitBytes: _imageCache.maxCacheSizeBytes,
       ),
       transitionSeams: CacheUsageCategory(
-        usedBytes: (await _dirSize(
-          Directory(p.join(docs.path, _seamDir)),
-        )).bytes,
+        usedBytes: transitionBytes,
         limitBytes: kSeamCacheLimitBytes,
       ),
-      tempRenders: CacheUsageCategory(
-        usedBytes: await _tempRenderBytes(temp, protectedPaths),
-      ),
+      tempRenders: CacheUsageCategory(usedBytes: tempRenderBytes),
     );
   }
 
@@ -197,14 +336,64 @@ class StorageManagementService {
       Directory(p.join(temp.path, kVideoCacheDirectoryName)),
     );
     await _deleteDirContents(Directory(p.join(temp.path, _imageCacheDir)));
-    final protectedPaths = _normalizedProtectedTempRenderPaths();
+    final protectedPaths = _normalizedProtectedPaths();
     await _forEachTempRender(
       temp,
       protectedPaths: protectedPaths,
       action: _deleteQuietly,
     );
+    for (final dir in TempRenderDirectories.all) {
+      await _deleteDirContents(Directory(p.join(temp.path, dir)));
+    }
     final docs = await _documentsDirectoryProvider();
-    await _deleteDirContents(Directory(p.join(docs.path, _seamDir)));
+    for (final dir in _documentsCacheDirs) {
+      await _deleteDirContents(Directory(p.join(docs.path, dir)));
+    }
+  }
+
+  /// What the documents directory holds, split into the user's content and
+  /// the media files nothing references any more.
+  ///
+  /// Walks the documents root one level deep: subdirectories other than the
+  /// caches [cacheUsage] covers are the user's content wholesale (sounds,
+  /// voice-overs, extracted audio), and each top-level file is either owned
+  /// by a row, protected, too fresh to judge, not media — all content — or an
+  /// orphan. Throws when the reference check itself fails, because a scan
+  /// that cannot ask the database must not report anything as reclaimable.
+  Future<DocumentsUsage> documentsUsage() async {
+    final scan = await _scanDocuments();
+    return DocumentsUsage(
+      contentBytes: scan.contentBytes,
+      orphanedFileCount: scan.orphans.length,
+      orphanedBytes: scan.orphanedBytes,
+    );
+  }
+
+  /// Deletes every orphaned file [documentsUsage] would report, re-checking
+  /// references right before deleting so a file that gained a row since the
+  /// last measurement is kept. Returns the bytes freed.
+  Future<int> removeOrphanedFiles() async {
+    final scan = await _scanDocuments();
+    var freed = 0;
+    for (final orphan in scan.orphans) {
+      try {
+        await orphan.file.delete();
+        freed += orphan.bytes;
+      } on Object catch (error) {
+        Log.warning(
+          '$_logName: deleting orphaned ${orphan.file.path} failed: $error',
+          name: _logName,
+          category: LogCategory.system,
+        );
+      }
+    }
+    Log.info(
+      '$_logName: removed ${scan.orphans.length} orphaned file(s), '
+      '$freed bytes',
+      name: _logName,
+      category: LogCategory.system,
+    );
+    return freed;
   }
 
   /// Every directory the app writes to, each with its largest immediate
@@ -372,6 +561,93 @@ class StorageManagementService {
     await _videoCache.enforceCacheLimits(force: true);
   }
 
+  Future<_DocumentsScan> _scanDocuments() async {
+    final docs = await _documentsDirectoryProvider();
+    if (!docs.existsSync()) {
+      return const _DocumentsScan(contentBytes: 0, orphans: []);
+    }
+    // Pending uploads store the absolute path they were created with, and iOS
+    // moves the container on every update — so protect by basename, the same
+    // way every row reference is matched.
+    final protectedNames = {
+      for (final filePath in _protectedPaths()) p.basename(filePath),
+    };
+    final cutoff = _now().subtract(orphanGraceAge);
+    var contentBytes = 0;
+    final candidates = <_DocumentsFile>[];
+    try {
+      await for (final entity in docs.list(followLinks: false)) {
+        if (entity is Directory) {
+          if (_documentsCacheDirs.contains(p.basename(entity.path))) continue;
+          contentBytes += (await _dirSize(entity)).bytes;
+        } else if (entity is File) {
+          // One stat rather than a length + modified pair, so a file deleted
+          // mid-scan cannot report a size from before and a time from after.
+          final stat = entity.statSync();
+          if (stat.type == FileSystemEntityType.notFound) continue;
+          final file = _DocumentsFile(file: entity, bytes: stat.size);
+          if (_isSweepCandidate(file, stat, protectedNames, cutoff)) {
+            candidates.add(file);
+          } else {
+            contentBytes += stat.size;
+          }
+        }
+      }
+    } on Object catch (error) {
+      Log.warning(
+        '$_logName: scanning ${docs.path} failed: $error',
+        name: _logName,
+        category: LogCategory.system,
+      );
+    }
+
+    final referenced = await _referencedBasenames(
+      candidates.map((file) => file.name).toSet(),
+    );
+    final orphans = <_DocumentsFile>[];
+    for (final candidate in candidates) {
+      if (referenced.contains(candidate.name)) {
+        contentBytes += candidate.bytes;
+      } else {
+        orphans.add(candidate);
+      }
+    }
+    return _DocumentsScan(contentBytes: contentBytes, orphans: orphans);
+  }
+
+  /// Whether [file] is media the sweep may remove once no row claims it.
+  ///
+  /// Everything that fails here is the user's content by definition: a
+  /// pending upload's input, a file still being written, or something the
+  /// app did not write and cannot vouch for.
+  bool _isSweepCandidate(
+    _DocumentsFile file,
+    FileStat stat,
+    Set<String> protectedNames,
+    DateTime cutoff,
+  ) {
+    if (!_sweepableMediaExtensions.contains(
+      p.extension(file.name).toLowerCase(),
+    )) {
+      return false;
+    }
+    if (protectedNames.contains(file.name)) return false;
+    return stat.modified.isBefore(cutoff);
+  }
+
+  /// The subset of [names] some clip row, draft row or pending upload still
+  /// points at. Basenames, because that is how every row stores a path: iOS
+  /// moves the container on update, so absolute paths are rejoined on load.
+  Future<Set<String>> _referencedBasenames(Set<String> names) async {
+    if (names.isEmpty) return const {};
+    final referenced = await _clipsDao.referencedFilenames(names);
+    final unresolved = names.difference(referenced);
+    if (unresolved.isEmpty) return referenced;
+    return referenced.union(
+      await _draftsDao.referencedDraftFilenames(unresolved),
+    );
+  }
+
   /// Recursive size of [dir], counting every file the process can still read.
   ///
   /// Descends one level at a time rather than with `list(recursive: true)`,
@@ -457,9 +733,8 @@ class StorageManagementService {
     }
   }
 
-  Set<String> _normalizedProtectedTempRenderPaths() => {
-    for (final filePath in _protectedTempRenderPaths())
-      _normalizePath(filePath),
+  Set<String> _normalizedProtectedPaths() => {
+    for (final filePath in _protectedPaths()) _normalizePath(filePath),
   };
 
   String _normalizePath(String filePath) => p.normalize(p.absolute(filePath));

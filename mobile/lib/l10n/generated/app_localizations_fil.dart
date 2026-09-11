@@ -11192,6 +11192,52 @@ class AppLocalizationsFil extends AppLocalizations {
   String get settingsStorageCleared => 'Na-clear ang cache';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Mga clip at draft mo';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Mga recording, draft, at sound na ginawa mo. Hindi ito nagagalaw ng pag-clear ng cache — mag-delete ng mga clip sa library mo para makapag-free ng space dito.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Walang natirang file';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count natirang file, $size',
+      one: '$count natirang file, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Alisin ang mga natirang file';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Alisin ang mga natirang file?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+      one:
+          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Naalis na ang mga natirang file';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Library ng clip';
 
   @override

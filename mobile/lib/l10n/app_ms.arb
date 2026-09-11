@@ -6082,6 +6082,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "Klip dan draf anda",
+  "settingsStorageContentDescription": "Rakaman, draf dan bunyi yang anda buat. Mengosongkan cache tidak pernah menyentuhnya — padam klip daripada pustaka anda untuk membebaskan ruang di sini.",
+  "settingsStorageNoOrphanedFiles": "Tiada fail tertinggal",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} fail tertinggal, {size}} other{{count} fail tertinggal, {size}}}",
+  "settingsStorageRemoveOrphanedButton": "Buang fail tertinggal",
+  "settingsStorageRemoveOrphanedConfirmTitle": "Buang fail tertinggal?",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{Ini memadam {count} fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan {size}. Tidak boleh dibuat asal.} other{Ini memadam {count} fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan {size}. Tidak boleh dibuat asal.}}",
+  "settingsStorageOrphanedFilesRemoved": "Fail tertinggal dibuang",
   "settingsStorageLibrarySectionTitle": "Pustaka klip",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

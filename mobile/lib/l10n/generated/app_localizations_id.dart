@@ -11013,6 +11013,49 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsStorageCleared => 'Cache dihapus';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Klip dan draf kamu';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Rekaman, draf, dan suara yang kamu buat. Menghapus cache tidak pernah menyentuhnya — hapus klip dari pustakamu untuk membebaskan ruang di sini.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Tidak ada file sisa';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count file sisa, $size',
+      one: '$count file sisa, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Hapus file sisa';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => 'Hapus file sisa?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
+      one:
+          'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'File sisa dihapus';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Pustaka klip';
 
   @override

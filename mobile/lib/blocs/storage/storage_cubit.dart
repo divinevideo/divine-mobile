@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/storage_footprint.dart';
@@ -8,10 +9,12 @@ import 'package:openvine/services/storage_management_service.dart';
 
 part 'storage_state.dart';
 
-/// Drives the settings "Storage" screen: reports the clearable cache size,
-/// clears it on demand, audits the clip library for broken entries, and runs
-/// the last-resort repair wipe for a corrupted install.
-class StorageCubit extends Cubit<StorageState> {
+/// Drives the settings "Storage" screen: reports the clearable cache size and
+/// clears it on demand, reports what the user's own content holds and sweeps
+/// the media nothing references any more, audits the clip library for broken
+/// entries, and runs the last-resort repair wipe for a corrupted install.
+class StorageCubit extends Cubit<StorageState>
+    with CloseGuardedEmit<StorageState> {
   /// Creates a cubit backed by [service] and loads the current cache size.
   ///
   /// [recoverAllCaches] must be injected by a screen that exposes repair so
@@ -55,6 +58,47 @@ class StorageCubit extends Cubit<StorageState> {
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+    }
+  }
+
+  /// Measures the documents directory: what the user's clips, drafts and
+  /// sounds own, and how much sits in files no row references.
+  ///
+  /// Separate from [loadCacheSize] so a database failure here leaves the cache
+  /// section usable, and the other way round.
+  Future<void> loadDocumentsUsage() async {
+    emit(state.copyWith(contentStatus: StorageContentStatus.loading));
+    try {
+      final usage = await _service.documentsUsage();
+      emitIfOpen(
+        state.copyWith(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: usage,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(state.copyWith(contentStatus: StorageContentStatus.failure));
+    }
+  }
+
+  /// Deletes the orphaned files found by [loadDocumentsUsage], then
+  /// re-measures so the readout reflects what was actually freed.
+  Future<void> removeOrphanedFiles() async {
+    if (state.documentsUsage.orphanedFileCount == 0) return;
+    emit(state.copyWith(contentStatus: StorageContentStatus.removing));
+    try {
+      await _service.removeOrphanedFiles();
+      final usage = await _service.documentsUsage();
+      emitIfOpen(
+        state.copyWith(
+          contentStatus: StorageContentStatus.removed,
+          documentsUsage: usage,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(state.copyWith(contentStatus: StorageContentStatus.failure));
     }
   }
 

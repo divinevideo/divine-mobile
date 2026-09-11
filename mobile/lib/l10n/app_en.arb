@@ -7182,7 +7182,7 @@
   },
   "settingsStorageCacheInUse": "{size} in use",
   "@settingsStorageCacheInUse": {
-    "description": "Shows how much disk the caches currently use.",
+    "description": "Shows how much disk a Storage section currently uses. Rendered once under 'Cached media' and once under 'Your clips and drafts'.",
     "placeholders": {
       "size": {
         "type": "String"
@@ -7213,6 +7213,56 @@
   "settingsStorageCleared": "Cache cleared",
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
+  },
+  "settingsStorageContentSectionTitle": "Your clips and drafts",
+  "@settingsStorageContentSectionTitle": {
+    "description": "Section header on the Storage screen for the user's own recordings, drafts and sounds — the content the app cannot re-create."
+  },
+  "settingsStorageContentDescription": "Recordings, drafts and sounds you made. Clearing the cache never touches these — delete clips from your library to free up space here.",
+  "@settingsStorageContentDescription": {
+    "description": "Explains what the 'Your clips and drafts' size covers and how to reduce it."
+  },
+  "settingsStorageNoOrphanedFiles": "No leftover files",
+  "@settingsStorageNoOrphanedFiles": {
+    "description": "Shown when every media file on disk is still used by a clip, draft or upload."
+  },
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} leftover file, {size}} other{{count} leftover files, {size}}}",
+  "@settingsStorageOrphanedFilesFound": {
+    "description": "How many media files no clip, draft or upload uses anymore, and how much space they take. Example: '3 leftover files, 120 MB'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String",
+        "example": "120 MB"
+      }
+    }
+  },
+  "settingsStorageRemoveOrphanedButton": "Remove leftover files",
+  "@settingsStorageRemoveOrphanedButton": {
+    "description": "Button that deletes the media files no clip, draft or upload uses anymore."
+  },
+  "settingsStorageRemoveOrphanedConfirmTitle": "Remove leftover files?",
+  "@settingsStorageRemoveOrphanedConfirmTitle": {
+    "description": "Title of the confirmation sheet before deleting leftover media files."
+  },
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{This deletes {count} file that no clip, draft or upload uses anymore, freeing up {size}. It can't be undone.} other{This deletes {count} files that no clip, draft or upload uses anymore, freeing up {size}. This can't be undone.}}",
+  "@settingsStorageRemoveOrphanedConfirmMessage": {
+    "description": "Body of the confirmation sheet before deleting leftover media files. Explains what is deleted, how much space it frees, and that it is permanent.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String",
+        "example": "120 MB"
+      }
+    }
+  },
+  "settingsStorageOrphanedFilesRemoved": "Leftover files removed",
+  "@settingsStorageOrphanedFilesRemoved": {
+    "description": "Accessibility announcement after the leftover media files are deleted."
   },
   "settingsStorageLibrarySectionTitle": "Clip library",
   "@settingsStorageLibrarySectionTitle": {

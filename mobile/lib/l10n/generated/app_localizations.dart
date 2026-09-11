@@ -18720,7 +18720,7 @@ abstract class AppLocalizations {
   /// **'Measuring…'**
   String get settingsStorageMeasuring;
 
-  /// Shows how much disk the caches currently use.
+  /// Shows how much disk a Storage section currently uses. Rendered once under 'Cached media' and once under 'Your clips and drafts'.
   ///
   /// In en, this message translates to:
   /// **'{size} in use'**
@@ -18755,6 +18755,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cache cleared'**
   String get settingsStorageCleared;
+
+  /// Section header on the Storage screen for the user's own recordings, drafts and sounds — the content the app cannot re-create.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clips and drafts'**
+  String get settingsStorageContentSectionTitle;
+
+  /// Explains what the 'Your clips and drafts' size covers and how to reduce it.
+  ///
+  /// In en, this message translates to:
+  /// **'Recordings, drafts and sounds you made. Clearing the cache never touches these — delete clips from your library to free up space here.'**
+  String get settingsStorageContentDescription;
+
+  /// Shown when every media file on disk is still used by a clip, draft or upload.
+  ///
+  /// In en, this message translates to:
+  /// **'No leftover files'**
+  String get settingsStorageNoOrphanedFiles;
+
+  /// How many media files no clip, draft or upload uses anymore, and how much space they take. Example: '3 leftover files, 120 MB'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} leftover file, {size}} other{{count} leftover files, {size}}}'**
+  String settingsStorageOrphanedFilesFound(int count, String size);
+
+  /// Button that deletes the media files no clip, draft or upload uses anymore.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove leftover files'**
+  String get settingsStorageRemoveOrphanedButton;
+
+  /// Title of the confirmation sheet before deleting leftover media files.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove leftover files?'**
+  String get settingsStorageRemoveOrphanedConfirmTitle;
+
+  /// Body of the confirmation sheet before deleting leftover media files. Explains what is deleted, how much space it frees, and that it is permanent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This deletes {count} file that no clip, draft or upload uses anymore, freeing up {size}. It can\'t be undone.} other{This deletes {count} files that no clip, draft or upload uses anymore, freeing up {size}. This can\'t be undone.}}'**
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size);
+
+  /// Accessibility announcement after the leftover media files are deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Leftover files removed'**
+  String get settingsStorageOrphanedFilesRemoved;
 
   /// Section header for the clip-library audit on the Storage screen.
   ///

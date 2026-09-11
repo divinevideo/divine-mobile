@@ -11337,6 +11337,54 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsStorageCleared => 'Cache golit';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Clipurile și schițele tale';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Înregistrări, schițe și sunete create de tine. Golirea cache-ului nu le atinge niciodată – șterge clipuri din bibliotecă pentru a elibera spațiu aici.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Niciun fișier rămas';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fișiere rămase, $size',
+      few: '$count fișiere rămase, $size',
+      one: '$count fișier rămas, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Elimină fișierele rămase';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Elimini fișierele rămase?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Se șterg $count de fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
+      few:
+          'Se șterg $count fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
+      one:
+          'Se șterge $count fișier pe care niciun clip, schiță sau încărcare nu îl mai folosește și se eliberează $size. Nu se poate anula.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Fișierele rămase au fost eliminate';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Bibliotecă de clipuri';
 
   @override

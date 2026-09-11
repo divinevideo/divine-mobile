@@ -11187,6 +11187,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsStorageCleared => 'Cache cleared';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Your clips and drafts';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Recordings, drafts and sounds you made. Clearing the cache never touches these — delete clips from your library to free up space here.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'No leftover files';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count leftover files, $size',
+      one: '$count leftover file, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Remove leftover files';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Remove leftover files?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This deletes $count files that no clip, draft or upload uses anymore, freeing up $size. This can\'t be undone.',
+      one:
+          'This deletes $count file that no clip, draft or upload uses anymore, freeing up $size. It can\'t be undone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Leftover files removed';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Clip library';
 
   @override

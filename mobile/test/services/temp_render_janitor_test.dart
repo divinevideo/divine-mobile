@@ -27,9 +27,31 @@ void main() {
       expect(TempRenderJanitor.isTempRenderName('watermarked_1.mp4'), isTrue);
       expect(TempRenderJanitor.isTempRenderName('merged_1.mp4'), isTrue);
       expect(TempRenderJanitor.isTempRenderName('merged_audio_1.wav'), isTrue);
+      // The rest of what the editor writes to the temporary directory, which
+      // only the repair wipe used to reach (#7641).
+      expect(TempRenderJanitor.isTempRenderName('trimmed_1.mp4'), isTrue);
+      expect(TempRenderJanitor.isTempRenderName('cropped_1.mp4'), isTrue);
+      expect(TempRenderJanitor.isTempRenderName('normalized_0_1.mp4'), isTrue);
+      expect(TempRenderJanitor.isTempRenderName('speed_1.mp4'), isTrue);
+      expect(
+        TempRenderJanitor.isTempRenderName('extracted_audio_1.wav'),
+        isTrue,
+      );
+      expect(TempRenderJanitor.isTempRenderName('strip_clip_1_0.jpg'), isTrue);
       expect(TempRenderJanitor.isTempRenderName('merged_audio_1.mp4'), isFalse);
       expect(TempRenderJanitor.isTempRenderName('unrelated.mp4'), isFalse);
       expect(TempRenderJanitor.isTempRenderName('merged_1.wav'), isFalse);
+      expect(TempRenderJanitor.isTempRenderName('trimmed_1.wav'), isFalse);
+    });
+
+    test('names every scratch directory the editor and player write', () {
+      expect(TempRenderDirectories.all, [
+        'speed_clips',
+        'divine_player_assets',
+        'divine_player_memory',
+        'divine_player_audio_assets',
+        'divine_player_audio_memory',
+      ]);
     });
 
     test(

@@ -108,7 +108,7 @@ discarded_futures|lib/screens/settings/crossposting_settings_screen.dart	1
 discarded_futures|lib/screens/settings/invites_screen.dart	1
 discarded_futures|lib/screens/settings/privacy_settings_screen.dart	1
 discarded_futures|lib/screens/settings/settings_screen.dart	2
-discarded_futures|lib/screens/settings/storage/storage_management_page.dart	2
+discarded_futures|lib/screens/settings/storage/storage_management_page.dart	1
 discarded_futures|lib/screens/settings/support_center_screen.dart	3
 discarded_futures|lib/screens/sound_detail_screen.dart	4
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
@@ -429,7 +429,7 @@ unawaited_futures|test/providers/explore_active_video_test.dart	2
 unawaited_futures|test/providers/subtitle_visibility_test.dart	1
 unawaited_futures|test/providers/video_playback_stop_integration_test.dart	5
 unawaited_futures|test/screens/settings/nip05_settings_screen_test.dart	1
-unawaited_futures|test/screens/settings/storage/storage_management_view_test.dart	10
+unawaited_futures|test/screens/settings/storage/storage_management_view_test.dart	9
 unawaited_futures|test/services/auth_service_data_cleanup_ordering_test.dart	1
 unawaited_futures|test/services/auth_service_identity_change_preservation_test.dart	1
 unawaited_futures|test/services/auth_service_invite_session_cleanup_test.dart	1

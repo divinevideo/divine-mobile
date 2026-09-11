@@ -11096,6 +11096,50 @@ class AppLocalizationsMs extends AppLocalizations {
   String get settingsStorageCleared => 'Cache dikosongkan';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Klip dan draf anda';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Rakaman, draf dan bunyi yang anda buat. Mengosongkan cache tidak pernah menyentuhnya — padam klip daripada pustaka anda untuk membebaskan ruang di sini.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Tiada fail tertinggal';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fail tertinggal, $size',
+      one: '$count fail tertinggal, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Buang fail tertinggal';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Buang fail tertinggal?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
+      one:
+          'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Fail tertinggal dibuang';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Pustaka klip';
 
   @override

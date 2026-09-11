@@ -11073,6 +11073,51 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsStorageCleared => 'کیش صاف ہو گئی';
 
   @override
+  String get settingsStorageContentSectionTitle => 'آپ کی کلپس اور ڈرافٹس';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'آپ کی بنائی ہوئی ریکارڈنگز، ڈرافٹس اور آوازیں۔ کیش صاف کرنے سے ان پر کوئی اثر نہیں پڑتا — یہاں جگہ خالی کرنے کے لیے اپنی لائبریری سے کلپس حذف کریں۔';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'کوئی بچی ہوئی فائل نہیں';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count بچی ہوئی فائلیں، $size',
+      one: '$count بچی ہوئی فائل، $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'بچی ہوئی فائلیں ہٹائیں';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'بچی ہوئی فائلیں ہٹائیں؟';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'اس سے $count فائلیں حذف ہو جائیں گی جنہیں اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
+      one:
+          'اس سے $count فائل حذف ہو جائے گی جسے اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'بچی ہوئی فائلیں ہٹا دی گئیں';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'کلپ لائبریری';
 
   @override

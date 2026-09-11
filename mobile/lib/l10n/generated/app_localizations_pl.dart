@@ -11308,6 +11308,57 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settingsStorageCleared => 'Pamięć podręczna wyczyszczona';
 
   @override
+  String get settingsStorageContentSectionTitle =>
+      'Twoje klipy i wersje robocze';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Nagrania, wersje robocze i dźwięki, które stworzyłeś(-aś). Czyszczenie pamięci podręcznej ich nie dotyka – usuń klipy z biblioteki, żeby zwolnić tu miejsce.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Brak pozostałych plików';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pozostałego pliku, $size',
+      many: '$count pozostałych plików, $size',
+      few: '$count pozostałe pliki, $size',
+      one: '$count pozostały plik, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Usuń pozostałe pliki';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Usunąć pozostałe pliki?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'To usunie $count pliku, którego nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      many:
+          'To usunie $count plików, których nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      few:
+          'To usunie $count pliki, których nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      one:
+          'To usunie $count plik, którego nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Pozostałe pliki usunięte';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Biblioteka klipów';
 
   @override

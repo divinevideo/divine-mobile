@@ -11407,6 +11407,53 @@ class AppLocalizationsTe extends AppLocalizations {
   String get settingsStorageCleared => 'కాష్ క్లియర్ చేయబడింది';
 
   @override
+  String get settingsStorageContentSectionTitle =>
+      'మీ క్లిప్‌లు మరియు చిత్తుప్రతులు';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'మీరు చేసిన రికార్డింగ్‌లు, చిత్తుప్రతులు మరియు శబ్దాలు. కాష్ క్లియర్ చేయడం వీటిని ఎప్పుడూ తాకదు — ఇక్కడ స్థలం ఖాళీ చేయడానికి మీ లైబ్రరీ నుండి క్లిప్‌లను తొలగించండి.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'మిగిలిపోయిన ఫైల్‌లు లేవు';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count మిగిలిపోయిన ఫైల్‌లు, $size',
+      one: '$count మిగిలిపోయిన ఫైల్, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'మిగిలిపోయిన ఫైల్‌లను తీసివేయండి';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'మిగిలిపోయిన ఫైల్‌లను తీసివేయాలా?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌లను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
+      one:
+          'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌ను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'మిగిలిపోయిన ఫైల్‌లు తీసివేయబడ్డాయి';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'క్లిప్ లైబ్రరీ';
 
   @override

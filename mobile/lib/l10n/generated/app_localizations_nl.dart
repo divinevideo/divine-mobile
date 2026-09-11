@@ -11149,6 +11149,52 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsStorageCleared => 'Cache gewist';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Je clips en concepten';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Opnames, concepten en geluiden die je hebt gemaakt. Cache wissen raakt ze nooit aan – verwijder clips uit je bibliotheek om hier ruimte vrij te maken.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Geen achtergebleven bestanden';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count achtergebleven bestanden, $size',
+      one: '$count achtergebleven bestand, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Achtergebleven bestanden verwijderen';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Achtergebleven bestanden verwijderen?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Dit verwijdert $count bestanden die geen clip, concept of upload meer gebruikt en maakt $size vrij. Dit kun je niet ongedaan maken.',
+      one:
+          'Dit verwijdert $count bestand dat geen clip, concept of upload meer gebruikt en maakt $size vrij. Dit kun je niet ongedaan maken.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Achtergebleven bestanden verwijderd';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Clipbibliotheek';
 
   @override

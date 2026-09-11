@@ -11042,6 +11042,51 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsStorageCleared => 'Đã xóa bộ nhớ đệm';
 
   @override
+  String get settingsStorageContentSectionTitle => 'Clip và bản nháp của bạn';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Bản ghi, bản nháp và âm thanh bạn đã tạo. Xóa bộ nhớ đệm không bao giờ đụng đến chúng — xóa clip khỏi thư viện để giải phóng dung lượng ở đây.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Không có tệp còn sót lại';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tệp còn sót lại, $size',
+      one: '$count tệp còn sót lại, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Xóa tệp còn sót lại';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Xóa tệp còn sót lại?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+      one:
+          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Đã xóa các tệp còn sót lại';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Thư viện clip';
 
   @override

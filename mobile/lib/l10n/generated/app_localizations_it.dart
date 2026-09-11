@@ -11224,6 +11224,50 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsStorageCleared => 'Cache svuotata';
 
   @override
+  String get settingsStorageContentSectionTitle => 'I tuoi clip e le bozze';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Registrazioni, bozze e suoni che hai creato. Svuotare la cache non li tocca mai: elimina clip dalla tua libreria per liberare spazio qui.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Nessun file residuo';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count file residui, $size',
+      one: '$count file residuo, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Rimuovi i file residui';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Rimuovere i file residui?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
+      one:
+          'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'File residui rimossi';
+
+  @override
   String get settingsStorageLibrarySectionTitle => 'Libreria di clip';
 
   @override

@@ -6082,6 +6082,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "你的片段和草稿",
+  "settingsStorageContentDescription": "你制作的录像、草稿和声音。清除缓存从不会动它们——想在这里腾出空间，就从片段库里删除片段。",
+  "settingsStorageNoOrphanedFiles": "没有残留文件",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} 个残留文件，{size}} other{{count} 个残留文件，{size}}}",
+  "settingsStorageRemoveOrphanedButton": "移除残留文件",
+  "settingsStorageRemoveOrphanedConfirmTitle": "移除残留文件？",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{这会删除 {count} 个已不被任何片段、草稿或上传使用的文件，释放 {size}。无法撤销。} other{这会删除 {count} 个已不被任何片段、草稿或上传使用的文件，释放 {size}。无法撤销。}}",
+  "settingsStorageOrphanedFilesRemoved": "残留文件已移除",
   "settingsStorageLibrarySectionTitle": "片段库",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

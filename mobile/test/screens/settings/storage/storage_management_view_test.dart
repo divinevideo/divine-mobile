@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -60,6 +61,13 @@ void main() {
         tempRenders: CacheUsageCategory(usedBytes: 0),
       ),
     );
+    when(service.documentsUsage).thenAnswer(
+      (_) async => const DocumentsUsage(
+        contentBytes: 5 * 1024 * 1024,
+        orphanedFileCount: 2,
+        orphanedBytes: 1024 * 1024,
+      ),
+    );
   });
 
   group('renders', () {
@@ -94,6 +102,136 @@ void main() {
     });
   });
 
+  group('content', () {
+    testWidgets("shows what the user's content holds and the leftover files", (
+      tester,
+    ) async {
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+      await cubit.loadDocumentsUsage();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      // Two "in use" lines, one per section: the cache the user can clear,
+      // and the content — 5 MB owned by clips plus the 1 MB of leftovers.
+      expect(
+        find.text(l10n.settingsStorageCacheInUse('3.0 MB')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.settingsStorageCacheInUse('6.0 MB')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.settingsStorageOrphanedFilesFound(2, '1.0 MB')),
+        findsOneWidget,
+      );
+      final button = tester.widget<DivineButton>(
+        find.widgetWithText(
+          DivineButton,
+          l10n.settingsStorageRemoveOrphanedButton,
+        ),
+      );
+      expect(button.onPressed, isNotNull);
+    });
+
+    testWidgets('reports no leftover files and disables removal', (
+      tester,
+    ) async {
+      when(service.documentsUsage).thenAnswer(
+        (_) async => const DocumentsUsage(
+          contentBytes: 5 * 1024 * 1024,
+          orphanedFileCount: 0,
+          orphanedBytes: 0,
+        ),
+      );
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+      await cubit.loadDocumentsUsage();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsStorageNoOrphanedFiles), findsOneWidget);
+      final button = tester.widget<DivineButton>(
+        find.widgetWithText(
+          DivineButton,
+          l10n.settingsStorageRemoveOrphanedButton,
+        ),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('removing leftover files is gated behind a confirmation', (
+      tester,
+    ) async {
+      when(service.removeOrphanedFiles).thenAnswer((_) async => 1024 * 1024);
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+      await cubit.loadDocumentsUsage();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      // The sweep re-measures afterwards; the second answer is the empty one.
+      when(service.documentsUsage).thenAnswer(
+        (_) async => const DocumentsUsage(
+          contentBytes: 5 * 1024 * 1024,
+          orphanedFileCount: 0,
+          orphanedBytes: 0,
+        ),
+      );
+
+      await tester.tap(find.text(l10n.settingsStorageRemoveOrphanedButton));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.settingsStorageRemoveOrphanedConfirmTitle),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          l10n.settingsStorageRemoveOrphanedConfirmMessage(2, '1.0 MB'),
+        ),
+        findsOneWidget,
+      );
+      verifyNever(service.removeOrphanedFiles);
+
+      await tester.tap(find.text(l10n.commonDelete));
+      await tester.pumpAndSettle();
+
+      verify(service.removeOrphanedFiles).called(1);
+      expect(find.text(l10n.settingsStorageNoOrphanedFiles), findsOneWidget);
+      // The figure above drops by what was freed.
+      expect(
+        find.text(l10n.settingsStorageCacheInUse('5.0 MB')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a failed measurement says so and keeps the cache section', (
+      tester,
+    ) async {
+      when(service.documentsUsage).thenThrow(Exception('db closed'));
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+      await cubit.loadDocumentsUsage();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsStorageError), findsOneWidget);
+      expect(
+        find.text(l10n.settingsStorageCacheInUse('3.0 MB')),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('interactions', () {
     testWidgets('a scan with no broken clips reports a healthy library', (
       tester,
@@ -104,6 +242,11 @@ void main() {
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsStorageScanButton),
+        200,
+      );
       await tester.tap(find.text(l10n.settingsStorageScanButton));
       await tester.pumpAndSettle();
 
@@ -120,6 +263,11 @@ void main() {
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsStorageScanButton),
+        200,
+      );
       await tester.tap(find.text(l10n.settingsStorageScanButton));
       await tester.pumpAndSettle();
 
@@ -128,6 +276,11 @@ void main() {
         findsOneWidget,
       );
 
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsStorageRemoveBrokenButton),
+        200,
+      );
       await tester.tap(find.text(l10n.settingsStorageRemoveBrokenButton));
       await tester.pumpAndSettle();
 
@@ -237,8 +390,12 @@ void main() {
           return true;
         },
         measureRecoveryFootprint: () async => throw Exception('boom'),
-      )..loadCacheSize();
+      );
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+      // The content section has its own "Measuring…" line while it loads;
+      // let it settle so the assertion below is about the sheet alone.
+      await cubit.loadDocumentsUsage();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
