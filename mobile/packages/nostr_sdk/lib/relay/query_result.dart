@@ -96,6 +96,12 @@ class QueryResult {
   /// reached that relay's own result-size limit, rather than the relay
   /// having no more events to send.
   ///
+  /// With no `limit` on a filter and no NIP-11 `max_limit` from the relay,
+  /// that limit is unknown, so any relay that sent that filter even one
+  /// matching event counts unless it also sent a NIP-67 `finish` hint. On
+  /// its own that is weak evidence of a cap; a caller that will act on it
+  /// should give the filter a `limit`.
+  ///
   /// A relay that sent events outside the read's filters counts too: it did
   /// not honour them, so it may have spent its limit on events nobody asked
   /// for. So does a relay that sent a frame the pool rejected, one that is

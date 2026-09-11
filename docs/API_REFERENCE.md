@@ -379,6 +379,10 @@ class QueryResult {
   relay that sent a NIP-67 `more` hint, sent events outside the filters, or
   sent a frame the pool rejected. Can be `true` alongside `isComplete`: a
   relay can answer fully within its own cap and still call that "done".
+  With no `limit` on a filter and no NIP-11 `max_limit` from the relay, that
+  limit is unknown, so any relay that sent the filter even one matching event
+  counts unless it also sent `finish`. That is weak evidence on its own; a
+  caller that will act on it should give the filter a `limit`.
 - `confirmedExhaustive`: `true` only when every relay that answered
   explicitly confirmed it had no further matching events (NIP-67 `finish`).
 
