@@ -112,6 +112,15 @@ class RelayManager {
   final Relay Function(String url)? _relayFactory;
   final RelayDiagnosticsSink? _diagnosticsSink;
 
+  /// The sink relay diagnostics are filed through, or null when none was
+  /// injected.
+  ///
+  /// Exposed so `NostrClient` can file the one line a read owes when the
+  /// relay pool never saw it — the client and this manager are handed the
+  /// same sink, so routing the client's line elsewhere would split one
+  /// diagnostic channel into two.
+  RelayDiagnosticsSink? get diagnosticsSink => _diagnosticsSink;
+
   /// Configured relay URLs (user's list, persisted)
   final List<String> _configuredRelays = [];
 

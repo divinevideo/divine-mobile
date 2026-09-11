@@ -1,0 +1,485 @@
+import 'dart:async';
+
+import 'package:db_client/db_client.dart' hide Filter;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/client_connected.dart';
+
+class _MockRelayManager extends Mock implements RelayManager {}
+
+class _MockAppDbClient extends Mock implements AppDbClient {}
+
+class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _MockNostrEventsDao extends Mock implements NostrEventsDao {}
+
+class _FakeFilter extends Fake implements Filter {}
+
+/// A relay whose every frame the test writes by hand, so a read can be held
+/// open past its deadline, closed mid-replay, or left silent on purpose.
+class _ScriptedRelay extends Relay {
+  _ScriptedRelay(String url) : super(url, RelayStatus(url));
+
+  /// Subscription ids of the `REQ`s this relay was sent, in order.
+  final List<String> reqSubIds = [];
+
+  @override
+  Future<bool> doConnect() async {
+    relayStatus.connected = ClientConnected.connected;
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async {
+    if (message.isNotEmpty && message[0] == 'REQ' && message.length > 1) {
+      reqSubIds.add(message[1] as String);
+    }
+    return true;
+  }
+
+  Future<void> deliver(List<dynamic> json) async {
+    final handler = onMessage;
+    expect(handler, isNotNull, reason: 'RelayPool did not wire onMessage');
+    final dynamic result = handler!(this, json);
+    if (result is Future) await result;
+  }
+
+  /// Waits for the pool to register the [index]th `REQ` this relay was sent.
+  Future<String> awaitReq(int index) async {
+    for (var attempt = 0; attempt < 400; attempt++) {
+      if (reqSubIds.length > index && checkQuery(reqSubIds[index])) {
+        return reqSubIds[index];
+      }
+      await pumpEventQueue();
+    }
+    fail('RelayPool never registered a pending query at index $index');
+  }
+}
+
+const _secretKey =
+    '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+Nostr _newNostr() => Nostr(
+  LocalNostrSigner(_secretKey),
+  [],
+  (url) => RelayBase(url, RelayStatus(url)),
+);
+
+Future<List<Event>> _signedNotes(Nostr nostr, int count) async {
+  final pubkey = await nostr.ensurePublicKey();
+  final base = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  return [
+    for (var i = 0; i < count; i++)
+      (await nostr.nostrSigner.signEvent(
+        Event(
+          pubkey,
+          EventKind.textNote,
+          const [],
+          'read-events-$i',
+          createdAt: base - (i * 10),
+        ),
+      ))!,
+  ];
+}
+
+NostrClient _clientOver(
+  Nostr nostr, {
+  required List<String> connectedRelays,
+  AppDbClient? dbClient,
+  RelayDiagnosticsSink? diagnosticsSink,
+}) {
+  final relayManager = _MockRelayManager();
+  when(() => relayManager.connectedRelays).thenReturn(connectedRelays);
+  when(() => relayManager.diagnosticsSink).thenReturn(diagnosticsSink);
+  when(relayManager.dispose).thenAnswer((_) async {});
+  when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {});
+  return NostrClient.forTesting(
+    nostr: nostr,
+    relayManager: relayManager,
+    dbClient: dbClient,
+  );
+}
+
+Filter _textNotes() => Filter(kinds: const [EventKind.textNote]);
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    registerFallbackValue(_FakeFilter());
+    registerFallbackValue(<Event>[]);
+  });
+
+  group('NostrClient.readEvents', () {
+    test(
+      'keeps the events a relay already sent when the deadline fires',
+      () async {
+        final nostr = _newNostr();
+        final relay = _ScriptedRelay('wss://slow.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final notes = await _signedNotes(nostr, 3);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://slow.example'],
+        );
+
+        final read = client.readEvents(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(milliseconds: 400),
+        );
+        final subId = await relay.awaitReq(0);
+        for (final note in notes) {
+          await relay.deliver(['EVENT', subId, note.toJson()]);
+        }
+
+        final result = await read;
+
+        expect(result.endedBy, QueryEnd.deadline);
+        expect(result.isComplete, isFalse);
+        expect(
+          result.events.map((event) => event.id),
+          unorderedEquals(notes.map((note) => note.id)),
+          reason: 'the read was cut short, not emptied',
+        );
+      },
+    );
+
+    test('reports a CLOSED after a partial replay as relayClosed', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://budget.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final notes = await _signedNotes(nostr, 3);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://budget.example'],
+      );
+
+      final read = client.readEvents(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(seconds: 3),
+      );
+      final subId = await relay.awaitReq(0);
+      for (final note in notes) {
+        await relay.deliver(['EVENT', subId, note.toJson()]);
+      }
+      await relay.deliver(['CLOSED', subId, 'error: stored replay timed out']);
+
+      final result = await read;
+
+      expect(result.endedBy, QueryEnd.relayClosed);
+      expect(result.events, hasLength(3));
+    });
+
+    test(
+      'reports a relay skipped past the settle window as settledEarly',
+      () async {
+        final nostr = _newNostr();
+        final answering = _ScriptedRelay('wss://answers.example');
+        final silent = _ScriptedRelay('wss://silent.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(silent), isTrue);
+        final notes = await _signedNotes(nostr, 2);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://silent.example'],
+        );
+
+        // Comfortably past RelayPool.querySettleWindow, so the silent relay
+        // is skipped past rather than the whole read timing out.
+        final read = client.readEvents(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(seconds: 3),
+        );
+        final subId = await answering.awaitReq(0);
+        await silent.awaitReq(0);
+        for (final note in notes) {
+          await answering.deliver(['EVENT', subId, note.toJson()]);
+        }
+        await answering.deliver(['EOSE', subId]);
+
+        final result = await read;
+
+        expect(result.endedBy, QueryEnd.settledEarly);
+        expect(result.events, hasLength(2));
+      },
+    );
+
+    test(
+      'merges a cached row without making a cut-short read complete',
+      () async {
+        final nostr = _newNostr();
+        final relay = _ScriptedRelay('wss://slow.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final notes = await _signedNotes(nostr, 2);
+        final fromRelay = notes.first;
+        final fromCache = notes.last;
+
+        final dbClient = _MockAppDbClient();
+        final database = _MockAppDatabase();
+        final dao = _MockNostrEventsDao();
+        when(() => dbClient.database).thenReturn(database);
+        when(() => database.nostrEventsDao).thenReturn(dao);
+        when(
+          () => dao.getEventsByFilter(any()),
+        ).thenAnswer((_) async => [fromCache]);
+        when(() => dao.upsertEventsBatch(any())).thenAnswer((_) async {});
+
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://slow.example'],
+          dbClient: dbClient,
+        );
+
+        final read = client.readEvents(
+          [_textNotes()],
+          timeout: const Duration(milliseconds: 400),
+        );
+        final subId = await relay.awaitReq(0);
+        await relay.deliver(['EVENT', subId, fromRelay.toJson()]);
+
+        final result = await read;
+
+        expect(
+          result.endedBy,
+          QueryEnd.deadline,
+          reason: 'a cached row cannot finish a read the relays never finished',
+        );
+        expect(result.confirmedExhaustive, isFalse);
+        expect(
+          result.events.map((event) => event.id),
+          unorderedEquals([fromRelay.id, fromCache.id]),
+        );
+      },
+    );
+
+    test('maps a disposed client to noRelay', () async {
+      final nostr = _newNostr();
+      final client = _clientOver(nostr, connectedRelays: ['wss://a.example']);
+      await client.dispose();
+
+      final result = await client.readEvents([_textNotes()]);
+
+      expect(result.endedBy, QueryEnd.noRelay);
+      expect(result.events, isEmpty);
+    });
+
+    test('maps a query pool closed mid-call to deadline', () async {
+      final nostr = _newNostr();
+      final dbClient = _MockAppDbClient();
+      final database = _MockAppDatabase();
+      final dao = _MockNostrEventsDao();
+      when(() => dbClient.database).thenReturn(database);
+      when(() => database.nostrEventsDao).thenReturn(dao);
+      final cacheGate = Completer<List<Event>>();
+      when(
+        () => dao.getEventsByFilter(any()),
+      ).thenAnswer((_) => cacheGate.future);
+
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://a.example'],
+        dbClient: dbClient,
+      );
+
+      final pending = client.readEvents([_textNotes()]);
+      await pumpEventQueue();
+      await client.dispose();
+      cacheGate.complete(const []);
+
+      final result = await pending;
+
+      expect(
+        result.endedBy,
+        QueryEnd.deadline,
+        reason: 'the relays were reachable; only this one read was dropped',
+      );
+    });
+  });
+
+  group('NostrClient.queryEventsDetailed', () {
+    test(
+      'keeps the events a deadline cut short and still reports timedOut',
+      () async {
+        final nostr = _newNostr();
+        final relay = _ScriptedRelay('wss://slow.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final notes = await _signedNotes(nostr, 3);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://slow.example'],
+        );
+
+        final read = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(milliseconds: 400),
+        );
+        final subId = await relay.awaitReq(0);
+        for (final note in notes) {
+          await relay.deliver(['EVENT', subId, note.toJson()]);
+        }
+
+        final result = await read;
+
+        expect(result.timedOut, isTrue);
+        expect(result.noRelays, isFalse);
+        expect(
+          result.events.map((event) => event.id),
+          unorderedEquals(notes.map((note) => note.id)),
+          reason: '#6238: a timed-out read used to return an empty list',
+        );
+      },
+    );
+
+    test(
+      'leaves a display read unflagged when the query pool closed',
+      () async {
+        // `endedBy` calls this a deadline because the read never ran, but the
+        // flag has always told a display read that its cached fallback stands.
+        final nostr = _newNostr();
+        final dbClient = _MockAppDbClient();
+        final database = _MockAppDatabase();
+        final dao = _MockNostrEventsDao();
+        when(() => dbClient.database).thenReturn(database);
+        when(() => database.nostrEventsDao).thenReturn(dao);
+        final cacheGate = Completer<List<Event>>();
+        when(
+          () => dao.getEventsByFilter(any()),
+        ).thenAnswer((_) => cacheGate.future);
+
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://a.example'],
+          dbClient: dbClient,
+        );
+
+        final pending = client.queryEventsDetailed([_textNotes()]);
+        await pumpEventQueue();
+        await client.dispose();
+        cacheGate.complete(const []);
+
+        final result = await pending;
+
+        expect(result.timedOut, isFalse);
+        expect(result.noRelays, isFalse);
+      },
+    );
+
+    test('reports a CLOSED-ended read as not timed out', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://budget.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final notes = await _signedNotes(nostr, 1);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://budget.example'],
+      );
+
+      final read = client.queryEventsDetailed(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(seconds: 3),
+      );
+      final subId = await relay.awaitReq(0);
+      await relay.deliver(['EVENT', subId, notes.single.toJson()]);
+      await relay.deliver(['CLOSED', subId, 'error: stored replay timed out']);
+
+      final result = await read;
+
+      expect(result.timedOut, isFalse);
+      expect(result.noRelays, isFalse);
+      expect(result.events, hasLength(1));
+    });
+  });
+
+  group('NostrClient.queryEvents', () {
+    test('returns the events a deadline cut short', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://slow.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final notes = await _signedNotes(nostr, 3);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://slow.example'],
+      );
+
+      final read = client.queryEvents(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(milliseconds: 400),
+      );
+      final subId = await relay.awaitReq(0);
+      for (final note in notes) {
+        await relay.deliver(['EVENT', subId, note.toJson()]);
+      }
+
+      expect(
+        (await read).map((event) => event.id),
+        unorderedEquals(notes.map((note) => note.id)),
+      );
+    });
+  });
+
+  group('NostrClient queryCompletion diagnostics', () {
+    test('files one line for a read the relay pool never saw', () async {
+      final nostr = _newNostr();
+      final lines = <RelayDiagnostic>[];
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://a.example'],
+        diagnosticsSink: lines.add,
+      );
+      await client.dispose();
+
+      await client.readEvents([_textNotes()]);
+
+      expect(lines, hasLength(1));
+      expect(lines.single.site, RelayDiagnosticSite.queryCompletion);
+      expect(lines.single.level, RelayDiagnosticLevel.warning);
+      expect(lines.single.message, contains('noRelay'));
+      expect(lines.single.message, contains('kinds: [1]'));
+    });
+
+    test('files no line for a read the relay pool judged itself', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://slow.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final lines = <RelayDiagnostic>[];
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://slow.example'],
+        diagnosticsSink: lines.add,
+      );
+
+      final read = client.readEvents(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(milliseconds: 400),
+      );
+      await relay.awaitReq(0);
+      final result = await read;
+
+      expect(result.endedBy, QueryEnd.deadline);
+      expect(
+        lines,
+        isEmpty,
+        reason: 'the pool already filed this read; a second line double-counts',
+      );
+    });
+  });
+}

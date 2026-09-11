@@ -176,8 +176,11 @@ class NostrClient {
   /// How long [queryEventsDetailed] lets a websocket leg run past the caller's
   /// deadline before abandoning it, and every event it holds.
   ///
-  /// A leg ends itself at that deadline, so this only catches one that does
-  /// not. It must exceed timer latency, or an honest leg would lose the race.
+  /// The deadline is handed to the SDK, which ends the read there and hands
+  /// back what arrived, so this only catches a leg that does not end itself.
+  /// It must exceed timer latency, or an honest leg would lose the race —
+  /// racing it against the same instant is what made a timed-out read return
+  /// an empty list (#6238).
   static const Duration _websocketLegOverrunGrace = Duration(
     milliseconds: 250,
   );
@@ -916,6 +919,11 @@ class NostrClient {
   /// A client disposed *mid-call* is deliberately not in that list: the relays
   /// were reachable and only this one query was dropped, so it arrives as
   /// `timedOut` for a full-settlement caller instead.
+  ///
+  /// `timedOut: true` is never an empty answer by itself: a read that spends
+  /// its whole budget still returns the events that arrived before it ran
+  /// out, merged with the cached rows. Use [readEvents] to see *how* the read
+  /// ended rather than only whether it ran out of time.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsDetailed(
     List<Filter> filters, {
@@ -928,13 +936,100 @@ class NostrClient {
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
   }) async {
+    final read = await _read(
+      filters,
+      subscriptionId: subscriptionId,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      useCache: useCache,
+      useQueryPool: useQueryPool,
+      timeout: timeout,
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    return (
+      events: read.result.events,
+      timedOut: read.timedOut,
+      noRelays: read.result.endedBy == QueryEnd.noRelay,
+    );
+  }
+
+  /// Reads the events [filters] match and reports how the read ended.
+  ///
+  /// Runs the same read as [queryEventsDetailed] and [queryEvents] — cache
+  /// and WebSocket, merged — but keeps the outcome instead of reducing it to
+  /// two flags. [QueryResult.endedBy] says how the read ended, and
+  /// [QueryResult.possiblyCapped] / [QueryResult.confirmedExhaustive] how
+  /// complete the relays' answer was.
+  ///
+  /// All three describe the **network leg only**. A cached row merged into
+  /// [QueryResult.events] can never make a read the relays did not finish
+  /// look finished.
+  ///
+  /// Ends the relays were never asked about are reported as the nearest thing
+  /// they could have said: a disposed client, and a call with no connected
+  /// relay, as [QueryEnd.noRelay]; a query pool that closed mid-call, or a
+  /// pool slot that never arrived, as [QueryEnd.deadline].
+  Future<QueryResult> readEvents(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    bool useCache = true,
+    bool useQueryPool = true,
+    Duration timeout = const Duration(seconds: 5),
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final read = await _read(
+      filters,
+      subscriptionId: subscriptionId,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      useCache: useCache,
+      useQueryPool: useQueryPool,
+      timeout: timeout,
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    return read.result;
+  }
+
+  /// Runs the one read behind [readEvents], [queryEventsDetailed] and
+  /// [queryEvents].
+  ///
+  /// `timedOut` is [QueryResult.endedBy] plus the one case it cannot express:
+  /// a read that ends [QueryEnd.noRelay] at or after the deadline had a relay
+  /// still holding the REQ when the deadline fired, so it timed out too. A
+  /// read skipped because the query pool closed keeps the flag it has always
+  /// reported instead — see that branch.
+  Future<({QueryResult result, bool timedOut})> _read(
+    List<Filter> filters, {
+    required String? subscriptionId,
+    required List<String>? tempRelays,
+    required List<int> relayTypes,
+    required bool sendAfterAuth,
+    required bool useCache,
+    required bool useQueryPool,
+    required Duration timeout,
+    required bool requireAllRelaysSettled,
+  }) async {
+    final startedAt = DateTime.now();
     // A disposed client's query pool is closed; querying it is a no-op
     // rather than an error. This is the common case (checked upfront to
     // skip pointless cache/reconnect work below) — the narrower re-check
     // right before `withResource` (see below) closes the residual race
     // where dispose() runs during the awaits in between. See #5952.
     if (_isDisposed) {
-      return (events: <Event>[], timedOut: false, noRelays: true);
+      const skipped = QueryResult(events: [], endedBy: QueryEnd.noRelay);
+      _reportQueryCompletion(
+        filters: filters,
+        endedBy: skipped.endedBy,
+        reason: 'the client was disposed before the read started',
+        events: 0,
+        startedAt: startedAt,
+      );
+      return (result: skipped, timedOut: false);
     }
 
     // One deadline for the whole call, spent by every awaited step below.
@@ -942,7 +1037,7 @@ class NostrClient {
     // the reconnect and the pool wait run unbounded beside it — so a caller
     // that asked for 5s could wait 48s (#7091). This mirrors the same
     // discipline `Nostr.queryEventsDetailed` already applies one layer down.
-    final deadline = DateTime.now().add(timeout);
+    final deadline = startedAt.add(timeout);
     Duration remainingTimeout() {
       final remaining = deadline.difference(DateTime.now());
       return remaining.isNegative ? Duration.zero : remaining;
@@ -1014,25 +1109,28 @@ class NostrClient {
     final noConnectedRelays =
         _relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool;
     final filtersJson = filters.map((f) => f.toJson()).toList();
-    // Spend only what is left of the deadline. A leg handed the whole
-    // `timeout` outlived the backstop below, which then dropped everything the
-    // relays that did answer had sent (#9030).
-    Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
-    runWebSocketQuery() => _nostr.queryEventsDetailed(
+    // The caller's own deadline, not a second budget beside it. Handing the
+    // SDK the full `timeout` again let the outer one always win, and its
+    // catch replaced a read that had already received hundreds of events with
+    // an empty list — 594 delivered, 0 returned, on device (#6238). An
+    // absolute deadline subsumes #9030's spend-what-is-left fix: it cannot
+    // drift between being computed and being spent.
+    Future<QueryResult> runWebSocketQuery() => _nostr.readEvents(
       filtersJson,
       id: subscriptionId,
       tempRelays: effectiveTempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
-      timeout: remainingTimeout(),
+      deadline: deadline,
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
 
+    // Always at least the grace from now: a read whose budget is already
+    // spent still needs a moment to hand back what it holds.
     Duration overrunBackstop() =>
         remainingTimeout() + _websocketLegOverrunGrace;
 
-    Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
-    runPooledWebSocketQuery() async {
+    Future<QueryResult> runPooledWebSocketQuery() async {
       final acquisition = _queryPool.request();
       PoolResource resource;
       try {
@@ -1041,7 +1139,7 @@ class NostrClient {
         // package:pool cannot remove a waiter from its FIFO. Drain it when a
         // slot eventually reaches it, but never run the abandoned callback.
         unawaited(acquisition.then((resource) => resource.release()));
-        rethrow;
+        throw const _QueryPoolWaitExpired();
       }
       try {
         return await runWebSocketQuery().timeout(overrunBackstop());
@@ -1065,43 +1163,40 @@ class NostrClient {
     // the NIP-50 search relays and leak temp relays nothing would clean up.
     // This check-then-call has no await before the query, so it closes the
     // race rather than narrowing it. See #5952.
-    ({List<Event> events, bool timedOut, bool noRelaysParticipated})
-    websocketResult;
+    // What a read the relay pool never finished hands back, overwritten by
+    // the pool's own answer whenever there was one.
+    var network = const QueryResult(events: [], endedBy: QueryEnd.deadline);
+    // Set only while the relay pool never saw this read, which is what
+    // decides who owes the read its one `queryCompletion` line.
+    String? skippedReason;
+    bool? timedOutOverride;
     if (_queryPool.isClosed) {
       // Nothing was asked of the relays here, which is a different thing from
       // their having nothing. A display read is content to fall back on cache;
       // a full-settlement caller is about to replace what it read, so it gets
       // the same inconclusive answer a relay that never settled would give.
-      // The relays themselves are still reachable, so this is not a
-      // participation failure — `timedOut` is what carries it.
-      websocketResult = (
-        events: <Event>[],
-        timedOut: requireAllRelaysSettled,
-        noRelaysParticipated: false,
-      );
+      // That split is what `timedOut` has always carried here, and it is the
+      // one place it and `endedBy` disagree on purpose: the read itself never
+      // ran, whoever was asking.
+      skippedReason = 'the query pool closed mid-call';
+      timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
-        websocketResult = useQueryPool
+        network = useQueryPool
             ? await runPooledWebSocketQuery()
             : await runWebSocketQuery().timeout(overrunBackstop());
+      } on _QueryPoolWaitExpired {
+        // `Pool`'s own `timeout:` cannot express the acquisition half: it is
+        // an inactivity timer reset on every acquire and release, so a busy
+        // pool resets it forever while one waiter starves.
+        skippedReason = 'the query pool did not hand over a slot in time';
       } on TimeoutException {
-        // The budget expired before the query settled. This is the same
-        // inconclusive answer a relay that never settled gives — not a
-        // participation failure. `Pool`'s own `timeout:` cannot express the
-        // acquisition half: it is an inactivity timer reset on every acquire
-        // and release, so a busy pool resets it forever while one waiter
-        // starves.
-        websocketResult = (
-          events: <Event>[],
-          timedOut: true,
-          noRelaysParticipated: false,
-        );
+        // The read outlived its own deadline by the whole grace period. The
+        // relay pool saw it and files its own line when it concludes, so the
+        // inconclusive default above is the whole answer here.
       }
     }
-    final websocketEvents = _eventsMatchingAnyFilter(
-      websocketResult.events,
-      filters,
-    );
+    final websocketEvents = _eventsMatchingAnyFilter(network.events, filters);
 
     // Cache websocket results (fire-and-forget)
     if (websocketEvents.isNotEmpty) {
@@ -1118,10 +1213,45 @@ class NostrClient {
     // result set (e.g., getVideosByAddressableIds sends N filters with limit=1
     // each, expecting N results total).
     final limit = filters.length == 1 ? filters.first.limit : null;
+    final events = _mergeEvents(cacheResults, websocketEvents, limit: limit);
+
+    // A pre-flight snapshot that saw nothing connected proves nothing was
+    // asked, which outranks however the read itself ended — the same
+    // precedence the relay pool applies to `noRelay`. The completeness flags
+    // stay the network leg's own: a cached row is not an answer from a relay.
+    final endedBy = noConnectedRelays ? QueryEnd.noRelay : network.endedBy;
+    final result = QueryResult(
+      events: events,
+      endedBy: endedBy,
+      possiblyCapped: network.possiblyCapped,
+      confirmedExhaustive: network.confirmedExhaustive,
+    );
+
+    // The relay pool files a line for every read it saw that ended worth one,
+    // so the client owes one only for a read the pool never saw, or one the
+    // client's own view of the relays turned into an end worth reporting.
+    final filedByPool =
+        skippedReason == null && _worthAQueryCompletion(network);
+    if (!filedByPool && _worthAQueryCompletion(result)) {
+      _reportQueryCompletion(
+        filters: filters,
+        endedBy: endedBy,
+        reason: skippedReason ?? 'no relay was connected',
+        events: events.length,
+        startedAt: startedAt,
+      );
+    }
+
     return (
-      events: _mergeEvents(cacheResults, websocketEvents, limit: limit),
-      timedOut: websocketResult.timedOut,
-      noRelays: noConnectedRelays || websocketResult.noRelaysParticipated,
+      result: result,
+      timedOut:
+          timedOutOverride ??
+          (endedBy == QueryEnd.deadline ||
+              // A read no relay took, ending at or after the deadline, had a
+              // relay still holding the REQ when the deadline fired.
+              (endedBy == QueryEnd.noRelay &&
+                  (requireAllRelaysSettled ||
+                      !DateTime.now().isBefore(deadline)))),
     );
   }
 
@@ -1158,6 +1288,49 @@ class NostrClient {
       timeout: timeout,
     );
     return result.events;
+  }
+
+  /// Whether a read that ended this way owes a `queryCompletion` line — the
+  /// same rule the relay pool applies to the reads it saw.
+  static bool _worthAQueryCompletion(QueryResult result) =>
+      !result.isComplete || result.possiblyCapped;
+
+  /// Files the one [RelayDiagnosticSite.queryCompletion] line a read owes when
+  /// the relay pool never saw it, or never judged it worth a line of its own.
+  ///
+  /// Carries the end reason, why the relays were not asked, the event count,
+  /// the elapsed time and each filter's kinds and limit — never a pubkey, an
+  /// event id, or a filter's `ids`, `authors` or tag values.
+  void _reportQueryCompletion({
+    required List<Filter> filters,
+    required QueryEnd endedBy,
+    required String reason,
+    required int events,
+    required DateTime startedAt,
+  }) {
+    final sink = _relayManager.diagnosticsSink;
+    if (sink == null) return;
+    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    emitRelayDiagnostic(
+      sink,
+      RelayDiagnostic(
+        site: RelayDiagnosticSite.queryCompletion,
+        // Every end the client files for itself is one the relays were never
+        // asked about, which is the level the pool gives those too.
+        level: RelayDiagnosticLevel.warning,
+        relayUrl: 'nostr-client',
+        message:
+            'Query ended ${endedBy.name} after ${elapsedMs}ms '
+            '(events=$events); the relays were not asked: $reason; '
+            'filters: ${filters.map(_describeFilter).join(', ')}',
+      ),
+    );
+  }
+
+  static String _describeFilter(Filter filter) {
+    final kinds = filter.kinds;
+    return '{kinds: ${kinds == null ? 'any' : '[${kinds.join(', ')}]'}, '
+        'limit: ${filter.limit ?? 'none'}}';
   }
 
   /// Counts events matching the given filters using NIP-45 COUNT.
@@ -2124,6 +2297,12 @@ class NostrClient {
 
     return merged;
   }
+}
+
+/// The query pool never handed a slot over inside the read's budget, so the
+/// relay pool never saw the read and owes no line for it.
+class _QueryPoolWaitExpired implements Exception {
+  const _QueryPoolWaitExpired();
 }
 
 const _invalidRelayCountSentinels = {
