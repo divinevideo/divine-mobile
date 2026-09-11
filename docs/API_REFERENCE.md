@@ -185,12 +185,12 @@ whether or not the read finished.
 ended. A read that ends any way other than a complete, uncapped answer
 files one `queryCompletion` diagnostic line.
 
-**Trade-off:** `NostrClient`'s early-return paths (a disposed client, no
-connected relay, a closed query pool) each file their own `queryCompletion`
-line under a single `nostr-client` relay-url key, so those lines all share
-one rate-limit bucket — three a minute, then a suppression summary. A cold
-start that skips many reads at once surfaces the first three and a count,
-not one line per read. Reads the relay pool itself completes are rate-limited
+**Trade-off:** `NostrClient`'s early-return paths (a disposed client, a
+query-pool slot that never arrived, a closed query pool) each file their own
+`queryCompletion` line under a single `nostr-client` relay-url key, so those
+lines all share one rate-limit bucket — three a minute, then a suppression
+summary. A cold start that skips many reads at once surfaces the first three
+and a count, not one line per read. Reads the relay pool itself completes are rate-limited
 per the relay that answered, so they are not affected.
 
 ##### readAllEvents()
