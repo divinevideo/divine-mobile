@@ -631,6 +631,97 @@ void main() {
       },
     );
 
+    testWidgets(
+      'keeps a detached last clip on the timeline when its slot closes',
+      (tester) async {
+        registerFallbackValue(_FakeLayer());
+        final clipBloc = _MockClipEditorBloc();
+        final mockEditor = _MockProImageEditorState();
+        final mockStateManager = _MockStateManager();
+        // 4 s then 3 s; the 3 s tail is detached and its slot closed, so
+        // the timeline is 4 s long afterwards.
+        final head = DivineVideoClip(
+          id: 'head',
+          video: EditorVideo.file('/docs/head.mp4'),
+          duration: const Duration(seconds: 4),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+        );
+        final tail = DivineVideoClip(
+          id: 'tail',
+          video: EditorVideo.file('/docs/tail.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+        );
+        final detached = ClipEditorState(
+          clips: [head],
+          lastDetachResult: ClipDetachSuccess(
+            previousClips: [head, tail],
+            detachedClip: tail,
+          ),
+        );
+
+        when(() => clipBloc.state).thenReturn(const ClipEditorState());
+        whenListen(
+          clipBloc,
+          Stream<ClipEditorState>.fromIterable([detached]),
+          initialState: const ClipEditorState(),
+        );
+        when(() => mockEditor.stateManager).thenReturn(mockStateManager);
+        when(() => mockStateManager.activeMeta).thenReturn(const {});
+        when(
+          () => mockEditor.addHistory(
+            layers: any(named: 'layers'),
+            filters: any(named: 'filters'),
+            meta: any(named: 'meta'),
+            newLayer: any(named: 'newLayer'),
+            transformConfigs: any(named: 'transformConfigs'),
+            tuneAdjustments: any(named: 'tuneAdjustments'),
+            blur: any(named: 'blur'),
+            heroScreenshotRequired: any(named: 'heroScreenshotRequired'),
+            blockCaptureScreenshot: any(named: 'blockCaptureScreenshot'),
+          ),
+        ).thenAnswer((_) {});
+
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBloc,
+            editorOverride: mockEditor,
+          ),
+        );
+        await tester.pump();
+
+        final layer =
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: any(named: 'layers'),
+                    filters: any(named: 'filters'),
+                    meta: any(named: 'meta'),
+                    newLayer: captureAny(named: 'newLayer'),
+                    transformConfigs: any(named: 'transformConfigs'),
+                    tuneAdjustments: any(named: 'tuneAdjustments'),
+                    blur: any(named: 'blur'),
+                    heroScreenshotRequired: any(
+                      named: 'heroScreenshotRequired',
+                    ),
+                    blockCaptureScreenshot: any(
+                      named: 'blockCaptureScreenshot',
+                    ),
+                  ),
+                ).captured.single
+                as Layer;
+        // The slot started at 4 s — the new end of the timeline — so a
+        // window kept there would never be on screen. It is pulled back to
+        // end on the composition's end instead.
+        expect(layer.startTime, const Duration(seconds: 1));
+        expect(layer.endTime, const Duration(seconds: 4));
+      },
+    );
+
     testWidgets('shows a snackbar when a clip transform has no local file', (
       tester,
     ) async {
