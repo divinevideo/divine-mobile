@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nostr_client/nostr_client.dart' show ForceReconnectOutcome;
 import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
@@ -219,9 +220,19 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
   Future<void> _reconnectRelays() async {
     try {
       final nostrClient = ref.read(nostrServiceProvider);
-      await nostrClient.forceReconnectAll();
+      final outcome = await nostrClient.forceReconnectAll();
+      final connected =
+          '${nostrClient.connectedRelayCount} of '
+          '${nostrClient.configuredRelayCount}';
       Log.info(
-        '📱 Relay connections restored after app resume',
+        switch (outcome) {
+          ForceReconnectOutcome.completed =>
+            '📱 Relay reconnect after app resume finished: $connected relays '
+                'connected',
+          ForceReconnectOutcome.stillDialling =>
+            '📱 Relay reconnect after app resume ended with relays still '
+                'connecting ($connected connected)',
+        },
         name: 'AppLifecycleHandler',
         category: LogCategory.system,
       );

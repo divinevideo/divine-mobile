@@ -2324,6 +2324,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Verbinden met relays mislukt. Check je netwerkverbinding.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Verbinden met relays is nog bezig. Geef het even de tijd.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Op dit apparaat opgeslagen. We synchroniseren het met je account zodra publiceren weer werkt.';
 

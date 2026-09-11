@@ -2340,6 +2340,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo conectar a los relays. Revisá tu conexión de red.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Todavía nos estamos conectando a los relays. Dale un momento.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Guardado en este dispositivo. Lo sincronizaremos con tu cuenta cuando la publicación vuelva a funcionar.';
 

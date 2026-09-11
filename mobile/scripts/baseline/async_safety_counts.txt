@@ -37,7 +37,7 @@ discarded_futures|lib/providers/notifications_providers.dart	4
 discarded_futures|lib/providers/preferences_providers.dart	2
 discarded_futures|lib/providers/protected_minor_providers.dart	3
 discarded_futures|lib/providers/provider_identity_stream.dart	2
-discarded_futures|lib/providers/relay_providers.dart	4
+discarded_futures|lib/providers/relay_providers.dart	3
 discarded_futures|lib/providers/repository_providers.dart	3
 discarded_futures|lib/providers/social_providers.dart	8
 discarded_futures|lib/providers/sounds_providers.dart	1

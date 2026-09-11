@@ -2285,6 +2285,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không kết nối được với relay. Vui lòng kiểm tra kết nối mạng của bạn.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Vẫn đang kết nối với relay. Vui lòng chờ một chút.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Đã lưu trên thiết bị này. Chúng tôi sẽ đồng bộ với tài khoản của bạn khi việc đăng lại hoạt động.';
 

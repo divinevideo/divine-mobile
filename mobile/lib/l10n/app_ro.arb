@@ -800,6 +800,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "N-am putut conecta la relay-uri. Verifică-ți conexiunea la rețea.",
+    "relaySettingsStillConnecting": "Încă ne conectăm la relay-uri. Mai așteaptă puțin.",
     "relaySettingsSavedLocallyPublishPending": "Salvat pe acest dispozitiv. Îl vom sincroniza cu contul tău când publicarea funcționează din nou.",
     "relaySettingsAddRelayTitle": "Adaugă relay",
     "relaySettingsAddRelayPrompt": "Introdu URL-ul WebSocket al relay-ului pe care vrei să-l adaugi:",

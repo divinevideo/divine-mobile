@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "连接中继失败。请检查网络连接。",
+  "relaySettingsStillConnecting": "仍在连接中继。请稍候。",
   "relaySettingsSavedLocallyPublishPending": "已保存在此设备上。发布恢复正常后，我们会将它同步到你的账号。",
   "relaySettingsAddRelayTitle": "添加中继",
   "relaySettingsAddRelayPrompt": "输入要添加的中继 WebSocket URL：",

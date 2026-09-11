@@ -2365,6 +2365,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się połączyć z przekaźnikami. Sprawdź połączenie z siecią.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Wciąż łączymy się z przekaźnikami. Daj nam chwilę.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Zapisano na tym urządzeniu. Zsynchronizujemy to z Twoim kontem, gdy publikowanie znów zadziała.';
 

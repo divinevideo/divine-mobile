@@ -945,6 +945,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "ከቅብብሎሽ ጋር መገናኘት አልተሳካም። እባክዎ የአውታረ መረብ ግንኙነትዎን ያረጋግጡ።",
+    "relaySettingsStillConnecting": "አሁንም ከቅብብሎሽ ጋር በመገናኘት ላይ ነው። እባክዎ ትንሽ ይጠብቁ።",
     "relaySettingsSavedLocallyPublishPending": "በዚህ መሣሪያ ላይ ተቀምጧል። ማተም እንደገና ሲሰራ ወደ መለያዎ እናስመሳስለዋለን።",
     "relaySettingsAddRelayTitle": "ቅብብል ጨምር",
     "relaySettingsAddRelayPrompt": "ማከል የምትፈልገውን የሪሌይ WebSocket URL አስገባ:",

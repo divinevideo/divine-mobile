@@ -800,6 +800,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "Impossibile connettersi ai relay. Controlla la connessione di rete.",
+    "relaySettingsStillConnecting": "Connessione ai relay ancora in corso. Aspetta un attimo.",
     "relaySettingsSavedLocallyPublishPending": "Salvato su questo dispositivo. Lo sincronizzeremo con il tuo account quando la pubblicazione tornerà a funzionare.",
     "relaySettingsAddRelayTitle": "Aggiungi relay",
     "relaySettingsAddRelayPrompt": "Inserisci l'URL WebSocket del relay che vuoi aggiungere:",

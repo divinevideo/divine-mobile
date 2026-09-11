@@ -797,6 +797,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "リレーに接続できなかった。ネット接続を確認してみて。",
+    "relaySettingsStillConnecting": "リレーにまだ接続中です。少しお待ちください。",
     "relaySettingsSavedLocallyPublishPending": "この端末に保存しました。公開がまた動くようになったらアカウントに同期します。",
     "relaySettingsAddRelayTitle": "リレーを追加",
     "relaySettingsAddRelayPrompt": "追加したいリレーの WebSocket URL を入力してね:",

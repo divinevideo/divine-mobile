@@ -3969,6 +3969,12 @@ abstract class AppLocalizations {
   /// **'Failed to connect to relays. Please check your network connection.'**
   String get relaySettingsFailedToConnectCheck;
 
+  /// Shown after the user taps Retry on the Relays screen when the reconnect wait ends before any relay has connected, while connections are still being made. Not an error: the connections keep going in the background.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting to relays. Give it a moment.'**
+  String get relaySettingsStillConnecting;
+
   /// No description provided for @relaySettingsSavedLocallyPublishPending.
   ///
   /// In en, this message translates to:

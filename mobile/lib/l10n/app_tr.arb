@@ -797,6 +797,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "Rölelere bağlanılamadı. Lütfen ağ bağlantını kontrol et.",
+    "relaySettingsStillConnecting": "Rölelere hâlâ bağlanılıyor. Biraz bekle.",
     "relaySettingsSavedLocallyPublishPending": "Bu cihazda kaydedildi. Yayınlama tekrar çalıştığında hesabınla eşitleyeceğiz.",
     "relaySettingsAddRelayTitle": "Röle Ekle",
     "relaySettingsAddRelayPrompt": "Eklemek istediğin rölenin WebSocket URL'sini gir:",

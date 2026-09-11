@@ -171,11 +171,18 @@ class RelaySettingsCubit extends Cubit<RelaySettingsState> {
 
   Future<RetryConnectionOutcome> retryConnection() async {
     try {
-      await _nostrClient.forceReconnectAll();
+      final outcome = await _nostrClient.forceReconnectAll();
       final connectedCount = _nostrClient.connectedRelayCount;
       if (connectedCount > 0) {
         await _videoEventService.resetAndResubscribeAll();
         return RetryConnectionOutcome.connected(connectedCount);
+      }
+      // Nothing connected YET is only a failure once the cycle has actually
+      // finished. A caller that joined shortly before the shared deadline gets
+      // here with dials still open, and calling that a failure contradicts the
+      // reconnect that is still running.
+      if (outcome == ForceReconnectOutcome.stillDialling) {
+        return const RetryConnectionOutcome.stillConnecting();
       }
       return const RetryConnectionOutcome.notConnected();
     } catch (e, stackTrace) {

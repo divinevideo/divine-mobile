@@ -800,6 +800,7 @@
         }
     },
     "relaySettingsFailedToConnectCheck": "Kunde inte ansluta till reler. Kolla din nätverksanslutning.",
+    "relaySettingsStillConnecting": "Ansluter fortfarande till reler. Vänta en liten stund.",
     "relaySettingsSavedLocallyPublishPending": "Sparat på den här enheten. Vi synkar det till ditt konto när publicering fungerar igen.",
     "relaySettingsAddRelayTitle": "Lägg till rel",
     "relaySettingsAddRelayPrompt": "Ange WebSocket-URL:en för relen du vill lägga till:",

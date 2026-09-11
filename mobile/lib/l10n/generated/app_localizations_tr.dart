@@ -2250,6 +2250,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Rölelere bağlanılamadı. Lütfen ağ bağlantını kontrol et.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Rölelere hâlâ bağlanılıyor. Biraz bekle.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Bu cihazda kaydedildi. Yayınlama tekrar çalıştığında hesabınla eşitleyeceğiz.';
 

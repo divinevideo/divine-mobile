@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_client/src/relay_diagnostics_adapter.dart';
@@ -14,6 +15,8 @@ import 'package:unified_logger/unified_logger.dart';
 class _MockRelayPool extends Mock implements RelayPool {}
 
 class _MockRelay extends Mock implements Relay {}
+
+class _MockRelayBase extends Mock implements RelayBase {}
 
 class _MockRelayStatus extends Mock implements RelayStatus {}
 
@@ -63,6 +66,22 @@ _MockRelay _createMockRelay(
   when(() => mockStatus.authed).thenReturn(authed);
 
   return mockRelay;
+}
+
+/// A pooled relay whose socket reports [connected] and whose idle check
+/// returns [healthy].
+_MockRelayBase _createPooledRelay(
+  String url, {
+  required int connected,
+  required bool healthy,
+}) {
+  final relay = _MockRelayBase();
+  final status = _MockRelayStatus();
+  when(() => relay.url).thenReturn(url);
+  when(() => relay.relayStatus).thenReturn(status);
+  when(() => status.connected).thenReturn(connected);
+  when(relay.checkHealth).thenReturn(healthy);
+  return relay;
 }
 
 // =============================================================================
@@ -1411,6 +1430,407 @@ void main() {
       });
     });
 
+    group('one dial per relay', () {
+      test('a sweep while the startup connect is pending dials once', () async {
+        // The sweep used to tear down the startup socket mid-handshake and
+        // open a second one to the same relay (#8991).
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final startup = manager.initialize();
+        final sweep = manager.retryDisconnectedRelays();
+        await pumpEventQueue();
+
+        expect(
+          dials,
+          hasLength(1),
+          reason: 'the sweep must join the startup dial',
+        );
+        verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await Future.wait([startup, sweep]);
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connected,
+        );
+      });
+
+      test('a sweep joins the dial addRelay started', () async {
+        await manager.initialize();
+        final dial = Completer<bool>();
+        var dialCount = 0;
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          dialCount++;
+          return dial.future;
+        });
+
+        final adding = manager.addRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        var swept = false;
+        final sweep = manager.retryDisconnectedRelays().then(
+          (_) => swept = true,
+        );
+        await pumpEventQueue();
+
+        expect(
+          dialCount,
+          equals(1),
+          reason: 'the sweep must join the dial in flight',
+        );
+        expect(
+          swept,
+          isFalse,
+          reason: 'a caller must not proceed while the relay is still dialling',
+        );
+
+        dial.complete(true);
+        await Future.wait([adding, sweep]);
+        expect(swept, isTrue);
+      });
+
+      test('an error thrown while dialling reaches the caller', () async {
+        // A shared dial that swallowed this would leave every caller waiting
+        // on it forever.
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenThrow(StateError('dial failed'));
+
+        await expectLater(manager.initialize(), throwsStateError);
+      });
+
+      test(
+        'removing a relay releases the callers waiting on its dial',
+        () async {
+          await manager.initialize();
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) => Completer<bool>().future);
+
+          bool? added;
+          unawaited(
+            manager.addRelay(testCustomRelayUrl).then((ok) => added = ok),
+          );
+          await pumpEventQueue();
+          await manager.removeRelay(
+            testCustomRelayUrl,
+            source: RelayRemoveSource.automatic,
+          );
+          await pumpEventQueue();
+
+          expect(added, isFalse);
+        },
+      );
+
+      test(
+        'a re-added relay dials afresh and ignores the old dial settling late',
+        () async {
+          await manager.initialize();
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          unawaited(manager.addRelay(testCustomRelayUrl));
+          await pumpEventQueue();
+          await manager.removeRelay(
+            testCustomRelayUrl,
+            source: RelayRemoveSource.automatic,
+          );
+          unawaited(manager.addRelay(testCustomRelayUrl));
+          await pumpEventQueue();
+          expect(
+            dials,
+            hasLength(2),
+            reason: "the re-added relay must not join the removed relay's dial",
+          );
+
+          dials.first.complete(false);
+          await pumpEventQueue();
+          expect(
+            manager.getRelayStatus(testCustomRelayUrl)?.state,
+            RelayState.connecting,
+            reason:
+                "the removed relay's late result must not reach its "
+                'successor',
+          );
+        },
+      );
+
+      test('dispose releases the callers waiting on a dial', () async {
+        await manager.initialize();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => Completer<bool>().future);
+
+        bool? added;
+        unawaited(
+          manager.addRelay(testCustomRelayUrl).then((ok) => added = ok),
+        );
+        await pumpEventQueue();
+        await manager.dispose();
+        await pumpEventQueue();
+
+        expect(added, isFalse);
+      });
+
+      test('reconnectRelay replaces a dial in flight', () async {
+        await manager.initialize();
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final adding = manager.addRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        final reconnecting = manager.reconnectRelay(testCustomRelayUrl);
+        await pumpEventQueue();
+        expect(dials, hasLength(2));
+
+        dials.last.complete(true);
+        expect(await reconnecting, isTrue);
+        dials.first.complete(false);
+        await pumpEventQueue();
+        expect(
+          manager.getRelayStatus(testCustomRelayUrl)?.state,
+          RelayState.connected,
+          reason: 'the replaced dial cannot overwrite its replacement',
+        );
+        expect(
+          await adding,
+          isTrue,
+          reason: "a caller of the replaced dial gets the replacement's result",
+        );
+      });
+
+      test('forceReconnectAll replaces a dial in flight', () async {
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final startup = manager.initialize();
+        await pumpEventQueue();
+        final cycle = manager.forceReconnectAll();
+        await pumpEventQueue();
+        expect(dials, hasLength(2));
+
+        dials.last.complete(true);
+        await cycle;
+        dials.first.complete(false);
+        await startup;
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connected,
+          reason: 'the replaced dial cannot overwrite the cycle',
+        );
+      });
+
+      test(
+        'a replaced attempt that throws cannot fail its replacement',
+        () async {
+          final diagnostics = <RelayDiagnostic>[];
+          final dialManager = RelayManager(
+            config: config,
+            relayPool: mockRelayPool,
+            diagnosticsSink: diagnostics.add,
+          );
+          await dialManager.initialize();
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          final adding = dialManager.addRelay(testCustomRelayUrl);
+          await pumpEventQueue();
+          final reconnecting = dialManager.reconnectRelay(testCustomRelayUrl);
+          await pumpEventQueue();
+          expect(dials, hasLength(2));
+
+          dials.first.completeError(StateError('replaced attempt failed'));
+          await pumpEventQueue();
+          dials.last.complete(true);
+
+          expect(await reconnecting, isTrue);
+          expect(await adding, isTrue);
+          expect(
+            diagnostics
+                .where((entry) => entry.level == RelayDiagnosticLevel.error)
+                .map((entry) => entry.error),
+            contains(isA<StateError>()),
+            reason: "the replaced attempt's error is still reported",
+          );
+        },
+      );
+    });
+
+    group('health check', () {
+      test('leaves a relay whose dial is still in flight', () async {
+        // The pooled socket can still read as disconnected before its
+        // handshake starts; a dial in flight is not a failed health check.
+        final dial = Completer<bool>();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => dial.future);
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.disconnect,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+
+        final startup = manager.initialize();
+        final sweep = manager.retryDisconnectedRelays();
+        await pumpEventQueue();
+
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connecting,
+        );
+
+        dial.complete(true);
+        await Future.wait([startup, sweep]);
+      });
+
+      test('leaves a relay whose socket is still connecting', () async {
+        // Demoting it made the sweep tear the socket down mid-handshake and
+        // dial again (#8991).
+        await manager.initialize();
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.connecting,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+        clearInteractions(mockRelayPool);
+
+        await manager.retryDisconnectedRelays();
+
+        expect(
+          manager.getRelayStatus(testDefaultRelayUrl)?.state,
+          RelayState.connected,
+        );
+        verifyNever(() => mockRelayPool.remove(testDefaultRelayUrl));
+      });
+
+      test('a sweep leaves a relay the SDK is still connecting', () async {
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) async => false);
+        await manager.initialize();
+        final relay = _createPooledRelay(
+          testDefaultRelayUrl,
+          connected: ClientConnected.connecting,
+          healthy: false,
+        );
+        when(
+          () => mockRelayPool.getRelay(testDefaultRelayUrl),
+        ).thenReturn(relay);
+        clearInteractions(mockRelayPool);
+
+        await manager.retryDisconnectedRelays();
+
+        verifyNever(() => mockRelayPool.remove(testDefaultRelayUrl));
+        verifyNever(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        );
+      });
+
+      for (final (name, connected) in [
+        ('a connected', ClientConnected.connected),
+        ('a disconnected', ClientConnected.disconnect),
+      ]) {
+        test('still redials $name socket that fails its check', () async {
+          await manager.initialize();
+          final relay = _createPooledRelay(
+            testDefaultRelayUrl,
+            connected: connected,
+            healthy: false,
+          );
+          when(
+            () => mockRelayPool.getRelay(testDefaultRelayUrl),
+          ).thenReturn(relay);
+          clearInteractions(mockRelayPool);
+
+          await manager.retryDisconnectedRelays();
+
+          verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+          verify(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).called(1);
+        });
+      }
+    });
+
     group('reconnectRelay', () {
       setUp(() async {
         await manager.initialize();
@@ -1428,8 +1848,8 @@ void main() {
 
         await manager.reconnectRelay(testCustomRelayUrl);
 
-        // Called twice: once by reconnectRelay and once by _connectToRelay
-        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(2);
+        // The old socket is replaced once, as part of the new dial.
+        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(1);
         verify(
           () => mockRelayPool.add(
             any(),
@@ -1505,7 +1925,7 @@ void main() {
         await manager.addRelay(testCustomRelayUrl2);
       });
 
-      test('disconnects all relays before reconnecting', () async {
+      test('replaces every relay once', () async {
         clearInteractions(mockRelayPool);
         when(
           () => mockRelayPool.add(
@@ -1516,11 +1936,368 @@ void main() {
 
         await manager.forceReconnectAll();
 
-        // Each relay is removed twice: once by forceReconnectAll and once
-        // by _connectToRelay (which clears the stale pool entry before add).
-        verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(2);
-        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(2);
-        verify(() => mockRelayPool.remove(testCustomRelayUrl2)).called(2);
+        // Each old socket is replaced once, as part of its relay's new dial.
+        verify(() => mockRelayPool.remove(testDefaultRelayUrl)).called(1);
+        verify(() => mockRelayPool.remove(testCustomRelayUrl)).called(1);
+        verify(() => mockRelayPool.remove(testCustomRelayUrl2)).called(1);
+      });
+
+      test('two concurrent calls run one cycle', () async {
+        clearInteractions(mockRelayPool);
+
+        await Future.wait([
+          manager.forceReconnectAll(),
+          manager.forceReconnectAll(),
+        ]);
+
+        verify(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).called(3);
+      });
+
+      test(
+        'a completed cycle reports completed',
+        () async {
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) async => true);
+
+          expect(
+            await manager.forceReconnectAll(),
+            ForceReconnectOutcome.completed,
+          );
+        },
+      );
+
+      test('a cycle whose dials all failed still reports completed', () async {
+        // completed says every dial finished, not that any of them connected;
+        // the Relays screen decides what to show from the relay count.
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) async => false);
+
+        expect(
+          await manager.forceReconnectAll(),
+          ForceReconnectOutcome.completed,
+        );
+      });
+
+      test('a caller joining is released at the deadline of the cycle it '
+          'joined, not its own', () {
+        // The finding's exact case: with the deadline read off the wall clock
+        // a joiner waited a fresh budget from where it joined, so it could
+        // answer long after the cycle it was waiting on had given up.
+        fakeAsync((async) {
+          var dials = 0;
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            dials++;
+            return Completer<bool>().future;
+          });
+
+          ForceReconnectOutcome? first;
+          ForceReconnectOutcome? joiner;
+          unawaited(manager.forceReconnectAll().then((o) => first = o));
+          async.elapse(const Duration(seconds: 14, milliseconds: 900));
+          unawaited(manager.forceReconnectAll().then((o) => joiner = o));
+          async.elapse(const Duration(milliseconds: 99));
+          expect(joiner, isNull);
+
+          async.elapse(const Duration(milliseconds: 1));
+          expect(first, equals(ForceReconnectOutcome.stillDialling));
+          expect(
+            joiner,
+            equals(ForceReconnectOutcome.stillDialling),
+            reason: 'the joiner waits out the cycle, not a fresh budget',
+          );
+          expect(dials, equals(3), reason: 'the joiner starts no cycle');
+        });
+      });
+
+      test(
+        'a caller joining a cycle that finishes in time hears completed',
+        () {
+          fakeAsync((async) {
+            final dials = <Completer<bool>>[];
+            when(
+              () => mockRelayPool.add(
+                any(),
+                autoSubscribe: any(named: 'autoSubscribe'),
+              ),
+            ).thenAnswer((_) {
+              final dial = Completer<bool>();
+              dials.add(dial);
+              return dial.future;
+            });
+
+            ForceReconnectOutcome? first;
+            ForceReconnectOutcome? joiner;
+            unawaited(manager.forceReconnectAll().then((o) => first = o));
+            async.elapse(const Duration(seconds: 10));
+            unawaited(manager.forceReconnectAll().then((o) => joiner = o));
+            for (final dial in dials) {
+              dial.complete(true);
+            }
+            async.flushMicrotasks();
+
+            expect(dials, hasLength(3));
+            expect(first, equals(ForceReconnectOutcome.completed));
+            expect(joiner, equals(ForceReconnectOutcome.completed));
+          });
+        },
+      );
+
+      test(
+        'a caller joining shortly before the shared deadline is told the '
+        'cycle is still dialling, not that it finished',
+        () async {
+          // The bug this pins: the joiner used to get a normal completion
+          // when the shared deadline expired, indistinguishable from a
+          // finished cycle. The Relays screen then read connectedRelayCount
+          // as zero and told the user the retry had failed, while the
+          // reconnect was still running.
+          final dials = <Completer<bool>>[];
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            final dial = Completer<bool>();
+            dials.add(dial);
+            return dial.future;
+          });
+
+          final original = RelayManager.reconnectSweepBudget;
+          RelayManager.reconnectSweepBudget = const Duration(milliseconds: 60);
+          addTearDown(() => RelayManager.reconnectSweepBudget = original);
+
+          final first = manager.forceReconnectAll();
+          await pumpEventQueue();
+          // Joins the running cycle with only part of its budget left.
+          final joiner = manager.forceReconnectAll();
+
+          expect(await joiner, ForceReconnectOutcome.stillDialling);
+          expect(await first, ForceReconnectOutcome.stillDialling);
+          expect(
+            dials.every((dial) => !dial.isCompleted),
+            isTrue,
+            reason: 'the dials are still open; the cycle really did not finish',
+          );
+
+          for (final dial in dials) {
+            dial.complete(true);
+          }
+          await pumpEventQueue();
+        },
+      );
+
+      test('starts every dial before any completes', () async {
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final cycle = manager.forceReconnectAll();
+        await pumpEventQueue();
+
+        expect(dials, hasLength(3));
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await cycle;
+      });
+
+      test('a sweep during the cycle joins it instead of redialling', () async {
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        final cycle = manager.forceReconnectAll();
+        await pumpEventQueue();
+        final sweep = manager.retryDisconnectedRelays();
+        await pumpEventQueue();
+
+        expect(dials, hasLength(3), reason: 'the sweep must join the cycle');
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await Future.wait([cycle, sweep]);
+      });
+
+      test('a relay removed mid-cycle is not dialled again', () async {
+        final pending = <Completer<bool>>[];
+        final dialledAfterRemoval = <String>[];
+        var removed = false;
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((invocation) {
+          if (removed) {
+            dialledAfterRemoval.add(
+              (invocation.positionalArguments.first as Relay).url,
+            );
+          }
+          final dial = Completer<bool>();
+          pending.add(dial);
+          return dial.future;
+        });
+
+        var done = false;
+        final cycle = manager.forceReconnectAll().whenComplete(
+          () => done = true,
+        );
+        await pumpEventQueue();
+        await manager.removeRelay(
+          testCustomRelayUrl,
+          source: RelayRemoveSource.automatic,
+        );
+        removed = true;
+        for (var round = 0; round < 5 && !done; round++) {
+          for (final dial in pending.where((d) => !d.isCompleted).toList()) {
+            dial.complete(true);
+          }
+          await pumpEventQueue();
+        }
+        await cycle;
+
+        expect(dialledAfterRemoval, isNot(contains(testCustomRelayUrl)));
+      });
+
+      test(
+        'a hung dial releases callers at the budget and a later call '
+        'replaces it',
+        () async {
+          final original = RelayManager.reconnectSweepBudget;
+          RelayManager.reconnectSweepBudget = Duration.zero;
+          addTearDown(() => RelayManager.reconnectSweepBudget = original);
+          final hung = Completer<bool>();
+          addTearDown(() {
+            if (!hung.isCompleted) hung.complete(false);
+          });
+          var dials = 0;
+          when(
+            () => mockRelayPool.add(
+              any(),
+              autoSubscribe: any(named: 'autoSubscribe'),
+            ),
+          ).thenAnswer((_) {
+            dials++;
+            return hung.future;
+          });
+
+          var released = false;
+          unawaited(manager.forceReconnectAll().then((_) => released = true));
+          await pumpEventQueue();
+          expect(
+            released,
+            isTrue,
+            reason: 'a caller stops waiting at the budget',
+          );
+
+          unawaited(manager.forceReconnectAll());
+          await pumpEventQueue();
+          expect(
+            dials,
+            equals(6),
+            reason: 'a call after the deadline replaces the hung dials',
+          );
+        },
+      );
+
+      test('a cycle cut short by dispose reports no failure', () async {
+        final diagnostics = <RelayDiagnostic>[];
+        final cycleManager = RelayManager(
+          config: config,
+          relayPool: mockRelayPool,
+          diagnosticsSink: diagnostics.add,
+        );
+        await cycleManager.initialize();
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) => Completer<bool>().future);
+
+        unawaited(cycleManager.forceReconnectAll());
+        await pumpEventQueue();
+        await cycleManager.dispose();
+        await pumpEventQueue();
+
+        final messages = diagnostics.map((entry) => entry.message);
+        expect(messages, contains('Force reconnecting all relays'));
+        expect(messages, isNot(contains('Force reconnection failed')));
+      });
+
+      test('a replaced cycle does not report its relay twice', () async {
+        final original = RelayManager.reconnectSweepBudget;
+        RelayManager.reconnectSweepBudget = Duration.zero;
+        addTearDown(() => RelayManager.reconnectSweepBudget = original);
+        final diagnostics = <RelayDiagnostic>[];
+        final cycleManager = RelayManager(
+          config: config,
+          relayPool: mockRelayPool,
+          diagnosticsSink: diagnostics.add,
+        );
+        await cycleManager.initialize();
+        final dials = <Completer<bool>>[];
+        when(
+          () => mockRelayPool.add(
+            any(),
+            autoSubscribe: any(named: 'autoSubscribe'),
+          ),
+        ).thenAnswer((_) {
+          final dial = Completer<bool>();
+          dials.add(dial);
+          return dial.future;
+        });
+
+        await cycleManager.forceReconnectAll();
+        await cycleManager.forceReconnectAll();
+        for (final dial in dials) {
+          dial.complete(true);
+        }
+        await pumpEventQueue();
+
+        expect(
+          diagnostics.where(
+            (entry) =>
+                entry.message == 'Force reconnected' &&
+                entry.relayUrl == testDefaultRelayUrl,
+          ),
+          hasLength(1),
+        );
       });
 
       test('reconnects all relays after disconnecting', () async {

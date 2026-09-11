@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "Gagal bersambung ke relay. Sila semak sambungan rangkaian anda.",
+  "relaySettingsStillConnecting": "Masih menyambung ke relay. Sila tunggu sebentar.",
   "relaySettingsSavedLocallyPublishPending": "Disimpan pada peranti ini. Kami akan menyegerakkannya ke akaun anda apabila penerbitan berfungsi semula.",
   "relaySettingsAddRelayTitle": "Tambah Relay",
   "relaySettingsAddRelayPrompt": "Masukkan URL WebSocket relay yang mahu anda tambah:",

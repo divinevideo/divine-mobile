@@ -2147,6 +2147,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get relaySettingsFailedToConnectCheck => 'リレーに接続できなかった。ネット接続を確認してみて。';
 
   @override
+  String get relaySettingsStillConnecting => 'リレーにまだ接続中です。少しお待ちください。';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'この端末に保存しました。公開がまた動くようになったらアカウントに同期します。';
 

@@ -2347,6 +2347,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile connettersi ai relay. Controlla la connessione di rete.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Connessione ai relay ancora in corso. Aspetta un attimo.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Salvato su questo dispositivo. Lo sincronizzeremo con il tuo account quando la pubblicazione tornerà a funzionare.';
 

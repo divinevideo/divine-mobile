@@ -855,6 +855,12 @@ Future<void> _retryConnection(BuildContext context) async {
           l10n.relaySettingsConnectedToRelays(outcome.connectedCount),
         ),
       );
+    case RetryConnectionOutcomeKind.stillConnecting:
+      // Not an error: the reconnect is still running and its relays will
+      // report as they land.
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(l10n.relaySettingsStillConnecting),
+      );
     case RetryConnectionOutcomeKind.notConnected:
     case RetryConnectionOutcomeKind.failed:
       _showError(messenger, l10n.relaySettingsFailedToConnectCheck);

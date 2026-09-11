@@ -608,6 +608,7 @@
     "relaySettingsForcingReconnection": "Pinipilit ang muling pagkonekta sa relay...",
     "relaySettingsConnectedToRelays": "Nakakonekta sa {count} relay!",
     "relaySettingsFailedToConnectCheck": "Hindi nakakonekta sa mga relay. Pakitsek ang iyong network connection.",
+    "relaySettingsStillConnecting": "Kumokonekta pa rin sa mga relay. Sandali lang.",
     "relaySettingsSavedLocallyPublishPending": "Naka-save sa device na ito. Isi-sync namin ito sa account mo kapag gumana ulit ang publishing.",
     "relaySettingsAddRelayTitle": "Magdagdag ng Relay",
     "relaySettingsAddRelayPrompt": "Ilagay ang WebSocket URL ng relay na gusto mong idagdag:",
