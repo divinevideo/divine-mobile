@@ -369,9 +369,10 @@ class StorageManagementService {
     );
   }
 
-  /// Deletes every orphaned file [documentsUsage] would report, re-checking
-  /// references right before deleting so a file that gained a row since the
-  /// last measurement is kept. Returns the bytes freed.
+  /// Deletes every orphaned file [documentsUsage] would report, re-running the
+  /// scan first so a file that gained a row since the last measurement is
+  /// re-checked and kept. That reference check is taken once before the delete
+  /// pass, not per file. Returns the bytes freed.
   Future<int> removeOrphanedFiles() async {
     final scan = await _scanDocuments();
     var freed = 0;
