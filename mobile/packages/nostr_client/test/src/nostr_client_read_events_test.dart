@@ -77,10 +77,11 @@ class _ScriptedRelay extends Relay {
 const _secretKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 
-Nostr _newNostr() => Nostr(
+Nostr _newNostr({RelayDiagnosticsSink? diagnosticsSink}) => Nostr(
   LocalNostrSigner(_secretKey),
   [],
   (url) => RelayBase(url, RelayStatus(url)),
+  diagnosticsSink: diagnosticsSink,
 );
 
 Future<List<Event>> _signedNotes(Nostr nostr, int count) async {
@@ -119,6 +120,13 @@ NostrClient _clientOver(
 }
 
 Filter _textNotes() => Filter(kinds: const [EventKind.textNote]);
+
+/// The `queryCompletion` entries in [lines], whoever filed them. The relay
+/// pool also reports connection and dispatch activity into the same sink.
+List<RelayDiagnostic> _completionLines(List<RelayDiagnostic> lines) => [
+  for (final line in lines)
+    if (line.site == RelayDiagnosticSite.queryCompletion) line,
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -493,8 +501,8 @@ void main() {
 
   group('NostrClient queryCompletion diagnostics', () {
     test('files one line for a read the relay pool never saw', () async {
-      final nostr = _newNostr();
       final lines = <RelayDiagnostic>[];
+      final nostr = _newNostr(diagnosticsSink: lines.add);
       final client = _clientOver(
         nostr,
         connectedRelays: ['wss://a.example'],
@@ -504,18 +512,22 @@ void main() {
 
       await client.readEvents([_textNotes()]);
 
-      expect(lines, hasLength(1));
-      expect(lines.single.site, RelayDiagnosticSite.queryCompletion);
-      expect(lines.single.level, RelayDiagnosticLevel.warning);
-      expect(lines.single.message, contains('noRelay'));
-      expect(lines.single.message, contains('kinds: [1]'));
+      final completions = _completionLines(lines);
+      expect(completions, hasLength(1));
+      expect(completions.single.relayUrl, 'nostr-client');
+      expect(completions.single.level, RelayDiagnosticLevel.warning);
+      expect(completions.single.message, contains('noRelay'));
+      expect(completions.single.message, contains('kinds: [1]'));
     });
 
     test('files no line for a read the relay pool judged itself', () async {
-      final nostr = _newNostr();
+      // Both the pool and the client report into this one sink, so a client
+      // line for a read the pool already judged would show up as a second
+      // entry rather than going unseen.
+      final lines = <RelayDiagnostic>[];
+      final nostr = _newNostr(diagnosticsSink: lines.add);
       final relay = _ScriptedRelay('wss://slow.example');
       expect(await nostr.relayPool.add(relay), isTrue);
-      final lines = <RelayDiagnostic>[];
       final client = _clientOver(
         nostr,
         connectedRelays: ['wss://slow.example'],
@@ -531,10 +543,16 @@ void main() {
       final result = await read;
 
       expect(result.endedBy, QueryEnd.deadline);
+      final completions = _completionLines(lines);
       expect(
-        lines,
-        isEmpty,
-        reason: 'the pool already filed this read; a second line double-counts',
+        completions,
+        hasLength(1),
+        reason: 'the pool files this read; a client line double-counts it',
+      );
+      expect(
+        completions.single.relayUrl,
+        isNot('nostr-client'),
+        reason: "the one line is the relay pool's own",
       );
     });
   });
@@ -712,6 +730,14 @@ void main() {
 
         expect(result.pages, 0);
         expect(result.isComplete, isFalse);
+        expect(
+          result.stoppedBy,
+          isNull,
+          reason:
+              'the pager itself saw the spent deadline and opened no page. '
+              'A deadline stop here would mean the slot wait timed out first, '
+              'which is the other test',
+        );
         expect(
           relay.reqSubIds,
           isEmpty,
