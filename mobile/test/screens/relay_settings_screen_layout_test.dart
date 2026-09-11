@@ -593,4 +593,80 @@ void main() {
       },
     );
   });
+
+  group('Retry connection', () {
+    const relay = 'wss://relay.divine.video';
+
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      required _MockNostrService nostrService,
+    }) async {
+      SharedPreferences.setMockInitialValues({});
+
+      final capabilityService = _MockRelayCapabilityService();
+      final statsService = _MockRelayStatisticsService();
+      final videoEventService = _MockVideoEventService();
+      final stats = RelayStatistics(relayUrl: relay);
+
+      when(() => nostrService.configuredRelays).thenReturn([relay]);
+      when(() => nostrService.defaultRelayUrl).thenReturn(relay);
+      when(() => statsService.getStatistics(any())).thenReturn(stats);
+      when(statsService.getAllStatistics).thenReturn({relay: stats});
+      when(
+        () => capabilityService.getRelayCapabilities(any()),
+      ).thenThrow(RelayCapabilityException('Not found', relay));
+      when(videoEventService.resetAndResubscribeAll).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          nostrServiceProvider.overrideWithValue(nostrService),
+          relayCapabilityServiceProvider.overrideWithValue(capabilityService),
+          relayStatisticsServiceProvider.overrideWithValue(statsService),
+          relayStatisticsStreamProvider.overrideWith(
+            (_) => Stream.value({relay: stats}),
+          ),
+          relayListRepositoryProvider.overrideWithValue(
+            _FakeRelayListRepository(),
+          ),
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: const RelaySettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('says relays are still connecting when the wait ends '
+        'before any connects', (tester) async {
+      final nostrService = _MockNostrService();
+      when(() => nostrService.connectedRelayCount).thenReturn(0);
+      when(
+        nostrService.forceReconnectAll,
+      ).thenAnswer((_) async => ForceReconnectOutcome.stillDialling);
+
+      await pumpScreen(tester, nostrService: nostrService);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.relaySettingsRetry));
+      await tester.pumpAndSettle();
+      // The result queues behind the "Forcing relay reconnection" snackbar.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.relaySettingsStillConnecting), findsOneWidget);
+      expect(find.text(l10n.relaySettingsFailedToConnectCheck), findsNothing);
+      verify(nostrService.forceReconnectAll).called(1);
+    });
+  });
 }

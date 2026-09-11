@@ -513,6 +513,29 @@ void main() {
     );
 
     blocTest<RelaySettingsCubit, RelaySettingsState>(
+      'retryConnection reports the relays already connected while others '
+      'still dial',
+      setUp: () {
+        // A cycle that has not finished can still have connected some of the
+        // pool; saying only "still connecting" would hide relays the user can
+        // already publish through, and skip the feeds those relays serve.
+        when(
+          nostr.forceReconnectAll,
+        ).thenAnswer((_) async => ForceReconnectOutcome.stillDialling);
+        when(() => nostr.connectedRelayCount).thenReturn(1);
+      },
+      build: buildCubit,
+      act: (cubit) async {
+        final outcome = await cubit.retryConnection();
+        expect(outcome.kind, RetryConnectionOutcomeKind.connected);
+        expect(outcome.connectedCount, 1);
+      },
+      verify: (_) {
+        verify(videos.resetAndResubscribeAll).called(1);
+      },
+    );
+
+    blocTest<RelaySettingsCubit, RelaySettingsState>(
       'retryConnection emits failed and addError on service throw',
       setUp: () {
         when(nostr.forceReconnectAll).thenThrow(StateError('nope'));
