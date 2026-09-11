@@ -1217,12 +1217,18 @@ class NostrClient {
       } on CountNotSentException catch (e) {
         // No relay took the COUNT, so the pool is idle or down. Redial once,
         // as queries do, and ask again within what is left of the budget.
+        var deadlineExpired = false;
         try {
-          await retryDisconnectedRelays().timeout(remainingTimeout());
+          await retryDisconnectedRelays().timeout(
+            remainingTimeout(),
+            onTimeout: () {
+              deadlineExpired = true;
+            },
+          );
         } on TimeoutException {
-          // The redial outlived the budget; nothing is left to ask with.
+          // An independently thrown reconnect timeout may leave caller budget.
         }
-        if (remainingTimeout() == Duration.zero) {
+        if (deadlineExpired || remainingTimeout() == Duration.zero) {
           throw CountUnavailableException(e.reason);
         }
         response = await askRelays(remainingTimeout());
