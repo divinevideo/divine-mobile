@@ -173,6 +173,15 @@ class NostrClient {
   @visibleForTesting
   static int maxConcurrentQueries = 6;
 
+  /// How long [queryEventsDetailed] lets a websocket leg run past the caller's
+  /// deadline before abandoning it, and every event it holds.
+  ///
+  /// A leg ends itself at that deadline, so this only catches one that does
+  /// not. It must exceed timer latency, or an honest leg would lose the race.
+  static const Duration _websocketLegOverrunGrace = Duration(
+    milliseconds: 250,
+  );
+
   late final Pool _queryPool = Pool(maxConcurrentQueries);
 
   /// The signer used by this client for event signing and NIP-44 encryption.
@@ -874,9 +883,12 @@ class NostrClient {
   ///
   /// [timeout] is an end-to-end deadline for the cache read, reconnect sweep,
   /// query-pool acquisition, and WebSocket query together. Exhausting it
-  /// returns `timedOut: true`. A pool waiter that expires remains in the
-  /// package's FIFO only until a resource reaches it; it releases that resource
-  /// without dispatching network work.
+  /// returns `timedOut: true` alongside whatever the relays that did answer
+  /// had delivered by then. A WebSocket query that does not honor its own
+  /// budget may run for up to 250 ms beyond that deadline before its partial
+  /// events are abandoned. A pool waiter that expires remains in the package's
+  /// FIFO only until a resource reaches it; it releases that resource without
+  /// dispatching network work.
   ///
   /// `timedOut: false` with an empty `events` normally means "the relays
   /// answered and there is nothing", but only for a caller that is content to
@@ -1002,6 +1014,9 @@ class NostrClient {
     final noConnectedRelays =
         _relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool;
     final filtersJson = filters.map((f) => f.toJson()).toList();
+    // Spend only what is left of the deadline. A leg handed the whole
+    // `timeout` outlived the backstop below, which then dropped everything the
+    // relays that did answer had sent (#9030).
     Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
     runWebSocketQuery() => _nostr.queryEventsDetailed(
       filtersJson,
@@ -1009,12 +1024,12 @@ class NostrClient {
       tempRelays: effectiveTempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
-      // Its own subscription budget. The caller's end-to-end contract is
-      // enforced by the deadline applied to this call below, not by shrinking
-      // the argument here.
-      timeout: timeout,
+      timeout: remainingTimeout(),
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
+
+    Duration overrunBackstop() =>
+        remainingTimeout() + _websocketLegOverrunGrace;
 
     Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
     runPooledWebSocketQuery() async {
@@ -1029,7 +1044,7 @@ class NostrClient {
         rethrow;
       }
       try {
-        return await runWebSocketQuery().timeout(remainingTimeout());
+        return await runWebSocketQuery().timeout(overrunBackstop());
       } finally {
         resource.release();
       }
@@ -1068,7 +1083,7 @@ class NostrClient {
       try {
         websocketResult = useQueryPool
             ? await runPooledWebSocketQuery()
-            : await runWebSocketQuery().timeout(remainingTimeout());
+            : await runWebSocketQuery().timeout(overrunBackstop());
       } on TimeoutException {
         // The budget expired before the query settled. This is the same
         // inconclusive answer a relay that never settled gives — not a
