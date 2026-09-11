@@ -299,10 +299,10 @@ bool minorAccountReviewStatusAffectsRouting(
 /// un-rewritten universal-link URL into the matcher (Page Not Found).
 ///
 /// Both deep-link steps resolve a destination and then *keep going*, so the
-/// gating below still applies to them. go_router calls this at most once per
-/// navigation, so returning a destination early would put the caller past
-/// every gate — see [divineSchemeRedirectTarget] and
-/// [universalLinkToRouterPath].
+/// gating below applies in the same redirect pass. Although go_router now
+/// resolves chained top-level redirects, carrying the resolved location keeps
+/// every gate reasoning about one destination — see
+/// [divineSchemeRedirectTarget] and [universalLinkToRouterPath].
 String? appRouterRedirect(Ref ref, GoRouterState state) {
   final authService = ref.read(authServiceProvider);
 
