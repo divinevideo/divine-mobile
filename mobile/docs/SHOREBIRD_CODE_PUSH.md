@@ -151,11 +151,14 @@ Run `ios-build` or `android-build` in Codemagic as usual. They now produce
 Shorebird releases as a side effect of building the store artifact — no extra
 step, no change to how you ship.
 
-Before starting a store build, update `mobile/pubspec.yaml` to the intended
-marketing version. The iOS preflight reads the latest approved App Store
-version and refuses a candidate that is equal or lower before Shorebird builds
-or records a release. Increasing only the build number cannot reopen a closed
-App Store version train.
+Before starting a store build, confirm `mobile/pubspec.yaml` has the intended
+marketing version. Keep the current marketing version while its train is in
+TestFlight or awaiting approval, using a higher build number for each build.
+Changing the marketing version is a release decision, not an implementation
+detail, so ask a maintainer before changing it. Once App Store Connect approves
+the current version and closes that train, move to a newer marketing version:
+the iOS preflight reads the latest approved App Store version and refuses a
+candidate that is equal or lower before Shorebird builds or records a release.
 
 iOS publishing deliberately stops after uploading the Shorebird IPA to App
 Store Connect (`submit_to_testflight: false`, `submit_to_app_store: false`).

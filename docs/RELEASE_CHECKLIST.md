@@ -13,7 +13,7 @@ freeze — Divine does not run release freezes, including before launch. See
 
 - [ ] Confirm the target commit is on `main` or the intended release branch.
 - [ ] Confirm `mobile/pubspec.yaml` has the release version and build number you expect.
-- [ ] Confirm the marketing version is still the current train before changing it. Do **not** bump `mobile/pubspec.yaml` to a new marketing version (`1.0.22` → `1.0.23`) while the current version is still in TestFlight or awaiting approval on App Store Connect: TestFlight builds stay on the same marketing version with a higher build number. A new version train is opened only once the current one is approved and released, because `scripts/ios_store_version_preflight.rb` requires a marketing version strictly greater than the latest approved one, and a higher build number cannot reopen a closed train. Treat editing this version as a release decision, not an implementation detail.
+- [ ] Keep the current marketing version while its train is in TestFlight or awaiting approval. Changing `mobile/pubspec.yaml` is a release decision: ask a maintainer first, then follow [Cutting a release](../mobile/docs/SHOREBIRD_CODE_PUSH.md#cutting-a-release).
 - [ ] Review `git status` and remove temporary files, logs, or unfinished work.
 - [ ] Confirm launch-critical docs are updated:
   - [ ] [docs/P1_LAUNCH_HUB.md](P1_LAUNCH_HUB.md)
