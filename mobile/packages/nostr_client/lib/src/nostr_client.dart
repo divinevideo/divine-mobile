@@ -950,7 +950,7 @@ class NostrClient {
     return (
       events: read.result.events,
       timedOut: read.timedOut,
-      noRelays: read.result.endedBy == QueryEnd.noRelay,
+      noRelays: read.noRelays,
     );
   }
 
@@ -966,10 +966,12 @@ class NostrClient {
   /// [QueryResult.events] can never make a read the relays did not finish
   /// look finished.
   ///
-  /// Ends the relays were never asked about are reported as the nearest thing
-  /// they could have said: a disposed client, and a call with no connected
-  /// relay, as [QueryEnd.noRelay]; a query pool that closed mid-call, or a
-  /// pool slot that never arrived, as [QueryEnd.deadline].
+  /// A read the relays were never asked at all is reported as the nearest
+  /// thing they could have said: a disposed client as [QueryEnd.noRelay]; a
+  /// query pool that closed mid-call, or a pool slot that never arrived, as
+  /// [QueryEnd.deadline]. Every other read reports how the relay pool's own
+  /// read ended, including one this client believed had no relay connected —
+  /// `queryEventsDetailed`'s `noRelays` flag is what carries that belief.
   Future<QueryResult> readEvents(
     List<Filter> filters, {
     String? subscriptionId,
@@ -1003,7 +1005,11 @@ class NostrClient {
   /// still holding the REQ when the deadline fired, so it timed out too. A
   /// read skipped because the query pool closed keeps the flag it has always
   /// reported instead — see that branch.
-  Future<({QueryResult result, bool timedOut})> _read(
+  ///
+  /// `noRelays` adds what [QueryResult.endedBy] deliberately leaves out: a
+  /// pre-flight snapshot with no connected relay proves this client asked
+  /// nothing, even when the read the pool ran still ended some other way.
+  Future<({QueryResult result, bool timedOut, bool noRelays})> _read(
     List<Filter> filters, {
     required String? subscriptionId,
     required List<String>? tempRelays,
@@ -1029,7 +1035,7 @@ class NostrClient {
         events: 0,
         startedAt: startedAt,
       );
-      return (result: skipped, timedOut: false);
+      return (result: skipped, timedOut: false, noRelays: true);
     }
 
     // One deadline for the whole call, spent by every awaited step below.
@@ -1215,28 +1221,25 @@ class NostrClient {
     final limit = filters.length == 1 ? filters.first.limit : null;
     final events = _mergeEvents(cacheResults, websocketEvents, limit: limit);
 
-    // A pre-flight snapshot that saw nothing connected proves nothing was
-    // asked, which outranks however the read itself ended — the same
-    // precedence the relay pool applies to `noRelay`. The completeness flags
-    // stay the network leg's own: a cached row is not an answer from a relay.
-    final endedBy = noConnectedRelays ? QueryEnd.noRelay : network.endedBy;
+    // How the read ended is the network leg's own account of it, whatever the
+    // pre-flight snapshot said: a read whose relays answered did not end
+    // `noRelay` just because a stale snapshot listed none. The completeness
+    // flags are its own too — a cached row is not an answer from a relay.
     final result = QueryResult(
       events: events,
-      endedBy: endedBy,
+      endedBy: network.endedBy,
       possiblyCapped: network.possiblyCapped,
       confirmedExhaustive: network.confirmedExhaustive,
     );
 
     // The relay pool files a line for every read it saw that ended worth one,
-    // so the client owes one only for a read the pool never saw, or one the
-    // client's own view of the relays turned into an end worth reporting.
-    final filedByPool =
-        skippedReason == null && _worthAQueryCompletion(network);
-    if (!filedByPool && _worthAQueryCompletion(result)) {
+    // so the client owes one only for the reads the pool never saw — all of
+    // which end `noRelay` or `deadline`, so all of them are worth a line.
+    if (skippedReason != null) {
       _reportQueryCompletion(
         filters: filters,
-        endedBy: endedBy,
-        reason: skippedReason ?? 'no relay was connected',
+        endedBy: result.endedBy,
+        reason: skippedReason,
         events: events.length,
         startedAt: startedAt,
       );
@@ -1244,12 +1247,15 @@ class NostrClient {
 
     return (
       result: result,
+      // The snapshot still carries the legacy flag: it proves this client
+      // asked nothing, which an empty answer alone cannot say.
+      noRelays: noConnectedRelays || network.endedBy == QueryEnd.noRelay,
       timedOut:
           timedOutOverride ??
-          (endedBy == QueryEnd.deadline ||
+          (network.endedBy == QueryEnd.deadline ||
               // A read no relay took, ending at or after the deadline, had a
               // relay still holding the REQ when the deadline fired.
-              (endedBy == QueryEnd.noRelay &&
+              (network.endedBy == QueryEnd.noRelay &&
                   (requireAllRelaysSettled ||
                       !DateTime.now().isBefore(deadline)))),
     );
@@ -1358,7 +1364,10 @@ class NostrClient {
     }
 
     if (_queryPool.isClosed) {
-      return stopped(QueryEnd.deadline, 'the query pool closed mid-call');
+      return stopped(
+        QueryEnd.deadline,
+        'the query pool closed mid-call',
+      );
     }
     // One slot for the walk rather than one per page: the pager owns its page
     // loop, and a walk issues one REQ at a time, so holding the slot bounds
@@ -1387,13 +1396,8 @@ class NostrClient {
     }
   }
 
-  /// Whether a read that ended this way owes a `queryCompletion` line — the
-  /// same rule the relay pool applies to the reads it saw.
-  static bool _worthAQueryCompletion(QueryResult result) =>
-      !result.isComplete || result.possiblyCapped;
-
   /// Files the one [RelayDiagnosticSite.queryCompletion] line a read owes when
-  /// the relay pool never saw it, or never judged it worth a line of its own.
+  /// the relay pool never saw it.
   ///
   /// Carries the end reason, why the relays were not asked, the event count,
   /// the elapsed time and each filter's kinds and limit — never a pubkey, an

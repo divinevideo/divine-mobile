@@ -273,6 +273,56 @@ void main() {
       },
     );
 
+    for (final settled in [false, true]) {
+      test(
+        'keeps the relays own ending when the snapshot listed none '
+        '(requireAllRelaysSettled: $settled)',
+        () async {
+          // The pre-flight snapshot can be stale — a relay whose socket came
+          // up since is still asked, and answers. Calling that read `noRelay`
+          // would be untrue, and would make a full-settlement caller read a
+          // settled answer as a timeout.
+          final nostr = _newNostr();
+          final relay = _ScriptedRelay('wss://late.example');
+          expect(await nostr.relayPool.add(relay), isTrue);
+          final notes = await _signedNotes(nostr, 1);
+          final client = _clientOver(nostr, connectedRelays: const []);
+
+          final read = client.readEvents(
+            [_textNotes()],
+            useCache: false,
+            requireAllRelaysSettled: settled,
+            timeout: const Duration(seconds: 3),
+          );
+          final detailed = client.queryEventsDetailed(
+            [_textNotes()],
+            useCache: false,
+            requireAllRelaysSettled: settled,
+            timeout: const Duration(seconds: 3),
+          );
+          for (final index in [0, 1]) {
+            final subId = await relay.awaitReq(index);
+            await relay.deliver(['EVENT', subId, notes.single.toJson()]);
+            await relay.deliver(['EOSE', subId]);
+          }
+
+          expect((await read).endedBy, QueryEnd.complete);
+          final flags = await detailed;
+          expect(
+            flags.noRelays,
+            isTrue,
+            reason: 'this client still knew of no connected relay',
+          );
+          expect(
+            flags.timedOut,
+            isFalse,
+            reason: 'the relays answered and settled inside the budget',
+          );
+          expect(flags.events, hasLength(1));
+        },
+      );
+    }
+
     test('maps a disposed client to noRelay', () async {
       final nostr = _newNostr();
       final client = _clientOver(nostr, connectedRelays: ['wss://a.example']);
