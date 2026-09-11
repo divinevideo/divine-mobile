@@ -884,9 +884,11 @@ class NostrClient {
   /// [timeout] is an end-to-end deadline for the cache read, reconnect sweep,
   /// query-pool acquisition, and WebSocket query together. Exhausting it
   /// returns `timedOut: true` alongside whatever the relays that did answer
-  /// had delivered by then. A pool waiter that expires remains in the
-  /// package's FIFO only until a resource reaches it; it releases that resource
-  /// without dispatching network work.
+  /// had delivered by then. A WebSocket query that does not honor its own
+  /// budget may run for up to 250 ms beyond that deadline before its partial
+  /// events are abandoned. A pool waiter that expires remains in the package's
+  /// FIFO only until a resource reaches it; it releases that resource without
+  /// dispatching network work.
   ///
   /// `timedOut: false` with an empty `events` normally means "the relays
   /// answered and there is nothing", but only for a caller that is content to

@@ -5846,8 +5846,10 @@ void main() {
 
       group('when a relay never answers', () {
         late Event delivered;
+        late List<Duration> handedBudgets;
 
         setUp(() async {
+          handedBudgets = [];
           // What the relays that did answer sent before the deadline.
           final signer = LocalNostrSigner(generatePrivateKey());
           final author = (await signer.getPublicKey())!;
@@ -5870,6 +5872,7 @@ void main() {
             ),
           ).thenAnswer((invocation) {
             final budget = invocation.namedArguments[#timeout] as Duration;
+            handedBudgets.add(budget);
             final settled = Completer<List<Event>>();
             Timer(
               budget + const Duration(milliseconds: 20),
@@ -5931,6 +5934,11 @@ void main() {
 
           expect(result.timedOut, isTrue);
           expect(result.events.map((event) => event.id), [delivered.id]);
+          expect(handedBudgets, hasLength(2));
+          expect(
+            handedBudgets.last,
+            lessThan(const Duration(milliseconds: 800)),
+          );
         });
       });
     });
