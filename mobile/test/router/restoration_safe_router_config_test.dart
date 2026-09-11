@@ -185,39 +185,6 @@ void main() {
       });
     });
 
-    group('restorationSafeRouterConfig', () {
-      testWidgets('keeps a router mounted again alive when its state no longer '
-          'decodes', (tester) async {
-        final saved = await _savedStateFromRetiredLocation(tester);
-
-        final router = _buildRouter(withRetiredRoute: false);
-        addTearDown(router.dispose);
-        final reporter = _RecordingCrashReporter();
-        final config = restorationSafeRouterConfig(
-          router,
-          crashReporter: reporter,
-        );
-        Widget app(Key key) => MaterialApp.router(
-          key: key,
-          routerConfig: config,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        );
-        await tester.pumpWidget(app(const ValueKey(1)));
-        await tester.pumpAndSettle();
-
-        // The router reports every location it lands on, so its provider
-        // holds an encoded state. A Router mounted again over the same
-        // GoRouter decodes it from Router.restoreState — the #7869 stack.
-        router.routeInformationProvider.routerReportsNewRouteInformation(saved);
-        await tester.pumpWidget(app(const ValueKey(2)));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(reporter.recorded, hasLength(1));
-      });
-    });
-
     group('restoreRouteInformation', () {
       testWidgets('delegates encoding unchanged', (tester) async {
         final router = _buildRouter(withRetiredRoute: false);
@@ -243,6 +210,39 @@ void main() {
               ?.uri,
         );
       });
+    });
+  });
+
+  group('restorationSafeRouterConfig', () {
+    testWidgets('keeps a router mounted again alive when its state no longer '
+        'decodes', (tester) async {
+      final saved = await _savedStateFromRetiredLocation(tester);
+
+      final router = _buildRouter(withRetiredRoute: false);
+      addTearDown(router.dispose);
+      final reporter = _RecordingCrashReporter();
+      final config = restorationSafeRouterConfig(
+        router,
+        crashReporter: reporter,
+      );
+      Widget app(Key key) => MaterialApp.router(
+        key: key,
+        routerConfig: config,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      );
+      await tester.pumpWidget(app(const ValueKey(1)));
+      await tester.pumpAndSettle();
+
+      // The router reports every location it lands on, so its provider
+      // holds an encoded state. A Router mounted again over the same
+      // GoRouter decodes it from Router.restoreState — the #7869 stack.
+      router.routeInformationProvider.routerReportsNewRouteInformation(saved);
+      await tester.pumpWidget(app(const ValueKey(2)));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(reporter.recorded, hasLength(1));
     });
   });
 }
