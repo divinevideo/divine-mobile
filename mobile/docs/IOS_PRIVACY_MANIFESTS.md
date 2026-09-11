@@ -96,7 +96,7 @@ the manifest rules and the release checklist.
 | D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
 | D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
 | D6 — Performance Data | Approved | Linked (conservative), purposes Analytics and App Functionality, tracking false. | Performance Data declared linked. |
-| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. |
+| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. Not linked holds only while neither Divine nor Shorebird joins the installation identifier to Divine account data; revisit D7 if that changes. |
 
 ### Tracking posture before each candidate
 
