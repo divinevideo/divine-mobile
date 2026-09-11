@@ -403,6 +403,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     /// the audio-mix edge de-click fades do not apply, so an HLS loop seam can
     /// click; HLS is only ever reached as a last-resort fallback source, which
     /// does not justify rebuilding those ramps here.
+    ///
+    /// `trimToCommonTrackEnd` is ignored here, and cannot be honoured: the
+    /// common track end comes from `load(.timeRange)` on the asset's video and
+    /// audio tracks, and an HLS asset has none to load. The clip plays to the
+    /// playlist's end, as it does on Android (#8897).
     private func makeHlsPlayerItem(
         from clipMap: [String: Any]
     ) async throws -> (AVPlayerItem, [Double], [Double]) {

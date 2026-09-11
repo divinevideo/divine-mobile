@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:divine_video_player/src/video_buffer_profile.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -146,14 +147,26 @@ class VideoClip {
   /// rather than a seam. Clamping only ever shortens: [end], when set, still
   /// wins if it is earlier.
   ///
-  /// Support is per-platform: Apple and Android both honour it for local and
-  /// remote sources, and the web and Linux backends ignore it. Reading a
-  /// remote source's track lengths costs a metadata request before playback
-  /// starts, so both platforms cache the result per source and Android gives
-  /// up after a short wait and plays unclamped rather than hold the load.
-  /// Android does not probe an HLS source at all — `MediaExtractor` cannot
-  /// open a playlist — so an HLS clip plays unclamped rather than paying for a
-  /// read that can only fail.
+  /// Support is per-platform, and the web and Linux backends ignore it.
+  /// Reading a source's track lengths costs a metadata read, which for a
+  /// remote source is a network request in front of first frame:
+  ///
+  /// * Apple reads both tracks before it builds the composition, for local
+  ///   and remote sources alike.
+  /// * Android reads a local file before the load. Whether a remote source's
+  ///   read also sits in front of the load depends on the controller's
+  ///   [VideoBufferProfile]: a [VideoBufferProfile.full] player reads first,
+  ///   bounded by a short wait after which it plays unclamped; a
+  ///   [VideoBufferProfile.feed] player starts immediately and warms the
+  ///   lengths in the background, which tightens the playlist only while the
+  ///   player still sits paused at frame zero — a feed preloads its tiles
+  ///   that way, so the clamp usually lands before play. A feed player that
+  ///   was already playing when the read landed keeps the seam for that play,
+  ///   and the cached lengths clamp the next load of the source instead.
+  ///   Either way Android caches the result per source.
+  /// * Neither platform probes an HLS source: an HLS asset exposes no tracks
+  ///   to Apple, and Android's `MediaExtractor` cannot open a playlist. An
+  ///   HLS clip plays unclamped on both.
   final bool trimToCommonTrackEnd;
 
   /// Serializes this clip for platform channel transport.
