@@ -107,7 +107,10 @@ data type gets one answer covering the app and every SDK: it is linked if any
 collector links it, and its purposes are the union of every collector's
 purposes. Device ID, Crash Data and Other Diagnostic Data are declared linked
 by the Runner manifest (D2) and not linked by Firebase's own manifests, so the
-label answers linked for all three.
+label answers linked for all three. D7 works the same way: Shorebird's own
+Device ID, Product Interaction and Other Diagnostic Data stay not linked, but
+the label answers linked for those types because the Runner manifest declares
+them linked.
 
 Xcode's aggregate privacy report only shows collection that some bundle
 declares, and several SDKs in this app declare none. Their collection has to be
