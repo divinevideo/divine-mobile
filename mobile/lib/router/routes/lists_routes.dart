@@ -7,6 +7,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
+import 'package:openvine/features/people_lists/view/people_list_members_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -111,6 +112,30 @@ List<RouteBase> listsRoutes(Ref ref) {
           );
         }
         return UserListPeopleScreen(
+          listId: listId,
+          ownerPubkey: state.uri.queryParameters['owner'],
+        );
+      },
+    ),
+
+    // PEOPLE LIST ROSTER route: every member, behind the list's "View all".
+    // Resolves the list the same two ways the members route does, so a
+    // discovered list's `owner` query param carries over.
+    // Gated on FeatureFlag.curatedLists (see CreatePeopleListPage route).
+    GoRoute(
+      path: PeopleListMembersScreen.path,
+      name: PeopleListMembersScreen.routeName,
+      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
+      builder: (context, state) {
+        final listId = state.pathParameters['listId'];
+        if (listId == null || listId.isEmpty) {
+          return RouteErrorScreen(
+            message: context.l10n.routeInvalidListId,
+            title: context.l10n.peopleListsRouteTitle,
+            showBackButton: true,
+          );
+        }
+        return PeopleListMembersScreen(
           listId: listId,
           ownerPubkey: state.uri.queryParameters['owner'],
         );
