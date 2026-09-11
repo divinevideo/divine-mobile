@@ -522,13 +522,19 @@ class Nostr {
   /// Set [requireAllRelaysSettled] when an incomplete answer must be reported
   /// as `timedOut` rather than as a result — see [RelayPool.query].
   ///
+  /// `events` holds whatever had arrived when the read stopped, even when
+  /// `timedOut` is `true` — a deadline no longer empties the answer, it only
+  /// marks it incomplete.
+  ///
   /// `noRelaysParticipated` reports that no relay took the REQ at all, which
   /// an empty `events` on its own cannot distinguish from every relay holding
   /// nothing. It stays `false` when the fan-out itself ran out of time, since
   /// that leaves participation genuinely unknown.
   ///
   /// It runs the same read as [readEvents] and maps how that read ended onto
-  /// the two flags.
+  /// the two flags. Use [readEvents] directly for the full [QueryResult], or
+  /// [readAllEvents] to walk every event a filter matches across many pages
+  /// instead of one capped read.
   Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
   queryEventsDetailed(
     List<Map<String, dynamic>> filters, {
@@ -568,6 +574,15 @@ class Nostr {
     );
   }
 
+  /// Reads events matching [filters] and returns them as a plain list.
+  ///
+  /// A read that stops before it finishes — [timeout] elapsing, a relay
+  /// closing the subscription, or a socket dropping — still returns whatever
+  /// events had already arrived rather than an empty list; the returned list
+  /// alone does not say whether the read finished. Use [readEvents] for the
+  /// full [QueryResult], or [queryEventsDetailed] for a lighter
+  /// timed-out/no-relays summary. Use [readAllEvents] to walk every event a
+  /// filter matches across many pages instead of one capped read.
   Future<List<Event>> queryEvents(
     List<Map<String, dynamic>> filters, {
     String? id,

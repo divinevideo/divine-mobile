@@ -161,6 +161,89 @@ Create a one-time query subscription.
 
 **Returns:** the subscription id, plus `sentTo` — the relays that took the REQ, cache relays included. An empty `sentTo` means nothing was asked, which an empty result set on its own cannot distinguish from every relay holding nothing. The future resolves when the fan-out is done; `onComplete` may already have fired, since a fan-out that settles the query calls it inline.
 
+##### readEvents()
+```dart
+Future<QueryResult> readEvents(
+  List<Map<String, dynamic>> filters,
+  {String? id, List<String>? tempRelays, List<int> relayTypes = RelayType.all, bool sendAfterAuth = false, Duration timeout = const Duration(seconds: 5), DateTime? deadline, bool requireAllRelaysSettled = false}
+)
+```
+Read events matching `filters` and report how the read ended — see
+`QueryResult`. The read stops at `deadline` (`timeout` from now when
+`deadline` is not given) and returns whatever events had arrived by then,
+whether or not the read finished.
+
+**Parameters:**
+- `filters`: Nostr filters
+- `id`: Optional query ID
+- `tempRelays`: Optional temporary relays
+- `relayTypes`: Types of relays to use
+- `sendAfterAuth`: Send query after relay authentication
+- `timeout`: How long to wait when `deadline` is not given
+- `deadline`: Absolute time to stop the read, overriding `timeout`
+- `requireAllRelaysSettled`: Report an incomplete answer as incomplete
+  rather than as a finished result — see `query()`
+
+**Returns:** a `QueryResult` — the events collected plus how the read
+ended. A read that ends any way other than a complete, uncapped answer
+files one `queryCompletion` diagnostic line.
+
+**Trade-off:** `NostrClient`'s early-return paths (a disposed client, no
+connected relay, a closed query pool) each file their own `queryCompletion`
+line under a single `nostr-client` relay-url key, so those lines all share
+one rate-limit bucket — three a minute, then a suppression summary. A cold
+start that skips many reads at once surfaces the first three and a count,
+not one line per read. Reads the relay pool itself completes are rate-limited
+per the relay that answered, so they are not affected.
+
+##### readAllEvents()
+```dart
+Future<PagedQueryResult> readAllEvents(
+  Map<String, dynamic> filter,
+  {int pageSize = 500, int maxPages = 50, Duration pageTimeout = const Duration(seconds: 10), DateTime? deadline, List<String>? tempRelays, List<int> relayTypes = RelayType.all}
+)
+```
+Walk every event `filter` matches, a page of `pageSize` at a time, using an
+`until` cursor. Each page requires full relay settlement; the walk stops on
+an empty settled page, a page confirmed exhaustive, `maxPages`, or
+`deadline` — see `PagedQueryResult`.
+
+**Parameters:**
+- `filter`: a single Nostr filter (its `limit` and `until` are set per page)
+- `pageSize`: events requested per page
+- `maxPages`: hard ceiling on the number of pages walked
+- `pageTimeout`: per-page budget, cut short by `deadline`
+- `deadline`: absolute time to stop the whole walk
+- `tempRelays`: optional temporary relays
+- `relayTypes`: types of relays to use
+
+**Returns:** a `PagedQueryResult` — every event collected, whether the walk
+finished, how many pages it took, and (when incomplete) which page's
+`QueryEnd` stopped it.
+
+**Trade-off:** `NostrClient.readAllEvents` (in `nostr_client`) holds one
+query-pool slot for the whole walk rather than one per page, so a long walk
+can occupy a slot for up to `maxPages × pageTimeout` — 500 seconds at the
+defaults above — rather than releasing it between pages. A caller issuing
+many concurrent reads should size `maxPages`/`pageTimeout` with that in mind.
+
+##### queryEventsDetailed()
+```dart
+Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
+queryEventsDetailed(
+  List<Map<String, dynamic>> filters,
+  {String? id, List<String>? tempRelays, List<int> relayTypes = RelayType.all, bool sendAfterAuth = false, Duration timeout = const Duration(seconds: 5), bool requireAllRelaysSettled = false}
+)
+```
+Runs the same read as `readEvents()` and reduces `QueryResult.endedBy` to
+two flags instead of returning the full result.
+
+**Returns:** `events` — populated with whatever had arrived even when
+`timedOut` is `true`; a deadline no longer empties the answer, it only
+marks it incomplete. `timedOut` — the caller's deadline (or, with
+`requireAllRelaysSettled`, a fan-out no relay took) ended the read before it
+settled. `noRelaysParticipated` — no relay took the `REQ` at all.
+
 ##### queryEvents()
 ```dart
 Future<List<Event>> queryEvents(
@@ -170,7 +253,16 @@ Future<List<Event>> queryEvents(
 ```
 Query events and return as a Future.
 
-**Returns:** List of events matching the filters
+A read that stops before it finishes — `timeout` elapsing, a relay closing
+the subscription, or a socket dropping — still returns whatever events had
+already arrived rather than an empty list; this method alone does not say
+whether the read finished. Use `readEvents()` for the full `QueryResult`, or
+`queryEventsDetailed()` for a lighter timed-out/no-relays summary. Use
+`readAllEvents()` to walk every event a filter matches across many pages
+instead of one capped read.
+
+**Returns:** List of events matching the filters (may be partial if the
+read did not finish)
 
 ##### unsubscribe()
 ```dart
@@ -238,6 +330,79 @@ Check if any relays are available for reading.
 bool writable()
 ```
 Check if any relays are available for writing.
+
+### QueryEnd
+
+How a one-shot relay read ended. Returned as `QueryResult.endedBy` from
+`readEvents()` and, when a page stops a walk early, as
+`PagedQueryResult.stoppedBy` from `readAllEvents()`.
+
+```dart
+enum QueryEnd {
+  complete,       // every relay sent EOSE (or a NIP-67 finish hint) in time
+  settledEarly,   // some relays answered fully; at least one stayed silent
+  relayClosed,    // a relay sent CLOSED before answering in full
+  socketDropped,  // a relay's connection dropped mid-read
+  deadline,       // the caller's own deadline elapsed first
+  noRelay,        // no relay accepted the REQ at all
+}
+```
+
+Precedence when more than one applies: `noRelay` when no relay took the
+`REQ`; otherwise `deadline` when the caller's deadline fired before the
+read settled; otherwise the most severe per-relay outcome, in the order
+`socketDropped` > `relayClosed` > `settledEarly` > `complete`.
+
+### QueryResult
+
+The outcome of a one-shot relay read, returned by `readEvents()`.
+
+```dart
+class QueryResult {
+  final List<Event> events;
+  final QueryEnd endedBy;
+  final bool possiblyCapped;       // defaults to false
+  final bool confirmedExhaustive;  // defaults to false
+  bool get isComplete;             // true only when endedBy == QueryEnd.complete
+}
+```
+
+**Properties:**
+- `events`: events that had arrived by the time the read ended — populated
+  even when `endedBy` is not `QueryEnd.complete`; a read that stops early
+  keeps whatever it collected instead of discarding it.
+- `endedBy`: why the read ended — see `QueryEnd`.
+- `possiblyCapped`: `true` when a relay may have withheld matching events
+  because the read reached that relay's own result-size limit — including a
+  relay that sent a NIP-67 `more` hint, sent events outside the filters, or
+  sent a frame the pool rejected. Can be `true` alongside `isComplete`: a
+  relay can answer fully within its own cap and still call that "done".
+- `confirmedExhaustive`: `true` only when every relay that answered
+  explicitly confirmed it had no further matching events (NIP-67 `finish`).
+
+### PagedQueryResult
+
+The outcome of a paged read, returned by `readAllEvents()`.
+
+```dart
+class PagedQueryResult {
+  final List<Event> events;
+  final bool isComplete;
+  final int pages;
+  final QueryEnd? stoppedBy;
+}
+```
+
+**Properties:**
+- `events`: every event collected across all pages.
+- `isComplete`: `true` when the pager walked every page it needed — an
+  empty settled page, or a page confirmed exhaustive — rather than stopping
+  early.
+- `pages`: how many pages the pager issued.
+- `stoppedBy`: the `QueryEnd` of the page whose outcome stopped the walk;
+  `null` when `isComplete` is `true`, or when the walk stopped for a
+  pager-level reason (ran out of pages, hit the deadline) that is not a
+  property of any single page.
 
 ### Event
 

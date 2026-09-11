@@ -923,7 +923,9 @@ class NostrClient {
   /// `timedOut: true` is never an empty answer by itself: a read that spends
   /// its whole budget still returns the events that arrived before it ran
   /// out, merged with the cached rows. Use [readEvents] to see *how* the read
-  /// ended rather than only whether it ran out of time.
+  /// ended rather than only whether it ran out of time, or [readAllEvents] to
+  /// walk every event a filter matches across many pages instead of one
+  /// capped read.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsDetailed(
     List<Filter> filters, {
@@ -1275,6 +1277,15 @@ class NostrClient {
   /// Then queries via WebSocket and merges results.
   ///
   /// Results from websocket are cached for future queries.
+  ///
+  /// A read that stops before it finishes — [timeout] elapsing, a relay
+  /// closing the subscription, or a socket dropping — still returns whatever
+  /// events had already arrived, merged with the cache, rather than an empty
+  /// list; the returned list alone does not say whether the read finished.
+  /// Use [readEvents] for the full [QueryResult], or [queryEventsDetailed]
+  /// for a lighter timed-out/no-relays summary. Use [readAllEvents] to walk
+  /// every event a filter matches across many pages instead of one capped
+  /// read.
   ///
   /// Calling this on a disposed client is a no-op that returns an empty
   /// list. If the client is disposed while a call is in flight, the
