@@ -7,12 +7,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 class _FakePathProvider extends Fake
     with MockPlatformInterfaceMixin
@@ -186,6 +191,90 @@ void main() {
     });
   });
 
+  group(DetachedClipLayerView, () {
+    late Directory tempDir;
+    late PathProviderPlatform originalPathProvider;
+
+    setUp(() async {
+      tempDir = Directory.systemTemp.createTempSync('detached_layer_view');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+      detachedClipPlayers.resetForTesting();
+      resetCachedDocumentsPath();
+      await getDocumentsPath();
+    });
+
+    tearDown(() {
+      resetCachedDocumentsPath();
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    Map<String, dynamic> keyedMeta(ChromaKey key) => DetachedClipLayerData(
+      clip: _clip(),
+      layerId: 'layer-1',
+      chromaKey: ClipChromaKey(key: key),
+    ).toMeta();
+
+    ChromaKeyedVideo keyedVideo(WidgetTester tester) =>
+        tester.widget(find.byType(ChromaKeyedVideo).first);
+
+    Future<void> disposeLayerView(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      detachedClipPlayers.resetForTesting();
+    }
+
+    testWidgets(
+      'applies the layer key over the canvas without a checkerboard',
+      (tester) async {
+        await tester.pumpWidget(
+          _app(
+            _layerHost(
+              DetachedClipLayerView(
+                meta: keyedMeta(const ChromaKey.greenScreen()),
+              ),
+            ),
+          ),
+        );
+
+        final preview = keyedVideo(tester);
+        expect(preview.chromaKey?.key, const ChromaKey.greenScreen());
+        expect(preview.previewTransparency, isFalse);
+        await disposeLayerView(tester);
+      },
+    );
+
+    testWidgets('re-reads a changed layer key without replacing the view', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          _layerHost(
+            DetachedClipLayerView(
+              meta: keyedMeta(const ChromaKey.greenScreen()),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        _app(
+          _layerHost(
+            DetachedClipLayerView(
+              meta: keyedMeta(const ChromaKey.blueScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final preview = keyedVideo(tester);
+      expect(preview.chromaKey?.key, const ChromaKey.blueScreen());
+      expect(preview.previewTransparency, isFalse);
+      await disposeLayerView(tester);
+    });
+  });
+
   group(DetachedClipPoster, () {
     late Directory tempDir;
     late PathProviderPlatform originalPathProvider;
@@ -257,9 +346,7 @@ void main() {
         layerId: 'layer-1',
       ).toMeta();
 
-      await tester.pumpWidget(
-        _app(DetachedClipPoster(meta: meta)),
-      );
+      await tester.pumpWidget(_app(DetachedClipPoster(meta: meta)));
       await tester.pumpAndSettle();
 
       // The draft render path mounts every layer offscreen just to rasterize
