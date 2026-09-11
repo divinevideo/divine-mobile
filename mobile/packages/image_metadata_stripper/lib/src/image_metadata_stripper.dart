@@ -40,11 +40,39 @@ class ImageMetadataStripper {
   /// Returns the resulting [File] (path may differ from input).
   /// On failure, logs the error and returns the unmodified [imageFile]
   /// so the upload can proceed with metadata intact rather than crashing.
+  /// Callers that must not send the original on failure must use
+  /// [stripMetadataInPlaceOrThrow] instead.
   static Future<File> stripMetadataInPlace(File imageFile) async {
+    try {
+      return await stripMetadataInPlaceOrThrow(imageFile);
+    } on Exception catch (e, stackTrace) {
+      Log.error(
+        'Failed to strip image metadata',
+        name: 'ImageMetadataStripper',
+        category: LogCategory.storage,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return imageFile;
+    }
+  }
+
+  /// Fail-closed variant of [stripMetadataInPlace].
+  ///
+  /// Throws instead of returning the original when stripping fails, so a
+  /// privacy-sensitive caller can drop the attachment rather than send bytes
+  /// whose metadata it could not confirm was removed. Never returns the
+  /// original once stripping has failed.
+  static Future<File> stripMetadataInPlaceOrThrow(File imageFile) async {
     final tempPath = '${imageFile.path}.stripped';
     try {
       await stripMetadata(inputPath: imageFile.path, outputPath: tempPath);
       final tempFile = File(tempPath);
+      if (!tempFile.existsSync()) {
+        throw FileSystemException(
+          'Metadata stripper produced no output for ${imageFile.path}',
+        );
+      }
 
       // The native strippers output JPEG for every format except PNG.
       // Rename the file so the extension matches the actual content.
@@ -59,23 +87,19 @@ class ImageMetadataStripper {
       }
 
       return targetFile;
-    } on Exception catch (e, stackTrace) {
-      Log.error(
-        'Failed to strip image metadata',
-        name: 'ImageMetadataStripper',
-        category: LogCategory.storage,
-        error: e,
-        stackTrace: stackTrace,
-      );
-      // Clean up temp file if it was partially written
-      try {
-        final tempFile = File(tempPath);
-        if (tempFile.existsSync()) await tempFile.delete();
-      } on Exception catch (_) {
-        // Best-effort cleanup; returning the original image remains safe.
-      }
+    } on Exception {
+      await _deleteTempFile(tempPath);
+      rethrow;
     }
-    return imageFile;
+  }
+
+  static Future<void> _deleteTempFile(String tempPath) async {
+    try {
+      final tempFile = File(tempPath);
+      if (tempFile.existsSync()) await tempFile.delete();
+    } on Exception catch (_) {
+      // Best-effort cleanup of a partially written temp file.
+    }
   }
 
   /// Strips EXIF metadata from raw image bytes using pure Dart.

@@ -403,5 +403,74 @@ void main() {
         );
       });
     });
+
+    group('stripMetadataInPlaceOrThrow', () {
+      late Directory tempDir;
+
+      setUp(() async {
+        tempDir = await Directory.systemTemp.createTemp(
+          'image_metadata_stripper_fail_closed_test_',
+        );
+      });
+
+      tearDown(() async {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+
+      test('returns the stripped file when the native call succeeds', () async {
+        final imageFile = File('${tempDir.path}/photo.jpg');
+        await imageFile.writeAsBytes([0xFF, 0xD8, 0xFF, 0xE0]);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              final args = call.arguments as Map;
+              await File(args['outputPath'] as String).writeAsBytes([
+                0xFF,
+                0xD8,
+                0xFF,
+                0xDB,
+              ]);
+              return null;
+            });
+
+        final result = await ImageMetadataStripper.stripMetadataInPlaceOrThrow(
+          imageFile,
+        );
+
+        expect(result.existsSync(), isTrue);
+        expect(await result.readAsBytes(), equals([0xFF, 0xD8, 0xFF, 0xDB]));
+      });
+
+      test('throws instead of returning the original when no output is '
+          'produced', () async {
+        final imageFile = File('${tempDir.path}/photo.jpg');
+        await imageFile.writeAsBytes([0xFF, 0xD8, 0xFF, 0xE0]);
+        // Handler reports success but creates no output file.
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async => null);
+
+        await expectLater(
+          () => ImageMetadataStripper.stripMetadataInPlaceOrThrow(imageFile),
+          throwsA(isA<FileSystemException>()),
+        );
+        // The original is left on disk; the caller owns not sending it.
+        expect(imageFile.existsSync(), isTrue);
+      });
+
+      test('stripMetadataInPlace still fails open and returns the '
+          'original', () async {
+        final imageFile = File('${tempDir.path}/photo.jpg');
+        await imageFile.writeAsBytes([0xFF, 0xD8, 0xFF, 0xE0]);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async => null);
+
+        final result = await ImageMetadataStripper.stripMetadataInPlace(
+          imageFile,
+        );
+
+        expect(result.path, equals(imageFile.path));
+      });
+    });
   });
 }
