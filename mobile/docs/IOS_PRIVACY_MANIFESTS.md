@@ -52,6 +52,13 @@ when refreshing it until each change is present upstream:
 - `Resources/PrivacyInfo.xcprivacy` declares the required file-timestamp API,
   and `LibProofMode.podspec` bundles that manifest. The upstream contribution
   remains tracked in #8851.
+- `Classes/Proof.swift` records the network fields (`IPv4`, `IPv6`,
+  `DataType`, `Network` and `NetworkType`) only when `showMobileNetwork` is
+  true. Upstream records them in every proof whatever the options say, so a
+  refresh that drops this change puts the phone's IP addresses back into every
+  signed proof (#9073). `LibProofModeNetworkFieldsTests` in
+  `ios/RunnerTests/RunnerTests.swift` fails when the change is missing. No CI
+  job runs `RunnerTests`, so run it after every refresh.
 
 The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
 sets `showDeviceIds: false`, so compiling out `AdSupport` and
@@ -75,11 +82,19 @@ privacy label, which is why it was kept out of the required-reason API audit.
 
 `LibProofMode`'s collected-data section is empty because Divine constructs
 `ProofGenerationOptions(showDeviceIds: false, showLocation: false,
-showMobileNetwork: false, notarizationProviders: [])`. Those flags gate the
-corresponding blocks in `Proof.swift` (`buildProof`, lines 408 / 430 / 439), so
-no device ID, location or carrier data enters the proof. **If any of those flags
-is ever flipped to `true`, this manifest and the App Store privacy label must be
-updated in the same change.**
+showMobileNetwork: false, notarizationProviders: [])`. In `Proof.swift`'s
+`buildProof`, `showDeviceIds` gates the device IDs, `showLocation` gates the
+location, and `showMobileNetwork` gates the carrier and network fields: cell
+info, IP addresses, connection status and type, and radio technology. Only the
+cell-info gate is upstream; the rest is Divine's own (see the vendor delta
+above). So no device ID, location or network data enters the proof. It still
+records the file name, hash and timestamps, the hardware model, screen size,
+language and region. **If any of those flags is ever flipped to `true`, this
+manifest and the App Store privacy label must be updated in the same change.**
+
+The proof files themselves stay on the device: the published `proofmode` tag
+carries the media hash and signature, not this CSV. Publishing the CSV would be
+new collection, and needs the same manifest and label review.
 
 ## Privacy-label decisions (#8850)
 
