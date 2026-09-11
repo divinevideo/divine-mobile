@@ -2905,7 +2905,6 @@
     "peopleListsNoPeopleSubtitle": "始めるにはユーザーを追加してください",
     "peopleListsNoVideosTitle": "まだ動画がありません",
     "peopleListsNoVideosSubtitle": "リストメンバーの動画がここに表示されます",
-    "peopleListsNoVideosAvailable": "利用可能な動画がありません",
     "peopleListsFailedToLoadVideos": "動画の読み込みに失敗しました",
     "peopleListsVideoNotAvailable": "動画は利用できません",
     "peopleListsBackToGridTooltip": "グリッドに戻る",

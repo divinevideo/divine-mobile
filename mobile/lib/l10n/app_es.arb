@@ -2920,7 +2920,6 @@
     "peopleListsNoPeopleSubtitle": "Añade personas para empezar",
     "peopleListsNoVideosTitle": "Aún no hay videos",
     "peopleListsNoVideosSubtitle": "Los videos de los miembros de la lista aparecerán aquí",
-    "peopleListsNoVideosAvailable": "No hay videos disponibles",
     "peopleListsFailedToLoadVideos": "Error al cargar los videos",
     "peopleListsVideoNotAvailable": "Video no disponible",
     "peopleListsBackToGridTooltip": "Volver a la cuadrícula",

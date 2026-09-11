@@ -2912,7 +2912,6 @@
     "peopleListsNoPeopleSubtitle": "Lägg till personer för att komma igång",
     "peopleListsNoVideosTitle": "Inga videor än",
     "peopleListsNoVideosSubtitle": "Videor från listmedlemmar visas här",
-    "peopleListsNoVideosAvailable": "Inga videor tillgängliga",
     "peopleListsFailedToLoadVideos": "Det gick inte att läsa in videor",
     "peopleListsVideoNotAvailable": "Video ej tillgänglig",
     "peopleListsBackToGridTooltip": "Tillbaka till rutnät",

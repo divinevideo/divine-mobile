@@ -3956,9 +3956,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి';
 
   @override
-  String get peopleListsNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'వీడియోలను లోడ్ చేయడంలో విఫలమైంది';
 
@@ -5079,6 +5076,34 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>

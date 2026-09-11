@@ -2373,7 +2373,6 @@
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
-  "peopleListsNoVideosAvailable": "No videos available",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
   "peopleListsVideoNotAvailable": "Video not available",
   "peopleListsBackToGridTooltip": "Back to grid",
@@ -3061,6 +3060,29 @@
   "listsDiscoveryLoadingLabel": "Loading lists",
   "@listsDiscoveryLoadingLabel": {
     "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@listLoopsCount": {
+    "description": "Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "formatted": { "type": "String" }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "@listStatsSeparator": {
+    "description": "Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently."
+  },
+  "peopleListsViewAllMembers": "View all",
+  "@peopleListsViewAllMembers": {
+    "description": "Beside the piled member avatars on a people list; opens the full roster of the list's members."
+  },
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} people}}",
+  "@peopleListsPeopleCount": {
+    "description": "Subtitle of a people list's roster screen, under the list name.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   },
   "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
   "@listsDiscoveryEmpty": {

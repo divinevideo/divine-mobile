@@ -1480,7 +1480,6 @@
     "peopleListsNoPeopleSubtitle": "Добави някого, за да започнеш",
     "peopleListsNoVideosTitle": "Още няма видеа",
     "peopleListsNoVideosSubtitle": "Видеата от хората в списъка ще се появят тук",
-    "peopleListsNoVideosAvailable": "Няма налични видеа",
     "peopleListsFailedToLoadVideos": "Не успяхме да заредим видеата",
     "peopleListsVideoNotAvailable": "Видеото не е налично",
     "peopleListsBackToGridTooltip": "Обратно към мрежата",

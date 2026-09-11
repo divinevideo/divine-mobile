@@ -1933,7 +1933,6 @@
   "peopleListsNoPeopleSubtitle": "加一些人进来吧",
   "peopleListsNoVideosTitle": "还没有视频",
   "peopleListsNoVideosSubtitle": "列表成员的视频会显示在这里",
-  "peopleListsNoVideosAvailable": "暂无视频",
   "peopleListsFailedToLoadVideos": "视频加载失败",
   "peopleListsVideoNotAvailable": "视频不可用",
   "peopleListsBackToGridTooltip": "返回网格",

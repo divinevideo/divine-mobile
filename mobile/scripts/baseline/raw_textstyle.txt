@@ -38,7 +38,7 @@ lib/screens/original_sound_detail_screen.dart	4
 lib/screens/other_profile_screen.dart	2
 lib/screens/profile_setup/widgets/profile_setup_listeners.dart	4
 lib/screens/search_results/widgets/videos_section.dart	1
-lib/screens/user_list_people_screen.dart	15
+lib/screens/user_list_people_screen.dart	8
 lib/services/watermark_image_generator.dart	1
 lib/startup/database_bootstrap_failure_app.dart	4
 lib/widgets/add_to_list_dialog.dart	10

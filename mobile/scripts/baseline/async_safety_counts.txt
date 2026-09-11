@@ -111,7 +111,7 @@ discarded_futures|lib/screens/settings/storage/storage_management_page.dart	2
 discarded_futures|lib/screens/settings/support_center_screen.dart	3
 discarded_futures|lib/screens/sound_detail_screen.dart	4
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
-discarded_futures|lib/screens/user_list_people_screen.dart	5
+discarded_futures|lib/screens/user_list_people_screen.dart	4
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/video_detail_screen.dart	6
 discarded_futures|lib/screens/video_editor/video_audio_editor_timing_screen.dart	6

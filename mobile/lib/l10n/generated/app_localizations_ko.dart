@@ -3581,9 +3581,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '목록 구성원의 동영상이 여기에 표시됩니다';
 
   @override
-  String get peopleListsNoVideosAvailable => '사용 가능한 동영상 없음';
-
-  @override
   String get peopleListsFailedToLoadVideos => '동영상을 불러오지 못했습니다';
 
   @override
@@ -4625,6 +4622,34 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>

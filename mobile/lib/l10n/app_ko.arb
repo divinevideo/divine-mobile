@@ -2443,7 +2443,6 @@
     "peopleListsNoPeopleSubtitle": "시작하려면 사람을 추가하세요",
     "peopleListsNoVideosTitle": "아직 동영상 없음",
     "peopleListsNoVideosSubtitle": "목록 구성원의 동영상이 여기에 표시됩니다",
-    "peopleListsNoVideosAvailable": "사용 가능한 동영상 없음",
     "peopleListsFailedToLoadVideos": "동영상을 불러오지 못했습니다",
     "peopleListsVideoNotAvailable": "동영상을 사용할 수 없습니다",
     "peopleListsBackToGridTooltip": "그리드로 돌아가기",

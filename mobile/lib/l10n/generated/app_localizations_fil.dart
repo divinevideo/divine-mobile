@@ -3838,9 +3838,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Lalabas dito ang mga video mula sa mga miyembro ng listahan';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Walang available na video';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Hindi na-load ang mga video';
 
   @override
@@ -4935,6 +4932,34 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>
