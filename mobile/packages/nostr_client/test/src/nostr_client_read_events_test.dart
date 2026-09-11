@@ -25,6 +25,9 @@ class _ScriptedRelay extends Relay {
   /// Subscription ids of the `REQ`s this relay was sent, in order.
   final List<String> reqSubIds = [];
 
+  /// The filters of each of those `REQ`s, in the same order.
+  final List<List<Map<String, dynamic>>> reqFilters = [];
+
   @override
   Future<bool> doConnect() async {
     relayStatus.connected = ClientConnected.connected;
@@ -45,6 +48,9 @@ class _ScriptedRelay extends Relay {
   }) async {
     if (message.isNotEmpty && message[0] == 'REQ' && message.length > 1) {
       reqSubIds.add(message[1] as String);
+      reqFilters.add([
+        for (final filter in message.skip(2)) filter as Map<String, dynamic>,
+      ]);
     }
     return true;
   }
@@ -481,5 +487,187 @@ void main() {
         reason: 'the pool already filed this read; a second line double-counts',
       );
     });
+  });
+
+  group('NostrClient.readAllEvents', () {
+    test('walks two pages and stops on the empty page', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://pages.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final notes = await _signedNotes(nostr, 2);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://pages.example'],
+      );
+
+      final walk = client.readAllEvents(_textNotes(), pageSize: 10);
+
+      final firstPage = await relay.awaitReq(0);
+      for (final note in notes) {
+        await relay.deliver(['EVENT', firstPage, note.toJson()]);
+      }
+      await relay.deliver(['EOSE', firstPage]);
+
+      final secondPage = await relay.awaitReq(1);
+      await relay.deliver(['EOSE', secondPage]);
+
+      final result = await walk;
+
+      expect(result.pages, 2);
+      expect(result.isComplete, isTrue);
+      expect(result.stoppedBy, isNull);
+      expect(
+        result.events.map((event) => event.id),
+        unorderedEquals(notes.map((note) => note.id)),
+      );
+      expect(
+        relay.reqFilters[1].single['until'],
+        notes.last.createdAt,
+        reason: 'the second page resumes at the oldest event of the first',
+      );
+    });
+
+    test('settles the relay set before the first page', () async {
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://cold.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      final relayManager = _MockRelayManager();
+      var connected = false;
+      when(
+        () => relayManager.connectedRelays,
+      ).thenAnswer((_) => connected ? ['wss://cold.example'] : <String>[]);
+      when(() => relayManager.diagnosticsSink).thenReturn(null);
+      when(relayManager.dispose).thenAnswer((_) async {});
+      when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {
+        connected = true;
+      });
+      final client = NostrClient.forTesting(
+        nostr: nostr,
+        relayManager: relayManager,
+      );
+
+      final walk = client.readAllEvents(_textNotes(), pageSize: 10);
+      final page = await relay.awaitReq(0);
+      await relay.deliver(['EOSE', page]);
+
+      final result = await walk;
+
+      verify(relayManager.retryDisconnectedRelays).called(1);
+      expect(result.pages, 1);
+      expect(result.isComplete, isTrue);
+    });
+
+    test('maps a disposed client to a noRelay stop', () async {
+      final nostr = _newNostr();
+      final client = _clientOver(nostr, connectedRelays: ['wss://a.example']);
+      await client.dispose();
+
+      final result = await client.readAllEvents(_textNotes());
+
+      expect(result.pages, 0);
+      expect(result.isComplete, isFalse);
+      expect(result.stoppedBy, QueryEnd.noRelay);
+      expect(result.events, isEmpty);
+    });
+
+    test('maps a query pool closed mid-walk to a deadline stop', () async {
+      final nostr = _newNostr();
+      final relayManager = _MockRelayManager();
+      when(() => relayManager.connectedRelays).thenReturn(const []);
+      when(() => relayManager.diagnosticsSink).thenReturn(null);
+      when(relayManager.dispose).thenAnswer((_) async {});
+      final reconnectGate = Completer<void>();
+      when(
+        relayManager.retryDisconnectedRelays,
+      ).thenAnswer((_) => reconnectGate.future);
+      final client = NostrClient.forTesting(
+        nostr: nostr,
+        relayManager: relayManager,
+      );
+
+      final walk = client.readAllEvents(_textNotes());
+      await pumpEventQueue();
+      await client.dispose();
+      reconnectGate.complete();
+
+      final result = await walk;
+
+      expect(result.stoppedBy, QueryEnd.deadline);
+      expect(result.pages, 0);
+    });
+
+    test('stops on the deadline when no query slot arrives in time', () async {
+      final originalMax = NostrClient.maxConcurrentQueries;
+      NostrClient.maxConcurrentQueries = 1;
+      addTearDown(() => NostrClient.maxConcurrentQueries = originalMax);
+
+      final nostr = _newNostr();
+      final relay = _ScriptedRelay('wss://busy.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://busy.example'],
+      );
+
+      // Holds the pool's only slot until its own deadline.
+      final holding = client.readEvents(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(milliseconds: 300),
+      );
+      await relay.awaitReq(0);
+
+      final result = await client.readAllEvents(
+        _textNotes(),
+        timeout: Duration.zero,
+      );
+
+      expect(result.stoppedBy, QueryEnd.deadline);
+      expect(result.pages, 0);
+      expect(
+        relay.reqSubIds,
+        hasLength(1),
+        reason: 'the walk that never got a slot must not have asked anything',
+      );
+      await holding;
+    });
+
+    test(
+      'stops without asking when the budget is gone before page 1',
+      () async {
+        final nostr = _newNostr();
+        final relay = _ScriptedRelay('wss://cold.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final relayManager = _MockRelayManager();
+        when(() => relayManager.connectedRelays).thenReturn(const []);
+        when(() => relayManager.diagnosticsSink).thenReturn(null);
+        when(relayManager.dispose).thenAnswer((_) async {});
+        final stalledReconnect = Completer<void>();
+        addTearDown(() {
+          if (!stalledReconnect.isCompleted) stalledReconnect.complete();
+        });
+        when(
+          relayManager.retryDisconnectedRelays,
+        ).thenAnswer((_) => stalledReconnect.future);
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: relayManager,
+        );
+
+        final result = await client.readAllEvents(
+          _textNotes(),
+          timeout: Duration.zero,
+        );
+
+        expect(result.pages, 0);
+        expect(result.isComplete, isFalse);
+        expect(
+          relay.reqSubIds,
+          isEmpty,
+          reason: 'a walk with no budget left must not open a page',
+        );
+      },
+    );
   });
 }

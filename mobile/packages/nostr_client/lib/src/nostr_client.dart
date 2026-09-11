@@ -1290,6 +1290,103 @@ class NostrClient {
     return result.events;
   }
 
+  /// Reads every event [filter] matches, a page of [pageSize] at a time,
+  /// walking back through the relays' history.
+  ///
+  /// Unlike [readEvents] this never reads or writes the local cache: the walk
+  /// asks the relays for everything they hold, and a cached row can neither
+  /// extend nor confirm that. Every page requires full relay settlement, so
+  /// [PagedQueryResult.isComplete] means the relays that took part said they
+  /// had nothing older left — see `Nostr.readAllEvents` for the four cases
+  /// that can still lose events while reporting complete.
+  ///
+  /// [timeout] bounds the whole walk; without one it is bounded by [maxPages]
+  /// and [pageTimeout] alone. The walk stops [PagedQueryResult.isComplete]
+  /// `false` with what it collected when a page does not settle.
+  Future<PagedQueryResult> readAllEvents(
+    Filter filter, {
+    int pageSize = 500,
+    int maxPages = 50,
+    Duration pageTimeout = const Duration(seconds: 10),
+    Duration? timeout,
+  }) async {
+    final startedAt = DateTime.now();
+    final deadline = timeout == null ? null : startedAt.add(timeout);
+    // With no overall deadline, one page's budget bounds each step that has
+    // to settle before the walk can start.
+    Duration budget() {
+      if (deadline == null) return pageTimeout;
+      final remaining = deadline.difference(DateTime.now());
+      return remaining.isNegative ? Duration.zero : remaining;
+    }
+
+    PagedQueryResult stopped(QueryEnd stoppedBy, String reason) {
+      _reportQueryCompletion(
+        filters: [filter],
+        endedBy: stoppedBy,
+        reason: reason,
+        events: 0,
+        startedAt: startedAt,
+      );
+      return PagedQueryResult(
+        events: const [],
+        isComplete: false,
+        pages: 0,
+        stoppedBy: stoppedBy,
+      );
+    }
+
+    if (_isDisposed) {
+      return stopped(
+        QueryEnd.noRelay,
+        'the client was disposed before the walk started',
+      );
+    }
+
+    // The pager follows the relays that answered page 1, and stops the walk
+    // incomplete when one joins later or drops out. A cold start whose
+    // sockets come up during page 2 would therefore end after two pages, so
+    // the relay set is settled first — by the same reconnect a one-shot read
+    // uses, and then by the wait for a query slot.
+    if (_relayManager.connectedRelays.isEmpty) {
+      try {
+        await retryDisconnectedRelays().timeout(budget());
+      } on TimeoutException {
+        // Best-effort, as in a one-shot read: walk whatever came up rather
+        // than spending the budget dialling hosts that are not answering.
+      }
+    }
+
+    if (_queryPool.isClosed) {
+      return stopped(QueryEnd.deadline, 'the query pool closed mid-call');
+    }
+    // One slot for the walk rather than one per page: the pager owns its page
+    // loop, and a walk issues one REQ at a time, so holding the slot bounds
+    // this client's concurrent REQs exactly as a one-shot read does.
+    final acquisition = _queryPool.request();
+    PoolResource resource;
+    try {
+      resource = await acquisition.timeout(budget());
+    } on TimeoutException {
+      unawaited(acquisition.then((resource) => resource.release()));
+      return stopped(
+        QueryEnd.deadline,
+        'the query pool did not hand over a slot in time',
+      );
+    }
+    try {
+      return await _nostr.readAllEvents(
+        filter.toJson(),
+        pageSize: pageSize,
+        maxPages: maxPages,
+        pageTimeout: pageTimeout,
+        deadline: deadline,
+      );
+    } finally {
+      resource.release();
+    }
+  }
+
   /// Whether a read that ended this way owes a `queryCompletion` line — the
   /// same rule the relay pool applies to the reads it saw.
   static bool _worthAQueryCompletion(QueryResult result) =>
