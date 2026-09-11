@@ -17,6 +17,25 @@ class _MockNostrEventsDao extends Mock implements NostrEventsDao {}
 
 class _FakeFilter extends Fake implements Filter {}
 
+/// Hands the client one fixed walk, so the client's own handling of what the
+/// pager returned can be exercised without a relay in the way.
+class _StubPagerNostr extends Mock implements Nostr {
+  _StubPagerNostr(this.walk);
+
+  final PagedQueryResult walk;
+
+  @override
+  Future<PagedQueryResult> readAllEvents(
+    Map<String, dynamic> filter, {
+    int pageSize = 500,
+    int maxPages = 50,
+    Duration pageTimeout = const Duration(seconds: 10),
+    DateTime? deadline,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+  }) async => walk;
+}
+
 /// A relay whose every frame the test writes by hand, so a read can be held
 /// open past its deadline, closed mid-replay, or left silent on purpose.
 class _ScriptedRelay extends Relay {
@@ -76,6 +95,11 @@ class _ScriptedRelay extends Relay {
 
 const _secretKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+/// An author for events handed straight to the client by a stubbed pager.
+/// Nothing verifies these, so only the shape has to be well-formed.
+const _pubkey =
+    '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
 
 Nostr _newNostr({RelayDiagnosticsSink? diagnosticsSink}) => Nostr(
   LocalNostrSigner(_secretKey),
@@ -624,6 +648,39 @@ void main() {
       verify(relayManager.retryDisconnectedRelays).called(1);
       expect(result.pages, 1);
       expect(result.isComplete, isTrue);
+    });
+
+    test('drops a walked event that does not match the filter', () async {
+      // The relay pool gates on the page filter, so a relay cannot put an
+      // off-filter event into a walk; this pins the client's own re-check of
+      // what the pager handed back, as the one-shot read leg is pinned too.
+      final matching = Event(_pubkey, EventKind.textNote, const [], 'kept');
+      final offFilter = Event(_pubkey, EventKind.reaction, const [], 'dropped');
+      final nostr = _StubPagerNostr(
+        PagedQueryResult(
+          events: [offFilter, matching],
+          isComplete: false,
+          pages: 3,
+          stoppedBy: QueryEnd.relayClosed,
+        ),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://pages.example'],
+      );
+
+      final result = await client.readAllEvents(_textNotes());
+
+      expect(
+        result.events.map((event) => event.id),
+        [matching.id],
+        reason: 'the reaction was never asked for',
+      );
+      expect(
+        (result.pages, result.isComplete, result.stoppedBy),
+        (3, false, QueryEnd.relayClosed),
+        reason: "how the walk went is the pager's account, not a re-derivation",
+      );
     });
 
     test('maps a disposed client to a noRelay stop', () async {
