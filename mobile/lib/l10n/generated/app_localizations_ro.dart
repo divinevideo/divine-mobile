@@ -3947,9 +3947,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipurile membrilor listei vor apărea aici';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Niciun videoclip disponibil';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Încărcarea videoclipurilor a eșuat';
 
@@ -5063,6 +5060,34 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>

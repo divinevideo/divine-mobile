@@ -19,7 +19,7 @@ lib/screens/inbox/conversation/widgets/reaction_picker_overlay.dart	1
 lib/screens/inbox/inbox_view.dart	1
 lib/screens/inbox/new_message_sheet.dart	1
 lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
-lib/screens/user_list_people_screen.dart	2
+lib/screens/user_list_people_screen.dart	1
 lib/utils/external_link_launcher.dart	1
 lib/utils/pause_aware_modals.dart	2
 lib/widgets/add_to_list_dialog.dart	1

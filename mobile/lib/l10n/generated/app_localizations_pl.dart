@@ -3934,9 +3934,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Filmy od członków listy pojawią się tutaj';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Brak dostępnych filmów';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Nie udało się załadować filmów';
 
   @override
@@ -5049,6 +5046,34 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>

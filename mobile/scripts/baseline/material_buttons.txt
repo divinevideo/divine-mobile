@@ -28,7 +28,7 @@ lib/screens/inbox/inbox_view.dart	2
 lib/screens/minor_account_review_screen.dart	1
 lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
 lib/screens/search_results/widgets/search_user_tile.dart	1
-lib/screens/user_list_people_screen.dart	6
+lib/screens/user_list_people_screen.dart	4
 lib/screens/video_editor/voice_over_recorder_screen.dart	1
 lib/screens/video_engagement/video_engagement_list_view.dart	1
 lib/screens/web_auth_screen.dart	1

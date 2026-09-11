@@ -3745,9 +3745,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => 'ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ';
 
   @override
-  String get peopleListsNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ቪዲዮዎችን መጫን አልተሳካም።';
 
   @override
@@ -4797,6 +4794,34 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get listsDiscoveryEmpty =>

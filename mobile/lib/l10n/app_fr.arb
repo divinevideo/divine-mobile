@@ -2915,7 +2915,6 @@
     "peopleListsNoPeopleSubtitle": "Ajoute des personnes pour commencer",
     "peopleListsNoVideosTitle": "Pas encore de vidéos",
     "peopleListsNoVideosSubtitle": "Les vidéos des membres de la liste apparaîtront ici",
-    "peopleListsNoVideosAvailable": "Aucune vidéo disponible",
     "peopleListsFailedToLoadVideos": "Impossible de charger les vidéos",
     "peopleListsVideoNotAvailable": "Vidéo non disponible",
     "peopleListsBackToGridTooltip": "Retour à la grille",
