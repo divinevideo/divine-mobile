@@ -71,7 +71,8 @@ declaration described below.
 `NSPrivacyCollectedDataTypes` is empty in the app manifest and is **not** a
 claim that Divine collects nothing. Filling it is a product/legal decision that
 must match the App Store Connect privacy label, and was deliberately out of
-scope for the required-reason API audit.
+scope for the required-reason API audit. Its outcome is recorded under
+[Privacy-label decisions](#privacy-label-decisions-8850) below.
 
 `LibProofMode`'s collected-data section is empty because Divine constructs
 `ProofGenerationOptions(showDeviceIds: false, showLocation: false,
@@ -80,6 +81,36 @@ corresponding blocks in `Proof.swift` (`buildProof`, lines 408 / 430 / 439), so
 no device ID, location or carrier data enters the proof. **If any of those flags
 is ever flipped to `true`, this manifest and the App Store privacy label must be
 updated in the same change.**
+
+## Privacy-label decisions (#8850)
+
+Filling the app-target `NSPrivacyCollectedDataTypes` is a product/legal decision
+that must match the App Store Connect label. The decisions and their rationale
+are recorded on #8850; this table keeps the engineering-facing outcome next to
+the manifest rules and the release checklist.
+
+| Decision | Status | Outcome | Manifest / release impact |
+|---|---|---|---|
+| D1 — advertising / `NSPrivacyTracking` | Approved | Personalized advertising is disabled and the ad-tech account link has been removed from the analytics property; personal advertising is off in every region and Google signals is off. | Keep `NSPrivacyTracking = false` and `NSPrivacyTrackingDomains` empty. No ATT prompt. Re-check the property before every candidate. |
+| D2 — linked set | Approved | The linked set is approved as listed. | Name, Email Address, Contacts, public profile/user content, Photos or Videos, Audio Data, Customer Support, User ID, Device ID, Product Interaction, Crash Data, and Other Diagnostic Data are declared linked. |
+| D3 — bug-report attachment location | Approved; implemented in #9049 | Strip attachment metadata instead of declaring Precise Location. | The bug-report picker strips EXIF explicitly and fails closed (#9049); Precise Location is omitted. |
+| D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
+| D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
+| D6 — Performance Data | Approved | Linked (conservative), purposes Analytics and App Functionality, tracking false. | Performance Data declared linked. |
+| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. |
+
+### Tracking posture before each candidate
+
+Every candidate is evaluated against its own analytics configuration, so before
+building a release candidate confirm on the analytics property that personalized
+advertising is still disabled and no ad account is linked (D1). A change there
+can flip the required `NSPrivacyTracking` answer.
+
+The app manifest is populated from this table, then verified: build the
+Shorebird store candidate, collect the embedded manifests and Xcode's aggregate
+privacy report, and reconcile both against this table and the intended App Store
+Connect answers. Correct and rebuild on any mismatch; #8850 stays open until the
+post-build verification passes.
 
 ## Apple's catalogue
 
@@ -214,5 +245,7 @@ document still matches the catalogue.
 - `divine_device_attestation` was resolved in #8779. Its owning package now
   ships the `UserDefaults` / `CA92.1` declaration described above.
 - App-target `NSPrivacyCollectedDataTypes` reconciliation with the aggregate
-  privacy report and App Store Connect label is tracked in #8850.
+  privacy report and App Store Connect label is tracked in #8850. The decisions
+  are recorded under [Privacy-label decisions](#privacy-label-decisions-8850);
+  the reconciliation stays open until #8850's post-build verification passes.
 - Upstreaming Divine's LibProofMode manifest is tracked in #8851.
