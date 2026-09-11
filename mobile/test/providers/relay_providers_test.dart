@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/services/connectivity_transition_monitor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -142,6 +143,85 @@ void main() {
         initialization.end(first);
         async.elapse(const Duration(seconds: 2));
         verify(first.forceReconnectAll).called(1);
+      });
+    });
+
+    group('repair log', () {
+      List<String> repairLogs(
+        FakeAsync async, {
+        required ForceReconnectOutcome outcome,
+        required int connected,
+      }) {
+        unawaited(LogCaptureService().clearAllLogs());
+        when(first.forceReconnectAll).thenAnswer((_) async => outcome);
+        when(() => first.connectedRelayCount).thenReturn(connected);
+        when(() => first.configuredRelayCount).thenReturn(2);
+        final connectivity = _FakeConnectivity(const [ConnectivityResult.wifi]);
+        final container = containerFor(connectivity);
+        container.listen(connectivityRelayReconnectProvider, (_, _) {});
+        async.flushMicrotasks();
+
+        connectivity.change(const [ConnectivityResult.mobile]);
+        async.elapse(const Duration(seconds: 2));
+
+        verify(first.forceReconnectAll).called(1);
+        return [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ];
+      }
+
+      test('logs how many relays connected when the repair finishes', () {
+        fakeAsync((async) {
+          final messages = repairLogs(
+            async,
+            outcome: ForceReconnectOutcome.completed,
+            connected: 1,
+          );
+
+          expect(
+            messages,
+            contains(
+              'Relay reconnect after a connectivity change finished: 1 of 2 '
+              'relays connected',
+            ),
+          );
+          expect(
+            messages,
+            isNot(
+              contains(
+                'Relay reconnect attempt after a connectivity change ended',
+              ),
+            ),
+          );
+        });
+      });
+
+      test('says relays are still connecting when the repair wait ends '
+          'first', () {
+        fakeAsync((async) {
+          final messages = repairLogs(
+            async,
+            outcome: ForceReconnectOutcome.stillDialling,
+            connected: 0,
+          );
+
+          expect(
+            messages,
+            contains(
+              'Relay reconnect after a connectivity change ended with relays '
+              'still connecting (0 of 2 connected)',
+            ),
+          );
+          expect(
+            messages,
+            isNot(
+              contains(
+                'Relay reconnect attempt after a connectivity change ended',
+              ),
+            ),
+          );
+        });
       });
     });
 

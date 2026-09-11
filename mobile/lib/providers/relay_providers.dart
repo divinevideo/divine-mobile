@@ -266,27 +266,11 @@ class _RelaySetChangeCoordinator {
         category: LogCategory.relay,
       );
 
+      // Only the reconnect is caught here: a fault in the logging below must
+      // not read as a reconnect failure.
+      ForceReconnectOutcome? outcome;
       try {
-        final outcome = await attachment.client.forceReconnectAll();
-        // The cycle keeps running past the budget, so this is not a failure —
-        // but it is not a completed reconnect either, and logging it as one
-        // makes a stalled dial indistinguishable from a healthy one in a
-        // support export.
-        if (outcome == ForceReconnectOutcome.completed) {
-          Log.info(
-            'Successfully reconnected all relay WebSockets',
-            name: 'RelaySetChangeBridge',
-            category: LogCategory.relay,
-          );
-        } else {
-          Log.warning(
-            'Relay reconnect did not finish within its budget; dials remain '
-            'in flight. Resetting feeds anyway so they pick up relays as '
-            'those land.',
-            name: 'RelaySetChangeBridge',
-            category: LogCategory.relay,
-          );
-        }
+        outcome = await attachment.client.forceReconnectAll();
       } catch (e) {
         Log.error(
           'Failed to reconnect relays: $e',
@@ -294,6 +278,7 @@ class _RelaySetChangeCoordinator {
           category: LogCategory.relay,
         );
       }
+      if (outcome != null) _logReconnectOutcome(attachment.client, outcome);
 
       if (!_operationIsCurrent(attachment, transaction, transactionVersion)) {
         _rescheduleAfterOperation = _pendingTransaction != null;
@@ -384,6 +369,31 @@ class _RelaySetChangeCoordinator {
         return const _RelayReconciliationResult.superseded();
       }
       return _RelayReconciliationResult.incomplete(e.toString());
+    }
+  }
+
+  void _logReconnectOutcome(NostrClient client, ForceReconnectOutcome outcome) {
+    final connected =
+        '${client.connectedRelayCount} of ${client.configuredRelayCount}';
+    switch (outcome) {
+      case ForceReconnectOutcome.completed:
+        Log.info(
+          'Relay reconnect finished: $connected relays connected',
+          name: 'RelaySetChangeBridge',
+          category: LogCategory.relay,
+        );
+      case ForceReconnectOutcome.stillDialling:
+        // Not a failure, and not a finished reconnect either: logging it as
+        // one makes a stalled dial indistinguishable from a healthy one in a
+        // support export. The feed reset still goes ahead, because RelayPool
+        // re-sends every active subscription to a relay once its dial lands.
+        Log.warning(
+          'Relay reconnect wait ended with relays still connecting '
+          '($connected connected); resetting feeds, and relays that connect '
+          'later receive the subscriptions then',
+          name: 'RelaySetChangeBridge',
+          category: LogCategory.relay,
+        );
     }
   }
 
@@ -748,9 +758,19 @@ final connectivityRelayReconnectProvider =
         changes: ref.watch(connectivityChangesProvider),
         checkConnectivity: ref.watch(connectivityCheckProvider),
         repair: () async {
-          await ref.read(nostrServiceProvider).forceReconnectAll();
+          final client = ref.read(nostrServiceProvider);
+          final outcome = await client.forceReconnectAll();
+          final connected =
+              '${client.connectedRelayCount} of ${client.configuredRelayCount}';
           Log.info(
-            'Relay reconnect attempt after a connectivity change ended',
+            switch (outcome) {
+              ForceReconnectOutcome.completed =>
+                'Relay reconnect after a connectivity change finished: '
+                    '$connected relays connected',
+              ForceReconnectOutcome.stillDialling =>
+                'Relay reconnect after a connectivity change ended with relays '
+                    'still connecting ($connected connected)',
+            },
             name: 'ConnectivityRelayReconnect',
             category: LogCategory.relay,
           );
