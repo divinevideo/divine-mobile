@@ -24,6 +24,9 @@ class _StubPagerNostr extends Mock implements Nostr {
 
   final PagedQueryResult walk;
 
+  /// The deadline the client handed the pager, null until it has walked.
+  DateTime? seenDeadline;
+
   @override
   Future<PagedQueryResult> readAllEvents(
     Map<String, dynamic> filter, {
@@ -33,7 +36,10 @@ class _StubPagerNostr extends Mock implements Nostr {
     DateTime? deadline,
     List<String>? tempRelays,
     List<int> relayTypes = RelayType.all,
-  }) async => walk;
+  }) async {
+    seenDeadline = deadline;
+    return walk;
+  }
 }
 
 /// A relay whose every frame the test writes by hand, so a read can be held
@@ -680,6 +686,47 @@ void main() {
         (result.pages, result.isComplete, result.stoppedBy),
         (3, false, QueryEnd.relayClosed),
         reason: "how the walk went is the pager's account, not a re-derivation",
+      );
+    });
+
+    test('bounds a walk given no timeout with a default budget', () async {
+      // The walk holds a query-pool slot for its whole length, so omitting a
+      // timeout must not leave it unbounded.
+      final nostr = _StubPagerNostr(
+        const PagedQueryResult(events: [], isComplete: true, pages: 1),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://pages.example'],
+      );
+      final before = DateTime.now();
+
+      await client.readAllEvents(_textNotes());
+
+      final deadline = nostr.seenDeadline;
+      expect(deadline, isNotNull, reason: 'an omitted timeout still bounds it');
+      expect(
+        deadline!.difference(before).inSeconds,
+        inInclusiveRange(60, 120),
+        reason: 'the default budget is minutes, not unbounded and not a page',
+      );
+    });
+
+    test('leaves a walk asked for no bound unbounded', () async {
+      final nostr = _StubPagerNostr(
+        const PagedQueryResult(events: [], isComplete: true, pages: 1),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://pages.example'],
+      );
+
+      await client.readAllEvents(_textNotes(), timeout: null);
+
+      expect(
+        nostr.seenDeadline,
+        isNull,
+        reason: 'an explicit null still asks for maxPages and pageTimeout only',
       );
     });
 

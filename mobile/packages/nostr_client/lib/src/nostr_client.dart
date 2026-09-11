@@ -1323,15 +1323,19 @@ class NostrClient {
   /// had nothing older left — see `Nostr.readAllEvents` for the four cases
   /// that can still lose events while reporting complete.
   ///
-  /// [timeout] bounds the whole walk; without one it is bounded by [maxPages]
-  /// and [pageTimeout] alone. The walk stops [PagedQueryResult.isComplete]
-  /// `false` with what it collected when a page does not settle.
+  /// [timeout] bounds the whole walk, including the waits before page 1, and
+  /// defaults to two minutes because the walk holds a query-pool slot for all
+  /// of it. A walk large enough to need longer should pass a bigger budget
+  /// explicitly; an explicit null asks for no overall bound at all, leaving
+  /// [maxPages] and [pageTimeout] as the only ceiling. The walk stops
+  /// [PagedQueryResult.isComplete] `false` with what it collected when a page
+  /// does not settle.
   Future<PagedQueryResult> readAllEvents(
     Filter filter, {
     int pageSize = 500,
     int maxPages = 50,
     Duration pageTimeout = const Duration(seconds: 10),
-    Duration? timeout,
+    Duration? timeout = const Duration(minutes: 2),
   }) async {
     final startedAt = DateTime.now();
     final deadline = timeout == null ? null : startedAt.add(timeout);

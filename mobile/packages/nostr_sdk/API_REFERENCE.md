@@ -226,9 +226,11 @@ finished, how many pages it took, and (when incomplete) which page's
 
 **Trade-off:** `NostrClient.readAllEvents` (in `nostr_client`) holds one
 query-pool slot for the whole walk rather than one per page, so a long walk
-can occupy a slot for up to `maxPages × pageTimeout` — 500 seconds at the
-defaults above — rather than releasing it between pages. A caller issuing
-many concurrent reads should size `maxPages`/`pageTimeout` with that in mind.
+can occupy a slot for its whole `timeout` — two minutes by default there —
+rather than releasing it between pages. A caller issuing many concurrent
+reads should size that budget with it in mind. Passing `timeout: null` drops
+the overall bound and leaves `maxPages × pageTimeout` — 500 seconds at the
+defaults above — as the only ceiling on the slot.
 
 ##### queryEventsDetailed()
 ```dart
