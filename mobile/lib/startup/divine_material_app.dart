@@ -71,6 +71,7 @@ class DivineMaterialApp extends ConsumerWidget {
         // prescribes (#8916). It goes away when the last such package moves.
         // The bridge ships deprecated on purpose, to mark it as migration
         // scaffolding rather than API.
+        // TODO(#9078): Remove after all rendered dependencies use material_ui.
         // ignore: deprecated_member_use
         builder: (context, child) => MaterialUiCompatibilityBridge(
           child: LayerRasterizerHost(
