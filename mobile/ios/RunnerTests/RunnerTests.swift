@@ -274,11 +274,10 @@ final class MediaSessionScopePolicyTests: XCTestCase {
   }
 }
 
-/// Pins what `AppDelegate`'s ProofMode options keep out of the signed proof
-/// (#9073). Upstream LibProofMode records the Wi-Fi addresses and connection
-/// details whatever the options say, so this fails if a vendor refresh drops
-/// Divine's `showMobileNetwork` gate. The proof is signed, so the fields must
-/// never be written: stripping them later would break verification.
+/// Divine passes every ProofMode option as false (see `AppDelegate`), and the
+/// network fields must then stay out of the signed proof (#9073). Upstream
+/// LibProofMode records them whatever the options say, so this fails if a
+/// vendor refresh drops Divine's `showMobileNetwork` gate.
 final class LibProofModeNetworkFieldsTests: XCTestCase {
   private var folder: URL!
   private var originalDocumentFolder: URL?

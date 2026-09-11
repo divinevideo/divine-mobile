@@ -414,7 +414,8 @@ open class Proof: NSObject {
         }
         
         // Divine-local (#9073): upstream records these on every proof, whatever
-        // the options say. The proof is signed, so they must not be written at all.
+        // the options say. The proof is signed as it is written, so this is the
+        // only place they can be left out.
         if showMobileNetwork {
             proof[.ipv4] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV4)
             proof[.ipv6] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV6)
