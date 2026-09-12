@@ -1408,6 +1408,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1493,6 +1494,7 @@ void main() {
                   email: any(named: 'email'),
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
+                  marketingConsent: any(named: 'marketingConsent'),
                 ),
               ).thenAnswer(
                 (_) async => (
