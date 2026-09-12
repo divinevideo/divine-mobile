@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_cache/media_cache.dart';
@@ -40,6 +41,7 @@ void main() {
     late AppDatabase db;
     late Directory temp;
     late Directory docs;
+    late Directory caches;
     late SharedPreferences prefs;
     late StorageManagementService service;
 
@@ -62,7 +64,8 @@ void main() {
       temporaryDirectoryProvider: () async => temp,
       documentsDirectoryProvider: () async => docs,
       applicationSupportDirectoryProvider: applicationSupportDirectoryProvider,
-      applicationCacheDirectoryProvider: applicationCacheDirectoryProvider,
+      applicationCacheDirectoryProvider:
+          applicationCacheDirectoryProvider ?? () async => caches,
       fileLengthProvider: fileLengthProvider,
       now: () => now,
       protectedPaths: protectedPaths,
@@ -75,6 +78,7 @@ void main() {
       db = AppDatabase.test(NativeDatabase.memory());
       temp = Directory.systemTemp.createTempSync('storage_temp_');
       docs = Directory.systemTemp.createTempSync('storage_docs_');
+      caches = Directory.systemTemp.createTempSync('storage_caches_');
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
       when(() => videoCache.clearCache()).thenAnswer((_) async {});
@@ -87,6 +91,7 @@ void main() {
       await db.close();
       if (temp.existsSync()) temp.deleteSync(recursive: true);
       if (docs.existsSync()) docs.deleteSync(recursive: true);
+      if (caches.existsSync()) caches.deleteSync(recursive: true);
     });
 
     File writeFile(String path, int bytes, {Duration? age}) {
@@ -125,6 +130,7 @@ void main() {
       test('sums cache dirs, seams and temp renders, ignoring other '
           'files', () async {
         writeFile('${temp.path}/openvine_video_cache/a.mp4', 100);
+        writeFile('${caches.path}/divine_video_cache/1/2.0.3.v3.exo', 70);
         writeFile('${temp.path}/openvine_image_cache/b.jpg', 50);
         writeFile('${docs.path}/transition_seams/s.mp4', 30);
         writeFile('${temp.path}/watermarked_1.mp4', 20);
@@ -133,7 +139,10 @@ void main() {
         writeFile('${temp.path}/unrelated.txt', 5);
         writeFile('${docs.path}/my_clip.mp4', 999);
 
-        expect(await service.cacheSizeBytes(), 100 + 50 + 30 + 20 + 10 + 40);
+        expect(
+          await service.cacheSizeBytes(),
+          100 + 70 + 50 + 30 + 20 + 10 + 40,
+        );
       });
 
       test('returns zero when nothing is cached', () async {
@@ -143,16 +152,26 @@ void main() {
       test('reports per-category usage against matching budgets', () async {
         await prefs.setInt(kCacheLimitPrefKey, 3 * 1024);
         writeFile('${temp.path}/openvine_video_cache/a.mp4', 100);
+        writeFile('${caches.path}/divine_video_cache/1/2.0.3.v3.exo', 70);
         writeFile('${temp.path}/openvine_image_cache/b.jpg', 50);
         writeFile('${docs.path}/transition_seams/s.mp4', 30);
         writeFile('${temp.path}/merged_2.mp4', 10);
 
         final usage = await service.cacheUsage();
 
-        expect(usage.totalBytes, 190);
+        expect(usage.totalBytes, 260);
         expect(
           usage.video,
           const CacheUsageCategory(usedBytes: 100, limitBytes: 3 * 1024),
+        );
+        // The player's own cache runs under its own budget, not the
+        // user-configured video-cache limit.
+        expect(
+          usage.player,
+          const CacheUsageCategory(
+            usedBytes: 70,
+            limitBytes: kDefaultCacheMaxSizeBytes,
+          ),
         );
         expect(
           usage.images,
@@ -180,6 +199,20 @@ void main() {
         // Nothing cleared transition_frames before #7641; it is the same
         // kind of regenerable preview as the seams and lives beside them.
         expect(usage.transitionSeams.usedBytes, 42);
+      });
+
+      test('reports an empty player cache when the platform has no cache '
+          'directory', () async {
+        writeFile('${temp.path}/openvine_video_cache/a.mp4', 100);
+        service = buildService(
+          applicationCacheDirectoryProvider: () async =>
+              throw UnsupportedError('no cache directory'),
+        );
+
+        final usage = await service.cacheUsage();
+
+        expect(usage.player.usedBytes, 0);
+        expect(usage.totalBytes, 100);
       });
 
       test('keeps scanning temp renders when one vanishes mid-walk', () async {
@@ -299,6 +332,28 @@ void main() {
 
         expect(orphanVideo.existsSync(), isFalse);
         expect(orphanImage.existsSync(), isFalse);
+        expect(await service.cacheSizeBytes(), 0);
+      });
+
+      test('empties the player cache but keeps its index marker', () async {
+        // ExoPlayer's SimpleCache lays flat <id>.<pos>.<ts>.v3.exo spans next
+        // to a <uid>.uid marker that names its index in the shared database.
+        // Deleting the marker would orphan that index.
+        final span = writeFile(
+          '${caches.path}/divine_video_cache/1.0.1700000000.v3.exo',
+          70,
+        );
+        final marker = writeFile(
+          '${caches.path}/divine_video_cache/2a1b3c4d.uid',
+          0,
+        );
+        expect(await service.cacheSizeBytes(), 70);
+
+        await service.clearCaches();
+
+        expect(span.existsSync(), isFalse);
+        expect(span.parent.existsSync(), isTrue);
+        expect(marker.existsSync(), isTrue, reason: 'index marker kept');
         expect(await service.cacheSizeBytes(), 0);
       });
 
@@ -605,7 +660,6 @@ void main() {
 
     group('measureFootprint', () {
       late Directory appSupport;
-      late Directory caches;
 
       StorageManagementService footprintService({Directory? cacheDirectory}) =>
           buildService(
@@ -616,12 +670,10 @@ void main() {
 
       setUp(() {
         appSupport = Directory.systemTemp.createTempSync('storage_support_');
-        caches = Directory.systemTemp.createTempSync('storage_caches_');
       });
 
       tearDown(() {
         if (appSupport.existsSync()) appSupport.deleteSync(recursive: true);
-        if (caches.existsSync()) caches.deleteSync(recursive: true);
       });
 
       test('totals each root and ranks its children largest first', () async {

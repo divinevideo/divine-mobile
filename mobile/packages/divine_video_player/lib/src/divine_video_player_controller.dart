@@ -12,8 +12,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Default maximum cache size on disk (500 MB).
+/// Default maximum size of the Android player's disk cache (500 MB).
+///
+/// The cache lives at `<cacheDir>/divine_video_cache`, see
+/// [kNativeVideoCacheDirectoryName].
 const int kDefaultCacheMaxSizeBytes = 500 * 1024 * 1024;
+
+/// Directory under the platform cache directory that holds the Android
+/// player's own disk cache (ExoPlayer's `SimpleCache`).
+///
+/// Nothing is written there on other platforms. The app's storage screen
+/// counts and clears the directory by this name, so it is part of the
+/// package's contract with `VideoCache.kt`.
+const String kNativeVideoCacheDirectoryName = 'divine_video_cache';
 
 /// Logger name for the Dart half of the player.
 ///
@@ -267,12 +278,17 @@ class DivineVideoPlayerController {
     return _globalChannel.invokeMethod<void>('disposeAll');
   }
 
-  /// Configures the native video cache.
+  /// Configures the Android player's disk cache.
   ///
-  /// Call once at app startup before creating any controllers.
-  /// On Android this sets up ExoPlayer's disk-backed `SimpleCache`
-  /// that allows progressive caching (stream and cache simultaneously).
-  /// On iOS/macOS it configures the shared `URLCache` disk capacity.
+  /// Call once at app startup before creating any controllers. On Android
+  /// this sets up ExoPlayer's disk-backed `SimpleCache`, which fills
+  /// progressively while an HTTP(S) source streams and serves later reads
+  /// of the same URL from disk. Local sources (`VideoClip.file`, or any
+  /// non-HTTP URI) are played directly and never copied into it.
+  ///
+  /// A no-op everywhere else. AVFoundation loads media through its own
+  /// stack and never reads `URLCache`, so there is nothing to configure on
+  /// iOS or macOS; web and Linux have no native plugin.
   ///
   /// [maxSizeBytes] is the maximum cache size on disk. Defaults to
   /// [kDefaultCacheMaxSizeBytes] (500 MB). Least-recently-used entries
@@ -288,7 +304,7 @@ class DivineVideoPlayerController {
   static Future<void> configureCache({
     int maxSizeBytes = kDefaultCacheMaxSizeBytes,
   }) {
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.linux) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return Future.value();
     }
     return _globalChannel.invokeMethod<void>('configureCache', {
@@ -296,13 +312,14 @@ class DivineVideoPlayerController {
     });
   }
 
-  /// Pre-loads video metadata and initial buffer data into the native
-  /// cache without creating a player instance.
+  /// Pre-loads video metadata, and on Android the initial buffer of an
+  /// HTTP(S) source into the disk cache, without creating a player instance.
   ///
   /// Call this for upcoming videos (e.g. the next item in a feed) so
   /// that playback starts instantly when the user reaches them.
   /// No controller needs to be alive — the work happens on the native
-  /// side and the OS-level cache retains the result.
+  /// side. On iOS and macOS this only makes a best-effort metadata request;
+  /// nothing is retained by this plugin or written to disk there.
   ///
   /// ```dart
   /// await DivineVideoPlayerController.preload([

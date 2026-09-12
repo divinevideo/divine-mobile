@@ -464,6 +464,7 @@ class BugReportService {
         buffer.writeln(
           'Cache: '
           'video ${_formatCacheUsageCategory(usage.video)} · '
+          'player ${_formatCacheUsageCategory(usage.player)} · '
           'images ${_formatCacheUsageCategory(usage.images)} · '
           'seams ${_formatCacheUsageCategory(usage.transitionSeams)} · '
           'temp ${_formatCacheUsageCategory(usage.tempRenders)}',

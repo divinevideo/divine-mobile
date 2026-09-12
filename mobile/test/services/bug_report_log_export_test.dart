@@ -415,6 +415,10 @@ void main() {
             usedBytes: 1536 * 1024 * 1024,
             limitBytes: 2 * 1024 * 1024 * 1024,
           ),
+          player: CacheUsageCategory(
+            usedBytes: 100 * 1024 * 1024,
+            limitBytes: 500 * 1024 * 1024,
+          ),
           images: CacheUsageCategory(
             usedBytes: 128 * 1024 * 1024,
             limitBytes: 256 * 1024 * 1024,
@@ -436,6 +440,8 @@ void main() {
         contains(
           'Cache: video 1.5 GB/2.0 GB '
           '(75.0%, within limit, 1610612736/2147483648 bytes) · '
+          'player 100.0 MB/500.0 MB '
+          '(20.0%, within limit, 104857600/524288000 bytes) · '
           'images 128.0 MB/256.0 MB '
           '(50.0%, within limit, 134217728/268435456 bytes) · '
           'seams 64.0 MB/200.0 MB '
@@ -454,6 +460,10 @@ void main() {
           video: CacheUsageCategory(
             usedBytes: 2 * 1024 * 1024 * 1024,
             limitBytes: 2 * 1024 * 1024 * 1024,
+          ),
+          player: CacheUsageCategory(
+            usedBytes: 0,
+            limitBytes: 500 * 1024 * 1024,
           ),
           images: CacheUsageCategory(
             usedBytes: 300 * 1024 * 1024,

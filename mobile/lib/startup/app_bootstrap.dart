@@ -213,17 +213,19 @@ Future<void> startOpenVineApp({
   // They initialize automatically when a DivineVideoPlayerController is
   // first created.
 
-  // Configure the native video player disk cache (500 MB, LRU eviction).
-  // Skip on web/Linux/Windows — divine_video_player has no native plugin
-  // on those targets and `configureCache` is a bare method-channel call.
+  // Configure the Android player's disk cache (500 MB, LRU eviction). It is
+  // Android-only: AVFoundation never reads a URLCache, so the Apple plugin
+  // has nothing to configure (#8029). Skip on web/Linux/Windows —
+  // divine_video_player has no native plugin on those targets and
+  // `configureCache` is a bare method-channel call.
   await configureVideoPlayerCacheForStartup(
     skip: !hasNativeVideoPlayer,
     configureCache: DivineVideoPlayerController.configureCache,
   );
 
-  // Dispose any zombie native players from a previous Dart VM
-  // (e.g. hot restart). Must happen after configureCache so the
-  // global method channel is already registered.
+  // Dispose any zombie native players from a previous Dart VM (e.g. hot
+  // restart). Plugin registration, rather than configureCache, makes the
+  // global method channel available on each native platform.
   await disposeVideoPlayersForStartup(
     skip: !hasNativeVideoPlayer,
     disposeAll: DivineVideoPlayerController.disposeAll,
@@ -263,9 +265,7 @@ Future<void> startOpenVineApp({
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         startupPerformance.startPhase('window_manager');
-        crashReporting.logInitializationStep(
-          'Initializing window manager',
-        );
+        crashReporting.logInitializationStep('Initializing window manager');
         await windowManager.ensureInitialized();
 
         // Set initial window size for desktop vine experience
@@ -333,10 +333,7 @@ Future<void> startOpenVineApp({
       if (message.contains('[EXTERNAL-EVENT]') &&
           message.contains('already exists in database or was rejected')) {
         // Use our batcher for these specific messages
-        logMessageBatcher.tryBatchMessage(
-          message,
-          category: LogCategory.relay,
-        );
+        logMessageBatcher.tryBatchMessage(message, category: LogCategory.relay);
         return; // Don't print the individual message
       } else if (message.contains('[EXTERNAL-EVENT]') &&
           message.contains('matches subscription')) {
@@ -682,12 +679,8 @@ Future<void> startOpenVineApp({
   Log.info('Divine starting...', name: 'Main');
   Log.info('Log level: ${UnifiedLogger.currentLevel.name}', name: 'Main');
   final initDuration = DateTime.now().difference(startTime).inMilliseconds;
-  crashReporting.log(
-    '[STARTUP] Blocking setup took ${initDuration}ms',
-  );
-  crashReporting.logInitializationStep(
-    'Blocking startup complete',
-  );
+  crashReporting.log('[STARTUP] Blocking setup took ${initDuration}ms');
+  crashReporting.logInitializationStep('Blocking startup complete');
   startupPerformance.checkpoint('pre_app_launch');
 
   await initializeDateFormatting();
@@ -760,16 +753,10 @@ Future<void> _recordBuildProvenance({
     Log.info(provenance.summary, name: 'Main', category: LogCategory.system);
     crashReporting.log(provenance.summary);
     unawaited(
-      crashReporting.setCustomKey(
-        'environment',
-        provenance.environment.name,
-      ),
+      crashReporting.setCustomKey('environment', provenance.environment.name),
     );
     unawaited(
-      crashReporting.setCustomKey(
-        'build_mode',
-        provenance.buildMode.name,
-      ),
+      crashReporting.setCustomKey('build_mode', provenance.buildMode.name),
     );
     unawaited(
       crashReporting.setCustomKey(
@@ -784,10 +771,7 @@ Future<void> _recordBuildProvenance({
       ),
     );
     unawaited(
-      crashReporting.setCustomKey(
-        'shorebird_patch',
-        provenance.patchLabel,
-      ),
+      crashReporting.setCustomKey('shorebird_patch', provenance.patchLabel),
     );
   } catch (error, stack) {
     Log.warning(

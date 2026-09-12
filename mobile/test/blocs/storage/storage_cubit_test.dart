@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
@@ -43,6 +44,10 @@ void main() {
         usedBytes: 1024,
         limitBytes: configuredVideoLimit,
       ),
+      player: CacheUsageCategory(
+        usedBytes: 128,
+        limitBytes: kDefaultCacheMaxSizeBytes,
+      ),
       images: CacheUsageCategory(usedBytes: 512, limitBytes: 4 * 1024),
       transitionSeams: CacheUsageCategory(usedBytes: 256, limitBytes: 8 * 1024),
       tempRenders: CacheUsageCategory(usedBytes: 256),
@@ -68,7 +73,7 @@ void main() {
           ),
           StorageState(
             cacheStatus: StorageCacheStatus.ready,
-            cacheSizeBytes: 2048,
+            cacheSizeBytes: 2176,
             cacheUsage: cacheUsage,
             videoCacheLimitBytes: configuredVideoLimit,
           ),
@@ -308,6 +313,10 @@ void main() {
           when(service.cacheUsage).thenAnswer(
             (_) async => const CacheUsage(
               video: CacheUsageCategory(usedBytes: 512, limitBytes: oneGb),
+              player: CacheUsageCategory(
+                usedBytes: 0,
+                limitBytes: kDefaultCacheMaxSizeBytes,
+              ),
               images: CacheUsageCategory(usedBytes: 0),
               transitionSeams: CacheUsageCategory(
                 usedBytes: 0,
@@ -331,6 +340,10 @@ void main() {
             cacheSizeBytes: 512,
             cacheUsage: CacheUsage(
               video: CacheUsageCategory(usedBytes: 512, limitBytes: oneGb),
+              player: CacheUsageCategory(
+                usedBytes: 0,
+                limitBytes: kDefaultCacheMaxSizeBytes,
+              ),
               images: CacheUsageCategory(usedBytes: 0),
               transitionSeams: CacheUsageCategory(
                 usedBytes: 0,
