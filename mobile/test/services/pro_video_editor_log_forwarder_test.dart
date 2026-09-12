@@ -2,11 +2,19 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockProVideoEditor extends Mock implements ProVideoEditor {}
+
+class _RecordingCrashReporter extends Fake implements CrashReporter {
+  final breadcrumbs = <String>[];
+
+  @override
+  void log(String message) => breadcrumbs.add(message);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +44,75 @@ void main() {
   });
 
   group('ProVideoEditorLogForwarder.forwardEntry', () {
+    test('preserves native failure and cause chain in crash breadcrumbs', () {
+      final reporter = _RecordingCrashReporter();
+      const stack =
+          'androidx.media3.transformer.ExportException: '
+          'Video frame processing error\n'
+          'Caused by: androidx.media3.common.VideoFrameProcessingException: '
+          'GL_OUT_OF_MEMORY';
+
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'Error rendering video: Video frame processing error',
+          tag: 'RenderVideo',
+          stackTrace: stack,
+        ),
+        crashReporter: reporter,
+      );
+
+      expect(reporter.breadcrumbs, hasLength(1));
+      expect(reporter.breadcrumbs.single, contains('RenderVideo'));
+      expect(reporter.breadcrumbs.single, contains(stack));
+    });
+
+    test('sanitizes the message, tag and cause before crash reporting', () {
+      final reporter = _RecordingCrashReporter();
+      // Synthetic identifiers exercise the shared crash-report sanitizer.
+      final publicKey = 'npub1${List.filled(58, 'q').join()}';
+      final secretKey = 'nsec1${List.filled(58, 'q').join()}';
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'Error for $publicKey',
+          tag: secretKey,
+          stackTrace: 'Caused by: failed for creator@example.com',
+        ),
+        crashReporter: reporter,
+      );
+
+      expect(reporter.breadcrumbs, hasLength(1));
+      final breadcrumb = reporter.breadcrumbs.single;
+      expect(breadcrumb, isNot(contains(publicKey)));
+      expect(breadcrumb, isNot(contains(secretKey)));
+      expect(breadcrumb, isNot(contains('creator@example.com')));
+      expect(breadcrumb, contains('npub1<redacted>'));
+      expect(breadcrumb, contains('nsec1<redacted>'));
+      expect(breadcrumb, contains('Caused by:'));
+    });
+
+    test(
+      'keeps warnings but excludes routine native logs and empty messages',
+      () {
+        final reporter = _RecordingCrashReporter();
+        for (final level in NativeLogLevel.values) {
+          ProVideoEditorLogForwarder.forwardEntry(
+            entry(level, 'native-${level.name}'),
+            crashReporter: reporter,
+          );
+        }
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(NativeLogLevel.error, ''),
+          crashReporter: reporter,
+        );
+
+        expect(reporter.breadcrumbs, hasLength(2));
+        expect(reporter.breadcrumbs.join(), contains('native-warning'));
+        expect(reporter.breadcrumbs.join(), contains('native-error'));
+      },
+    );
+
     test('forwards an error with stack trace under the video category', () {
       const message = 'pve-fwd-error-unique';
       ProVideoEditorLogForwarder.forwardEntry(
@@ -133,12 +210,17 @@ void main() {
       final controller = StreamController<NativeLogEntry>.broadcast();
       when(() => mock.logStream).thenAnswer((_) => controller.stream);
 
-      ProVideoEditorLogForwarder.start(proVideoEditor: mock);
+      final reporter = _RecordingCrashReporter();
+      ProVideoEditorLogForwarder.start(
+        proVideoEditor: mock,
+        crashReporter: reporter,
+      );
 
       const live = 'pve-stream-live-unique';
       controller.add(entry(NativeLogLevel.warning, live));
       await Future<void>.delayed(Duration.zero);
       expect(latestWithMessage(live), isNotNull);
+      expect(reporter.breadcrumbs.single, contains(live));
 
       await ProVideoEditorLogForwarder.stop();
 
@@ -146,6 +228,7 @@ void main() {
       controller.add(entry(NativeLogLevel.warning, afterStop));
       await Future<void>.delayed(Duration.zero);
       expect(latestWithMessage(afterStop), isNull);
+      expect(reporter.breadcrumbs, hasLength(1));
 
       await controller.close();
     });
