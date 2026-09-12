@@ -570,12 +570,16 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         // mix whose input parameters address a different asset's tracks.
         loopAudioMix = nil
         // forwardPlaybackEndTime and the looper describe the same boundary two
-        // ways; only the looper's range is honoured when it wraps.
-        loopTimeRange = CMTimeCompare(loopEnd, assetDuration) < 0
-            ? CMTimeRange(start: .zero, end: loopEnd)
-            : nil
-        if loopTimeRange == nil, CMTimeCompare(endTime, assetDuration) < 0 {
-            playerItem.forwardPlaybackEndTime = endTime
+        // ways, and both are needed: the looper honours only its own range
+        // when it wraps, while a player that is not looping — or stops looping
+        // later — has only forwardPlaybackEndTime to end the item where Dart
+        // was told it ends. loopEnd never exceeds endTime, so one comparison
+        // covers both trims.
+        if CMTimeCompare(loopEnd, assetDuration) < 0 {
+            loopTimeRange = CMTimeRange(start: .zero, end: loopEnd)
+            playerItem.forwardPlaybackEndTime = loopEnd
+        } else {
+            loopTimeRange = nil
         }
         return (playerItem, [0], [loopEnd.seconds])
     }

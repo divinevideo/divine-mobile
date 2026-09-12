@@ -146,11 +146,17 @@ void main() {
             'looper range instead.',
       );
       expect(
-        body,
-        contains('forwardPlaybackEndTime'),
+        body.replaceAll(RegExp(r'\s+'), ' '),
+        contains(
+          'loopTimeRange = CMTimeRange(start: .zero, end: loopEnd) '
+          'playerItem.forwardPlaybackEndTime = loopEnd',
+        ),
         reason:
-            'Trimming has no composition time range to live in, so the feed '
-            'cap has to be applied as a forward playback end time.',
+            'Trimming has no composition time range to live in, so the same '
+            'cut is applied as a forward playback end time wherever it is '
+            'applied as the looper range. A player that is not looping, or '
+            'stops looping later, has only the former to end the item where '
+            'Dart was told it ends.',
       );
       expect(
         body,
