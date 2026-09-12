@@ -13,6 +13,7 @@ import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
@@ -43,6 +44,7 @@ void main() {
       documentsPath: '/documents',
       logMessageBatcher: logMessageBatcher,
       installSource: InstallSource.playStore,
+      shorebirdAvailable: true,
     );
   });
 
@@ -79,6 +81,16 @@ void main() {
 
       expect(a.read(installSourceProvider), InstallSource.playStore);
       expect(b.read(installSourceProvider), InstallSource.playStore);
+    });
+
+    test('every container reads the same Shorebird availability override', () {
+      final a = buildAccountContainer(deviceScope);
+      addTearDown(a.dispose);
+      final b = buildAccountContainer(deviceScope);
+      addTearDown(b.dispose);
+
+      expect(a.read(shorebirdAvailableProvider), isTrue);
+      expect(b.read(shorebirdAvailableProvider), isTrue);
     });
 
     test('every container reads the same documents path override', () {

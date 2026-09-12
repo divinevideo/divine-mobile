@@ -1,6 +1,7 @@
 // ABOUTME: Performance monitoring service for tracking app performance metrics
 // ABOUTME: Uses Firebase Performance Monitoring to track screen transitions, network requests, and custom operations
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -141,6 +142,32 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
   @visibleForTesting
   static const bool collectionEnabled = kReleaseMode;
 
+  /// Whether a release build must also be a distributed one to report.
+  ///
+  /// [collectionEnabled] cannot tell a store build from `flutter run
+  /// --release` on a developer's phone: both are release mode, and the local
+  /// one still reached the dataset under the `pubspec.yaml` build number —
+  /// 449 rows from four devices in the month after #7158 shipped (#7302).
+  /// [isDistributedBuild] is the runtime half: the Shorebird engine that only
+  /// `shorebird release` links, or an installer we recognise. Flip this to
+  /// `false` for a local run that should report; revert before committing.
+  @visibleForTesting
+  static const bool distributedBuildsOnly = true;
+
+  /// Whether this build reached the device through a channel real users use.
+  ///
+  /// Every store and TestFlight artifact comes out of `shorebird release` and
+  /// carries the updater engine, so [shorebirdAvailable] alone covers Play,
+  /// the App Store and TestFlight. Zapstore installs the split APKs Codemagic
+  /// builds with plain `flutter build`, which have no engine, so its installer
+  /// package is accepted on its own. A GitHub-release APK installed by hand is
+  /// indistinguishable from a local build by either signal and is excluded
+  /// with it — the only population this loses.
+  static bool isDistributedBuild({
+    required bool shorebirdAvailable,
+    required InstallSource installSource,
+  }) => shorebirdAvailable || installSource == InstallSource.zapstore;
+
   late final FirebasePerformance _performance;
   bool _initialized = false;
 
@@ -151,10 +178,15 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
   /// before [initialize] resolves.
   bool get isEnabled => _initialized;
 
-  /// Initialize performance monitoring
-  Future<void> initialize() async {
+  /// Initialize performance monitoring.
+  ///
+  /// [distributedBuild] is [isDistributedBuild] evaluated by the caller, which
+  /// has the container; it only matters when [distributedBuildsOnly] holds.
+  Future<void> initialize({required bool distributedBuild}) async {
     if (_initialized) return;
 
+    final collect =
+        collectionEnabled && (!distributedBuildsOnly || distributedBuild);
     try {
       _performance = FirebasePerformance.instance;
 
@@ -162,12 +194,13 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
       // is off: the SDK persists it across launches, so a device that ran an
       // earlier build — which enabled collection unconditionally — keeps
       // reporting until something actively sets it back to false.
-      await _performance.setPerformanceCollectionEnabled(collectionEnabled);
+      await _performance.setPerformanceCollectionEnabled(collect);
 
       _initialized = true;
       Log.info(
         'Performance monitoring initialized successfully '
-        '(collection enabled: $collectionEnabled)',
+        '(collection enabled: $collect, release: $collectionEnabled, '
+        'distributed build: $distributedBuild)',
         name: 'PerformanceMonitoring',
       );
     } catch (e) {

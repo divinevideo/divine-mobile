@@ -14,6 +14,7 @@ import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
@@ -61,6 +62,7 @@ class DeviceScope {
     this.dbCipherKey,
     this.databaseCorruptionService,
     this.installSource = InstallSource.sideload,
+    this.shorebirdAvailable = false,
     this.accountOverrides = const [],
   });
 
@@ -122,6 +124,11 @@ class DeviceScope {
   /// in-app review gate and `AppUpdateRepository` see the same value.
   final InstallSource installSource;
 
+  /// Whether the build carries the Shorebird updater engine, i.e. came out of
+  /// `shorebird release`. Sampled once at startup from the updater the patch
+  /// check constructs; `false` for a plain `flutter build` or `flutter run`.
+  final bool shorebirdAvailable;
+
   /// Extra overrides applied to every account container.
   ///
   /// Production leaves this empty. Tests use it for container-wide fakes that
@@ -140,6 +147,7 @@ class DeviceScope {
       databaseCorruptionService,
     ),
     installSourceProvider.overrideWithValue(installSource),
+    shorebirdAvailableProvider.overrideWithValue(shorebirdAvailable),
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
     crashReportingServiceProvider.overrideWithValue(crashReporting),
     logMessageBatcherProvider.overrideWithValue(logMessageBatcher),
