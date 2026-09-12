@@ -1,6 +1,8 @@
 // ABOUTME: Tests the shared account-deletion entry point end to end.
 // ABOUTME: Pins that a coordinator-accepted deletion feeds the recovery gate.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,9 +61,8 @@ void main() {
       when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyHex);
       when(() => authService.authState).thenReturn(AuthState.authenticated);
       when(() => authService.signerReadiness).thenReturn(SignerReadiness.ready);
-      when(
-        authService.checkAccountDeletionReadiness,
-      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(authService.checkAccountDeletionReadiness)
+          .thenAnswer((_) async => AccountDeletionReadiness.ready);
       when(repository.prepare).thenAnswer((_) async => _recoverable);
       when(
         () => repository.submit(
@@ -78,104 +79,137 @@ void main() {
       when(authService.signOut).thenAnswer((_) async {});
     });
 
-    testWidgets(
-      'a processing answer records the attempt the recovery gate reads',
-      (tester) async {
-        SharedPreferences.setMockInitialValues(<String, Object>{});
-        final sharedPreferences = await SharedPreferences.getInstance();
-        final container = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-            authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-            currentAuthRpcCapabilityProvider.overrideWithValue(
-              AuthRpcCapability.rpcReady,
-            ),
-            accountDeletionServiceProvider.overrideWithValue(deletionService),
-            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
-              repository,
-            ),
-            ownedDivineUsernameProvider.overrideWith(
-              (ref) async => const DivineUsernameNotFound(),
-            ),
-            fetchUserProfileProvider(
-              _pubkeyHex,
-            ).overrideWith((ref) async => null),
-          ],
-        );
-        addTearDown(container.dispose);
+    for (final unmountDuring in [null, 'submission', 'sign-out']) {
+      testWidgets(
+        'records the recovery receipt when caller ${unmountDuring == null ? 'stays mounted' : 'unmounts during $unmountDuring'}',
+        (tester) async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final sharedPreferences = await SharedPreferences.getInstance();
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              authServiceProvider.overrideWithValue(authService),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+              currentAuthRpcCapabilityProvider.overrideWithValue(
+                AuthRpcCapability.rpcReady,
+              ),
+              accountDeletionServiceProvider.overrideWithValue(deletionService),
+              accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+              ownedDivineUsernameProvider.overrideWith(
+                (ref) async => const DivineUsernameNotFound(),
+              ),
+              fetchUserProfileProvider(_pubkeyHex)
+                  .overrideWith((ref) async => null),
+            ],
+          );
+          addTearDown(container.dispose);
 
-        // The confirmation sheet closes through GoRouter, so the host needs one.
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => Scaffold(
-                body: Consumer(
-                  builder: (context, ref, _) => ElevatedButton(
-                    key: const Key('delete'),
-                    onPressed: () => startAccountDeletionFlow(
-                      context: context,
-                      ref: ref,
-                      screenName: 'Test',
+          // The confirmation sheet closes through GoRouter, so the host needs one.
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => Scaffold(
+                  body: Consumer(
+                    builder: (context, ref, _) => ElevatedButton(
+                      key: const Key('delete'),
+                      onPressed: () => startAccountDeletionFlow(
+                        context: context,
+                        ref: ref,
+                        screenName: 'Test',
+                      ),
+                      child: const Text('Delete'),
                     ),
-                    child: const Text('Delete'),
                   ),
                 ),
               ),
+              GoRoute(
+                path: '/finished',
+                builder: (_, _) => const Scaffold(body: Text('Finished')),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          final pendingOperation = Completer<void>();
+          if (unmountDuring == 'submission') {
+            when(
+              () => repository.submit(
+                attemptId: any(named: 'attemptId'),
+                vanishEventId: any(named: 'vanishEventId'),
+              ),
+            ).thenAnswer((_) async {
+              router.go('/finished');
+              await pendingOperation.future;
+              return _processing;
+            });
+          } else if (unmountDuring == 'sign-out') {
+            when(authService.signOut).thenAnswer((_) async {
+              router.go('/finished');
+              await pendingOperation.future;
+            });
+          }
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
             ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: router,
+          );
+
+          await tester.tap(find.byKey(const Key('delete')));
+          await tester.pumpAndSettle();
+          // No handle in the profile, so the sheet asks for the DELETE token.
+          await tester.enterText(find.byType(TextField), 'DELETE');
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(
+            find.widgetWithText(
+              DivineButton,
+              l10n.deleteAccountDeleteAllContentButton,
             ),
-          ),
-        );
+          );
+          await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('delete')));
-        await tester.pumpAndSettle();
-        // No handle in the profile, so the sheet asks for the DELETE token.
-        await tester.enterText(find.byType(TextField), 'DELETE');
-        await tester.pumpAndSettle();
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(
-          find.widgetWithText(
-            DivineButton,
-            l10n.deleteAccountDeleteAllContentButton,
-          ),
-        );
-        await tester.pumpAndSettle();
+          if (unmountDuring != null) {
+            expect(find.byKey(const Key('delete')), findsNothing);
+            expect(find.text('Finished'), findsOneWidget);
+            pendingOperation.complete();
+            await tester.pumpAndSettle();
+          }
+          expect(tester.takeException(), isNull);
 
-        final receipt = container.read(
-          submittedAccountDeletionAttemptProvider,
-        );
-        expect(receipt?.pubkeyHex, _pubkeyHex);
-        expect(receipt?.attempt, same(_processing));
-        expect(receipt?.vanishEventId, 'event-id');
-        expect(receipt?.submissionOwnedLocally, isFalse);
-        // The signer is gone the moment the coordinator accepts: the gate must
-        // be fed by the record, never by a lookup. Read under real time so a
-        // provider that reached the lookup fails here instead of hanging on
-        // its retry timers.
-        when(repository.fetchCurrent).thenThrow(
-          const AccountDeletionRecoveryException(
-            'Could not authorize deletion attempt request',
-          ),
-        );
-        final current = await tester.runAsync(
-          () => container.read(currentAccountDeletionAttemptProvider.future),
-        );
-        expect(current, same(_processing));
-        verifyNever(repository.fetchCurrent);
-        verify(authService.signOut).called(1);
-      },
-    );
+          final receipt = container.read(
+            submittedAccountDeletionAttemptProvider,
+          );
+          expect(receipt?.pubkeyHex, _pubkeyHex);
+          expect(receipt?.attempt, same(_processing));
+          expect(receipt?.vanishEventId, 'event-id');
+          expect(receipt?.submissionOwnedLocally, isFalse);
+          // The signer is gone the moment the coordinator accepts: the gate must
+          // be fed by the record, never by a lookup. Read under real time so a
+          // provider that reached the lookup fails here instead of hanging on
+          // its retry timers.
+          when(repository.fetchCurrent).thenThrow(
+            const AccountDeletionRecoveryException(
+              'Could not authorize deletion attempt request',
+            ),
+          );
+          final current = await tester.runAsync(
+            () => container.read(currentAccountDeletionAttemptProvider.future),
+          );
+          expect(current, same(_processing));
+          verifyNever(repository.fetchCurrent);
+          verify(authService.signOut).called(1);
+        },
+      );
+    }
 
     testWidgets('a pending receipt blocks deletion for another account', (
       tester,
