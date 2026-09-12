@@ -5,9 +5,12 @@
 # vs origin/main. Epic: #4338.
 # This hard service baseline is authoritative over the broad advisory check for
 # service god-file ceilings.
+# A verified in-tree move may replace its old row with:
+# <new-relpath><TAB><current-count> # renamed-from: <old-relpath>
+# Rename chains and swaps are deliberately unsupported.
 # Regenerate after shrinking/removing: UPDATE_BASELINE=1 bash scripts/check_service_god_file_ceiling.sh
-lib/services/auth_service.dart	4509
+lib/services/auth_service.dart	4470
 lib/services/curated_list_service.dart	1841
 lib/services/upload_manager.dart	1957
-lib/services/video_event_publisher.dart	2294
-lib/services/video_event_service.dart	6499
+lib/services/video_event_publisher.dart	2291
+lib/services/video_event_service.dart	6411
