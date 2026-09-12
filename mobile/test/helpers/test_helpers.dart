@@ -265,9 +265,25 @@ class TestHelpers {
   /// this after installing its `PathProviderPlatform` mock.
   static Future<void> initHiveHome() async {
     HiveStorageService.resetForTesting();
-    addTearDown(HiveStorageService.resetForTesting);
+    addTearDown(() {
+      HiveStorageService.resetForTesting();
+      resetHiveHomeForTesting();
+    });
     await HiveStorageService.initialize();
   }
+
+  /// Points Hive at [path] for tests that need a specific filesystem shape.
+  ///
+  /// Prefer [initHiveHome] when the test can use the app's normal storage
+  /// layout. This narrower helper exists for failure-path tests and always
+  /// restores Hive's process-global home before the next merged suite runs.
+  static void setHiveHomeForTesting(String path) {
+    Hive.init(path);
+    addTearDown(resetHiveHomeForTesting);
+  }
+
+  /// Restores Hive's process-global home to its uninitialized test state.
+  static void resetHiveHomeForTesting() => Hive.init(null);
 
   /// Generate test data for performance testing
   static List<VideoEvent> generatePerformanceTestData(int count) =>

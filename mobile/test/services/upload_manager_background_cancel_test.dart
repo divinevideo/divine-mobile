@@ -13,6 +13,8 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload/upload_ports.dart';
 import 'package:openvine/services/upload_manager.dart';
 
+import '../helpers/test_helpers.dart';
+
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockUploadCrashReporter extends Mock implements UploadCrashReporter {}
@@ -34,7 +36,7 @@ void main() {
     testDir = await Directory.systemTemp.createTemp(
       'upload_manager_bg_cancel_test_',
     );
-    Hive.init(testDir.path);
+    TestHelpers.setHiveHomeForTesting(testDir.path);
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(UploadStatusAdapter());
     }
@@ -126,56 +128,53 @@ void main() {
   }
 
   group('UploadManager background cancel race', () {
-    test(
-      'cancelling an in-flight background upload marks it failed without a '
-      'crash report',
-      () async {
-        final videoFile = await newVideoFile();
-        stubCancellableTransfer();
+    test('cancelling an in-flight background upload marks it failed without a '
+        'crash report', () async {
+      final videoFile = await newVideoFile();
+      stubCancellableTransfer();
 
-        // startUpload drives _performUpload; it stays in flight on the
-        // transfer future until the cancel resolves it.
-        final runFuture = uploadManager.startUpload(
-          videoFile: videoFile,
-          nostrPubkey: 'pk',
-          title: 'T',
-        );
-        await _pumpUntil(
-          () => uploadManager.pendingUploads.any(
-            (upload) => upload.status == UploadStatus.uploading,
-          ),
-        );
-        final uploadId = uploadManager.pendingUploads
-            .firstWhere((upload) => upload.status == UploadStatus.uploading)
-            .id;
+      // startUpload drives _performUpload; it stays in flight on the
+      // transfer future until the cancel resolves it.
+      final runFuture = uploadManager.startUpload(
+        videoFile: videoFile,
+        nostrPubkey: 'pk',
+        title: 'T',
+      );
+      await _pumpUntil(
+        () => uploadManager.pendingUploads.any(
+          (upload) => upload.status == UploadStatus.uploading,
+        ),
+      );
+      final uploadId = uploadManager.pendingUploads
+          .firstWhere((upload) => upload.status == UploadStatus.uploading)
+          .id;
 
-        await uploadManager.cancelUpload(uploadId);
-        // startUpload surfaces the cancellation to its caller rather than
-        // swallowing it; the persisted row is still the authoritative record.
-        await expectLater(
-          runFuture,
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'toString',
-              contains('Upload cancelled by user'),
-            ),
+      await uploadManager.cancelUpload(uploadId);
+      // startUpload surfaces the cancellation to its caller rather than
+      // swallowing it; the persisted row is still the authoritative record.
+      await expectLater(
+        runFuture,
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains('Upload cancelled by user'),
           ),
-        );
+        ),
+      );
 
-        final result = uploadManager.getUpload(uploadId);
-        expect(result?.status, equals(UploadStatus.failed));
-        expect(result?.errorMessage, equals('Upload cancelled by user'));
-        // A deliberate cancel must not be reported to Crashlytics as a failure.
-        verifyNever(
-          () => mockCrashReporter.recordError(
-            any(),
-            any(),
-            reason: any(named: 'reason'),
-          ),
-        );
-      },
-    );
+      final result = uploadManager.getUpload(uploadId);
+      expect(result?.status, equals(UploadStatus.failed));
+      expect(result?.errorMessage, equals('Upload cancelled by user'));
+      // A deliberate cancel must not be reported to Crashlytics as a failure.
+      verifyNever(
+        () => mockCrashReporter.recordError(
+          any(),
+          any(),
+          reason: any(named: 'reason'),
+        ),
+      );
+    });
   });
 }
 

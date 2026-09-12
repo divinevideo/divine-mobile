@@ -12,6 +12,8 @@ import 'package:models/models.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:test/test.dart';
 
+import 'helpers/hive_test_home.dart';
+
 /// Test constants. Full pubkeys — never truncate.
 const _ownerA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -51,7 +53,7 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'local_people_lists_cache_test_',
       );
-      Hive.init(tempDir.path);
+      setHiveTestHome(tempDir.path);
       boxCounter = 0;
     });
 
@@ -77,18 +79,12 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'owner-a-list',
-            updatedAt: DateTime.utc(2026, 4, 1),
-          ),
+          list: _list(id: 'owner-a-list', updatedAt: DateTime.utc(2026, 4, 1)),
           receivedAt: receivedAt,
         );
         await cache.putList(
           ownerPubkey: _ownerB,
-          list: _list(
-            id: 'owner-b-list',
-            updatedAt: DateTime.utc(2026, 4, 2),
-          ),
+          list: _list(id: 'owner-b-list', updatedAt: DateTime.utc(2026, 4, 2)),
           receivedAt: receivedAt,
         );
 
@@ -105,35 +101,23 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'oldest',
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
+          list: _list(id: 'oldest', updatedAt: DateTime.utc(2026, 1, 1)),
           receivedAt: receivedAt,
         );
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'newest',
-            updatedAt: DateTime.utc(2026, 4, 1),
-          ),
+          list: _list(id: 'newest', updatedAt: DateTime.utc(2026, 4, 1)),
           receivedAt: receivedAt,
         );
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'middle',
-            updatedAt: DateTime.utc(2026, 2, 1),
-          ),
+          list: _list(id: 'middle', updatedAt: DateTime.utc(2026, 2, 1)),
           receivedAt: receivedAt,
         );
 
         final lists = await cache.readLists(ownerPubkey: _ownerA);
 
-        expect(
-          lists.map((l) => l.id),
-          equals(['newest', 'middle', 'oldest']),
-        );
+        expect(lists.map((l) => l.id), equals(['newest', 'middle', 'oldest']));
       });
 
       test('hides tombstoned listIds', () async {
@@ -176,10 +160,7 @@ void main() {
 
           await cache.putList(
             ownerPubkey: _ownerA,
-            list: _list(
-              id: 'good',
-              updatedAt: DateTime.utc(2026, 4, 1),
-            ),
+            list: _list(id: 'good', updatedAt: DateTime.utc(2026, 4, 1)),
             receivedAt: DateTime.utc(2026, 4, 1),
           );
 
@@ -297,10 +278,7 @@ void main() {
         // An older event arrives (e.g. lagging relay).
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'ghost',
-            updatedAt: DateTime.utc(2026, 4, 1),
-          ),
+          list: _list(id: 'ghost', updatedAt: DateTime.utc(2026, 4, 1)),
           receivedAt: DateTime.utc(2026, 4, 11),
         );
 
@@ -334,10 +312,7 @@ void main() {
         expect(lists, hasLength(1));
         expect(lists.single.id, equals('phoenix'));
         expect(lists.single.name, equals('Phoenix Rising'));
-        expect(
-          lists.single.pubkeys,
-          equals(const [_memberA, _memberB]),
-        );
+        expect(lists.single.pubkeys, equals(const [_memberA, _memberB]));
       });
     });
 
@@ -382,10 +357,7 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'initial',
-            updatedAt: DateTime.utc(2026, 4, 1),
-          ),
+          list: _list(id: 'initial', updatedAt: DateTime.utc(2026, 4, 1)),
           receivedAt: DateTime.utc(2026, 4, 1),
         );
 
@@ -400,18 +372,12 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'second',
-            updatedAt: DateTime.utc(2026, 4, 5),
-          ),
+          list: _list(id: 'second', updatedAt: DateTime.utc(2026, 4, 5)),
           receivedAt: DateTime.utc(2026, 4, 5),
         );
         await pumpEventQueue();
 
-        expect(
-          emissions.last.map((l) => l.id),
-          equals(['second', 'initial']),
-        );
+        expect(emissions.last.map((l) => l.id), equals(['second', 'initial']));
 
         await subscription.cancel();
       });
@@ -436,10 +402,7 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerB,
-          list: _list(
-            id: 'owner-b-only',
-            updatedAt: DateTime.utc(2026, 4, 5),
-          ),
+          list: _list(id: 'owner-b-only', updatedAt: DateTime.utc(2026, 4, 5)),
           receivedAt: DateTime.utc(2026, 4, 5),
         );
         await pumpEventQueue();
@@ -455,10 +418,7 @@ void main() {
 
         await cache.putList(
           ownerPubkey: _ownerA,
-          list: _list(
-            id: 'temporary',
-            updatedAt: DateTime.utc(2026, 4, 1),
-          ),
+          list: _list(id: 'temporary', updatedAt: DateTime.utc(2026, 4, 1)),
           receivedAt: DateTime.utc(2026, 4, 1),
         );
 

@@ -43,7 +43,7 @@ void main() {
         // latch -- it never touches HiveImpl.homePath. Left set, the next suite
         // to open a box without re-pointing Hive has BackendManagerVm silently
         // recreate the directory deleted below and write there.
-        Hive.init(null);
+        TestHelpers.resetHiveHomeForTesting();
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
         }
@@ -68,10 +68,7 @@ void main() {
 
     group('healAndBlameSharedHiveBoxes', () {
       test('does nothing when every shared box is closed', () async {
-        await expectLater(
-          healAndBlameSharedHiveBoxes(strict: true),
-          completes,
-        );
+        await expectLater(healAndBlameSharedHiveBoxes(strict: true), completes);
       });
 
       test('closes the leaked box and fails in strict mode', () async {
