@@ -1165,8 +1165,8 @@ internal class DivineVideoPlayerInstance(
                         return@post
                     }
                     clipAudioLoop = loop
-                    if (player?.isPlaying == true) {
-                        loop.play(player?.currentPosition ?: 0L, volume.toFloat())
+                    player?.takeIf { it.isPlaying }?.let {
+                        loop.play(it.currentPosition, it.volume)
                     }
                 }
             }
@@ -1351,16 +1351,17 @@ internal class DivineVideoPlayerInstance(
 
     // -- play / pause with audio sync --
 
+    // The private loop track is not started or stopped here: it follows the
+    // player's actual playing state in [onIsPlayingChanged], which these
+    // calls reach through the player itself.
     private fun handlePlay(result: MethodChannel.Result) {
         ensurePlayer().play()
-        clipAudioLoop?.play(player?.currentPosition ?: 0L, volume.toFloat())
         audioOverlayManager.resumeActive()
         result.success(null)
     }
 
     private fun handlePause(result: MethodChannel.Result) {
         ensurePlayer().pause()
-        clipAudioLoop?.pause()
         audioOverlayManager.pauseAll()
         result.success(null)
     }
@@ -1724,9 +1725,20 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            // The private loop track has no playWhenReady of its own, so it is
+            // keyed to the player's *actual* playing state rather than to the
+            // play and pause Dart asks for. That covers the pauses the player
+            // makes by itself — backgrounding, a buffering stall, an Activity
+            // detach — which would otherwise leave the track sounding over a
+            // still picture, and restarts it from where the picture now is
+            // when play resumes. The player's volume is used because it
+            // already folds in the clip's own gain and is deliberately zero
+            // during the foreground frame flush.
             if (isPlaying) {
+                player?.let { clipAudioLoop?.play(it.currentPosition, it.volume) }
                 syncAudioOverlays()
             } else {
+                clipAudioLoop?.pause()
                 audioOverlayManager.pauseAndDeactivateAll()
                 reportUnrequestedStop()
             }
@@ -2015,6 +2027,10 @@ internal class DivineVideoPlayerInstance(
             needsSurface = true
         }
         audioOverlayManager.pauseAll()
+        // The stop above only pauses the loop track through onIsPlayingChanged;
+        // nothing resumes after a detach, so free the AudioTrack now rather
+        // than holding it until dispose.
+        releaseClipAudioLoop()
     }
 
     fun dispose() {
