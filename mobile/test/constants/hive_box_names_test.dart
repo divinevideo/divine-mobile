@@ -1,4 +1,4 @@
-// ABOUTME: Ties the Hive wipe policy to the real Hive.openBox call sites.
+// ABOUTME: Ties the Hive wipe policy to the real Hive box-open call sites.
 // ABOUTME: A box that skips HiveBoxNames fails here instead of being wiped.
 
 import 'dart:io';
@@ -6,14 +6,15 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 
-/// `.openBox<T>(arg` / `.openLazyBox(arg`, capturing the first argument. The
-/// argument may sit on the next line, so whitespace is skipped.
+/// `HiveBoxOpener.open<T>(arg`, `.openBox<T>(arg`, and their lazy variants,
+/// capturing the first argument. The argument may sit on the next line, so
+/// whitespace is skipped.
 ///
 /// The receiver is intentionally broad: app-layer code can use `Hive.openBox`
 /// directly, while packages receive injected open-box callbacks because they
 /// cannot import app-owned [HiveBoxNames].
 final _openBoxCall = RegExp(
-  r'''\.open(?:Lazy)?Box(?:<[^>]*>)?\(\s*([A-Za-z_$][\w.]*|'[^']*'|"[^"]*")''',
+  r'''(?:HiveBoxOpener\.open(?:Lazy)?|\.open(?:Lazy)?Box)(?:<[^>]*>)?\(\s*([A-Za-z_$][\w.]*|'[^']*'|"[^"]*")''',
 );
 
 /// A `static const`/`const` declaration and its initializer, e.g.
@@ -57,6 +58,18 @@ class ProbeB {
       expect(_openBoxCall.firstMatch(source)?.group(1), "'draft_notes_v1'");
     });
 
+    test('openBox scanner includes HiveBoxOpener calls', () {
+      const source = '''
+Future<Box<dynamic>> open() =>
+    HiveBoxOpener.open<dynamic>(HiveBoxNames.notifications);
+''';
+
+      expect(
+        _openBoxCall.firstMatch(source)?.group(1),
+        'HiveBoxNames.notifications',
+      );
+    });
+
     test('every declared box name is in HiveBoxNames.all', () {
       final source = File(
         'lib/constants/hive_box_names.dart',
@@ -78,7 +91,7 @@ class ProbeB {
       );
     });
 
-    test('every Hive.openBox call site names its box via HiveBoxNames', () {
+    test('every Hive box open names its box via HiveBoxNames', () {
       final offenders = <String>[];
 
       for (final file in _dartSources()) {
@@ -91,7 +104,7 @@ class ProbeB {
           if (resolved != null && resolved.startsWith('HiveBoxNames.')) {
             continue;
           }
-          offenders.add('${file.path}: Hive.openBox($argument)');
+          offenders.add('${file.path}: Hive box open($argument)');
         }
       }
 
