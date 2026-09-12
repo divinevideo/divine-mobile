@@ -125,28 +125,6 @@ void main() {
       expect(prefetchCalls, 0);
     });
 
-    test('createAnonymousAccountFromKeyContainer imports the provided key '
-        'as an automatic identity', () async {
-      final privateKeyHex = generatePrivateKey();
-      final container = SecureKeyContainer.fromPrivateKeyHex(privateKeyHex);
-      final expectedPubkey = container.publicKeyHex;
-      final authService = createAuthService();
-      addTearDown(authService.dispose);
-
-      await ignoringDiscoveryErrors(
-        () => authService.createAnonymousAccountFromKeyContainer(container),
-      );
-
-      expect(authService.isAuthenticated, isTrue);
-      expect(
-        authService.authenticationSource,
-        equals(AuthenticationSource.automatic),
-      );
-      expect(authService.currentPublicKeyHex, equals(expectedPubkey));
-      final prefs = await SharedPreferences.getInstance();
-      expect(hasFollowingPrefetchMarker(prefs, expectedPubkey), isTrue);
-    });
-
     test(
       'known private-key import preserves an existing following cache',
       () async {
@@ -201,27 +179,5 @@ void main() {
         expect(prefetchCalls, 0);
       },
     );
-
-    test('createAnonymousAccountFromKeyContainer throws for a '
-        'public-key-only container', () async {
-      final pubkey = SecureKeyContainer.fromPrivateKeyHex(
-        generatePrivateKey(),
-      ).publicKeyHex;
-      final pubkeyOnly = SecureKeyContainer.fromPublicKey(pubkey);
-      final authService = createAuthService();
-      addTearDown(authService.dispose);
-
-      await expectLater(
-        authService.createAnonymousAccountFromKeyContainer(pubkeyOnly),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Failed to read generated identity key'),
-          ),
-        ),
-      );
-      expect(authService.isAuthenticated, isFalse);
-    });
   });
 }

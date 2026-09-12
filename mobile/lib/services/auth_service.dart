@@ -1338,25 +1338,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
   }
 
-  /// Create a new anonymous account from a pre-generated key container.
-  Future<void> createAnonymousAccountFromKeyContainer(
-    SecureKeyContainer keyContainer,
-  ) async {
-    String? privateKeyHex;
-    keyContainer.withPrivateKey<void>((privateKey) {
-      privateKeyHex = privateKey;
-    });
-
-    if (privateKeyHex == null || privateKeyHex!.isEmpty) {
-      throw Exception('Failed to read generated identity key');
-    }
-
-    await createAnonymousAccountFromPrivateKeyHex(
-      privateKeyHex!,
-      followingKnownEmpty: true,
-    );
-  }
-
   /// Create a new anonymous account from a known private key.
   Future<void> createAnonymousAccountFromPrivateKeyHex(
     String privateKeyHex, {
