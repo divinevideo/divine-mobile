@@ -33,7 +33,7 @@ void main() {
 
       setUp(() async {
         tmp = Directory.systemTemp.createTempSync('cache_recovery_hive_test');
-        Hive.init(tmp.path);
+        TestHelpers.setHiveHomeForTesting(tmp.path);
         await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
         await TestHelpers.cleanupHiveBox(
           HiveBoxNames.pushNotificationPreferencesDirty,
@@ -75,9 +75,7 @@ void main() {
         () async {
           final pendingUploads = Hive.isBoxOpen(HiveBoxNames.pendingUploads)
               ? Hive.box<PendingUpload>(HiveBoxNames.pendingUploads)
-              : await Hive.openBox<PendingUpload>(
-                  HiveBoxNames.pendingUploads,
-                );
+              : await Hive.openBox<PendingUpload>(HiveBoxNames.pendingUploads);
           final hashtagStats = Hive.isBoxOpen(HiveBoxNames.hashtagStats)
               ? Hive.box(HiveBoxNames.hashtagStats)
               : await Hive.openBox(HiveBoxNames.hashtagStats);
@@ -249,77 +247,71 @@ void main() {
         },
       );
 
-      test(
-        'preserves a durable box left only as a compacted copy',
-        () async {
-          // Compaction interrupted after writing `.hivec` and before renaming
-          // it over the box file leaves it as the only copy of the box.
-          final compacted = write(
-            'support/openvine/${HiveBoxNames.notifications}.hivec',
-            'compacted preferences',
-          );
-          final dirtyCompacted = write(
-            'support/openvine/'
-                '${HiveBoxNames.pushNotificationPreferencesDirty}.hivec',
-            'compacted dirty preferences',
-          );
-          final uploadsCompacted = write(
-            'support/openvine/${HiveBoxNames.pendingUploads}.hivec',
-            'compacted pending uploads',
-          );
-          final scratch = write('support/openvine/scratch.txt', 'scratch');
+      test('preserves a durable box left only as a compacted copy', () async {
+        // Compaction interrupted after writing `.hivec` and before renaming
+        // it over the box file leaves it as the only copy of the box.
+        final compacted = write(
+          'support/openvine/${HiveBoxNames.notifications}.hivec',
+          'compacted preferences',
+        );
+        final dirtyCompacted = write(
+          'support/openvine/'
+              '${HiveBoxNames.pushNotificationPreferencesDirty}.hivec',
+          'compacted dirty preferences',
+        );
+        final uploadsCompacted = write(
+          'support/openvine/${HiveBoxNames.pendingUploads}.hivec',
+          'compacted pending uploads',
+        );
+        final scratch = write('support/openvine/scratch.txt', 'scratch');
 
-          final recovered = await CacheRecoveryService.clearAllCaches();
+        final recovered = await CacheRecoveryService.clearAllCaches();
 
-          expect(recovered, isTrue);
-          expect(compacted.existsSync(), isTrue);
-          expect(dirtyCompacted.existsSync(), isTrue);
-          expect(uploadsCompacted.existsSync(), isTrue);
-          expect(scratch.existsSync(), isFalse);
-        },
-      );
+        expect(recovered, isTrue);
+        expect(compacted.existsSync(), isTrue);
+        expect(dirtyCompacted.existsSync(), isTrue);
+        expect(uploadsCompacted.existsSync(), isTrue);
+        expect(scratch.existsSync(), isFalse);
+      });
 
-      test(
-        'cacheSizeBytes excludes protected app support state',
-        () async {
-          write('support/openvine/database/divine_db.db', 'database');
-          write(
-            'support/openvine/${HiveBoxNames.pendingUploads}.hive',
-            'pending uploads',
-          );
-          write('support/openvine/${HiveBoxNames.pendingUploads}.lock', 'lock');
-          write(
-            'support/openvine/${HiveBoxNames.notifications}.hive',
-            'preferences',
-          );
-          write('support/openvine/${HiveBoxNames.notifications}.lock', 'lock');
-          write(
-            'support/openvine/'
-                '${HiveBoxNames.pushNotificationPreferencesDirty}.hive',
-            'dirty preferences',
-          );
-          write(
-            'support/openvine/'
-                '${HiveBoxNames.pushNotificationPreferencesDirty}.lock',
-            'lock',
-          );
-          write(
-            'support/openvine/${HiveBoxNames.notifications}.hivec',
-            'compacted preferences',
-          );
-          write('support/openvine/cache/cache_sync.db', 'cache');
-          write('support/openvine/scratch.txt', 'scratch');
-          write('temp/transient.tmp', 'temp');
-          write('cache/download.bin', 'cache');
+      test('cacheSizeBytes excludes protected app support state', () async {
+        write('support/openvine/database/divine_db.db', 'database');
+        write(
+          'support/openvine/${HiveBoxNames.pendingUploads}.hive',
+          'pending uploads',
+        );
+        write('support/openvine/${HiveBoxNames.pendingUploads}.lock', 'lock');
+        write(
+          'support/openvine/${HiveBoxNames.notifications}.hive',
+          'preferences',
+        );
+        write('support/openvine/${HiveBoxNames.notifications}.lock', 'lock');
+        write(
+          'support/openvine/'
+              '${HiveBoxNames.pushNotificationPreferencesDirty}.hive',
+          'dirty preferences',
+        );
+        write(
+          'support/openvine/'
+              '${HiveBoxNames.pushNotificationPreferencesDirty}.lock',
+          'lock',
+        );
+        write(
+          'support/openvine/${HiveBoxNames.notifications}.hivec',
+          'compacted preferences',
+        );
+        write('support/openvine/cache/cache_sync.db', 'cache');
+        write('support/openvine/scratch.txt', 'scratch');
+        write('temp/transient.tmp', 'temp');
+        write('cache/download.bin', 'cache');
 
-          final bytes = await CacheRecoveryService.cacheSizeBytes();
+        final bytes = await CacheRecoveryService.cacheSizeBytes();
 
-          expect(
-            bytes,
-            'cache'.length + 'scratch'.length + 'temp'.length + 'cache'.length,
-          );
-        },
-      );
+        expect(
+          bytes,
+          'cache'.length + 'scratch'.length + 'temp'.length + 'cache'.length,
+        );
+      });
     });
 
     group('deleteDirectoryContentsExcept', () {

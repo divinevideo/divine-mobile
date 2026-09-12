@@ -102,7 +102,7 @@ void main() {
       try {
         await TestHelpers.cleanupHiveBox('pending_uploads');
       } finally {
-        Hive.init(null);
+        TestHelpers.resetHiveHomeForTesting();
         PathProviderPlatform.instance = originalPathProviderInstance;
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
@@ -432,7 +432,7 @@ void main() {
         try {
           await TestHelpers.cleanupHiveBox('pending_uploads');
         } finally {
-          Hive.init(null);
+          TestHelpers.resetHiveHomeForTesting();
           PathProviderPlatform.instance = originalPathProvider;
           if (tempDir.existsSync()) {
             await tempDir.delete(recursive: true);

@@ -16,6 +16,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../helpers/test_helpers.dart';
+
 class MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
@@ -41,7 +43,7 @@ void main() {
       // Initialize Hive with test directory
       final testDir = Directory.systemTemp.createTempSync('upload_init_test_');
       testBoxPath = testDir.path;
-      Hive.init(testBoxPath);
+      TestHelpers.setHiveHomeForTesting(testBoxPath);
 
       // Register adapters
       if (!Hive.isAdapterRegistered(1)) {

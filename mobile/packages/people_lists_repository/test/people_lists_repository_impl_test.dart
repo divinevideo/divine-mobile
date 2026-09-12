@@ -11,6 +11,8 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
+import 'helpers/hive_test_home.dart';
+
 class _MockNostrClient extends Mock implements NostrClient {
   _MockNostrClient() {
     // Self-registered so the stub below works without each file needing its
@@ -77,7 +79,7 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'people_lists_repository_impl_test_',
       );
-      Hive.init(tempDir.path);
+      setHiveTestHome(tempDir.path);
       boxCounter = 0;
     });
 
@@ -298,11 +300,8 @@ void main() {
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
-            (_) async => (
-              events: [staleRemote],
-              timedOut: false,
-              noRelays: false,
-            ),
+            (_) async =>
+                (events: [staleRemote], timedOut: false, noRelays: false),
           );
           when(() => client.publishEvent(any())).thenAnswer((invocation) async {
             return PublishSuccess(
@@ -1066,11 +1065,8 @@ void main() {
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
-            (_) async => (
-              events: [newer, older],
-              timedOut: false,
-              noRelays: false,
-            ),
+            (_) async =>
+                (events: [newer, older], timedOut: false, noRelays: false),
           );
           final repository = buildRepository(nostrClient: client);
 
@@ -1118,11 +1114,8 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
-          (_) async => (
-            events: [higherId, lowerId],
-            timedOut: false,
-            noRelays: false,
-          ),
+          (_) async =>
+              (events: [higherId, lowerId], timedOut: false, noRelays: false),
         );
         final repository = buildRepository(nostrClient: client);
 
