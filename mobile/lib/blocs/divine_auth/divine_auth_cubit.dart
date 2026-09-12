@@ -29,14 +29,12 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     required AuthValidationMessages validationMessages,
     bool requirePasswordConfirmation = false,
     String? appVersion,
-    AnalyticsEventSink analytics = const NoOpAnalyticsEventSink(),
   }) : _oauthClient = oauthClient,
        _authService = authService,
        _pendingVerificationService = pendingVerificationService,
        _validationMessages = validationMessages,
        _requirePasswordConfirmation = requirePasswordConfirmation,
        _appVersion = appVersion,
-       _analytics = analytics,
        super(const DivineAuthInitial());
 
   final KeycastOAuth _oauthClient;
@@ -45,7 +43,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final AuthValidationMessages _validationMessages;
   final bool _requirePasswordConfirmation;
   final String? _appVersion;
-  final AnalyticsEventSink _analytics;
 
   /// Initialize form with default state (sign up mode)
   void initialize({

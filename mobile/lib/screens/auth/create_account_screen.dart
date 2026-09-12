@@ -71,7 +71,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         validationMessages: AuthValidationMessages.fromL10n(l10n),
         requirePasswordConfirmation: true,
         appVersion: ref.watch(appVersionProvider),
-        analytics: ref.read(analyticsEventSinkProvider),
       )..initialize(),
       child: const _CreateAccountView(),
     );

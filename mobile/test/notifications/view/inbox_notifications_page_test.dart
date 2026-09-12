@@ -3,11 +3,7 @@
 // ABOUTME: watermark, #4708) and that each tab opens its own filtered feed.
 
 // Fresh widget instances make per-pump fixture ownership explicit.
-// ignore_for_file: prefer_const_constructors
-
 import 'package:badge_repository/badge_repository.dart';
-import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
