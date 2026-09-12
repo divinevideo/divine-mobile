@@ -85,11 +85,20 @@ class RelayPool {
 
   set eventVerifyWorker(EventVerifyWorker? worker) => _verifyWorker = worker;
 
-  /// Per-relay serial tail used to keep EVENT/EOSE frames in order once verify
-  /// becomes asynchronous (an EOSE must not complete a query before its
-  /// preceding events finish verifying). One entry per relay url; only used
-  /// when [_verifyWorker] is set.
-  final Map<String, Future<void>> _orderedFrameTails = {};
+  /// Serial tails that keep a subscription's EVENT/EOSE/CLOSED frames in
+  /// order once verify becomes asynchronous (an EOSE must not complete a query
+  /// before its preceding events finish verifying).
+  ///
+  /// One entry per (relay, subscription id), not per relay. Only frames of the
+  /// same subscription need ordering, and one shared per-relay chain made a
+  /// live feed subscription wait behind every other subscription's stored
+  /// replay on that socket — thousands of one-shot query events at ~20–40 ms
+  /// of Schnorr verify each, on device — which is how a profile feed the relay
+  /// had answered in 300 ms reached the app 16 s later and ran into the 30 s
+  /// feed-load fuse on slower Android hardware (#7301). Entries are removed
+  /// once their chain drains, so the map stays bounded by the subscriptions
+  /// that are mid-delivery. Only used when [_verifyWorker] is set.
+  final Map<(String, String), Future<void>> _orderedFrameTails = {};
 
   // subscription
   final Map<String, Subscription> _subscriptions = {};
@@ -264,6 +273,7 @@ class RelayPool {
     this.signatureVerificationPolicy = SignatureVerificationPolicy.all,
     this.silentRepairCooldown = const Duration(seconds: 60),
     this.minSubscriptionAgeBeforeRepair = const Duration(seconds: 10),
+    this.minQueryAgeBeforeRepair = const Duration(seconds: 4),
     this.subscriptionSilenceProbe = const Duration(seconds: 8),
     this.tempRelayIdleTimeout = const Duration(seconds: 120),
     this.tempRelaySweepInterval = const Duration(seconds: 60),
@@ -376,6 +386,27 @@ class RelayPool {
   /// deadline, so a caller that actually waited still gets the repair.
   /// Injectable so tests need no wall-clock wait.
   Duration minSubscriptionAgeBeforeRepair;
+
+  /// How long a one-shot query must have gone unanswered before its release
+  /// is treated as evidence against the socket.
+  ///
+  /// [_repairRelaysThatNeverAnswered] assumed a query is only released once
+  /// its caller gave up waiting. Two release paths never waited at all: a
+  /// read whose deadline had already passed when its slot in the client's
+  /// query pool arrived was written to the relays and unsubscribed a few
+  /// milliseconds later, and a query the settle window completed on the
+  /// first relay's EOSE released the slower relays about a second after the
+  /// REQ. Neither says anything about the socket, but both pass the
+  /// silence test trivially — no relay answers inside 7 ms — so every relay
+  /// that was otherwise idle got force-cycled and replayed its whole stored
+  /// window for every subscription it carried. On device that was a
+  /// three-relay cycle and thousands of frames of replay per profile visit,
+  /// all of it queued ahead of the feed the user was looking at (#7301).
+  ///
+  /// The default is below the SDK's 5 s default read timeout, so a caller
+  /// that waited its whole budget still gets the repair, and above any
+  /// settle-window completion. Injectable so tests need no wall-clock wait.
+  Duration minQueryAgeBeforeRepair;
 
   /// How long after a subscription's REQ fan-out the pool checks whether any
   /// relay has answered, and repairs the ones that have not.
@@ -1089,15 +1120,29 @@ class RelayPool {
     }
   }
 
-  /// Runs [work] after the previous EVENT/EOSE frame from the same relay,
-  /// preserving per-relay in-order delivery once verify is asynchronous. Errors
-  /// are swallowed on the retained tail so one bad frame can't wedge the chain;
-  /// the returned future still surfaces them to the immediate caller.
-  Future<void> _enqueueOrdered(Relay relay, Future<void> Function() work) {
-    final key = relay.url;
+  /// Runs [work] after the previous EVENT/EOSE/CLOSED frame that [relay] sent
+  /// for [subId], preserving per-subscription in-order delivery once verify is
+  /// asynchronous. Errors are swallowed on the retained tail so one bad frame
+  /// can't wedge the chain; the returned future still surfaces them to the
+  /// immediate caller.
+  Future<void> _enqueueOrdered(
+    Relay relay,
+    String subId,
+    Future<void> Function() work,
+  ) {
+    final key = (relay.url, subId);
     final prev = _orderedFrameTails[key] ?? Future<void>.value();
     final next = prev.then((_) => work());
-    _orderedFrameTails[key] = next.catchError((Object _) {});
+    final tail = next.catchError((Object _) {});
+    _orderedFrameTails[key] = tail;
+    // Only the chain's last link removes the entry; a link that finished
+    // while a later frame was already queued behind it leaves that frame's
+    // tail in place.
+    tail.whenComplete(() {
+      if (identical(_orderedFrameTails[key], tail)) {
+        _orderedFrameTails.remove(key);
+      }
+    });
     return next;
   }
 
@@ -1426,9 +1471,11 @@ class RelayPool {
   /// Force-cycles the relays that never produced a terminal frame for the
   /// abandoned query [subId].
   ///
-  /// A caller only abandons a query by timing out, so any relay still holding
-  /// it demonstrably did not answer. When that same connection also received no
-  /// inbound frame of any kind since the REQ was written, it is the half-open
+  /// A caller that abandons a query after waiting at least
+  /// [minQueryAgeBeforeRepair] has given every relay still holding it a fair
+  /// chance to answer, so those relays demonstrably did not. When such a
+  /// connection also received no inbound frame of any kind since the REQ was
+  /// written, it is the half-open
   /// zombie [_repairSilentRelays] already remediates on the publish side — a
   /// socket that still reports `connected` to every health gate while silently
   /// swallowing everything written to it. Without this, queries never trigger
@@ -1437,6 +1484,11 @@ class RelayPool {
   void _repairRelaysThatNeverAnswered(String subId) {
     final sentAt = _querySentAt.remove(subId);
     if (sentAt == null) return;
+    // A query released before [minQueryAgeBeforeRepair] proves nothing about
+    // the socket; see that field for the two paths that release one early.
+    if (DateTime.now().difference(sentAt) < minQueryAgeBeforeRepair) {
+      return;
+    }
     final silent = [
       for (final relay in [
         ..._relaysSnapshot(),
@@ -1612,18 +1664,26 @@ class RelayPool {
     }
 
     // #5863: when an off-main verify worker is wired, serialize the frames
-    // that carry or terminate a query per relay so the asynchronous verify
-    // preserves in-order delivery — a terminal frame must not complete a query
-    // before its preceding events finish verifying. CLOSED is terminal too: a
-    // relay may stream part of a stored replay and then abandon it, so
+    // that carry or terminate a query per subscription so the asynchronous
+    // verify preserves in-order delivery — a terminal frame must not complete
+    // a query before its preceding events finish verifying. CLOSED is terminal
+    // too: a relay may stream part of a stored replay and then abandon it, so
     // completing on CLOSED out of order would drop the events already in
-    // flight. With no worker the original synchronous path runs unchanged.
+    // flight. Frames of different subscriptions carry no ordering obligation
+    // toward each other and run on independent chains (#7301). A frame whose
+    // subscription id is not a string is malformed; it takes the relay-wide
+    // chain so [_dispatchTypedFrame] can log and drop it in turn. With no
+    // worker the original synchronous path runs unchanged.
     if (_verifyWorker != null &&
         (messageType == 'EVENT' ||
             messageType == 'EOSE' ||
             messageType == 'CLOSED')) {
+      final subId = json.length > 1 && json[1] is String
+          ? json[1] as String
+          : '';
       return _enqueueOrdered(
         relay,
+        subId,
         () => _dispatchTypedFrame(relay, json, messageType),
       );
     }
@@ -1649,6 +1709,19 @@ class RelayPool {
       try {
         final subId = _stringAt(relay, json, 1, 'EVENT subscription id');
         if (subId == null) return;
+
+        // Nothing is listening for [subId] any more: the query was released
+        // or the subscription torn down while the relay was still streaming
+        // its replay. Every check below decides whether the event may be
+        // delivered, and with no recipient there is nothing to decide — the
+        // Schnorr verify it would spend is what the live subscriptions behind
+        // it are waiting on (#7301). Same outcome as the post-verify lookup
+        // below, which stays because the recipient can go away during the
+        // await.
+        if (_subscriptions[subId] == null &&
+            relay.getRequestSubscription(subId) == null) {
+          return;
+        }
 
         final eventJson = _mapAt(relay, json, 2, 'EVENT payload');
         if (eventJson == null) {

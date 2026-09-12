@@ -634,8 +634,40 @@ class Nostr {
     required DateTime deadline,
     required bool requireAllRelaysSettled,
   }) async {
-    final eventBox = EventMemBox(sortAfterAdd: false);
+    // A deadline that has already passed ends the read before it starts. The
+    // client's query pool can hand a slot over with the caller's budget fully
+    // spent by the wait; a REQ written then was unsubscribed a few
+    // milliseconds later, and the pool read those milliseconds of silence as
+    // every relay having swallowed the request (#7301). Nothing is asked of
+    // the relays, so the outcome is the deadline's with no relay in it — the
+    // same answer the timer below would have given.
     final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final now = DateTime.now();
+    if (!deadline.isAfter(now)) {
+      // The pool files a completion line for every read it sees; this one
+      // it never will, so the line is filed here.
+      emitRelayDiagnostic(
+        _pool.diagnosticsSink,
+        RelayDiagnostic(
+          site: RelayDiagnosticSite.queryCompletion,
+          level: RelayDiagnosticLevel.warning,
+          relayUrl: RelayDiagnostic.poolScope,
+          message:
+              'Query $subscriptionId ended deadline before any REQ was '
+              'written: the deadline had already passed by '
+              '${now.difference(deadline).inMilliseconds}ms',
+        ),
+      );
+      return (
+        result: const QueryResult(events: [], endedBy: QueryEnd.deadline),
+        endedAtDeadline: true,
+        relays: const <QueryRelaySummary>[],
+        cappedWithoutEvents: const <String>[],
+        sentTo: null,
+      );
+    }
+
+    final eventBox = EventMemBox(sortAfterAdd: false);
     final ended = Completer<QueryOutcome>();
     var endedAtDeadline = false;
 

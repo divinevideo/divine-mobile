@@ -36,6 +36,10 @@ void main() {
         channelFactory: factory,
       );
       await nostr.relayPool.add(relay);
+      // These tests exercise the repair itself with a 100ms read budget; the
+      // floor that keeps a hasty release from counting as evidence is pinned
+      // separately below.
+      nostr.relayPool.minQueryAgeBeforeRepair = Duration.zero;
     });
 
     Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
@@ -125,6 +129,75 @@ void main() {
           factory.createdChannels,
           hasLength(2),
           reason: 'the relay that swallowed the REQ is still the zombie',
+        );
+      },
+    );
+
+    test('a query released before minQueryAgeBeforeRepair is not evidence '
+        'against the socket (#7301)', () async {
+      // The read below waits 100ms, far short of the floor: a caller that
+      // gave the relay no real chance to answer proves nothing about the
+      // socket, however silent the relay was inside that window.
+      nostr.relayPool.minQueryAgeBeforeRepair = const Duration(seconds: 4);
+      final zombieChannel = factory.createdChannels.single;
+
+      final result = await queryOnce();
+      expect(result.timedOut, isTrue);
+      expect(
+        zombieChannel.sentMessages
+            .map((m) => jsonDecode(m as String) as List<dynamic>)
+            .where((m) => m.first == 'REQ'),
+        hasLength(1),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        factory.createdChannels,
+        hasLength(1),
+        reason:
+            'a relay that went unanswered for 100ms has not been shown to '
+            'be a zombie; cycling it would replay every subscription it '
+            'carries',
+      );
+    });
+
+    test(
+      'a straggler the settle window abandons inside minQueryAgeBeforeRepair '
+      'is left alone (#7301)',
+      () async {
+        // A second relay answers at once, so the settle window releases the
+        // straggler about a second after the REQ — routine for a relay that
+        // is merely slower than its peer, and no evidence of a dead socket.
+        nostr.relayPool.minQueryAgeBeforeRepair = const Duration(seconds: 4);
+        const answeringUrl = 'wss://answers.example';
+        final answeringFactory = FakeWebSocketChannelFactory();
+        await nostr.relayPool.add(
+          RelayBase(
+            answeringUrl,
+            RelayStatus(answeringUrl),
+            channelFactory: answeringFactory,
+          ),
+        );
+        final answeringChannel = answeringFactory.createdChannels.single;
+
+        final pending = nostr.queryEventsDetailed([
+          {
+            'kinds': [1],
+          },
+        ], timeout: const Duration(seconds: 4));
+        await Future<void>.delayed(Duration.zero);
+        answeringChannel.simulateMessage(
+          jsonEncode(['EOSE', _lastReqSubId(answeringChannel)]),
+        );
+
+        final result = await pending;
+        expect(result.timedOut, isFalse);
+
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(
+          factory.createdChannels,
+          hasLength(1),
+          reason: 'the slower relay keeps its socket and its subscriptions',
         );
       },
     );
