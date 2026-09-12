@@ -18,6 +18,7 @@ Complete dark-mode design system providing:
 |-----------|-------------|
 | `DivineButton` | Primary button component with multiple variants (primary, secondary, tertiary, ghost, ghostSecondary, link, error). Supports leading/trailing icons, loading state, and expanded width. |
 | `DivineIconButton` | Icon-only button with primary/secondary/tertiary variants and small/base sizes. |
+| `DivineFollowButton` | Follow badge for an author avatar: a 20dp disc centred in a 44dp tap target, with follow/selected variants and a 100ms cross-fade between them. |
 | `DivineTextLink` | Inline text link for use within text flows. Provides both widget and `TextSpan` versions. |
 
 **DivineButton Types:**
@@ -118,6 +119,21 @@ DivineIconButton(
   type: DivineIconButtonType.secondary,
   size: DivineIconButtonSize.small,
   onPressed: () => context.pop(),
+)
+```
+
+### DivineFollowButton
+```dart
+// Follow badge on an author avatar. The caller flips the variant and the
+// badge cross-fades to it; a badge without onPressed is inert.
+DivineFollowButton(
+  variant: isFollowing
+      ? DivineFollowButtonVariant.selected
+      : DivineFollowButtonVariant.follow,
+  onPressed: isFollowing ? null : () => bloc.add(FollowRequested(pubkey)),
+  semanticLabel: isFollowing
+      ? context.l10n.profileFollowingLabel
+      : context.l10n.videoFollowButtonFollow,
 )
 ```
 

@@ -82,4 +82,4 @@ lib/widgets/video_feed_item/inspired_by_attribution_row.dart	1
 lib/widgets/video_feed_item/list_attribution_chip.dart	1
 lib/widgets/video_feed_item/reaction_overlay.dart	1
 lib/widgets/video_feed_item/reel_dm_reply_bar.dart	1
-lib/widgets/video_feed_item/video_feed_item.dart	7
+lib/widgets/video_feed_item/video_feed_item.dart	6
