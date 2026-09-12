@@ -2700,6 +2700,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               ),
               captureLayersOnDone: true,
               captureImageOnDone: false,
+              // A drawing is one vector layer per stroke, and Impeller keeps
+              // nothing between frames, so every repaint re-strokes all of
+              // them — during playback that is every frame. With hundreds of
+              // strokes that is the whole frame budget (#8032). Static paint
+              // layers are drawn from a cached composite instead; a layer
+              // being dragged, scaled or retimed renders live.
+              enablePaintLayerRasterCache: true,
               widgets: MainEditorWidgets(
                 appBar: (_, _) => null,
                 bottomBar: (_, _, key) => null,

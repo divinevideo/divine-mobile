@@ -390,7 +390,8 @@ dependencies:
   pro_video_editor: ^2.12.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
-  pro_image_editor: ^14.1.1
+  # 14.2.0 adds the paint-layer raster cache the video editor turns on.
+  pro_image_editor: ^14.2.0
   flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
   sensors_plus: ^7.0.0
