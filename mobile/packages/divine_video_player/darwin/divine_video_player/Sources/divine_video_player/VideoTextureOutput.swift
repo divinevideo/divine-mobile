@@ -305,7 +305,13 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     // MARK: - AVPlayerItemOutputPullDelegate
 
     /// Called after a seek flushes the output queue.
+    ///
+    /// Every warmed output reports here too, and a queued looper item is
+    /// flushed when the looper prepares it. Its frames belong to a lap that
+    /// has not started, so only the current output may reset the bookkeeping
+    /// and re-arm; [attach] re-arms a warm output the moment it is adopted.
     func outputSequenceWasFlushed(_ output: AVPlayerItemOutput) {
+        guard output === videoOutput else { return }
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         (output as? AVPlayerItemVideoOutput)?
@@ -314,8 +320,13 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
 
     /// Fires even on a paused player — most reliable frame path after an
     /// exact seek on an `AVMutableComposition` with `AVVideoComposition`.
+    ///
+    /// A warmed output that is not current is ignored: copying from it at the
+    /// player's time hands over the next lap's first frame while the current
+    /// lap is still playing.
     func outputMediaDataWillChange(_ sender: AVPlayerItemOutput) {
-        guard let videoOutput = sender as? AVPlayerItemVideoOutput else {
+        guard let videoOutput = sender as? AVPlayerItemVideoOutput,
+              videoOutput === self.videoOutput else {
             return
         }
         // Prefer the stored seek target; fall back to currentTime only when

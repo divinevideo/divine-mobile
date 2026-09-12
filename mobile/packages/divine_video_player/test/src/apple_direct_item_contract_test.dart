@@ -105,12 +105,17 @@ void main() {
       // hands back an empty array for it.
       expect(
         body,
-        isNot(
-          contains('let videoTrack = try await asset.loadTracks'),
-        ),
+        contains('let videoTracks = try await asset.loadTracks'),
         reason:
-            'A non-optional track read would crash or throw for HLS, which '
-            'exposes none.',
+            'The track read has to land in an array so that an HLS asset, '
+            'which exposes none, reads as empty rather than failing.',
+      );
+      expect(
+        body,
+        isNot(anyOf(contains('Tracks.first!'), contains('Tracks[0]'))),
+        reason:
+            'A forced unwrap or index into that array would crash for HLS, '
+            'which exposes none.',
       );
       expect(
         body,
