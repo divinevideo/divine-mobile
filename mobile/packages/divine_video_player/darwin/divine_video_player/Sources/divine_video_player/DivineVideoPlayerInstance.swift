@@ -1283,9 +1283,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     /// be empty right after the looper is created and fills in later; running
     /// this again on every current-item change picks up whatever it has by
     /// then. It is idempotent — an item already warmed is skipped.
+    ///
+    /// With no looper the set is empty on purpose: that is what drops the
+    /// previous looper's items, outputs and decoders when looping is switched
+    /// off, instead of holding them until dispose.
     private func prewarmLoopingOutputs() {
-        guard let looper = playerLooper else { return }
-        textureOutput?.prewarm(items: looper.loopingPlayerItems)
+        textureOutput?.prewarm(items: playerLooper?.loopingPlayerItems ?? [])
     }
 
     private func attachCurrentItemOutputs() {
