@@ -2,19 +2,20 @@
 // ABOUTME: Verifies public key copy plus Keycast local-vs-remote signing states
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _FakeKeyManagementAuthService extends Fake implements AuthService {
@@ -144,11 +145,36 @@ void main() {
       await pumpSubject(tester);
       final l10n = lookupAppLocalizations(const Locale('en'));
 
-      await tester.tap(find.byTooltip(l10n.keyManagementCopyPublicKeyTooltip));
+      await tester.tap(findByTooltip(l10n.keyManagementCopyPublicKeyTooltip));
       await tester.pumpAndSettle();
 
       expect(clipboardPayload, equals(testNpub));
       expect(find.text(l10n.keyManagementPublicKeyCopied), findsOneWidget);
+    });
+
+    testWidgets('copies npub from the control the key backup journey taps', (
+      tester,
+    ) async {
+      // backupYourKey.yaml overwrites the private key it copied by tapping
+      // this id, so the id has to stay on a control that writes the npub.
+      String? clipboardPayload;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardPayload = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+
+      await pumpSubject(tester);
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.keyManagementCopyNpubButton),
+      );
+      await tester.pumpAndSettle();
+
+      expect(clipboardPayload, equals(testNpub));
     });
 
     testWidgets(
@@ -667,7 +693,7 @@ void main() {
               ),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
               theme: ThemeData.dark(),

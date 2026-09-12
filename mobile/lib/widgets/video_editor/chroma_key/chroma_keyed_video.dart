@@ -4,7 +4,7 @@
 
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
@@ -23,6 +23,7 @@ class ChromaKeyedVideo extends StatefulWidget {
     required this.child,
     this.chromaKey,
     this.backdropSync,
+    this.previewTransparency = true,
     super.key,
   });
 
@@ -32,6 +33,16 @@ class ChromaKeyedVideo extends StatefulWidget {
   /// Keeps a video backdrop in step with [child] instead of letting the two
   /// drift. See [ChromaKeyBackdropSync].
   final ChromaKeyBackdropSync? backdropSync;
+
+  /// Whether a transparent key is shown over a checkerboard, the way an image
+  /// editor stands in for "nothing here".
+  ///
+  /// On by default, for the green-screen screen: its preview has nothing real
+  /// behind the clip, so the checkerboard is what makes the matte legible. Off
+  /// on the editor canvas, where a detached clip sits over the composition and
+  /// whatever is underneath *is* the backdrop — a checkerboard there would hide
+  /// exactly what the key is meant to reveal.
+  final bool previewTransparency;
 
   @override
   State<ChromaKeyedVideo> createState() => _ChromaKeyedVideoState();
@@ -114,6 +125,7 @@ class _ChromaKeyedVideoState extends State<ChromaKeyedVideo> {
           child: ChromaKeyBackdrop(
             chromaKey: chromaKey,
             sync: widget.backdropSync,
+            previewTransparency: widget.previewTransparency,
           ),
         ),
         ImageFiltered(

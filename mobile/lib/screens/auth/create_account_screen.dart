@@ -5,13 +5,13 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:invite_api_client/invite_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_event.dart';
@@ -20,6 +20,7 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/utils/validators.dart';
@@ -82,6 +83,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         inviteSourceSlug: inviteAccessGrant?.creatorSlug,
         validationMessages: AuthValidationMessages.fromL10n(l10n),
         requirePasswordConfirmation: true,
+        appVersion: ref.watch(appVersionProvider),
         analytics: ref.read(analyticsEventSinkProvider),
       )..initialize(),
       child: _CreateAccountView(inviteAccessGrant: inviteAccessGrant),
@@ -260,6 +262,10 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
           context.read<DivineAuthCubit>().updatePassword(value),
       onConfirmPasswordChanged: (value) =>
           context.read<DivineAuthCubit>().updateConfirmPassword(value),
+      belowFieldsWidget: _MarketingOptInCheckbox(
+        value: widget.state.marketingConsent,
+        enabled: !isDisabled,
+      ),
       errorWidget: widget.state.generalError != null
           ? Column(
               mainAxisSize: MainAxisSize.min,
@@ -289,6 +295,47 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
         isSkipping: isSkipping,
         isDisabled: isDisabled,
         onPressed: _skip,
+      ),
+    );
+  }
+}
+
+/// Unchecked-by-default opt-in for marketing communications, shown on the
+/// email/password create-account form. Toggles [DivineAuthCubit]'s
+/// marketing-consent state; the value is sent with headless registration.
+class _MarketingOptInCheckbox extends StatelessWidget {
+  const _MarketingOptInCheckbox({required this.value, required this.enabled});
+
+  final bool value;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.vineColors;
+    return MergeSemantics(
+      child: Semantics(
+        checked: value,
+        enabled: enabled,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled
+              ? () => context.read<DivineAuthCubit>().updateMarketingConsent(
+                  !value,
+                )
+              : null,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: DivineCheckbox(
+              state: value
+                  ? DivineCheckboxState.selected
+                  : DivineCheckboxState.unselected,
+              label: Text(
+                context.l10n.authCreateAccountMarketingOptIn,
+                style: VineTheme.bodyLargeFont(color: palette.primaryText),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

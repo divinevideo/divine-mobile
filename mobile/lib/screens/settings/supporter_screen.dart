@@ -2,13 +2,14 @@
 // ABOUTME: Signal-style: optional monthly support, nothing gated, recognition only.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 
@@ -22,8 +23,15 @@ class SupporterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(supporterRepositoryProvider);
+    final analytics = ref.watch(analyticsEventSinkProvider);
     return BlocProvider(
-      create: (_) => SupporterCubit(repository: repository),
+      create: (_) => SupporterCubit(
+        repository: repository,
+        trackEvent: (event) => analytics.logEvent(
+          name: event,
+          parameters: const {},
+        ),
+      ),
       child: const SupporterScreenView(),
     );
   }

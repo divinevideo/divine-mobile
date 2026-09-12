@@ -2,10 +2,10 @@
 // ABOUTME: TimeFormatter that maps to AppLocalizations strings.
 
 import 'package:clock/clock.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 
@@ -16,7 +16,7 @@ Future<AppLocalizations> _loadL10n(WidgetTester tester, Locale locale) async {
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) {
@@ -440,7 +440,7 @@ void main() {
           await tester.pumpWidget(
             MaterialApp(
               locale: const Locale('en'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Builder(
                 builder: (context) {

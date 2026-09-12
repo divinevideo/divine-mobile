@@ -2147,6 +2147,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get relaySettingsFailedToConnectCheck => 'リレーに接続できなかった。ネット接続を確認してみて。';
 
   @override
+  String get relaySettingsStillConnecting => 'リレーにまだ接続中です。少しお待ちください。';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'この端末に保存しました。公開がまた動くようになったらアカウントに同期します。';
 
@@ -2770,6 +2773,24 @@ class AppLocalizationsJa extends AppLocalizations {
       'Funnelcake がオーディエンス分析エンドポイントを追加したら、ソース/地域/時間帯の内訳がここに入るよ。';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'リテンション';
 
   @override
@@ -2986,6 +3007,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'アカウントを作ろう';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '招待コードに戻る';
@@ -8505,6 +8530,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '動画は透明を保持できないため、書き出すと黒くなります。';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'クリップの後ろにあるものが透けて見えます。';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       '後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。';
 
@@ -8771,6 +8800,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => '開始スケール';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'カスタム';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'スライドを始める位置を動画でタップしてください';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'スライドを終える位置を動画でタップしてください';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel => 'タイムライン編集を終了';
@@ -10511,6 +10551,48 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'キャッシュを消去しました';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'クリップと下書き';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '自分で作った録画、下書き、サウンド。キャッシュを消してもここには触れません。ここの容量を空けるには、ライブラリからクリップを削除してください。';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '残ったファイルはありません';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '残ったファイル $count 件、$size',
+      one: '残ったファイル $count 件、$size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '残ったファイルを削除';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '残ったファイルを削除しますか？';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'どのクリップ・下書き・アップロードにも使われていないファイル $count 件を削除し、$size を解放します。元に戻せません。',
+      one: 'どのクリップ・下書き・アップロードにも使われていないファイル $count 件を削除し、$size を解放します。元に戻せません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '残ったファイルを削除しました';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'クリップライブラリ';

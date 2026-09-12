@@ -401,6 +401,71 @@ void main() {
     );
 
     test(
+      'counts a relay whose handshake failed while its status lagged',
+      () async {
+        final signer = LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        );
+        final nostr = Nostr(
+          signer,
+          [],
+          (url) => RelayBase(url, RelayStatus(url)),
+        );
+        await nostr.refreshPublicKey();
+
+        final fastFactory = FakeWebSocketChannelFactory();
+        await nostr.relayPool.add(
+          RelayBase(fastUrl, RelayStatus(fastUrl), channelFactory: fastFactory),
+        );
+
+        final failedReady = Completer<void>();
+        final failedRelay = RelayBase(
+          failedUrl,
+          RelayStatus(failedUrl),
+          channelFactory: FakeWebSocketChannelFactory(
+            readyFutureFactory: () => failedReady.future,
+          ),
+        );
+        final failedAdd = nostr.relayPool.add(failedRelay);
+        await _waitForRelayState(failedRelay, ClientConnected.connecting);
+
+        // Same stale reading as the test below, but the handshake now fails
+        // 20ms in — so the write gives up with the whole publish budget still
+        // unspent, and no clock reading can tell that this relay was tried.
+        failedRelay.relayStatus.connected = ClientConnected.disconnect;
+
+        _acceptEventWhenSent(fastFactory, eventId);
+        final failTimer = Timer(const Duration(milliseconds: 20), () {
+          failedReady.completeError(StateError('connect failed'));
+        });
+        addTearDown(failTimer.cancel);
+
+        final outcome = await nostr.relayPool.sendEventAwaitOk(
+          [
+            'EVENT',
+            {'id': eventId, 'kind': 5},
+          ],
+          eventId: eventId,
+          timeout: const Duration(seconds: 1),
+        );
+        await failedAdd;
+
+        expect(outcome.acceptedBy, equals([fastUrl]));
+        expect(
+          outcome.unreachableTargets,
+          equals([failedUrl]),
+          reason:
+              'the fan-out waited on this handshake and it collapsed under '
+              'it, so the relay was attempted — reading the lagging status '
+              'field and then the clock drops it from the denominator '
+              'whenever the write ends before the deadline',
+        );
+        expect(outcome.targetCount, equals(2));
+        expect(outcome.acceptedByAll, isFalse);
+      },
+    );
+
+    test(
       'counts an attempted relay whose status still lags the socket',
       () async {
         final signer = LocalNostrSigner(

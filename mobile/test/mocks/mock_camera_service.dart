@@ -8,7 +8,7 @@ import 'package:divine_camera/divine_camera.dart'
         DivineVideoQuality,
         DivineVideoStabilizationMode,
         PhotoCaptureResult;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';

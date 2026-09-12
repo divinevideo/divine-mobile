@@ -468,7 +468,9 @@ void main() {
           toggleCompleter.complete();
 
           await expectLater(closeFuture, completes);
-          expect(bloc.state.hasLocalFollowEdit, isFalse);
+          // The local-edit flag is set before the toggle is awaited, so it is
+          // already true here; what must not happen is an emit after close.
+          expect(bloc.state.hasLocalFollowEdit, isTrue);
         },
       );
 

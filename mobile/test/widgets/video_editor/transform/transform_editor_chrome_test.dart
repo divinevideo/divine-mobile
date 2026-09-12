@@ -2,10 +2,10 @@
 // ABOUTME: Covers the app-bar and bottom-bar actions both transform screens use.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_chrome.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show CropRotateEditorState;
@@ -33,7 +33,7 @@ void main() {
   Future<void> pump(WidgetTester tester, Widget child) {
     return tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: Scaffold(body: child),

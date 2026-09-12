@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -14,6 +14,7 @@ void main() {
   // divine_video_player, so tests can assert the migrated controller wiring
   // (create/play/pause/dispose) without a real native player.
   final methodCalls = <String>[];
+  final createArguments = <Map<Object?, Object?>>[];
   final setClipsArguments = <Map<Object?, Object?>>[];
 
   // Per-created-player event streams keyed by native player id. Emitting to a
@@ -63,6 +64,7 @@ void main() {
   setUp(() {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
     methodCalls.clear();
+    createArguments.clear();
     setClipsArguments.clear();
     playerEvents = {};
     installedMethodChannels.clear();
@@ -79,7 +81,9 @@ void main() {
         ) async {
           methodCalls.add(call.method);
           if (call.method == 'create') {
-            installPlayerChannels((call.arguments as Map)['id'] as int);
+            final arguments = call.arguments! as Map<Object?, Object?>;
+            createArguments.add(arguments);
+            installPlayerChannels(arguments['id']! as int);
             return <String, Object?>{'textureId': 1};
           }
           return null;
@@ -112,7 +116,7 @@ void main() {
 
   Widget buildPlayer({VoidCallback? onOpenVideo}) {
     return MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: VideoCommentPlayer(
@@ -137,7 +141,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: VideoCommentPlayer(
@@ -192,6 +196,10 @@ void main() {
       final clips = setClipsArguments.single['clips']! as List<Object?>;
       final clip = clips.single! as Map<Object?, Object?>;
       expect(clip['trimToCommonTrackEnd'], isTrue);
+      // On Android only a full-profile player reads a remote clip's track
+      // lengths before the load; a feed-profile player warms them behind it
+      // and the play just started would keep its loop seam (#8897).
+      expect(createArguments.single['bufferProfile'], 'full');
     });
 
     testWidgets('disposes the native controller when unmounted', (
@@ -203,7 +211,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: SizedBox(),
         ),
@@ -265,7 +273,7 @@ void main() {
         // callback (delivered after the render object is disposed) fires.
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: SizedBox(),
           ),
@@ -299,7 +307,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ListView(

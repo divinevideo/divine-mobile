@@ -4,9 +4,9 @@
 // ABOUTME: gift-wrap subscription is auth-session-scoped via
 // ABOUTME: dmRepositoryProvider, not driven by this screen's lifecycle.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';

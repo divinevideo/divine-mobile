@@ -241,7 +241,7 @@ If it fails due to performance, profile and optimize:
 **File**: `test/screens/explore_screen_fresh_filter_test.dart`
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';

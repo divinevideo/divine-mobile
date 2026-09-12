@@ -2,7 +2,7 @@
 // ABOUTME: Shared by feed playback and the editor's CC preview overlay.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The rounded scrim pill that renders one caption cue's text over video.
 class CaptionPill extends StatelessWidget {

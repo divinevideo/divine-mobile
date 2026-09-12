@@ -1,8 +1,8 @@
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// A text font with its style getter.
@@ -60,6 +60,12 @@ class VideoEditorConstants {
 
   /// Maximum number of collaborators allowed per video.
   static const int maxCollaborators = 5;
+
+  /// Maximum creators one video may credit as "Inspired By".
+  ///
+  /// Matches [maxCollaborators]: both are lists of people the author
+  /// attributes, and both become p-tags on the published event.
+  static const int maxInspiredByCreators = 5;
 
   /// Whether to enforce the tag limit in the UI.
   static const bool enableTagLimit = false;

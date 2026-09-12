@@ -2,11 +2,11 @@
 // ABOUTME: Covers enabled/disabled states, checkbox rendering, and tap wiring.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 // Full-length Nostr pubkeys — never truncate anywhere in this file.
 const String _pubkey =
@@ -22,7 +22,7 @@ void main() {
       String? handle = '@ada',
     }) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PersonPickableRow(

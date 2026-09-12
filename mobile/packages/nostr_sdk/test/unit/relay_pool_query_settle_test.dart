@@ -904,6 +904,7 @@ void main() {
           final refusing = _SilentRelay('wss://refuses-req.example');
           expect(await nostr.relayPool.add(refusing), isTrue);
 
+          var completed = false;
           final pending = nostr.queryEventsDetailed(
             [
               {
@@ -921,6 +922,15 @@ void main() {
             'error: too many concurrent REQs',
           ]);
 
+          pending.then((_) => completed = true);
+          await pumpEventQueue();
+          expect(
+            completed,
+            isTrue,
+            reason:
+                'CLOSED is terminal for this relay copy, so waiting out the '
+                'deadline cannot make the incomplete answer more complete',
+          );
           final result = await pending;
 
           expect(result.events, isEmpty);
@@ -946,6 +956,7 @@ void main() {
         expect(await nostr.relayPool.add(answering), isTrue);
         expect(await nostr.relayPool.add(refusing), isTrue);
 
+        var completed = false;
         final pending = nostr.queryEventsDetailed(
           [
             {
@@ -965,6 +976,15 @@ void main() {
           'error: too many concurrent REQs',
         ]);
 
+        pending.then((_) => completed = true);
+        await pumpEventQueue();
+        expect(
+          completed,
+          isTrue,
+          reason:
+              'the healthy relay answered and the refusing relay terminated '
+              'its copy, so no participant can still change this result',
+        );
         final result = await pending;
 
         expect(result.events, isEmpty);

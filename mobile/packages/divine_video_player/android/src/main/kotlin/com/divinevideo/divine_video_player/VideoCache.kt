@@ -22,9 +22,13 @@ import java.io.File
  * Initialised once via [configure] at app startup. All player instances
  * share the same cache directory and eviction policy.
  *
- * When configured, [dataSourceFactory] returns a [CacheDataSource.Factory]
- * that reads from cache first and fills it progressively on cache misses.
+ * When configured, [dataSourceFactory] returns a factory whose sources read
+ * HTTP(S) media from cache first and fill it progressively on cache misses.
  * When **not** configured, it falls back to a plain [DefaultDataSource.Factory].
+ *
+ * The cache lives at `<cacheDir>/divine_video_cache`. The app's storage
+ * screen counts and clears that directory by name, so a rename here must be
+ * mirrored in `StorageManagementService`.
  */
 @UnstableApi
 internal object VideoCache {
@@ -64,6 +68,9 @@ internal object VideoCache {
      * Returns a [DataSource.Factory] that hits the cache when available,
      * or a plain [DefaultDataSource.Factory] if the cache has not been
      * configured.
+     *
+     * Only anonymous HTTP(S) requests go through the cache; see
+     * [CacheBypassDataSource] for what is routed around it and why.
      */
     fun dataSourceFactory(
         context: Context,
@@ -72,7 +79,7 @@ internal object VideoCache {
         val cachedFactory = cacheDataSourceFactory ?: upstreamFactory(context)
         val uncachedFactory = upstreamFactory(context)
         return DataSource.Factory {
-            AuthAwareCacheBypassDataSource(
+            CacheBypassDataSource(
                 cachedFactory = cachedFactory,
                 uncachedFactory = uncachedFactory,
                 httpHeadersForUri = httpHeadersForUri,
@@ -141,7 +148,33 @@ internal class ProcessingResponseDataSource(
     }
 }
 
-internal class AuthAwareCacheBypassDataSource(
+/**
+ * Whether a request for [scheme] can usefully go through [SimpleCache].
+ *
+ * Only remote HTTP(S) bytes are worth keeping: everything else Media3 can
+ * open — `file`, a bare path (no scheme), `content`, `asset`, `data` — is
+ * already on the device. Routing those through a write-through cache copies
+ * every local read into `divine_video_cache` a second time, which is exactly
+ * what happened to each feed video played from the Dart-side media cache
+ * (#8029).
+ */
+internal fun isCacheableScheme(scheme: String?): Boolean =
+    scheme.equals("http", ignoreCase = true) ||
+        scheme.equals("https", ignoreCase = true)
+
+/**
+ * Routes each request either through [cachedFactory] or straight to
+ * [uncachedFactory], deciding per `open()` so HLS segments are judged on
+ * their own URI rather than the manifest's.
+ *
+ * Two kinds of request bypass the cache:
+ *  - Viewer-authenticated (age-gated) content, which the origin serves
+ *    `no-store`; the auth headers are attached and the private bytes are
+ *    never persisted.
+ *  - Anything that is not an HTTP(S) URL, which is already local and would
+ *    only be duplicated on disk (see [isCacheableScheme]).
+ */
+internal class CacheBypassDataSource(
     private val cachedFactory: DataSource.Factory,
     private val uncachedFactory: DataSource.Factory,
     private val httpHeadersForUri: (Uri) -> Map<String, String>,
@@ -160,12 +193,10 @@ internal class AuthAwareCacheBypassDataSource(
         val resolvedDataSpec = if (httpHeaders.isEmpty()) {
             dataSpec
         } else {
-            // Authenticated age-gated responses are served no-store by the
-            // origin. Attach the viewer auth headers but bypass SimpleCache so
-            // those private bytes are not persisted on disk.
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
-        val selectedDelegate = if (httpHeaders.isEmpty()) {
+        val useCache = httpHeaders.isEmpty() && isCacheableScheme(dataSpec.uri.scheme)
+        val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()
         } else {
             uncachedFactory.createDataSource()

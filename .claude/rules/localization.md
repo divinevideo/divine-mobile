@@ -141,7 +141,7 @@ baseline.
 - **`divine_ui` package stays l10n-free** — its widgets accept string params with English defaults
 - **Plurals use ICU syntax** in ARB files, not conditional logic in Dart
 - **Translated copy follows the per-locale register and terminology decisions** in [`mobile/docs/LOCALIZATION_STYLE_GUIDE.md`](../../mobile/docs/LOCALIZATION_STYLE_GUIDE.md) — the ARB parity guard proves a key exists, not that it is written in the locale's voice
-- **Every `MaterialApp` in tests needs delegates** — use `localizationsDelegates: AppLocalizations.localizationsDelegates` and `supportedLocales: AppLocalizations.supportedLocales`
+- **Every `MaterialApp` in tests needs delegates** — use `localizationsDelegates: appLocalizationsDelegates` (from `package:openvine/l10n/l10n.dart`) and `supportedLocales: AppLocalizations.supportedLocales`. The generated `AppLocalizations.localizationsDelegates` is not enough on its own: gen-l10n emits `flutter_localizations`' delegates, which satisfy the framework's `MaterialLocalizations` and not `material_ui`'s (#8916), and a `MaterialApp` given a non-English locale without them reports a delegate-coverage error
 - **Never hardcode English strings in widget test assertions** — resolve the key from `AppLocalizations` instead, so the test survives copy changes and breaks loudly if the widget stops reading from l10n. Pick whichever lookup fits the test:
 
 ```dart
@@ -210,7 +210,7 @@ this order:
    not fetch l10n through `navigatorKey.currentContext` or similar
    workarounds.
 7. **Update tests** that pump these widgets: add
-   `AppLocalizations.localizationsDelegates` / `supportedLocales`
+   `appLocalizationsDelegates` / `AppLocalizations.supportedLocales`
    to the test's `MaterialApp` (see `testing.md`). Any existing
    assertion on the hardcoded English string now needs to match the
    ARB value verbatim.

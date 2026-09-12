@@ -1,6 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A styled text field following the Divine design system.
 class DivineTextField extends StatelessWidget {

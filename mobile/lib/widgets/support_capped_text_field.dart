@@ -2,9 +2,9 @@
 // ABOUTME: Keeps dropped keyboard content from looking like accepted evidence
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// A [DivineTextField] with a hard character cap that tells the user when the

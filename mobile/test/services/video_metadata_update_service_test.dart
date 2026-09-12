@@ -769,10 +769,7 @@ void main() {
 
         expect(result, isA<VideoUpdateSuccess>());
         expect(capturedTags.where((tag) => tag.first == 't'), isEmpty);
-        expect(
-          capturedTags,
-          contains(equals(['proofmode', 'proof-manifest'])),
-        );
+        expect(capturedTags, contains(equals(['proofmode', 'proof-manifest'])));
       });
 
       test(
@@ -897,64 +894,53 @@ void main() {
         );
       });
 
-      test(
-        'canonicalizes collaborator tags and invite recipients',
-        () async {
-          const collaborator =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-          when(
-            () => mockDmRepository.sendMessage(
-              recipientPubkey: any(named: 'recipientPubkey'),
-              content: any(named: 'content'),
-              additionalTags: any(named: 'additionalTags'),
-              skipNip04Fallback: any(named: 'skipNip04Fallback'),
-            ),
-          ).thenAnswer(
-            (_) async => NIP17SendResult.success(
-              rumorEventId: 'rumor-id',
-              messageEventId: 'invite-id',
-              recipientPubkey: collaborator,
-            ),
-          );
+      test('canonicalizes collaborator tags and invite recipients', () async {
+        const collaborator =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        when(
+          () => mockDmRepository.sendMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: 'rumor-id',
+            messageEventId: 'invite-id',
+            recipientPubkey: collaborator,
+          ),
+        );
 
-          final result = await service.updateVideo(
-            originalVideo: _testVideo(),
-            editorState: VideoEditorProviderState(
-              collaboratorPubkeys: {
-                collaborator.toUpperCase(),
-                NostrKeyUtils.encodePubKey(collaborator),
-                NostrKeyUtils.encodePubKey(_ownerPubkey),
-                'not-a-pubkey',
-              },
-            ),
-            initialCollaboratorPubkeys: const {},
-          );
+        final result = await service.updateVideo(
+          originalVideo: _testVideo(),
+          editorState: VideoEditorProviderState(
+            collaboratorPubkeys: {
+              collaborator.toUpperCase(),
+              NostrKeyUtils.encodePubKey(collaborator),
+              NostrKeyUtils.encodePubKey(_ownerPubkey),
+              'not-a-pubkey',
+            },
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
 
-          expect(result, isA<VideoUpdateSuccess>());
-          final collaboratorTags = capturedTags
-              .where((tag) => tag.length >= 4 && tag[3] == 'collaborator')
-              .toList();
-          expect(
-            collaboratorTags,
-            [
-              [
-                'p',
-                collaborator,
-                'wss://relay.divine.video',
-                'collaborator',
-              ],
-            ],
-          );
-          verify(
-            () => mockDmRepository.sendMessage(
-              recipientPubkey: collaborator,
-              content: any(named: 'content'),
-              additionalTags: any(named: 'additionalTags'),
-              skipNip04Fallback: true,
-            ),
-          ).called(1);
-        },
-      );
+        expect(result, isA<VideoUpdateSuccess>());
+        final collaboratorTags = capturedTags
+            .where((tag) => tag.length >= 4 && tag[3] == 'collaborator')
+            .toList();
+        expect(collaboratorTags, [
+          ['p', collaborator, 'wss://relay.divine.video', 'collaborator'],
+        ]);
+        verify(
+          () => mockDmRepository.sendMessage(
+            recipientPubkey: collaborator,
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+            skipNip04Fallback: true,
+          ),
+        ).called(1);
+      });
 
       test('compares existing collaborators in canonical form', () async {
         const collaborator =
@@ -1677,7 +1663,7 @@ void main() {
 
         final result = await service.updateVideo(
           originalVideo: _testVideo(),
-          editorState: VideoEditorProviderState(inspiredByNpub: npub),
+          editorState: VideoEditorProviderState(inspiredByNpubs: [npub]),
           initialCollaboratorPubkeys: const {},
         );
 

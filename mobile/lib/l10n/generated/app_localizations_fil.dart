@@ -2320,6 +2320,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi nakakonekta sa mga relay. Pakitsek ang iyong network connection.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Kumokonekta pa rin sa mga relay. Sandali lang.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Naka-save sa device na ito. Isi-sync namin ito sa account mo kapag gumana ulit ang publishing.';
 
@@ -2978,6 +2982,24 @@ class AppLocalizationsFil extends AppLocalizations {
       'Lalabas ang audience source/geo/time breakdown habang nagdadagdag ang Funnelcake ng mga audience analytics endpoint.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retention';
 
   @override
@@ -3205,6 +3227,10 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Gumawa ng account';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Bumalik sa invite code';
@@ -9011,6 +9037,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi kayang magdala ng transparency ang video, kaya magiging itim ito sa export.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Kahit anong nasa likod ng clip, makikita sa pagitan.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.';
 
@@ -9300,6 +9330,17 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Scale mula sa';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Custom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'I-tap ang video kung saan ito dapat mag-slide papasok';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'I-tap ang video kung saan ito dapat mag-slide palabas';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11168,6 +11209,52 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Na-clear ang cache';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Mga clip at draft mo';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Mga recording, draft, at sound na ginawa mo. Hindi ito nagagalaw ng pag-clear ng cache — mag-delete ng mga clip sa library mo para makapag-free ng space dito.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Walang natirang file';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count natirang file, $size',
+      one: '$count natirang file, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Alisin ang mga natirang file';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Alisin ang mga natirang file?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+      one:
+          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Naalis na ang mga natirang file';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Library ng clip';

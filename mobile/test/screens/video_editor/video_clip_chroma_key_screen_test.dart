@@ -6,21 +6,26 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ChromaKeyDetection, ChromaKeyDetectionException, EditorVideo;
+    show
+        ChromaKey,
+        ChromaKeyDetection,
+        ChromaKeyDetectionException,
+        EditorVideo;
 
 import '../../helpers/shared_channel_override.dart';
 
@@ -69,7 +74,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<ClipEditorBloc>.value(
               value: bloc,
@@ -82,6 +87,48 @@ void main() {
         ),
       );
       await tester.pump();
+    }
+
+    /// Pushes the detached-clip variant from a plain page and captures what it
+    /// pops with. No [ClipEditorBloc] anywhere in the tree: a detached clip
+    /// never bakes, so the screen must not reach for one.
+    Future<DetachedClipChromaKeyResult? Function()> pumpDetached(
+      WidgetTester tester, {
+      required ChromaKeyDetectFn detect,
+      ClipChromaKey? chromaKey,
+    }) async {
+      DetachedClipChromaKeyResult? result;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  result = await Navigator.of(context)
+                      .push<DetachedClipChromaKeyResult>(
+                        MaterialPageRoute(
+                          builder: (_) => VideoClipChromaKeyScreen.detached(
+                            clip: clip,
+                            chromaKey: chromaKey,
+                            detect: detect,
+                          ),
+                        ),
+                      );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      // Two pumps for the route transition; `pumpAndSettle` would wait on the
+      // looping spinner a pending measurement shows.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      return () => result;
     }
 
     // A measurement the screen never asked to be told about: the colour is
@@ -175,6 +222,75 @@ void main() {
       // The key the sliders and swatch act on has to survive, or the user is
       // left with nothing to adjust by hand.
       expect(screenColor(tester, l10n), const Color(0xFF00B140));
+    });
+
+    group('detached', () {
+      testWidgets('pops with the key on Done instead of baking', (
+        tester,
+      ) async {
+        final result = await pumpDetached(
+          tester,
+          detect: (_) async => measured,
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        // Whatever is under the layer shows through, so a library clip has
+        // no track to play on and is not offered.
+        expect(
+          find.text(l10n.videoEditorChromaKeyBackgroundVideo),
+          findsNothing,
+        );
+        expect(
+          find.text(l10n.videoEditorChromaKeyCanvasTransparentHint),
+          findsOneWidget,
+        );
+        // Nothing to take off yet.
+        expect(find.text(l10n.videoEditorChromaKeyRemove), findsNothing);
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorChromaKeyDoneSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        final applied = result();
+        expect(applied, isA<DetachedClipChromaKeyApplied>());
+        // The measured key, not the preset: proves the settings on screen are
+        // what leaves through the pop.
+        expect(
+          (applied! as DetachedClipChromaKeyApplied).chromaKey.key.color,
+          const Color(0xFF19A55B),
+        );
+        expect(find.byType(VideoClipChromaKeyScreen), findsNothing);
+      });
+
+      testWidgets("opens on the layer's own key and can take it off", (
+        tester,
+      ) async {
+        var detectCalls = 0;
+        final result = await pumpDetached(
+          tester,
+          chromaKey: const ClipChromaKey(key: ChromaKey.blueScreen()),
+          detect: (_) async {
+            detectCalls++;
+            return measured;
+          },
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        // A key the user already tuned is restored, not re-measured over.
+        expect(detectCalls, 0);
+        expect(screenColor(tester, l10n), const ChromaKey.blueScreen().color);
+
+        final remove = find.text(l10n.videoEditorChromaKeyRemove);
+        await tester.ensureVisible(remove);
+        await tester.tap(remove);
+        await tester.pumpAndSettle();
+
+        expect(result(), isA<DetachedClipChromaKeyRemoved>());
+        expect(find.byType(VideoClipChromaKeyScreen), findsNothing);
+      });
     });
 
     testWidgets('shoots the background photo instead of opening the gallery', (

@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
@@ -20,7 +20,7 @@ import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/create_account_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
@@ -95,6 +95,7 @@ void main() {
   Widget createTestWidget({
     InviteAccessGrant? inviteAccessGrant,
     AnalyticsService? analyticsService,
+    TextScaler? textScaler,
   }) {
     return ProviderScope(
       overrides: [
@@ -122,9 +123,17 @@ void main() {
                   initialState: InviteGateState(accessGrant: inviteAccessGrant),
                 ),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
+            builder: textScaler == null
+                ? null
+                : (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: textScaler),
+                    child: child!,
+                  ),
             home: const CreateAccountScreen(),
           ),
         ),
@@ -371,6 +380,8 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              marketingConsent: any(named: 'marketingConsent'),
+              appVersion: any(named: 'appVersion'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -433,7 +444,7 @@ void main() {
           await tester.pumpWidget(
             MaterialApp.router(
               theme: VineTheme.theme,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),
@@ -478,6 +489,8 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              marketingConsent: any(named: 'marketingConsent'),
+              appVersion: any(named: 'appVersion'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -533,7 +546,7 @@ void main() {
           await tester.pumpWidget(
             MaterialApp.router(
               theme: VineTheme.theme,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),
@@ -584,6 +597,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -634,6 +649,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
       });
@@ -676,6 +693,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
       });
@@ -687,6 +706,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -741,6 +762,8 @@ void main() {
             email: 'test@example.com',
             password: 'SecurePass123!',
             scope: 'policy:full',
+            marketingConsent: false,
+            appVersion: 'test',
           ),
         ).called(1);
       });
@@ -757,6 +780,8 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            marketingConsent: any(named: 'marketingConsent'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer((_) => registered.future);
 
@@ -808,6 +833,8 @@ void main() {
             email: 'test@example.com',
             password: 'SecurePass123!',
             scope: 'policy:full',
+            marketingConsent: false,
+            appVersion: 'test',
           ),
         ).called(1);
 
@@ -821,6 +848,48 @@ void main() {
           'test-verifier',
         ));
         await tester.pumpAndSettle();
+      });
+    });
+
+    group('marketing opt-in', () {
+      DivineCheckbox optInCheckbox(WidgetTester tester) =>
+          tester.widget<DivineCheckbox>(find.byType(DivineCheckbox));
+
+      testWidgets('renders unchecked by default', (tester) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.authCreateAccountMarketingOptIn),
+          findsOneWidget,
+        );
+        expect(optInCheckbox(tester).state, DivineCheckboxState.unselected);
+      });
+
+      testWidgets('checks when the user taps it', (tester) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.authCreateAccountMarketingOptIn));
+        await tester.pumpAndSettle();
+
+        expect(optInCheckbox(tester).state, DivineCheckboxState.selected);
+      });
+
+      testWidgets('renders without overflow at 2x text scale', (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(textScaler: const TextScaler.linear(2)),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.authCreateAccountMarketingOptIn),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
       });
     });
   });

@@ -2347,6 +2347,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile connettersi ai relay. Controlla la connessione di rete.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Connessione ai relay ancora in corso. Aspetta un attimo.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Salvato su questo dispositivo. Lo sincronizzeremo con il tuo account quando la pubblicazione tornerà a funzionare.';
 
@@ -3004,6 +3008,24 @@ class AppLocalizationsIt extends AppLocalizations {
       'I dettagli su sorgente/area geografica/tempo dell\'audience arriveranno quando Funnelcake aggiungerà gli endpoint di analytics dell\'audience.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retention';
 
   @override
@@ -3230,6 +3252,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Crea account';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Torna al codice invito';
@@ -9040,6 +9066,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il video non supporta la trasparenza, quindi in esportazione diventa nero.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Quello che c\'è dietro la clip si vede in trasparenza.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l\'inquadratura.';
 
@@ -9329,6 +9359,17 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Scala da';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Punto personalizzato';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tocca il video nel punto da cui deve entrare';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tocca il video nel punto verso cui deve uscire';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11200,6 +11241,50 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache svuotata';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'I tuoi clip e le bozze';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Registrazioni, bozze e suoni che hai creato. Svuotare la cache non li tocca mai: elimina clip dalla tua libreria per liberare spazio qui.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Nessun file residuo';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count file residui, $size',
+      one: '$count file residuo, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Rimuovi i file residui';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Rimuovere i file residui?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
+      one:
+          'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'File residui rimossi';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Libreria di clip';

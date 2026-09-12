@@ -1,7 +1,7 @@
 // ABOUTME: WCAG contrast helper for asserting text stays legible on a fill.
 // ABOUTME: Composites the foreground first so translucent tokens score honestly.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// WCAG 2.1 contrast ratio between [foreground] composited over [background]
 /// and that background.

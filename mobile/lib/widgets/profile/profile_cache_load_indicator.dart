@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Thin revalidation bar shown directly under the profile tab bar while a
 /// cached tab (e.g. Liked) refreshes its data in the background.

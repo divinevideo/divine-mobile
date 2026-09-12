@@ -2,7 +2,7 @@
 // ABOUTME: Narrows the conversation list, or swaps it for blocked chats.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 

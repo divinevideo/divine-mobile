@@ -1,7 +1,7 @@
 // ABOUTME: Pill showing whether a badge award has been pinned to a profile.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A small status pill for badge acceptance state.
 ///

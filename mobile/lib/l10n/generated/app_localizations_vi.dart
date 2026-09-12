@@ -2285,6 +2285,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không kết nối được với relay. Vui lòng kiểm tra kết nối mạng của bạn.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Vẫn đang kết nối với relay. Vui lòng chờ một chút.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Đã lưu trên thiết bị này. Chúng tôi sẽ đồng bộ với tài khoản của bạn khi việc đăng lại hoạt động.';
 
@@ -2935,6 +2939,24 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phân tích nguồn/vùng/thời gian của khán giả sẽ xuất hiện khi Funnelcake bổ sung endpoint phân tích khán giả.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Tỷ lệ giữ chân';
 
   @override
@@ -3161,6 +3183,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Tạo tài khoản';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Quay lại mã mời';
@@ -8904,6 +8930,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Bất cứ thứ gì phía sau clip sẽ hiện xuyên qua.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.';
 
@@ -9187,6 +9217,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Thu phóng từ';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Chạm vào video tại nơi bạn muốn hiệu ứng trượt bắt đầu';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Chạm vào video tại nơi bạn muốn hiệu ứng trượt kết thúc';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11018,6 +11059,51 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Đã xóa bộ nhớ đệm';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Clip và bản nháp của bạn';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Bản ghi, bản nháp và âm thanh bạn đã tạo. Xóa bộ nhớ đệm không bao giờ đụng đến chúng — xóa clip khỏi thư viện để giải phóng dung lượng ở đây.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Không có tệp còn sót lại';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tệp còn sót lại, $size',
+      one: '$count tệp còn sót lại, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Xóa tệp còn sót lại';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Xóa tệp còn sót lại?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+      one:
+          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Đã xóa các tệp còn sót lại';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Thư viện clip';

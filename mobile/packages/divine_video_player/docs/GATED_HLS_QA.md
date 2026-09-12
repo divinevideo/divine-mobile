@@ -10,7 +10,7 @@ Header transport differs per platform and is unit-tested only where it can be:
 
 - **Android** — ExoPlayer keys request headers per URI, so HLS segments (a
   different URI than the manifest) need an explicit hash fallback. Covered by
-  `httpHeadersForRequest` + `AuthAwareCacheBypassDataSource` (unit-tested in
+  `httpHeadersForRequest` + `CacheBypassDataSource` (unit-tested in
   `DivineVideoPlayerInstanceTest` / `VideoCacheTest`, CI-gated via the
   `android-unit-tests` job).
 - **iOS / macOS** — headers set under `avURLAssetHTTPHeaderFieldsKey`
@@ -39,7 +39,7 @@ will reject so playback falls over to HLS (or temporarily force the HLS source).
 - [ ] **Negative:** as a **signed-out / non-verified** viewer, the same gated
       content is refused (401 → age-gate UX), confirming the gate is real.
 - [ ] **Android cache:** the gated bytes are **not** persisted to the disk cache
-      (served no-store; `AuthAwareCacheBypassDataSource` bypasses `SimpleCache`).
+      (served no-store; `CacheBypassDataSource` bypasses `SimpleCache`).
 
 ## If iOS/macOS segments 401 in QA
 

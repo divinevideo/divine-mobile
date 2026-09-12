@@ -1,4 +1,3 @@
-import '../nip19/pubkey_for_logs.dart';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:math' as math;
@@ -6,6 +5,7 @@ import 'dart:math' as math;
 import '../client_utils/keys.dart';
 import '../event.dart';
 import '../event_kind.dart';
+import '../nip19/pubkey_for_logs.dart';
 import '../nip44/nip44_v2.dart';
 import '../nostr.dart';
 

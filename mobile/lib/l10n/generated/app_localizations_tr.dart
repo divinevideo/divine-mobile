@@ -2250,6 +2250,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Rölelere bağlanılamadı. Lütfen ağ bağlantını kontrol et.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Rölelere hâlâ bağlanılıyor. Biraz bekle.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Bu cihazda kaydedildi. Yayınlama tekrar çalıştığında hesabınla eşitleyeceğiz.';
 
@@ -2902,6 +2906,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kaynak/coğrafya/zaman ayrıntıları, Funnelcake kitle analitik uç noktalarını ekledikçe doldurulacak.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Elde Tutma';
 
   @override
@@ -3128,6 +3150,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Hesap oluştur';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Davet koduna geri dön';
@@ -8859,6 +8885,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video saydamlık tutamaz, bu yüzden dışa aktarımda siyah olur.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Klibin arkasında ne varsa görünür.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.';
 
@@ -9141,6 +9171,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Ölçek başlangıcı';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Videoda nereden kayarak gireceğine dokun';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Videoda nereye kayarak çıkacağına dokun';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -10994,6 +11035,50 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Önbellek temizlendi';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Kliplerin ve taslakların';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Yaptığın kayıtlar, taslaklar ve sesler. Önbelleği temizlemek bunlara hiç dokunmaz; burada yer açmak için kitaplığından klip sil.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Artık dosya yok';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count artık dosya, $size',
+      one: '$count artık dosya, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Artık dosyaları kaldır';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Artık dosyalar kaldırılsın mı?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+      one:
+          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Artık dosyalar kaldırıldı';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Klip kitaplığı';

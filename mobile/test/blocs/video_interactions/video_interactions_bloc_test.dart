@@ -153,6 +153,77 @@ void main() {
       );
 
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'leaves an unknown addressable like count unknown instead of zero',
+        setUp: () {
+          when(
+            () => mockLikesRepository.isLikedResolvingCoordinate(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockRepostsRepository.isReposted(testAddressableId),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockLikesRepository.getLikeCount(
+              testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => null);
+          when(
+            () => mockCommentsRepository.getCommentsCount(
+              testEventId,
+              rootAddressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => 7);
+          when(
+            () => mockRepostsRepository.getRepostCount(testAddressableId),
+          ).thenAnswer((_) async => 32);
+        },
+        build: () => createBloc(addressableId: testAddressableId),
+        act: (bloc) => bloc.add(const VideoInteractionsFetchRequested()),
+        expect: () => [
+          const VideoInteractionsState(status: VideoInteractionsStatus.loading),
+          const VideoInteractionsState(
+            status: VideoInteractionsStatus.success,
+            commentCount: 7,
+            repostCount: 32,
+          ),
+        ],
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'applies the like and repost counts when the comment count is unknown',
+        setUp: () {
+          when(
+            () => mockLikesRepository.isLikedResolvingCoordinate(
+              eventId: testEventId,
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockLikesRepository.getLikeCount(testEventId),
+          ).thenAnswer((_) async => 42);
+          when(
+            () => mockCommentsRepository.getCommentsCount(testEventId),
+          ).thenAnswer((_) async => null);
+          when(
+            () => mockRepostsRepository.getRepostCountByEventId(testEventId),
+          ).thenAnswer((_) async => 5);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const VideoInteractionsFetchRequested()),
+        expect: () => [
+          const VideoInteractionsState(status: VideoInteractionsStatus.loading),
+          const VideoInteractionsState(
+            status: VideoInteractionsStatus.success,
+            isLiked: true,
+            likeCount: 42,
+            repostCount: 5,
+          ),
+        ],
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         // #6022: the like floor is addressable + likes-ONLY. The clean
         // addressable relay resolve raises the like count above the seed, but
         // comment and repost counts are NOT floored — their higher relay

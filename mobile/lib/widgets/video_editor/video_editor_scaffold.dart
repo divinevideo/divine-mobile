@@ -1,7 +1,7 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -12,6 +12,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/detached_clip_window.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart';
@@ -406,9 +407,18 @@ class _ClipDetachResultListener extends StatelessWidget {
     // time, is hidden outside it, and the export draws it over exactly the same
     // stretch. Without a window the clip sat frozen on its last frame for the
     // rest of the composition while the export showed nothing there.
+    //
+    // Measured against the composition as it is *now*: closing the slot
+    // shortened it, and a slot at the old tail end would otherwise sit past
+    // the new end where nothing plays it.
     final slotStart = previousClips
         .takeWhile((c) => c.id != detachedClip.id)
         .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+    final window = detachedClipWindow(
+      slotStart: slotStart,
+      playbackDuration: detachedClip.playbackDuration,
+      compositionDuration: state.totalDuration,
+    );
 
     final layerId = 'detached_${detachedClip.id}';
     final meta = DetachedClipLayerData(
@@ -417,8 +427,8 @@ class _ClipDetachResultListener extends StatelessWidget {
     ).toMeta();
     final layer = WidgetLayer(
       id: layerId,
-      startTime: slotStart,
-      endTime: slotStart + detachedClip.playbackDuration,
+      startTime: window.start,
+      endTime: window.end,
       width: width,
       widget: DetachedClipLayerView(meta: meta),
       meta: meta,
@@ -495,7 +505,14 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
     final layer = editor.activeLayers[index];
     if (layer is! WidgetLayer) return;
 
-    final meta = DetachedClipLayerData(clip: clip, layerId: layerId).toMeta();
+    // Only the clip is swapped. The layer's own settings — where a split tail
+    // starts inside the clip, and its live green screen — describe the layer,
+    // not the footage, and a crop changes neither.
+    final meta = DetachedClipLayerData.withClip(
+      DetachedClipLayerData.metaOf(layer),
+      clip,
+    );
+    if (meta == null) return;
 
     // The layer keeps its width; the crop changes the content's aspect ratio,
     // so the height follows on its own through the frame that lays it out. A
@@ -674,9 +691,14 @@ class _TimelineSection extends StatefulWidget {
 }
 
 class _TimelineSectionState extends State<_TimelineSection>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final CurvedAnimation _animation;
+
+  /// Collapses the whole section — timeline and bottom actions alike — while a
+  /// slide point is being placed, so the canvas has the full screen.
+  late final AnimationController _collapseController;
+  late final CurvedAnimation _collapseAnimation;
 
   static bool _shouldHide(SubEditorType? type) =>
       type == .draw || type == .filter || type == .tune;
@@ -686,49 +708,79 @@ class _TimelineSectionState extends State<_TimelineSection>
     super.initState();
     _controller = AnimationController(vsync: this, duration: _switchDuration);
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _collapseController = AnimationController(
+      vsync: this,
+      duration: _switchDuration,
+    );
+    _collapseAnimation = CurvedAnimation(
+      parent: _collapseController,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
     _animation.dispose();
     _controller.dispose();
+    _collapseAnimation.dispose();
+    _collapseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
-      listenWhen: (prev, curr) =>
-          _shouldHide(prev.openSubEditor) != _shouldHide(curr.openSubEditor),
-      listener: (context, state) {
-        if (_shouldHide(state.openSubEditor)) {
-          _controller.forward();
-        } else {
-          _controller.reverse();
-        }
-      },
-      child: ColoredBox(
-        color: context.vineColors.surfaceContainerHigh,
-        child: Column(
-          mainAxisSize: .min,
-          crossAxisAlignment: .stretch,
-          children: [
-            // Keep timeline always in tree to preserve thumbnail
-            // cache. SizeTransition clips without unmounting.
-            SizeTransition(
-              sizeFactor: ReverseAnimation(_animation),
-              alignment: AlignmentDirectional.topStart,
-              child: const Padding(
-                padding: .only(top: 12),
-                child: VideoEditorTimelineScaffold(),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              _shouldHide(prev.openSubEditor) !=
+              _shouldHide(curr.openSubEditor),
+          listener: (context, state) {
+            if (_shouldHide(state.openSubEditor)) {
+              _controller.forward();
+            } else {
+              _controller.reverse();
+            }
+          },
+        ),
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              prev.isPlacingSlidePoint != curr.isPlacingSlidePoint,
+          listener: (context, state) {
+            if (state.isPlacingSlidePoint) {
+              _collapseController.forward();
+            } else {
+              _collapseController.reverse();
+            }
+          },
+        ),
+      ],
+      child: SizeTransition(
+        sizeFactor: ReverseAnimation(_collapseAnimation),
+        alignment: AlignmentDirectional.topStart,
+        child: ColoredBox(
+          color: context.vineColors.surfaceContainerHigh,
+          child: Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .stretch,
+            children: [
+              // Keep timeline always in tree to preserve thumbnail
+              // cache. SizeTransition clips without unmounting.
+              SizeTransition(
+                sizeFactor: ReverseAnimation(_animation),
+                alignment: AlignmentDirectional.topStart,
+                child: const Padding(
+                  padding: .only(top: 12),
+                  child: VideoEditorTimelineScaffold(),
+                ),
               ),
-            ),
-            SizeTransition(
-              sizeFactor: _animation,
-              alignment: AlignmentDirectional.topStart,
-              child: const _BottomActions(),
-            ),
-          ],
+              SizeTransition(
+                sizeFactor: _animation,
+                alignment: AlignmentDirectional.topStart,
+                child: const _BottomActions(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -744,8 +796,11 @@ class _OverlayControls extends StatelessWidget {
       buildWhen: (previous, current) =>
           previous.isLayerInteractionActive !=
               current.isLayerInteractionActive ||
-          previous.openSubEditor != current.openSubEditor,
+          previous.openSubEditor != current.openSubEditor ||
+          previous.isPlacingSlidePoint != current.isPlacingSlidePoint,
       builder: (context, state) => switch (state) {
+        // The point picker brings its own toolbar and owns the whole screen.
+        _ when state.isPlacingSlidePoint => const SizedBox.shrink(),
         _ when state.isLayerInteractionActive => const SizedBox(),
         // Text-Editor
         VideoEditorMainState(openSubEditor: .text) => const SizedBox.shrink(),

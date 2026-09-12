@@ -2308,6 +2308,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte ansluta till reler. Kolla din nätverksanslutning.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Ansluter fortfarande till reler. Vänta en liten stund.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Sparat på den här enheten. Vi synkar det till ditt konto när publicering fungerar igen.';
 
@@ -2961,6 +2965,24 @@ class AppLocalizationsSv extends AppLocalizations {
       'Publikkälla/geografi/tidsuppdelningar kommer att fyllas i när Funnelcake lägger till publikstatistikslutpunkter.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retention';
 
   @override
@@ -3185,6 +3207,10 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Skapa konto';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Tillbaka till inbjudningskod';
@@ -8939,6 +8965,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Video kan inte spara transparens, så det här exporteras som svart.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Det som ligger bakom klippet syns igenom.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.';
 
@@ -9225,6 +9255,17 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Skala från';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Egen punkt';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tryck på videon där den ska glida in ifrån';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tryck på videon där den ska glida ut till';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11068,6 +11109,51 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache rensad';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Dina klipp och utkast';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Inspelningar, utkast och ljud du har skapat. Att rensa cachen rör dem aldrig – radera klipp från ditt bibliotek för att frigöra plats här.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Inga kvarlämnade filer';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kvarlämnade filer, $size',
+      one: '$count kvarlämnad fil, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Ta bort kvarlämnade filer';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Ta bort kvarlämnade filer?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Det raderar $count filer som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+      one:
+          'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Kvarlämnade filer borttagna';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Klippbibliotek';

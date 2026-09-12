@@ -2,9 +2,9 @@
 // ABOUTME: the page forwards bloc construction + initial refresh to the
 // ABOUTME: repository and marks notifications seen on open (#4708).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';

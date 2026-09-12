@@ -2,8 +2,8 @@
 // ABOUTME: Shows per-user grant entries saved by the Nostr app grant store
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/blocs/apps_permissions/apps_permissions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';

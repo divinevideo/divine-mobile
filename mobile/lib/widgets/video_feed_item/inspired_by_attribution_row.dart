@@ -3,9 +3,9 @@
 // ABOUTME: navigation to the inspiring creator's profile.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -85,6 +85,10 @@ class InspiredByAttributionRow extends ConsumerWidget {
         );
       }
     }
+    // Every creator credited by an inspired-by p-tag. The content line names
+    // only the first, so without these the second and later picks would be
+    // published and notified but never shown.
+    video.inspiredByPubkeys.forEach(addPubkey);
     for (final credit in video.clipSourceCredits) {
       addPubkey(credit.authorPubkey);
     }

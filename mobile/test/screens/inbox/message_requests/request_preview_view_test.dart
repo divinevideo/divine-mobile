@@ -4,9 +4,9 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit.dart';
@@ -27,6 +27,7 @@ import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../../helpers/finders.dart';
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -962,7 +963,7 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
         await tester.pump();
 
         verify(() => mockGoRouter.go(InboxPage.path)).called(1);
@@ -1133,7 +1134,7 @@ void main() {
           buildStatusSubject(const RequestPreviewState()),
         );
 
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(findByTooltip('Back'));
         await tester.pump();
 
         verify(() => mockGoRouter.go(InboxPage.path)).called(1);

@@ -157,7 +157,7 @@ final class OutgoingDmRetryServiceProvider
 }
 
 String _$outgoingDmRetryServiceHash() =>
-    r'8be3ee6c65e8993b5892200a472a9792ca187ebf';
+    r'6fe150ee3a0d6f9787c39abbee464d995bbce694';
 
 /// Auto-sweep service that re-drives undelivered DM reactions (publish failed
 /// or interrupted mid-send) on app-foreground transitions via
@@ -615,7 +615,7 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'a002a2f1ba14092c472a0c51f342b3caa1be50d4';
+    r'35ad0aa2a24a6ede377f122ee1303ba30bc75649';
 
 /// Hashtag service depends on Video event service and cache service
 

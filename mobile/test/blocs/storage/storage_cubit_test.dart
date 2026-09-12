@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
@@ -43,6 +44,10 @@ void main() {
         usedBytes: 1024,
         limitBytes: configuredVideoLimit,
       ),
+      player: CacheUsageCategory(
+        usedBytes: 128,
+        limitBytes: kDefaultCacheMaxSizeBytes,
+      ),
       images: CacheUsageCategory(usedBytes: 512, limitBytes: 4 * 1024),
       transitionSeams: CacheUsageCategory(usedBytes: 256, limitBytes: 8 * 1024),
       tempRenders: CacheUsageCategory(usedBytes: 256),
@@ -68,7 +73,7 @@ void main() {
           ),
           StorageState(
             cacheStatus: StorageCacheStatus.ready,
-            cacheSizeBytes: 2048,
+            cacheSizeBytes: 2176,
             cacheUsage: cacheUsage,
             videoCacheLimitBytes: configuredVideoLimit,
           ),
@@ -114,6 +119,127 @@ void main() {
           ),
           StorageState(cacheStatus: StorageCacheStatus.cleared),
         ],
+      );
+    });
+
+    group('loadDocumentsUsage', () {
+      const usage = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 3,
+        orphanedBytes: 1024,
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits loading then ready with the usage',
+        setUp: () =>
+            when(service.documentsUsage).thenAnswer((_) async => usage),
+        build: build,
+        act: (cubit) => cubit.loadDocumentsUsage(),
+        expect: () => const [
+          StorageState(contentStatus: StorageContentStatus.loading),
+          StorageState(
+            contentStatus: StorageContentStatus.ready,
+            documentsUsage: usage,
+          ),
+        ],
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits failure when the measurement throws and leaves the cache '
+        'section alone',
+        setUp: () =>
+            when(service.documentsUsage).thenThrow(Exception('db closed')),
+        build: build,
+        seed: () => const StorageState(
+          cacheStatus: StorageCacheStatus.ready,
+          cacheSizeBytes: 4096,
+        ),
+        act: (cubit) => cubit.loadDocumentsUsage(),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 4096,
+            contentStatus: StorageContentStatus.loading,
+          ),
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 4096,
+            contentStatus: StorageContentStatus.failure,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
+    group('removeOrphanedFiles', () {
+      const before = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 3,
+        orphanedBytes: 1024,
+      );
+      const after = DocumentsUsage(
+        contentBytes: 8192,
+        orphanedFileCount: 0,
+        orphanedBytes: 0,
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits removing then removed with the re-measured usage',
+        setUp: () {
+          when(service.removeOrphanedFiles).thenAnswer((_) async => 1024);
+          when(service.documentsUsage).thenAnswer((_) async => after);
+        },
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: before,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const [
+          StorageState(
+            contentStatus: StorageContentStatus.removing,
+            documentsUsage: before,
+          ),
+          StorageState(
+            contentStatus: StorageContentStatus.removed,
+            documentsUsage: after,
+          ),
+        ],
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'does nothing when there is nothing to remove',
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: after,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const <StorageState>[],
+        verify: (_) => verifyNever(service.removeOrphanedFiles),
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits failure when the sweep throws',
+        setUp: () =>
+            when(service.removeOrphanedFiles).thenThrow(Exception('boom')),
+        build: build,
+        seed: () => const StorageState(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: before,
+        ),
+        act: (cubit) => cubit.removeOrphanedFiles(),
+        expect: () => const [
+          StorageState(
+            contentStatus: StorageContentStatus.removing,
+            documentsUsage: before,
+          ),
+          StorageState(
+            contentStatus: StorageContentStatus.failure,
+            documentsUsage: before,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
       );
     });
 
@@ -187,6 +313,10 @@ void main() {
           when(service.cacheUsage).thenAnswer(
             (_) async => const CacheUsage(
               video: CacheUsageCategory(usedBytes: 512, limitBytes: oneGb),
+              player: CacheUsageCategory(
+                usedBytes: 0,
+                limitBytes: kDefaultCacheMaxSizeBytes,
+              ),
               images: CacheUsageCategory(usedBytes: 0),
               transitionSeams: CacheUsageCategory(
                 usedBytes: 0,
@@ -210,6 +340,10 @@ void main() {
             cacheSizeBytes: 512,
             cacheUsage: CacheUsage(
               video: CacheUsageCategory(usedBytes: 512, limitBytes: oneGb),
+              player: CacheUsageCategory(
+                usedBytes: 0,
+                limitBytes: kDefaultCacheMaxSizeBytes,
+              ),
               images: CacheUsageCategory(usedBytes: 0),
               transitionSeams: CacheUsageCategory(
                 usedBytes: 0,
@@ -226,6 +360,17 @@ void main() {
 
     group('recovery', () {
       const footprintBytes = 42 * 1024 * 1024;
+
+      blocTest<StorageCubit, StorageState>(
+        'fails closed when cache recovery was not injected',
+        build: build,
+        act: (cubit) => cubit.recoverFromCorruptedCache(),
+        expect: () => const [
+          StorageState(recoveryStatus: StorageRecoveryStatus.recovering),
+          StorageState(recoveryStatus: StorageRecoveryStatus.failure),
+        ],
+        errors: () => [isA<StateError>()],
+      );
 
       blocTest<StorageCubit, StorageState>(
         'loadRecoveryFootprint emits measuring then the measured footprint',

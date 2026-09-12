@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VineSound;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -14,7 +14,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
-import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -316,7 +315,6 @@ class _AudioSelectionBottomSheetState
           await (widget.localAudioImportService ?? LocalAudioImportService())
               .importAudioFile(
                 sourcePath: filePath,
-                draftId: ref.read(videoEditorProvider.notifier).draftId,
                 displayName: file.name,
               );
 

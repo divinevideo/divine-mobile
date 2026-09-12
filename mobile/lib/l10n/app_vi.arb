@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "Không kết nối được với relay. Vui lòng kiểm tra kết nối mạng của bạn.",
+  "relaySettingsStillConnecting": "Vẫn đang kết nối với relay. Vui lòng chờ một chút.",
   "relaySettingsSavedLocallyPublishPending": "Đã lưu trên thiết bị này. Chúng tôi sẽ đồng bộ với tài khoản của bạn khi việc đăng lại hoạt động.",
   "relaySettingsAddRelayTitle": "Thêm relay",
   "relaySettingsAddRelayPrompt": "Nhập URL WebSocket của relay bạn muốn thêm:",
@@ -4803,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "Ảnh",
   "videoEditorChromaKeyBackgroundVideo": "Clip",
   "videoEditorChromaKeyTransparentHint": "Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.",
+  "videoEditorChromaKeyCanvasTransparentHint": "Bất cứ thứ gì phía sau clip sẽ hiện xuyên qua.",
   "videoEditorChromaKeySurfaceHint": "Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.",
   "videoEditorChromaKeyDetectFailed": "Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.",
   "videoEditorChromaKeyPickClipTitle": "Chọn một clip",
@@ -5079,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "Tùy chỉnh",
+  "videoEditorLayerAnimationPointEnterHint": "Chạm vào video tại nơi bạn muốn hiệu ứng trượt bắt đầu",
+  "videoEditorLayerAnimationPointLeaveHint": "Chạm vào video tại nơi bạn muốn hiệu ứng trượt kết thúc",
   "videoEditorFinishTimelineEditingSemanticLabel": "Hoàn tất chỉnh sửa timeline",
   "videoEditorAudioPlayPreviewSemanticLabel": "Phát thử",
   "videoEditorAudioPausePreviewSemanticLabel": "Tạm dừng nghe thử",
@@ -6082,6 +6087,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "Clip và bản nháp của bạn",
+  "settingsStorageContentDescription": "Bản ghi, bản nháp và âm thanh bạn đã tạo. Xóa bộ nhớ đệm không bao giờ đụng đến chúng — xóa clip khỏi thư viện để giải phóng dung lượng ở đây.",
+  "settingsStorageNoOrphanedFiles": "Không có tệp còn sót lại",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} tệp còn sót lại, {size}} other{{count} tệp còn sót lại, {size}}}",
+  "settingsStorageRemoveOrphanedButton": "Xóa tệp còn sót lại",
+  "settingsStorageRemoveOrphanedConfirmTitle": "Xóa tệp còn sót lại?",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{Thao tác này xóa {count} tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng {size}. Không thể hoàn tác.} other{Thao tác này xóa {count} tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng {size}. Không thể hoàn tác.}}",
+  "settingsStorageOrphanedFilesRemoved": "Đã xóa các tệp còn sót lại",
   "settingsStorageLibrarySectionTitle": "Thư viện clip",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

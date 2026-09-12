@@ -3,9 +3,9 @@
 // ABOUTME: engagement lists all render, so the picker and the screens it feeds
 // ABOUTME: have to agree about who an account is (#8421 adjacent).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';

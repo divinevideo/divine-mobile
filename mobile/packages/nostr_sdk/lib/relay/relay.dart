@@ -7,9 +7,9 @@ import 'dart:developer';
 import '../count_response.dart';
 import '../subscription.dart';
 import 'client_connected.dart';
+import 'relay_diagnostics.dart';
 import 'relay_info.dart';
 import 'relay_info_util.dart';
-import 'relay_diagnostics.dart';
 import 'relay_status.dart';
 
 enum WriteAccess { readOnly, writeOnly, readWrite, nothing }
@@ -101,6 +101,17 @@ abstract class Relay {
   /// still holds every REQ it was sent, and re-issuing them would only make
   /// the relay replay its stored window again.
   bool get connectionIsFresh => true;
+
+  /// Whether this relay's socket is mid-handshake right now.
+  ///
+  /// [relayStatus] mirrors the connection layer through a stream, so it trails
+  /// the socket it describes. A caller deciding whether a failed write was
+  /// nonetheless *attempted* must ask the socket, not the mirror: a publish
+  /// that waits out an in-flight handshake and gives up reads as "never tried"
+  /// from a mirror that has not caught up yet. Implementations that own a
+  /// connection override this; the default falls back to the mirror.
+  bool get isSocketConnecting =>
+      relayStatus.connected == ClientConnected.connecting;
 
   /// The medhod called after relay connect success.
   ///

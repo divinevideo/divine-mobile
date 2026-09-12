@@ -240,8 +240,11 @@ class RepostsRepository {
   /// Returns a locally-cached count if available (set by recent toggle
   /// operations), otherwise queries relays via NIP-45 COUNT.
   ///
+  /// Returns `null` when no relay answered. Nothing is cached then, so the
+  /// next call asks again.
+  ///
   /// Note: This counts all reposts from all users, not just the current user's.
-  Future<int> getRepostCount(String addressableId) async {
+  Future<int?> getRepostCount(String addressableId) async {
     // Use local cache if available (set by recent toggle operations or a
     // previous relay fetch). This prevents redundant relay queries when
     // scrolling back to an already-viewed video.
@@ -255,9 +258,7 @@ class RepostsRepository {
       a: [addressableId],
     );
 
-    final result = await _nostrClient.countEvents([filter]);
-    _cacheRepostCount(addressableId, result.count);
-    return result.count;
+    return _countAndCache(addressableId, filter);
   }
 
   /// Get the repost count for a video by its event ID.
@@ -267,8 +268,11 @@ class RepostsRepository {
   ///
   /// Use this method for non-addressable videos (videos without a d-tag).
   ///
+  /// Returns `null` when no relay answered. Nothing is cached then, so the
+  /// next call asks again.
+  ///
   /// Note: This counts all reposts from all users, not just the current user's.
-  Future<int> getRepostCountByEventId(String eventId) async {
+  Future<int?> getRepostCountByEventId(String eventId) async {
     if (_localCountCache.containsKey(eventId)) {
       return _localCountCache[eventId]!;
     }
@@ -280,8 +284,17 @@ class RepostsRepository {
       e: [eventId],
     );
 
-    final result = await _nostrClient.countEvents([filter]);
-    _cacheRepostCount(eventId, result.count);
+    return _countAndCache(eventId, filter);
+  }
+
+  Future<int?> _countAndCache(String cacheKey, Filter filter) async {
+    final CountResult result;
+    try {
+      result = await _nostrClient.countEvents([filter]);
+    } on CountUnavailableException {
+      return null;
+    }
+    _cacheRepostCount(cacheKey, result.count);
     return result.count;
   }
 
@@ -1057,7 +1070,10 @@ class RepostsRepository {
   /// updates the local cache.
   void _subscribeToReposts(String currentUserPubkey) {
     // Use a deterministic subscription ID so we can unsubscribe later
-    _repostSubscriptionId = 'reposts_repo_reposts_$currentUserPubkey';
+    _repostSubscriptionId = scopedSubscriptionId(
+      'reposts_repo_reposts',
+      currentUserPubkey,
+    );
 
     final eventStream = _nostrClient.subscribe([
       Filter(

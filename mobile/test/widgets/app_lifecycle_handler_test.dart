@@ -4,16 +4,18 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/app_badge_service.dart';
@@ -22,8 +24,11 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/widgets/app_lifecycle_handler.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
@@ -91,7 +96,7 @@ void main() {
             notificationRefreshCoordinatorProvider.overrideWithValue(null),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),
@@ -295,6 +300,110 @@ void main() {
       expect(container.read(appForegroundProvider), isTrue);
       expect(appBadgeClearer.clearCalls, 2);
       await tester.pump(const Duration(seconds: 31));
+    });
+  });
+
+  group('relay reconnect on resume', () {
+    Future<List<String>> resumeLogs(
+      WidgetTester tester, {
+      required ForceReconnectOutcome outcome,
+      required int connected,
+    }) async {
+      final authService = _MockAuthService();
+      addTearDown(() {
+        BackgroundActivityManager().onAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      });
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => const Stream<AuthState>.empty());
+      final clipLibraryService = _MockClipLibraryService();
+      when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
+      when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      final draftStorageService = _MockDraftStorageService();
+      when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
+      final nostrClient = _MockNostrClient();
+      when(nostrClient.forceReconnectAll).thenAnswer((_) async => outcome);
+      when(() => nostrClient.connectedRelayCount).thenReturn(connected);
+      when(() => nostrClient.configuredRelayCount).thenReturn(2);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appBadgeServiceProvider.overrideWithValue(
+              _CountingAppBadgeClearer(),
+            ),
+            authServiceProvider.overrideWithValue(authService),
+            notificationRefreshCoordinatorProvider.overrideWithValue(null),
+            videoPublishProvider.overrideWith(_NoopVideoPublishNotifier.new),
+            clipLibraryServiceProvider.overrideWithValue(clipLibraryService),
+            draftStorageServiceProvider.overrideWithValue(draftStorageService),
+            nostrServiceProvider.overrideWithValue(nostrClient),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppLifecycleHandler(child: SizedBox.shrink()),
+          ),
+        ),
+      );
+      await tester.pump();
+      unawaited(LogCaptureService().clearAllLogs());
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      verify(nostrClient.forceReconnectAll).called(1);
+      final messages = [
+        for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+      ];
+      await tester.pump(const Duration(seconds: 31));
+      return messages;
+    }
+
+    testWidgets('logs how many relays connected when the reconnect '
+        'finishes', (tester) async {
+      final messages = await resumeLogs(
+        tester,
+        outcome: ForceReconnectOutcome.completed,
+        connected: 1,
+      );
+
+      expect(
+        messages,
+        contains(
+          '📱 Relay reconnect after app resume finished: 1 of 2 relays '
+          'connected',
+        ),
+      );
+      expect(
+        messages,
+        isNot(contains('📱 Relay connections restored after app resume')),
+      );
+    });
+
+    testWidgets('says relays are still connecting when the wait ends '
+        'first', (tester) async {
+      final messages = await resumeLogs(
+        tester,
+        outcome: ForceReconnectOutcome.stillDialling,
+        connected: 0,
+      );
+
+      expect(
+        messages,
+        contains(
+          '📱 Relay reconnect after app resume ended with relays still '
+          'connecting (0 of 2 connected)',
+        ),
+      );
+      expect(
+        messages,
+        isNot(contains('📱 Relay connections restored after app resume')),
+      );
     });
   });
 }

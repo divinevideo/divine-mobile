@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group(LocalAudioImportService, () {
@@ -22,7 +23,7 @@ void main() {
     });
 
     test(
-      'copies picked audio into draft storage and returns local AudioEvent',
+      'copies picked audio into library storage and returns local AudioEvent',
       () async {
         final source = File('${sourceDir.path}/My Sound.MP3');
         await source.writeAsBytes([1, 2, 3, 4]);
@@ -34,7 +35,6 @@ void main() {
 
         final event = await service.importAudioFile(
           sourcePath: source.path,
-          draftId: 'draft_123',
           displayName: 'My Sound.MP3',
         );
 
@@ -43,7 +43,12 @@ void main() {
         expect(event.mimeType, equals('audio/mpeg'));
         expect(event.duration, equals(2.5));
         expect(event.localFilePath, isNot(equals(source.path)));
-        expect(event.localFilePath, contains('/draft_123/'));
+        // No draft segment: an imported track can be saved to My Sounds and
+        // outlive whichever draft was open when it was picked (#8024).
+        expect(
+          p.dirname(event.localFilePath!),
+          equals(storageDir.path),
+        );
         expect(
           await File(event.localFilePath!).readAsBytes(),
           equals([1, 2, 3, 4]),
@@ -61,7 +66,6 @@ void main() {
       await expectLater(
         service.importAudioFile(
           sourcePath: source.path,
-          draftId: 'draft_123',
           displayName: 'notes.txt',
         ),
         throwsA(isA<LocalAudioImportException>()),
@@ -78,7 +82,6 @@ void main() {
       await expectLater(
         service.importAudioFile(
           sourcePath: '${sourceDir.path}/missing.mp3',
-          draftId: 'draft_123',
           displayName: 'missing.mp3',
         ),
         throwsA(isA<LocalAudioImportException>()),

@@ -1,7 +1,7 @@
 import 'package:divine_ui/src/icon/divine_icon.dart';
 import 'package:divine_ui/src/loading/divine_progress_indicator.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A reusable search bar styled to match the Divine design system.
 ///

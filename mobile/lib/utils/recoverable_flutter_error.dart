@@ -2,7 +2,7 @@ import 'dart:io'
     if (dart.library.js_interop) 'package:openvine/utils/platform_io_web.dart'
     as io;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:openvine/utils/expected_network_error.dart';
 

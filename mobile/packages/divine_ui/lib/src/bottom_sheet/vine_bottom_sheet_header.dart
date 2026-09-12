@@ -4,8 +4,8 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Header component for [VineBottomSheet].
 ///

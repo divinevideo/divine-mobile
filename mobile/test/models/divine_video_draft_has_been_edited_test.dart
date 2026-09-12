@@ -218,7 +218,7 @@ void main() {
 
       test('returns true when draft has inspiredByNpub', () {
         final draft = _minimalDraft().copyWith(
-          inspiredByNpub: _testPubkey,
+          inspiredByNpubs: const [_testPubkey],
           skipUpdateLastModified: true,
         );
 
@@ -287,7 +287,7 @@ void main() {
           inspiredByVideo: const InspiredByInfo(
             addressableId: '34236:$_testPubkey:dtag',
           ),
-          inspiredByNpub: _testPubkey,
+          inspiredByNpubs: const [_testPubkey],
           captionMentions: const [
             CaptionMention(display: 'alice', pubkey: _testPubkey),
           ],
@@ -317,7 +317,7 @@ void main() {
           'contentWarning',
           'collaboratorPubkeys',
           'inspiredByVideo',
-          'inspiredByNpub',
+          'inspiredByNpubs',
           'expireTime',
         };
 

@@ -35,6 +35,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     String? inviteCode,
     String? inviteSourceSlug,
     bool requirePasswordConfirmation = false,
+    String? appVersion,
     AnalyticsEventSink analytics = const NoOpAnalyticsEventSink(),
   }) : _oauthClient = oauthClient,
        _authService = authService,
@@ -46,6 +47,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
        _inviteSourceSlug = inviteSourceSlug,
        _validationMessages = validationMessages,
        _requirePasswordConfirmation = requirePasswordConfirmation,
+       _appVersion = appVersion,
        _analytics = analytics,
        super(const DivineAuthInitial());
 
@@ -57,6 +59,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final String? _inviteSourceSlug;
   final AuthValidationMessages _validationMessages;
   final bool _requirePasswordConfirmation;
+  final String? _appVersion;
   final AnalyticsEventSink _analytics;
 
   /// Initialize form with default state (sign up mode)
@@ -132,6 +135,14 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     emit(current.copyWith(obscurePassword: !current.obscurePassword));
   }
 
+  /// Set whether the user opted in to marketing communications at sign-up.
+  void updateMarketingConsent(bool value) {
+    final current = state;
+    if (current is! DivineAuthFormState) return;
+
+    emit(current.copyWith(marketingConsent: value));
+  }
+
   /// Validate and submit the form
   Future<void> submit() async {
     final current = state;
@@ -187,7 +198,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       if (current.isSignIn) {
         await _handleSignIn(email, current.password);
       } else {
-        await _handleSignUp(email, current.password);
+        await _handleSignUp(
+          email,
+          current.password,
+          marketingConsent: current.marketingConsent,
+        );
       }
     } catch (e, stackTrace) {
       Log.error(
@@ -264,7 +279,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     }
   }
 
-  Future<void> _handleSignUp(String email, String password) async {
+  Future<void> _handleSignUp(
+    String email,
+    String password, {
+    required bool marketingConsent,
+  }) async {
     Log.info(
       'Attempting sign up using email and password',
       name: 'DivineAuthCubit',
@@ -275,6 +294,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       email: email,
       password: password,
       scope: 'policy:full',
+      marketingConsent: marketingConsent,
+      appVersion: _appVersion,
     );
 
     if (!result.success) {

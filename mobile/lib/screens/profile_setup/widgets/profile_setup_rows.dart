@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Corner radius of the edit-profile form cards (`radius/24` in Figma).
 ///

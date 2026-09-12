@@ -1,4 +1,3 @@
-import '../nip19/pubkey_for_logs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
@@ -8,6 +7,7 @@ import '../event.dart';
 import '../event_kind.dart';
 import '../filter.dart';
 import '../nip19/nip19.dart';
+import '../nip19/pubkey_for_logs.dart';
 import '../relay/client_connected.dart';
 import '../relay/relay.dart';
 import '../relay/relay_base.dart';

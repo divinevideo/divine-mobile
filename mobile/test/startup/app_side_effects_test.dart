@@ -22,6 +22,7 @@ import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/connectivity_transition_monitor.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/startup/app_side_effects.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -110,7 +111,9 @@ void main() {
     // Root tier, stubbed: neither reaches the identity mirrors under test.
     routeNormalizationProvider.overrideWithValue(null),
     supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new),
-    connectivityRelayReconnectProvider.overrideWithValue(null),
+    connectivityRelayReconnectProvider.overrideWithValue(
+      const Stream<ConnectivityTransition>.empty(),
+    ),
     outgoingDmRetryServiceProvider.overrideWithValue(null),
     dmReactionRetryServiceProvider.overrideWithValue(null),
     viewEventRetryServiceProvider.overrideWithValue(null),

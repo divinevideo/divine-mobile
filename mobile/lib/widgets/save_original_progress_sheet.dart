@@ -2,9 +2,9 @@
 // ABOUTME: Shows downloading -> saving stages with completion actions
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/save_original_progress/save_original_progress_cubit.dart';
 import 'package:openvine/blocs/save_original_progress/save_original_progress_state.dart';

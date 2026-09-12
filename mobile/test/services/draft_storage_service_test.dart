@@ -2120,7 +2120,7 @@ void main() {
 
       test('deletes imported audio when the draft is deleted', () async {
         final audio = writeAudio(
-          p.join('draft_audio_imports', 'draft_audio', 'imported.m4a'),
+          p.join('library_audio_imports', 'draft_audio', 'imported.m4a'),
         );
         final draft = draftWithAudio(
           id: 'draft_audio',
@@ -2246,7 +2246,7 @@ void main() {
       test('still deletes the target audio when a sibling draft has a corrupt '
           'data blob', () async {
         final audio = writeAudio(
-          p.join('draft_audio_imports', 'draft_target', 'imported.m4a'),
+          p.join('library_audio_imports', 'draft_target', 'imported.m4a'),
         );
         final draft = draftWithAudio(
           id: 'draft_target',
@@ -2280,12 +2280,12 @@ void main() {
       });
 
       test('keeps audio a saved sound still points at', () async {
-        // Importing audio from the Library still writes it under whichever
-        // draft was open (`draft_audio_imports/<draftId>/`), so deleting that
-        // draft would otherwise reclaim a file My Sounds depends on. Unlike a
-        // stale path, a deleted file cannot be healed on load (#7977).
+        // Imported audio lives in library storage, but a draft can still be
+        // the only thing whose timeline references it, so deleting that draft
+        // would otherwise reclaim a file My Sounds depends on. Unlike a stale
+        // path, a deleted file cannot be healed on load (#7977).
         final audio = writeAudio(
-          p.join('draft_audio_imports', 'draft_autosave', 'imported.m4a'),
+          p.join('library_audio_imports', 'draft_autosave', 'imported.m4a'),
         );
         SavedSoundsService.resetLegacyMigrationClaimForTesting();
         SharedPreferences.setMockInitialValues({});
@@ -2325,7 +2325,7 @@ void main() {
 
       test('deletes audio no saved sound points at', () async {
         final audio = writeAudio(
-          p.join('draft_audio_imports', 'draft_unsaved', 'imported.m4a'),
+          p.join('library_audio_imports', 'draft_unsaved', 'imported.m4a'),
         );
         SavedSoundsService.resetLegacyMigrationClaimForTesting();
         SharedPreferences.setMockInitialValues({});
@@ -2354,7 +2354,7 @@ void main() {
         'keeps audio a saved sound points at when all drafts are cleared',
         () async {
           final audio = writeAudio(
-            p.join('draft_audio_imports', 'draft_cleared', 'imported.m4a'),
+            p.join('library_audio_imports', 'draft_cleared', 'imported.m4a'),
           );
           SavedSoundsService.resetLegacyMigrationClaimForTesting();
           SharedPreferences.setMockInitialValues({});
@@ -2396,7 +2396,7 @@ void main() {
 
       test('deletes audio files when all drafts are cleared', () async {
         final audio = writeAudio(
-          p.join('draft_audio_imports', 'draft_clear', 'imported.m4a'),
+          p.join('library_audio_imports', 'draft_clear', 'imported.m4a'),
         );
         final draft = draftWithAudio(
           id: 'draft_clear',

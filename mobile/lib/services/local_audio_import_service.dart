@@ -32,9 +32,13 @@ class LocalAudioImportService {
   final AudioImportDurationResolver _durationResolver;
   final AudioImportClock _clock;
 
+  /// Copies [sourcePath] into library-owned audio storage.
+  ///
+  /// The destination is [libraryAudioImportsDirName], not the open draft: an
+  /// imported track can be saved to My Sounds and outlive any draft, so no
+  /// draft owns it (#8024).
   Future<AudioEvent> importAudioFile({
     required String sourcePath,
-    required String draftId,
     required String displayName,
   }) async {
     final source = File(sourcePath);
@@ -55,10 +59,9 @@ class LocalAudioImportService {
       '${now.millisecondsSinceEpoch}_${p.basename(displayName)}',
     );
     final root = await _storageRootProvider();
-    final draftDir = Directory(p.join(root.path, _safeFileName(draftId)));
-    await draftDir.create(recursive: true);
+    await root.create(recursive: true);
 
-    final copied = await source.copy(p.join(draftDir.path, fileName));
+    final copied = await source.copy(p.join(root.path, fileName));
     final duration = await _durationResolver(copied);
 
     return AudioEvent.fromLocalImport(
@@ -73,7 +76,7 @@ class LocalAudioImportService {
 
   static Future<Directory> _defaultStorageRoot() async {
     final docs = await getApplicationDocumentsDirectory();
-    return Directory(p.join(docs.path, draftAudioImportsDirName));
+    return Directory(p.join(docs.path, libraryAudioImportsDirName));
   }
 
   static Future<Duration?> _defaultDurationResolver(File file) async {

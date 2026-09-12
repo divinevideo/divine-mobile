@@ -3,9 +3,9 @@
 // ABOUTME: so tests observe the app's own loading behaviour rather than
 // ABOUTME: driving it. Used by both the local-key and Keycast identity paths.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 
 /// Invites the server grants an identity on its first authenticated

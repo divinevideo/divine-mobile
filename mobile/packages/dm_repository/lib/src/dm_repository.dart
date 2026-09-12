@@ -40,6 +40,7 @@ import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
+import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
@@ -125,6 +126,19 @@ abstract class DmHistoryDrainConfig {
 
   /// Maximum pages fetched in a single drain (≈ [pageSize] × this events).
   static const int maxPages = 50;
+
+  /// Additional attempts shared by the whole drain run when a page does not
+  /// fully settle. This is deliberately a run budget, not a per-page budget:
+  /// one bad relay must not multiply the 5-second query deadline by every
+  /// page in a large history. See #9030.
+  static const int unsettledPageRetriesPerRun = 2;
+
+  /// Automatic retries after a drain defers without a relay status edge.
+  static const List<Duration> deferredRetryDelays = [
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+  ];
 
   /// Maximum NIP-44 decryption attempts for a single gift wrap before the
   /// failed-decrypt retry queue gives up on it. Generous so a transient
@@ -298,6 +312,15 @@ enum _OwnDmInboxState {
   /// The query threw / timed out — outcome unknown; do not publish, retry.
   failed,
 }
+
+/// An own-inbox read's outcome. `advertisedMissing` is the newest list found,
+/// set only for a `found` read that asked the advertised relay without that
+/// relay returning it (#8433).
+typedef _OwnDmInboxRead = ({
+  _OwnDmInboxState state,
+  List<String>? relays,
+  Event? advertisedMissing,
+});
 
 /// Why a recipient's NIP-17 DM inbox lookup returned what it did.
 ///
@@ -615,6 +638,23 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
+  /// Backoff retry paired with [_drainRelayReadySubscription]. Whichever fires
+  /// first cancels the other. The finite delay list bounds consecutive
+  /// no-progress deferrals; durable cursor progress or completion replenishes
+  /// the budget for a later, independent outage. #9030.
+  Timer? _drainRetryTimer;
+  int _automaticDrainRetryCount = 0;
+
+  /// Replenishes deferred retries only after the drain durably made progress.
+  ///
+  /// An authoritative empty gift-wrap page is not enough on its own: outgoing
+  /// NIP-04 recovery can still fail immediately afterward. Resetting before
+  /// that pass would turn a permanent NIP-04 outage into an unbounded sequence
+  /// of first-delay retries.
+  void _resetAutomaticDrainRetriesAfterProgress() {
+    _automaticDrainRetryCount = 0;
+  }
+
   /// One-shot relay-status listener armed by a deferred history drain, so
   /// the drain resumes when a relay connects instead of waiting for the next
   /// inbox open. See [_resumeDrainWhenRelayConnects].
@@ -644,7 +684,7 @@ class DmRepository {
   /// reconnects don't re-query; a `failed` (transient relay error) outcome is
   /// NOT cached — the memo is cleared once it resolves so the next caller
   /// re-queries, and RC3 never overwrites a real list on a transient failure.
-  Future<({_OwnDmInboxState state, List<String>? relays})>? _ownInboxFuture;
+  Future<_OwnDmInboxRead>? _ownInboxFuture;
 
   /// Debounced cross-device DM read-state marker publish (#4977). Reading a
   /// conversation advances its read cursor and schedules this; a burst of
@@ -996,6 +1036,9 @@ class DmRepository {
     _eventLock = null;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1237,8 +1280,7 @@ class DmRepository {
   /// — the memo clears itself once it resolves `failed` so the next caller
   /// re-queries instead of degrading the whole session to the default pool.
   /// [_resetState] clears the memo on account switch.
-  Future<({_OwnDmInboxState state, List<String>? relays})>
-  _resolveOwnDmInbox() {
+  Future<_OwnDmInboxRead> _resolveOwnDmInbox() {
     final cached = _ownInboxFuture;
     if (cached != null) return cached;
     final future = _queryOwnDmInbox(
@@ -1248,8 +1290,8 @@ class DmRepository {
       // falls back to the default pool on `absent` and `failed` alike, and
       // `startListening` awaits it before opening the subscription. Making it
       // strict would put a full timeout in front of DM delivery on every login
-      // and every reconnect to protect a write that happens at most once per
-      // device. The publish path reads authoritatively on its own instead.
+      // and every reconnect to protect the inbox-list publish, which reads
+      // authoritatively on its own instead.
       // See #8212.
       requireAuthoritative: false,
       source: _DmRelayListSource.selfAuthored,
@@ -1956,18 +1998,35 @@ class DmRepository {
       }
       var pagesRun = 0;
       var totalEvents = 0;
+      var unsettledRetriesRemaining =
+          DmHistoryDrainConfig.unsettledPageRetriesPerRun;
       for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
         // Bail if the user switched or the repository was torn down.
         if (_ingestSessionEnded(pubkey, gen)) return;
-        final historyPage = await _fetchHistoryPage(
+        final subscriptionId = dmHistoryDrainSubscriptionId(pubkey, page);
+        final firstHistoryPage = await _fetchHistoryPage(
           until: cursor,
           limit: DmHistoryDrainConfig.pageSize,
-          subscriptionId: dmHistoryDrainSubscriptionId(pubkey, page),
+          subscriptionId: subscriptionId,
           pubkey: pubkey,
           generation: gen,
           tempRelays: ownInbox,
         );
-        if (historyPage == null) return;
+        if (firstHistoryPage == null) return;
+        var historyPage = firstHistoryPage;
+        while (!historyPage.authoritative && unsettledRetriesRemaining > 0) {
+          unsettledRetriesRemaining--;
+          final retryPage = await _fetchHistoryPage(
+            until: cursor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: subscriptionId,
+            pubkey: pubkey,
+            generation: gen,
+            tempRelays: ownInbox,
+          );
+          if (retryPage == null) return;
+          historyPage = retryPage;
+        }
         final events = historyPage.events;
         // _fetchHistoryPage's own guard sits at the top of its persist loop,
         // so the last event's persist and the yield after it are both
@@ -1997,7 +2056,8 @@ class DmRepository {
               // the window would be skipped by the events it did return.
               await syncState.setHistoryDrainCursor(pubkey, cursor);
               Log.warning(
-                'DM history drain saw an empty page that no relay answered for '
+                'DM history drain request $subscriptionId saw an empty page '
+                'that no relay answered for '
                 '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
                 '$cursor and deferring completion to the next inbox open.',
                 category: LogCategory.system,
@@ -2033,7 +2093,8 @@ class DmRepository {
             // already dragged below the window we still need to re-read.
             await syncState.setHistoryDrainCursor(pubkey, cursor);
             Log.warning(
-              'DM history drain saw a page not every relay settled for '
+              'DM history drain request $subscriptionId saw a page not every '
+              'relay settled for '
               '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
               '$cursor and deferring completion to the next inbox open.',
               category: LogCategory.system,
@@ -2060,6 +2121,7 @@ class DmRepository {
         // point never moves below a window that page may not have seen whole.
         if (!sawUnansweredPage) {
           await syncState.setHistoryDrainCursor(pubkey, cursor);
+          _resetAutomaticDrainRetriesAfterProgress();
         }
       }
 
@@ -2083,6 +2145,7 @@ class DmRepository {
           // later session never has to spend a read finding that out.
           await syncState.setDrainCoveredOwnInbox(pubkey);
           await syncState.markHistoryDrainComplete(pubkey);
+          _resetAutomaticDrainRetriesAfterProgress();
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
@@ -2189,7 +2252,19 @@ class DmRepository {
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
     if (_ingestSessionEnded(pubkey, generation)) return;
+    if (_automaticDrainRetryCount >=
+        DmHistoryDrainConfig.deferredRetryDelays.length) {
+      Log.warning(
+        'DM history drain for ${pubkeyForLogs(pubkey)} exhausted its '
+        'automatic no-progress retry budget; waiting for a manual retry or '
+        'a later session.',
+        category: LogCategory.system,
+      );
+      return;
+    }
     final lastConnected = <String>{
       for (final entry in _nostrClient.relayStatuses.entries)
         if (entry.value.isConnected) entry.key,
@@ -2216,10 +2291,26 @@ class DmRepository {
       if (!newlyConnected) return;
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
+      _drainRetryTimer?.cancel();
+      _drainRetryTimer = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
         'connected',
+        category: LogCategory.system,
+      );
+      unawaited(backfillHistoryIfNeeded());
+    });
+    final delay =
+        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
+    _drainRetryTimer = Timer(delay, () {
+      _drainRetryTimer = null;
+      unawaited(_drainRelayReadySubscription?.cancel());
+      _drainRelayReadySubscription = null;
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      Log.info(
+        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
+        'bounded retry delay',
         category: LogCategory.system,
       );
       unawaited(backfillHistoryIfNeeded());
@@ -2249,6 +2340,9 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass
@@ -4052,13 +4146,16 @@ class DmRepository {
   /// Resolving a COUNTERPARTY's inbox passes `false`: it runs on every send,
   /// degrades to the default pool on either outcome, and overwrites nothing,
   /// so it keeps the cache and the first answer it gets.
-  Future<({_OwnDmInboxState state, List<String>? relays})> _queryOwnDmInbox(
+  Future<_OwnDmInboxRead> _queryOwnDmInbox(
     String pubkey, {
     required bool requireAuthoritative,
     // Defaults to the strict reading so a call site added later fails closed.
     // Every path here except the signed-in user's own inbox is resolving
     // somebody else's list.
     _DmRelayListSource source = _DmRelayListSource.remote,
+    // Read as its own leg when given. Only the publish passes it — see the
+    // leg comment below.
+    String? advertisedRelay,
   }) async {
     try {
       final filter = [
@@ -4076,11 +4173,13 @@ class DmRepository {
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
       //
-      // Own-inbox reads deliberately keep the existing single pool-only leg.
-      // The fast read is in front of the receiving subscription, while the
-      // authoritative read protects publication (#8212); widening receipt is
-      // a separate asynchronous concern and must not add a cold connection to
-      // either synchronous path.
+      // The live memo read and the drain's strict read keep a single
+      // pool-only leg: the memo is in front of the receiving subscription, and
+      // widening receipt is a separate asynchronous concern (#8212). Only the
+      // publish passes [advertisedRelay], and that leg asks it alone: a user
+      // can remove the relay from the pool, and a read that never asks where
+      // the list was written can neither confirm it nor see a list held only
+      // there (#8433).
       final queryFutures = [
         _nostrClient.queryEventsDetailed(
           filter,
@@ -4100,11 +4199,24 @@ class DmRepository {
             requireAllRelaysSettled: true,
             timeout: _dmInboxDiscoveryQueryTimeout,
           ),
+        if (advertisedRelay != null)
+          _nostrClient.queryEventsDetailed(
+            filter,
+            useCache: false,
+            tempRelays: [advertisedRelay],
+            relayTypes: const [RelayType.temp],
+            requireAllRelaysSettled: true,
+            timeout: _ownDmInboxAuthoritativeTimeout,
+          ),
       ];
       final results = await Future.wait(queryFutures).timeout(
         inboxResolutionBudget,
       );
       final events = [for (final result in results) ...result.events];
+      // The advertised leg, when asked, is queued last.
+      final advertisedEvents = advertisedRelay == null
+          ? null
+          : results.last.events;
       // Computed here but applied ONLY at the two exits below where nothing
       // matching came back. A read that DID return the list stays `found` even
       // when some relay never settled: the list is in hand, and RC3's job is
@@ -4163,7 +4275,7 @@ class DmRepository {
 
       if (events.isEmpty) {
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null);
+        return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       final matchingEvents = [
         for (final event in events)
@@ -4177,7 +4289,7 @@ class DmRepository {
           category: LogCategory.system,
         );
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null);
+        return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       // Newest wins for a replaceable event served from multiple relays.
       matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -4199,9 +4311,24 @@ class DmRepository {
         pubkey,
         source,
       );
-      return relays.isEmpty
-          ? (state: _OwnDmInboxState.absent, relays: null)
-          : (state: _OwnDmInboxState.found, relays: relays);
+      if (relays.isEmpty) {
+        return (
+          state: _OwnDmInboxState.absent,
+          relays: null,
+          advertisedMissing: null,
+        );
+      }
+      final advertisedServesList =
+          advertisedEvents == null ||
+          advertisedEvents.any(
+            (event) =>
+                event.kind == EventKind.dmRelaysList && event.pubkey == pubkey,
+          );
+      return (
+        state: _OwnDmInboxState.found,
+        relays: relays,
+        advertisedMissing: advertisedServesList ? null : matchingEvents.first,
+      );
     } on TimeoutException {
       // Deliberately `failed`, never `absent`. NIP-17 says an absent kind-10050
       // means the user "is not ready to receive messages"; a read we abandoned
@@ -4213,13 +4340,21 @@ class DmRepository {
         '${inboxResolutionBudget.inMilliseconds}ms; treating as unread',
         category: LogCategory.system,
       );
-      return (state: _OwnDmInboxState.failed, relays: null);
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
     } on Object catch (e) {
       Log.warning(
         'Failed to resolve DM inbox relays for ${pubkeyForLogs(pubkey)}: $e',
         category: LogCategory.system,
       );
-      return (state: _OwnDmInboxState.failed, relays: null);
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
     }
   }
 
@@ -4250,13 +4385,19 @@ class DmRepository {
   /// relay that answers — which is right for a caller that falls back to the
   /// default pool but not for one about to replace what it read. Sharing it
   /// was what made the guard above unreachable (#8212). The extra query is
-  /// bounded: this method returns early once `dmRelayListPublished` is set, so
-  /// it runs at most once per (device, pubkey), and it is never awaited by
-  /// login. Idempotent per (device, pubkey) via
-  /// `DmSyncState.dmRelayListPublished`, with the flag set ONLY once
-  /// [_dmInboxRelayUrl] itself confirms `OK`. A rejection there, or a
-  /// slow/failed signer, leaves the flag unset and the next login retries —
-  /// the publish never blocks login and self-heals.
+  /// bounded: this method returns early once `dmRelayListPublished` is set,
+  /// and it is never awaited by login.
+  ///
+  /// `DmSyncState.dmRelayListPublished` is set only when [_dmInboxRelayUrl]
+  /// itself returns the list — never on a publish's `OK`, and never on another
+  /// relay's copy. That relay answers `OK` once the event is queued, commits
+  /// it minutes later, and can lose it in between (#8433), so an `OK` proves
+  /// the relay took the event, not that anyone can read it. The session after
+  /// a publish reads it back: the advertised relay's copy records the flag, a
+  /// list only other relays serve is sent there unchanged, and `absent`
+  /// publishes again. A rejection, or a slow/failed signer, records nothing
+  /// and the next login retries — the publish never blocks login and
+  /// self-heals.
   ///
   /// No-op when uninitialized, when no signer / sync state is wired, or when
   /// no valid advertised relay URL is configured.
@@ -4275,14 +4416,24 @@ class DmRepository {
       if (syncState.dmRelayListPublished(pubkey)) return;
 
       // Its own authoritative read, NOT the shared session memo: this is the
-      // one caller that replaces what it read. See #8212.
+      // one caller that replaces what it read. See #8212. It also asks the
+      // relay it publishes to on its own: only that relay's copy is recorded,
+      // and the pool may not contain it (#8433).
       final resolution = await _queryOwnDmInbox(
         pubkey,
         requireAuthoritative: true,
         source: _DmRelayListSource.selfAuthored,
+        advertisedRelay: relayUrl,
       );
       if (_disposed || _resetGeneration != gen) return;
       if (resolution.state == _OwnDmInboxState.found) {
+        final missing = resolution.advertisedMissing;
+        if (missing != null) {
+          // Only other relays serve it: send that same signed list to the
+          // advertised relay, and record it once that relay serves it.
+          await _resendDmRelayList(missing, relayUrl);
+          return;
+        }
         // Already advertising an inbox — never overwrite a richer list.
         // Record the flag so we stop re-checking every login.
         await syncState.markDmRelayListPublished(pubkey);
@@ -4335,10 +4486,7 @@ class DmRepository {
         targetRelays: <String>[relayUrl, ...discoveryTargets],
       );
       if (_disposed || _resetGeneration != gen) return;
-      // Success is the advertised relay's own `OK`, not "something accepted".
-      // A discovery relay accepting while divine's relay refused would mark
-      // the list published and stop retrying, leaving the one relay divine
-      // reads from without it.
+      // The advertised relay's `OK` only decides which line is logged (#8433).
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
@@ -4359,13 +4507,12 @@ class DmRepository {
         );
       }
 
-      await syncState.markDmRelayListPublished(pubkey);
       // The event id is the anchor: a relay serves only the newest revision of
       // a replaceable kind for a coordinate query, so an id is the one handle
       // that still reaches an earlier one. Logged whole.
       Log.info(
         'Published kind-10050 DM inbox relay list for ${pubkeyForLogs(pubkey)} '
-        '-> $relayUrl (event ${signed.id})',
+        '-> $relayUrl (event ${signed.id}); recorded once $relayUrl serves it',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {
@@ -4376,6 +4523,32 @@ class DmRepository {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Sends [list], the user's own signed kind-10050 found only on other
+  /// relays, to [relayUrl] unchanged — nothing is re-signed or published over.
+  /// Nothing is recorded either: the next session records it once [relayUrl]
+  /// returns it (#8433).
+  Future<void> _resendDmRelayList(Event list, String relayUrl) async {
+    final outcome = await _nostrClient.publishEventAwaitOk(
+      list,
+      targetRelays: [relayUrl],
+    );
+    if (!outcome.acceptedBy.contains(relayUrl)) {
+      Log.warning(
+        'kind-10050 re-send to $relayUrl did not land '
+        '(${outcome.rejectedBy[relayUrl] ?? 'no response'}) — will retry next '
+        'login',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    Log.info(
+      'Re-sent kind-10050 DM inbox relay list for '
+      '${pubkeyForLogs(list.pubkey)} -> $relayUrl (event ${list.id}), which '
+      'did not serve it; recorded once it does',
+      category: LogCategory.system,
+    );
   }
 
   /// Upserts a conversation for a LIVE outgoing send and marks it read in

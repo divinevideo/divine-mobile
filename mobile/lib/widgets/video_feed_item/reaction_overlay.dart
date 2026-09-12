@@ -12,7 +12,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Font size the hero emoji is rasterized at; particles draw the same image
 /// scaled down.

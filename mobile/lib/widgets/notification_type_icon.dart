@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Rounded-square type indicator shown on the leading edge of a notification
 /// row (32×32, radius 12). Optionally overlays a small red unread dot.

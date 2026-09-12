@@ -13,6 +13,7 @@ freeze — Divine does not run release freezes, including before launch. See
 
 - [ ] Confirm the target commit is on `main` or the intended release branch.
 - [ ] Confirm `mobile/pubspec.yaml` has the release version and build number you expect.
+- [ ] Keep the current marketing version while its train is in TestFlight or awaiting approval. Changing `mobile/pubspec.yaml` is a release decision: ask a maintainer first, then follow [Cutting a release](../mobile/docs/SHOREBIRD_CODE_PUSH.md#cutting-a-release).
 - [ ] Review `git status` and remove temporary files, logs, or unfinished work.
 - [ ] Confirm launch-critical docs are updated:
   - [ ] [docs/P1_LAUNCH_HUB.md](P1_LAUNCH_HUB.md)

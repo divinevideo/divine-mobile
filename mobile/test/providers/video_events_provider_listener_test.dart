@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -291,7 +292,7 @@ void main() {
       container.dispose();
     });
 
-    test('should react to service notifyListeners calls', () async {
+    test('should react to service notifyListeners calls', () {
       // Arrange - Start with no videos
       when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
 
@@ -304,48 +305,43 @@ void main() {
         attachedListener = invocation.positionalArguments[0] as VoidCallback;
       });
 
-      final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(videoEventsProvider, (prev, next) {
-        states.add(next);
-      }, fireImmediately: true);
+      fakeAsync((async) {
+        final states = <AsyncValue<List<VideoEvent>>>[];
+        final listener = container.listen(videoEventsProvider, (prev, next) {
+          states.add(next);
+        }, fireImmediately: true);
+        async.flushMicrotasks();
 
-      await pumpEventQueue();
+        // Ignore the initial empty-list emission and observe only the update.
+        states.clear();
 
-      // Clear initial states
-      states.clear();
+        final now = DateTime.now();
+        final newVideos = <VideoEvent>[
+          VideoEvent(
+            id: 'new1',
+            pubkey: 'author1',
+            title: 'New Video',
+            content: 'Content',
+            videoUrl: 'https://example.com/new.mp4',
+            createdAt: now.millisecondsSinceEpoch,
+            timestamp: now,
+          ),
+        ];
+        when(() => mockVideoEventService.discoveryVideos).thenReturn(newVideos);
 
-      // Act - Add videos and trigger listener
-      final now = DateTime.now();
-      final timestamp = now.millisecondsSinceEpoch;
-      final newVideos = <VideoEvent>[
-        VideoEvent(
-          id: 'new1',
-          pubkey: 'author1',
-          title: 'New Video',
-          content: 'Content',
-          videoUrl: 'https://example.com/new.mp4',
-          createdAt: timestamp,
-          timestamp: now,
-        ),
-      ];
-      when(() => mockVideoEventService.discoveryVideos).thenReturn(newVideos);
+        // Simulate VideoEventService notifying the provider, then advance the
+        // provider's 500 ms batching timer without waiting on wall-clock time.
+        attachedListener?.call();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
 
-      // Simulate service calling notifyListeners (triggers
-      // _onVideoEventServiceChange)
-      attachedListener?.call();
+        expect(
+          states.where((state) => state.hasValue).last.value,
+          orderedEquals(newVideos),
+        );
 
-      // Wait for debounce (500ms) + processing
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      await pumpEventQueue();
-
-      // Assert - Should have received update with non-empty videos
-      expect(
-        states.any((s) => s.hasValue && (s.value?.isNotEmpty ?? false)),
-        isTrue,
-        reason: 'Should receive updates from service',
-      );
-
-      listener.close();
+        listener.close();
+      });
     });
   });
 }

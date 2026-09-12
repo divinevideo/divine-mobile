@@ -48,7 +48,7 @@ class DivineVideoDraft {
     this.finalRenderedClip,
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
-    this.inspiredByNpub,
+    this.inspiredByNpubs = const [],
     this.captionMentions = const [],
     this.clipSourceCredits = const [],
     this.selectedSound,
@@ -75,7 +75,7 @@ class DivineVideoDraft {
     DivineVideoClip? finalRenderedClip,
     Set<String> collaboratorPubkeys = const {},
     InspiredByInfo? inspiredByVideo,
-    String? inspiredByNpub,
+    List<String> inspiredByNpubs = const [],
     List<CaptionMention> captionMentions = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedSound,
@@ -106,7 +106,7 @@ class DivineVideoDraft {
       finalRenderedClip: finalRenderedClip,
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
-      inspiredByNpub: inspiredByNpub,
+      inspiredByNpubs: inspiredByNpubs,
       captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
@@ -208,7 +208,7 @@ class DivineVideoDraft {
               json['inspiredByVideo'] as Map<String, dynamic>,
             )
           : null,
-      inspiredByNpub: json['inspiredByNpub'] as String?,
+      inspiredByNpubs: _inspiredByNpubsFromJson(json),
       captionMentions: CaptionMention.listFromJson(json['captionMentions']),
       clipSourceCredits: ClipSourceCredit.listFromJson(
         json['clipSourceCredits'],
@@ -305,8 +305,12 @@ class DivineVideoDraft {
   /// Reference to a specific video that inspired this one (a-tag).
   final InspiredByInfo? inspiredByVideo;
 
-  /// NIP-27 npub reference for general "Inspired By" a creator.
-  final String? inspiredByNpub;
+  /// NIP-27 npub references for the creators this video credits.
+  final List<String> inspiredByNpubs;
+
+  /// The creator named by the NIP-27 content line, or null when none is set.
+  String? get inspiredByNpub =>
+      inspiredByNpubs.isEmpty ? null : inspiredByNpubs.first;
 
   /// Accounts the author picked from the caption's mention autocomplete.
   ///
@@ -390,7 +394,7 @@ class DivineVideoDraft {
     bool clearFinalRenderedClip = false,
     Set<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
-    String? inspiredByNpub,
+    List<String>? inspiredByNpubs,
     List<CaptionMention>? captionMentions,
     List<ClipSourceCredit>? clipSourceCredits,
     AudioEvent? selectedSound,
@@ -434,7 +438,7 @@ class DivineVideoDraft {
         : (finalRenderedClip ?? this.finalRenderedClip),
     collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
     inspiredByVideo: inspiredByVideo ?? this.inspiredByVideo,
-    inspiredByNpub: inspiredByNpub ?? this.inspiredByNpub,
+    inspiredByNpubs: inspiredByNpubs ?? this.inspiredByNpubs,
     captionMentions: captionMentions ?? this.captionMentions,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     selectedSound: clearSelectedSound
@@ -494,7 +498,7 @@ class DivineVideoDraft {
       finalRenderedClip: finalRenderedClip,
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
-      inspiredByNpub: inspiredByNpub,
+      inspiredByNpubs: inspiredByNpubs,
       captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
@@ -505,6 +509,17 @@ class DivineVideoDraft {
       thumbnailTimestamp: thumbnailTimestamp,
       customThumbnailPath: customThumbnailPath,
     );
+  }
+
+  /// Reads the credited-creator list while accepting the legacy scalar key.
+  static List<String> _inspiredByNpubsFromJson(Map<String, dynamic> json) {
+    final raw = json['inspiredByNpubs'];
+    if (raw is List) {
+      return raw.whereType<String>().where((n) => n.isNotEmpty).toList();
+    }
+    final legacy = json['inspiredByNpub'];
+    if (legacy is String && legacy.isNotEmpty) return [legacy];
+    return const [];
   }
 
   Map<String, dynamic> toJson() => {
@@ -532,7 +547,7 @@ class DivineVideoDraft {
     if (collaboratorPubkeys.isNotEmpty)
       'collaboratorPubkeys': collaboratorPubkeys.toList(),
     if (inspiredByVideo != null) 'inspiredByVideo': inspiredByVideo!.toJson(),
-    if (inspiredByNpub != null) 'inspiredByNpub': inspiredByNpub,
+    if (inspiredByNpubs.isNotEmpty) 'inspiredByNpubs': inspiredByNpubs,
     if (captionMentions.isNotEmpty)
       'captionMentions': captionMentions
           .map((mention) => mention.toJson())
@@ -632,7 +647,7 @@ class DivineVideoDraft {
           videoReplyContext != null ||
           collaboratorPubkeys.isNotEmpty ||
           inspiredByVideo != null ||
-          inspiredByNpub != null ||
+          inspiredByNpubs.isNotEmpty ||
           clipSourceCredits.isNotEmpty ||
           expireTime != null);
 }

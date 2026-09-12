@@ -3969,6 +3969,12 @@ abstract class AppLocalizations {
   /// **'Failed to connect to relays. Please check your network connection.'**
   String get relaySettingsFailedToConnectCheck;
 
+  /// Shown after the user taps Retry on the Relays screen when the reconnect wait ends before any relay has connected, while connections are still being made. Not an error: the connections keep going in the background.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting to relays. Give it a moment.'**
+  String get relaySettingsStillConnecting;
+
   /// No description provided for @relaySettingsSavedLocallyPublishPending.
   ///
   /// In en, this message translates to:
@@ -5089,6 +5095,36 @@ abstract class AppLocalizations {
   /// **'Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.'**
   String get analyticsAudiencePlaceholder;
 
+  /// No description provided for @analyticsSocialCountsInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'About your follower count'**
+  String get analyticsSocialCountsInfoLabel;
+
+  /// No description provided for @analyticsSocialCountsInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About your follower count'**
+  String get analyticsSocialCountsInfoTitle;
+
+  /// No description provided for @analyticsFollowerCountsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your follower count shows the people who follow you on Divine.'**
+  String get analyticsFollowerCountsBody;
+
+  /// No description provided for @analyticsSocialCountsLearnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more'**
+  String get analyticsSocialCountsLearnMore;
+
+  /// No description provided for @analyticsSocialCountsLearnMoreSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more at {url}'**
+  String analyticsSocialCountsLearnMoreSemantics(String url);
+
   /// No description provided for @analyticsRetention.
   ///
   /// In en, this message translates to:
@@ -5472,6 +5508,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create account'**
   String get authCreateAccountTitle;
+
+  /// No description provided for @authCreateAccountMarketingOptIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Divine app updates and news'**
+  String get authCreateAccountMarketingOptIn;
 
   /// No description provided for @authBackToInviteCode.
   ///
@@ -15254,6 +15296,12 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
+  /// Shown under the background chips of the green-screen screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Whatever\'s behind the clip shows through.'**
+  String get videoEditorChromaKeyCanvasTransparentHint;
+
   /// Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register.
   ///
   /// In en, this message translates to:
@@ -15739,6 +15787,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scale from'**
   String get videoEditorLayerAnimationScaleFrom;
+
+  /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get videoEditorLayerAnimationCustomPoint;
+
+  /// Instruction shown over the video while the creator picks the point an enter slide animation starts from.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the video where this should slide in from'**
+  String get videoEditorLayerAnimationPointEnterHint;
+
+  /// Instruction shown over the video while the creator picks the point a leave slide animation ends at.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the video where this should slide out to'**
+  String get videoEditorLayerAnimationPointLeaveHint;
 
   /// No description provided for @videoEditorFinishTimelineEditingSemanticLabel.
   ///
@@ -18684,7 +18750,7 @@ abstract class AppLocalizations {
   /// **'Measuring…'**
   String get settingsStorageMeasuring;
 
-  /// Shows how much disk the caches currently use.
+  /// Shows how much disk a Storage section currently uses. Rendered once under 'Cached media' and once under 'Your clips and drafts'.
   ///
   /// In en, this message translates to:
   /// **'{size} in use'**
@@ -18719,6 +18785,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cache cleared'**
   String get settingsStorageCleared;
+
+  /// Section header on the Storage screen for the user's own recordings, drafts and sounds — the content the app cannot re-create.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clips and drafts'**
+  String get settingsStorageContentSectionTitle;
+
+  /// Explains what the 'Your clips and drafts' size covers and how to reduce it.
+  ///
+  /// In en, this message translates to:
+  /// **'Recordings, drafts and sounds you made. Clearing the cache never touches these — delete clips from your library to free up space here.'**
+  String get settingsStorageContentDescription;
+
+  /// Shown when every media file on disk is still used by a clip, draft or upload.
+  ///
+  /// In en, this message translates to:
+  /// **'No leftover files'**
+  String get settingsStorageNoOrphanedFiles;
+
+  /// How many media files no clip, draft or upload uses anymore, and how much space they take. Example: '3 leftover files, 120 MB'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} leftover file, {size}} other{{count} leftover files, {size}}}'**
+  String settingsStorageOrphanedFilesFound(int count, String size);
+
+  /// Button that deletes the media files no clip, draft or upload uses anymore.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove leftover files'**
+  String get settingsStorageRemoveOrphanedButton;
+
+  /// Title of the confirmation sheet before deleting leftover media files.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove leftover files?'**
+  String get settingsStorageRemoveOrphanedConfirmTitle;
+
+  /// Body of the confirmation sheet before deleting leftover media files. Explains what is deleted, how much space it frees, and that it is permanent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This deletes {count} file that no clip, draft or upload uses anymore, freeing up {size}. It can\'t be undone.} other{This deletes {count} files that no clip, draft or upload uses anymore, freeing up {size}. This can\'t be undone.}}'**
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size);
+
+  /// Accessibility announcement after the leftover media files are deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Leftover files removed'**
+  String get settingsStorageOrphanedFilesRemoved;
 
   /// Section header for the clip-library audit on the Storage screen.
   ///

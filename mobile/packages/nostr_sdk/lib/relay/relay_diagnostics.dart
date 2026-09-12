@@ -12,6 +12,11 @@ enum RelayDiagnosticSite {
   requestSettlement,
   authentication,
   notice,
+
+  /// A one-shot relay read ended worth surfacing to support triage: it did
+  /// not end cleanly (see `QueryEnd` in `query_result.dart`), or it ended
+  /// cleanly but a relay may have capped the result.
+  queryCompletion,
 }
 
 /// A safe, structured description of relay activity.
@@ -29,8 +34,26 @@ class RelayDiagnostic {
     this.stackTrace,
   });
 
+  /// Reserved [relayUrl] value for a diagnostic about the pool as a whole.
+  ///
+  /// Real relay diagnostics always carry their WebSocket URL. Pool-level
+  /// summaries use this stable key so consumers can group and rate-limit them
+  /// without presenting it as a configured relay.
+  static const String poolScope = 'relay-pool';
+
+  /// Reserved [relayUrl] value for a diagnostic a client layer files above the
+  /// pool, about a read the pool never saw at all.
+  ///
+  /// Deliberately not [poolScope]: a disposed client, or a query-pool slot
+  /// that never arrived, is not a relay's doing, and one key each keeps a busy
+  /// layer from suppressing the other under a shared rate limit.
+  static const String clientScope = 'nostr-client';
+
   final RelayDiagnosticSite site;
   final RelayDiagnosticLevel level;
+
+  /// The relay WebSocket URL, or [poolScope] / [clientScope] for a summary
+  /// that belongs to no single relay.
   final String relayUrl;
   final String message;
   final Object? error;

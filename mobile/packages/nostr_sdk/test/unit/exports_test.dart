@@ -26,6 +26,9 @@ void main() {
       expect(RelayStatus, isA<Type>());
       expect(RelayType, isA<Type>());
       expect(EventFilter, isA<Type>());
+      // RelayPool.query and reportQueryDeadline both traffic in these.
+      expect(QueryOutcome, isA<Type>());
+      expect(QueryRelaySummary, isA<Type>());
     });
 
     test('Essential NIP implementations are exported', () {

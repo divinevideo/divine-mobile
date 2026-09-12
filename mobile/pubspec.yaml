@@ -16,6 +16,8 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
+# Marketing-version changes are release decisions. Keep the current train until
+# approval; ask a maintainer and follow ../docs/RELEASE_CHECKLIST.md before editing.
 version: 1.0.22+820
 
 environment:
@@ -93,6 +95,12 @@ workspace:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Material and Cupertino left the Flutter framework and now ship as pub
+  # packages maintained in flutter/packages. `package:flutter/material.dart`
+  # still exists in 3.47.2 but is the legacy path (#8916).
+  material_ui: ^1.2.0
+  cupertino_ui: ^1.0.2
 
   # Analytics — unified event schema and the single Firebase analytics surface.
   analytics:
@@ -348,7 +356,12 @@ dependencies:
   firebase_crashlytics: ^5.0.7
   firebase_messaging: ^16.1.1
   firebase_performance: ^0.11.1+4
-  go_router: ^16.2.4
+  # 18.0.0 is the first go_router built on material_ui, and the floor is
+  # load-bearing: earlier versions pick a page builder with
+  # findAncestorWidgetOfExactType<MaterialApp>() against the framework class,
+  # which a material_ui MaterialApp is not. Every `builder:` route would fall
+  # through to NoTransitionPage and lose its transition (#8916).
+  go_router: ^18.0.1
   # Runtime splash-screen control via FlutterNativeSplash.preserve/remove.
   # Used ONLY for the runtime API — do NOT add a flutter_native_splash:
   # config block or run `dart run flutter_native_splash:create`. The
@@ -374,8 +387,10 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.11.4
-  pro_image_editor: ^13.5.0
+  pro_video_editor: ^2.12.0
+  # 14.0.0 is the first release built on material_ui; before it the editor's
+  # ThemeData is the framework's and no longer interchangeable with ours.
+  pro_image_editor: ^14.1.1
   flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
   sensors_plus: ^7.0.0

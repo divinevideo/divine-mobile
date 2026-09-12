@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/relay_add_source.dart';
 import 'package:nostr_client/src/models/relay_connection_status.dart';
@@ -47,6 +48,20 @@ String? normalizeRelayUrl(String url) {
   if (uri == null || uri.host.isEmpty) return null;
   if (uri.scheme == 'ws' && !isLoopbackHost(uri.host)) return null;
   return normalized;
+}
+
+/// Whether a force-reconnect cycle finished, or was still dialling when the
+/// caller stopped waiting.
+///
+/// The shared cycle keeps running after the deadline, so `stillDialling` is
+/// "no answer yet", not "failed".
+enum ForceReconnectOutcome {
+  /// The cycle finished inside its budget.
+  completed,
+
+  /// The caller stopped waiting at the shared deadline while dials were still
+  /// open. The cycle keeps running and keeps writing relay status.
+  stillDialling,
 }
 
 /// {@template relay_manager}
@@ -112,6 +127,15 @@ class RelayManager {
   final Relay Function(String url)? _relayFactory;
   final RelayDiagnosticsSink? _diagnosticsSink;
 
+  /// The sink relay diagnostics are filed through, or null when none was
+  /// injected.
+  ///
+  /// Exposed so `NostrClient` can file the one line a read owes when the
+  /// relay pool never saw it — the client and this manager are handed the
+  /// same sink, so routing the client's line elsewhere would split one
+  /// diagnostic channel into two.
+  RelayDiagnosticsSink? get diagnosticsSink => _diagnosticsSink;
+
   /// Configured relay URLs (user's list, persisted)
   final List<String> _configuredRelays = [];
 
@@ -120,6 +144,10 @@ class RelayManager {
 
   /// Status for each relay
   final Map<String, RelayConnectionStatus> _relayStatuses = {};
+
+  /// The connection attempt in flight for each relay, shared by every caller
+  /// that asks for that relay while it runs (#8991).
+  final Map<String, _RelayDial> _dials = {};
 
   /// Stream controller for status updates
   final _statusController =
@@ -130,6 +158,9 @@ class RelayManager {
 
   /// Whether the manager has been initialized
   bool _initialized = false;
+
+  /// Whether [dispose] has run.
+  bool _disposed = false;
 
   /// Whether persisted user-removal intent has been loaded.
   bool _userRemovedRelaysLoaded = false;
@@ -363,19 +394,10 @@ class RelayManager {
     );
     _notifyStatusChange();
 
-    // Connect to the relay
-    final success = await _connectToRelay(normalizedUrl);
-
-    // Update status based on connection result
-    if (success) {
-      _updateRelayStatus(normalizedUrl, RelayState.connected);
-    } else {
-      _updateRelayStatus(
-        normalizedUrl,
-        RelayState.error,
-        errorMessage: 'Failed to connect',
-      );
-    }
+    final success = await _dial(
+      normalizedUrl,
+      failureMessage: 'Failed to connect',
+    );
     _notifyStatusChange();
 
     // Persist configuration
@@ -412,7 +434,8 @@ class RelayManager {
 
     _log('Removing relay: $normalizedUrl', relayUrl: normalizedUrl);
 
-    // Disconnect from the relay
+    // Release anyone waiting on its dial, then tear the relay down.
+    _releaseDial(normalizedUrl);
     _relayPool.remove(normalizedUrl);
 
     // Remove from configured list and statuses
@@ -490,7 +513,8 @@ class RelayManager {
   // Reconnection
   // ---------------------------------------------------------------------------
 
-  /// Aggregate bound on how long a caller waits for one reconnect sweep.
+  /// Aggregate bound on how long a caller waits for one reconnect sweep or
+  /// [forceReconnectAll] cycle.
   ///
   /// Parallelising already bounds a healthy sweep at roughly one connect
   /// (a 10s handshake timeout plus a 2s orphan close), but nothing below here
@@ -507,13 +531,12 @@ class RelayManager {
   /// Concurrent callers share the underlying sweep for the full lifetime of
   /// its dials. Each caller stops waiting at the sweep's original aggregate
   /// deadline, while late dial results continue updating their own relay
-  /// status. `_connectToRelay` replaces the prior relay object, so clearing the
-  /// single-flight latch when only the caller deadline expires would let the
-  /// next caller start duplicate sockets against the same hosts (#7091).
+  /// status (#7091). A relay that is already being dialled is joined rather
+  /// than redialled, so no sweep opens a second socket to it (#8991).
   Future<void> retryDisconnectedRelays() {
     final inFlight = _retryInFlight;
     if (inFlight != null) return _waitForRetrySweep(inFlight);
-    _retryDeadline = DateTime.now().add(reconnectSweepBudget);
+    _retryDeadline = clock.now().add(reconnectSweepBudget);
     final sweep = _runRetrySweep();
     late final Future<void> tracked;
     tracked = sweep.whenComplete(() {
@@ -532,14 +555,33 @@ class RelayManager {
   Future<void> _waitForRetrySweep(Future<void> sweep) async {
     final deadline = _retryDeadline;
     if (deadline == null) return sweep;
-    final remaining = deadline.difference(DateTime.now());
+    // The retry sweep has no caller that reports an outcome, so its result is
+    // deliberately dropped here rather than widened through that path too.
+    await _waitUntil(sweep, deadline, 'Reconnect sweep');
+  }
+
+  /// Waits for [work] until [deadline]. Work still running afterwards keeps
+  /// going and keeps writing its relays' status.
+  ///
+  /// Returns whether [work] finished inside the deadline. Callers that report
+  /// an outcome need that: an expired deadline and a finished cycle both leave
+  /// this future completing normally, and treating the first as the second
+  /// tells the user the reconnect failed while it is still succeeding.
+  Future<ForceReconnectOutcome> _waitUntil(
+    Future<void> work,
+    DateTime deadline,
+    String label,
+  ) async {
+    final remaining = deadline.difference(clock.now());
     try {
-      await sweep.timeout(remaining.isNegative ? Duration.zero : remaining);
+      await work.timeout(remaining.isNegative ? Duration.zero : remaining);
+      return ForceReconnectOutcome.completed;
     } on TimeoutException {
       _log(
-        'Reconnect sweep exceeded ${reconnectSweepBudget.inSeconds}s; '
+        '$label exceeded ${reconnectSweepBudget.inSeconds}s; '
         'hosts still dialling remain in flight',
       );
+      return ForceReconnectOutcome.stillDialling;
     }
   }
 
@@ -549,13 +591,21 @@ class RelayManager {
     // First, check health of all "connected" relays to detect dead connections
     _checkRelayHealth();
 
-    final disconnected = _configuredRelays.where((url) {
+    // A relay with a dial in flight is joined and one the SDK is reconnecting
+    // is left alone: redialling either tears its socket down mid-handshake
+    // and opens a second one (#8991).
+    final attempts = <Future<bool>>[];
+    for (final url in List<String>.from(_configuredRelays)) {
+      final running = _dials[url];
+      if (running != null) {
+        attempts.add(running.result.future);
+        continue;
+      }
       final status = _relayStatuses[url];
-      return status != null && !status.isConnected;
-    }).toList();
-
-    for (final url in disconnected) {
-      _updateRelayStatus(url, RelayState.connecting);
+      if (status == null || status.isConnected || _isSocketConnecting(url)) {
+        continue;
+      }
+      attempts.add(_dial(url, failureMessage: 'Reconnection failed'));
     }
     _notifyStatusChange();
 
@@ -564,17 +614,8 @@ class RelayManager {
     // caller deadline must not turn unresolved dials into failures, and a dial
     // that succeeds after that deadline is still the live pooled connection.
     await Future.wait(
-      disconnected.map((url) async {
-        final success = await _connectToRelay(url);
-        if (success) {
-          _updateRelayStatus(url, RelayState.connected);
-        } else {
-          _updateRelayStatus(
-            url,
-            RelayState.error,
-            errorMessage: 'Reconnection failed',
-          );
-        }
+      attempts.map((attempt) async {
+        await attempt;
         _notifyStatusChange();
       }),
     );
@@ -586,6 +627,9 @@ class RelayManager {
   /// died silently (common with WebSockets after ~2 minutes of idle time).
   void _checkRelayHealth() {
     for (final url in _configuredRelays) {
+      // A socket still being dialled fails its idle check by definition, and
+      // demoting it gets the socket torn down mid-handshake (#8991).
+      if (_dials.containsKey(url) || _isSocketConnecting(url)) continue;
       final relay = _relayPool.getRelay(url);
       if (relay == null) continue;
 
@@ -604,44 +648,91 @@ class RelayManager {
     }
   }
 
-  /// Force reconnect all relays (disconnect first, then reconnect)
+  /// Whether the pooled socket for [url] is mid-handshake, as it is while the
+  /// SDK reconnects it on its own.
+  bool _isSocketConnecting(String url) {
+    final relay = _relayPool.getRelay(url);
+    return relay is RelayBase &&
+        relay.relayStatus.connected == ClientConnected.connecting;
+  }
+
+  /// Redials every configured relay on a fresh socket, replacing any dial in
+  /// flight.
   ///
   /// Use this when WebSocket connections may have been silently dropped
-  /// (e.g., after app backgrounding).
-  Future<void> forceReconnectAll() async {
-    _log('Force reconnecting all relays');
-
-    // Create a copy to avoid concurrent modification during async iteration
-    final relaysToReconnect = List<String>.from(_configuredRelays);
-
-    // First disconnect all
-    for (final url in relaysToReconnect) {
-      _relayPool.remove(url);
-      _updateRelayStatus(url, RelayState.connecting);
+  /// (e.g., after app backgrounding). Concurrent callers share one cycle and
+  /// stop waiting at its [reconnectSweepBudget] deadline; a call after that
+  /// deadline starts a new cycle, which replaces any dial still hanging.
+  ///
+  /// Returns [ForceReconnectOutcome.completed] only when the cycle actually
+  /// finished. A caller joining shortly before the shared deadline gets
+  /// [ForceReconnectOutcome.stillDialling] instead of a normal completion it
+  /// would otherwise read as "the reconnect is done and nothing connected".
+  Future<ForceReconnectOutcome> forceReconnectAll() {
+    final running = _forceCycle;
+    final runningDeadline = _forceCycleDeadline;
+    if (running != null &&
+        runningDeadline != null &&
+        clock.now().isBefore(runningDeadline)) {
+      return _waitUntil(running, runningDeadline, 'Force reconnect');
     }
-    _notifyStatusChange();
-
-    // Then reconnect all
-    for (final url in relaysToReconnect) {
-      final success = await _connectToRelay(url);
-      if (success) {
-        _updateRelayStatus(url, RelayState.connected);
-        _log('Force reconnected', relayUrl: url);
-      } else {
-        _updateRelayStatus(
-          url,
-          RelayState.error,
-          errorMessage: 'Force reconnection failed',
-        );
-        _log(
-          'Force reconnection failed',
-          relayUrl: url,
-          level: RelayDiagnosticLevel.warning,
-        );
+    final deadline = clock.now().add(reconnectSweepBudget);
+    late final Future<void> cycle;
+    cycle = _runForceReconnect().whenComplete(() {
+      if (identical(_forceCycle, cycle)) {
+        _forceCycle = null;
+        _forceCycleDeadline = null;
       }
-    }
+    });
+    _forceCycle = cycle;
+    _forceCycleDeadline = deadline;
+    return _waitUntil(cycle, deadline, 'Force reconnect');
+  }
 
+  Future<void>? _forceCycle;
+  DateTime? _forceCycleDeadline;
+  int _forceCycleCount = 0;
+
+  Future<void> _runForceReconnect() async {
+    _log('Force reconnecting all relays');
+    final cycle = ++_forceCycleCount;
+    final attempts = [
+      for (final url in List<String>.from(_configuredRelays))
+        _dial(
+          url,
+          supersede: true,
+          failureMessage: 'Force reconnection failed',
+        ).then(
+          (success) =>
+              _logForceReconnect(url, connected: success, cycle: cycle),
+        ),
+    ];
     _notifyStatusChange();
+    await Future.wait(attempts);
+    _notifyStatusChange();
+  }
+
+  void _logForceReconnect(
+    String url, {
+    required bool connected,
+    required int cycle,
+  }) {
+    // A relay released by removal or dispose did not fail, and a cycle that a
+    // later one replaced leaves the report to that one.
+    if (_disposed ||
+        cycle != _forceCycleCount ||
+        !_configuredRelays.contains(url)) {
+      return;
+    }
+    if (connected) {
+      _log('Force reconnected', relayUrl: url);
+    } else {
+      _log(
+        'Force reconnection failed',
+        relayUrl: url,
+        level: RelayDiagnosticLevel.warning,
+      );
+    }
   }
 
   /// Reconnect to a specific relay
@@ -652,25 +743,15 @@ class RelayManager {
     }
 
     _log('Reconnecting to relay', relayUrl: normalizedUrl);
-    _updateRelayStatus(normalizedUrl, RelayState.connecting);
+
+    // The caller asked for a new socket, so a dial in flight is replaced.
+    final attempt = _dial(
+      normalizedUrl,
+      supersede: true,
+      failureMessage: 'Reconnection failed',
+    );
     _notifyStatusChange();
-
-    // Disconnect first
-    _relayPool.remove(normalizedUrl);
-
-    // Reconnect
-    final success = await _connectToRelay(normalizedUrl);
-
-    if (success) {
-      _updateRelayStatus(normalizedUrl, RelayState.connected);
-    } else {
-      _updateRelayStatus(
-        normalizedUrl,
-        RelayState.error,
-        errorMessage: 'Reconnection failed',
-      );
-    }
-
+    final success = await attempt;
     _notifyStatusChange();
     return success;
   }
@@ -682,8 +763,10 @@ class RelayManager {
   /// Dispose of resources
   Future<void> dispose() async {
     _log('Disposing RelayManager');
+    _disposed = true;
     _statusPollTimer?.cancel();
     _statusPollTimer = null;
+    List<String>.from(_dials.keys).forEach(_releaseDial);
     await _statusController.close();
     _initialized = false;
   }
@@ -696,33 +779,78 @@ class RelayManager {
     // Create a copy to avoid concurrent modification during async iteration
     final relaysToConnect = List<String>.from(_configuredRelays);
 
-    for (final url in relaysToConnect) {
-      _updateRelayStatus(url, RelayState.connecting);
-    }
-    _notifyStatusChange();
-
     // Connect to all relays in PARALLEL instead of sequential.
     // This reduces startup from O(n * timeout) to O(max timeout).
-    final results = await Future.wait(
-      relaysToConnect.map((url) async {
-        final success = await _connectToRelay(url);
-        return MapEntry(url, success);
-      }),
-    );
-
-    // Update statuses based on results
-    for (final entry in results) {
-      if (entry.value) {
-        _updateRelayStatus(entry.key, RelayState.connected);
-      } else {
-        _updateRelayStatus(
-          entry.key,
-          RelayState.error,
-          errorMessage: 'Failed to connect',
-        );
-      }
-    }
+    final attempts = [
+      for (final url in relaysToConnect)
+        _dial(url, failureMessage: 'Failed to connect'),
+    ];
     _notifyStatusChange();
+    await Future.wait(attempts);
+    _notifyStatusChange();
+  }
+
+  /// Connects [url], or joins the connection attempt already running for it.
+  ///
+  /// With [supersede], a running attempt is replaced instead of joined: the
+  /// relay is redialled, and callers of the replaced attempt receive the
+  /// replacement's result. Only the latest attempt writes the relay's status,
+  /// an attempt whose dial was released writes nothing, and callers emit on
+  /// [statusStream] on their own schedule.
+  Future<bool> _dial(
+    String url, {
+    required String failureMessage,
+    bool supersede = false,
+  }) {
+    final running = _dials[url];
+    if (running != null && !supersede) return running.result.future;
+    final dial = running ?? (_dials[url] = _RelayDial());
+    final generation = ++dial.generation;
+    _updateRelayStatus(url, RelayState.connecting);
+    unawaited(
+      _connectToRelay(url).then(
+        (success) {
+          if (!_isLatestDial(url, dial, generation)) return;
+          _dials.remove(url);
+          if (success) {
+            _updateRelayStatus(url, RelayState.connected);
+          } else {
+            _updateRelayStatus(
+              url,
+              RelayState.error,
+              errorMessage: failureMessage,
+            );
+          }
+          dial.result.complete(success);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (!_isLatestDial(url, dial, generation)) {
+            // Nobody waits on a replaced or released attempt any more, but a
+            // programming error in it still has to be seen.
+            _diagnose(
+              message: 'Relay connection threw after it was replaced',
+              relayUrl: url,
+              level: RelayDiagnosticLevel.error,
+              error: error,
+              stackTrace: stackTrace,
+            );
+            return;
+          }
+          _dials.remove(url);
+          dial.result.completeError(error, stackTrace);
+        },
+      ),
+    );
+    return dial.result.future;
+  }
+
+  bool _isLatestDial(String url, _RelayDial dial, int generation) =>
+      identical(_dials[url], dial) && dial.generation == generation;
+
+  /// Answers everyone waiting on [url]'s dial with `false`; the attempt then
+  /// writes nothing when it settles.
+  void _releaseDial(String url) {
+    _dials.remove(url)?.result.complete(false);
   }
 
   Future<bool> _connectToRelay(String url) async {
@@ -961,4 +1089,14 @@ class RelayManager {
       ),
     );
   }
+}
+
+/// One connection attempt for a relay, shared by every caller that asks for
+/// that relay while it runs.
+///
+/// Superseding reuses the slot and bumps [generation], so callers that joined
+/// the replaced attempt receive the replacement's result.
+class _RelayDial {
+  int generation = 0;
+  final Completer<bool> result = Completer<bool>();
 }

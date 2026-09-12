@@ -3,11 +3,11 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tab_surface_telemetry.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tab_videos_cubit.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';

@@ -3,6 +3,7 @@
 
 import 'package:dm_repository/src/dm_subscription_ids.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show nip01MaxSubscriptionIdLength;
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';

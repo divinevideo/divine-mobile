@@ -2367,6 +2367,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రిలేలకు కనెక్ట్ చేయడంలో విఫలమైంది. దయచేసి మీ నెట్‌వర్క్ కనెక్షన్‌ని తనిఖీ చేయండి.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'ఇంకా రిలేలకు కనెక్ట్ అవుతోంది. దయచేసి కొంచెం సేపు వేచి ఉండండి.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'ఈ పరికరంలో సేవ్ చేయబడింది. రచనలను మళ్లీ ప్రచురించేటప్పుడు మేము దానిని మీ ఖాతాకు సమకాలీకరిస్తాము.';
 
@@ -3094,6 +3098,24 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫన్నెల్‌కేక్ ఆడియన్స్ అనలిటిక్స్ ఎండ్ పాయింట్‌లను జోడిస్తుంది కాబట్టి ప్రేక్షకుల మూలం/భూగోళం/సమయం బ్రేక్‌డౌన్‌లు జనాదరణ పొందుతాయి.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'నిలుపుదల';
 
   @override
@@ -3323,6 +3345,10 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'ఖాతాను సృష్టించండి';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి';
@@ -9207,6 +9233,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'క్లిప్ వెనుక ఉన్నది దాని ద్వారా కనిపిస్తుంది.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.';
 
@@ -9504,6 +9534,17 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'స్కేల్ నుండి';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ఇది ఎక్కడి నుండి జారి రావాలో వీడియోలో నొక్కండి';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ఇది ఎక్కడికి జారి పోవాలో వీడియోలో నొక్కండి';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11383,6 +11424,53 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'కాష్ క్లియర్ చేయబడింది';
+
+  @override
+  String get settingsStorageContentSectionTitle =>
+      'మీ క్లిప్‌లు మరియు చిత్తుప్రతులు';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'మీరు చేసిన రికార్డింగ్‌లు, చిత్తుప్రతులు మరియు శబ్దాలు. కాష్ క్లియర్ చేయడం వీటిని ఎప్పుడూ తాకదు — ఇక్కడ స్థలం ఖాళీ చేయడానికి మీ లైబ్రరీ నుండి క్లిప్‌లను తొలగించండి.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'మిగిలిపోయిన ఫైల్‌లు లేవు';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count మిగిలిపోయిన ఫైల్‌లు, $size',
+      one: '$count మిగిలిపోయిన ఫైల్, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'మిగిలిపోయిన ఫైల్‌లను తీసివేయండి';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'మిగిలిపోయిన ఫైల్‌లను తీసివేయాలా?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌లను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
+      one:
+          'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌ను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'మిగిలిపోయిన ఫైల్‌లు తీసివేయబడ్డాయి';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'క్లిప్ లైబ్రరీ';

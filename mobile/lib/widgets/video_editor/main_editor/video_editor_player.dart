@@ -1,5 +1,5 @@
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';

@@ -2294,6 +2294,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'فشل الاتصال بالمحولات. يرجى التحقق من اتصال الشبكة.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'لا يزال الاتصال بالمحولات جارياً. يرجى الانتظار لحظة.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'تم الحفظ على هذا الجهاز. سنزامنه مع حسابك عندما يعمل النشر مرة أخرى.';
 
@@ -2936,6 +2940,24 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستظهر تفاصيل مصدر الجمهور والموقع الجغرافي والوقت عندما يضيف Funnelcake نقاط نهاية تحليلات الجمهور.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'الاحتفاظ';
 
   @override
@@ -3158,6 +3180,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'إنشاء حساب';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'العودة إلى رمز الدعوة';
@@ -8890,6 +8916,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'الفيديو لا يحفظ الشفافية، لذا سيخرج هذا الجزء أسود.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'ما خلف المقطع يظهر من خلاله.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.';
 
@@ -9174,6 +9204,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'التحجيم من';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'مخصص';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'النقر على الفيديو لتحديد نقطة بدء الانزلاق';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'النقر على الفيديو لتحديد نقطة نهاية الانزلاق';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -10994,6 +11035,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'تم مسح ذاكرة التخزين المؤقت';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'مقاطعك ومسوداتك';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'التسجيلات والمسودات والأصوات التي أنشأتها. مسح ذاكرة التخزين المؤقت لا يمسّها أبدًا — لتحرير مساحة هنا، يمكن حذف مقاطع من المكتبة.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'لا توجد ملفات متبقية';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ملف متبقٍ، $size',
+      many: '$count ملفًا متبقيًا، $size',
+      few: '$count ملفات متبقية، $size',
+      two: 'ملفان متبقيان، $size',
+      one: 'ملف متبقٍ واحد، $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'إزالة الملفات المتبقية';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'إزالة الملفات المتبقية؟';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'سيؤدي ذلك إلى حذف $count ملف لم يعد يستخدمه أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      many:
+          'سيؤدي ذلك إلى حذف $count ملفًا لم يعد يستخدمها أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      few:
+          'سيؤدي ذلك إلى حذف $count ملفات لم يعد يستخدمها أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      two:
+          'سيؤدي ذلك إلى حذف ملفين لم يعد يستخدمهما أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+      one:
+          'سيؤدي ذلك إلى حذف ملف واحد لم يعد يستخدمه أي مقطع أو مسودة أو رفع، وتحرير $size. لا يمكن التراجع عن ذلك.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'تمت إزالة الملفات المتبقية';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'مكتبة المقاطع';

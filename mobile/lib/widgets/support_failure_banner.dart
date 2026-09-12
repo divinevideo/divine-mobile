@@ -2,7 +2,7 @@
 // ABOUTME: Keeps a failed submission visible while the user retries
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Banner reporting a failed support submission.
 ///

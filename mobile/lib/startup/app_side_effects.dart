@@ -74,12 +74,12 @@ class AppRootSideEffects extends ConsumerWidget {
     ref.watch(productEventQueueProvider);
     ref.watch(profileSaveRetryServiceProvider);
 
-    // Force-reconnects the relay pool when connectivity returns (#3161).
-    // The one root-tier member that watches `nostrServiceProvider`: the pool
-    // has to self-heal app-wide, including on routes outside the shell, so it
-    // cannot be deferred to [AppShellSideEffects]. `NostrService.build()` only
-    // dials relays when an identity is present, so a signed-out launch still
-    // pays construction only.
+    // The one owner of connectivity-driven relay repair (#3161, #8990). The
+    // pool has to self-heal on a real network change app-wide, including on
+    // routes outside the shell, so it cannot be deferred to
+    // [AppShellSideEffects]; its transitions also drive the DM retry sweep.
+    // It reads the Nostr client only when a repair fires, so a signed-out
+    // launch pays for a connectivity subscription and nothing more.
     ref.watch(connectivityRelayReconnectProvider);
 
     // Registers the FCM token and drains notification preferences once the

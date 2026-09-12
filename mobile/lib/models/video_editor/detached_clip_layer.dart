@@ -2,6 +2,7 @@
 // ABOUTME: timeline, so the canvas and the renderer can treat it as video
 
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Marks a [WidgetLayer]'s export meta as a clip that was detached from the
@@ -37,6 +38,18 @@ const String detachedClipLayerIdKey = 'layerId';
 /// clip's first frame at its own start.
 const String detachedClipLayerSourceOffsetKey = 'sourceOffsetUs';
 
+/// Key under which the layer's green-screen settings are written, as
+/// [ClipChromaKey.toJson]. Absent when the layer carries no key.
+///
+/// Unlike a timeline clip's key, this one is never baked into a file. The
+/// export composites a detached clip as a `VideoLayer` over the finished
+/// track, and a key on that layer makes the removed area genuinely see-through
+/// — which a single H.264 track cannot do, and which is the reason to detach a
+/// green-screen clip in the first place. So the settings stay live: the canvas
+/// applies them through the preview shader and the export through the
+/// composition, and both read the same values from here.
+const String detachedClipLayerChromaKeyKey = 'chromaKey';
+
 /// A clip lifted out of the timeline and turned into a freely placeable layer
 /// on the editor canvas.
 ///
@@ -50,6 +63,7 @@ class DetachedClipLayerData {
     required this.clip,
     required this.layerId,
     this.sourceOffset = Duration.zero,
+    this.chromaKey,
   });
 
   /// The detached clip.
@@ -61,6 +75,13 @@ class DetachedClipLayerData {
   /// Where this layer starts inside the clip, in playback time.
   final Duration sourceOffset;
 
+  /// The green screen applied to this layer live, or `null` for none.
+  ///
+  /// Separate from [DivineVideoClip.chromaKey] on purpose: that one records a
+  /// key already burned into the clip's file, while this one is applied on top
+  /// of whatever the file holds — see [detachedClipLayerChromaKeyKey].
+  final ClipChromaKey? chromaKey;
+
   /// Serializes to the map stored in `WidgetLayer.exportConfigs.meta`.
   ///
   /// Paths inside are basenames — [DivineVideoClip.toJson]'s contract — so the
@@ -71,6 +92,7 @@ class DetachedClipLayerData {
     detachedClipLayerDurationKey: clip.playbackDuration.inMicroseconds,
     detachedClipLayerIdKey: layerId,
     detachedClipLayerSourceOffsetKey: sourceOffset.inMicroseconds,
+    if (chromaKey case final key?) detachedClipLayerChromaKeyKey: key.toJson(),
   };
 
   /// Whether [meta] describes a detached clip rather than a sticker.
@@ -101,10 +123,85 @@ class DetachedClipLayerData {
         ),
         layerId: meta[detachedClipLayerIdKey] as String? ?? '',
         sourceOffset: sourceOffsetOf(meta) ?? Duration.zero,
+        chromaKey: chromaKeyOf(
+          meta,
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
       );
     } on FormatException {
       return null;
     }
+  }
+
+  /// Whether [meta] is a detached clip carrying a live green screen.
+  ///
+  /// Reads the map alone, so the timeline's action bar can highlight the
+  /// action without resolving a documents path.
+  static bool hasChromaKey(Map<String, dynamic>? meta) =>
+      isDetachedClipMeta(meta) && meta![detachedClipLayerChromaKeyKey] is Map;
+
+  /// The live green screen [meta] carries, with its background image path
+  /// resolved against [documentsPath], or `null` when there is none.
+  ///
+  /// A key that cannot be read is treated as no key: the layer then plays
+  /// unkeyed rather than taking the whole layer down with it, the same
+  /// tolerance [fromMeta] applies to the clip payload.
+  static ClipChromaKey? chromaKeyOf(
+    Map<String, dynamic>? meta,
+    String documentsPath, {
+    bool useOriginalPath = false,
+  }) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final raw = meta![detachedClipLayerChromaKeyKey];
+    if (raw is! Map) return null;
+    try {
+      return ClipChromaKey.fromJson(
+        Map<String, dynamic>.from(raw),
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      );
+    } catch (_) {
+      // A malformed key payload (a wrong type, an out-of-range tolerance) is
+      // dropped rather than rethrown, for the reason given above.
+      return null;
+    }
+  }
+
+  /// [meta] with its live green screen replaced by [chromaKey], or removed
+  /// when that is `null`.
+  ///
+  /// Edits the map rather than rebuilding through [fromMeta], so the clip
+  /// payload travels across untouched and no documents path is needed.
+  static Map<String, dynamic>? withChromaKey(
+    Map<String, dynamic>? meta,
+    ClipChromaKey? chromaKey,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final copy = {...meta!}..remove(detachedClipLayerChromaKeyKey);
+    if (chromaKey != null) {
+      copy[detachedClipLayerChromaKeyKey] = chromaKey.toJson();
+    }
+    return copy;
+  }
+
+  /// [meta] carrying [clip] in place of the clip it had.
+  ///
+  /// For a re-render that swaps the footage — a crop — but leaves the layer
+  /// itself alone: its id, where it starts inside the clip and its green
+  /// screen all stay as they were. Rebuilding the meta from the clip alone
+  /// would silently reset a split tail to the clip's first frame and drop the
+  /// key the user set.
+  static Map<String, dynamic>? withClip(
+    Map<String, dynamic>? meta,
+    DivineVideoClip clip,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    return {
+      ...meta!,
+      detachedClipLayerClipKey: clip.toJson(),
+      detachedClipLayerDurationKey: clip.playbackDuration.inMicroseconds,
+    };
   }
 
   /// How long the clip plays, read straight from [meta].
@@ -216,9 +313,12 @@ class DetachedClipLayerData {
             final data = fromMeta(map, documentsPath);
             if (data != null) {
               paths.addAll(
-                data.clip.ownedFilePaths.whereType<String>().where(
-                  (path) => path.isNotEmpty,
-                ),
+                [
+                  ...data.clip.ownedFilePaths,
+                  // The layer's own key can point at a backdrop photo that no
+                  // clip references — it belongs to the layer, not the clip.
+                  data.chromaKey?.backgroundImagePath,
+                ].whereType<String>().where((path) => path.isNotEmpty),
               );
             }
           } on Object {

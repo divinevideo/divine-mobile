@@ -9,8 +9,9 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
-typedef SupporterAnalyticsSink = void Function(String event);
+typedef SupporterAnalyticsSink = FutureOr<void> Function(String event);
 
 class SupporterCubit extends Cubit<SupporterState> {
   /// Creates a [SupporterCubit].
@@ -37,8 +38,11 @@ class SupporterCubit extends Cubit<SupporterState> {
   void start() {
     _entitlementSub ??= _repository.changes.listen(
       (entitlement) {
+        if (entitlement.isSupporter) _finishPurchaseAnalytics(succeeded: true);
         _emit(
           state.copyWith(
+            awaitingPurchaseConfirmation:
+                !entitlement.isSupporter && state.awaitingPurchaseConfirmation,
             entitlement: entitlement,
             status: entitlement.isSupporter
                 ? SupporterStatus.active
@@ -69,7 +73,14 @@ class SupporterCubit extends Cubit<SupporterState> {
     try {
       final tiers = await _repository.validator.fetchProducts();
       if (isClosed) return;
-      _emit(state.copyWith(tiers: tiers, status: SupporterStatus.idle));
+      _emit(
+        state.copyWith(
+          tiers: tiers,
+          status: state.status == SupporterStatus.loading
+              ? SupporterStatus.idle
+              : state.status,
+        ),
+      );
     } on EntitlementException catch (e) {
       _emit(
         state.copyWith(
@@ -84,14 +95,24 @@ class SupporterCubit extends Cubit<SupporterState> {
   Future<void> subscribe(String productId) async {
     if (state.isBusy) return;
     _emit(
-      state.copyWith(status: SupporterStatus.purchasing, clearFailure: true),
+      state.copyWith(
+        status: SupporterStatus.purchasing,
+        clearFailure: true,
+        awaitingPurchaseConfirmation: true,
+      ),
     );
-    _trackEvent('supporter_subscribe_tapped');
+    _recordEvent('supporter_subscribe_tapped');
     try {
       final entitlement = await _repository.purchase(productId);
       if (isClosed) return;
+      if (entitlement.isSupporter) _finishPurchaseAnalytics(succeeded: true);
+      // Canonical updates may arrive before the store future completes.
+      if (!entitlement.isSupporter && !state.awaitingPurchaseConfirmation) {
+        return;
+      }
       _emit(
         state.copyWith(
+          awaitingPurchaseConfirmation: !entitlement.isSupporter,
           entitlement: entitlement,
           status: entitlement.isSupporter
               ? SupporterStatus.active
@@ -99,18 +120,18 @@ class SupporterCubit extends Cubit<SupporterState> {
           clearFailure: true,
         ),
       );
-      _trackEvent('supporter_subscribe_succeeded');
     } on EntitlementException catch (e) {
+      _finishPurchaseAnalytics(succeeded: false);
       _emit(
         state.copyWith(
+          awaitingPurchaseConfirmation: false,
           status: SupporterStatus.idle,
           failure: SupporterFailure.fromMessage(e.message),
         ),
       );
-      _trackEvent('supporter_subscribe_failed');
     } on SupporterApiException catch (error) {
+      _finishPurchaseAnalytics(succeeded: false);
       _emitApiFailure(error);
-      _trackEvent('supporter_subscribe_failed');
     }
   }
 
@@ -120,14 +141,14 @@ class SupporterCubit extends Cubit<SupporterState> {
     _emit(
       state.copyWith(status: SupporterStatus.restoring, clearFailure: true),
     );
-    _trackEvent('supporter_restore_tapped');
+    _recordEvent('supporter_restore_tapped');
     try {
       await _repository.restorePurchases();
       // The restored entitlement arrives on the repository stream; reset to idle
       // and let the stream listener surface the active status.
       if (isClosed) return;
       _emit(state.copyWith(status: SupporterStatus.idle));
-      _trackEvent('supporter_restore_completed');
+      _recordEvent('supporter_restore_completed');
     } on EntitlementException catch (e) {
       _emit(
         state.copyWith(
@@ -135,7 +156,30 @@ class SupporterCubit extends Cubit<SupporterState> {
           failure: SupporterFailure.fromMessage(e.message),
         ),
       );
-      _trackEvent('supporter_restore_failed');
+      _recordEvent('supporter_restore_failed');
+    }
+  }
+
+  void _finishPurchaseAnalytics({required bool succeeded}) {
+    if (!state.awaitingPurchaseConfirmation) return;
+    _recordEvent(
+      succeeded
+          ? 'supporter_subscribe_succeeded'
+          : 'supporter_subscribe_failed',
+    );
+  }
+
+  void _recordEvent(String event) => unawaited(_sendEvent(event));
+
+  Future<void> _sendEvent(String event) async {
+    try {
+      await _trackEvent(event);
+    } on Object {
+      Log.warning(
+        'Supporter analytics delivery failed (event=$event)',
+        name: 'SupporterCubit',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -150,11 +194,13 @@ class SupporterCubit extends Cubit<SupporterState> {
 
   void _handleEntitlementError(Object error, StackTrace stackTrace) {
     if (isClosed) return;
+    _finishPurchaseAnalytics(succeeded: false);
     if (error is SupporterApiException) {
       _emitApiFailure(error);
     } else if (error is EntitlementException) {
       _emit(
         state.copyWith(
+          awaitingPurchaseConfirmation: false,
           status: SupporterStatus.error,
           failure: SupporterFailure.fromMessage(error.message),
         ),
@@ -189,7 +235,13 @@ class SupporterCubit extends Cubit<SupporterState> {
         SupporterFailure.verificationUnavailable,
       _ => SupporterFailure.unknown,
     };
-    _emit(state.copyWith(status: SupporterStatus.error, failure: failure));
+    _emit(
+      state.copyWith(
+        awaitingPurchaseConfirmation: false,
+        status: SupporterStatus.error,
+        failure: failure,
+      ),
+    );
   }
 
   @override

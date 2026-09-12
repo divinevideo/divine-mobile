@@ -5,9 +5,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
@@ -118,6 +118,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   final _editorKey = GlobalKey<ProImageEditorState>();
   final GlobalKey<State<StatefulWidget>> _removeAreaKey = GlobalKey();
+
+  /// Marks the canvas body so a full-screen tool laid over the editor can map
+  /// a touch back into layer coordinates.
+  final GlobalKey _canvasBodyKey = GlobalKey();
 
   late final _isLoadingDraft = ValueNotifier<bool>(widget.draftId != null);
 
@@ -1038,6 +1042,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
             return VideoEditorScope(
               editorKey: _editorKey,
               removeAreaKey: _removeAreaKey,
+              canvasBodyKey: _canvasBodyKey,
               originalClipAspectRatio: clip?.originalAspectRatio ?? 9 / 16,
               targetClipAspectRatio: clip?.targetAspectRatio.value,
               bodySizeNotifier: _bodySizeNotifier,

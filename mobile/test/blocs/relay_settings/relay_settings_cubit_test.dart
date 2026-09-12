@@ -49,7 +49,9 @@ void main() {
       when(
         relayListRepository.publishConfiguredRelayList,
       ).thenAnswer((_) async => const RelayListPublishResult.published());
-      when(nostr.forceReconnectAll).thenAnswer((_) async {});
+      when(nostr.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
       when(videos.resetAndResubscribeAll).thenAnswer((_) async {});
     });
 
@@ -486,6 +488,50 @@ void main() {
       },
       verify: (_) {
         verifyNever(videos.resetAndResubscribeAll);
+      },
+    );
+
+    blocTest<RelaySettingsCubit, RelaySettingsState>(
+      'retryConnection reports stillConnecting, not notConnected, when the '
+      'reconnect had not finished',
+      setUp: () {
+        // The shared cycle keeps dialling past the deadline. Zero connected
+        // relays here means "no answer yet", and calling it a failure told the
+        // user the retry failed while it was still succeeding.
+        when(nostr.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.stillDialling,
+        );
+      },
+      build: buildCubit,
+      act: (cubit) async {
+        final outcome = await cubit.retryConnection();
+        expect(outcome.kind, RetryConnectionOutcomeKind.stillConnecting);
+      },
+      verify: (_) {
+        verifyNever(videos.resetAndResubscribeAll);
+      },
+    );
+
+    blocTest<RelaySettingsCubit, RelaySettingsState>(
+      'retryConnection reports the relays already connected while others '
+      'still dial',
+      setUp: () {
+        // A cycle that has not finished can still have connected some of the
+        // pool; saying only "still connecting" would hide relays the user can
+        // already publish through, and skip the feeds those relays serve.
+        when(
+          nostr.forceReconnectAll,
+        ).thenAnswer((_) async => ForceReconnectOutcome.stillDialling);
+        when(() => nostr.connectedRelayCount).thenReturn(1);
+      },
+      build: buildCubit,
+      act: (cubit) async {
+        final outcome = await cubit.retryConnection();
+        expect(outcome.kind, RetryConnectionOutcomeKind.connected);
+        expect(outcome.connectedCount, 1);
+      },
+      verify: (_) {
+        verify(videos.resetAndResubscribeAll).called(1);
       },
     );
 

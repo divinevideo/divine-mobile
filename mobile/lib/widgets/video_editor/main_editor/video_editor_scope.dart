@@ -33,6 +33,7 @@ class VideoEditorScope extends InheritedWidget {
     required this.playheadAdvancingNotifier,
     required this.fromLibrary,
     this.targetClipAspectRatio,
+    this.canvasBodyKey,
     this.editorOverride,
     this.awaitPushCoverTransition,
     super.child = const SizedBox.shrink(),
@@ -50,6 +51,14 @@ class VideoEditorScope extends InheritedWidget {
 
   /// Global key to access the remove area widget.
   final GlobalKey removeAreaKey;
+
+  /// Global key on the canvas body — the box the editor is laid out in.
+  ///
+  /// [canvasBodyRect] turns it into the body's rectangle on screen, which is
+  /// what maps a touch anywhere over the editor back into layer coordinates.
+  /// Optional so widgets can be tested without a canvas; a feature that needs
+  /// the rectangle is expected to stay out of the way when it is absent.
+  final GlobalKey? canvasBodyKey;
 
   /// Callback to open the sticker picker.
   final VoidCallback onAddStickers;
@@ -114,9 +123,12 @@ class VideoEditorScope extends InheritedWidget {
   final Future<void> Function()? awaitPushCoverTransition;
 
   /// FittedBox scale factor between bodySize and renderSize.
-  double get fittedBoxScale => calculateFittedBoxScale(
-    bodySizeNotifier.value,
-    originalClipAspectRatio,
+  double get fittedBoxScale => canvasGeometry.fittedBoxScale;
+
+  /// The single model of the canvas's current render and fit geometry.
+  VideoEditorCanvasGeometry get canvasGeometry => VideoEditorCanvasGeometry(
+    bodySize: bodySizeNotifier.value,
+    originalAspectRatio: originalClipAspectRatio,
     targetAspectRatio: targetClipAspectRatio,
   );
 
@@ -127,11 +139,7 @@ class VideoEditorScope extends InheritedWidget {
   /// this exactly spans the video. Deriving a layer width from [bodySize]
   /// instead is off by `targetSize / bodySize`, which is why a "80% of the
   /// canvas" layer came out wider than the video it sat on.
-  Size get canvasRenderSize => VideoEditorCanvasGeometry(
-    bodySize: bodySizeNotifier.value,
-    originalAspectRatio: originalClipAspectRatio,
-    targetAspectRatio: targetClipAspectRatio,
-  ).renderSize;
+  Size get canvasRenderSize => canvasGeometry.renderSize;
 
   /// Calculates the visible target area fitted inside [bodySize].
   static Size calculateTargetSize(Size bodySize, double targetAspectRatio) =>
@@ -152,6 +160,15 @@ class VideoEditorScope extends InheritedWidget {
     originalAspectRatio: aspectRatio,
     targetAspectRatio: targetAspectRatio,
   ).fittedBoxScale;
+
+  /// The canvas body's rectangle in global (screen) coordinates.
+  ///
+  /// `null` when no [canvasBodyKey] was provided or the canvas is not mounted.
+  Rect? get canvasBodyRect {
+    final box = canvasBodyKey?.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
 
   /// Returns the [ProImageEditorState] if available.
   ProImageEditorState? get editor => editorOverride ?? editorKey.currentState;
@@ -221,5 +238,6 @@ class VideoEditorScope extends InheritedWidget {
       removeAreaKey != oldWidget.removeAreaKey ||
       originalClipAspectRatio != oldWidget.originalClipAspectRatio ||
       targetClipAspectRatio != oldWidget.targetClipAspectRatio ||
+      canvasBodyKey != oldWidget.canvasBodyKey ||
       zoomMatrixNotifier != oldWidget.zoomMatrixNotifier;
 }

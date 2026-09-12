@@ -1,7 +1,7 @@
 // ABOUTME: Shared thumbnail widget for profile tab grids
 // ABOUTME: Wraps PassiveAuthThumbnailImage with blurhash and placeholder fallbacks
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';

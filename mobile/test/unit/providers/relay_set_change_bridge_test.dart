@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
@@ -49,6 +50,12 @@ void stubUserRemovedRelays(
   });
 }
 
+/// The bridge logs how many relays a forced reconnect left connected.
+void stubRelayCounts(MockNostrClient client) {
+  when(() => client.connectedRelayCount).thenReturn(1);
+  when(() => client.configuredRelayCount).thenReturn(1);
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(<String>[]);
@@ -81,10 +88,13 @@ void main() {
         () => mockVideoEventService.resetAndResubscribeAll(),
       ).thenAnswer((_) async {});
       when(() => mockNostrClient.isInitialized).thenReturn(true);
-      when(() => mockNostrClient.forceReconnectAll()).thenAnswer((_) async {});
+      when(() => mockNostrClient.forceReconnectAll()).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
       when(() => mockNostrClient.defaultRelayUrl).thenReturn(defaultRelay);
       when(() => mockNostrClient.publicKey).thenAnswer((_) => clientPublicKey);
       stubUserRemovedRelays(mockNostrClient);
+      stubRelayCounts(mockNostrClient);
     });
 
     tearDown(() {
@@ -120,6 +130,7 @@ void main() {
       when(() => client.publicKey).thenReturn(pubkey);
       when(() => client.defaultRelayUrl).thenReturn(relay);
       stubUserRemovedRelays(client);
+      stubRelayCounts(client);
     }
 
     test('does not trigger reset on initial activation', () {
@@ -168,6 +179,90 @@ void main() {
         verify(() => mockNostrClient.forceReconnectAll()).called(1);
         verify(() => mockVideoEventService.resetAndResubscribeAll()).called(1);
         container.dispose();
+      });
+    });
+
+    group('reconnect outcome', () {
+      const relay1 = 'wss://relay1.example.com';
+      const relay2 = 'wss://relay2.example.com';
+
+      List<String> reconnectAndReset(
+        FakeAsync async, {
+        required ForceReconnectOutcome outcome,
+        required int connected,
+      }) {
+        unawaited(LogCaptureService().clearAllLogs());
+        when(
+          () => mockNostrClient.forceReconnectAll(),
+        ).thenAnswer((_) async => outcome);
+        when(() => mockNostrClient.connectedRelayCount).thenReturn(connected);
+        when(() => mockNostrClient.configuredRelayCount).thenReturn(2);
+        final container = createContainer(
+          initialStatuses: {relay1: RelayConnectionStatus.connected(relay1)},
+        );
+        addTearDown(container.dispose);
+
+        statusController.add({
+          relay1: RelayConnectionStatus.connected(relay1),
+          relay2: RelayConnectionStatus.connected(relay2),
+        });
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+
+        return [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ];
+      }
+
+      test('logs how many relays connected when the reconnect finishes', () {
+        fakeAsync((async) {
+          final messages = reconnectAndReset(
+            async,
+            outcome: ForceReconnectOutcome.completed,
+            connected: 1,
+          );
+
+          expect(
+            messages,
+            contains('Relay reconnect finished: 1 of 2 relays connected'),
+          );
+          expect(
+            messages,
+            isNot(contains('Successfully reconnected all relay WebSockets')),
+          );
+          verify(
+            () => mockVideoEventService.resetAndResubscribeAll(),
+          ).called(1);
+        });
+      });
+
+      test('says relays are still connecting and still resets feeds when '
+          'the wait ends first', () {
+        fakeAsync((async) {
+          final messages = reconnectAndReset(
+            async,
+            outcome: ForceReconnectOutcome.stillDialling,
+            connected: 0,
+          );
+
+          expect(
+            messages,
+            contains(
+              'Relay reconnect wait ended with relays still connecting '
+              '(0 of 2 connected); resetting feeds, and relays that connect '
+              'later receive the subscriptions then',
+            ),
+          );
+          expect(
+            messages,
+            isNot(contains('Successfully reconnected all relay WebSockets')),
+          );
+          verify(
+            () => mockVideoEventService.resetAndResubscribeAll(),
+          ).called(1);
+        });
       });
     });
 
@@ -499,8 +594,11 @@ void main() {
           final relay = call.positionalArguments.single as String;
           return replacementRelays.remove(relay);
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
+        stubRelayCounts(replacementClient);
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
           overrides: [
@@ -630,8 +728,11 @@ void main() {
             final relay = call.positionalArguments.single as String;
             return replacementRelays.remove(relay);
           });
-          when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+          when(replacementClient.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
 
+          stubRelayCounts(replacementClient);
           final swappableService = SwappableNostrService(mockNostrClient);
           final container = ProviderContainer(
             overrides: [
@@ -746,7 +847,9 @@ void main() {
             source: any(named: 'source'),
           ),
         ).thenAnswer((_) async => true);
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -832,7 +935,9 @@ void main() {
             source: any(named: 'source'),
           ),
         ).thenAnswer((_) async => true);
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -935,7 +1040,9 @@ void main() {
           );
           return 1;
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1027,7 +1134,9 @@ void main() {
             final relay = call.positionalArguments.single as String;
             return replacementRelays.remove(relay);
           });
-          when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+          when(replacementClient.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
 
           final swappableService = SwappableNostrService(mockNostrClient);
           final container = ProviderContainer(
@@ -1112,7 +1221,9 @@ void main() {
           );
           return 1;
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1200,7 +1311,9 @@ void main() {
           if (removeAttempts == 1) return false;
           return replacementRelays.remove(removedRelay);
         });
-        when(replacementClient.forceReconnectAll).thenAnswer((_) async {});
+        when(replacementClient.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         final swappableService = SwappableNostrService(mockNostrClient);
         final container = ProviderContainer(
@@ -1411,7 +1524,9 @@ void main() {
         for (final client in [firstReplacement, secondReplacement]) {
           when(() => client.isInitialized).thenReturn(true);
           stubClientScope(client);
-          when(client.forceReconnectAll).thenAnswer((_) async {});
+          when(client.forceReconnectAll).thenAnswer(
+            (_) async => ForceReconnectOutcome.completed,
+          );
         }
         when(() => firstReplacement.relayStatuses).thenAnswer(
           (_) => {

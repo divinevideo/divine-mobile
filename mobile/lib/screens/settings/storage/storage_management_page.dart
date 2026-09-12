@@ -1,14 +1,15 @@
 // ABOUTME: Settings "Storage" screen — clear cached media (never the clip
-// ABOUTME: library) and audit the clip library for broken entries.
+// ABOUTME: library), show what the user's own content holds, sweep leftover
+// ABOUTME: files no clip or draft uses, and audit the library for broken rows.
 
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/storage/storage_cubit.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -36,9 +37,20 @@ class StorageManagementPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.watch(storageManagementServiceProvider);
+    final recoverAllCaches = ref.watch(recoverAllCachesProvider);
     return BlocProvider(
-      key: ValueKey(service),
-      create: (_) => StorageCubit(service: service)..loadCacheSize(),
+      key: ValueKey((service, recoverAllCaches)),
+      create: (_) {
+        final cubit = StorageCubit(
+          service: service,
+          recoverAllCaches: recoverAllCaches,
+        );
+        // Independent measurements with independent statuses, so a database
+        // failure in one leaves the other section usable.
+        unawaited(cubit.loadCacheSize());
+        unawaited(cubit.loadDocumentsUsage());
+        return cubit;
+      },
       child: const StorageManagementView(),
     );
   }
@@ -72,6 +84,11 @@ class StorageManagementView extends StatelessWidget {
           ),
           BlocListener<StorageCubit, StorageState>(
             listenWhen: (prev, curr) =>
+                prev.contentStatus != curr.contentStatus,
+            listener: _announceContent,
+          ),
+          BlocListener<StorageCubit, StorageState>(
+            listenWhen: (prev, curr) =>
                 prev.libraryStatus != curr.libraryStatus,
             listener: _announceLibrary,
           ),
@@ -95,6 +112,10 @@ class StorageManagementView extends StatelessWidget {
                 ),
                 const _CacheSection(),
                 DivineSectionHeader(
+                  context.l10n.settingsStorageContentSectionTitle,
+                ),
+                const _ContentSection(),
+                DivineSectionHeader(
                   context.l10n.settingsStorageLibrarySectionTitle,
                 ),
                 const _LibrarySection(),
@@ -115,6 +136,15 @@ class StorageManagementView extends StatelessWidget {
     _announce(context, switch (state.cacheStatus) {
       StorageCacheStatus.cleared => l10n.settingsStorageCleared,
       StorageCacheStatus.failure => l10n.settingsStorageError,
+      _ => null,
+    });
+  }
+
+  void _announceContent(BuildContext context, StorageState state) {
+    final l10n = context.l10n;
+    _announce(context, switch (state.contentStatus) {
+      StorageContentStatus.removed => l10n.settingsStorageOrphanedFilesRemoved,
+      StorageContentStatus.failure => l10n.settingsStorageError,
       _ => null,
     });
   }
@@ -291,6 +321,140 @@ class _CacheLimitControl extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// What the user's own recordings, drafts and sounds hold, and the leftover
+/// files nothing references any more. The size line is the counterpart of
+/// [_CacheSection]'s: together they account for the app's footprint, which
+/// the cache figure alone never could (#7641).
+class _ContentSection extends StatelessWidget {
+  const _ContentSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final status = context.select((StorageCubit c) => c.state.contentStatus);
+    final usage = context.select((StorageCubit c) => c.state.documentsUsage);
+    final busy =
+        status == StorageContentStatus.initial ||
+        status == StorageContentStatus.loading ||
+        status == StorageContentStatus.removing;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
+        children: [
+          Text(
+            l10n.settingsStorageContentDescription,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+          if (status == StorageContentStatus.failure)
+            Text(
+              l10n.settingsStorageError,
+              style: VineTheme.titleMediumFont(color: VineTheme.error),
+            )
+          else ...[
+            // The whole documents footprint, leftovers included, so removing
+            // them visibly lowers the number — the leftover line below is the
+            // breakdown of this figure, not a separate bucket.
+            Text(
+              busy
+                  ? l10n.settingsStorageMeasuring
+                  : l10n.settingsStorageCacheInUse(
+                      formatByteSize(usage.totalBytes),
+                    ),
+              style: VineTheme.titleMediumFont(
+                color: context.vineColors.primaryText,
+              ),
+            ),
+            if (!busy)
+              Text(
+                usage.orphanedFileCount == 0
+                    ? l10n.settingsStorageNoOrphanedFiles
+                    : l10n.settingsStorageOrphanedFilesFound(
+                        usage.orphanedFileCount,
+                        formatByteSize(usage.orphanedBytes),
+                      ),
+                style: VineTheme.bodyMediumFont(
+                  color: usage.orphanedFileCount == 0
+                      ? context.vineColors.accentPositive
+                      : context.vineColors.primaryText,
+                ),
+              ),
+          ],
+          DivineButton(
+            label: l10n.settingsStorageRemoveOrphanedButton,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            onPressed: busy || usage.orphanedFileCount == 0
+                ? null
+                : () => _confirmRemoveOrphaned(
+                    context,
+                    count: usage.orphanedFileCount,
+                    bytes: usage.orphanedBytes,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmRemoveOrphaned(
+    BuildContext context, {
+    required int count,
+    required int bytes,
+  }) async {
+    final l10n = context.l10n;
+    final cubit = context.read<StorageCubit>();
+    final confirmed = await VineBottomSheet.show<bool>(
+      context: context,
+      scrollable: false,
+      contentTitle: l10n.settingsStorageRemoveOrphanedConfirmTitle,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Text(
+            l10n.settingsStorageRemoveOrphanedConfirmMessage(
+              count,
+              formatByteSize(bytes),
+            ),
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Row(
+            spacing: 16,
+            children: [
+              Expanded(
+                child: DivineButton(
+                  label: l10n.settingsCancel,
+                  type: DivineButtonType.secondary,
+                  expanded: true,
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+              ),
+              Expanded(
+                child: DivineButton(
+                  label: l10n.commonDelete,
+                  type: DivineButtonType.error,
+                  expanded: true,
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (confirmed ?? false) await cubit.removeOrphanedFiles();
   }
 }
 

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:kepler/kepler.dart';
 import 'package:pointycastle/export.dart';
-import 'package:cryptography/cryptography.dart' as cryptography;
 
 // Message encrypt and decrypt
 // code from https://github.com/0xchat-app/nostr-dart

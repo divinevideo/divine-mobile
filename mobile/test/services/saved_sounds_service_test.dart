@@ -479,7 +479,7 @@ void main() {
       // The container UUID iOS rewrites on every app update.
       const oldContainer = '/var/mobile/Containers/Data/Application/OLD';
       const newContainer = '/var/mobile/Containers/Data/Application/NEW';
-      const relativePath = 'draft_audio_imports/draft_autosave/imported.m4a';
+      const relativePath = 'library_audio_imports/imported.m4a';
 
       test(
         'persists an imported sound relative to the documents directory',
@@ -553,6 +553,34 @@ void main() {
 
         expect(service.loadSounds().single.url, '$newContainer/$relativePath');
       });
+
+      test(
+        'rebases a path stored under the retired draft-import root',
+        () async {
+          // Written before imports moved out of draft-owned storage; the file
+          // was relocated by `migrateDraftOwnedAudioImports` (#8024).
+          await sharedPreferences.setString(
+            'saved_reusable_sounds_anon',
+            jsonEncode([
+              _importedSound(
+                id: 'local_import_1',
+                filePath:
+                    '$oldContainer/draft_audio_imports/draft_autosave/old.m4a',
+              ).toJson(),
+            ]),
+          );
+
+          final service = SavedSoundsService(
+            sharedPreferences,
+            documentsPath: newContainer,
+          );
+
+          expect(
+            service.loadSounds().single.url,
+            '$newContainer/library_audio_imports/draft_autosave/old.m4a',
+          );
+        },
+      );
 
       test('leaves a published sound url alone', () async {
         // A remote url that happens to carry an audio-root segment: without
@@ -788,7 +816,7 @@ void main() {
     });
 
     group('removeSound', () {
-      const filePath = '/documents/draft_audio_imports/d1/imported.m4a';
+      const filePath = '/documents/library_audio_imports/imported.m4a';
 
       SavedSoundsService createService({
         LocalAudioReclaimer? audioReclaimer,

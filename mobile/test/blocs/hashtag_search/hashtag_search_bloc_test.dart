@@ -628,6 +628,7 @@ void main() {
     group('feed performance tracking', () {
       late _MockHashtagRepository mockRepo;
       late _MockFeedPerformanceTracker mockTracker;
+      late FeedLoadHandle feedLoad;
 
       // Debounce duration used in the BLoC + buffer
       const debounceDuration = Duration(milliseconds: 400);
@@ -635,6 +636,10 @@ void main() {
       setUp(() {
         mockRepo = _MockHashtagRepository();
         mockTracker = _MockFeedPerformanceTracker();
+        feedLoad = FeedPerformanceTracker(
+          sink: const NoOpAnalyticsEventSink(),
+        ).startFeedLoad('test');
+        when(() => mockTracker.startFeedLoad(any())).thenReturn(feedLoad);
 
         when(
           () => mockRepo.searchHashtags(
@@ -664,10 +669,10 @@ void main() {
         verify: (_) {
           verify(() => mockTracker.startFeedLoad('hashtag_search')).called(1);
           verify(
-            () => mockTracker.markFirstVideosReceived('hashtag_search', 3),
+            () => mockTracker.markFirstVideosReceived(feedLoad, 3),
           ).called(1);
           verify(
-            () => mockTracker.markFeedDisplayed('hashtag_search', 3),
+            () => mockTracker.markFeedDisplayed(feedLoad, 3),
           ).called(1);
         },
       );
@@ -691,8 +696,10 @@ void main() {
               errorMessage: any(named: 'errorMessage'),
             ),
           ).called(1);
-          verifyNever(() => mockTracker.markFirstVideosReceived(any(), any()));
-          verifyNever(() => mockTracker.markFeedDisplayed(any(), any()));
+          verifyNever(
+            () => mockTracker.markFirstVideosReceived(feedLoad, any()),
+          );
+          verifyNever(() => mockTracker.markFeedDisplayed(feedLoad, any()));
         },
       );
 

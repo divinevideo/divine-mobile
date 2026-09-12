@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "连接中继失败。请检查网络连接。",
+  "relaySettingsStillConnecting": "仍在连接中继。请稍候。",
   "relaySettingsSavedLocallyPublishPending": "已保存在此设备上。发布恢复正常后，我们会将它同步到你的账号。",
   "relaySettingsAddRelayTitle": "添加中继",
   "relaySettingsAddRelayPrompt": "输入要添加的中继 WebSocket URL：",
@@ -4803,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "图片",
   "videoEditorChromaKeyBackgroundVideo": "片段",
   "videoEditorChromaKeyTransparentHint": "视频存不了透明，所以导出会是黑色。",
+  "videoEditorChromaKeyCanvasTransparentHint": "片段后面的内容会透出来。",
   "videoEditorChromaKeySurfaceHint": "你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。",
   "videoEditorChromaKeyDetectFailed": "没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。",
   "videoEditorChromaKeyPickClipTitle": "选个片段",
@@ -5079,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "自定义",
+  "videoEditorLayerAnimationPointEnterHint": "点按视频中你想让它滑入的位置",
+  "videoEditorLayerAnimationPointLeaveHint": "点按视频中你想让它滑出的位置",
   "videoEditorFinishTimelineEditingSemanticLabel": "完成时间线编辑",
   "videoEditorAudioPlayPreviewSemanticLabel": "播放预览",
   "videoEditorAudioPausePreviewSemanticLabel": "暂停预览",
@@ -6082,6 +6087,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "你的片段和草稿",
+  "settingsStorageContentDescription": "你制作的录像、草稿和声音。清除缓存从不会动它们——想在这里腾出空间，就从片段库里删除片段。",
+  "settingsStorageNoOrphanedFiles": "没有残留文件",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} 个残留文件，{size}} other{{count} 个残留文件，{size}}}",
+  "settingsStorageRemoveOrphanedButton": "移除残留文件",
+  "settingsStorageRemoveOrphanedConfirmTitle": "移除残留文件？",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{这会删除 {count} 个已不被任何片段、草稿或上传使用的文件，释放 {size}。无法撤销。} other{这会删除 {count} 个已不被任何片段、草稿或上传使用的文件，释放 {size}。无法撤销。}}",
+  "settingsStorageOrphanedFilesRemoved": "残留文件已移除",
   "settingsStorageLibrarySectionTitle": "片段库",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

@@ -649,6 +649,12 @@ const _knownUntranslatedDebt = <String>{
   'analyticsConnectionIssue',
   'analyticsDiagnosticsFailedSources',
   'analyticsServerUnavailable',
+  // Social-counts explainer copy is new; translation pass tracked in #7632.
+  'analyticsSocialCountsInfoLabel',
+  'analyticsSocialCountsInfoTitle',
+  'analyticsFollowerCountsBody',
+  'analyticsSocialCountsLearnMore',
+  'analyticsSocialCountsLearnMoreSemantics',
   // Account restore failure copy is new; translation pass tracked in #7659.
   'authAccountRestoreFailed',
   'settingsAccountRestoreFailed',
@@ -669,6 +675,9 @@ const _knownUntranslatedDebt = <String>{
   // profileBadgeOgVinerBody to _profileBadgeSheetKeys below, which already
   // guards the sheet against English fallback and covers neither today.
   'profileBadgeOgBetaTesterBody',
+  // Create-account marketing opt-in translation is deferred until the locale
+  // pass for this new consent copy.
+  'authCreateAccountMarketingOptIn',
   // The four social-proof keys and searchUserVideoCount left this list when
   // this branch translated them into every locale.
 };

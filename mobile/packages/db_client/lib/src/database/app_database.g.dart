@@ -5955,6 +5955,514 @@ class PersonalRepostsCompanion extends UpdateCompanion<PersonalRepostRow> {
   }
 }
 
+class $PersonalEventsTable extends PersonalEvents
+    with TableInfo<$PersonalEventsTable, PersonalEventRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PersonalEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pubkeyMeta = const VerificationMeta('pubkey');
+  @override
+  late final GeneratedColumn<String> pubkey = GeneratedColumn<String>(
+    'pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<int> kind = GeneratedColumn<int>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sigMeta = const VerificationMeta('sig');
+  @override
+  late final GeneratedColumn<String> sig = GeneratedColumn<String>(
+    'sig',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _retentionMeta = const VerificationMeta(
+    'retention',
+  );
+  @override
+  late final GeneratedColumn<int> retention = GeneratedColumn<int>(
+    'retention',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pubkey,
+    kind,
+    createdAt,
+    tags,
+    content,
+    sig,
+    retention,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'personal_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PersonalEventRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('pubkey')) {
+      context.handle(
+        _pubkeyMeta,
+        pubkey.isAcceptableOrUnknown(data['pubkey']!, _pubkeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pubkeyMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagsMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('sig')) {
+      context.handle(
+        _sigMeta,
+        sig.isAcceptableOrUnknown(data['sig']!, _sigMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sigMeta);
+    }
+    if (data.containsKey('retention')) {
+      context.handle(
+        _retentionMeta,
+        retention.isAcceptableOrUnknown(data['retention']!, _retentionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_retentionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PersonalEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PersonalEventRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      pubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pubkey'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kind'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      sig: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sig'],
+      )!,
+      retention: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retention'],
+      )!,
+    );
+  }
+
+  @override
+  $PersonalEventsTable createAlias(String alias) {
+    return $PersonalEventsTable(attachedDatabase, alias);
+  }
+}
+
+class PersonalEventRow extends DataClass
+    implements Insertable<PersonalEventRow> {
+  /// The Nostr event id (64-char hex).
+  final String id;
+
+  /// Author pubkey (64-char hex). Always the signed-in user; the column
+  /// exists so reads are an indexed predicate rather than a post-hoc filter,
+  /// and so one device can hold several accounts' rows without their costs
+  /// leaking into each other.
+  final String pubkey;
+  final int kind;
+  final int createdAt;
+
+  /// JSON-encoded array of tag arrays.
+  final String tags;
+  final String content;
+  final String sig;
+
+  /// Retention policy applied when this row was written. See
+  /// `PersonalEventRetention` in the DAO.
+  final int retention;
+  const PersonalEventRow({
+    required this.id,
+    required this.pubkey,
+    required this.kind,
+    required this.createdAt,
+    required this.tags,
+    required this.content,
+    required this.sig,
+    required this.retention,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['pubkey'] = Variable<String>(pubkey);
+    map['kind'] = Variable<int>(kind);
+    map['created_at'] = Variable<int>(createdAt);
+    map['tags'] = Variable<String>(tags);
+    map['content'] = Variable<String>(content);
+    map['sig'] = Variable<String>(sig);
+    map['retention'] = Variable<int>(retention);
+    return map;
+  }
+
+  PersonalEventsCompanion toCompanion(bool nullToAbsent) {
+    return PersonalEventsCompanion(
+      id: Value(id),
+      pubkey: Value(pubkey),
+      kind: Value(kind),
+      createdAt: Value(createdAt),
+      tags: Value(tags),
+      content: Value(content),
+      sig: Value(sig),
+      retention: Value(retention),
+    );
+  }
+
+  factory PersonalEventRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PersonalEventRow(
+      id: serializer.fromJson<String>(json['id']),
+      pubkey: serializer.fromJson<String>(json['pubkey']),
+      kind: serializer.fromJson<int>(json['kind']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      tags: serializer.fromJson<String>(json['tags']),
+      content: serializer.fromJson<String>(json['content']),
+      sig: serializer.fromJson<String>(json['sig']),
+      retention: serializer.fromJson<int>(json['retention']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'pubkey': serializer.toJson<String>(pubkey),
+      'kind': serializer.toJson<int>(kind),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'tags': serializer.toJson<String>(tags),
+      'content': serializer.toJson<String>(content),
+      'sig': serializer.toJson<String>(sig),
+      'retention': serializer.toJson<int>(retention),
+    };
+  }
+
+  PersonalEventRow copyWith({
+    String? id,
+    String? pubkey,
+    int? kind,
+    int? createdAt,
+    String? tags,
+    String? content,
+    String? sig,
+    int? retention,
+  }) => PersonalEventRow(
+    id: id ?? this.id,
+    pubkey: pubkey ?? this.pubkey,
+    kind: kind ?? this.kind,
+    createdAt: createdAt ?? this.createdAt,
+    tags: tags ?? this.tags,
+    content: content ?? this.content,
+    sig: sig ?? this.sig,
+    retention: retention ?? this.retention,
+  );
+  PersonalEventRow copyWithCompanion(PersonalEventsCompanion data) {
+    return PersonalEventRow(
+      id: data.id.present ? data.id.value : this.id,
+      pubkey: data.pubkey.present ? data.pubkey.value : this.pubkey,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      content: data.content.present ? data.content.value : this.content,
+      sig: data.sig.present ? data.sig.value : this.sig,
+      retention: data.retention.present ? data.retention.value : this.retention,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PersonalEventRow(')
+          ..write('id: $id, ')
+          ..write('pubkey: $pubkey, ')
+          ..write('kind: $kind, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('tags: $tags, ')
+          ..write('content: $content, ')
+          ..write('sig: $sig, ')
+          ..write('retention: $retention')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, pubkey, kind, createdAt, tags, content, sig, retention);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PersonalEventRow &&
+          other.id == this.id &&
+          other.pubkey == this.pubkey &&
+          other.kind == this.kind &&
+          other.createdAt == this.createdAt &&
+          other.tags == this.tags &&
+          other.content == this.content &&
+          other.sig == this.sig &&
+          other.retention == this.retention);
+}
+
+class PersonalEventsCompanion extends UpdateCompanion<PersonalEventRow> {
+  final Value<String> id;
+  final Value<String> pubkey;
+  final Value<int> kind;
+  final Value<int> createdAt;
+  final Value<String> tags;
+  final Value<String> content;
+  final Value<String> sig;
+  final Value<int> retention;
+  final Value<int> rowid;
+  const PersonalEventsCompanion({
+    this.id = const Value.absent(),
+    this.pubkey = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.content = const Value.absent(),
+    this.sig = const Value.absent(),
+    this.retention = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PersonalEventsCompanion.insert({
+    required String id,
+    required String pubkey,
+    required int kind,
+    required int createdAt,
+    required String tags,
+    required String content,
+    required String sig,
+    required int retention,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       pubkey = Value(pubkey),
+       kind = Value(kind),
+       createdAt = Value(createdAt),
+       tags = Value(tags),
+       content = Value(content),
+       sig = Value(sig),
+       retention = Value(retention);
+  static Insertable<PersonalEventRow> custom({
+    Expression<String>? id,
+    Expression<String>? pubkey,
+    Expression<int>? kind,
+    Expression<int>? createdAt,
+    Expression<String>? tags,
+    Expression<String>? content,
+    Expression<String>? sig,
+    Expression<int>? retention,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pubkey != null) 'pubkey': pubkey,
+      if (kind != null) 'kind': kind,
+      if (createdAt != null) 'created_at': createdAt,
+      if (tags != null) 'tags': tags,
+      if (content != null) 'content': content,
+      if (sig != null) 'sig': sig,
+      if (retention != null) 'retention': retention,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PersonalEventsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? pubkey,
+    Value<int>? kind,
+    Value<int>? createdAt,
+    Value<String>? tags,
+    Value<String>? content,
+    Value<String>? sig,
+    Value<int>? retention,
+    Value<int>? rowid,
+  }) {
+    return PersonalEventsCompanion(
+      id: id ?? this.id,
+      pubkey: pubkey ?? this.pubkey,
+      kind: kind ?? this.kind,
+      createdAt: createdAt ?? this.createdAt,
+      tags: tags ?? this.tags,
+      content: content ?? this.content,
+      sig: sig ?? this.sig,
+      retention: retention ?? this.retention,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (pubkey.present) {
+      map['pubkey'] = Variable<String>(pubkey.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<int>(kind.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (sig.present) {
+      map['sig'] = Variable<String>(sig.value);
+    }
+    if (retention.present) {
+      map['retention'] = Variable<int>(retention.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PersonalEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('pubkey: $pubkey, ')
+          ..write('kind: $kind, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('tags: $tags, ')
+          ..write('content: $content, ')
+          ..write('sig: $sig, ')
+          ..write('retention: $retention, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PendingActionsTable extends PendingActions
     with TableInfo<$PendingActionsTable, PendingActionRow> {
   @override
@@ -18075,6 +18583,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PersonalRepostsTable personalReposts = $PersonalRepostsTable(
     this,
   );
+  late final $PersonalEventsTable personalEvents = $PersonalEventsTable(this);
   late final $PendingActionsTable pendingActions = $PendingActionsTable(this);
   late final $Nip05VerificationsTable nip05Verifications =
       $Nip05VerificationsTable(this);
@@ -18166,6 +18675,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_personal_reposts_user_created',
     'CREATE INDEX IF NOT EXISTS idx_personal_reposts_user_created ON personal_reposts (user_pubkey, created_at DESC)',
   );
+  late final Index idxPersonalEventsPubkeyKindCreatedAt = Index(
+    'idx_personal_events_pubkey_kind_created_at',
+    'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_kind_created_at ON personal_events (pubkey, kind, created_at DESC)',
+  );
+  late final Index idxPersonalEventsPubkeyCreatedAt = Index(
+    'idx_personal_events_pubkey_created_at',
+    'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_created_at ON personal_events (pubkey, created_at DESC)',
+  );
   late final UserProfilesDao userProfilesDao = UserProfilesDao(
     this as AppDatabase,
   );
@@ -18185,6 +18702,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final PendingUploadsDao pendingUploadsDao = PendingUploadsDao(
+    this as AppDatabase,
+  );
+  late final PersonalEventsDao personalEventsDao = PersonalEventsDao(
     this as AppDatabase,
   );
   late final PersonalReactionsDao personalReactionsDao = PersonalReactionsDao(
@@ -18252,6 +18772,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pendingUploads,
     personalReactions,
     personalReposts,
+    personalEvents,
     pendingActions,
     nip05Verifications,
     drafts,
@@ -18286,6 +18807,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxPersonalRepostsUser,
     idxPersonalRepostsRepostId,
     idxPersonalRepostsUserCreated,
+    idxPersonalEventsPubkeyKindCreatedAt,
+    idxPersonalEventsPubkeyCreatedAt,
   ];
 }
 
@@ -21116,6 +21639,269 @@ typedef $$PersonalRepostsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $PersonalRepostsTable, PersonalRepostRow>,
       ),
       PersonalRepostRow,
+      PrefetchHooks Function()
+    >;
+typedef $$PersonalEventsTableCreateCompanionBuilder =
+    PersonalEventsCompanion Function({
+      required String id,
+      required String pubkey,
+      required int kind,
+      required int createdAt,
+      required String tags,
+      required String content,
+      required String sig,
+      required int retention,
+      Value<int> rowid,
+    });
+typedef $$PersonalEventsTableUpdateCompanionBuilder =
+    PersonalEventsCompanion Function({
+      Value<String> id,
+      Value<String> pubkey,
+      Value<int> kind,
+      Value<int> createdAt,
+      Value<String> tags,
+      Value<String> content,
+      Value<String> sig,
+      Value<int> retention,
+      Value<int> rowid,
+    });
+
+class $$PersonalEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $PersonalEventsTable> {
+  $$PersonalEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pubkey => $composableBuilder(
+    column: $table.pubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sig => $composableBuilder(
+    column: $table.sig,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retention => $composableBuilder(
+    column: $table.retention,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PersonalEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PersonalEventsTable> {
+  $$PersonalEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pubkey => $composableBuilder(
+    column: $table.pubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sig => $composableBuilder(
+    column: $table.sig,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retention => $composableBuilder(
+    column: $table.retention,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PersonalEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PersonalEventsTable> {
+  $$PersonalEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get pubkey =>
+      $composableBuilder(column: $table.pubkey, builder: (column) => column);
+
+  GeneratedColumn<int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get sig =>
+      $composableBuilder(column: $table.sig, builder: (column) => column);
+
+  GeneratedColumn<int> get retention =>
+      $composableBuilder(column: $table.retention, builder: (column) => column);
+}
+
+class $$PersonalEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PersonalEventsTable,
+          PersonalEventRow,
+          $$PersonalEventsTableFilterComposer,
+          $$PersonalEventsTableOrderingComposer,
+          $$PersonalEventsTableAnnotationComposer,
+          $$PersonalEventsTableCreateCompanionBuilder,
+          $$PersonalEventsTableUpdateCompanionBuilder,
+          (
+            PersonalEventRow,
+            BaseReferences<
+              _$AppDatabase,
+              $PersonalEventsTable,
+              PersonalEventRow
+            >,
+          ),
+          PersonalEventRow,
+          PrefetchHooks Function()
+        > {
+  $$PersonalEventsTableTableManager(
+    _$AppDatabase db,
+    $PersonalEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PersonalEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PersonalEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PersonalEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> pubkey = const Value.absent(),
+                Value<int> kind = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> sig = const Value.absent(),
+                Value<int> retention = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PersonalEventsCompanion(
+                id: id,
+                pubkey: pubkey,
+                kind: kind,
+                createdAt: createdAt,
+                tags: tags,
+                content: content,
+                sig: sig,
+                retention: retention,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String pubkey,
+                required int kind,
+                required int createdAt,
+                required String tags,
+                required String content,
+                required String sig,
+                required int retention,
+                Value<int> rowid = const Value.absent(),
+              }) => PersonalEventsCompanion.insert(
+                id: id,
+                pubkey: pubkey,
+                kind: kind,
+                createdAt: createdAt,
+                tags: tags,
+                content: content,
+                sig: sig,
+                retention: retention,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PersonalEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PersonalEventsTable,
+      PersonalEventRow,
+      $$PersonalEventsTableFilterComposer,
+      $$PersonalEventsTableOrderingComposer,
+      $$PersonalEventsTableAnnotationComposer,
+      $$PersonalEventsTableCreateCompanionBuilder,
+      $$PersonalEventsTableUpdateCompanionBuilder,
+      (
+        PersonalEventRow,
+        BaseReferences<_$AppDatabase, $PersonalEventsTable, PersonalEventRow>,
+      ),
+      PersonalEventRow,
       PrefetchHooks Function()
     >;
 typedef $$PendingActionsTableCreateCompanionBuilder =
@@ -26877,6 +27663,8 @@ class $AppDatabaseManager {
       $$PersonalReactionsTableTableManager(_db, _db.personalReactions);
   $$PersonalRepostsTableTableManager get personalReposts =>
       $$PersonalRepostsTableTableManager(_db, _db.personalReposts);
+  $$PersonalEventsTableTableManager get personalEvents =>
+      $$PersonalEventsTableTableManager(_db, _db.personalEvents);
   $$PendingActionsTableTableManager get pendingActions =>
       $$PendingActionsTableTableManager(_db, _db.pendingActions);
   $$Nip05VerificationsTableTableManager get nip05Verifications =>

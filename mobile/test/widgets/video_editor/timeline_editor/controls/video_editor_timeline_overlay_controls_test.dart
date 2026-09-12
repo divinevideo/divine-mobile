@@ -3,10 +3,11 @@
 // ABOUTME: VideoEditorScope in the tree.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
@@ -14,14 +15,16 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
@@ -67,7 +70,7 @@ void main() {
     }) {
       return ProviderScope(
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MultiBlocProvider(
@@ -105,7 +108,7 @@ void main() {
     Widget build(TimelineOverlayItem item) {
       return ProviderScope(
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: VideoEditorScope(
@@ -185,10 +188,79 @@ void main() {
       expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
       // A detached clip is composited as a VideoLayer, which carries no
       // animations field — offering the action would animate it in the editor
       // and drop it silently from the file.
       expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
+    });
+
+    testWidgets('keeps the green screen off every other layer', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'text-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(
+        () => editor.activeLayers,
+      ).thenReturn([TextLayer(id: item.id, text: 'hi')]);
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+
+      // Only a detached clip carries footage a key can be applied to.
+      expect(find.text(l10n.videoEditorChromaKeyLabel), findsNothing);
+    });
+
+    testWidgets('highlights the green screen once the layer carries one', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'detached-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      DivineIconButton chromaKeyButton() => tester.widget<DivineIconButton>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is DivineIconButton &&
+              w.semanticLabel == l10n.videoEditorChromaKeySemanticLabel,
+        ),
+      );
+      WidgetLayer layerWith(Map<String, dynamic> meta) => WidgetLayer(
+        id: item.id,
+        widget: const SizedBox.shrink(),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: item.id, meta: meta),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      when(() => editor.activeLayers).thenReturn([
+        layerWith(const {detachedClipLayerKindKey: detachedClipLayerKind}),
+      ]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      expect(chromaKeyButton().type, DivineIconButtonType.secondary);
+
+      when(() => editor.activeLayers).thenReturn([
+        layerWith({
+          detachedClipLayerKindKey: detachedClipLayerKind,
+          detachedClipLayerChromaKeyKey: const ClipChromaKey(
+            key: ChromaKey.greenScreen(),
+          ).toJson(),
+        }),
+      ]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      // Same treatment the timeline gives a baked key: the effect is visible
+      // from the action bar without opening the screen.
+      expect(chromaKeyButton().type, DivineIconButtonType.primary);
     });
 
     testWidgets('renders $VideoEditorTimelineControls for filter', (
@@ -1050,7 +1122,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: MultiBlocProvider(

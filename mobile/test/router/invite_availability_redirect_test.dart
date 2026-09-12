@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:invite_api_client/invite_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/invite_availability_redirects.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/invites_screen.dart';

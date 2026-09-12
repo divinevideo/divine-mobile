@@ -2,8 +2,8 @@
 // ABOUTME: Returns the picked FollowSortOrder, or null when dismissed
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Opens the follow-list sort sheet with [current] preselected.

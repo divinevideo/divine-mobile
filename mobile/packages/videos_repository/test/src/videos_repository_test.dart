@@ -2518,6 +2518,7 @@ void main() {
             );
 
             expect(result.videos.map((video) => video.id), ['feed-video']);
+            expect(result.followingPageCount, 2);
             verify(
               () => mockFunnelcakeClient.getHomeFeed(
                 pubkey: any(named: 'pubkey'),
@@ -2821,6 +2822,7 @@ void main() {
           );
 
           expect(result.videos.map((video) => video.id), ['feed-video']);
+          expect(result.followingPageCount, 2);
           verify(() => mockNostrClient.queryEvents(any())).called(2);
         },
       );
@@ -11619,6 +11621,7 @@ void main() {
           ]);
           expect(result.paginationCursor, equals('page-3'));
           expect(result.hasMore, isTrue);
+          expect(result.recommendationPageCount, 2);
           expect(requestedCursors, [null, 'page-2']);
         },
       );

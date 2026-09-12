@@ -413,13 +413,19 @@ open class Proof: NSObject {
             proof[.deviceId] = ""
         }
         
-        proof[.ipv4] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV4)
-        proof[.ipv6] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV6)
-        
-        proof[.dataType] = DeviceInfo.getDeviceInfo(device: .DEVICE_DATA_TYPE)
-        proof[.network] = DeviceInfo.getDeviceInfo(device: .DEVICE_NETWORK)
-        
-        proof[.networkType] = DeviceInfo.getDeviceInfo(device: .DEVICE_NETWORK_TYPE)
+        // Divine-local (#9073): upstream records these on every proof, whatever
+        // the options say. The proof is signed as it is written, so this is the
+        // only place they can be left out.
+        if showMobileNetwork {
+            proof[.ipv4] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV4)
+            proof[.ipv6] = DeviceInfo.getDeviceInfo(device: .DEVICE_IP_ADDRESS_IPV6)
+
+            proof[.dataType] = DeviceInfo.getDeviceInfo(device: .DEVICE_DATA_TYPE)
+            proof[.network] = DeviceInfo.getDeviceInfo(device: .DEVICE_NETWORK)
+
+            proof[.networkType] = DeviceInfo.getDeviceInfo(device: .DEVICE_NETWORK_TYPE)
+        }
+
         proof[.hardware] = DeviceInfo.getDeviceInfo(device: .DEVICE_HARDWARE_MODEL)
         proof[.manufacturer] = "Apple"
         proof[.screenSize] = DeviceInfo.getDeviceInfo(device: .DEVICE_SCREEN_SIZE)

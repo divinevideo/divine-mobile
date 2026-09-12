@@ -8,11 +8,11 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -29,7 +29,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -58,6 +58,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../helpers/finders.dart';
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
 import '../../helpers/test_pubkeys.dart';
@@ -484,7 +485,7 @@ void main() {
           ).overrideWith((ref) => monetizationLinksEnabled),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           theme: theme,
@@ -596,7 +597,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final button = find.byTooltip(l10n.ogVinerBadgeLabel);
+      final button = findByTooltip(l10n.ogVinerBadgeLabel);
       expect(button, findsOneWidget);
       // The header shows the same badge as the feed, glyph and all.
       expect(find.byType(OgVinerBadge), findsOneWidget);
@@ -632,7 +633,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final button = find.byTooltip(l10n.ogBetaTesterBadgeLabel);
+      final button = findByTooltip(l10n.ogBetaTesterBadgeLabel);
       expect(button, findsOneWidget);
       expect(find.byType(OgBetaBadge), findsOneWidget);
       // The header is the 48dp-compliant affordance; the inline chit takes a
@@ -784,7 +785,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final button = find.byTooltip(l10n.profileBadgeCheckmarkTitle);
+      final button = findByTooltip(l10n.profileBadgeCheckmarkTitle);
       expect(button, findsOneWidget);
       // The header shows the same blue checkmark badge as the feed.
       expect(find.byType(SpecialProfileCheckmark), findsOneWidget);
@@ -2856,8 +2857,7 @@ void main() {
                   ).overrideWith((ref) => false),
                 ],
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   home: BlocProvider<BackgroundPublishBloc>.value(
                     value: mockPublishBloc,
@@ -2974,8 +2974,7 @@ void main() {
                   ).overrideWith((ref) => false),
                 ],
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   home: BlocProvider<BackgroundPublishBloc>.value(
                     value: mockPublishBloc,

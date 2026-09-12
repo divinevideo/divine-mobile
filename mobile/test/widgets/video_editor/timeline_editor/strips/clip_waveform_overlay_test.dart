@@ -3,8 +3,8 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/video_editor/clip_waveform.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_waveform_overlay.dart';

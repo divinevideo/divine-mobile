@@ -21,6 +21,7 @@ class VideoEditorMainState extends Equatable {
     this.isReordering = false,
     this.isTimelineHiddenByUser = false,
     this.isMarkerMode = false,
+    this.isPlacingSlidePoint = false,
   });
 
   /// Whether the undo action is available.
@@ -91,6 +92,12 @@ class VideoEditorMainState extends Equatable {
   /// the user can drop markers repeatedly while playback runs.
   final bool isMarkerMode;
 
+  /// Whether a layer's custom slide point is being placed on the canvas.
+  ///
+  /// While active the timeline and the editor's own actions step aside, so the
+  /// video fills the screen and every part of it can be tapped.
+  final bool isPlacingSlidePoint;
+
   /// Creates a copy with the given fields replaced.
   ///
   /// Use [clearOpenSubEditor] to explicitly close the sub-editor.
@@ -114,6 +121,7 @@ class VideoEditorMainState extends Equatable {
     bool? isReordering,
     bool? isTimelineHiddenByUser,
     bool? isMarkerMode,
+    bool? isPlacingSlidePoint,
   }) {
     return VideoEditorMainState(
       canUndo: canUndo ?? this.canUndo,
@@ -142,6 +150,7 @@ class VideoEditorMainState extends Equatable {
       isTimelineHiddenByUser:
           isTimelineHiddenByUser ?? this.isTimelineHiddenByUser,
       isMarkerMode: isMarkerMode ?? this.isMarkerMode,
+      isPlacingSlidePoint: isPlacingSlidePoint ?? this.isPlacingSlidePoint,
     );
   }
 
@@ -165,5 +174,6 @@ class VideoEditorMainState extends Equatable {
     isReordering,
     isTimelineHiddenByUser,
     isMarkerMode,
+    isPlacingSlidePoint,
   ];
 }

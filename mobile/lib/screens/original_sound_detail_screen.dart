@@ -2,8 +2,8 @@
 // ABOUTME: Shows creator info and the source video, no "Use Sound" button.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';

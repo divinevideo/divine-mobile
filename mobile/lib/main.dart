@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/startup/app_bootstrap.dart';
 import 'package:unified_logger/unified_logger.dart';

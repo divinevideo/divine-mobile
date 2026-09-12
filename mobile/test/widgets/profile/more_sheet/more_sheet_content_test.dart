@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for MoreSheetContent's menu-to-confirmation transition.
 // ABOUTME: Pins that the content swap is driven by the animation, not a timer.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_menu.dart';

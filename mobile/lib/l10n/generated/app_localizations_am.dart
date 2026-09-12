@@ -2262,6 +2262,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ከቅብብሎሽ ጋር መገናኘት አልተሳካም። እባክዎ የአውታረ መረብ ግንኙነትዎን ያረጋግጡ።';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'አሁንም ከቅብብሎሽ ጋር በመገናኘት ላይ ነው። እባክዎ ትንሽ ይጠብቁ።';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'በዚህ መሣሪያ ላይ ተቀምጧል። ማተም እንደገና ሲሰራ ወደ መለያዎ እናስመሳስለዋለን።';
 
@@ -2900,6 +2904,24 @@ class AppLocalizationsAm extends AppLocalizations {
       'Funnelcake የታዳሚ ትንታኔ መጨረሻ ነጥቦችን ሲጨምር፣ የታዳሚ ምንጭ/ጂኦ/ጊዜ ዝርዝሮች ይሞላሉ።';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'ማቆየት።';
 
   @override
@@ -3119,6 +3141,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'መለያ ይፍጠሩ';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'ወደ ግብዣ ኮድ ተመለስ';
@@ -8732,6 +8758,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'ከቅንጥቡ ጀርባ ያለው ነገር በውስጡ ይታያል።';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።';
 
@@ -9006,6 +9036,17 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'ከመጠን';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ይህ ከየት እንደሚገባ ቪዲዮው ላይ ይንኩ';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ይህ ወዴት እንደሚወጣ ቪዲዮው ላይ ይንኩ';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -10778,6 +10819,49 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'መሸጎጫ ጸድቷል';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'የእርስዎ ክሊፖችና ረቂቆች';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'እርስዎ የሠሯቸው ቅጂዎች፣ ረቂቆችና ድምጾች። መሸጎጫን ማጽዳት እነዚህን በፍጹም አይነካም — እዚህ ቦታ ለማስለቀቅ ከቤተ-መጻሕፍትዎ ክሊፖችን ይሰርዙ።';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'የተረፉ ፋይሎች የሉም';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count የተረፉ ፋይሎች፣ $size',
+      one: '$count የተረፈ ፋይል፣ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'የተረፉ ፋይሎችን ያስወግዱ';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => 'የተረፉ ፋይሎች ይወገዱ?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'ይህ በማንኛውም ክሊፕ፣ ረቂቅ ወይም ስቀላ የማይጠቀምባቸውን $count ፋይሎች ይሰርዛል እና $size ያስለቅቃል። መመለስ አይቻልም።',
+      one:
+          'ይህ በማንኛውም ክሊፕ፣ ረቂቅ ወይም ስቀላ የማይጠቀምበትን $count ፋይል ይሰርዛል እና $size ያስለቅቃል። መመለስ አይቻልም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'የተረፉ ፋይሎች ተወግደዋል';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'የክሊፕ ቤተ-መጻሕፍት';

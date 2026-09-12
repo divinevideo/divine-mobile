@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -11,6 +12,13 @@ import 'package:nostr_sdk/utils/hash_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostr extends Mock implements Nostr {
+  /// What is left of [deadline], never negative — the budget a real read
+  /// spends when it is handed one instead of a duration.
+  static Duration _remainingUntil(DateTime deadline) {
+    final left = deadline.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
   /// Drives the `timedOut` field of the record synthesized below.
   bool timedOut = false;
 
@@ -52,6 +60,44 @@ class _MockNostr extends Mock implements Nostr {
       events: events,
       timedOut: timedOut,
       noRelaysParticipated: noRelaysParticipated,
+    );
+  }
+
+  /// The read the client actually runs. The SDK answers both this and
+  /// [queryEventsDetailed] from one read, so this double runs both from the
+  /// one method tests stub, and maps the two knobs above onto the [QueryEnd]
+  /// each one stands for.
+  @override
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final read = await queryEventsDetailed(
+      filters,
+      id: id,
+      tempRelays: tempRelays,
+      relayTypes: relayTypes,
+      sendAfterAuth: sendAfterAuth,
+      // The real read ends at `deadline` when it is handed one, so the double
+      // spends what is left of it. Forwarding the untouched `timeout` instead
+      // hands a caller that passed only a deadline the 5s default, which
+      // outlives the client's own backstop and loses the events it holds.
+      timeout: deadline == null ? timeout : _remainingUntil(deadline),
+      requireAllRelaysSettled: requireAllRelaysSettled,
+    );
+    return QueryResult(
+      events: read.events,
+      endedBy: read.noRelaysParticipated
+          ? QueryEnd.noRelay
+          : read.timedOut
+          ? QueryEnd.deadline
+          : QueryEnd.complete,
     );
   }
 }
@@ -1329,6 +1375,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1342,6 +1389,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1358,6 +1406,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -1380,6 +1429,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1402,6 +1452,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
 
@@ -1420,6 +1471,7 @@ void main() {
             tempRelays: tempRelays,
             relayTypes: [RelayType.normal],
             sendAfterAuth: true,
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1466,6 +1518,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1518,6 +1571,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1572,6 +1626,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           );
         },
@@ -1592,6 +1647,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => events);
       }
@@ -1835,6 +1891,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [event]);
 
@@ -1855,6 +1912,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [event]);
 
@@ -1867,6 +1925,7 @@ void main() {
             tempRelays: [relayUrl],
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
       });
@@ -1881,6 +1940,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -1906,6 +1966,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent]);
 
@@ -1924,6 +1985,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -3121,7 +3183,9 @@ void main() {
 
     group('forceReconnectAll', () {
       test('delegates to RelayManager', () async {
-        when(mockRelayManager.forceReconnectAll).thenAnswer((_) async {});
+        when(mockRelayManager.forceReconnectAll).thenAnswer(
+          (_) async => ForceReconnectOutcome.completed,
+        );
 
         await client.forceReconnectAll();
 
@@ -4416,6 +4480,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => websocketEvents);
           when(
@@ -4449,6 +4514,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4480,6 +4546,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4509,6 +4576,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => []);
 
@@ -4531,6 +4599,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
 
@@ -4557,6 +4626,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
@@ -4600,6 +4670,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => [wsEvent]);
           when(
@@ -4654,6 +4725,7 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => [wsProfile]);
           when(
@@ -5053,6 +5125,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent]);
 
@@ -5072,6 +5145,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5084,6 +5158,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5102,6 +5177,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5114,6 +5190,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5132,6 +5209,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5144,6 +5222,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5161,6 +5240,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5187,6 +5267,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => [profileEvent1, profileEvent2]);
 
@@ -5207,6 +5288,7 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
 
@@ -5219,6 +5301,7 @@ void main() {
             tempRelays: captureAny(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured;
 
@@ -5349,16 +5432,11 @@ void main() {
         expect(result.source, equals(CountSource.websocket));
       });
 
-      test('falls back to queryEvents when COUNT not supported', () async {
+      test('throws $CountUnavailableException when no relay answers, '
+          'without fetching events', () async {
         final filters = [
           Filter(kinds: [EventKind.textNote]),
         ];
-        final events = [
-          _createTestEvent(),
-          _createTestEvent(),
-          _createTestEvent(),
-        ];
-
         when(
           () => mockNostr.countEvents(
             any(),
@@ -5367,7 +5445,7 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenThrow(CountNotSupportedException('Not supported'));
+        ).thenThrow(CountNotSupportedException('No relay responded to COUNT'));
         when(
           () => mockNostr.queryEvents(
             any(),
@@ -5375,14 +5453,253 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => events);
+        ).thenAnswer((_) async => [_createTestEvent(), _createTestEvent()]);
 
-        final result = await client.countEvents(filters);
+        await expectLater(
+          client.countEvents(filters),
+          throwsA(isA<CountUnavailableException>()),
+        );
+        verifyNever(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
 
-        expect(result.count, equals(3));
-        expect(result.approximate, isFalse);
-        expect(result.source, equals(CountSource.clientSide));
+      test(
+        'redials once and asks again when no relay took the COUNT',
+        () async {
+          final calls = <String>[];
+          var attempts = 0;
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async {
+            calls.add('COUNT');
+            attempts++;
+            if (attempts == 1) {
+              throw CountNotSentException('No relay accepted COUNT');
+            }
+            return const CountResponse(count: 7);
+          });
+          when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {
+            calls.add('redial');
+          });
+
+          final result = await client.countEvents([
+            Filter(kinds: [EventKind.textNote]),
+          ]);
+
+          expect(calls, equals(['COUNT', 'redial', 'COUNT']));
+          expect(result.count, equals(7));
+        },
+      );
+
+      test('gives up after one redial when no relay takes the COUNT either '
+          'time', () async {
+        when(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+        when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {});
+
+        await expectLater(
+          client.countEvents([
+            Filter(kinds: [EventKind.textNote]),
+          ]),
+          throwsA(isA<CountUnavailableException>()),
+        );
+        verify(mockRelayManager.retryDisconnectedRelays).called(1);
+        verify(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(2);
+      });
+
+      test(
+        'does not redial when a relay took the COUNT but none answered',
+        () async {
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(
+            CountNotSupportedException('No relay responded to COUNT'),
+          );
+
+          await expectLater(
+            client.countEvents([
+              Filter(kinds: [EventKind.textNote]),
+            ]),
+            throwsA(isA<CountUnavailableException>()),
+          );
+          verifyNever(mockRelayManager.retryDisconnectedRelays);
+        },
+      );
+
+      test(
+        'does not ask again once the redial has spent the whole timeout',
+        () async {
+          final redial = Completer<void>();
+          addTearDown(() {
+            if (!redial.isCompleted) redial.complete();
+          });
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => redial.future);
+
+          await expectLater(
+            client.countEvents(
+              [
+                Filter(kinds: [EventKind.textNote]),
+              ],
+              timeout: const Duration(milliseconds: 200),
+            ),
+            throwsA(isA<CountUnavailableException>()),
+          );
+          verify(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        },
+        timeout: const Timeout(Duration(seconds: 3)),
+      );
+
+      // Deterministic regression guard for the redial deadline. Under
+      // FakeAsync the `.timeout` timer fires on elapse() while the wall
+      // clock that remainingTimeout() reads barely advances, so the
+      // re-sampled residue is reliably positive. That reproduces the
+      // pre-fix bug: the old code read the residue as leftover budget and
+      // dispatched a second COUNT. The onTimeout deadline flag must stop
+      // after one COUNT, so reverting it fails this test on every run,
+      // not only on the rare live-timer race from #9063.
+      test('does not ask again after the redial deadline fires', () {
+        fakeAsync((async) {
+          when(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenThrow(CountNotSentException('No relay accepted COUNT'));
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => Completer<void>().future);
+
+          Object? caught;
+          var settled = false;
+          unawaited(
+            client
+                .countEvents(
+                  [
+                    Filter(kinds: [EventKind.textNote]),
+                  ],
+                  timeout: const Duration(milliseconds: 200),
+                )
+                .then<void>(
+                  (_) => settled = true,
+                  onError: (Object error) {
+                    caught = error;
+                    settled = true;
+                  },
+                ),
+          );
+
+          async
+            ..elapse(const Duration(milliseconds: 200))
+            ..flushMicrotasks();
+
+          expect(settled, isTrue);
+          expect(caught, isA<CountUnavailableException>());
+          verify(
+            () => mockNostr.countEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        });
+      });
+
+      test('asks again after an earlier reconnect timeout', () async {
+        var attempts = 0;
+        when(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          if (attempts == 1) {
+            throw CountNotSentException('No relay accepted COUNT');
+          }
+          return const CountResponse(count: 7);
+        });
+        when(
+          mockRelayManager.retryDisconnectedRelays,
+        ).thenThrow(TimeoutException('Reconnect timed out'));
+
+        final result = await client.countEvents([
+          Filter(kinds: [EventKind.textNote]),
+        ]);
+
+        expect(result.count, equals(7));
+        verify(
+          () => mockNostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(2);
       });
 
       test('passes subscriptionId parameter', () async {
@@ -5670,6 +5987,104 @@ void main() {
         );
 
         expect(result.timedOut, isTrue);
+      });
+
+      group('when a relay never answers', () {
+        late Event delivered;
+        late List<Duration> handedBudgets;
+
+        setUp(() async {
+          handedBudgets = [];
+          // What the relays that did answer sent before the deadline.
+          final signer = LocalNostrSigner(generatePrivateKey());
+          final author = (await signer.getPublicKey())!;
+          delivered = (await signer.signEvent(
+            Event(author, EventKind.giftWrap, [
+              ['p', testPublicKey],
+            ], 'answered'),
+          ))!;
+          mockNostr.timedOut = true;
+          // The SDK query ends itself at the deadline it is handed and returns
+          // what arrived, resolving a moment after it as a real one does.
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) {
+            final budget = invocation.namedArguments[#timeout] as Duration;
+            handedBudgets.add(budget);
+            final settled = Completer<List<Event>>();
+            Timer(
+              budget + const Duration(milliseconds: 20),
+              () => settled.complete([delivered]),
+            );
+            return settled.future;
+          });
+        });
+
+        Future<({List<Event> events, bool timedOut, bool noRelays})> read(
+          NostrClient via, {
+          bool useQueryPool = true,
+          Duration timeout = const Duration(milliseconds: 200),
+        }) => via.queryEventsDetailed(
+          [
+            Filter(kinds: const [EventKind.giftWrap], p: [testPublicKey]),
+          ],
+          useCache: false,
+          useQueryPool: useQueryPool,
+          requireAllRelaysSettled: true,
+          timeout: timeout,
+        );
+
+        test('keeps the events the other relays delivered (#9030)', () async {
+          final result = await read(client);
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+        });
+
+        test('keeps them on the non-pooled path too', () async {
+          final result = await read(client, useQueryPool: false);
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+        });
+
+        test('keeps them after waiting for a query slot', () async {
+          final originalMax = NostrClient.maxConcurrentQueries;
+          NostrClient.maxConcurrentQueries = 1;
+          addTearDown(() => NostrClient.maxConcurrentQueries = originalMax);
+          final pooledClient = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+          );
+          addTearDown(pooledClient.dispose);
+          // Holds the only slot for longer than the overrun grace, so the read
+          // below reaches the relays with much of its deadline already spent.
+          final occupant = read(
+            pooledClient,
+            timeout: const Duration(milliseconds: 400),
+          );
+
+          final result = await read(
+            pooledClient,
+            timeout: const Duration(milliseconds: 800),
+          );
+          await occupant;
+
+          expect(result.timedOut, isTrue);
+          expect(result.events.map((event) => event.id), [delivered.id]);
+          expect(handedBudgets, hasLength(2));
+          expect(
+            handedBudgets.last,
+            lessThan(const Duration(milliseconds: 800)),
+          );
+        });
       });
     });
   });

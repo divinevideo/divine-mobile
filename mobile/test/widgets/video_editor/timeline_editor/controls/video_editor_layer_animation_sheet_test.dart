@@ -1,11 +1,16 @@
 // ABOUTME: Behavior tests for the layer enter/leave animation picker view.
 
+import 'dart:ui' show Tristate;
+
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -32,6 +37,10 @@ void main() {
       double viewHeight = 1600,
       bool disableAnimations = false,
       ThemeData? theme,
+      Offset? initialEnterPoint,
+      Offset? initialLeavePoint,
+      Offset layerAnchor = Offset.zero,
+      bool canPickPoint = true,
     }) async {
       result = null;
       returned = false;
@@ -51,7 +60,7 @@ void main() {
             child: child!,
           ),
           theme: theme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
@@ -64,6 +73,10 @@ void main() {
                             body: LayerAnimationPickerView(
                               initialEnter: initialEnter,
                               initialLeave: initialLeave,
+                              initialEnterPoint: initialEnterPoint,
+                              initialLeavePoint: initialLeavePoint,
+                              layerAnchor: layerAnchor,
+                              canPickPoint: canPickPoint,
                             ),
                           ),
                         ),
@@ -387,6 +400,198 @@ void main() {
 
       handle.dispose();
     });
+    group('custom slide point', () {
+      Finder customChip() =>
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationCustomPoint);
+
+      Finder edgeChip() =>
+          find.bySemanticsLabel(l10n.videoEditorTransitionDirectionLeft);
+
+      testWidgets('offers a point of your own beside the four edges', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(customChip(), findsOneWidget);
+      });
+
+      // A point is placed on the canvas, so with no canvas to place it on the
+      // option is hidden rather than offered as a dead end.
+      testWidgets('hides the option when there is no canvas', (tester) async {
+        await openPicker(tester, canPickPoint: false);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(customChip(), findsNothing);
+        expect(edgeChip(), findsOneWidget);
+      });
+
+      testWidgets('offers the option only while slide is selected', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(customChip(), findsNothing);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(customChip(), findsOneWidget);
+      });
+
+      // The sheet sits on top of the canvas the point is placed on, so it closes
+      // and asks its caller to hand over — carrying the edits made so far.
+      testWidgets('closes to the point picker, keeping the edits so far', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(customChip());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(returned, isTrue);
+        expect(result?.pickPoint, isTrue);
+        expect(result?.phase, editor.AnimationPhase.animateIn);
+        expect(result?.enter.single.type, editor.LayerAnimationType.slide);
+      });
+
+      testWidgets('hands over on the phase being edited', (tester) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationLeave));
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(customChip());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(result?.phase, editor.AnimationPhase.animateOut);
+      });
+
+      testWidgets('a placed point deselects the edge chips', (tester) async {
+        await openPicker(
+          tester,
+          initialEnter: const [
+            editor.LayerAnimation(
+              type: editor.LayerAnimationType.slide,
+              phase: editor.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 400),
+              slideDirection: editor.SlideDirection.left,
+            ),
+          ],
+          initialEnterPoint: const Offset(-0.25, 0.25),
+        );
+
+        expect(
+          tester.getSemantics(customChip()).flagsCollection.isSelected,
+          Tristate.isTrue,
+        );
+        expect(
+          tester.getSemantics(edgeChip()).flagsCollection.isSelected,
+          Tristate.isFalse,
+        );
+      });
+
+      // The two are alternatives, so picking an edge is how the custom point is
+      // deselected again — there is no separate clear.
+      testWidgets('picking an edge again drops the point', (tester) async {
+        await openPicker(
+          tester,
+          initialEnter: const [
+            editor.LayerAnimation(
+              type: editor.LayerAnimationType.slide,
+              phase: editor.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 400),
+              slideDirection: editor.SlideDirection.right,
+            ),
+          ],
+          initialEnterPoint: const Offset(-0.25, 0.25),
+        );
+
+        await tester.tap(edgeChip());
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(result?.enterPoint, isNull);
+        expect(
+          result?.enter.single.slideDirection,
+          editor.SlideDirection.left,
+        );
+      });
+
+      // pro_image_editor requires a direction on every slide and drives its own
+      // preview from it, so the closest edge to the point is carried alongside.
+      testWidgets('carries the edge the point leans towards', (tester) async {
+        await openPicker(
+          tester,
+          initialEnter: const [
+            editor.LayerAnimation(
+              type: editor.LayerAnimationType.slide,
+              phase: editor.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 400),
+              slideDirection: editor.SlideDirection.left,
+            ),
+          ],
+          // Well below the layer's resting place, barely to the left of it.
+          initialEnterPoint: const Offset(-0.05, 0.4),
+        );
+
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(
+          result?.enter.single.slideDirection,
+          editor.SlideDirection.bottom,
+        );
+        expect(result?.enterPoint, const Offset(-0.05, 0.4));
+      });
+
+      // A point means nothing to a fade, so dropping the slide drops the point
+      // rather than leaving an origin nothing reads.
+      testWidgets('a phase that stops sliding hands back no point', (
+        tester,
+      ) async {
+        await openPicker(
+          tester,
+          initialEnter: const [
+            editor.LayerAnimation(
+              type: editor.LayerAnimationType.slide,
+              phase: editor.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 400),
+              slideDirection: editor.SlideDirection.left,
+            ),
+          ],
+          initialEnterPoint: const Offset(-0.25, 0.25),
+        );
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(result?.enter, isEmpty);
+      });
+    });
   });
 
   group('resolveLayerEndTime', () {
@@ -547,39 +752,70 @@ void main() {
       ).thenAnswer((_) {});
     });
 
-    Future<void> openEditor(WidgetTester tester, Layer layer) async {
+    late VideoEditorMainBloc mainBloc;
+
+    setUp(() {
+      mainBloc = VideoEditorMainBloc();
+      addTearDown(mainBloc.close);
+    });
+
+    /// The canvas body the picker maps a touch against. Sized and positioned
+    /// so its centre is the canvas centre — the fraction `Offset.zero`.
+    const canvasBody = Rect.fromLTWH(0, 0, 400, 600);
+
+    Future<void> openEditor(
+      WidgetTester tester,
+      Layer layer, {
+      bool withCanvas = false,
+    }) async {
       when(() => mockEditor.activeLayers).thenReturn([layer]);
       tester.view.physicalSize = const Size(500, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      final canvasBodyKey = GlobalKey();
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: VideoEditorScope(
-            editorKey: GlobalKey(),
-            removeAreaKey: GlobalKey(),
-            originalClipAspectRatio: 9 / 16,
-            bodySizeNotifier: ValueNotifier(const Size(400, 600)),
-            zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-            playTimeNotifier: ValueNotifier(Duration.zero),
-            playheadAdvancingNotifier: ValueNotifier<bool>(false),
-            fromLibrary: false,
-            onOpenCamera: () {},
-            onOpenClipsEditor: () {},
-            onAddStickers: () {},
-            onAddEditTextLayer: ([layer]) async => null,
-            onOpenMusicLibrary: () {},
-            onOpenVoiceOver: () {},
-            onOpenCaptions: () {},
-            editorOverride: mockEditor,
-            child: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () =>
-                      editLayerAnimation(context, layer, totalDuration: total),
-                  child: const Text('open'),
+          home: BlocProvider<VideoEditorMainBloc>.value(
+            value: mainBloc,
+            child: VideoEditorScope(
+              editorKey: GlobalKey(),
+              removeAreaKey: GlobalKey(),
+              canvasBodyKey: withCanvas ? canvasBodyKey : null,
+              originalClipAspectRatio: 9 / 16,
+              bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+              zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+              playTimeNotifier: ValueNotifier(Duration.zero),
+              playheadAdvancingNotifier: ValueNotifier<bool>(false),
+              fromLibrary: false,
+              onOpenCamera: () {},
+              onOpenClipsEditor: () {},
+              onAddStickers: () {},
+              onAddEditTextLayer: ([layer]) async => null,
+              onOpenMusicLibrary: () {},
+              onOpenVoiceOver: () {},
+              onOpenCaptions: () {},
+              editorOverride: mockEditor,
+              child: Scaffold(
+                body: Stack(
+                  children: [
+                    Positioned.fromRect(
+                      rect: canvasBody,
+                      child: SizedBox(key: canvasBodyKey),
+                    ),
+                    Builder(
+                      builder: (context) => ElevatedButton(
+                        onPressed: () => editLayerAnimation(
+                          context,
+                          layer,
+                          totalDuration: total,
+                        ),
+                        child: const Text('open'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -660,12 +896,136 @@ void main() {
         equals(const Duration(seconds: 2)),
       );
     });
+
+    group('custom slide point', () {
+      /// Walks the whole hand-over: pick Slide, ask for a point, tap the
+      /// canvas, confirm, then close the sheet that comes back.
+      Future<void> placePoint(WidgetTester tester, Offset at) async {
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationCustomPoint),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(at);
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorDoneLabel).last,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+      }
+
+      testWidgets('stores the placed point on the layer meta', (tester) async {
+        await openEditor(tester, Layer(id: 'l1'), withCanvas: true);
+
+        await placePoint(tester, canvasBody.center);
+        await tapDone(tester);
+
+        expect(
+          LayerSlidePoints.of(capturedLayers().single).enter,
+          equals(Offset.zero),
+        );
+      });
+
+      // The point rides along on the animation as well, in canvas pixels, so
+      // the editor's own preview travels the path the export will.
+      testWidgets('writes the point onto the slide animation too', (
+        tester,
+      ) async {
+        await openEditor(tester, Layer(id: 'l1'), withCanvas: true);
+
+        await placePoint(tester, canvasBody.center);
+        await tapDone(tester);
+
+        final slide = capturedLayers().single.animations.singleWhere(
+          (a) => a.slideFrom != null,
+        );
+        expect(slide.slideFrom, equals(Offset.zero));
+      });
+
+      testWidgets('gives the canvas the screen while the point is placed', (
+        tester,
+      ) async {
+        await openEditor(tester, Layer(id: 'l1'), withCanvas: true);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationCustomPoint),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(mainBloc.state.isPlacingSlidePoint, isTrue);
+
+        await tester.tapAt(canvasBody.center);
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorDoneLabel).last,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(mainBloc.state.isPlacingSlidePoint, isFalse);
+      });
+
+      // Cancelling leaves the phase's origin alone — including the absence of
+      // one, which is what deselects the custom option again.
+      testWidgets('a cancelled placement stores no point', (tester) async {
+        await openEditor(tester, Layer(id: 'l1'), withCanvas: true);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationCustomPoint),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(canvasBody.center);
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.commonCancel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+        await tapDone(tester);
+
+        expect(LayerSlidePoints.of(capturedLayers().single).isEmpty, isTrue);
+        expect(mainBloc.state.isPlacingSlidePoint, isFalse);
+      });
+
+      // Without a canvas the option is never offered, so the editor stays in
+      // its normal layout rather than collapsing for a picker that can't open.
+      testWidgets('offers nothing to place when there is no canvas', (
+        tester,
+      ) async {
+        await openEditor(tester, Layer(id: 'l1'));
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSlide));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationCustomPoint),
+          findsNothing,
+        );
+        expect(mainBloc.state.isPlacingSlidePoint, isFalse);
+      });
+    });
   });
 }
 
 typedef _LayerAnimationResult = ({
   List<editor.LayerAnimation> enter,
   List<editor.LayerAnimation> leave,
+  Offset? enterPoint,
+  Offset? leavePoint,
+  editor.AnimationPhase phase,
+  bool pickPoint,
 });
 
 /// The decoration of the phase segment labelled [label].

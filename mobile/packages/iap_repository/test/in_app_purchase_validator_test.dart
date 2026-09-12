@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -142,7 +143,13 @@ void main() {
           ).thenAnswer((_) => const Stream<List<PurchaseDetails>>.empty());
           await expectLater(
             validator.purchase('divine.supporter.monthly'),
-            throwsA(isA<PurchaseFailedException>()),
+            throwsA(
+              isA<PurchaseFailedException>().having(
+                (error) => error.responseCode,
+                'responseCode',
+                'not_started',
+              ),
+            ),
           );
         },
       );
@@ -256,7 +263,16 @@ void main() {
             status: PurchaseStatus.canceled,
           ),
         ]);
-        await expectLater(future, throwsA(isA<PurchaseFailedException>()));
+        await expectLater(
+          future,
+          throwsA(
+            isA<PurchaseFailedException>().having(
+              (error) => error.responseCode,
+              'responseCode',
+              'cancelled',
+            ),
+          ),
+        );
       });
 
       test(
@@ -301,6 +317,23 @@ void main() {
 
         expect(emitted, isEmpty);
       });
+
+      test(
+        'passive renewal delivers proof without interactive progress',
+        () async {
+          final lifecycle = <EntitlementLifecycle>[];
+          validator.lifecycleChanges.listen(lifecycle.add);
+          validator.startListening();
+          final proofFuture = validator.purchaseProofChanges.first;
+          streamController.add([
+            _purchase('divine.supporter.monthly', purchaseID: 'renewal-123'),
+          ]);
+          final proof = await proofFuture;
+          expect(proof.transactionId, 'renewal-123');
+          expect(proof.capturedPubkey, isNull);
+          expect(lifecycle, isEmpty);
+        },
+      );
 
       test('emits pending and confirming lifecycle states', () async {
         final emitted = <EntitlementLifecycle>[];
@@ -417,6 +450,38 @@ void main() {
           expect(firstAttemptId, (await secondProof).attemptId);
         },
       );
+
+      for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+        test(
+          'completes verified restored transactions appropriately on $platform',
+          () async {
+            debugDefaultTargetPlatformOverride = platform;
+            addTearDown(() => debugDefaultTargetPlatformOverride = null);
+            final purchase = _purchase(
+              'divine.supporter.monthly',
+              status: PurchaseStatus.restored,
+              purchaseID: '12345',
+            );
+            when(
+              () => store.completePurchase(purchase),
+            ).thenAnswer((_) async {});
+            validator.startListening();
+            final proofFuture = validator.purchaseProofChanges.first;
+            streamController.add([purchase]);
+            final proof = await proofFuture;
+            verifyNever(() => store.completePurchase(purchase));
+
+            await validator.completePurchase(proof);
+            await validator.completePurchase(proof);
+
+            if (platform == TargetPlatform.iOS) {
+              verify(() => store.completePurchase(purchase)).called(1);
+            } else {
+              verifyNever(() => store.completePurchase(purchase));
+            }
+          },
+        );
+      }
 
       test(
         'silent restore does not emit interactive lifecycle state',

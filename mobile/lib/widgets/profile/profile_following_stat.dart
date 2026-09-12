@@ -1,10 +1,10 @@
 // ABOUTME: Following stat column widget using BLoC for reactive updates.
 // ABOUTME: Uses Page/View pattern - Page creates BLoC, View consumes it.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_following/others_following_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';

@@ -4,16 +4,16 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
@@ -139,7 +139,7 @@ Widget createTestWidget({
   return ProviderScope(
     overrides: [authServiceProvider.overrideWithValue(mockAuth), ...?overrides],
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
       builder: (context, navigator) => MediaQuery(
@@ -182,6 +182,91 @@ void main() {
 
       // VideoEventService stubs
       when(() => mockVideoEventService.getVideoById(any())).thenReturn(null);
+    });
+
+    group('Usage count', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Future<void> pumpWithUsageCount(
+        WidgetTester tester,
+        AudioEvent sound,
+        Future<int?> usageCount,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(sound: sound),
+            overrides: [
+              soundUsageCountProvider(
+                sound.id,
+              ).overrideWith((ref) => usageCount),
+              videosUsingSoundProvider(
+                sound.id,
+              ).overrideWith((ref) => Future.value(<String>[])),
+              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets('shows how many videos reuse the sound', (tester) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future.value(3));
+
+        expect(
+          find.textContaining(l10n.soundVideoCount(3)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says there are no videos only for a real zero', (
+        tester,
+      ) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future.value(0));
+
+        expect(
+          find.text('6.0s · ${l10n.soundNoVideoCount}'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('leaves the count out while it is unknown', (tester) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Future<int?>.value());
+
+        expect(find.text('6.0s'), findsOneWidget);
+        expect(find.textContaining('6.0s ·'), findsNothing);
+        expect(find.textContaining('null'), findsNothing);
+      });
+
+      testWidgets('leaves the count out while it is still loading', (
+        tester,
+      ) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+
+        await pumpWithUsageCount(tester, sound, Completer<int?>().future);
+
+        expect(find.text('6.0s'), findsOneWidget);
+        expect(find.textContaining('6.0s ·'), findsNothing);
+      });
+
+      testWidgets(
+        'drops the metadata line when neither the duration nor the count is '
+        'known',
+        (tester) async {
+          final sound = createTestAudioEvent(id: 'sound1', duration: 0);
+
+          await pumpWithUsageCount(tester, sound, Future<int?>.value());
+
+          expect(find.text(sound.title!), findsOneWidget);
+          expect(find.text(''), findsNothing);
+        },
+      );
     });
 
     group('Widget Structure', () {
@@ -1207,8 +1292,7 @@ void main() {
                 child: MockGoRouterProvider(
                   goRouter: mockGoRouter,
                   child: MaterialApp(
-                    localizationsDelegates:
-                        AppLocalizations.localizationsDelegates,
+                    localizationsDelegates: appLocalizationsDelegates,
                     supportedLocales: AppLocalizations.supportedLocales,
                     theme: VineTheme.theme,
                     home: SoundDetailScreen(sound: testSound),
@@ -1260,8 +1344,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1718,8 +1801,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1784,7 +1866,7 @@ void main() {
               audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: router,
@@ -1827,8 +1909,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1863,7 +1944,7 @@ void main() {
             child: MockGoRouterProvider(
               goRouter: mockGoRouter,
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 home: SoundDetailScreen(sound: testSound),

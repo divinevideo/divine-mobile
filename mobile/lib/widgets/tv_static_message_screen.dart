@@ -2,8 +2,8 @@
 // ABOUTME: Shared retro "no signal" look for permission and video dead ends
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:tv_static_effect/tv_static_effect.dart';

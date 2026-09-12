@@ -1019,7 +1019,11 @@ void main() {
     });
 
     group('static methods', () {
-      test('configureCache invokes global channel', () async {
+      test('configureCache invokes global channel on Android', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(
+          () => debugDefaultTargetPlatformOverride = null,
+        );
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(
               const MethodChannel('divine_video_player'),
@@ -1042,6 +1046,10 @@ void main() {
       });
 
       test('configureCache uses default size', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(
+          () => debugDefaultTargetPlatformOverride = null,
+        );
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(
               const MethodChannel('divine_video_player'),
@@ -1117,6 +1125,46 @@ void main() {
 
       test('configureCache is a no-op on Linux', () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+        addTearDown(
+          () => debugDefaultTargetPlatformOverride = null,
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                globalCalls.add(call);
+                return null;
+              },
+            );
+
+        await DivineVideoPlayerController.configureCache();
+
+        expect(globalCalls, isEmpty);
+      });
+
+      // AVFoundation never reads URLCache, so the Apple plugin has no cache
+      // to configure; an earlier build replaced URLCache.shared for nothing.
+      test('configureCache is a no-op on iOS', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        addTearDown(
+          () => debugDefaultTargetPlatformOverride = null,
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                globalCalls.add(call);
+                return null;
+              },
+            );
+
+        await DivineVideoPlayerController.configureCache();
+
+        expect(globalCalls, isEmpty);
+      });
+
+      test('configureCache is a no-op on macOS', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(
           () => debugDefaultTargetPlatformOverride = null,
         );

@@ -7,12 +7,12 @@ import 'dart:math';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode, listEquals;
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
@@ -2652,10 +2652,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _proVideoController,
           key: scope.editorKey,
           configs: ProImageEditorConfigs(
-            // pro_image_editor falls back to its own bare ThemeData,
-            // which carries no VineThemeColors. Everything under it
-            // would resolve context.vineColors through the silent dark
-            // fallback and paint dark tokens on a light page.
             theme: Theme.of(context),
             stateHistory: StateHistoryConfigs(
               initStateHistory: editorStateHistory.isNotEmpty
@@ -3122,16 +3118,21 @@ class _CanvasFitter extends ConsumerWidget {
         // that falls outside its child rect, so the editor's top-level
         // GestureDetector never opens an arena and [onScaleStart] /
         // [onScaleUpdate] never fire.
-        return VideoEditorCutAreaOverlay(
-          child: HitTestExpander(
-            visibleSize: geometry.targetSize,
-            child: VideoEditorCanvasFit(
-              geometry: geometry,
-              child: Navigator(
-                clipBehavior: Clip.none,
-                onGenerateRoute: (_) => PageRouteBuilder(
-                  pageBuilder: (_, _, _) =>
-                      builder(bodySize, geometry.renderSize),
+        return KeyedSubtree(
+          // Marks this box — the canvas body — so a tool laid over the editor
+          // can map a touch back into layer coordinates.
+          key: scope.canvasBodyKey,
+          child: VideoEditorCutAreaOverlay(
+            child: HitTestExpander(
+              visibleSize: geometry.targetSize,
+              child: VideoEditorCanvasFit(
+                geometry: geometry,
+                child: Navigator(
+                  clipBehavior: Clip.none,
+                  onGenerateRoute: (_) => PageRouteBuilder(
+                    pageBuilder: (_, _, _) =>
+                        builder(bodySize, geometry.renderSize),
+                  ),
                 ),
               ),
             ),

@@ -2,8 +2,8 @@
 // ABOUTME: Large tagline text with decorative 3D emoji stickers and Divine logo
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/l10n/l10n.dart';
 

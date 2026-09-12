@@ -2243,6 +2243,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Gagal terhubung ke relay. Silakan cek koneksi jaringanmu.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Masih menghubungkan ke relay. Tunggu sebentar.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Tersimpan di perangkat ini. Kami akan menyinkronkannya ke akunmu saat penerbitan berfungsi lagi.';
 
@@ -2894,6 +2898,24 @@ class AppLocalizationsId extends AppLocalizations {
       'Rincian sumber/geo/waktu audiens akan terisi saat Funnelcake menambah endpoint analitik audiens.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retensi';
 
   @override
@@ -3118,6 +3140,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Buat akun';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Kembali ke kode undangan';
@@ -8858,6 +8884,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Apa pun yang ada di belakang klip akan terlihat tembus.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.';
 
@@ -9144,6 +9174,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Skala dari';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Kustom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Ketuk video di tempat geserannya dimulai';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Ketuk video di tempat geserannya berakhir';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -10989,6 +11030,49 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache dihapus';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Klip dan draf kamu';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Rekaman, draf, dan suara yang kamu buat. Menghapus cache tidak pernah menyentuhnya — hapus klip dari pustakamu untuk membebaskan ruang di sini.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Tidak ada file sisa';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count file sisa, $size',
+      one: '$count file sisa, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Hapus file sisa';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => 'Hapus file sisa?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
+      one:
+          'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'File sisa dihapus';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Pustaka klip';

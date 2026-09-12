@@ -2,9 +2,9 @@
 // ABOUTME: warnings for a video (#4771). Driven by CommunitySuggestCubit.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/community_suggest/community_suggest_cubit.dart';
 import 'package:openvine/blocs/community_suggest/community_suggest_state.dart';

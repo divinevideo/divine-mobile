@@ -3,7 +3,7 @@
 // ABOUTME: and comments grids
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
 /// Reusable loading indicator displayed inside a profile tab while content

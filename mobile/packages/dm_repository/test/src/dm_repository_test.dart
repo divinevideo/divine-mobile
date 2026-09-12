@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -20,6 +21,7 @@ import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -732,6 +734,7 @@ void main() {
           subscriptionId: any(named: 'subscriptionId'),
           useCache: any(named: 'useCache'),
           tempRelays: any(named: 'tempRelays'),
+          relayTypes: any(named: 'relayTypes'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           timeout: any(named: 'timeout'),
         ),
@@ -977,6 +980,7 @@ void main() {
         subscriptionId: any(named: 'subscriptionId'),
         useCache: any(named: 'useCache'),
         tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         timeout: any(named: 'timeout'),
       ),
@@ -5650,7 +5654,7 @@ void main() {
 
       test(
         'publishes a kind-10050 advertising the injected stable relay when '
-        'absent and records the flag on a confirmed OK',
+        'absent, and leaves recording it to a later read (#8433)',
         () async {
           // setUp default queryEventsDetailed -> [] : no existing kind-10050.
           when(
@@ -5676,10 +5680,9 @@ void main() {
             ['relay', 'wss://relay.divine.video'],
           ]);
           expect(captured[1], ['wss://relay.divine.video']);
-          expect(
-            syncState.dmRelayListPublishedPubkeys,
-            contains(_validPubkeyA),
-          );
+          // The relay's OK means it queued the event, not that anyone can
+          // read it yet, so nothing is recorded until a read returns it.
+          expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
         },
       );
 
@@ -5746,73 +5749,6 @@ void main() {
               dmFallback2,
               discovery,
             ]);
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
-          },
-        );
-
-        test(
-          'a discovery relay refusing the kind is best-effort — the list is '
-          'still published',
-          () async {
-            when(
-              () => mockNostrClient.publishEventAwaitOk(
-                any(),
-                targetRelays: any(named: 'targetRelays'),
-              ),
-            ).thenAnswer(
-              (_) async => partialOutcome(
-                targets: const [divine, discovery],
-                acceptedBy: const [divine],
-              ),
-            );
-
-            final syncState = _FakeDmSyncState();
-            final repository = createRepository(
-              syncState: syncState,
-              dmInboxDiscoveryRelays: const [discovery],
-            );
-            await repository.ensureDmRelayListPublished();
-
-            // Discovery is a bonus, not a precondition: a third-party relay
-            // changing its kind policy must never put every account into a
-            // republish loop on each login.
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
-          },
-        );
-
-        test(
-          'a discovery relay accepting does NOT stand in for the advertised '
-          'relay refusing — retries next login',
-          () async {
-            when(
-              () => mockNostrClient.publishEventAwaitOk(
-                any(),
-                targetRelays: any(named: 'targetRelays'),
-              ),
-            ).thenAnswer(
-              (_) async => partialOutcome(
-                targets: const [divine, discovery],
-                acceptedBy: const [discovery],
-              ),
-            );
-
-            final syncState = _FakeDmSyncState();
-            final repository = createRepository(
-              syncState: syncState,
-              dmInboxDiscoveryRelays: const [discovery],
-            );
-            await repository.ensureDmRelayListPublished();
-
-            // "Something accepted" is the wrong bar. The advertised relay is
-            // the one divine drains, so a list that never reached it leaves
-            // the account undeliverable while the flag says it is done.
-            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
           },
         );
 
@@ -5851,30 +5787,6 @@ void main() {
       });
 
       test(
-        'does NOT record the flag when no relay accepts — retries next login',
-        () async {
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              any(),
-              targetRelays: any(named: 'targetRelays'),
-            ),
-          ).thenAnswer((_) async => outcome(accepted: false));
-
-          final syncState = _FakeDmSyncState();
-          final repository = createRepository(syncState: syncState);
-          await repository.ensureDmRelayListPublished();
-
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              any(),
-              targetRelays: any(named: 'targetRelays'),
-            ),
-          ).called(1);
-          expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
-        },
-      );
-
-      test(
         'skips publishing and records the flag when the user already '
         'advertises a kind-10050',
         () async {
@@ -5884,6 +5796,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -5974,6 +5887,7 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             timeout: any(named: 'timeout'),
           ),
@@ -5997,6 +5911,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6027,10 +5942,15 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
-          ).thenAnswer((_) async {
+          ).thenAnswer((invocation) async {
+            // Count the pool leg only; the advertised relay has nothing.
+            if (invocation.namedArguments[#tempRelays] != null) {
+              return answeredList(const <Event>[]);
+            }
             queries++;
             if (queries == 1) throw Exception('relay down');
             return answeredList(const <Event>[]); // absent on the retry
@@ -6059,10 +5979,6 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
             ),
           ).called(1);
-          expect(
-            syncState.dmRelayListPublishedPubkeys,
-            contains(_validPubkeyA),
-          );
         },
       );
 
@@ -6091,6 +6007,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6098,7 +6015,9 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+            final isPoolLeg = inv.namedArguments[#tempRelays] == null;
+            if (isPoolLeg &&
+                (filter.kinds?.contains(EventKind.dmRelaysList) ?? false)) {
               settlementByRead.add(
                 inv.namedArguments[#requireAllRelaysSettled] as bool?,
               );
@@ -6117,7 +6036,7 @@ void main() {
           await repository.startListening();
           await repository.ensureDmRelayListPublished();
 
-          // The live read stays cheap; exactly one read is authoritative.
+          // The live read stays cheap; exactly one pool read is authoritative.
           expect(settlementByRead, [false, true]);
 
           await repository.stopListening();
@@ -6135,6 +6054,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               timeout: any(named: 'timeout'),
             ),
@@ -6148,6 +6068,41 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
             ),
           ).thenAnswer((_) async => outcome(accepted: true));
+        }
+
+        /// Answers the pool read and the advertised-relay read separately. The
+        /// advertised leg must ask that relay alone, not re-ask the pool.
+        void stubOwnInboxByLeg({
+          required ({List<Event> events, bool timedOut, bool noRelays}) pool,
+          required ({List<Event> events, bool timedOut, bool noRelays})
+          advertised,
+        }) {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final tempRelays =
+                invocation.namedArguments[#tempRelays] as List<String>?;
+            if (tempRelays == null) return pool;
+            final relayTypes =
+                invocation.namedArguments[#relayTypes] as List<int>;
+            final asksOnlyTheAdvertisedRelay =
+                tempRelays.length == 1 &&
+                tempRelays.single == 'wss://relay.divine.video' &&
+                relayTypes.length == 1 &&
+                relayTypes.single == RelayType.temp;
+            if (!asksOnlyTheAdvertisedRelay) {
+              throw StateError('unexpected own-inbox read: $tempRelays');
+            }
+            return advertised;
+          });
         }
 
         test(
@@ -6209,10 +6164,6 @@ void main() {
                 targetRelays: any(named: 'targetRelays'),
               ),
             ).called(1);
-            expect(
-              syncState.dmRelayListPublishedPubkeys,
-              contains(_validPubkeyA),
-            );
           },
         );
 
@@ -6264,6 +6215,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: captureAny(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: captureAny(
                   named: 'requireAllRelaysSettled',
                 ),
@@ -6287,6 +6239,94 @@ void main() {
               );
             }
             expect(sawOwnInboxRead, isTrue);
+          },
+        );
+
+        test(
+          'a list only the advertised relay serves is found — never '
+          'published over (#8433)',
+          () async {
+            stubOwnInboxByLeg(
+              pool: answeredList(const <Event>[]),
+              advertised: answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+            );
+            stubAcceptedPublish();
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            verifyNever(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            );
+            expect(
+              syncState.dmRelayListPublishedPubkeys,
+              contains(_validPubkeyA),
+            );
+          },
+        );
+
+        test(
+          'an advertised-relay read that did not settle is not evidence of '
+          'absence (#8433)',
+          () async {
+            stubOwnInboxByLeg(
+              pool: answeredList(const <Event>[]),
+              advertised: unansweredList(timedOut: true),
+            );
+            stubAcceptedPublish();
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            verifyNever(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            );
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'a list only other relays serve is re-sent to the advertised relay '
+          'and not recorded (#8433)',
+          () async {
+            final list = existingInbox(const ['wss://relay.divine.video']);
+            stubOwnInboxByLeg(
+              pool: answeredList([list]),
+              advertised: answeredList(const <Event>[]),
+            );
+            Event? sent;
+            List<String>? sentTo;
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((invocation) async {
+              sent = invocation.positionalArguments.first as Event;
+              sentTo =
+                  invocation.namedArguments[#targetRelays] as List<String>?;
+              return outcome(accepted: true);
+            });
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            await repository.ensureDmRelayListPublished();
+
+            // The same signed event, to that relay alone: nothing re-signed,
+            // nothing published over the user's list.
+            expect(sent?.id, list.id);
+            expect(sentTo, ['wss://relay.divine.video']);
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
           },
         );
 
@@ -6341,10 +6381,15 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
                 timeout: any(named: 'timeout'),
               ),
-            ).thenAnswer((_) async {
+            ).thenAnswer((invocation) async {
+              // Count the pool leg only; the advertised relay has nothing.
+              if (invocation.namedArguments[#tempRelays] != null) {
+                return answeredList(const <Event>[]);
+              }
               queries++;
               // A read nothing answered — not an exception. This is the shape
               // #8212 actually fails in; the throwing variant is a separate
@@ -6366,10 +6411,174 @@ void main() {
                 targetRelays: any(named: 'targetRelays'),
               ),
             ).called(1);
+          },
+        );
+      });
+
+      group('records the list only once a relay read returns it (#8433)', () {
+        test(
+          'a later session whose read returns the published list records it '
+          'without publishing again',
+          () async {
+            Event? published;
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((invocation) async {
+              published = invocation.positionalArguments.first as Event;
+              return outcome(accepted: true);
+            });
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) async {
+              final event = published;
+              return answeredList(event == null ? const <Event>[] : [event]);
+            });
+
+            final syncState = _FakeDmSyncState();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+
+            // Next login: the relay now serves what it acknowledged.
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+
+            verify(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).called(1);
             expect(
               syncState.dmRelayListPublishedPubkeys,
               contains(_validPubkeyA),
             );
+          },
+        );
+
+        test(
+          'a later session whose read still finds nothing publishes again — '
+          'an acknowledged list the relay never served is retried',
+          () async {
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).thenAnswer((_) async => outcome(accepted: true));
+            // Every read answers, and none returns the list.
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) async => answeredList(const <Event>[]));
+
+            final syncState = _FakeDmSyncState();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+            await createRepository(
+              syncState: syncState,
+            ).ensureDmRelayListPublished();
+
+            verify(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+              ),
+            ).called(2);
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'a list read back after sign-out is not recorded for the departed '
+          'session',
+          () async {
+            final read =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) => read.future);
+
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            final pending = repository.ensureDmRelayListPublished();
+            await repository.stopListening();
+            read.complete(
+              answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+            );
+            await pending;
+
+            expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'an empty read back after sign-out does not sign for the departed '
+          'session',
+          () async {
+            final read =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) => read.future);
+            final signer = _MockNostrSigner();
+            when(() => signer.signEvent(any())).thenAnswer((_) async => null);
+
+            final repository = createRepository(
+              signer: signer,
+              syncState: _FakeDmSyncState(),
+            );
+            final pending = repository.ensureDmRelayListPublished();
+            await repository.stopListening();
+            read.complete(answeredList(const <Event>[]));
+            await pending;
+
+            // Signing is the first effect of an empty answer; a remote signer
+            // would prompt for a session that has already signed out.
+            verifyNever(() => signer.signEvent(any()));
           },
         );
       });
@@ -6685,7 +6894,10 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          expect(giftWrapPages, 2);
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1,
+          );
           expect(syncState.persistedDrainCursors, [100]);
           expect(syncState.drainCursorOverride, 100);
           expect(syncState.drainCompleteOverride, isFalse);
@@ -7709,7 +7921,11 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          expect(calls, DmHistoryDrainConfig.maxPages);
+          expect(
+            calls,
+            DmHistoryDrainConfig.maxPages +
+                DmHistoryDrainConfig.unsettledPageRetriesPerRun,
+          );
           expect(syncState.persistedDrainCursors, [1000000]);
 
           const loopCursor = 1000000 - DmHistoryDrainConfig.maxPages;
@@ -8296,9 +8512,8 @@ void main() {
         for (final url in urls) url: RelayConnectionStatus.connected(url),
       };
 
-      /// Answers the first gift-wrap page as one nothing answered and every
-      /// later page (gift-wrap and NIP-04 alike) as authoritative and empty,
-      /// so a resumed run can complete.
+      /// Exhausts one run's global retry budget, then lets the resumed run
+      /// complete. NIP-04 pages are authoritative and empty throughout.
       void stubUnansweredThenExhausted() {
         var giftWrapPages = 0;
         when(
@@ -8317,7 +8532,8 @@ void main() {
             return answeredPage(const <Event>[]);
           }
           giftWrapPages++;
-          return giftWrapPages == 1
+          return giftWrapPages <=
+                  DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
               ? unansweredPage(noRelays: true)
               : answeredPage(const <Event>[]);
         });
@@ -8339,6 +8555,332 @@ void main() {
           await Future<void>.delayed(Duration.zero);
         }
       }
+
+      test(
+        'bounds unsettled page retries across the whole drain run',
+        () async {
+          stubRelayStatus();
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return partialPage([deletion(1000 - giftWrapPages)]);
+          });
+          final syncState = armedSyncState();
+          final cursorBefore = syncState.oldestOverride;
+          expect(cursorBefore, isNotNull);
+
+          await createRepository(
+            syncState: syncState,
+          ).backfillHistoryIfNeeded();
+
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.maxPages +
+                DmHistoryDrainConfig.unsettledPageRetriesPerRun,
+          );
+          expect(syncState.drainCursorOverride, cursorBefore);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        },
+      );
+
+      test('timer resumes a deferred drain without a relay status change', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus(
+            connectedNow: connected(['wss://a.example']),
+          );
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(relayStatus.hasListener, isTrue);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+          expect(relayStatus.hasListener, isFalse);
+        });
+      });
+
+      test('relay edge and timer cannot both resume the same deferral', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus();
+          var giftWrapPages = 0;
+          stubUnansweredThenExhausted();
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return giftWrapPages <= 3
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          relayStatus.add(connected(['wss://relay.example']));
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+          expect(giftWrapPages, 4);
+        });
+      });
+
+      test('automatic timer resumes stop at the session cap', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            giftWrapPages++;
+            return unansweredPage(noRelays: true);
+          });
+          final syncState = armedSyncState();
+          final cursorBefore = syncState.oldestOverride;
+          expect(cursorBefore, isNotNull);
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          async
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+
+          expect(
+            giftWrapPages,
+            (DmHistoryDrainConfig.deferredRetryDelays.length + 1) *
+                (DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1),
+          );
+          expect(syncState.drainCursorOverride, cursorBefore);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(
+            relayStatus.hasListener,
+            isFalse,
+            reason:
+                'relay reconnects must share the same no-progress budget as '
+                'timers instead of re-driving the drain forever',
+          );
+          relayStatus.add(connected(['wss://new-capacity.example']));
+          async.flushMicrotasks();
+          expect(
+            giftWrapPages,
+            (DmHistoryDrainConfig.deferredRetryDelays.length + 1) *
+                (DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1),
+          );
+        });
+      });
+
+      test('durable cursor progress replenishes automatic timer resumes', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var stage = 0;
+          var stageGiftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return answeredPage(const <Event>[]);
+            }
+            stageGiftWrapPages++;
+            if (stage == 0) return unansweredPage(noRelays: true);
+            if (stage == 1 && stageGiftWrapPages == 1) {
+              return answeredPage([deletion(90)]);
+            }
+            if (stage == 1) return unansweredPage(noRelays: true);
+            return answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          // Spend the complete retry budget without moving the cursor.
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          // A later manual run advances the durable boundary, then encounters
+          // another outage. That progress must replenish the timer budget.
+          stage = 1;
+          stageGiftWrapPages = 0;
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(syncState.drainCursorOverride, 90);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          stage = 2;
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('failed NIP-04 recovery cannot replenish retries forever', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://silent.example']),
+          );
+          var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return unansweredPage(noRelays: true);
+            }
+            giftWrapPages++;
+            return answeredPage(const <Event>[]);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          for (final delay in DmHistoryDrainConfig.deferredRetryDelays) {
+            async
+              ..elapse(delay)
+              ..flushMicrotasks();
+          }
+          async
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+
+          expect(
+            giftWrapPages,
+            DmHistoryDrainConfig.deferredRetryDelays.length + 1,
+          );
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
+      test('teardown cancels the deferred drain timer', () {
+        fakeAsync((async) {
+          stubRelayStatus();
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.stopListening());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
+      test('switching users cancels the deferred drain timer', () {
+        fakeAsync((async) {
+          stubRelayStatus();
+          stubUnansweredThenExhausted();
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
 
       test(
         'resumes on its own once a relay connects after a page no relay '
@@ -8474,9 +9016,10 @@ void main() {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
-            // Run 1: one relay answered a page, another never did; the next
-            // page is authoritative and empty. Run 2: exhausted at once.
-            return giftWrapPages == 1
+            // Run 1 exhausts its retry budget on a partial first page, then
+            // reaches an authoritative empty page. Run 2 exhausts at once.
+            return giftWrapPages <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
                 ? partialPage([deletion(500)])
                 : answeredPage(const <Event>[]);
           });

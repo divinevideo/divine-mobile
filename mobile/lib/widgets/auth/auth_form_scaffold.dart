@@ -6,8 +6,8 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 
@@ -43,6 +43,7 @@ class AuthFormScaffold extends StatelessWidget {
     this.onConfirmPasswordChanged,
     this.errorWidget,
     this.headerWidget,
+    this.belowFieldsWidget,
     this.secondaryButton,
     this.onBack,
     this.emailLabel = 'Email',
@@ -89,6 +90,10 @@ class AuthFormScaffold extends StatelessWidget {
 
   /// Optional content displayed between the title and form fields.
   final Widget? headerWidget;
+
+  /// Optional content displayed directly below the form fields (e.g. a
+  /// marketing opt-in checkbox on the create-account form).
+  final Widget? belowFieldsWidget;
 
   /// The primary action button (e.g. "Create account").
   final Widget primaryButton;
@@ -213,6 +218,11 @@ class AuthFormScaffold extends StatelessWidget {
                               ),
                             ),
                           ),
+
+                          if (belowFieldsWidget != null) ...[
+                            const SizedBox(height: 16),
+                            belowFieldsWidget!,
+                          ],
 
                           const SizedBox(height: 16),
 

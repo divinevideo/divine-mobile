@@ -1,8 +1,8 @@
 // ABOUTME: Bottom bar widget for video recorder screen
 // ABOUTME: Contains mode selector wheel and library button
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dart';

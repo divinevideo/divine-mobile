@@ -2,9 +2,9 @@
 // ABOUTME: Verifies the video branch's serialized player policy.
 
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -34,6 +34,25 @@ void main() {
       );
 
       expect(find.byType(ChromaKeyTransparencyCheckerboard), findsOneWidget);
+    });
+
+    testWidgets('draws nothing for a transparent key on the canvas', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: ChromaKeyBackdrop(
+            chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+            previewTransparency: false,
+          ),
+        ),
+      );
+
+      // On the editor canvas what is underneath the clip *is* the backdrop; a
+      // checkerboard there would hide exactly what the key is meant to reveal.
+      expect(find.byType(ChromaKeyTransparencyCheckerboard), findsNothing);
+      expect(find.byType(ColoredBox), findsNothing);
     });
 
     testWidgets('fills with the chosen colour', (tester) async {

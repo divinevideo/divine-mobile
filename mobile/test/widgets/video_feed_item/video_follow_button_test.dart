@@ -1,16 +1,19 @@
 // ABOUTME: Tests for VideoFollowButton widget using MyFollowingBloc
 // ABOUTME: Validates follow/unfollow button state, tap behavior, and styling
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
-import 'package:flutter/material.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 
@@ -44,7 +47,7 @@ void main() {
 
     Widget createTestWidget({required String pubkey}) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: BlocProvider<MyFollowingBloc>.value(
@@ -101,6 +104,200 @@ void main() {
         expect(find.byType(GestureDetector), findsNothing);
         expect(find.bySemanticsLabel('Follow'), findsNothing);
         expect(find.bySemanticsLabel('Following'), findsNothing);
+      });
+    });
+
+    group('tap target', () {
+      Finder paintedBadge() => find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+      );
+
+      void stubNotFollowing() {
+        when(() => mockMyFollowingBloc.state).thenReturn(
+          const MyFollowingState(status: MyFollowingStatus.success),
+        );
+        when(
+          () => mockMyFollowingBloc.stream,
+        ).thenAnswer((_) => const Stream.empty());
+      }
+
+      testWidgets('advertises a target that meets the iOS guideline', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        final pubkey = validPubkey('follow-target');
+        stubNotFollowing();
+
+        // Centred deliberately. MinimumTapTargetGuideline bails out without
+        // measuring anything when the node touches a viewport edge, and the
+        // button pumped straight into a Scaffold body sits in the top-start
+        // corner — the guideline then passes over a 20dp target.
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Center(
+                child: BlocProvider<MyFollowingBloc>.value(
+                  value: mockMyFollowingBloc,
+                  child: VideoFollowButtonView(pubkey: pubkey),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+        handle.dispose();
+      });
+
+      testWidgets('keeps painting the badge at its original 20dp', (
+        tester,
+      ) async {
+        final pubkey = validPubkey('badge-paint');
+        stubNotFollowing();
+
+        await tester.pumpWidget(createTestWidget(pubkey: pubkey));
+        await tester.pump();
+
+        expect(tester.getSize(paintedBadge()), const Size(20, 20));
+        // Centred in the target: one padding in on both axes.
+        expect(
+          tester.getTopLeft(paintedBadge()) -
+              tester.getTopLeft(find.byType(VideoFollowButtonView)),
+          const Offset(followButtonPadding, followButtonPadding),
+        );
+      });
+
+      testWidgets('follows from the corner of the target, not just the badge', (
+        tester,
+      ) async {
+        // The guideline reads the semantics rect, so a node can advertise 44dp
+        // while only 20dp of it responds. Tap 40dp in from the origin — inside
+        // the target, well outside the painted badge — and require the event.
+        final pubkey = validPubkey('corner-tap');
+        stubNotFollowing();
+
+        await tester.pumpWidget(createTestWidget(pubkey: pubkey));
+        await tester.pump();
+
+        final target = find.byType(VideoFollowButtonView);
+        expect(
+          tester.getSize(target),
+          const Size(
+            followButtonTapTargetSize,
+            followButtonTapTargetSize,
+          ),
+        );
+
+        await tester.tapAt(tester.getTopLeft(target) + const Offset(40, 40));
+        await tester.pump();
+
+        final captured = verify(
+          () => mockMyFollowingBloc.add(captureAny()),
+        ).captured;
+        expect(captured.single, isA<MyFollowingToggleRequested>());
+        expect(
+          (captured.single as MyFollowingToggleRequested).pubkey,
+          pubkey,
+        );
+      });
+    });
+
+    group('selected state', () {
+      Finder paintedBadge() => find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+      );
+
+      DivineFollowButton badge(WidgetTester tester) =>
+          tester.widget<DivineFollowButton>(find.byType(DivineFollowButton));
+
+      testWidgets('shows an inert selected badge for a follow made here', (
+        tester,
+      ) async {
+        final otherPubkey = validPubkey('other');
+        when(() => mockMyFollowingBloc.state).thenReturn(
+          MyFollowingState(
+            status: MyFollowingStatus.success,
+            followingPubkeys: [otherPubkey],
+            hasLocalFollowEdit: true,
+          ),
+        );
+
+        await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+        await tester.pump();
+
+        expect(badge(tester).variant, DivineFollowButtonVariant.selected);
+        // A state, not a control: it ignores taps, so there is no way to
+        // unfollow here and the avatar corner beneath it still opens the
+        // profile.
+        expect(badge(tester).onPressed, isNull);
+        final pointer = tester.widget<IgnorePointer>(
+          find.descendant(
+            of: find.byType(DivineFollowButton),
+            matching: find.byType(IgnorePointer),
+          ),
+        );
+        expect(pointer.ignoring, isTrue);
+        expect(find.bySemanticsLabel('Following'), findsOneWidget);
+      });
+
+      testWidgets('cross-fades to selected in 100ms after a tap', (
+        tester,
+      ) async {
+        final otherPubkey = validPubkey('other');
+        final states = StreamController<MyFollowingState>();
+        addTearDown(states.close);
+        whenListen(
+          mockMyFollowingBloc,
+          states.stream,
+          initialState: const MyFollowingState(
+            status: MyFollowingStatus.success,
+          ),
+        );
+        // The bloc marks the local edit before the repository's optimistic
+        // update lands; the badge sees both at once.
+        when(() => mockMyFollowingBloc.add(any())).thenAnswer((_) {
+          states.add(
+            MyFollowingState(
+              status: MyFollowingStatus.success,
+              followingPubkeys: [otherPubkey],
+              hasLocalFollowEdit: true,
+            ),
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+        await tester.pump();
+        expect(badge(tester).variant, DivineFollowButtonVariant.follow);
+
+        await tester.tap(find.byType(GestureDetector));
+        await tester.pump();
+        expect(badge(tester).variant, DivineFollowButtonVariant.selected);
+
+        // Mid-transition both discs are on screen, the old fading out under
+        // the new one fading in.
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(paintedBadge(), findsNWidgets(2));
+
+        // A full fade past the mid-point (the ticker's first tick only sets
+        // the start time) plus the frame in which the switcher drops the old
+        // disc.
+        await tester.pump(DivineFollowButton.crossFadeDuration);
+        await tester.pump();
+        expect(paintedBadge(), findsOneWidget);
+        final disc = tester.widget<Container>(paintedBadge());
+        expect(
+          (disc.decoration! as BoxDecoration).color,
+          VineTheme.onPrimaryButton,
+        );
       });
     });
 
@@ -196,6 +393,173 @@ void main() {
       await tester.pump();
 
       expect(find.byType(VideoFollowButtonView), findsOneWidget);
+    });
+
+    _MockContentBlocklistRepository blocklist({
+      required String authorPubkey,
+      required bool blocksUs,
+    }) {
+      final mock = _MockContentBlocklistRepository();
+      when(() => mock.hasBlockedUs(authorPubkey)).thenReturn(blocksUs);
+      when(() => mock.isBlocked(any())).thenReturn(false);
+      when(() => mock.isFollowSevered(any())).thenReturn(false);
+      when(() => mock.currentState).thenReturn(
+        ContentPolicyState(
+          currentUserPubkey: 'b' * 64,
+          mutedPubkeys: const {},
+          blockedPubkeys: const {},
+          pubkeysBlockingUs: blocksUs ? {authorPubkey} : const {},
+          pubkeysMutingUs: const {},
+        ),
+      );
+      return mock;
+    }
+
+    testWidgets('renders nothing and claims no taps when blocked', (
+      tester,
+    ) async {
+      // The badge is absent for an author whose published block/mute list
+      // names us — absence, never an explanation. Absent has to mean absent to
+      // the hit test too: anything left standing there would take
+      // double-tap-to-like and press-and-hold-to-peek from the video behind
+      // it, in a state the viewer has no way to see.
+      final authorPubkey = 'd' * 64;
+      var reachedTheVideo = false;
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => reachedTheVideo = true,
+                    ),
+                  ),
+                  VideoFollowButton(pubkey: authorPubkey),
+                ],
+              ),
+            ),
+          ),
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              blocklist(authorPubkey: authorPubkey, blocksUs: true),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+
+      await tester.tapAt(const Offset(24, 24));
+      await tester.pump();
+      expect(reachedTheVideo, isTrue);
+    });
+
+    testWidgets('claims no taps when the blocklist flips while on screen', (
+      tester,
+    ) async {
+      // canTargetUser watches blocklistVersion, so it can change under a
+      // mounted item rather than only at build time.
+      final authorPubkey = 'e' * 64;
+      var reachedTheVideo = false;
+
+      Widget host(bool blocksUs) => testMaterialApp(
+        home: Scaffold(
+          body: SizedBox.expand(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => reachedTheVideo = true,
+                  ),
+                ),
+                VideoFollowButton(pubkey: authorPubkey),
+              ],
+            ),
+          ),
+        ),
+        additionalOverrides: [
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            blocklist(authorPubkey: authorPubkey, blocksUs: blocksUs),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(host(false));
+      await tester.pump();
+      expect(
+        find.byType(VideoFollowButtonView),
+        findsOneWidget,
+        reason: 'the flip this test is about must start from present',
+      );
+
+      // Same tree, new blocklist: the element is reused, so this is the live
+      // flip rather than a fresh mount.
+      await tester.pumpWidget(host(true));
+      await tester.pump();
+
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+      await tester.tapAt(const Offset(24, 24));
+      await tester.pump();
+      expect(reachedTheVideo, isTrue);
+    });
+
+    testWidgets('claims no taps before the following list resolves', (
+      tester,
+    ) async {
+      // MyFollowingBloc reports asynchronously, and isFollowing reads an
+      // in-memory list populated the same way, so on a cold feed this is the
+      // ordinary state rather than a corner. Nothing may stand in for the
+      // badge meanwhile.
+      final authorPubkey = 'c' * 64;
+      var reachedTheVideo = false;
+      final mockBlocklist = _MockContentBlocklistRepository();
+      when(() => mockBlocklist.hasBlockedUs(any())).thenReturn(false);
+      when(() => mockBlocklist.isBlocked(any())).thenReturn(false);
+      when(() => mockBlocklist.isFollowSevered(any())).thenReturn(false);
+      when(
+        () => mockBlocklist.currentState,
+      ).thenReturn(ContentPolicyState.empty());
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => reachedTheVideo = true,
+                    ),
+                  ),
+                  VideoFollowButton(pubkey: authorPubkey),
+                ],
+              ),
+            ),
+          ),
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklist,
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.byType(VideoFollowButtonView),
+        findsOneWidget,
+        reason: 'the view is mounted; it is the badge inside that is pending',
+      );
+      await tester.tapAt(const Offset(24, 24));
+      await tester.pump();
+      expect(reachedTheVideo, isTrue);
     });
   });
 }

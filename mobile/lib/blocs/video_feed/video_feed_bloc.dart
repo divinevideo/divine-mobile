@@ -120,6 +120,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final FeedModePreferenceStore _modePreferences;
   StreamSubscription<List<String>>? _followingSubscription;
   StreamSubscription<List<CuratedList>>? _curatedListsSubscription;
+  int _sourceSelectionSequence = 0;
 
   /// Tracks when the last successful load completed, used by
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
@@ -245,13 +246,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
-    _feedTracker?.startFeedLoad(source.mode.name);
+    final feedLoad = _feedTracker?.startFeedLoad(source.mode.name);
 
     final initialFollowingPubkeys = List<String>.unmodifiable(
       _followRepository.followingPubkeys,
     );
 
-    await _loadVideos(source, emit, revalidate: true);
+    await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
     if (emit.isDone) return;
 
     // After the initial load, check for the "no follows" CTA. Needed for
@@ -348,24 +349,53 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
-    await _modePreferences.persist(source);
-
-    emit(
-      state.copyWith(
-        status: VideoFeedStatus.loading,
-        source: source,
-        videos: [],
-        hasMore: true,
-        isLoadingMore: false,
-        clearError: true,
-        videoListSources: const {},
-        listOnlyVideoIds: const {},
-        clearPaginationCursor: true,
-        currentIndex: 0,
-      ),
+    final feedLoad = _feedTracker?.startFeedLoad(
+      source.mode.name,
+      reason: FeedLoadReason.sourceSwitch,
     );
 
-    await _loadVideos(source, emit, revalidate: true);
+    final selectionSequence = ++_sourceSelectionSequence;
+    final cachedVideos = await _readCachedFeed(source, skipCache: false);
+    if (selectionSequence != _sourceSelectionSequence || emit.isDone) {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+      return;
+    }
+
+    await _modePreferences.persist(source);
+    if (selectionSequence != _sourceSelectionSequence || emit.isDone) {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+      return;
+    }
+
+    final selectedState = state.copyWith(
+      status: VideoFeedStatus.loading,
+      source: source,
+      videos: [],
+      hasMore: true,
+      isLoadingMore: false,
+      clearError: true,
+      videoListSources: const {},
+      listOnlyVideoIds: const {},
+      clearPaginationCursor: true,
+      currentIndex: 0,
+    );
+    final servedCache = _emitCachedFeed(
+      source,
+      cachedVideos,
+      emit,
+      baseState: selectedState,
+      requireCurrentSource: false,
+      feedLoad: feedLoad,
+    );
+    if (!servedCache) emit(selectedState);
+
+    await _loadVideos(
+      source,
+      emit,
+      feedLoad: feedLoad,
+      revalidate: true,
+      prefetchedCachedVideos: cachedVideos,
+    );
   }
 
   bool _listsEqual(List<String> a, List<String> b) {
@@ -397,6 +427,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     final source = state.source;
+    final feedLoad = _feedTracker?.startFeedLoad(
+      source.mode.name,
+      reason: FeedLoadReason.pagination,
+    );
     emit(state.copyWith(isLoadingMore: true));
 
     try {
@@ -470,6 +504,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         ),
       );
 
+      if (updatedVideos.isNotEmpty) {
+        if (feedLoad != null) {
+          _feedTracker?.markFirstVisibleContent(
+            feedLoad,
+            updatedVideos.length,
+            servedFromCache: false,
+          );
+        }
+      }
+      if (feedLoad != null) {
+        _feedTracker?.markFreshResultCompleted(
+          feedLoad,
+          updatedVideos.length,
+          recommendationPageCount: result.recommendationPageCount,
+          followingPageCount: result.followingPageCount,
+        );
+      }
+
       _scheduleNostrEnrichment(source: source, videos: updatedVideos);
 
       // Batch-fetch profiles for new creators only.
@@ -487,6 +539,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         category: LogCategory.video,
       );
       emit(state.copyWith(isLoadingMore: false));
+    } finally {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
     }
   }
 
@@ -495,6 +549,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
     emit(
       state.copyWith(
         status: VideoFeedStatus.loading,
@@ -509,7 +567,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
-    await _loadVideos(state.source, emit, skipCache: true);
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle auto-refresh request (dispatched by UI on app resume).
@@ -553,9 +611,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+
     await _loadVideos(
       state.source,
       emit,
+      feedLoad: feedLoad,
       skipCache: state.source.type != VideoFeedSourceType.newVideos,
       revalidate: state.source.type == VideoFeedSourceType.newVideos,
     );
@@ -594,7 +658,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     // Silent refresh — keep current videos visible, replace when done.
-    await _loadVideos(state.source, emit, skipCache: true);
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle curated list subscription changes from [CuratedListRepository].
@@ -647,7 +715,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
-    await _loadVideos(nextSource, emit, skipCache: true);
+    final feedLoad = _feedTracker?.startFeedLoad(
+      nextSource.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+
+    await _loadVideos(nextSource, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle blocklist changes.
@@ -697,13 +770,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   Future<void> _loadVideos(
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit, {
+    FeedLoadHandle? feedLoad,
     bool skipCache = false,
     bool revalidate = false,
+    List<VideoEvent>? prefetchedCachedVideos,
   }) async {
-    final servedCache = await _maybeServeCachedFeed(source, emit, skipCache);
-    if (!_canEmitForSource(source, emit)) return;
-
     try {
+      final servedCache =
+          prefetchedCachedVideos?.isNotEmpty ??
+          await _maybeServeCachedFeed(source, emit, skipCache, feedLoad);
+      if (!_canEmitForSource(source, emit)) return;
+
       // `revalidate` serves the cached window *and* forces a fresh fetch.
       // `skipCache` alone cannot express that: it also suppresses the served
       // window, which would blank the screen, and at the repository layer it
@@ -739,11 +816,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             )
           : validVideos;
 
-      _feedTracker?.markFirstVideosReceived(
-        source.mode.name,
-        displayedVideos.length,
-      );
-
+      if (feedLoad != null) {
+        _feedTracker?.markFirstVideosReceived(feedLoad, displayedVideos.length);
+      }
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -765,9 +840,26 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         ),
       );
 
+      if (!servedCache && displayedVideos.isNotEmpty) {
+        if (feedLoad != null) {
+          _feedTracker?.markFirstVisibleContent(
+            feedLoad,
+            displayedVideos.length,
+            servedFromCache: false,
+          );
+        }
+      }
+
       _scheduleNostrEnrichment(source: source, videos: displayedVideos);
 
-      _feedTracker?.markFeedDisplayed(source.mode.name, displayedVideos.length);
+      if (feedLoad != null) {
+        _feedTracker?.markFreshResultCompleted(
+          feedLoad,
+          displayedVideos.length,
+          recommendationPageCount: result.recommendationPageCount,
+          followingPageCount: result.followingPageCount,
+        );
+      }
 
       // Batch-fetch creator profiles to warm the Drift cache.
       await _fetchCreatorProfiles(validVideos, source, emit);
@@ -808,6 +900,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           ),
         );
       }
+    } finally {
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
     }
   }
 
@@ -820,24 +914,47 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
     bool skipCache,
+    FeedLoadHandle? feedLoad,
   ) async {
+    final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
+    return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad);
+  }
+
+  Future<List<VideoEvent>> _readCachedFeed(
+    VideoFeedSource source, {
+    required bool skipCache,
+  }) async {
     if (skipCache || !_serveCachedHomeFeed || !_usesHomeFeedCache(source)) {
-      return false;
+      return const [];
     }
 
     final mode = source.mode.name;
-    final cachedValid = await _resumeManager.readServeableWindow(
+    return _resumeManager.readServeableWindow(
       pubkey: _userPubkey,
       mode: mode,
     );
-    if (cachedValid.isEmpty) return false;
-    if (!_canEmitForSource(source, emit)) return false;
+  }
+
+  bool _emitCachedFeed(
+    VideoFeedSource source,
+    List<VideoEvent> cachedValid,
+    Emitter<VideoFeedBlocState> emit, {
+    VideoFeedBlocState? baseState,
+    bool requireCurrentSource = true,
+    FeedLoadHandle? feedLoad,
+  }) {
+    if (cachedValid.isEmpty || emit.isDone) return false;
+    if (requireCurrentSource && state.source != source) return false;
+
+    final mode = source.mode.name;
 
     // The cached window already starts at the resume position (already-watched
     // videos were dropped on write), so it is served at index 0.
-    _feedTracker?.markFirstVideosReceived(mode, cachedValid.length);
+    if (feedLoad != null) {
+      _feedTracker?.markFirstVideosReceived(feedLoad, cachedValid.length);
+    }
     emit(
-      state.copyWith(
+      (baseState ?? state).copyWith(
         status: VideoFeedStatus.success,
         videos: cachedValid,
         currentIndex: 0,
@@ -846,8 +963,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         clearError: true,
       ),
     );
-    _feedTracker?.markFeedDisplayed(mode, cachedValid.length);
-
+    if (feedLoad != null) {
+      _feedTracker?.markFirstVisibleContent(
+        feedLoad,
+        cachedValid.length,
+        servedFromCache: true,
+      );
+    }
     // Advance the resume point immediately so a quick reopen (before the fresh
     // fetch lands and the load-time write runs) still opens on the next video
     // rather than this one again.

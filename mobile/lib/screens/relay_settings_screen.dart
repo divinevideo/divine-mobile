@@ -3,10 +3,10 @@
 
 import 'package:count_formatter/count_formatter.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/relay_settings/relay_settings_cubit.dart';
 import 'package:openvine/blocs/relay_settings/relay_settings_state.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
@@ -854,6 +854,12 @@ Future<void> _retryConnection(BuildContext context) async {
         DivineSnackbarContainer.snackBar(
           l10n.relaySettingsConnectedToRelays(outcome.connectedCount),
         ),
+      );
+    case RetryConnectionOutcomeKind.stillConnecting:
+      // Not an error: the reconnect is still running and its relays will
+      // report as they land.
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(l10n.relaySettingsStillConnecting),
       );
     case RetryConnectionOutcomeKind.notConnected:
     case RetryConnectionOutcomeKind.failed:

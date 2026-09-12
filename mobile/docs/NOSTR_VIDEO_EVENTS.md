@@ -352,6 +352,7 @@ The `.content` field is optional and could contain a free-form note.
 | `loops` | `["loops", "<playthrough-fraction>"]` | Exact finite, non-negative playthrough count emitted by mobile, including partial loops. Funnelcake does not read this tag — it derives loops from `viewed` — so it is informational for other consumers | Optional |
 | `source` | `["source", "<source-type>"]` | Traffic source: `home`, `discovery`, `profile`, `share`, `search` | Optional |
 | `client` | `["client", "<name>", "31990:<app-pubkey>:<d-identifier>", "<relay-url>"]` | NIP-89 client attribution for Divine | Optional |
+| `version` | `["version", "<app-version>"]` | Shipped app version (`PackageInfo.version`, e.g. `1.0.23`), so a view-reporting regression attributes to a release. Kept separate from `client`, whose exact value keys Funnelcake's view-volume detector | Optional |
 
 ### Two-phase sessions
 
@@ -386,6 +387,7 @@ with no new playback emits nothing. An app kill mid-session still leaves the
     ["viewed", "0", "5"],
     ["loops", "0.75"],
     ["source", "discovery"],
+    ["version", "1.0.23"],
     ["client", "Divine", "31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile", "wss://relay.divine.video"]
   ]
 }

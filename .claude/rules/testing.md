@@ -717,12 +717,24 @@ its generated getters) must include the localization delegates on the
 test's `MaterialApp`, or the l10n lookup fails at runtime:
 
 ```dart
+import 'package:openvine/l10n/l10n.dart';
+
 MaterialApp(
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   home: ...
 )
 ```
+
+`appLocalizationsDelegates` rather than the generated
+`AppLocalizations.localizationsDelegates`: gen-l10n has no notion of
+`material_ui` and emits `flutter_localizations`' `Global*` delegates, which
+satisfy the framework's `MaterialLocalizations` and not the one `material_ui`
+widgets look up (#8916). The app constant spreads the generated list and adds
+`material_ui`'s on top. A `MaterialApp` handed a non-English locale without
+them fails the test outright with "A MaterialLocalizations delegate that
+supports the <x> locale was not found"; with `en` it silently serves English
+Material strings.
 
 Most tests should reach for `testMaterialApp(...)` from
 `test/helpers/test_provider_overrides.dart` instead of hand-rolling one —

@@ -1,9 +1,9 @@
 // ABOUTME: Guards flat multi-segment routes against GoError on cold entry.
 // ABOUTME: Their back buttons must use safePop, not a raw context.pop (#6481).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';

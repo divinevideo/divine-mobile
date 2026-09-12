@@ -34,6 +34,7 @@ void main() {
         'viewer_pubkey_abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678';
     const creatorPubkey =
         'creator_pubkey_abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234';
+    const appVersion = '1.0.23';
 
     setUp(() {
       mockNostr = _MockNostrClient();
@@ -71,6 +72,7 @@ void main() {
       publisher = ViewEventPublisher(
         nostrService: mockNostr,
         authService: mockAuth,
+        appVersion: appVersion,
       );
     });
 
@@ -176,6 +178,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));
@@ -219,6 +222,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));
@@ -314,6 +318,53 @@ void main() {
         expect(tags.where((t) => t[0] == 'client'), isEmpty);
       });
 
+      test('tags the event with the shipped app version', () async {
+        await publisher.publishViewEvent(
+          video: createTestVideoEvent(pubkey: creatorPubkey),
+          startSeconds: 0,
+          endSeconds: 5,
+          phase: ViewEventPhase.start,
+        );
+
+        final captured = verify(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: captureAny(named: 'tags'),
+          ),
+        ).captured;
+
+        final tags = captured[0] as List<List<String>>;
+        expect(tags.where((t) => t[0] == 'version'), [
+          ['version', appVersion],
+        ]);
+      });
+
+      test('omits the version tag when the app version is blank', () async {
+        publisher = ViewEventPublisher(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          appVersion: '  ',
+        );
+
+        await publisher.publishViewEvent(
+          video: createTestVideoEvent(pubkey: creatorPubkey),
+          startSeconds: 0,
+          endSeconds: 5,
+        );
+
+        final captured = verify(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: captureAny(named: 'tags'),
+          ),
+        ).captured;
+
+        final tags = captured[0] as List<List<String>>;
+        expect(tags.where((t) => t[0] == 'version'), isEmpty);
+      });
+
       test(
         'does not fall back to event ID when the real d tag is absent',
         () async {
@@ -367,6 +418,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));
@@ -414,6 +466,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));
@@ -457,6 +510,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));
@@ -501,6 +555,7 @@ void main() {
           publisher = ViewEventPublisher(
             nostrService: mockNostr,
             authService: mockAuth,
+            appVersion: appVersion,
             onDrop:
                 (reason, {required String videoId, required String method}) {
                   drops.add((reason: reason, videoId: videoId, method: method));

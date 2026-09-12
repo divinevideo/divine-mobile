@@ -3,7 +3,7 @@
 // ABOUTME: "no messages"; offers a retry action.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Error state shown when the conversation list fails to load.

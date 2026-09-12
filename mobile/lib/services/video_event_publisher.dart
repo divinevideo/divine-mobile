@@ -841,7 +841,7 @@ class VideoEventPublisher {
     List<String> mentionedPubkeys = const [],
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
-    String? inspiredByNpub,
+    List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
     AudioShareAttribution? audioShareAttribution,
@@ -871,7 +871,7 @@ class VideoEventPublisher {
       mentionedPubkeys: mentionedPubkeys,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
-      inspiredByNpub: inspiredByNpub,
+      inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
       audioShareAttribution: audioShareAttribution,
@@ -921,7 +921,7 @@ class VideoEventPublisher {
     Duration? thumbnailTimestamp,
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
-    String? inspiredByNpub,
+    List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
     AudioShareAttribution? audioShareAttribution,
@@ -966,7 +966,7 @@ class VideoEventPublisher {
       thumbnailTimestamp: thumbnailTimestamp,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
-      inspiredByNpub: inspiredByNpub,
+      inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
       audioShareAttribution: audioShareAttribution,
@@ -1004,7 +1004,7 @@ class VideoEventPublisher {
     Duration? thumbnailTimestamp,
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
-    String? inspiredByNpub,
+    List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
     AudioShareAttribution? audioShareAttribution,
@@ -1407,7 +1407,7 @@ class VideoEventPublisher {
           buildInspiredByPTags(
             existingTags: tags,
             addressableId: inspiredByAddressableId,
-            npub: inspiredByNpub,
+            npubs: inspiredByNpubs,
             relayHint: inspiredByRelayUrl,
             selfPubkey: _authService?.currentPublicKeyHex,
           ),
@@ -1761,10 +1761,7 @@ class VideoEventPublisher {
       var content = upload.description ?? upload.title ?? '';
 
       // Append NIP-27 Inspired By person reference to content
-      if (inspiredByNpub != null && inspiredByNpub.isNotEmpty) {
-        final ibText = '\n\nInspired by nostr:$inspiredByNpub';
-        content = content.isEmpty ? ibText.trim() : '$content$ibText';
-      }
+      content = withInspiredByContentReference(content, inspiredByNpubs);
 
       // Create and sign the event
       if (_authService == null) {

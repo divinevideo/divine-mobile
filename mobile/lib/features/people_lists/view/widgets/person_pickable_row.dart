@@ -2,7 +2,7 @@
 // ABOUTME: Shows avatar, display name, handle, and a selection checkbox.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:openvine/widgets/user_avatar.dart';

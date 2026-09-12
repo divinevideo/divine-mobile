@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "Gagal bersambung ke relay. Sila semak sambungan rangkaian anda.",
+  "relaySettingsStillConnecting": "Masih menyambung ke relay. Sila tunggu sebentar.",
   "relaySettingsSavedLocallyPublishPending": "Disimpan pada peranti ini. Kami akan menyegerakkannya ke akaun anda apabila penerbitan berfungsi semula.",
   "relaySettingsAddRelayTitle": "Tambah Relay",
   "relaySettingsAddRelayPrompt": "Masukkan URL WebSocket relay yang mahu anda tambah:",
@@ -4803,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "Imej",
   "videoEditorChromaKeyBackgroundVideo": "Klip",
   "videoEditorChromaKeyTransparentHint": "Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.",
+  "videoEditorChromaKeyCanvasTransparentHint": "Apa sahaja di belakang klip akan kelihatan menembusinya.",
   "videoEditorChromaKeySurfaceHint": "Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.",
   "videoEditorChromaKeyDetectFailed": "Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.",
   "videoEditorChromaKeyPickClipTitle": "Pilih klip",
@@ -5079,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "Tersuai",
+  "videoEditorLayerAnimationPointEnterHint": "Ketik video pada tempat ia patut meluncur masuk",
+  "videoEditorLayerAnimationPointLeaveHint": "Ketik video pada tempat ia patut meluncur keluar",
   "videoEditorFinishTimelineEditingSemanticLabel": "Selesai menyunting garis masa",
   "videoEditorAudioPlayPreviewSemanticLabel": "Main pratonton",
   "videoEditorAudioPausePreviewSemanticLabel": "Jeda pratonton",
@@ -6082,6 +6087,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "Klip dan draf anda",
+  "settingsStorageContentDescription": "Rakaman, draf dan bunyi yang anda buat. Mengosongkan cache tidak pernah menyentuhnya — padam klip daripada pustaka anda untuk membebaskan ruang di sini.",
+  "settingsStorageNoOrphanedFiles": "Tiada fail tertinggal",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} fail tertinggal, {size}} other{{count} fail tertinggal, {size}}}",
+  "settingsStorageRemoveOrphanedButton": "Buang fail tertinggal",
+  "settingsStorageRemoveOrphanedConfirmTitle": "Buang fail tertinggal?",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{Ini memadam {count} fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan {size}. Tidak boleh dibuat asal.} other{Ini memadam {count} fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan {size}. Tidak boleh dibuat asal.}}",
+  "settingsStorageOrphanedFilesRemoved": "Fail tertinggal dibuang",
   "settingsStorageLibrarySectionTitle": "Pustaka klip",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

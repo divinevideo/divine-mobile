@@ -238,7 +238,7 @@ class VideoInteractionsBloc
       // non-addressable getLikeCount is a raw, unfiltered tally that must not
       // raise the count. originalLikes (archival) is kept out of the floor so
       // it can't mask newly resolved Nostr likes.
-      final likeCount = _addressableId != null
+      final likeCount = _addressableId != null && fetchedLikeCount != null
           ? math.max(
               preFetchLikeCount ?? 0,
               (_archivedLikeCount ?? 0) + fetchedLikeCount,

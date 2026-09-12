@@ -5,14 +5,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -226,7 +226,7 @@ Future<void> _pumpSandbox(
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: NostrAppSandboxScreen(
           app: _fixtureApp(origin),

@@ -1,16 +1,18 @@
 // ABOUTME: Profile screen for viewing other users with bottom navigation
 // ABOUTME: Pushed on stack from video feeds, profiles, search results, etc.
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -84,7 +86,7 @@ class OtherProfileScreen extends ConsumerWidget {
     if (pubkey == null) {
       return _ProfileErrorScreen(
         message: context.l10n.profileInvalidId,
-        onBack: context.pop,
+        onBack: context.safePop,
       );
     }
 
@@ -161,11 +163,14 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
   /// Whether the profile feed load has been tracked.
   bool _hasTrackedFeedLoad = false;
+  late final FeedPerformanceTracker _feedTracker;
+  late final FeedLoadHandle _feedLoad;
 
   @override
   void initState() {
     super.initState();
-    ref.read(feedPerformanceTrackerProvider).startFeedLoad('profile');
+    _feedTracker = ref.read(feedPerformanceTrackerProvider);
+    _feedLoad = _feedTracker.startFeedLoad('profile');
     // The feed cubit cold-loads on mount (via ProfileFeedScope below); reading
     // it here would be a cross-route ProviderNotFoundException because the
     // cubit lives under build.
@@ -173,6 +178,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
   @override
   void dispose() {
+    _feedTracker.abandonFeedLoad(_feedLoad);
     _scrollController.dispose();
     _refreshNotifier.dispose();
     super.dispose();
@@ -340,7 +346,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
           ScaffoldMessenger.of(context).showSnackBar(
             DivineSnackbarContainer.snackBar(l10n.profileBlockedUser(name)),
           );
-          context.pop();
+          context.safePop();
         }
       case MoreSheetResult.unblockConfirmed:
         context.read<OtherProfileBloc>().add(
@@ -358,6 +364,11 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             DivineSnackbarContainer.snackBar(l10n.profileUnblockedUser(name)),
           );
         }
+      case MoreSheetResult.embedCode:
+        // Not surfaced here: MoreSheetContent above never sets
+        // showEmbedCode, so this branch is unreachable on another user's
+        // profile.
+        break;
     }
   }
 
@@ -435,9 +446,8 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             if (!_hasTrackedFeedLoad) {
               _hasTrackedFeedLoad = true;
               final count = feedState.videos.length;
-              final tracker = ref.read(feedPerformanceTrackerProvider);
-              tracker.markFirstVideosReceived('profile', count);
-              tracker.markFeedDisplayed('profile', count);
+              _feedTracker.markFirstVideosReceived(_feedLoad, count);
+              _feedTracker.markFeedDisplayed(_feedLoad, count);
             }
           }
 
@@ -498,7 +508,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
                         feedState.status != ProfileFeedStatus.ready ||
                         feedState.isInitialLoad,
                     scrollController: _scrollController,
-                    onBack: context.pop,
+                    onBack: context.safePop,
                     onMore: _more,
                     onMessageUser: _messageUser,
                     isMessageRestricted: isMessageRestricted,

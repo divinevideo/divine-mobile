@@ -2,13 +2,13 @@
 // ABOUTME: Verifies the Nostr relay menu aligns with other settings screens.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
@@ -18,6 +18,8 @@ import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/finders.dart';
 
 class _MockNostrService extends Mock implements NostrClient {}
 
@@ -109,7 +111,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             home: const RelaySettingsScreen(),
@@ -163,7 +165,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const RelaySettingsScreen(),
@@ -173,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = lookupAppLocalizations(const Locale('en'));
-    final removeButton = find.byTooltip(l10n.relaySettingsRemoveRelayTooltip);
+    final removeButton = findByTooltip(l10n.relaySettingsRemoveRelayTooltip);
     expect(removeButton, findsOneWidget);
     await tester.tap(removeButton);
     await tester.pumpAndSettle();
@@ -232,7 +234,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const RelaySettingsScreen(),
@@ -308,7 +310,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             routerConfig: router,
@@ -592,5 +594,81 @@ void main() {
         ).called(1);
       },
     );
+  });
+
+  group('Retry connection', () {
+    const relay = 'wss://relay.divine.video';
+
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      required _MockNostrService nostrService,
+    }) async {
+      SharedPreferences.setMockInitialValues({});
+
+      final capabilityService = _MockRelayCapabilityService();
+      final statsService = _MockRelayStatisticsService();
+      final videoEventService = _MockVideoEventService();
+      final stats = RelayStatistics(relayUrl: relay);
+
+      when(() => nostrService.configuredRelays).thenReturn([relay]);
+      when(() => nostrService.defaultRelayUrl).thenReturn(relay);
+      when(() => statsService.getStatistics(any())).thenReturn(stats);
+      when(statsService.getAllStatistics).thenReturn({relay: stats});
+      when(
+        () => capabilityService.getRelayCapabilities(any()),
+      ).thenThrow(RelayCapabilityException('Not found', relay));
+      when(videoEventService.resetAndResubscribeAll).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          nostrServiceProvider.overrideWithValue(nostrService),
+          relayCapabilityServiceProvider.overrideWithValue(capabilityService),
+          relayStatisticsServiceProvider.overrideWithValue(statsService),
+          relayStatisticsStreamProvider.overrideWith(
+            (_) => Stream.value({relay: stats}),
+          ),
+          relayListRepositoryProvider.overrideWithValue(
+            _FakeRelayListRepository(),
+          ),
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: const RelaySettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('says relays are still connecting when the wait ends '
+        'before any connects', (tester) async {
+      final nostrService = _MockNostrService();
+      when(() => nostrService.connectedRelayCount).thenReturn(0);
+      when(
+        nostrService.forceReconnectAll,
+      ).thenAnswer((_) async => ForceReconnectOutcome.stillDialling);
+
+      await pumpScreen(tester, nostrService: nostrService);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.relaySettingsRetry));
+      await tester.pumpAndSettle();
+      // The result queues behind the "Forcing relay reconnection" snackbar.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.relaySettingsStillConnecting), findsOneWidget);
+      expect(find.text(l10n.relaySettingsFailedToConnectCheck), findsNothing);
+      verify(nostrService.forceReconnectAll).called(1);
+    });
   });
 }

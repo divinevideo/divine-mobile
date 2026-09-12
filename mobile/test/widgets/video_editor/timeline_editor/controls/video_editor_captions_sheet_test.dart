@@ -2,11 +2,11 @@
 // ABOUTME: Covers generation states, cue editing, and the confirm result.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/captions_editor/captions_editor_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_captions_sheet.dart';
@@ -40,7 +40,7 @@ void main() {
   }) {
     return MaterialApp(
       theme: theme,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => Center(

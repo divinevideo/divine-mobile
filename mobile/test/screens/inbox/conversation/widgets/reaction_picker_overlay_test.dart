@@ -5,8 +5,8 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_actions_sheet.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reaction_picker_overlay.dart';

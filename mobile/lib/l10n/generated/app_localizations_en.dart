@@ -2324,6 +2324,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to connect to relays. Please check your network connection.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Still connecting to relays. Give it a moment.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Saved on this device. We\'ll sync it to your account when publishing works again.';
 
@@ -3031,6 +3035,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Audience source/geo/time breakdowns will populate as Funnelcake adds audience analytics endpoints.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retention';
 
   @override
@@ -3256,6 +3278,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Create account';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Back to invite code';
@@ -9041,6 +9067,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Video can\'t hold transparency, so this exports as black.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Whatever\'s behind the clip shows through.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Any plain surface behind you works — a wall is fine — as long as it fills the frame.';
 
@@ -9332,6 +9362,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Scale from';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Custom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tap the video where this should slide in from';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tap the video where this should slide out to';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11163,6 +11204,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache cleared';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Your clips and drafts';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Recordings, drafts and sounds you made. Clearing the cache never touches these — delete clips from your library to free up space here.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'No leftover files';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count leftover files, $size',
+      one: '$count leftover file, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Remove leftover files';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Remove leftover files?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This deletes $count files that no clip, draft or upload uses anymore, freeing up $size. This can\'t be undone.',
+      one:
+          'This deletes $count file that no clip, draft or upload uses anymore, freeing up $size. It can\'t be undone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Leftover files removed';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Clip library';

@@ -2,12 +2,12 @@
 // ABOUTME: Pins loops trailing the interaction stats rather than leading them.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
 
 class _MockVideoInteractionsBloc
@@ -42,7 +42,7 @@ Future<void> _pump(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: BlocProvider<VideoInteractionsBloc>.value(
@@ -119,6 +119,23 @@ void main() {
       );
 
       expect(find.text('2.1M'), findsOneWidget);
+    });
+
+    testWidgets('shows unknown interaction counts without fabricating zero', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<VideoInteractionsState>.empty(),
+        initialState: const VideoInteractionsState(
+          status: VideoInteractionsStatus.success,
+        ),
+      );
+
+      await _pump(tester, video: _video(), bloc: bloc);
+
+      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('0'), findsOneWidget);
     });
 
     testWidgets('shows the Vine and diVine breakdown for a classic Vine', (

@@ -1,0 +1,127 @@
+name: Issue Title Guard
+
+# Comments once when an issue title does not match Divine's convention
+# (`type(scope): summary`). See .github/scripts/lint_issue_title.py for the
+# rules and divine-mobile#8337 for why this is an issues-event comment rather
+# than a push-triggered CI ratchet.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint-title:
+    name: lint-issue-title
+    runs-on: ubuntu-24.04
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event.action == 'opened' || github.event.changes.title != null)
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint the issue title
+        id: lint
+        # The title is passed through env, never interpolated into the shell,
+        # so a crafted title cannot inject commands.
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          set +e
+          findings="$(python3 .github/scripts/lint_issue_title.py)"
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "conforming=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "conforming=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "findings<<FINDINGS_EOF"
+            echo "$findings"
+            echo "FINDINGS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on a non-conforming title
+        uses: actions/github-script@v9
+        env:
+          CONFORMING: ${{ steps.lint.outputs.conforming }}
+          FINDINGS: ${{ steps.lint.outputs.findings }}
+        with:
+          script: |
+            const repo = context.repo;
+            const issueNumber = context.payload.issue.number;
+            const MARKER = '<!-- issue-title-guard-bot -->';
+
+            if (process.env.CONFORMING === 'true') {
+              await cleanup();
+              return;
+            }
+
+            const findings = (process.env.FINDINGS || '')
+              .split('\n')
+              .map(l => l.trim())
+              .filter(Boolean);
+
+            await upsertBotComment(buildComment(findings));
+
+            function buildComment(findings) {
+              const list = findings.map(f => `- ${f}`).join('\n');
+              return [
+                MARKER,
+                "### ✍️ This issue's title needs a tweak",
+                '',
+                'Divine issue titles use Conventional Commit format — ' +
+                  '`type(scope): summary`, or `type: summary` when no scope applies:',
+                '',
+                list,
+                '',
+                'Allowed types: `feat fix chore docs refactor test perf build ci ' +
+                  'style revert task epic`. The scope is optional, but when present ' +
+                  'it names a product area, not an intake channel.',
+                '',
+                'The canonical policy lives in ' +
+                  '[divine-context `PR_REVIEW.md`]' +
+                  '(https://github.com/divinevideo/divine-context/blob/main/PR_REVIEW.md) ' +
+                  '("Issue titles"). Edit the title and this comment clears itself.',
+              ].join('\n');
+            }
+
+            async function upsertBotComment(body) {
+              const comments = await github.rest.issues.listComments({
+                ...repo, issue_number: issueNumber, per_page: 100,
+              });
+              const existing = comments.data.find(
+                c => c.body && c.body.includes(MARKER)
+              );
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  ...repo, comment_id: existing.id, body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  ...repo, issue_number: issueNumber, body,
+                });
+              }
+            }
+
+            async function cleanup() {
+              const comments = await github.rest.issues.listComments({
+                ...repo, issue_number: issueNumber, per_page: 100,
+              });
+              const botComment = comments.data.find(
+                c => c.body && c.body.includes(MARKER)
+              );
+              if (botComment) {
+                await github.rest.issues.deleteComment({
+                  ...repo, comment_id: botComment.id,
+                });
+              }
+            }

@@ -2,7 +2,7 @@
 // ABOUTME: Flashes dark briefly whenever the capture count increases
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A brief dark blink over the camera preview, fired whenever [shutterTick]
 /// increases.

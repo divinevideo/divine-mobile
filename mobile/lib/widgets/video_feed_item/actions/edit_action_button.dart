@@ -2,7 +2,7 @@
 // ABOUTME: Only rendered for own videos; opens the video edit dialog.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/show_edit_dialog_for_video.dart';

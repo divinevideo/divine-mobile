@@ -1,7 +1,7 @@
 // ABOUTME: The explore grid TabBarView with its per-tab children and the
 // ABOUTME: buffered-videos banner overlay.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';

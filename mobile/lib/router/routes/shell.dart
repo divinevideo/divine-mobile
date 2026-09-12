@@ -1,9 +1,9 @@
 // ABOUTME: Bottom-nav StatefulShellRoute (home/explore/inbox/profile branches)
 // ABOUTME: Split from app_router.dart (#4508); owns per-branch pageContext scoping
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';
@@ -30,6 +30,14 @@ List<RouteBase> shellRoutes() {
     // pageContextProvider per branch so each tab sees *its own* route context
     // (not the active tab's) and keeps rendering real content while inactive.
     StatefulShellRoute(
+      // go_router 17 started notifying the root observers from inside a
+      // shell's branch navigators, and its 18.x line is what the
+      // material_ui migration needs (#8916). Taking the new default would
+      // make root observers emit screen-view and page-load events for every
+      // in-branch push. That is a product-analytics decision, not a side
+      // effect of a design-system migration, so behaviour is pinned here
+      // until #9079 is decided deliberately.
+      notifyRootObserver: false,
       // Transition-free on purpose: the shell replaces `/welcome` on the root
       // navigator when the authenticated redirect lands (startup restore,
       // login), and the startup splash lifts at the *start* of that

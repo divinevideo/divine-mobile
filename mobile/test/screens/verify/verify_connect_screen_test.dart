@@ -3,12 +3,12 @@
 
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -65,7 +65,7 @@ void main() {
     Future<void> pump(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<VerifyConnectCubit>.value(
@@ -204,7 +204,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<VerifyConnectCubit>.value(
@@ -311,7 +311,7 @@ void main() {
     }) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<VerifyConnectCubit>.value(

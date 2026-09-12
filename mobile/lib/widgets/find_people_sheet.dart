@@ -2,9 +2,9 @@
 // ABOUTME: Used by the share sheet to find recipients for video sharing via DM.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';

@@ -1,7 +1,7 @@
 // ABOUTME: Database helpers for E2E integration tests
 // ABOUTME: Query and manipulate keycast postgres for auth flow testing
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:postgres/postgres.dart';
 
 import 'constants.dart';

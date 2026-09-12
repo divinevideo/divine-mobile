@@ -1,9 +1,9 @@
 // ABOUTME: Banner layer rendered edge-to-edge behind the profile content
 // ABOUTME: Scroll-driven: moves up as user scrolls, extends behind status bar
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/providers/user_profile_providers.dart';

@@ -2157,6 +2157,9 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이 연결에 실패했어요. 네트워크 연결을 확인해주세요.';
 
   @override
+  String get relaySettingsStillConnecting => '아직 릴레이에 연결하고 있어요. 잠시만 기다려 주세요.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       '이 기기에 저장됐어요. 게시가 다시 작동하면 계정에 동기화할게요.';
 
@@ -2779,6 +2782,24 @@ class AppLocalizationsKo extends AppLocalizations {
       'Funnelcake가 시청자 분석 엔드포인트를 추가하면 시청자 소스/지역/시간 분석이 채워져요.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => '재시청률';
 
   @override
@@ -2995,6 +3016,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => '계정 만들기';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '초대 코드로 돌아가기';
@@ -8517,6 +8542,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '영상은 투명도를 담을 수 없어서 내보내면 검게 나옵니다.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      '클립 뒤에 있는 것이 그대로 비쳐 보여요.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       '뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.';
 
@@ -8786,6 +8815,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => '시작 크기';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      '슬라이드가 시작될 위치를 영상에서 탭하세요';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      '슬라이드가 끝날 위치를 영상에서 탭하세요';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel => '타임라인 편집 완료';
@@ -10525,6 +10565,48 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => '캐시를 지웠습니다';
+
+  @override
+  String get settingsStorageContentSectionTitle => '내 클립과 초안';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '직접 만든 녹화, 초안, 사운드예요. 캐시를 지워도 여기는 건드리지 않아요. 여기 공간을 비우려면 라이브러리에서 클립을 삭제하세요.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '남은 파일 없음';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '남은 파일 $count개, $size',
+      one: '남은 파일 $count개, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '남은 파일 제거';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '남은 파일을 제거할까요?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '어떤 클립, 초안, 업로드도 더 이상 쓰지 않는 파일 $count개를 삭제하고 $size를 비워요. 되돌릴 수 없어요.',
+      one: '어떤 클립, 초안, 업로드도 더 이상 쓰지 않는 파일 $count개를 삭제하고 $size를 비워요. 되돌릴 수 없어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '남은 파일을 제거했어요';
 
   @override
   String get settingsStorageLibrarySectionTitle => '클립 라이브러리';

@@ -4,9 +4,9 @@
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
@@ -41,6 +41,7 @@ class ForYouTab extends ConsumerStatefulWidget {
 class _ForYouTabState extends ConsumerState<ForYouTab> {
   late final FeedPerformanceTracker? _feedTracker;
   DateTime? _feedLoadStartTime;
+  FeedLoadHandle? _feedLoad;
 
   @override
   void initState() {
@@ -73,7 +74,7 @@ class _ForYouTabState extends ConsumerState<ForYouTab> {
     // Track feed loading start
     if (forYouAsync.isLoading && _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
-      _feedTracker?.startFeedLoad('for_you');
+      _feedLoad = _feedTracker?.startFeedLoad('for_you');
     }
 
     // Check hasValue FIRST before isLoading
@@ -87,6 +88,9 @@ class _ForYouTabState extends ConsumerState<ForYouTab> {
         errorType: 'load_failed',
         errorMessage: forYouAsync.error.toString(),
       );
+      final feedLoad = _feedLoad;
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+      _feedLoad = null;
       _feedLoadStartTime = null;
       return RefreshableFeedStateView(
         onRefresh: _refreshForYou,
@@ -109,8 +113,12 @@ class _ForYouTabState extends ConsumerState<ForYouTab> {
 
     // Track feed loaded with videos
     if (_feedLoadStartTime != null) {
-      _feedTracker?.markFirstVideosReceived('for_you', videos.length);
-      _feedTracker?.markFeedDisplayed('for_you', videos.length);
+      final feedLoad = _feedLoad;
+      if (feedLoad != null) {
+        _feedTracker?.markFirstVideosReceived(feedLoad, videos.length);
+        _feedTracker?.markFeedDisplayed(feedLoad, videos.length);
+      }
+      _feedLoad = null;
       _feedLoadStartTime = null;
     }
 
@@ -129,6 +137,13 @@ class _ForYouTabState extends ConsumerState<ForYouTab> {
     ref.read(funnelcakeAvailableProvider.notifier).refresh();
     await ref.read(funnelcakeAvailableProvider.future);
     await ref.read(forYouFeedProvider.notifier).refresh();
+  }
+
+  @override
+  void dispose() {
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+    super.dispose();
   }
 }
 

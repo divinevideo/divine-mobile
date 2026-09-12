@@ -2,7 +2,7 @@
 // ABOUTME: Displays a pink-tipped eraser icon.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_item_button.dart';
 

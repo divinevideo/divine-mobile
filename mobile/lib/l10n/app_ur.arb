@@ -1177,6 +1177,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "ریلے سے منسلک نہیں ہو سکا۔ براہ کرم اپنا نیٹ ورک کنکشن چیک کریں۔",
+  "relaySettingsStillConnecting": "ریلے سے ابھی بھی منسلک ہو رہا ہے۔ براہ کرم تھوڑا انتظار کریں۔",
   "relaySettingsSavedLocallyPublishPending": "اس ڈیوائس پر محفوظ ہو گیا۔ اشاعت دوبارہ کام کرنے لگے تو ہم اسے آپ کے اکاؤنٹ سے ہم آہنگ کر دیں گے۔",
   "relaySettingsAddRelayTitle": "ریلے شامل کریں",
   "relaySettingsAddRelayPrompt": "جس ریلے کو شامل کرنا چاہتے ہیں اس کا WebSocket URL درج کریں:",
@@ -4803,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "تصویر",
   "videoEditorChromaKeyBackgroundVideo": "کلپ",
   "videoEditorChromaKeyTransparentHint": "ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔",
+  "videoEditorChromaKeyCanvasTransparentHint": "کلپ کے پیچھے جو کچھ ہے، وہ اس کے آر پار نظر آئے گا۔",
   "videoEditorChromaKeySurfaceHint": "آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔",
   "videoEditorChromaKeyDetectFailed": "کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔",
   "videoEditorChromaKeyPickClipTitle": "کلپ چنیں",
@@ -5079,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "اپنی مرضی کا",
+  "videoEditorLayerAnimationPointEnterHint": "ویڈیو پر وہاں ٹیپ کریں جہاں سے یہ سلائیڈ ہو کر آئے",
+  "videoEditorLayerAnimationPointLeaveHint": "ویڈیو پر وہاں ٹیپ کریں جہاں یہ سلائیڈ ہو کر جائے",
   "videoEditorFinishTimelineEditingSemanticLabel": "ٹائم لائن ترمیم مکمل کریں",
   "videoEditorAudioPlayPreviewSemanticLabel": "پیش منظر چلائیں",
   "videoEditorAudioPausePreviewSemanticLabel": "پیش منظر روکیں",
@@ -6082,6 +6087,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "آپ کی کلپس اور ڈرافٹس",
+  "settingsStorageContentDescription": "آپ کی بنائی ہوئی ریکارڈنگز، ڈرافٹس اور آوازیں۔ کیش صاف کرنے سے ان پر کوئی اثر نہیں پڑتا — یہاں جگہ خالی کرنے کے لیے اپنی لائبریری سے کلپس حذف کریں۔",
+  "settingsStorageNoOrphanedFiles": "کوئی بچی ہوئی فائل نہیں",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} بچی ہوئی فائل، {size}} other{{count} بچی ہوئی فائلیں، {size}}}",
+  "settingsStorageRemoveOrphanedButton": "بچی ہوئی فائلیں ہٹائیں",
+  "settingsStorageRemoveOrphanedConfirmTitle": "بچی ہوئی فائلیں ہٹائیں؟",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{اس سے {count} فائل حذف ہو جائے گی جسے اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور {size} خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔} other{اس سے {count} فائلیں حذف ہو جائیں گی جنہیں اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور {size} خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔}}",
+  "settingsStorageOrphanedFilesRemoved": "بچی ہوئی فائلیں ہٹا دی گئیں",
   "settingsStorageLibrarySectionTitle": "کلپ لائبریری",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

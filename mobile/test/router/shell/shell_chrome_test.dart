@@ -4,14 +4,14 @@
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/shell/shell_chrome.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -78,7 +78,7 @@ void main() {
           child: testProviderScope(
             mockAuthService: mockAuth,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: ShellChrome(
                 currentIndex: currentIndex,

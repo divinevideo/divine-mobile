@@ -2,9 +2,9 @@
 // ABOUTME: Covers fading + pointer-blocking against the cubit, the
 // ABOUTME: no-provider fallback, and the reduced-motion instant switch.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 

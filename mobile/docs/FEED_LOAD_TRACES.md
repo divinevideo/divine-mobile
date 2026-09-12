@@ -10,18 +10,23 @@ takes to reach its first terminal milestone. They cover the cache lookup and
 the relay subscription as one operation. They do not measure only relay
 latency, and they do not necessarily measure time until a video is visible.
 
+For end-to-end cache, first-visible, and fresh-result phases, use
+[FEED_INTERACTIVE_LATENCY.md](FEED_INTERACTIVE_LATENCY.md).
+
 Use this reference when interpreting these traces in Firebase Performance.
 The implementation lives in
 [`VideoEventService`](../lib/services/video_event_service.dart), while
 [`FeedLoadTrace`](../lib/services/feed_load_trace.dart) owns the first-wins
 completion behavior.
 
-Only **release** builds report them. `PerformanceMonitoringService`
-gates on `kReleaseMode` in Dart and debug/profile builds are additionally
-deactivated natively, so a local run produces no samples at all and that is not
-a bug. Opting one run back in takes both halves of the recipe in
+Only **distributed release** builds report them. `PerformanceMonitoringService`
+gates on `kReleaseMode` in Dart, debug/profile builds are additionally
+deactivated natively, and since #7302 a release build must also carry the
+Shorebird engine (`shorebird release`) or a Zapstore installer — so a local
+run, `flutter run --release` included, produces no samples at all and that is
+not a bug. Opting one run back in takes every half of the recipe in
 [Network performance monitoring](NETWORK_PERFORMANCE_MONITORING.md#verifying-a-change) —
-either alone leaves collection off.
+any one alone leaves collection off.
 
 One sampling gap is worth knowing about, because it is silent.
 `startOperationTrace` hands back a no-op handle until

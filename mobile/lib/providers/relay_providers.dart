@@ -8,11 +8,17 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/nostr_client.dart'
-    show NostrClient, RelayConnectionStatus, RelayRemoveSource, RelayState;
+    show
+        ForceReconnectOutcome,
+        NostrClient,
+        RelayConnectionStatus,
+        RelayRemoveSource,
+        RelayState;
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/connection_status_service.dart';
+import 'package:openvine/services/connectivity_transition_monitor.dart';
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -260,13 +266,11 @@ class _RelaySetChangeCoordinator {
         category: LogCategory.relay,
       );
 
+      // Only the reconnect is caught here: a fault in the logging below must
+      // not read as a reconnect failure.
+      ForceReconnectOutcome? outcome;
       try {
-        await attachment.client.forceReconnectAll();
-        Log.info(
-          'Successfully reconnected all relay WebSockets',
-          name: 'RelaySetChangeBridge',
-          category: LogCategory.relay,
-        );
+        outcome = await attachment.client.forceReconnectAll();
       } catch (e) {
         Log.error(
           'Failed to reconnect relays: $e',
@@ -274,6 +278,7 @@ class _RelaySetChangeCoordinator {
           category: LogCategory.relay,
         );
       }
+      if (outcome != null) _logReconnectOutcome(attachment.client, outcome);
 
       if (!_operationIsCurrent(attachment, transaction, transactionVersion)) {
         _rescheduleAfterOperation = _pendingTransaction != null;
@@ -364,6 +369,31 @@ class _RelaySetChangeCoordinator {
         return const _RelayReconciliationResult.superseded();
       }
       return _RelayReconciliationResult.incomplete(e.toString());
+    }
+  }
+
+  void _logReconnectOutcome(NostrClient client, ForceReconnectOutcome outcome) {
+    final connected =
+        '${client.connectedRelayCount} of ${client.configuredRelayCount}';
+    switch (outcome) {
+      case ForceReconnectOutcome.completed:
+        Log.info(
+          'Relay reconnect finished: $connected relays connected',
+          name: 'RelaySetChangeBridge',
+          category: LogCategory.relay,
+        );
+      case ForceReconnectOutcome.stillDialling:
+        // Not a failure, and not a finished reconnect either: logging it as
+        // one makes a stalled dial indistinguishable from a healthy one in a
+        // support export. The feed reset still goes ahead, because RelayPool
+        // re-sends every active subscription to a relay once its dial lands.
+        Log.warning(
+          'Relay reconnect wait ended with relays still connecting '
+          '($connected connected); resetting feeds, and relays that connect '
+          'later receive the subscriptions then',
+          name: 'RelaySetChangeBridge',
+          category: LogCategory.relay,
+        );
     }
   }
 
@@ -701,39 +731,54 @@ bool _setsEqual<T>(Set<T> a, Set<T> b) {
   return a.containsAll(b);
 }
 
-/// Force-reconnects the relay pool whenever `connectivity_plus` reports the
-/// network returning, so a pool that collapsed to zero connections during an
-/// offline window self-heals app-wide — not only on an app-foreground
-/// transition (#3161). Debounced so a burst of connectivity events collapses
-/// into one reconnect. keepAlive with no UI consumer: activated by
-/// `AppRootSideEffects` so the pool also self-heals on routes outside the
-/// bottom-nav shell.
-final connectivityRelayReconnectProvider = Provider<void>((ref) {
-  final nostrService = ref.watch(nostrServiceProvider);
-  Timer? debounce;
-  final subscription = Connectivity().onConnectivityChanged
-      .where((results) => results.any((r) => r != ConnectivityResult.none))
-      .listen((_) {
-        debounce?.cancel();
-        debounce = Timer(const Duration(seconds: 2), () async {
-          try {
-            await nostrService.forceReconnectAll();
-            Log.info(
-              'Reconnected relays after connectivity returned',
-              name: 'ConnectivityRelayReconnect',
-              category: LogCategory.relay,
-            );
-          } catch (e) {
-            Log.error(
-              'connectivity-triggered relay reconnect failed: $e',
-              name: 'ConnectivityRelayReconnect',
-              category: LogCategory.relay,
-            );
-          }
-        });
-      });
-  ref.onDispose(() {
-    debounce?.cancel();
-    subscription.cancel();
-  });
-});
+/// `connectivity_plus` reports, as a seam for tests.
+final connectivityChangesProvider = Provider<Stream<List<ConnectivityResult>>>(
+  (ref) => Connectivity().onConnectivityChanged,
+);
+
+/// A one-off `connectivity_plus` check, as a seam for tests.
+final connectivityCheckProvider =
+    Provider<Future<List<ConnectivityResult>> Function()>(
+      (ref) => Connectivity().checkConnectivity,
+    );
+
+/// The one app-wide owner of connectivity-driven relay repair, so a pool that
+/// collapsed during an offline window self-heals on every route, not only on
+/// an app-foreground transition (#3161).
+///
+/// It subscribes once and never rebuilds: it watches only its two seams and
+/// reads the current client when a repair fires. Re-subscribing replayed the
+/// current state, which read as a reconnect and tore healthy sockets down
+/// after every launch and sign-in (#8990). A repair waits while that client
+/// is still initializing, and the transitions it emits drive the DM retry
+/// sweep. keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+final connectivityRelayReconnectProvider =
+    Provider<Stream<ConnectivityTransition>>((ref) {
+      final monitor = ConnectivityTransitionMonitor(
+        changes: ref.watch(connectivityChangesProvider),
+        checkConnectivity: ref.watch(connectivityCheckProvider),
+        repair: () async {
+          final client = ref.read(nostrServiceProvider);
+          final outcome = await client.forceReconnectAll();
+          final connected =
+              '${client.connectedRelayCount} of ${client.configuredRelayCount}';
+          Log.info(
+            switch (outcome) {
+              ForceReconnectOutcome.completed =>
+                'Relay reconnect after a connectivity change finished: '
+                    '$connected relays connected',
+              ForceReconnectOutcome.stillDialling =>
+                'Relay reconnect after a connectivity change ended with relays '
+                    'still connecting ($connected connected)',
+            },
+            name: 'ConnectivityRelayReconnect',
+            category: LogCategory.relay,
+          );
+        },
+        canRepair: () => !ref
+            .read(nostrInitializationInProgressProvider.notifier)
+            .isClientInitializing(ref.read(nostrServiceProvider)),
+      )..start();
+      ref.onDispose(monitor.dispose);
+      return monitor.transitions;
+    });

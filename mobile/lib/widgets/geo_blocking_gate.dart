@@ -2,8 +2,8 @@
 // ABOUTME: Displays GeoBlockedScreen if user is in a restricted region
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/geo_blocked_screen.dart';
 import 'package:openvine/services/geo_blocking_service.dart';

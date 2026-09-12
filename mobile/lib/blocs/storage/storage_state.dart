@@ -23,6 +23,30 @@ enum StorageCacheStatus {
   failure,
 }
 
+/// Lifecycle of the "your content" section — the documents directory split
+/// into what the user's clips, drafts and sounds own and what nothing
+/// references any more.
+enum StorageContentStatus {
+  /// Not measured yet.
+  initial,
+
+  /// Walking the documents directory and checking references.
+  loading,
+
+  /// Usage known and idle; see [StorageState.documentsUsage].
+  ready,
+
+  /// The orphan sweep is running.
+  removing,
+
+  /// The sweep just finished. Idle like [ready], but distinct so the UI can
+  /// announce the result to screen readers.
+  removed,
+
+  /// The last measurement or sweep failed.
+  failure,
+}
+
 /// Lifecycle of the clip-library audit section.
 enum StorageLibraryStatus {
   /// Not scanned yet.
@@ -90,6 +114,8 @@ class StorageState extends Equatable {
     this.cacheSizeBytes = 0,
     this.cacheUsage = CacheUsage.empty,
     this.videoCacheLimitBytes = kCacheLimitDefaultBytes,
+    this.contentStatus = StorageContentStatus.initial,
+    this.documentsUsage = DocumentsUsage.empty,
     this.libraryStatus = StorageLibraryStatus.idle,
     this.brokenClips = const [],
     this.recoveryStatus = StorageRecoveryStatus.idle,
@@ -109,6 +135,13 @@ class StorageState extends Equatable {
 
   /// The configured maximum video-cache size, in bytes.
   final int videoCacheLimitBytes;
+
+  /// Lifecycle of the "your content" section.
+  final StorageContentStatus contentStatus;
+
+  /// The documents directory split into the user's content and the files
+  /// nothing references any more.
+  final DocumentsUsage documentsUsage;
 
   /// Lifecycle of the clip-library audit section.
   final StorageLibraryStatus libraryStatus;
@@ -134,6 +167,8 @@ class StorageState extends Equatable {
     int? cacheSizeBytes,
     CacheUsage? cacheUsage,
     int? videoCacheLimitBytes,
+    StorageContentStatus? contentStatus,
+    DocumentsUsage? documentsUsage,
     StorageLibraryStatus? libraryStatus,
     List<DivineVideoClip>? brokenClips,
     StorageRecoveryStatus? recoveryStatus,
@@ -146,6 +181,8 @@ class StorageState extends Equatable {
       cacheSizeBytes: cacheSizeBytes ?? this.cacheSizeBytes,
       cacheUsage: cacheUsage ?? this.cacheUsage,
       videoCacheLimitBytes: videoCacheLimitBytes ?? this.videoCacheLimitBytes,
+      contentStatus: contentStatus ?? this.contentStatus,
+      documentsUsage: documentsUsage ?? this.documentsUsage,
       libraryStatus: libraryStatus ?? this.libraryStatus,
       brokenClips: brokenClips ?? this.brokenClips,
       recoveryStatus: recoveryStatus ?? this.recoveryStatus,
@@ -162,6 +199,8 @@ class StorageState extends Equatable {
     cacheSizeBytes,
     cacheUsage,
     videoCacheLimitBytes,
+    contentStatus,
+    documentsUsage,
     libraryStatus,
     brokenClips,
     recoveryStatus,

@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/startup/database_bootstrap_failure_app.dart';

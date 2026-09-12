@@ -8,7 +8,6 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
@@ -70,13 +69,6 @@ Stream<void> _dmRetryConnectivityTriggerStream() => Connectivity()
     .onConnectivityChanged
     .where((results) => results.any((r) => r != ConnectivityResult.none))
     .map<void>((_) {});
-
-/// Upper bound on the pool repair awaited inside
-/// [dmMessageRetryTriggerWithRelayRepair] before the sweep trigger is emitted
-/// anyway. `forceReconnectAll` reconnects relays serially, so a slow relay
-/// must not starve the retry sweep indefinitely — on timeout the sweep runs
-/// and the SDK's own OK-timeout remediation backstops any still-stale socket.
-const _relayRepairTimeout = Duration(seconds: 15);
 
 typedef PendingUploadOwnerCleanup = Future<int> Function(String ownerPubkey);
 
@@ -143,66 +135,6 @@ final dmListeningStopProvider = Provider<Future<void> Function()>((ref) {
     await ref.read(dmRepositoryProvider).stopListening();
   };
 });
-
-/// Connectivity trigger for the message retry sweep: fires on EVERY
-/// connectivity transition, including `→ none`. [OutgoingDmRetryService] runs
-/// its own offline probe per pass: an online pass re-drives retryable rows,
-/// and an offline pass surfaces aged still-`pending` rows as red failed
-/// bubbles (a pending row renders identically to a delivered one, so without
-/// this a send that went unconfirmed just before the network dropped stays
-/// sent-looking — and untappable — for the whole offline window). See #6046.
-///
-/// Before an ONLINE transition's trigger is emitted, [repairRelayPool] (wired
-/// to `NostrClient.forceReconnectAll`) is awaited: after an interface change
-/// the pool's WebSockets are half-open zombies that still report `connected`
-/// — publishes buffer into them and no OK ever arrives — and nothing else
-/// repairs the pool while the app stays foregrounded (`forceReconnectAll`
-/// otherwise only runs on app-resume, relay-set change, or a manual settings
-/// action). Without the repair, the sweep fired by the same connectivity
-/// event races the zombie window and every re-driven row soft-fails, leaving
-/// red bubbles unresendable until the 90s idle detector fires. The first
-/// emission after subscribe describes the current state, not a transition,
-/// so it never triggers a repair (app start must not cycle sockets that are
-/// still connecting). Repair failures and timeouts are logged and the
-/// trigger is emitted regardless. Public for testing; production wiring is
-/// in [outgoingDmRetryService].
-@visibleForTesting
-Stream<void> dmMessageRetryTriggerWithRelayRepair({
-  required Stream<List<ConnectivityResult>> connectivityChanges,
-  required Future<void> Function() repairRelayPool,
-}) {
-  // asyncMap rather than an async* generator: a generator suspended at its
-  // `await for` only processes a subscription cancel when the source emits
-  // again, so cancelling on dispose would leave the subscription dangling
-  // until the next connectivity event. asyncMap cancels the source promptly
-  // while keeping the same serialization (the source is paused while a
-  // repair is awaited, so triggers never overtake their repair).
-  List<ConnectivityResult>? previous;
-  return connectivityChanges.asyncMap((results) async {
-    final prior = previous;
-    previous = results;
-    final online = results.any((r) => r != ConnectivityResult.none);
-    if (online && prior != null && !_sameConnectivity(prior, results)) {
-      try {
-        await repairRelayPool().timeout(_relayRepairTimeout);
-      } on Object catch (e) {
-        Log.warning(
-          'Relay pool repair on connectivity change failed: $e',
-          name: 'SocialProviders',
-          category: LogCategory.system,
-        );
-      }
-    }
-  });
-}
-
-/// Whether two connectivity reports describe the same set of transports.
-/// Order-insensitive: `connectivity_plus` gives no ordering guarantee.
-bool _sameConnectivity(List<ConnectivityResult> a, List<ConnectivityResult> b) {
-  final aSet = a.toSet();
-  final bSet = b.toSet();
-  return aSet.length == bSet.length && aSet.containsAll(bSet);
-}
 
 /// Reports whether the device currently has no network connectivity. Wired into
 /// `NIP17MessageService` so an offline DM send fails hard (a red "Not delivered"
@@ -363,19 +295,17 @@ OutgoingDmRetryService? outgoingDmRetryService(Ref ref) {
   final foregroundController = StreamController<bool>();
   ref.onDispose(foregroundController.close);
 
-  // Re-drive undelivered messages the moment connectivity returns, not only on
+  // Re-drive undelivered messages when the network changes, not only on
   // app-foreground transitions — a message queued during a brief network drop
   // would otherwise sit undelivered until the app is backgrounded and
-  // re-foregrounded. Fires on `→ none` too, so the service's offline pass can
-  // surface unconfirmed pending rows as failed the moment the network drops.
-  // Online transitions force-reconnect the relay pool first, so the sweep
-  // publishes on fresh sockets instead of the zombies the old network left
-  // behind (see dmMessageRetryTriggerWithRelayRepair).
-  final nostrService = ref.watch(nostrServiceProvider);
-  final retryTriggerStream = dmMessageRetryTriggerWithRelayRepair(
-    connectivityChanges: Connectivity().onConnectivityChanged,
-    repairRelayPool: nostrService.forceReconnectAll,
-  );
+  // re-foregrounded. `offline` runs the service's offline pass, which surfaces
+  // unconfirmed pending rows as failed the moment the network drops (#6046).
+  // `online` arrives only after the connectivity owner's repair attempt has
+  // finished, failed or hit its cap, so the sweep runs after that reconnect
+  // instead of racing it, and the pool is not reconnected twice (#8990).
+  final retryTriggerStream = ref
+      .watch(connectivityRelayReconnectProvider)
+      .map<void>((_) {});
 
   final service = OutgoingDmRetryService(
     crashReporting: ref.read(crashReportingServiceProvider),
@@ -913,7 +843,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'identityVerifications',
             db.identityVerificationsDao.clearAll,
           );
-          // Three stores below hold this account's data under a key with no
+          // The two stores below hold this account's data under a key with no
           // pubkey in it, so the next account reads the previous account's
           // rows. Each already had a clear method; none of them had a caller
           // (#8314).
@@ -924,10 +854,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'seenVideos',
             ref.read(seenVideosClearProvider),
           );
-          await requiredCleanup(
-            'personalEvents',
-            ref.read(personalEventCacheClearProvider),
-          );
+          // Personal events are owner-scoped in Drift, so an account switch
+          // only needs to hide them. Delete them when the account itself is
+          // being removed; otherwise they remain available after re-auth.
+          if (deleteUserData) {
+            await requiredCleanup(
+              'personalEvents',
+              () => ref.read(personalEventCacheClearProvider)(userPubkey),
+            );
+          }
           await requiredCleanup(
             'pushPreferences',
             ref.read(notificationPreferencesStoreProvider).clearPreferences,
@@ -1002,6 +937,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           await requiredDelete(
             'personalReposts',
             () => db.personalRepostsDao.deleteAllForUser(userPubkey),
+          );
+          await requiredDelete(
+            'personalEvents',
+            () => db.personalEventsDao.deleteAllForOwner(userPubkey),
           );
           await requiredDelete(
             'pendingActions',

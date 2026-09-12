@@ -1,12 +1,12 @@
 // ABOUTME: Pins UserName's fallback precedence — the signed-in user must
 // ABOUTME: never be shown a generated "Adjective Animal NN" name (#6423).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/user_name.dart';
@@ -38,7 +38,7 @@ void main() {
         profileReadRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Center(
@@ -147,7 +147,7 @@ void main() {
           ProviderScope(
             overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Center(
@@ -184,7 +184,7 @@ void main() {
           ProviderScope(
             overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Center(

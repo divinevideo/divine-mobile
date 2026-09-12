@@ -4,10 +4,10 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
@@ -15,7 +15,7 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
@@ -27,6 +27,7 @@ import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -47,6 +48,8 @@ class _MockBackgroundPublishBloc
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockHashtagService extends Mock implements HashtagService {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +79,17 @@ void main() {
     return mockAuth;
   }
 
+  // What HashtagFeedScreen calls on open: the cached bucket for the tag and a
+  // live subscription to it.
+  HashtagService hashtagServiceWithoutHive() {
+    final service = _MockHashtagService();
+    when(() => service.getVideosByHashtags(any())).thenReturn(const []);
+    when(
+      () => service.subscribeToHashtagVideos(any()),
+    ).thenAnswer((_) async {});
+    return service;
+  }
+
   // The shell reads SharedPreferences, the app version and the relay-status
   // surface through Riverpod. A bare ProviderContainer throws inside
   // AppShellSideEffects before anything renders.
@@ -98,6 +112,11 @@ void main() {
       relayListDirtyPublishBridgeProvider.overrideWith((ref) {}),
       contactListDirtyBroadcastBridgeProvider.overrideWith((ref) {}),
       blocklistSyncBridgeProvider.overrideWith((ref) {}),
+      // The real provider builds HashtagCacheService, whose initialize()
+      // opens the hashtag_stats Hive box. Under fake async that open never
+      // completes, and Hive keeps it pending by name for the rest of the
+      // isolate, so every later suite that opens the box hangs (#9022).
+      hashtagServiceProvider.overrideWithValue(hashtagServiceWithoutHive()),
     ],
   );
 
@@ -133,7 +152,7 @@ void main() {
       child: UncontrolledProviderScope(
         container: c,
         child: MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('en'),
           routerConfig: c.read(goRouterProvider),
@@ -160,9 +179,8 @@ void main() {
   /// Unmounts the shell and disposes [c] so provider-owned timers stop.
   ///
   /// Has to run inside the test body rather than in addTearDown: the
-  /// pending-timer check fires first. Disposing the container is what stops
-  /// the long-lived ones — HashtagService, for instance, starts a 60s
-  /// periodic timer in its constructor that no amount of pumping drains.
+  /// pending-timer check fires first, and pumping never drains a periodic
+  /// timer that a provider owns.
   Future<void> unmount(WidgetTester tester, ProviderContainer c) async {
     await tester.pumpWidget(const SizedBox.shrink());
     c.dispose();

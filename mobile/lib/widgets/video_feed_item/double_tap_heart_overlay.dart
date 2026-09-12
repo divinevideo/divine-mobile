@@ -3,7 +3,7 @@
 // ABOUTME: animations. Triggered via a ValueNotifier<HeartTrigger?>.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Data carried by a double-tap heart trigger.
 ///

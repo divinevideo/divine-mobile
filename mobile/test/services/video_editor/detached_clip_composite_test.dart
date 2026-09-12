@@ -4,12 +4,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, SegmentFit;
+    show ChromaKey, EditorVideo, SegmentFit;
 
 DivineVideoClip _clip({
   String id = 'clip-1',
@@ -39,8 +40,13 @@ WidgetLayer _detachedLayer(
   Offset offset = Offset.zero,
   Duration? startTime,
   Duration? endTime,
+  ClipChromaKey? chromaKey,
 }) {
-  final meta = DetachedClipLayerData(clip: clip, layerId: 'layer-1').toMeta();
+  final meta = DetachedClipLayerData(
+    clip: clip,
+    layerId: 'layer-1',
+    chromaKey: chromaKey,
+  ).toMeta();
   return WidgetLayer(
     widget: const SizedBox.shrink(),
     offset: offset,
@@ -123,6 +129,18 @@ void main() {
       expect(result.below, hasLength(1));
     });
 
+    test("carries the layer's live green screen", () {
+      const key = ClipChromaKey(key: ChromaKey.blueScreen());
+
+      final result = partitionDetachedClipLayers([
+        _exported(_detachedLayer(_clip(), chromaKey: key)),
+        _exported(_detachedLayer(_clip(id: 'plain'))),
+      ], '/docs');
+
+      expect(result.detached.first.chromaKey, key);
+      expect(result.detached.last.chromaKey, isNull);
+    });
+
     test('puts a layer between two detached clips in the above group', () {
       final middle = _exported(TextLayer(text: 'middle'));
 
@@ -153,6 +171,7 @@ void main() {
       Duration? startTime,
       Duration? endTime,
       Duration sourceOffset = Duration.zero,
+      ClipChromaKey? chromaKey,
     }) => DetachedClipExportLayer(
       clip: clip,
       layer: _detachedLayer(
@@ -160,9 +179,11 @@ void main() {
         offset: offset,
         startTime: startTime,
         endTime: endTime,
+        chromaKey: chromaKey,
       ),
       logicalSize: logicalSize,
       sourceOffset: sourceOffset,
+      chromaKey: chromaKey,
     );
 
     test('starts a split tail partway into the clip', () {
@@ -365,6 +386,38 @@ void main() {
       // 5 s of source at 2× is 2.5 s of playback.
       expect(segment.endTime, const Duration(milliseconds: 2500));
       expect(segment.video.file?.path, '/cache/flat.mp4');
+    });
+
+    test('keys the layer with its live green screen', () {
+      const key = ChromaKey(color: Color(0xFF19A55B), similarity: 0.1);
+
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip(), chromaKey: const ClipChromaKey(key: key)),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // On the layer, where the composition keys the clip before placing it
+      // over the base track — so a transparent key really shows the track
+      // through, which a single H.264 track could never do.
+      expect(layer.chromaKey, key);
+      expect(layer.chromaKey!.isTransparent, isTrue);
+    });
+
+    test('leaves a layer without a green screen unkeyed', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip()),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      expect(layer.chromaKey, isNull);
     });
 
     test('never carries a playback speed the composition would reject', () {

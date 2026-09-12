@@ -7,10 +7,10 @@ import 'dart:math' as math;
 
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_collaborator_status/video_collaborator_status_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -238,7 +238,7 @@ class _MetadataCollaboratorsSectionBodyState
   }
 }
 
-/// Inspired-by section showing the inspiring creator as a tappable chip.
+/// Inspired-by section showing every credited creator as a tappable chip.
 ///
 /// Returns [SizedBox.shrink] when the video has no inspired-by attribution.
 class MetadataInspiredBySection extends StatelessWidget {
@@ -246,14 +246,39 @@ class MetadataInspiredBySection extends StatelessWidget {
 
   final VideoEvent video;
 
+  /// Credited creators, primary first, deduplicated across the sources that
+  /// can each name one: the inspiring video's author, the NIP-27 content
+  /// reference, and the `inspired-by` p-tags carrying the rest.
+  List<String> _creditedPubkeys() {
+    final pubkeys = <String>[];
+    final seen = <String>{};
+
+    void add(String? pubkey) {
+      final normalized = pubkey?.trim().toLowerCase();
+      if (normalized == null || normalized.isEmpty) return;
+      if (seen.add(normalized)) pubkeys.add(normalized);
+    }
+
+    add(video.inspiredByCreatorPubkey);
+    video.inspiredByPubkeys.forEach(add);
+    return pubkeys;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final pubkey = video.inspiredByCreatorPubkey;
-    if (pubkey == null) return const SizedBox.shrink();
+    final pubkeys = _creditedPubkeys();
+    if (pubkeys.isEmpty) return const SizedBox.shrink();
 
     return MetadataSection(
       label: context.l10n.metadataInspiredByLabel,
-      child: _TappableUserChip(pubkey: pubkey),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          for (final pubkey in pubkeys) _TappableUserChip(pubkey: pubkey),
+        ],
+      ),
     );
   }
 }

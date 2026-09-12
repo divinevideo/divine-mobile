@@ -7,8 +7,8 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart' show ClipsDao, DraftsDao;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show
         AudioEvent,
@@ -44,6 +44,8 @@ import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/core/models/video/progress_model.dart';
@@ -507,8 +509,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   /// Set the "Inspired By" reference to a person (NIP-27 npub in content).
-  void setInspiredByPerson(String npub) {
-    state = state.copyWith(inspiredByNpub: npub, clearInspiredByVideo: true);
+  void setInspiredByPeople(List<String> npubs) {
+    final deduped = <String>[];
+    for (final npub in npubs) {
+      final trimmed = npub.trim();
+      if (trimmed.isNotEmpty && !deduped.contains(trimmed)) {
+        deduped.add(trimmed);
+      }
+    }
+    state = state.copyWith(
+      inspiredByNpubs: deduped,
+      clearInspiredByNpub: deduped.isEmpty,
+      clearInspiredByVideo: true,
+    );
     triggerAutosave();
   }
 
@@ -644,7 +657,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       editorEditingParameters: state.editorEditingParameters?.toMap(),
       collaboratorPubkeys: state.collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
-      inspiredByNpub: state.inspiredByNpub,
+      inspiredByNpubs: state.inspiredByNpubs,
       captionMentions: state.captionMentions,
       // Always the timeline's own credits, never a remembered set: a credit is
       // a factual claim about footage that is *in* this video, and drafts
@@ -788,8 +801,29 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
           .toSet(),
       collaboratorPubkeys: video.collaboratorPubkeys.toSet(),
       inspiredByVideo: video.inspiredByVideo,
-      inspiredByNpub: video.inspiredByNpub,
+      inspiredByNpubs: _inspiredByNpubsFor(video),
     );
+  }
+
+  static List<String> _inspiredByNpubsFor(VideoEvent video) {
+    final npubs = <String>[];
+    final seenHex = <String>{};
+
+    void add(String? hex, String? npub) {
+      final normalizedHex = hex?.trim().toLowerCase();
+      if (normalizedHex == null || normalizedHex.isEmpty) return;
+      if (!seenHex.add(normalizedHex)) return;
+      npubs.add(npub ?? NostrKeyUtils.encodePubKey(normalizedHex));
+    }
+
+    final contentNpub = video.inspiredByNpub;
+    if (contentNpub != null) {
+      add(npubToHexOrNull(contentNpub), contentNpub);
+    }
+    for (final hex in video.inspiredByPubkeys) {
+      add(hex, null);
+    }
+    return npubs;
   }
 
   void triggerAutosave() {
@@ -1188,7 +1222,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         ref.read(authServiceProvider).currentPublicKeyHex ?? '',
       ),
       inspiredByVideo: draft.inspiredByVideo,
-      inspiredByNpub: draft.inspiredByNpub,
+      inspiredByNpubs: draft.inspiredByNpubs,
       captionMentions: draft.captionMentions,
       selectedSound: draft.selectedSound,
       seedSelectedSoundAsAudioTrack: false,

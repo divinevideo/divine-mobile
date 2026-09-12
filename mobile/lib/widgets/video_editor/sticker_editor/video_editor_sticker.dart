@@ -2,8 +2,8 @@
 // ABOUTME: SVG assets render as vectors; network images use cached raster rendering.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show StickerData;
 import 'package:openvine/widgets/vine_cached_image.dart';
 

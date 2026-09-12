@@ -3,10 +3,10 @@
 // ABOUTME: split CommentsListBloc + CommentReactionsBloc provider tree.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
@@ -68,7 +68,7 @@ void main() {
       return ProviderScope(
         overrides: [nostrServiceProvider.overrideWithValue(mockNostrClient)],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MultiBlocProvider(
@@ -268,7 +268,7 @@ void main() {
               nostrServiceProvider.overrideWithValue(mockNostrClient),
             ],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MultiBlocProvider(

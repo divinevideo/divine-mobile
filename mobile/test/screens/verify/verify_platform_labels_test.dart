@@ -1,8 +1,8 @@
 // ABOUTME: Pins that every platform the verifier offers gets its own proof
 // ABOUTME: instructions, since none of them are guessable.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';

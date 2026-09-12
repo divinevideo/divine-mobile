@@ -3,7 +3,7 @@
 
 import 'package:analytics/src/analytics_surface.dart';
 import 'package:analytics/src/screen_analytics_service.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class PageLoadObserver extends NavigatorObserver {

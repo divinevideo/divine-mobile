@@ -3,7 +3,7 @@
 // ABOUTME: comment quote, optional Follow back button.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/notification_constants.dart';
 import 'package:openvine/l10n/l10n.dart';

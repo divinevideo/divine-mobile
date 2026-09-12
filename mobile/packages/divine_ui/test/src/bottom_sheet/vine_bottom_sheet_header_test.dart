@@ -2,8 +2,8 @@
 // ABOUTME: Verifies header rendering and structure
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _longTitle = 'A comment title long enough to need wrapping';
 

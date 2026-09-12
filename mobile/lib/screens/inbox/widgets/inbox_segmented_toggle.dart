@@ -3,7 +3,7 @@
 // ABOUTME: slides between the active segment, and unread-count badges per tab.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// The two tabs available in the inbox segmented toggle.

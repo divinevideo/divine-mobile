@@ -508,8 +508,8 @@ internal class DivineVideoPlayerInstance(
 
         // Where each track really ends is only in the source's metadata. Local
         // files can be read before the playlist swap without adding a network
-        // round trip to first frame; remote sources warm in the background and
-        // tighten the current playlist when they land.
+        // round trip to first frame; a feed player's remote sources warm in
+        // the background and tighten the current playlist when they land.
         val deferred = DeferredSetClips(call, clipsRaw, result)
         deferredSetClips = deferred
         mainHandler.postDelayed(
@@ -885,12 +885,23 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * Local files are cheap enough to resolve before the playlist swap. Remote
-     * metadata reads add a second connection to the first-frame path, so they
-     * warm the cache without blocking playback.
+     * Whether [uri]'s track lengths are read before the playlist swap or
+     * warmed behind it.
+     *
+     * A local file is cheap enough to read first. A remote read is a second
+     * connection in front of first frame, and whether that is affordable is a
+     * property of the surface, not the source. A [BufferProfile.FEED] player
+     * is first-frame measured and preloads its tiles paused, so the warm
+     * usually lands before `play` and [applyResolvedCommonTrackEnds] tightens
+     * the playlist for free. A [BufferProfile.FULL] player is a preview that
+     * starts on tap: nothing sits paused for the warm to land on, so a
+     * background read could only ever clamp the *next* load of the source and
+     * the play the user just started kept its seam (#8897). It reads first,
+     * like a local file, and like the Apple player does for every source.
      */
     private fun shouldBlockSetClipsForTrackDurations(uri: String): Boolean =
-        uri.startsWith("/") || uri.startsWith("file://")
+        uri.startsWith("/") || uri.startsWith("file://") ||
+            bufferProfile == BufferProfile.FULL
 
     /**
      * Reads [uri]'s video and audio track lengths into [trackDurationsCache].

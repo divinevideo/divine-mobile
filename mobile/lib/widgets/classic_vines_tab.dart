@@ -4,10 +4,10 @@
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -46,6 +46,7 @@ class ClassicVinesTab extends ConsumerStatefulWidget {
 class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
   late final FeedPerformanceTracker? _feedTracker;
   DateTime? _feedLoadStartTime;
+  FeedLoadHandle? _feedLoad;
 
   @override
   void initState() {
@@ -82,7 +83,7 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
     // Track feed loading start
     if (classicVinesAsync.isLoading && _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
-      _feedTracker?.startFeedLoad('classics');
+      _feedLoad = _feedTracker?.startFeedLoad('classics');
     }
 
     // Check hasValue FIRST before isLoading
@@ -96,6 +97,9 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
         errorType: 'load_failed',
         errorMessage: classicVinesAsync.error.toString(),
       );
+      final feedLoad = _feedLoad;
+      if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+      _feedLoad = null;
       _feedLoadStartTime = null;
       return RefreshableFeedStateView(
         onRefresh: _refreshClassics,
@@ -120,8 +124,12 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
 
     // Track feed loaded with videos
     if (_feedLoadStartTime != null) {
-      _feedTracker?.markFirstVideosReceived('classics', videos.length);
-      _feedTracker?.markFeedDisplayed('classics', videos.length);
+      final feedLoad = _feedLoad;
+      if (feedLoad != null) {
+        _feedTracker?.markFirstVideosReceived(feedLoad, videos.length);
+        _feedTracker?.markFeedDisplayed(feedLoad, videos.length);
+      }
+      _feedLoad = null;
       _feedLoadStartTime = null;
     }
 
@@ -153,6 +161,13 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
     await ref.read(classicVinesAvailableProvider.future);
     if (!mounted) return;
     await ref.read(classicVinesFeedProvider.notifier).refresh();
+  }
+
+  @override
+  void dispose() {
+    final feedLoad = _feedLoad;
+    if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+    super.dispose();
   }
 }
 

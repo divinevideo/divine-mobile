@@ -1,11 +1,9 @@
 // ABOUTME: Dims the letterbox band outside the editor's target crop rect
 // ABOUTME: Marks which layers sit outside the frame that will be exported
 
-import 'dart:math';
-
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -30,24 +28,15 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 @visibleForTesting
 Matrix4 scrimZoomTransform({
   required Matrix4 editorMatrix,
-  required Size boxSize,
-  required Size targetSize,
-  required double originalAspectRatio,
+  required VideoEditorCanvasGeometry geometry,
 }) {
-  final renderSize = VideoEditorCanvasGeometry.renderSizeFor(
-    boxSize,
-    originalAspectRatio,
-  );
+  final renderSize = geometry.renderSize;
   if (renderSize.width <= 0 || renderSize.height <= 0) {
     return Matrix4.identity();
   }
 
-  final coverScale = max(
-    targetSize.width / renderSize.width,
-    targetSize.height / renderSize.height,
-  );
-  final dx = (boxSize.width - coverScale * renderSize.width) / 2;
-  final dy = (boxSize.height - coverScale * renderSize.height) / 2;
+  final coverScale = geometry.fittedBoxScale;
+  final origin = geometry.canvasOrigin;
 
   final k = editorMatrix.getMaxScaleOnAxis();
   final t = editorMatrix.getTranslation();
@@ -55,8 +44,8 @@ Matrix4 scrimZoomTransform({
   return Matrix4.identity()
     ..setEntry(0, 0, k)
     ..setEntry(1, 1, k)
-    ..setEntry(0, 3, coverScale * t.x + (1 - k) * dx)
-    ..setEntry(1, 3, coverScale * t.y + (1 - k) * dy);
+    ..setEntry(0, 3, coverScale * t.x + (1 - k) * origin.dx)
+    ..setEntry(1, 3, coverScale * t.y + (1 - k) * origin.dy);
 }
 
 /// Overlays [child] with the letterbox scrim that dims everything outside the
@@ -89,10 +78,12 @@ class VideoEditorCutAreaOverlay extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final boxSize = constraints.biggest;
-        final targetSize = VideoEditorCanvasGeometry.targetSizeFor(
-          boxSize,
-          targetAspectRatio.value,
+        final geometry = VideoEditorCanvasGeometry(
+          bodySize: boxSize,
+          originalAspectRatio: scope.originalClipAspectRatio,
+          targetAspectRatio: targetAspectRatio.value,
         );
+        final targetSize = geometry.targetSize;
         final verticalGap = (boxSize.height - targetSize.height) / 2;
         final horizontalGap = (boxSize.width - targetSize.width) / 2;
 
@@ -114,9 +105,7 @@ class VideoEditorCutAreaOverlay extends ConsumerWidget {
               builder: (context, matrix, child) => Transform(
                 transform: scrimZoomTransform(
                   editorMatrix: matrix,
-                  boxSize: boxSize,
-                  targetSize: targetSize,
-                  originalAspectRatio: scope.originalClipAspectRatio,
+                  geometry: geometry,
                 ),
                 child: child,
               ),

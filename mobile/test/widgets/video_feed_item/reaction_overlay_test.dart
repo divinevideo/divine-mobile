@@ -1,7 +1,7 @@
 // ABOUTME: Widget test for the full-screen reaction overlay animation.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/video_feed_item/reaction_overlay.dart';
 
 void main() {

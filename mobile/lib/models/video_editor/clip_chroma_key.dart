@@ -1,4 +1,4 @@
-// ABOUTME: Chroma-key (green screen) settings while the editor screen is open.
+// ABOUTME: Chroma-key settings used by baked timeline clips and live layers.
 // ABOUTME: Wraps pro_video_editor's ChromaKey and adds the video-background
 // ABOUTME: mode, which a single-track render cannot express on its own.
 
@@ -30,11 +30,12 @@ enum ClipChromaKeyBackgroundType {
   video,
 }
 
-/// A clip's chroma-key settings while the green-screen screen is open.
+/// A clip's chroma-key settings.
 ///
-/// Purely in-memory: the settings drive the preview shader, and on confirm they
-/// are baked into a new clip file. Nothing carries them afterwards — the keyed
-/// footage *is* the state.
+/// For a timeline clip these settings drive the preview and are then recorded
+/// alongside the key baked into the clip file, so the screen can restore the
+/// user's choices. For a detached clip they remain live layer state: the canvas
+/// preview and export composition both apply the persisted settings directly.
 @immutable
 class ClipChromaKey {
   const ClipChromaKey({required this.key, this.backgroundVideoPath})
@@ -87,10 +88,11 @@ class ClipChromaKey {
   /// inside [ChromaKey].
   ClipChromaKey withKey(ChromaKey key) => ClipChromaKey(key: key);
 
-  /// Serializes the settings so re-opening the editor can restore them.
+  /// Serializes the settings for persisted editor state.
   ///
-  /// The key is already baked into the clip's video; this is only what the
-  /// screen needs to show the user their last choices again.
+  /// A timeline clip stores them to restore the screen choices associated with
+  /// its baked key. A detached clip stores them as the live key applied by the
+  /// canvas preview and export composition.
   Map<String, dynamic> toJson() {
     // Paths are stored as basenames: iOS rewrites the container path on app
     // update, so an absolute path in a persisted draft goes stale.

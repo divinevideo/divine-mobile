@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// {@template divine_snackbar_container}
 /// A container widget for displaying snackbars in Divine UI.

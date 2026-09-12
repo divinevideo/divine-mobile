@@ -1,9 +1,9 @@
 import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
@@ -148,7 +148,7 @@ class DatabaseBootstrapFailureApp extends StatelessWidget {
       // shipped entirely in English to all 21 other locales without them.
       // AppLocalizations does not touch the database, so it is safe here.
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: resolveAppUiLocale,
       home: _FailureScreen(

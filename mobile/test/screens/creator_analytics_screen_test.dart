@@ -2,13 +2,13 @@
 // ABOUTME: Verifies analytics content aligns with settings menu max width.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
@@ -63,7 +63,7 @@ void main() {
           creatorAnalyticsRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const CreatorAnalyticsScreen(),
@@ -86,7 +86,7 @@ void main() {
           creatorAnalyticsRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const CreatorAnalyticsScreen(),
@@ -113,7 +113,7 @@ void main() {
           creatorAnalyticsRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const CreatorAnalyticsScreen(),
@@ -441,5 +441,36 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'explains social counts from an accessible info affordance on the '
+      'audience snapshot card (#8276)',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        // The Audience Snapshot card sits low in the lazy ListView; a tall
+        // viewport builds the whole list so the affordance is present.
+        tester.view.physicalSize = const Size(1200, 4000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await pumpAnalyticsScreen(
+          tester,
+          videos: [analyticsVideo(id: 'v1', views: 5)],
+        );
+
+        // The affordance carries a clear accessibility label.
+        final affordance = find.bySemanticsLabel(
+          l10n.analyticsSocialCountsInfoLabel,
+        );
+        expect(affordance, findsOneWidget);
+
+        await tester.tap(affordance);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.analyticsFollowerCountsBody), findsOneWidget);
+      },
+    );
   });
 }

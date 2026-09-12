@@ -4,15 +4,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_camera/divine_camera.dart'
     show DivineVideoStabilizationMode;
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
@@ -22,6 +22,8 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_actions.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import '../../../../helpers/finders.dart';
 
 class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
@@ -87,7 +89,7 @@ void main() {
         child: BlocProvider<VideoRecorderBloc>.value(
           value: recorderBloc,
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoRecorderCaptureActions()),
           ),
@@ -184,7 +186,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.byTooltip(l10n.videoRecorderToggleFlashLabel),
+          findByTooltip(l10n.videoRecorderToggleFlashLabel),
           findsOneWidget,
         );
       });
@@ -196,7 +198,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Find the flash tooltip's InkWell — its onTap should be null
-        final flashTooltip = find.byTooltip(l10n.videoRecorderToggleFlashLabel);
+        final flashTooltip = findByTooltip(l10n.videoRecorderToggleFlashLabel);
         final inkWell = find.descendant(
           of: flashTooltip,
           matching: find.byType(InkWell),
@@ -211,7 +213,7 @@ void main() {
         await tester.pumpWidget(buildWidget(canSwitchCamera: false));
         await tester.pumpAndSettle();
 
-        final switchTooltip = find.byTooltip(
+        final switchTooltip = findByTooltip(
           l10n.videoRecorderSwitchCameraLabel,
         );
         final inkWell = find.descendant(
@@ -230,7 +232,7 @@ void main() {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        final tooltip = find.byTooltip(l10n.videoRecorderStabilizationLabel);
+        final tooltip = findByTooltip(l10n.videoRecorderStabilizationLabel);
         final inkWell = find.descendant(
           of: tooltip,
           matching: find.byType(InkWell),
@@ -245,7 +247,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final tooltip = find.byTooltip(l10n.videoRecorderStabilizationLabel);
+        final tooltip = findByTooltip(l10n.videoRecorderStabilizationLabel);
         final inkWell = find.descendant(
           of: tooltip,
           matching: find.byType(InkWell),
@@ -270,7 +272,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(
-          find.byTooltip(l10n.videoRecorderStabilizationLabel),
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
         );
         await tester.pumpAndSettle();
 
@@ -298,7 +300,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(
-          find.byTooltip(l10n.videoRecorderStabilizationLabel),
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
         );
         await tester.pumpAndSettle();
 
@@ -331,7 +333,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(
-          find.byTooltip(l10n.videoRecorderStabilizationLabel),
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
         );
         await tester.pumpAndSettle();
 
@@ -355,7 +357,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.byTooltip(l10n.videoRecorderToggleGridLabel),
+          findByTooltip(l10n.videoRecorderToggleGridLabel),
           findsNothing,
         );
       });
@@ -367,7 +369,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.byTooltip(l10n.videoRecorderToggleGridLabel),
+          findByTooltip(l10n.videoRecorderToggleGridLabel),
           findsOneWidget,
         );
       });
@@ -380,7 +382,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byTooltip(l10n.videoRecorderToggleGridLabel));
+        await tester.tap(findByTooltip(l10n.videoRecorderToggleGridLabel));
         await tester.pumpAndSettle();
 
         verify(
@@ -398,7 +400,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleFlashLabel),
+          findByTooltip(l10n.videoRecorderToggleFlashLabel),
         );
         // The tooltip is excluded from semantics, so the label is announced
         // once and the flash state follows it.
@@ -414,7 +416,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderCycleTimerLabel),
+          findByTooltip(l10n.videoRecorderCycleTimerLabel),
         );
         expect(node.value, equals(l10n.videoRecorderTimerValueTenSeconds));
 
@@ -429,7 +431,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleAspectRatioLabel),
+          findByTooltip(l10n.videoRecorderToggleAspectRatioLabel),
         );
         expect(node.value, equals(l10n.videoRecorderAspectRatioValueSquare));
 
@@ -442,7 +444,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderSwitchCameraLabel),
+          findByTooltip(l10n.videoRecorderSwitchCameraLabel),
         );
         expect(node.value, equals(l10n.videoRecorderCameraValueFront));
 
@@ -460,7 +462,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderStabilizationLabel),
+          findByTooltip(l10n.videoRecorderStabilizationLabel),
         );
         expect(
           node.value,
@@ -592,7 +594,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleGridLabel),
+          findByTooltip(l10n.videoRecorderToggleGridLabel),
         );
         expect(node.flagsCollection.isToggled, Tristate.isTrue);
 
@@ -609,7 +611,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleGridLabel),
+          findByTooltip(l10n.videoRecorderToggleGridLabel),
         );
         expect(node.flagsCollection.isToggled, Tristate.isFalse);
 
@@ -629,7 +631,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleGhostFrameLabel),
+          findByTooltip(l10n.videoRecorderToggleGhostFrameLabel),
         );
         expect(node.flagsCollection.isToggled, Tristate.isTrue);
 
@@ -642,7 +644,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(
-          find.byTooltip(l10n.videoRecorderToggleFlashLabel),
+          findByTooltip(l10n.videoRecorderToggleFlashLabel),
         );
         expect(node.flagsCollection.isButton, isTrue);
         expect(node.flagsCollection.isEnabled, Tristate.isFalse);
@@ -667,7 +669,7 @@ void main() {
         await tester.pumpWidget(buildWidget(clips: clips));
         await tester.pumpAndSettle();
 
-        final arTooltip = find.byTooltip(
+        final arTooltip = findByTooltip(
           l10n.videoRecorderToggleAspectRatioLabel,
         );
         final inkWell = find.descendant(
@@ -682,7 +684,7 @@ void main() {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        final arTooltip = find.byTooltip(
+        final arTooltip = findByTooltip(
           l10n.videoRecorderToggleAspectRatioLabel,
         );
         final inkWell = find.descendant(

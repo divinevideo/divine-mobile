@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+
+import '../helpers/finders.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -53,7 +55,7 @@ void main() {
             }),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: MinorAccountReviewUnder13SupportScreen(),
           ),
@@ -62,12 +64,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Copy support email'), findsOneWidget);
-      expect(find.byTooltip('Copy case ID'), findsOneWidget);
+      expect(findByTooltip('Copy support email'), findsOneWidget);
+      expect(findByTooltip('Copy case ID'), findsOneWidget);
 
-      await tester.ensureVisible(find.byTooltip('Copy support email'));
+      await tester.ensureVisible(findByTooltip('Copy support email'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Copy support email'));
+      await tester.tap(findByTooltip('Copy support email'));
       await tester.pumpAndSettle();
 
       expect(copiedText, 'support@divine.video');
@@ -107,7 +109,7 @@ void main() {
             }),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: MinorAccountReviewUnder13SupportScreen(
               composeEmail:

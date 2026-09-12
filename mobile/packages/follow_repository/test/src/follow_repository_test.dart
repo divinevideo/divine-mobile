@@ -2784,6 +2784,50 @@ void main() {
         await realTimeStreamController.close();
       });
 
+      test(
+        'keeps the contact list subscription id within the NIP-01 cap from '
+        'subscribe to dispose',
+        () async {
+          final subscriptionIds = <String>[];
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((invocation) {
+            final id = invocation.namedArguments[#subscriptionId] as String?;
+            if (id != null) {
+              subscriptionIds.add(id);
+            }
+            return realTimeStreamController.stream;
+          });
+
+          await repository.initialize();
+          await repository.dispose();
+
+          for (final id in subscriptionIds) {
+            expect(
+              id.length,
+              lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
+              reason:
+                  '"$id" is ${id.length} characters; relays enforcing '
+                  'NIP-01 refuse the REQ',
+            );
+          }
+          final contactListId = scopedSubscriptionId(
+            'follow_repo_contact_list',
+            testCurrentUserPubkey,
+          );
+          expect(subscriptionIds, contains(contactListId));
+          verify(() => mockNostrClient.unsubscribe(contactListId)).called(1);
+        },
+      );
+
       test('updates following list when newer Kind 3 event arrives', () async {
         await repository.initialize();
 

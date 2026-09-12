@@ -3,8 +3,8 @@
 // ABOUTME: keyboard is on screen. Drives the platform's viewInsets
 // ABOUTME: animation directly since that's the signal the widget reads.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 
 void main() {

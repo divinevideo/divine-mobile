@@ -7,8 +7,8 @@ import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/services/web_auth_service.dart';

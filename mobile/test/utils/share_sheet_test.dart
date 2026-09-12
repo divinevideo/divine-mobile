@@ -1,9 +1,9 @@
 // ABOUTME: Tests the share-sheet wrapper that fills sharePositionOrigin.
 // ABOUTME: iPad refuses a share whose anchor is empty or outside the view.
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/utils/share_sheet.dart';
 
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');

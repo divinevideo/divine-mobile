@@ -1521,6 +1521,7 @@
     }
   },
   "relaySettingsFailedToConnectCheck": "రిలేలకు కనెక్ట్ చేయడంలో విఫలమైంది. దయచేసి మీ నెట్‌వర్క్ కనెక్షన్‌ని తనిఖీ చేయండి.",
+  "relaySettingsStillConnecting": "ఇంకా రిలేలకు కనెక్ట్ అవుతోంది. దయచేసి కొంచెం సేపు వేచి ఉండండి.",
   "relaySettingsSavedLocallyPublishPending": "ఈ పరికరంలో సేవ్ చేయబడింది. రచనలను మళ్లీ ప్రచురించేటప్పుడు మేము దానిని మీ ఖాతాకు సమకాలీకరిస్తాము.",
   "relaySettingsAddRelayTitle": "రిలేని జోడించండి",
   "relaySettingsAddRelayPrompt": "మీరు జోడించాలనుకుంటున్న రిలే యొక్క WebSocket URLని నమోదు చేయండి:",
@@ -5708,6 +5709,7 @@
   "videoEditorChromaKeyBackgroundImage": "చిత్రం",
   "videoEditorChromaKeyBackgroundVideo": "క్లిప్",
   "videoEditorChromaKeyTransparentHint": "వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.",
+  "videoEditorChromaKeyCanvasTransparentHint": "క్లిప్ వెనుక ఉన్నది దాని ద్వారా కనిపిస్తుంది.",
   "videoEditorChromaKeySurfaceHint": "మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.",
   "videoEditorChromaKeyDetectFailed": "స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.",
   "videoEditorChromaKeyPickClipTitle": "క్లిప్‌ను ఎంచుకోండి",
@@ -5990,6 +5992,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "అనుకూలం",
+  "videoEditorLayerAnimationPointEnterHint": "ఇది ఎక్కడి నుండి జారి రావాలో వీడియోలో నొక్కండి",
+  "videoEditorLayerAnimationPointLeaveHint": "ఇది ఎక్కడికి జారి పోవాలో వీడియోలో నొక్కండి",
   "videoEditorFinishTimelineEditingSemanticLabel": "టైమ్‌లైన్ సవరణను ముగించండి",
   "videoEditorAudioPlayPreviewSemanticLabel": "ప్రివ్యూని ప్లే చేయండి",
   "videoEditorAudioPausePreviewSemanticLabel": "ప్రివ్యూను పాజ్ చేయండి",
@@ -7146,6 +7151,14 @@
   "@settingsStorageCleared": {
     "description": "Accessibility announcement after the cache is cleared."
   },
+  "settingsStorageContentSectionTitle": "మీ క్లిప్‌లు మరియు చిత్తుప్రతులు",
+  "settingsStorageContentDescription": "మీరు చేసిన రికార్డింగ్‌లు, చిత్తుప్రతులు మరియు శబ్దాలు. కాష్ క్లియర్ చేయడం వీటిని ఎప్పుడూ తాకదు — ఇక్కడ స్థలం ఖాళీ చేయడానికి మీ లైబ్రరీ నుండి క్లిప్‌లను తొలగించండి.",
+  "settingsStorageNoOrphanedFiles": "మిగిలిపోయిన ఫైల్‌లు లేవు",
+  "settingsStorageOrphanedFilesFound": "{count, plural, =1{{count} మిగిలిపోయిన ఫైల్, {size}} other{{count} మిగిలిపోయిన ఫైల్‌లు, {size}}}",
+  "settingsStorageRemoveOrphanedButton": "మిగిలిపోయిన ఫైల్‌లను తీసివేయండి",
+  "settingsStorageRemoveOrphanedConfirmTitle": "మిగిలిపోయిన ఫైల్‌లను తీసివేయాలా?",
+  "settingsStorageRemoveOrphanedConfirmMessage": "{count, plural, =1{ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని {count} ఫైల్‌ను తొలగించి {size} ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.} other{ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని {count} ఫైల్‌లను తొలగించి {size} ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.}}",
+  "settingsStorageOrphanedFilesRemoved": "మిగిలిపోయిన ఫైల్‌లు తీసివేయబడ్డాయి",
   "settingsStorageLibrarySectionTitle": "క్లిప్ లైబ్రరీ",
   "@settingsStorageLibrarySectionTitle": {
     "description": "Section header for the clip-library audit on the Storage screen."

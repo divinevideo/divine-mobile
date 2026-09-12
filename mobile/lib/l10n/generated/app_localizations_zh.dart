@@ -2163,6 +2163,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get relaySettingsFailedToConnectCheck => '连接中继失败。请检查网络连接。';
 
   @override
+  String get relaySettingsStillConnecting => '仍在连接中继。请稍候。';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       '已保存在此设备上。发布恢复正常后，我们会将它同步到你的账号。';
 
@@ -2779,6 +2782,24 @@ class AppLocalizationsZh extends AppLocalizations {
       '等 Funnelcake 增加受众分析端点后，这里会显示受众来源/地区/时间分布。';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => '留存';
 
   @override
@@ -2993,6 +3014,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => '创建账号';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => '返回邀请码';
@@ -8427,6 +8452,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyTransparentHint => '视频存不了透明，所以导出会是黑色。';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint => '片段后面的内容会透出来。';
+
+  @override
   String get videoEditorChromaKeySurfaceHint => '你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。';
 
   @override
@@ -8686,6 +8714,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => '起始缩放';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => '自定义';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint => '点按视频中你想让它滑入的位置';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint => '点按视频中你想让它滑出的位置';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel => '完成时间线编辑';
@@ -10389,6 +10426,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => '缓存已清除';
+
+  @override
+  String get settingsStorageContentSectionTitle => '你的片段和草稿';
+
+  @override
+  String get settingsStorageContentDescription =>
+      '你制作的录像、草稿和声音。清除缓存从不会动它们——想在这里腾出空间，就从片段库里删除片段。';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => '没有残留文件';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个残留文件，$size',
+      one: '$count 个残留文件，$size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => '移除残留文件';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle => '移除残留文件？';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这会删除 $count 个已不被任何片段、草稿或上传使用的文件，释放 $size。无法撤销。',
+      one: '这会删除 $count 个已不被任何片段、草稿或上传使用的文件，释放 $size。无法撤销。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => '残留文件已移除';
 
   @override
   String get settingsStorageLibrarySectionTitle => '片段库';

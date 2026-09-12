@@ -16,6 +16,10 @@ abstract class SemanticIds {
 
   static const String videoTitle = 'video_title';
 
+  /// The follow badge on the feed player's author avatar, in both its follow
+  /// and followed states.
+  static const String videoFollowButton = 'follow_button';
+
   static const String humanMadeBadge = 'human_made_badge';
   static const String verificationSection = 'verification_section';
 
@@ -122,6 +126,10 @@ abstract class SemanticIds {
 
   /// Key backup action. Copy changes should not strand the recovery journey.
   static const String keyManagementCopyNsecButton = 'copy_nsec_button';
+
+  /// Public key copy. The key backup journey taps it to overwrite the private
+  /// key it copied: Maestro cannot write the device clipboard itself.
+  static const String keyManagementCopyNpubButton = 'copy_npub_button';
 
   /// Account portability. The row leaves the app for the hosted Divine Exit
   /// flow, so an E2E flow can only assert the handoff by addressing the row.

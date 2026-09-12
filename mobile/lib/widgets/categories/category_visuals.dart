@@ -1,7 +1,7 @@
 // ABOUTME: Shared visual metadata for featured and fallback category presentation.
 // ABOUTME: Keeps the categories discovery list and gallery screens visually consistent.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoCategory;
 
 class CategoryVisuals {

@@ -295,21 +295,58 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
   }
 
   /// Check if a filename is referenced by any draft-owned file column.
+  ///
+  /// Prefer [referencedDraftFilenames] when checking more than one file — the
+  /// manifest scan below is unindexed, so a per-file loop pays for a full scan
+  /// each.
   Future<bool> isDraftFileReferenced(String filename) async {
-    final query = selectOnly(drafts)
-      ..addColumns([drafts.id.count()])
-      ..where(
-        drafts.renderedFilePath.equals(filename) |
-            drafts.renderedThumbnailPath.equals(filename) |
-            drafts.customThumbnailPath.equals(filename),
-      );
-    final result = await query.getSingle();
-    if ((result.read(drafts.id.count()) ?? 0) > 0) return true;
+    final referenced = await referencedDraftFilenames({filename});
+    return referenced.isNotEmpty;
+  }
 
-    // Layer-owned files (including detached videos) live in the serialized
-    // editor state rather than an indexed clip row. DraftStorageService writes
-    // their explicit ownership manifest into `data`; scan it as the fallback
-    // instead of guessing ownership from arbitrary JSON string values.
+  /// The subset of [filenames] referenced by any draft-owned file reference.
+  ///
+  /// The indexed `rendered_file_path` / `rendered_thumbnail_path` /
+  /// `custom_thumbnail_path` columns cover a draft's own media. Layer-owned
+  /// files (including detached videos) live in the serialized editor state
+  /// rather than an indexed clip row; DraftStorageService writes their
+  /// explicit ownership manifest into `data`, which is scanned as the fallback
+  /// instead of guessing ownership from arbitrary JSON string values.
+  ///
+  /// Resolves the whole set in a single scan rather than one per filename:
+  /// `data` is unindexed, and an orphan sweep of the documents directory asks
+  /// about every unreferenced-looking file at once.
+  Future<Set<String>> referencedDraftFilenames(Set<String> filenames) async {
+    if (filenames.isEmpty) return const <String>{};
+
+    final referenced = <String>{};
+    final indexedRows =
+        await (selectOnly(drafts)
+              ..addColumns([
+                drafts.renderedFilePath,
+                drafts.renderedThumbnailPath,
+                drafts.customThumbnailPath,
+              ])
+              ..where(
+                drafts.renderedFilePath.isIn(filenames) |
+                    drafts.renderedThumbnailPath.isIn(filenames) |
+                    drafts.customThumbnailPath.isIn(filenames),
+              ))
+            .get();
+    for (final row in indexedRows) {
+      for (final column in [
+        drafts.renderedFilePath,
+        drafts.renderedThumbnailPath,
+        drafts.customThumbnailPath,
+      ]) {
+        final value = row.read(column);
+        if (value != null && filenames.contains(value)) referenced.add(value);
+      }
+    }
+
+    final unresolved = filenames.difference(referenced);
+    if (unresolved.isEmpty) return referenced;
+
     final dataRows = await (selectOnly(
       drafts,
     )..addColumns([drafts.data])).get();
@@ -322,9 +359,15 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
       }
       if (decoded is! Map) continue;
       final manifest = decoded[draftOwnedFileBasenamesKey];
-      if (manifest is Iterable && manifest.contains(filename)) return true;
+      if (manifest is! Iterable) continue;
+      for (final entry in manifest) {
+        if (entry is String && unresolved.contains(entry)) {
+          referenced.add(entry);
+        }
+      }
+      if (referenced.length == filenames.length) break;
     }
-    return false;
+    return referenced;
   }
 
   /// Atomically save a draft and its clips in a single transaction.

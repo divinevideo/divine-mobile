@@ -3,7 +3,7 @@
 
 import 'dart:ui' show SemanticsRole;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A circular Material progress indicator that becomes static when motion is
 /// disabled by the platform.

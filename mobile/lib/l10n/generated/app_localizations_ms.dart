@@ -2297,6 +2297,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Gagal bersambung ke relay. Sila semak sambungan rangkaian anda.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Masih menyambung ke relay. Sila tunggu sebentar.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Disimpan pada peranti ini. Kami akan menyegerakkannya ke akaun anda apabila penerbitan berfungsi semula.';
 
@@ -2953,6 +2957,24 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pecahan sumber/geo/masa audiens akan diisi apabila Funnelcake menambah titik hujung analitik audiens.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Pengekalan';
 
   @override
@@ -3178,6 +3200,10 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Cipta akaun';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Kembali ke kod jemputan';
@@ -8952,6 +8978,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Apa sahaja di belakang klip akan kelihatan menembusinya.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.';
 
@@ -9237,6 +9267,17 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Skala daripada';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Tersuai';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Ketik video pada tempat ia patut meluncur masuk';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Ketik video pada tempat ia patut meluncur keluar';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11072,6 +11113,50 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache dikosongkan';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Klip dan draf anda';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Rakaman, draf dan bunyi yang anda buat. Mengosongkan cache tidak pernah menyentuhnya — padam klip daripada pustaka anda untuk membebaskan ruang di sini.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Tiada fail tertinggal';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fail tertinggal, $size',
+      one: '$count fail tertinggal, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Buang fail tertinggal';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Buang fail tertinggal?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
+      one:
+          'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Fail tertinggal dibuang';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Pustaka klip';

@@ -1,9 +1,9 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';

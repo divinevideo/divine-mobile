@@ -2657,6 +2657,17 @@ void main() {
     });
 
     group('getLikeCount', () {
+      test('returns null and caches nothing when no relay answered', () async {
+        when(() => mockNostrClient.countEvents(any())).thenThrow(
+          const CountUnavailableException('No relay responded to COUNT'),
+        );
+
+        repository = createRepository();
+        expect(await repository.getLikeCount(testEventId), isNull);
+        expect(await repository.getLikeCount(testEventId), isNull);
+        verify(() => mockNostrClient.countEvents(any())).called(2);
+      });
+
       test('queries relay for like count by event ID', () async {
         when(
           () => mockNostrClient.countEvents(any()),
@@ -4691,6 +4702,47 @@ void main() {
                   ).captured.single
                   as List<Filter>;
           expect(captured.single.authors, equals([testUserPubkey]));
+        },
+      );
+
+      test(
+        'keeps the reactions subscription id within the NIP-01 cap from '
+        'subscribe to dispose',
+        () async {
+          // A full-length hex key: the short fixture above would hide an id
+          // that runs past the cap.
+          const hexPubkey =
+              'c3d4e5f6789012345678901234567890'
+              'abcdef1234567890123456789012ab12';
+          when(() => mockNostrClient.publicKey).thenReturn(hexPubkey);
+          when(
+            () => mockNostrClient.resolvePublicKey(),
+          ).thenAnswer((_) async => hexPubkey);
+
+          repository = createRepository();
+          await repository.initialize();
+          repository.dispose();
+
+          final id =
+              verify(
+                    () => mockNostrClient.subscribe(
+                      any(),
+                      subscriptionId: captureAny(named: 'subscriptionId'),
+                    ),
+                  ).captured.single
+                  as String;
+          expect(
+            id.length,
+            lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
+            reason:
+                '"$id" is ${id.length} characters; relays enforcing '
+                'NIP-01 refuse the REQ',
+          );
+          expect(
+            id,
+            equals(scopedSubscriptionId('likes_repo_reactions', hexPubkey)),
+          );
+          verify(() => mockNostrClient.unsubscribe(id)).called(1);
         },
       );
 

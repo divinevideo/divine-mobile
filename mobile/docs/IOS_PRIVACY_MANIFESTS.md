@@ -52,6 +52,14 @@ when refreshing it until each change is present upstream:
 - `Resources/PrivacyInfo.xcprivacy` declares the required file-timestamp API,
   and `LibProofMode.podspec` bundles that manifest. The upstream contribution
   remains tracked in #8851.
+- `Classes/Proof.swift` records the network fields (`IPv4`, `IPv6`,
+  `DataType`, `Network` and `NetworkType`) only when `showMobileNetwork` is
+  true. Upstream records them in every proof whatever the options say, so a
+  refresh that drops this change puts the phone's IP addresses back into every
+  signed proof (#9073). `check_libproofmode_network_privacy.py` protects the
+  vendor delta in CI, and `LibProofModeNetworkFieldsTests` in
+  `ios/RunnerTests/RunnerTests.swift` verifies the generated proof when the
+  native test suite runs.
 
 The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
 sets `showDeviceIds: false`, so compiling out `AdSupport` and
@@ -68,18 +76,89 @@ declaration described below.
 | App (`Runner`) | *(none)* | — | The Runner target's own Release code calls no required-reason API. Its single `UserDefaults` call is inside `#if DEBUG`. |
 | `divine_quick_actions` | *(none)* | — | No required-reason API detected. |
 
-`NSPrivacyCollectedDataTypes` is empty in the app manifest and is **not** a
-claim that Divine collects nothing. Filling it is a product/legal decision that
-must match the App Store Connect privacy label, and was deliberately out of
-scope for the required-reason API audit.
+The app manifest's `NSPrivacyCollectedDataTypes` is filled in from the
+[Privacy-label decisions](#privacy-label-decisions-8850) below. Choosing those
+values was a product/legal decision that must match the App Store Connect
+privacy label, which is why it was kept out of the required-reason API audit.
 
 `LibProofMode`'s collected-data section is empty because Divine constructs
 `ProofGenerationOptions(showDeviceIds: false, showLocation: false,
-showMobileNetwork: false, notarizationProviders: [])`. Those flags gate the
-corresponding blocks in `Proof.swift` (`buildProof`, lines 408 / 430 / 439), so
-no device ID, location or carrier data enters the proof. **If any of those flags
-is ever flipped to `true`, this manifest and the App Store privacy label must be
-updated in the same change.**
+showMobileNetwork: false, notarizationProviders: [])`. In `Proof.swift`'s
+`buildProof`, `showDeviceIds` gates the device IDs, `showLocation` gates the
+location, and `showMobileNetwork` gates the carrier and network fields: cell
+info, IP addresses, connection status and type, and radio technology. Only the
+cell-info gate is upstream; the rest is Divine's own (see the vendor delta
+above). So no device ID, location or network data enters the proof. It still
+records the file name, hash and timestamps, the hardware model, screen size,
+language and region. **If any of those flags is ever flipped to `true`, this
+manifest and the App Store privacy label must be updated in the same change.**
+
+The proof files themselves stay on the device: the published `proofmode` tag
+carries the media hash and signature, not this CSV. Publishing the CSV would be
+new collection, and needs the same manifest and label review.
+
+## Privacy-label decisions (#8850)
+
+Filling the app-target `NSPrivacyCollectedDataTypes` is a product/legal decision
+that must match the App Store Connect label. The decisions and their rationale
+are recorded on #8850; this table keeps the engineering-facing outcome next to
+the manifest rules and the release checklist.
+
+| Decision | Status | Outcome | Manifest / release impact |
+|---|---|---|---|
+| D1 — advertising / `NSPrivacyTracking` | Approved | Personalized advertising is disabled and the ad-tech account link has been removed from the analytics property; personal advertising is off in every region and Google signals is off. | Keep `NSPrivacyTracking = false` and `NSPrivacyTrackingDomains` empty. No ATT prompt. Re-check the property before every candidate. |
+| D2 — linked set | Approved | The linked set is approved as listed. | Name, Email Address, Contacts, public profile/user content, Photos or Videos, Audio Data, Customer Support, User ID, Device ID, Product Interaction, Crash Data, and Other Diagnostic Data are declared linked. |
+| D3 — bug-report attachment location | Approved; implemented in #9049 | Strip attachment metadata instead of declaring Precise Location. | The bug-report picker strips EXIF explicitly and fails closed (#9049); Precise Location is omitted. |
+| D4 — Search History | Approved | Not linked. | Declare Search History, purpose App Functionality, tracking false, linked false. |
+| D5 — private-message linkage | Approved | Linked. NIP-17 hides the sender, but the legacy kind-4 fallback exposes author/recipient to relays, and Keycast (managed key custody) holds server-side keys and can decrypt for users who opt in. | `Emails or Text Messages` declared linked, purpose App Functionality, tracking false. |
+| D6 — Performance Data | Approved | Linked (conservative), purposes Analytics and App Functionality, tracking false. | Performance Data declared linked. |
+| D7 — Shorebird | Approved | Not linked, not tracking. | Disclose Device ID / Product Interaction / Other Diagnostic Data in App Store Connect (#7980); not duplicated in the Runner manifest. Not linked holds only while neither Divine nor Shorebird joins the installation identifier to Divine account data; revisit D7 if that changes. |
+
+### How the App Store Connect label combines these
+
+App Store Connect asks, for each data type, whether it is linked to the user's
+identity "by you and/or your third-party partners"
+([Apple](https://developer.apple.com/app-store/app-privacy-details/)). So each
+data type gets one answer covering the app and every SDK: it is linked if any
+collector links it, and its purposes are the union of every collector's
+purposes. Device ID, Crash Data and Other Diagnostic Data are declared linked
+by the Runner manifest (D2) and not linked by Firebase's own manifests, so the
+label answers linked for all three. D7 works the same way: Shorebird's own
+Device ID, Product Interaction and Other Diagnostic Data stay not linked, but
+the label answers linked for those types because the Runner manifest declares
+them linked.
+
+Xcode's aggregate privacy report only shows collection that some bundle
+declares, and several SDKs in this app declare none. Their collection has to be
+added to the App Store Connect answers by hand, from the vendor's guidance:
+
+- Shorebird (D7): the engine's privacy manifest is Flutter's stock one, which
+  declares no collected data, and the updater ships no manifest.
+- Firebase Analytics (with GoogleAppMeasurement), Google's on-device
+  conversion measurement SDK (GoogleAdsOnDeviceConversion), Firebase
+  Performance and Firebase Sessions ship no privacy manifest. Google's
+  guidance is its
+  [App Store data disclosure page](https://firebase.google.com/docs/ios/app-store-data-collection).
+
+The report does show one type that the Runner manifest does not repeat: Other
+Data Types, declared by Firebase Cloud Messaging (not linked, Analytics). It
+belongs on the label like any other SDK-declared type.
+
+Checked on 2026-09-11 against firebase-ios-sdk 12.12.0, GoogleAppMeasurement
+12.11.0 and Shorebird 1.6.120. Re-check whenever one of them changes.
+
+### Tracking posture before each candidate
+
+Every candidate is evaluated against its own analytics configuration, so before
+building a release candidate confirm on the analytics property that personalized
+advertising is still disabled and no ad account is linked (D1). A change there
+can flip the required `NSPrivacyTracking` answer.
+
+The app manifest is populated from this table, then verified: build the
+Shorebird store candidate, collect the embedded manifests and Xcode's aggregate
+privacy report, and reconcile both against this table and the intended App Store
+Connect answers. Correct and rebuild on any mismatch; #8850 stays open until the
+post-build verification passes.
 
 ## Apple's catalogue
 
@@ -214,5 +293,7 @@ document still matches the catalogue.
 - `divine_device_attestation` was resolved in #8779. Its owning package now
   ships the `UserDefaults` / `CA92.1` declaration described above.
 - App-target `NSPrivacyCollectedDataTypes` reconciliation with the aggregate
-  privacy report and App Store Connect label is tracked in #8850.
+  privacy report and App Store Connect label is tracked in #8850. The decisions
+  are recorded under [Privacy-label decisions](#privacy-label-decisions-8850);
+  the reconciliation stays open until #8850's post-build verification passes.
 - Upstreaming Divine's LibProofMode manifest is tracked in #8851.

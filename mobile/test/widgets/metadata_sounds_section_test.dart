@@ -4,17 +4,18 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -90,10 +91,13 @@ void main() {
       required VideoEvent video,
       AudioEvent? audioOverride,
       String? viewerPubkey,
+      Object? audioError,
+      ValueNotifier<int>? rebuilds,
     }) {
       return ProviderScope(
         overrides: [
           soundByIdProvider(testAudioEventId).overrideWith((ref) async {
+            if (audioError != null) throw audioError;
             return audioOverride ?? testAudio;
           }),
           authServiceProvider.overrideWithValue(
@@ -101,18 +105,64 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: Scaffold(
             backgroundColor: Colors.black,
-            body: MetadataSoundsSection(video: video),
+            body: rebuilds == null
+                ? MetadataSoundsSection(video: video)
+                : ValueListenableBuilder<int>(
+                    valueListenable: rebuilds,
+                    builder: (context, rebuild, child) => Column(
+                      children: [
+                        Text('Rebuild $rebuild'),
+                        MetadataSoundsSection(video: video),
+                      ],
+                    ),
+                  ),
           ),
         ),
       );
     }
 
+    int renderPathLogCount() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              entry.name == 'MetadataSoundsSection' &&
+              entry.message.startsWith('Failed to load audio'),
+        )
+        .length;
+
     group('Shared audio', () {
+      testWidgets('does not log when the error fallback rebuilds', (
+        tester,
+      ) async {
+        final rebuilds = ValueNotifier<int>(0);
+        addTearDown(rebuilds.dispose);
+        final logsBefore = renderPathLogCount();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            audioError: StateError('relay unavailable'),
+            rebuilds: rebuilds,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Original sound'), findsOneWidget);
+        final logsAfterInitialRender = renderPathLogCount();
+
+        rebuilds.value = 1;
+        await tester.pump();
+
+        expect(find.text('Rebuild 1'), findsOneWidget);
+        expect(renderPathLogCount(), logsAfterInitialRender);
+        expect(logsAfterInitialRender, logsBefore);
+      });
+
       testWidgets('shows sound title for video with audio reference', (
         tester,
       ) async {
@@ -173,7 +223,7 @@ void main() {
               authServiceProvider.overrideWithValue(_mockAuth()),
             ],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               home: Scaffold(
@@ -286,7 +336,7 @@ void main() {
               authServiceProvider.overrideWithValue(_mockAuth()),
             ],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               home: Scaffold(
@@ -342,7 +392,7 @@ void main() {
           ProviderScope(
             overrides: [authServiceProvider.overrideWithValue(_mockAuth())],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: router,
@@ -417,7 +467,7 @@ void main() {
                 ).overrideWith((ref) async => null),
               ],
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 home: Scaffold(
@@ -453,7 +503,7 @@ void main() {
                 ).overrideWith((ref) async => null),
               ],
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 home: Scaffold(
@@ -524,7 +574,7 @@ void main() {
                 ).overrideWith((ref) async => reusedSynth),
               ],
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 routerConfig: router,

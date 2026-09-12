@@ -2354,6 +2354,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не успяхме да се свържем с релетата. Провери мрежовата си връзка.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Все още се свързваме с релетата. Изчакай малко.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Запазено е на това устройство. Ще го синхронизираме с акаунта ти, когато публикуването заработи отново.';
 
@@ -3012,6 +3016,24 @@ class AppLocalizationsBg extends AppLocalizations {
       'Разбивките по източник на аудитория, гео и време ще се попълнят, когато Funnelcake добави ендпойнти за анализ на аудиторията.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Задържане';
 
   @override
@@ -3236,6 +3258,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Създаване на акаунт';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Назад към кода на поканата';
@@ -9021,6 +9047,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Каквото е зад клипа, прозира през него.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.';
 
@@ -9310,6 +9340,17 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Мащаб от';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'По избор';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Докосни видеото там, откъдето да се плъзне навътре';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Докосни видеото там, накъдето да се плъзне навън';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11181,6 +11222,52 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Кешът е изчистен';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Твоите клипове и чернови';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Записи, чернови и звуци, които си направил(а). Изчистването на кеша никога не ги пипа – изтрий клипове от библиотеката си, за да освободиш място тук.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Няма останали файлове';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count останали файла, $size',
+      one: '$count останал файл, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Премахни останалите файлове';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Да се премахнат ли останалите файлове?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Това изтрива $count файла, които вече не се използват от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
+      one:
+          'Това изтрива $count файл, който вече не се използва от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Останалите файлове са премахнати';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Библиотека с клипове';

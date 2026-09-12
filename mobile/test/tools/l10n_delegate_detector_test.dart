@@ -83,6 +83,22 @@ void main() {
       expect(sites, isEmpty);
     });
 
+    test('does not count a MaterialApp using appLocalizationsDelegates', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('counts a MaterialApp with delegates that omit AppLocalizations', () {
       final sites = scan('''
 void main() {
@@ -197,7 +213,7 @@ void main() {
 
     test('counts import-prefixed MaterialApp with no delegates', () {
       final sites = scan('''
-import 'package:flutter/material.dart' as material;
+import 'package:material_ui/material_ui.dart' as material;
 
 void main() {
   pumpWidget(material.MaterialApp(home: Foo()));
@@ -211,7 +227,7 @@ void main() {
 
     test('counts import-prefixed MaterialApp.router with no delegates', () {
       final sites = scan('''
-import 'package:flutter/material.dart' as material;
+import 'package:material_ui/material_ui.dart' as material;
 
 void main() {
   pumpWidget(material.MaterialApp.router(routerConfig: router));

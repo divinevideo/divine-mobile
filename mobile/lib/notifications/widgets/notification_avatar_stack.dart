@@ -2,7 +2,7 @@
 // ABOUTME: Shows 1-3 actor avatars with optional overflow count indicator.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/notification_constants.dart';
 import 'package:openvine/widgets/user_avatar.dart';

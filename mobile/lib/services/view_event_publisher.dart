@@ -45,10 +45,12 @@ class ViewEventPublisher {
   ViewEventPublisher({
     required NostrClient nostrService,
     required AuthService authService,
+    required String appVersion,
     String? defaultRelayHint,
     ViewEventDropReporter? onDrop,
   }) : _nostrService = nostrService,
        _authService = authService,
+       _appVersion = appVersion.trim(),
        _onDrop = onDrop,
        _defaultRelayHint = defaultRelayHint ?? 'wss://relay.divine.video';
 
@@ -56,6 +58,16 @@ class ViewEventPublisher {
   final AuthService _authService;
   final String _defaultRelayHint;
   final ViewEventDropReporter? _onDrop;
+
+  /// Shipped app version written into the `version` tag of every view event.
+  ///
+  /// `view_interactions.client` only says "Divine": it cannot tell a 1.0.19
+  /// view from a 1.0.20 one, so a reporting regression could not be pinned to
+  /// the release that shipped it (#7921). The NIP-89 `client` tag is left
+  /// untouched on purpose — Funnelcake's view-volume detector keys on its
+  /// exact value. An empty version omits the tag rather than sending a
+  /// placeholder.
+  final String _appVersion;
 
   /// Records a dropped view event and returns `false` for the caller.
   ///
@@ -162,6 +174,8 @@ class ViewEventPublisher {
         // Fractional to preserve partial passes (median 0.75) per spec.
         if (phase != ViewEventPhase.start && loopCount != null && loopCount > 0)
           ['loops', loopCount.toString()],
+        // App version, so reporting regressions attribute to a release.
+        if (_appVersion.isNotEmpty) ['version', _appVersion],
       ];
 
       Log.debug(
@@ -191,7 +205,8 @@ class ViewEventPublisher {
 
       if (sentEvent is PublishSuccess) {
         Log.info(
-          'View event published: video=${video.id}, watched=${endSeconds - startSeconds}s',
+          'View event published: video=${video.id}, '
+          'watched=${endSeconds - startSeconds}s, version=$_appVersion',
           name: 'ViewEventPublisher',
           category: LogCategory.video,
         );

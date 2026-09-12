@@ -4,6 +4,7 @@
 
 import 'dart:io';
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -40,6 +41,61 @@ void main() {
       // manufacture a release-over-release regression that the release code
       // did not contain.
       expect(PerformanceMonitoringService.collectionEnabled, isFalse);
+    });
+  });
+
+  group('PerformanceMonitoringService.distributedBuildsOnly', () {
+    test('holds, so a local release build does not report', () {
+      // #7302: `kReleaseMode` cannot tell `flutter run --release` on a
+      // developer's phone from a store build. Four such devices put 449 rows
+      // under the pubspec build number in the month after #7158 shipped.
+      expect(PerformanceMonitoringService.distributedBuildsOnly, isTrue);
+    });
+  });
+
+  group('PerformanceMonitoringService.isDistributedBuild', () {
+    test('accepts any build that carries the Shorebird engine', () {
+      // Every Play, App Store and TestFlight artifact comes out of
+      // `shorebird release`, whatever installer the OS reports for it.
+      for (final source in InstallSource.values) {
+        expect(
+          PerformanceMonitoringService.isDistributedBuild(
+            shorebirdAvailable: true,
+            installSource: source,
+          ),
+          isTrue,
+          reason: source.name,
+        );
+      }
+    });
+
+    test('accepts a Zapstore install without the engine', () {
+      // Zapstore ships the split APKs Codemagic builds with plain
+      // `flutter build`, so the installer package is the only signal.
+      expect(
+        PerformanceMonitoringService.isDistributedBuild(
+          shorebirdAvailable: false,
+          installSource: InstallSource.zapstore,
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects a build with neither signal', () {
+      // A local `flutter build` reports sideload on Android and, installed
+      // through Xcode, a sandbox receipt on iOS — so neither store-looking
+      // installer is enough on its own.
+      for (final source in InstallSource.values) {
+        if (source == InstallSource.zapstore) continue;
+        expect(
+          PerformanceMonitoringService.isDistributedBuild(
+            shorebirdAvailable: false,
+            installSource: source,
+          ),
+          isFalse,
+          reason: source.name,
+        );
+      }
     });
   });
 
@@ -142,7 +198,7 @@ void main() {
       // because initialize() was called and swallowed a failure.
       expect(service.isEnabled, isFalse);
 
-      await service.initialize();
+      await service.initialize(distributedBuild: true);
 
       expect(service.isEnabled, isFalse);
     });
@@ -150,7 +206,7 @@ void main() {
     test(
       'startOperationTrace returns a handle that tags and stops cleanly',
       () async {
-        await service.initialize();
+        await service.initialize(distributedBuild: true);
 
         final trace = service.startOperationTrace('test_operation');
 

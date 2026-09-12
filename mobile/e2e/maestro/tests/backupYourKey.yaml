@@ -1,4 +1,35 @@
 appId: co.openvine.app.staging
+# Step 3 puts the signed-in account's private key on the device clipboard.
+# The copy is the behaviour under test; the key left behind is not. #8777
+# removed the deletion flow that used to consume it, so without step 4 and
+# this hook a run ends with a live account's nsec readable by every app on
+# the device.
+#
+# Both overwrite it by tapping the app's own public key copy, which writes the
+# device clipboard. Maestro's `setClipboard` cannot: it only sets Maestro's
+# copied text for `pasteText` and never reaches the device. That button sits
+# above the fold once the flow has scrolled down to the private key copy, so
+# both scroll back up to it first.
+#
+# The hook covers failures: Maestro runs onFlowComplete from a `finally`, for
+# a direct run and for a subflow reached through `runFlow:` alike. It acts
+# only while the private key copy is on screen — before that nothing was
+# copied — and its steps are optional because a subflow's hook has no catch
+# of its own: a step failing there would replace the flow's real failure.
+onFlowComplete:
+  - runFlow:
+      when:
+        visible:
+          id: "copy_nsec_button"
+      commands:
+        - scrollUntilVisible:
+            element:
+              id: "copy_npub_button"
+            direction: UP
+            optional: true
+        - tapOn:
+            id: "copy_npub_button"
+            optional: true
 ---
 # Verify that a signed-in user can reach key management and back up their
 # private key to the clipboard.
@@ -6,6 +37,7 @@ appId: co.openvine.app.staging
 # 1. Open Settings, then Nostr Settings
 # 2. Open Key Management and verify the Nostr Keys screen
 # 3. Copy the private key and verify the confirmation
+# 4. Overwrite the clipboard with the public key
 
 # 1. Settings -> Nostr Settings
 - runFlow: ../utils/openSettings.yaml
@@ -31,3 +63,12 @@ appId: co.openvine.app.staging
 - tapOn:
     id: "copy_nsec_button"
 - runFlow: ../asserts/assertPrivKeyCopied.yaml
+
+# 4. Not optional, so a passing run proves the overwrite happened. The hook
+# above repeats it for runs that fail between the copy and here.
+- scrollUntilVisible:
+    element:
+      id: "copy_npub_button"
+    direction: UP
+- tapOn:
+    id: "copy_npub_button"

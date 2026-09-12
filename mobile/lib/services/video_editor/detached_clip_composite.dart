@@ -4,6 +4,7 @@
 import 'dart:ui' show Offset, Size;
 
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -18,6 +19,7 @@ class DetachedClipExportLayer {
     required this.layer,
     required this.logicalSize,
     this.sourceOffset = Duration.zero,
+    this.chromaKey,
   });
 
   /// The clip's own media, with its trim, volume and speed.
@@ -32,6 +34,13 @@ class DetachedClipExportLayer {
   /// Where this layer starts inside the clip, in playback time — non-zero for
   /// the tail half of a split.
   final Duration sourceOffset;
+
+  /// The green screen the layer applies live, or `null` for none.
+  ///
+  /// Keyed by the composition as the clip is placed over the base track, so
+  /// the removed area shows the track underneath — the one place a transparent
+  /// key can be honoured literally, since H.264 carries no alpha of its own.
+  final ClipChromaKey? chromaKey;
 }
 
 /// The captured layers sorted into what renders under the detached clips, the
@@ -82,6 +91,7 @@ PartitionedLayers partitionDetachedClipLayers(
         layer: item.layer,
         logicalSize: item.logicalSize,
         sourceOffset: data!.sourceOffset,
+        chromaKey: data.chromaKey,
       ),
     );
   }
@@ -103,6 +113,13 @@ PartitionedLayers partitionDetachedClipLayers(
 /// Time is mapped through [timelineMap] like every other overlay window: an
 /// overlap transition shortens the output, and without the mapping a clip near
 /// the end would be placed past the real video end.
+///
+/// A live green screen goes on the layer as its `chromaKey`. The composition
+/// keys each clip on its own frame before placing it, so a transparent key
+/// lets the base track show through the removed area; a colour or image fill
+/// travels inside the key itself. A library-clip backdrop has no second track
+/// to play on here and is not offered for a detached clip — were one to arrive
+/// anyway, its key is transparent and the track shows through instead.
 VideoLayer buildDetachedClipVideoLayer({
   required DetachedClipExportLayer item,
   required EditorVideo resolvedVideo,
@@ -150,6 +167,7 @@ VideoLayer buildDetachedClipVideoLayer({
   final span = windowed < available ? windowed : available;
 
   return VideoLayer(
+    chromaKey: item.chromaKey?.key,
     clips: [
       VideoSegment(
         video: resolvedVideo,

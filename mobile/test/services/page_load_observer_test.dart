@@ -1,8 +1,8 @@
 import 'package:analytics/analytics.dart';
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
@@ -117,7 +117,7 @@ void main() {
     testWidgets('tracks didPush for regular routes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: const Scaffold(body: Text('Home')),
@@ -135,7 +135,7 @@ void main() {
     testWidgets('skips popup routes without crashing', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: Scaffold(
@@ -168,7 +168,7 @@ void main() {
     testWidgets('tracks didPop for regular routes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: const Scaffold(body: Text('Home')),
@@ -198,7 +198,7 @@ void main() {
     testWidgets('logs semantic screen view for named routes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: const Scaffold(body: Text('Home')),
@@ -238,7 +238,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: const Scaffold(body: Text('Home')),
@@ -284,7 +284,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: [observer],
           home: Builder(

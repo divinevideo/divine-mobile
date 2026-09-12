@@ -92,10 +92,10 @@ SupporterRepository supporterRepository(Ref ref) {
 /// foreground.
 ///
 /// This deliberately does not depend on the Supporter screen or the feature
-/// flag: anyone whose store purchase succeeded before the Worker was wired
-/// must be able to claim it as soon as an authenticated build with the Worker
-/// URL opens. The repository first checks canonical state, coalesces overlapping
-/// calls, and retries failures on a later foreground edge.
+/// flag. Purchases with a known local or canonical account owner can recover
+/// without opening Settings. Unbound legacy purchases require explicit Restore
+/// to choose their account. The repository coalesces overlapping calls and
+/// retries temporary failures on a later foreground edge.
 final supporterRecoveryProvider = Provider<Future<void>?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final authState = ref.watch(currentAuthStateProvider);

@@ -1,8 +1,8 @@
 // ABOUTME: Card for one of the viewer's own curated lists, wired to its feed
 // ABOUTME: Shared by the profile Lists tab and the explore tab's My Lists block
 
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';

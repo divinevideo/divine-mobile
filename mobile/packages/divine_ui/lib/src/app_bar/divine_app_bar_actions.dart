@@ -1,7 +1,7 @@
 import 'package:divine_ui/src/app_bar/divine_app_bar_icon_button.dart';
 import 'package:divine_ui/src/app_bar/divine_app_bar_style.dart';
 import 'package:divine_ui/src/app_bar/icon_source.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Action button configuration for DiVineAppBar.
 @immutable

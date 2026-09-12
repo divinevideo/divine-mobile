@@ -2324,6 +2324,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Verbinden met relays mislukt. Check je netwerkverbinding.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Verbinden met relays is nog bezig. Geef het even de tijd.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Op dit apparaat opgeslagen. We synchroniseren het met je account zodra publiceren weer werkt.';
 
@@ -2977,6 +2981,24 @@ class AppLocalizationsNl extends AppLocalizations {
       'Publieksbron/geo/tijd-overzichten komen zodra Funnelcake publieksanalytics-endpoints toevoegt.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retentie';
 
   @override
@@ -3202,6 +3224,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Account aanmaken';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Terug naar invite-code';
@@ -8982,6 +9008,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Wat achter de clip zit, schijnt erdoorheen.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.';
 
@@ -9271,6 +9301,17 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Schalen vanaf';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Eigen punt';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tik op de video waar dit vandaan moet schuiven';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tik op de video waar dit naartoe moet schuiven';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11125,6 +11166,52 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache gewist';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Je clips en concepten';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Opnames, concepten en geluiden die je hebt gemaakt. Cache wissen raakt ze nooit aan – verwijder clips uit je bibliotheek om hier ruimte vrij te maken.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Geen achtergebleven bestanden';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count achtergebleven bestanden, $size',
+      one: '$count achtergebleven bestand, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Achtergebleven bestanden verwijderen';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Achtergebleven bestanden verwijderen?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Dit verwijdert $count bestanden die geen clip, concept of upload meer gebruikt en maakt $size vrij. Dit kun je niet ongedaan maken.',
+      one:
+          'Dit verwijdert $count bestand dat geen clip, concept of upload meer gebruikt en maakt $size vrij. Dit kun je niet ongedaan maken.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Achtergebleven bestanden verwijderd';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Clipbibliotheek';

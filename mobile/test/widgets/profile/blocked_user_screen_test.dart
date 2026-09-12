@@ -2,10 +2,10 @@
 // ABOUTME: Verifies the placeholder renders and keeps the more-sheet reachable
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
 import 'package:openvine/widgets/profile/unavailable_profile_actions.dart';
 
@@ -19,7 +19,7 @@ void main() {
     Widget buildSubject({VoidCallback? onBack}) {
       return ProviderScope(
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlockedUserScreen(
             onBack: onBack ?? () {},

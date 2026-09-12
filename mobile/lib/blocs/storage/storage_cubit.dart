@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/storage_footprint.dart';
@@ -8,19 +9,20 @@ import 'package:openvine/services/storage_management_service.dart';
 
 part 'storage_state.dart';
 
-/// Drives the settings "Storage" screen: reports the clearable cache size,
-/// clears it on demand, audits the clip library for broken entries, and runs
-/// the last-resort repair wipe for a corrupted install.
-class StorageCubit extends Cubit<StorageState> {
+/// Drives the settings "Storage" screen: reports the clearable cache size and
+/// clears it on demand, reports what the user's own content holds and sweeps
+/// the media nothing references any more, audits the clip library for broken
+/// entries, and runs the last-resort repair wipe for a corrupted install.
+class StorageCubit extends Cubit<StorageState>
+    with CloseGuardedEmit<StorageState> {
   /// Creates a cubit backed by [service] and loads the current cache size.
   ///
-  /// [recoverAllCaches] and [measureRecoveryFootprint] default to
-  /// [CacheRecoveryService]'s static entry points and exist so tests can drive
-  /// the repair section without touching the real filesystem.
+  /// [recoverAllCaches] must be injected by a screen that exposes repair so
+  /// every disposable database table participates. When it is absent, repair
+  /// fails closed instead of running an incomplete static wipe.
   StorageCubit({
     required StorageManagementService service,
-    Future<bool> Function() recoverAllCaches =
-        CacheRecoveryService.clearAllCaches,
+    Future<bool> Function()? recoverAllCaches,
     Future<int> Function() measureRecoveryFootprint =
         CacheRecoveryService.cacheSizeBytes,
   }) : _service = service,
@@ -29,7 +31,7 @@ class StorageCubit extends Cubit<StorageState> {
        super(const StorageState());
 
   final StorageManagementService _service;
-  final Future<bool> Function() _recoverAllCaches;
+  final Future<bool> Function()? _recoverAllCaches;
   final Future<int> Function() _measureRecoveryFootprint;
 
   /// Loads the current clearable cache size and configured limit.
@@ -56,6 +58,47 @@ class StorageCubit extends Cubit<StorageState> {
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+    }
+  }
+
+  /// Measures the documents directory: what the user's clips, drafts and
+  /// sounds own, and how much sits in files no row references.
+  ///
+  /// Separate from [loadCacheSize] so a database failure here leaves the cache
+  /// section usable, and the other way round.
+  Future<void> loadDocumentsUsage() async {
+    emit(state.copyWith(contentStatus: StorageContentStatus.loading));
+    try {
+      final usage = await _service.documentsUsage();
+      emitIfOpen(
+        state.copyWith(
+          contentStatus: StorageContentStatus.ready,
+          documentsUsage: usage,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(state.copyWith(contentStatus: StorageContentStatus.failure));
+    }
+  }
+
+  /// Deletes the orphaned files found by [loadDocumentsUsage], then
+  /// re-measures so the readout reflects what was actually freed.
+  Future<void> removeOrphanedFiles() async {
+    if (state.documentsUsage.orphanedFileCount == 0) return;
+    emit(state.copyWith(contentStatus: StorageContentStatus.removing));
+    try {
+      await _service.removeOrphanedFiles();
+      final usage = await _service.documentsUsage();
+      emitIfOpen(
+        state.copyWith(
+          contentStatus: StorageContentStatus.removed,
+          documentsUsage: usage,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(state.copyWith(contentStatus: StorageContentStatus.failure));
     }
   }
 
@@ -171,7 +214,11 @@ class StorageCubit extends Cubit<StorageState> {
   Future<void> recoverFromCorruptedCache() async {
     emit(state.copyWith(recoveryStatus: StorageRecoveryStatus.recovering));
     try {
-      final succeeded = await _recoverAllCaches();
+      final recoverAllCaches = _recoverAllCaches;
+      if (recoverAllCaches == null) {
+        throw StateError('Cache recovery was not configured for this screen');
+      }
+      final succeeded = await recoverAllCaches();
       if (isClosed) return;
       emit(
         state.copyWith(

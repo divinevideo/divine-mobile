@@ -2342,6 +2342,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Verbindung zu Relays fehlgeschlagen. Bitte prüf deine Netzwerkverbindung.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Verbindung zu Relays wird noch aufgebaut. Einen Moment noch.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Auf diesem Gerät gespeichert. Wir synchronisieren es mit deinem Konto, sobald das Veröffentlichen wieder funktioniert.';
 
@@ -3000,6 +3004,24 @@ class AppLocalizationsDe extends AppLocalizations {
       'Publikums-Aufschlüsselungen nach Quelle/Geo/Zeit werden verfügbar, sobald Funnelcake Publikums-Analytics-Endpoints hinzufügt.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retention';
 
   @override
@@ -3227,6 +3249,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Konto erstellen';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Zurück zum Einladungscode';
@@ -9055,6 +9081,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Video kann keine Transparenz speichern – das wird beim Export schwarz.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Was hinter dem Clip liegt, scheint durch.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Jede glatte Fläche hinter dir funktioniert – eine Wand reicht –, solange sie das ganze Bild füllt.';
 
@@ -9344,6 +9374,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Skalieren von';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Eigener Punkt';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tippe im Video an, von wo aus es hereingleiten soll';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tippe im Video an, wohin es hinausgleiten soll';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11204,6 +11245,53 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Zwischenspeicher geleert';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Deine Clips und Entwürfe';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Aufnahmen, Entwürfe und Sounds, die du erstellt hast. Cache leeren rührt sie nie an – lösche Clips aus deiner Bibliothek, um hier Platz zu schaffen.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles =>
+      'Keine übrig gebliebenen Dateien';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count übrig gebliebene Dateien, $size',
+      one: '$count übrig gebliebene Datei, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton =>
+      'Übrig gebliebene Dateien entfernen';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Übrig gebliebene Dateien entfernen?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Das löscht $count Dateien, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
+      one:
+          'Das löscht $count Datei, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Übrig gebliebene Dateien entfernt';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Clip-Bibliothek';

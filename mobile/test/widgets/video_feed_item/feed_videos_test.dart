@@ -7,13 +7,13 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:likes_repository/likes_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
@@ -28,7 +28,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag_state.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
@@ -365,7 +365,7 @@ Future<ProviderContainer> _pumpFeedVideos(
       container: container,
       child: MaterialApp(
         navigatorObservers: navigatorObservers,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: MultiBlocProvider(
           providers: [
@@ -456,7 +456,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<FeedLoadingModerationCubit>.value(
               value: restrictedCubit,
@@ -819,7 +819,7 @@ void main() {
       expect(feed.canAutoPlay!(video), isTrue);
     });
 
-    testWidgets('the author row is a 48dp tap target', (tester) async {
+    testWidgets('the author row is a 44dp tap target', (tester) async {
       final semantics = tester.ensureSemantics();
       try {
         InfiniteVideoFeed.debugIsSupportedOverride = true;
@@ -853,10 +853,12 @@ void main() {
           isNotNull,
           reason: 'the author row must expose a profile tap action',
         );
+        // 44dp is Apple's HIG minimum and the designed row height; the
+        // row is the avatar's height, with the name column centred on it.
         expect(
           authorRow!.rect.height,
-          greaterThanOrEqualTo(48),
-          reason: 'the author row must be at least 48dp tall',
+          greaterThanOrEqualTo(44),
+          reason: 'the author row must be at least 44dp tall',
         );
       } finally {
         semantics.dispose();
@@ -888,8 +890,8 @@ void main() {
       final targetRect = tester.getRect(target);
       expect(
         targetRect.height,
-        greaterThanOrEqualTo(48),
-        reason: 'sanity: this is the 48dp profile target, not an inner one',
+        greaterThanOrEqualTo(44),
+        reason: 'sanity: this is the 44dp profile target, not an inner one',
       );
 
       // The surface returns false from its own hit test — both of its
@@ -911,13 +913,13 @@ void main() {
           .path
           .any((entry) => surface.contains(entry.target));
 
-      // Inside the target the profile wins, across the FULL 58dp — 2dp above
+      // Inside the target the profile wins, across the FULL 44dp — 2dp above
       // the bottom edge is below the meta text, so deferring to the child
       // would drop it and leave only the ~20dp name line really tappable.
       expect(
         videoOwns(Offset(targetRect.left + 4, targetRect.bottom - 2)),
         isFalse,
-        reason: 'the whole 48dp target must navigate to the profile',
+        reason: 'the whole 44dp target must navigate to the profile',
       );
 
       // Past its trailing edge the video takes over again. An opaque detector
@@ -1868,7 +1870,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
@@ -2088,7 +2090,7 @@ void main() {
         UncontrolledProviderScope(
           container: ProviderContainer(overrides: _buildOverrides().cast()),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: MultiBlocProvider(
               providers: [

@@ -2,10 +2,10 @@
 // ABOUTME: Regression test for the startup/login sign-in-page glimpse (#5242)
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/shell.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -49,6 +49,14 @@ void main() {
       tester,
     ) async {
       final shellRoute = shellRoutes().single as StatefulShellRoute;
+
+      expect(
+        shellRoute.notifyRootObserver,
+        isFalse,
+        reason:
+            'Branch navigation must not notify the root analytics observers '
+            'until the event model in #9079 is decided.',
+      );
 
       // The shell replaces /welcome on the root navigator when the
       // authenticated redirect lands (startup restore, login), and the

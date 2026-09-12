@@ -1,6 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -93,6 +94,17 @@ class _LayerOverlayControls extends StatelessWidget {
       onTransform: isDetachedClip
           ? () => transformDetachedClip(context, layer)
           : null,
+      // Green screen, for a detached clip only — and, unlike the timeline's,
+      // never baked: the export composites the layer over the track, so the
+      // removed area can be left genuinely see-through.
+      onChromaKey: isDetachedClip
+          ? () => editDetachedClipChromaKey(context, layer)
+          : null,
+      hasChromaKey:
+          isDetachedClip &&
+          DetachedClipLayerData.hasChromaKey(
+            DetachedClipLayerData.metaOf(layer),
+          ),
       // Animations are off for a detached clip: the export composites it as a
       // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
       // an `animations` field the way a rasterized `ImageLayer` does. Offering

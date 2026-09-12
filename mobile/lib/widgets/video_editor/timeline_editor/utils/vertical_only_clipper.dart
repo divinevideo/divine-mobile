@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Clips only vertically (to the widget's height) while allowing
 /// horizontal overflow to remain visible — needed so overlay trim

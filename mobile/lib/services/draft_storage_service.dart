@@ -710,10 +710,10 @@ class DraftStorageService {
   /// [DivineVideoDraft.selectedSound] — so this guard keeps shared audio until
   /// the last referencing draft is deleted.
   ///
-  /// My Sounds is scanned too. Audio imported from the Library is written
-  /// under whichever draft was open at the time, so deleting that draft would
-  /// otherwise reclaim a file a saved sound still points at — and unlike a
-  /// stale path, a deleted file cannot be healed on load (#7977).
+  /// My Sounds is scanned too. Imported audio lives in library storage, but a
+  /// draft can still reference the same file as a saved sound, so deleting the
+  /// draft must not reclaim it. Unlike a stale path, a deleted file cannot be
+  /// healed on load (#7977).
   ///
   /// Callers run this *after* deleting the draft they are cleaning up, so
   /// every row it sees is a survivor and there is nothing to exclude.

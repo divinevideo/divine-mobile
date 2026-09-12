@@ -2,21 +2,47 @@
 // ABOUTME: the three tolerance sliders, and the background choice.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 
+/// What the clip being keyed sits on, which decides what "Nothing" behind the
+/// subject means and which backdrops can be offered.
+enum ChromaKeySurface {
+  /// The clip is the timeline track, and the key is baked into its file.
+  ///
+  /// Nothing lies below the track, so a transparent key flattens to black in
+  /// the H.264 file — which the panel warns about — and a library clip can be
+  /// put behind the subject by baking a second track under it.
+  track,
+
+  /// The clip is a layer over the editor canvas, and the key is applied live.
+  ///
+  /// A transparent key lets whatever is underneath show through, which is the
+  /// point of detaching a green-screen clip. A library clip is not offered:
+  /// the key goes on the layer at export rather than into a file, and a layer
+  /// has no second track of its own to play a backdrop on.
+  canvas,
+}
+
 /// Everything below the preview on the chroma-key screen.
 class ChromaKeyControls extends StatelessWidget {
-  const ChromaKeyControls({required this.onPickBackground, super.key});
+  const ChromaKeyControls({
+    required this.onPickBackground,
+    this.surface = ChromaKeySurface.track,
+    super.key,
+  });
 
   /// Opens the picker for [type]. Owned by the screen because an image is shot
   /// with the camera and a video comes from the clip library.
   final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
+
+  /// What the keyed clip sits on. See [ChromaKeySurface].
+  final ChromaKeySurface surface;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +59,10 @@ class ChromaKeyControls extends StatelessWidget {
           const _Gutter(child: _ToleranceSliders()),
           // Unpadded: the section insets its own text but lets the chips
           // scroll past the gutter to the screen edge.
-          _BackgroundSection(onPickBackground: onPickBackground),
+          _BackgroundSection(
+            onPickBackground: onPickBackground,
+            surface: surface,
+          ),
         ],
       ),
     );
@@ -370,9 +399,22 @@ class _LabeledSlider extends StatelessWidget {
 
 /// Picks what fills the area the key removed.
 class _BackgroundSection extends StatelessWidget {
-  const _BackgroundSection({required this.onPickBackground});
+  const _BackgroundSection({
+    required this.onPickBackground,
+    required this.surface,
+  });
 
   final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
+  final ChromaKeySurface surface;
+
+  /// The backdrops that can be offered on [surface].
+  List<ClipChromaKeyBackgroundType> get _options => switch (surface) {
+    ChromaKeySurface.track => ClipChromaKeyBackgroundType.values,
+    ChromaKeySurface.canvas =>
+      ClipChromaKeyBackgroundType.values
+          .where((type) => type != ClipChromaKeyBackgroundType.video)
+          .toList(growable: false),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +446,7 @@ class _BackgroundSection extends StatelessWidget {
           child: Row(
             spacing: 8,
             children: [
-              for (final option in ClipChromaKeyBackgroundType.values)
+              for (final option in _options)
                 _BackgroundChip(
                   option: option,
                   isSelected: option == type,
@@ -416,7 +458,15 @@ class _BackgroundSection extends StatelessWidget {
         if (type == ClipChromaKeyBackgroundType.transparent)
           _Gutter(
             child: Text(
-              context.l10n.videoEditorChromaKeyTransparentHint,
+              // A warning on the track, where the removed area exports as
+              // black; a reassurance on the canvas, where it really is
+              // see-through.
+              switch (surface) {
+                ChromaKeySurface.track =>
+                  context.l10n.videoEditorChromaKeyTransparentHint,
+                ChromaKeySurface.canvas =>
+                  context.l10n.videoEditorChromaKeyCanvasTransparentHint,
+              },
               // `onSurfaceMuted` is only 3.05:1 on the light canvas, so this
               // hint takes the variant token instead of the muted one.
               style: VineTheme.bodySmallFont(

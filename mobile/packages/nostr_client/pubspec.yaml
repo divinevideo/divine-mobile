@@ -9,6 +9,7 @@ environment:
   flutter: ^3.47.0
 
 dependencies:
+  clock: ^1.1.2
   crypto: ^3.0.7
   db_client:
     path: ../db_client
@@ -22,6 +23,7 @@ dependencies:
     path: ../unified_logger
 
 dev_dependencies:
+  fake_async: ^1.3.3
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4

@@ -224,25 +224,20 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
             let clips = args["clips"] as? [[String: Any]] ?? []
             Self.handlePreload(clips: clips, result: result)
 
-        case "configureCache":
-            let maxSizeBytes = args["maxSizeBytes"] as? Int ?? (500 * 1024 * 1024)
-            // 10% of disk budget for in-memory cache, rest on disk.
-            let memoryCapacity = maxSizeBytes / 10
-            URLCache.shared = URLCache(
-                memoryCapacity: memoryCapacity,
-                diskCapacity: maxSizeBytes,
-                diskPath: "divine_video_cache"
-            )
-            result(nil)
-
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
-    /// Preloads video metadata and initial buffer data by loading
-    /// `AVURLAsset` properties asynchronously. The OS-level URL cache
-    /// retains the fetched data so that a real player starts faster.
+    /// Best-effort preload of video metadata by loading `AVURLAsset`
+    /// properties asynchronously before a real player requests them.
+    ///
+    /// There is no disk cache behind this on Apple platforms: AVFoundation
+    /// loads media through its own stack and never consults `URLCache`, so
+    /// the plugin deliberately configures none. Playback caching is the
+    /// app's job (the Dart-side media cache hands the player local files).
+    /// The temporary asset is discarded when its task finishes, so this does
+    /// not promise that metadata remains warm for a later player.
     private static func handlePreload(
         clips: [[String: Any]],
         result: @escaping FlutterResult

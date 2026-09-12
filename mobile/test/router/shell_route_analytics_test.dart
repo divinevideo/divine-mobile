@@ -2,9 +2,9 @@
 // ABOUTME: Prevents normal home navigation from reporting unknown_route.
 
 import 'package:analytics/analytics.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 

@@ -324,6 +324,9 @@ void main() {
       test(
         'keeps the recording when the manifest fails validation (#8799)',
         () async {
+          // How a signed file reads back once its media bytes change: the
+          // untrusted-credential finding every ProofSign file carries, plus a
+          // hash mismatch, which is the actual evidence of breakage.
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
             c2pa: _WritingC2pa(
@@ -333,7 +336,11 @@ void main() {
                 validationErrors: [
                   ValidationError(
                     code: 'signingCredential.untrusted',
-                    message: 'untrusted signer',
+                    message: 'signing certificate untrusted',
+                  ),
+                  ValidationError(
+                    code: 'assertion.bmffHash.mismatch',
+                    message: 'asset hash error',
                   ),
                 ],
                 validationStatus: ValidationStatus.invalid,
@@ -345,7 +352,40 @@ void main() {
 
           expect(result.success, isFalse);
           expect(result.failureReason, C2paSigningFailureReason.outputMissing);
+          expect(result.error, contains('assertion.bmffHash.mismatch'));
           expect(video.readAsBytesSync(), equals([0, 1, 2, 3]));
+          expect(signedLeftovers(), isEmpty);
+        },
+      );
+
+      test(
+        'accepts a genuine ProofSign signature, whose only finding is an '
+        'untrusted signing credential (#8799)',
+        () async {
+          // What the native reader returns for a real Divine-signed capture.
+          // The app loads no C2PA trust anchors, so this is the normal
+          // success shape, and the plugin still flags it `invalid`.
+          final genuine = ManifestStoreInfo.fromMap(const <String, dynamic>{
+            'active_manifest': 'urn:c2pa:signed',
+            'validation_status': <dynamic>[
+              <String, dynamic>{
+                'code': 'signingCredential.untrusted',
+                'url': 'self#jumbf=/c2pa/urn:c2pa:signed/c2pa.signature',
+                'explanation': 'signing certificate untrusted',
+              },
+            ],
+          });
+          expect(genuine.validationStatus, ValidationStatus.invalid);
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final service = C2paSigningService(
+            c2pa: _WritingC2pa(const [7, 8, 9], manifest: genuine),
+          );
+
+          final result = await service.signVideoInPlace(videoPath: video.path);
+
+          expect(result.success, isTrue);
+          expect(result.manifest?.activeManifest, 'urn:c2pa:signed');
+          expect(video.readAsBytesSync(), equals([7, 8, 9]));
           expect(signedLeftovers(), isEmpty);
         },
       );
@@ -370,10 +410,8 @@ void main() {
       test(
         'accepts an unknown validation status, which is a clean read (#8799)',
         () async {
-          // `unknown` is what the library reports when the native read
-          // returned no `validation_status` key — the ordinary success shape.
-          // Only `invalid` is positive evidence the output is broken, so
-          // rejecting `unknown` would discard correctly signed recordings.
+          // `unknown` is what the plugin reports when the native read returned
+          // no `validation_status` key at all, e.g. with trust checks off.
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
             c2pa: _WritingC2pa(

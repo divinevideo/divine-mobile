@@ -2365,6 +2365,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się połączyć z przekaźnikami. Sprawdź połączenie z siecią.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Wciąż łączymy się z przekaźnikami. Daj nam chwilę.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Zapisano na tym urządzeniu. Zsynchronizujemy to z Twoim kontem, gdy publikowanie znów zadziała.';
 
@@ -3054,6 +3058,24 @@ class AppLocalizationsPl extends AppLocalizations {
       'Podziały widowni źródło/geo/czas pojawią się, gdy Funnelcake doda endpointy statystyk widowni.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retencja';
 
   @override
@@ -3279,6 +3301,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Utwórz konto';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Wróć do kodu zaproszenia';
@@ -9124,6 +9150,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wideo nie przechowuje przezroczystości, więc w eksporcie będzie czarne.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'To, co jest za klipem, prześwituje.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.';
 
@@ -9415,6 +9445,17 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Skaluj od';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Własny punkt';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Dotknij wideo w miejscu, z którego ma wjechać';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Dotknij wideo w miejscu, do którego ma wyjechać';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11284,6 +11325,57 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Pamięć podręczna wyczyszczona';
+
+  @override
+  String get settingsStorageContentSectionTitle =>
+      'Twoje klipy i wersje robocze';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Nagrania, wersje robocze i dźwięki, które stworzyłeś(-aś). Czyszczenie pamięci podręcznej ich nie dotyka – usuń klipy z biblioteki, żeby zwolnić tu miejsce.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Brak pozostałych plików';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pozostałego pliku, $size',
+      many: '$count pozostałych plików, $size',
+      few: '$count pozostałe pliki, $size',
+      one: '$count pozostały plik, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Usuń pozostałe pliki';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Usunąć pozostałe pliki?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'To usunie $count pliku, którego nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      many:
+          'To usunie $count plików, których nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      few:
+          'To usunie $count pliki, których nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+      one:
+          'To usunie $count plik, którego nie używa już żaden klip, wersja robocza ani przesyłanie, i zwolni $size. Nie da się tego cofnąć.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved => 'Pozostałe pliki usunięte';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Biblioteka klipów';

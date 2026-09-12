@@ -8,17 +8,17 @@ import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
@@ -240,8 +240,21 @@ void main() {
       );
       addTearDown(router.dispose);
 
+      final authService = createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: _authorPubkeyHex,
+      );
+      // ProfileHeaderWidget reads these directly; createMockAuthService()
+      // does not stub them, and unstubbed Mock getters return null, which
+      // throws building the header (mirrors other_profile_screen_test.dart's
+      // setUp and profile_route_redirect_test.dart's pumpRouter).
+      when(() => authService.isAnonymous).thenReturn(false);
+      when(() => authService.hasExpiredOAuthSession).thenReturn(false);
+      when(() => authService.isRpcUpgradeInProgress).thenReturn(false);
+
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: authService,
           additionalOverrides: [
             videosRepositoryProvider.overrideWithValue(videosRepository),
             videoEventServiceProvider.overrideWithValue(videoEventService),
@@ -253,7 +266,7 @@ void main() {
             ),
           ],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
             builder: (context, child) => MultiBlocProvider(
@@ -435,6 +448,10 @@ void main() {
 
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: _authorPubkeyHex,
+          ),
           additionalOverrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(
               blocklistRepository,
@@ -444,7 +461,7 @@ void main() {
             ),
           ],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),
@@ -483,7 +500,11 @@ void main() {
 
     /// Pumps the grid route (no video index) for [segment], signed in as
     /// [_authorPubkeyHex].
-    Future<void> pumpGridRoute(WidgetTester tester, String segment) async {
+    Future<void> pumpGridRoute(
+      WidgetTester tester,
+      String segment, {
+      bool settle = true,
+    }) async {
       final location = ProfileScreenRouter.pathForNpub(segment);
       final router = GoRouter(
         initialLocation: location,
@@ -511,13 +532,17 @@ void main() {
             ),
           ],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+      }
     }
 
     // `/profile/<hex>` is a documented deep-link form, and the app only ever
@@ -538,14 +563,14 @@ void main() {
       expect(find.byType(ProfileScaffold), findsOneWidget);
     });
 
-    testWidgets("another user's profile is not yours", (tester) async {
+    testWidgets("another user's profile fails closed until redirected", (
+      tester,
+    ) async {
       // A real, decodable identity: a malformed segment would pass this by
       // failing to normalize rather than by being compared and rejected.
-      await pumpGridRoute(tester, _otherNpub);
+      await pumpGridRoute(tester, _otherNpub, settle: false);
 
-      // Positive control: the body really did render, so findsNothing below
-      // means the scaffold was not chosen — not that the tree failed to build.
-      expect(find.byType(BlockedUserScreen), findsOneWidget);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(ProfileScaffold), findsNothing);
     });
   });

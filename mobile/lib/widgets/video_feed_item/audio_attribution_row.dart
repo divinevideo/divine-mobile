@@ -2,8 +2,8 @@
 // ABOUTME: Shows shared sound name or "Original sound - @creator" with tap navigation.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -43,26 +43,13 @@ class AudioAttributionRow extends ConsumerWidget {
     return audioAsync.when(
       data: (audio) {
         if (audio == null) {
-          Log.warning(
-            'Audio event not found for video ${video.id} '
-            '(audioEventId: ${video.audioEventId})',
-            name: 'AudioAttributionRow',
-            category: LogCategory.ui,
-          );
           return _UnresolvedAudioAttribution(video: video);
         }
 
         return _AudioAttributionContent(audio: audio, sourceVideo: video);
       },
       loading: () => const _AudioAttributionSkeleton(),
-      error: (error, stack) {
-        Log.error(
-          'Failed to load audio for video ${video.id}: $error',
-          name: 'AudioAttributionRow',
-          category: LogCategory.ui,
-        );
-        return _UnresolvedAudioAttribution(video: video);
-      },
+      error: (error, stack) => _UnresolvedAudioAttribution(video: video),
     );
   }
 }

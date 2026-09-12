@@ -829,7 +829,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   /// Initialize the repost resolver with callbacks to this service
   void _initializeRepostResolver() {
     _repostResolver = RepostResolver(
-      subscribe: _nostrService.subscribe,
+      queryEvents: _nostrService.queryEventsDetailed,
       findByAddressable: _findCachedVideoByAddressable,
       findById: _findCachedVideoById,
     );
@@ -6251,19 +6251,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     SubscriptionType subscriptionType,
   ) => _applyLikeCountToVideo(videoId, likeCount, subscriptionType);
 
-  List<Filter> _buildDiagnosticProbeFilters(List<Filter> filters) {
-    return filters.map((filter) {
-      final diagnosticFilter = Filter.fromJson(filter.toJson());
-      final existingLimit = diagnosticFilter.limit;
-      diagnosticFilter.limit = existingLimit == null || existingLimit > 100
-          ? 100
-          : existingLimit;
-      return diagnosticFilter;
-    }).toList();
-  }
-
   /// Run automatic diagnostics when feed fails to load events
-  /// This logs relay status, connection info, and tests direct queries to help debug
+  /// This logs relay status, connection info, and subscription filters.
   Future<void> _runAutoDiagnostics(
     SubscriptionType subscriptionType,
     List<Filter> filters,
@@ -6360,91 +6349,14 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         }
       }
 
-      // 3. Test direct query with the same filters to see if matching events
-      // exist in the database. queryEvents only consults the local cache for
-      // single-filter queries, so probe each filter separately — otherwise
-      // repost-enabled (multi-filter) feeds skip the cache entirely and the
-      // "subscription broken" branch below can never fire.
-      final diagnosticFilters = _buildDiagnosticProbeFilters(filters);
-      Log.warning(
-        '🔍 Testing direct database query with subscription filters (bypassing subscription)...',
+      Log.info(
+        'Empty-feed diagnostics use subscription and connection state only; '
+        'no follow-up relay query issued.',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
 
-      final directQueryEvents = <Event>[];
-      for (final diagnosticFilter in diagnosticFilters) {
-        directQueryEvents.addAll(
-          await _nostrService.queryEvents([diagnosticFilter]),
-        );
-      }
-
-      Log.warning(
-        '✅ Filtered direct query returned ${directQueryEvents.length} matching events',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-
-      if (directQueryEvents.isEmpty) {
-        Log.info(
-          '✅ DIAGNOSTIC: No cached events match the empty $subscriptionType subscription filters.',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-        Log.info(
-          '   Expected when the requested authors or filters have no matching cached videos.',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-      } else {
-        Log.warning(
-          '✅ DIAGNOSTIC: Database HAS ${directQueryEvents.length} events matching the subscription filters, but subscription returned 0.',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-        Log.error(
-          '❌ This means subscription filtering is too restrictive OR subscription stream is broken.',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-
-        // Log sample events to help compare with subscription filters
-        Log.warning(
-          '📄 Sample matching events in database:',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-        for (var i = 0; i < directQueryEvents.length && i < 3; i++) {
-          final event = directQueryEvents[i];
-          Log.warning(
-            '   Event $i:',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-          Log.warning(
-            '      - id: ${event.id}',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-          Log.warning(
-            '      - kind: ${event.kind}',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-          Log.warning(
-            '      - pubkey: ${pubkeyForLogs(event.pubkey)}',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-          Log.warning(
-            '      - createdAt: ${DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000)}',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-        }
-      }
-
-      // 4. Get relay stats for additional diagnostics
+      // 3. Get local relay stats for additional diagnostics
       final relayStats = await _nostrService.getRelayStats();
       if (relayStats != null) {
         Log.warning(

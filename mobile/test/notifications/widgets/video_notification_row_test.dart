@@ -2,8 +2,8 @@
 // ABOUTME: thumbnail rendering, and tap callbacks (row, profile, thumbnail).
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/notification_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -80,7 +80,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: MediaQuery(

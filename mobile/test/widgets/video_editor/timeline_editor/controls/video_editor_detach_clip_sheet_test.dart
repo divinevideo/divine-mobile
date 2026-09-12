@@ -1,10 +1,10 @@
 // ABOUTME: Widget tests for the detach-clip chooser sheet.
 // ABOUTME: Covers the options offered, the lone-clip case, and what it returns.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
 
 /// Opens the sheet from a real route so the production entry point — and the
@@ -41,7 +41,7 @@ Widget _buildSubject({
   required bool canRemoveSlot,
   required void Function(DetachClipChoice? choice) onResult,
 }) => MaterialApp.router(
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   routerConfig: GoRouter(
     routes: [

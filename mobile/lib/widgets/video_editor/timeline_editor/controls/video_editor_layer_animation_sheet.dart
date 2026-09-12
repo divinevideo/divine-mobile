@@ -4,11 +4,13 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_slide_point_picker.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
@@ -63,22 +65,80 @@ Future<void> editLayerAnimation(
   final editor = scope.editor;
   if (editor == null) return;
 
-  final result = await VineBottomSheet.show<_LayerAnimationResult>(
-    context: context,
-    expanded: false,
-    scrollable: false,
-    isScrollControlled: true,
-    title: Text(
-      context.l10n.videoEditorLayerAnimationLabel,
-      style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
-    ),
-    body: LayerAnimationPickerView(
-      initialEnter: layer.divineEnterAnimations,
-      initialLeave: layer.divineLeaveAnimations,
-    ),
+  // Points travel as canvas fractions, never pixels: placing one gives the
+  // canvas the whole screen, so the surface the point was picked on is not the
+  // surface it is applied against.
+  final stored = LayerSlidePoints.of(layer);
+  final canvasSize = scope.canvasRenderSize;
+  final anchor =
+      LayerSlidePoints.fractionOf(layer.offset, canvasSize) ?? Offset.zero;
+  final aspectRatio = canvasSize.isEmpty ? 1.0 : canvasSize.aspectRatio;
+
+  var draft = (
+    enter: layer.divineEnterAnimations,
+    leave: layer.divineLeaveAnimations,
+    enterPoint: stored.enter,
+    leavePoint: stored.leave,
+    phase: AnimationPhase.animateIn,
+    pickPoint: false,
   );
 
-  if (result == null || !context.mounted) return;
+  // The point is placed on the canvas, which the sheet is sitting on top of —
+  // so the sheet closes, the picker takes over, and the sheet re-opens on the
+  // phase it left, carrying the edits made so far.
+  while (true) {
+    if (!context.mounted) return;
+    final result = await VineBottomSheet.show<_LayerAnimationResult>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      title: Text(
+        context.l10n.videoEditorLayerAnimationLabel,
+        style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
+      ),
+      body: LayerAnimationPickerView(
+        initialEnter: draft.enter,
+        initialLeave: draft.leave,
+        initialEnterPoint: draft.enterPoint,
+        initialLeavePoint: draft.leavePoint,
+        initialPhase: draft.phase,
+        layerAnchor: anchor,
+        canvasAspectRatio: aspectRatio,
+        canPickPoint: scope.canvasBodyRect != null,
+      ),
+    );
+
+    if (result == null || !context.mounted) return;
+    draft = result;
+    if (!result.pickPoint) break;
+
+    final picked = await pickLayerSlidePoint(
+      context,
+      layer: layer,
+      phase: result.phase,
+      initialFraction: result.phase == AnimationPhase.animateOut
+          ? result.leavePoint
+          : result.enterPoint,
+    );
+    // A cancelled pick leaves the phase's current point alone — including the
+    // absence of one, which is what deselects the custom option again.
+    if (picked == null) continue;
+    draft = (
+      enter: result.enter,
+      leave: result.leave,
+      enterPoint: result.phase == AnimationPhase.animateOut
+          ? result.enterPoint
+          : picked,
+      leavePoint: result.phase == AnimationPhase.animateOut
+          ? picked
+          : result.leavePoint,
+      phase: result.phase,
+      pickPoint: false,
+    );
+  }
+
+  final result = draft;
 
   final layers = List<Layer>.from(editor.activeLayers);
   final index = layers.indexWhere((l) => l.id == layer.id);
@@ -106,6 +166,13 @@ Future<void> editLayerAnimation(
     hasLeaveAnimation: result.leave.isNotEmpty,
   );
 
+  // A custom slide point only means anything to a slide, so a phase that no
+  // longer has one drops its point rather than keeping an origin nothing reads.
+  final points = LayerSlidePoints(
+    enter: _slidePointFor(result.enter, result.enterPoint),
+    leave: _slidePointFor(result.leave, result.leavePoint),
+  );
+
   // Drive the layer entirely from the typed animations; clear the legacy fade
   // fields / custom builder so [Layer.effectiveAnimations] can't fall back to a
   // stale fade when the animations list is empty.
@@ -113,13 +180,22 @@ Future<void> editLayerAnimation(
   // endTime is set via the mutable field rather than copyWith: Layer.copyWith
   // resolves it as `endTime ?? this.endTime`, so it can't clear a stale end
   // back to null — which resolveLayerEndTime returns to un-anchor a layer.
-  layers[index] = layer.copyWith(animations: animations.toLayerAnimations())
-    ..endTime = endTime
-    ..enterDuration = null
-    ..exitDuration = null
-    ..enterCurve = null
-    ..exitCurve = null
-    ..transitionBuilder = null;
+  layers[index] =
+      layer.copyWith(
+          // The points ride along on the animations as well, in canvas pixels,
+          // so the editor's own preview slides the way the export will.
+          animations: animations.toLayerAnimations(
+            points: points,
+            canvasSize: canvasSize,
+          ),
+          meta: points.applyTo(layer.meta),
+        )
+        ..endTime = endTime
+        ..enterDuration = null
+        ..exitDuration = null
+        ..enterCurve = null
+        ..exitCurve = null
+        ..transitionBuilder = null;
 
   editor.addHistory(layers: layers);
 }
@@ -175,13 +251,28 @@ Duration? resolveLayerEndTime({
   return null;
 }
 
-/// The picker's result: the chosen enter and leave animations. A phase can
-/// carry several composed effects (e.g. fade + slide); an empty list means no
-/// animation for that phase.
+/// The picker's result: the chosen enter and leave animations, the custom slide
+/// point each phase travels from (a canvas fraction, `null` for a plain edge
+/// slide), the phase on screen when the sheet closed, and whether it closed to
+/// hand over to the point picker. A phase can carry several composed effects
+/// (e.g. fade + slide); an empty list means no animation for that phase.
 typedef _LayerAnimationResult = ({
   List<LayerAnimation> enter,
   List<LayerAnimation> leave,
+  Offset? enterPoint,
+  Offset? leavePoint,
+  AnimationPhase phase,
+  bool pickPoint,
 });
+
+/// The point to store for a phase, or `null` when the phase has no slide to
+/// apply it to.
+Offset? _slidePointFor(List<LayerAnimation> animations, Offset? point) {
+  if (point == null) return null;
+  return animations.any((a) => a.type == LayerAnimationType.slide)
+      ? point
+      : null;
+}
 
 /// Stateful picker body. Edits the enter and leave animations independently via
 /// an Enter|Leave toggle; pops a [_LayerAnimationResult] on confirm.
@@ -190,12 +281,44 @@ class LayerAnimationPickerView extends StatefulWidget {
   const LayerAnimationPickerView({
     required this.initialEnter,
     required this.initialLeave,
+    this.initialEnterPoint,
+    this.initialLeavePoint,
+    this.initialPhase = AnimationPhase.animateIn,
+    this.layerAnchor = Offset.zero,
+    this.canvasAspectRatio = 1,
+    this.canPickPoint = false,
     this.maxDurationMs = _maxDurationMs,
     super.key,
   });
 
   final List<LayerAnimation> initialEnter;
   final List<LayerAnimation> initialLeave;
+
+  /// Where the enter slide starts, as a canvas fraction. `null` slides in from
+  /// a canvas edge.
+  final Offset? initialEnterPoint;
+
+  /// Where the leave slide ends, as a canvas fraction. `null` slides out to a
+  /// canvas edge.
+  final Offset? initialLeavePoint;
+
+  /// Phase to open on, so re-opening after a point pick lands where it left.
+  final AnimationPhase initialPhase;
+
+  /// The layer's resting position, as a canvas fraction. The preview tile shows
+  /// a custom slide travelling from its point towards this.
+  final Offset layerAnchor;
+
+  /// Width over height of the canvas, which turns the difference between two
+  /// canvas fractions back into the direction the layer actually travels —
+  /// fractions are scaled per axis, so on a 9:16 frame a raw difference leans
+  /// horizontal.
+  final double canvasAspectRatio;
+
+  /// Whether a point can be placed at all. False when there is no canvas to
+  /// place it on, which hides the option rather than offering a dead end.
+  final bool canPickPoint;
+
   final int maxDurationMs;
 
   @override
@@ -206,7 +329,7 @@ class LayerAnimationPickerView extends StatefulWidget {
 class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  AnimationPhase _phase = AnimationPhase.animateIn;
+  late AnimationPhase _phase;
 
   late _PhaseConfig _enter;
   late _PhaseConfig _leave;
@@ -230,8 +353,15 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   @override
   void initState() {
     super.initState();
-    _enter = _PhaseConfig.fromAnimations(widget.initialEnter);
-    _leave = _PhaseConfig.fromAnimations(widget.initialLeave);
+    _phase = widget.initialPhase;
+    _enter = _PhaseConfig.fromAnimations(
+      widget.initialEnter,
+      slideFrom: widget.initialEnterPoint,
+    );
+    _leave = _PhaseConfig.fromAnimations(
+      widget.initialLeave,
+      slideFrom: widget.initialLeavePoint,
+    );
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: _loopMs),
@@ -274,20 +404,31 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
 
   int get _maxMs => widget.maxDurationMs;
 
-  List<LayerAnimation> _build(_PhaseConfig config, AnimationPhase phase) => [
-    for (final type in _composableTypes)
-      if (config.types.contains(type))
-        LayerAnimation(
-          type: type,
-          phase: phase,
-          duration: config.duration,
-          curve: config.curve,
-          slideDirection: type == LayerAnimationType.slide
-              ? config.direction
-              : null,
-          scaleFrom: type == LayerAnimationType.scale ? config.scaleFrom : null,
-        ),
-  ];
+  List<LayerAnimation> _build(_PhaseConfig config, AnimationPhase phase) {
+    // A custom point overrides the direction at export, but a direction is
+    // still carried: pro_image_editor requires one on every slide and drives
+    // the in-editor preview from it, so the closest edge to the point keeps
+    // that preview travelling roughly the way the export will.
+    final travel = _travelOf(config);
+    final direction = travel == null
+        ? config.direction
+        : _nearestSlideDirection(travel, fallback: config.direction);
+
+    return [
+      for (final type in _composableTypes)
+        if (config.types.contains(type))
+          LayerAnimation(
+            type: type,
+            phase: phase,
+            duration: config.duration,
+            curve: config.curve,
+            slideDirection: type == LayerAnimationType.slide ? direction : null,
+            scaleFrom: type == LayerAnimationType.scale
+                ? config.scaleFrom
+                : null,
+          ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -334,6 +475,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                           controller: _controller,
                           phase: _phase,
                           direction: active.direction,
+                          slideVector: _travelOf(active),
                           scaleFrom: active.scaleFrom,
                           curve: active.curve,
                           durationMs: active.duration.inMilliseconds,
@@ -401,22 +543,25 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                               spacing: 8,
                               children: [
                                 for (final direction in _slideDirections)
-                                  AnimationPickerChip(
-                                    selected: direction == active.direction,
+                                  _DirectionChip(
+                                    selected:
+                                        active.slideFrom == null &&
+                                        direction == active.direction,
+                                    label: _directionLabel(l10n, direction),
+                                    icon: _directionIcon(direction),
                                     onTap: () => _updateActive(
-                                      (c) => c.copyWith(direction: direction),
+                                      (c) => c.withDirection(direction),
                                     ),
-                                    semanticLabel: _directionLabel(
-                                      l10n,
-                                      direction,
-                                    ),
-                                    child: DivineIcon(
-                                      icon: _directionIcon(direction),
-                                      size: 18,
-                                      color: direction == active.direction
-                                          ? context.vineColors.accentBrand
-                                          : context.vineColors.secondaryText,
-                                    ),
+                                  ),
+                                if (widget.canPickPoint)
+                                  _DirectionChip(
+                                    selected: active.slideFrom != null,
+                                    label: l10n
+                                        .videoEditorLayerAnimationCustomPoint,
+                                    icon: .handPointing,
+                                    onTap: () => Navigator.of(
+                                      context,
+                                    ).pop(_result(pickPoint: true)),
                                   ),
                               ],
                             ),
@@ -462,10 +607,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
             padding: const .symmetric(horizontal: 16),
             child: DivineButton(
               label: l10n.videoEditorDoneLabel,
-              onPressed: () => Navigator.of(context).pop((
-                enter: _build(_enter, AnimationPhase.animateIn),
-                leave: _build(_leave, AnimationPhase.animateOut),
-              )),
+              onPressed: () => Navigator.of(context).pop(_result()),
             ),
           ),
           const SizedBox(height: 16),
@@ -473,6 +615,29 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
       ),
     );
   }
+
+  /// Where a phase's custom point sits relative to the layer's resting place,
+  /// in canvas proportions — the direction and distance the slide covers.
+  /// `null` when the phase travels from an edge instead.
+  Offset? _travelOf(_PhaseConfig config) {
+    final from = config.slideFrom;
+    if (from == null) return null;
+    final delta = from - widget.layerAnchor;
+    return Offset(delta.dx * widget.canvasAspectRatio, delta.dy);
+  }
+
+  /// The picker's current state, as the sheet hands it back.
+  ///
+  /// [pickPoint] closes the sheet to place a point on the canvas rather than to
+  /// apply the edit; everything else is carried back in either case.
+  _LayerAnimationResult _result({bool pickPoint = false}) => (
+    enter: _build(_enter, AnimationPhase.animateIn),
+    leave: _build(_leave, AnimationPhase.animateOut),
+    enterPoint: _enter.slideFrom,
+    leavePoint: _leave.slideFrom,
+    phase: _phase,
+    pickPoint: pickPoint,
+  );
 
   String _typeLabel(AppLocalizations l10n, LayerAnimationType? type) =>
       switch (type) {
@@ -487,8 +652,8 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
 ///
 /// [types] is the set of effects active for the phase — a phase can combine
 /// several (e.g. fade + slide). [duration] and [curve] are shared by every
-/// effect; [direction] and [scaleFrom] apply only when slide / scale is in
-/// [types].
+/// effect; [direction], [slideFrom] and [scaleFrom] apply only when slide /
+/// scale is in [types].
 class _PhaseConfig {
   const _PhaseConfig({
     required this.types,
@@ -496,13 +661,21 @@ class _PhaseConfig {
     required this.curve,
     required this.direction,
     required this.scaleFrom,
+    this.slideFrom,
   });
 
   /// Rebuilds the config from a phase's existing animations. [duration] and
   /// [curve] come from the first animation; [direction] / [scaleFrom] from the
   /// first slide / scale animation. (The picker edits these as shared values,
   /// so per-effect differences set externally collapse on edit.)
-  factory _PhaseConfig.fromAnimations(List<LayerAnimation> animations) {
+  ///
+  /// [slideFrom] comes from the layer instead of the animations: the custom
+  /// point is stored beside them, because pro_image_editor's animation model
+  /// has nowhere to keep it (see [LayerSlidePoints]).
+  factory _PhaseConfig.fromAnimations(
+    List<LayerAnimation> animations, {
+    Offset? slideFrom,
+  }) {
     final types = <LayerAnimationType>{};
     Duration? duration;
     AnimationCurve? curve;
@@ -525,6 +698,7 @@ class _PhaseConfig {
       curve: curve ?? AnimationCurve.easeOut,
       direction: direction ?? SlideDirection.left,
       scaleFrom: scaleFrom ?? 0.0,
+      slideFrom: slideFrom,
     );
   }
 
@@ -534,6 +708,10 @@ class _PhaseConfig {
   final SlideDirection direction;
   final double scaleFrom;
 
+  /// Where the slide starts (enter) or ends (leave), as a canvas fraction.
+  /// `null` travels to or from the canvas edge [direction] names.
+  final Offset? slideFrom;
+
   /// Adds or removes [type] from [types]; a `null` [type] clears the set (None).
   _PhaseConfig toggled(LayerAnimationType? type) {
     if (type == null) return copyWith(types: const {});
@@ -541,6 +719,17 @@ class _PhaseConfig {
     if (!next.add(type)) next.remove(type);
     return copyWith(types: next);
   }
+
+  /// Switches the phase back to an edge slide in [direction], dropping any
+  /// custom point — the two are alternatives, so picking an edge is how the
+  /// custom option is deselected.
+  _PhaseConfig withDirection(SlideDirection direction) => _PhaseConfig(
+    types: types,
+    duration: duration,
+    curve: curve,
+    direction: direction,
+    scaleFrom: scaleFrom,
+  );
 
   _PhaseConfig copyWith({
     Set<LayerAnimationType>? types,
@@ -554,6 +743,7 @@ class _PhaseConfig {
     curve: curve ?? this.curve,
     direction: direction ?? this.direction,
     scaleFrom: scaleFrom ?? this.scaleFrom,
+    slideFrom: slideFrom,
   );
 }
 
@@ -639,6 +829,36 @@ class _PhaseSegment extends StatelessWidget {
   }
 }
 
+/// One option in the slide's direction row — an edge, or the custom point.
+class _DirectionChip extends StatelessWidget {
+  const _DirectionChip({
+    required this.selected,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final String label;
+  final DivineIconName icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return AnimationPickerChip(
+      selected: selected,
+      onTap: onTap,
+      semanticLabel: label,
+      child: DivineIcon(
+        icon: icon,
+        size: 18,
+        color: selected ? colors.accentBrand : colors.secondaryText,
+      ),
+    );
+  }
+}
+
 /// One layer-animation option: a looped preview of [type] on a placeholder
 /// layer for the active [phase], with a label, highlighted when [selected].
 class _LayerTypeTile extends StatelessWidget {
@@ -649,6 +869,7 @@ class _LayerTypeTile extends StatelessWidget {
     required this.controller,
     required this.phase,
     required this.direction,
+    required this.slideVector,
     required this.scaleFrom,
     required this.curve,
     required this.durationMs,
@@ -661,6 +882,10 @@ class _LayerTypeTile extends StatelessWidget {
   final AnimationController controller;
   final AnimationPhase phase;
   final SlideDirection direction;
+
+  /// Where the custom point sits relative to the layer's resting place, in
+  /// layer coordinates. `null` previews the edge slide [direction] names.
+  final Offset? slideVector;
   final double scaleFrom;
   final AnimationCurve curve;
   final int durationMs;
@@ -708,6 +933,7 @@ class _LayerTypeTile extends StatelessWidget {
                           type: type,
                           phase: phase,
                           direction: direction,
+                          slideVector: slideVector,
                           scaleFrom: scaleFrom,
                           progress: flutterCurveFor(curve).transform(
                             _holdProgress(controller.value, durationMs),
@@ -741,6 +967,7 @@ class _LayerEffect extends StatelessWidget {
     required this.type,
     required this.phase,
     required this.direction,
+    required this.slideVector,
     required this.scaleFrom,
     required this.progress,
   });
@@ -748,6 +975,7 @@ class _LayerEffect extends StatelessWidget {
   final LayerAnimationType? type;
   final AnimationPhase phase;
   final SlideDirection direction;
+  final Offset? slideVector;
   final double scaleFrom;
   final double progress;
 
@@ -787,7 +1015,7 @@ class _LayerEffect extends StatelessWidget {
           ),
           LayerAnimationType.slide => Center(
             child: Transform.translate(
-              offset: _previewSlideOffset(direction, 1 - presence),
+              offset: _previewSlideOffset(1 - presence),
               child: layer,
             ),
           ),
@@ -796,7 +1024,17 @@ class _LayerEffect extends StatelessWidget {
     );
   }
 
-  Offset _previewSlideOffset(SlideDirection direction, double away) {
+  /// How far the placeholder sits from its resting place at [away] (1 = fully
+  /// away, 0 = home).
+  ///
+  /// A custom point previews the direction it travels from rather than an edge;
+  /// the distance stays the preview's own, since the tile is far too small to
+  /// show the real one to scale.
+  Offset _previewSlideOffset(double away) {
+    final vector = slideVector;
+    if (vector != null && vector.distance > 0) {
+      return vector / vector.distance * (away * _previewWidth);
+    }
     return switch (direction) {
       SlideDirection.left => Offset(-away * _previewWidth, 0),
       SlideDirection.right => Offset(away * _previewWidth, 0),
@@ -840,6 +1078,22 @@ double _holdProgress(double value, int durationMs) {
   if (ratio <= 0 || value <= start) return 0;
   if (value >= end) return 1;
   return (value - start) / (end - start);
+}
+
+/// The edge [travel] points at — the axis it leans on, and the side of it.
+///
+/// [travel] runs from the layer's resting place to the custom point, so its
+/// sign already names the side an enter comes from and a leave heads for. A
+/// zero-length travel names no edge and keeps [fallback].
+SlideDirection _nearestSlideDirection(
+  Offset travel, {
+  required SlideDirection fallback,
+}) {
+  if (travel == Offset.zero) return fallback;
+  if (travel.dx.abs() >= travel.dy.abs()) {
+    return travel.dx < 0 ? SlideDirection.left : SlideDirection.right;
+  }
+  return travel.dy < 0 ? SlideDirection.top : SlideDirection.bottom;
 }
 
 String _directionLabel(AppLocalizations l10n, SlideDirection direction) =>

@@ -3,8 +3,8 @@
 // ABOUTME: for use in both row variants.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/notifications/widgets/notification_leading_type_icon.dart';
 import 'package:openvine/notifications/widgets/notification_type_icon_spec.dart';

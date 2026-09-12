@@ -111,16 +111,32 @@ await controller.dispose();
 Pre-buffer upcoming videos so playback starts instantly:
 
 ```dart
-// Configure the native cache (call once at app startup)
+// Configure the Android player's disk cache (call once at app startup)
 await DivineVideoPlayerController.configureCache(
   maxSizeBytes: 500 * 1024 * 1024, // 500 MB
 );
 
-// Preload into the cache without creating a player
+// Preload without creating a player
 await DivineVideoPlayerController.preload([
   VideoClip(uri: 'https://example.com/next-video.mp4'),
 ]);
 ```
+
+The disk cache exists on Android only. ExoPlayer streams HTTP(S) sources
+through a write-through `SimpleCache` at `<cacheDir>/divine_video_cache`
+(`kNativeVideoCacheDirectoryName`), so a URL it has already streamed is
+served from disk the next time. Two kinds of source deliberately bypass it:
+
+- Local sources — `VideoClip.file`, or any URI that is not `http`/`https`.
+  The bytes are already on the device; caching them would only store a
+  second copy. An app that hands the player files from its own download
+  cache therefore pays for one copy, not two.
+- Viewer-authenticated sources, which the origin serves `no-store`; those
+  bytes are never persisted.
+
+On iOS and macOS there is no cache to configure: AVFoundation loads media
+through its own stack and does not consult `URLCache`, so `configureCache`
+is a no-op there and `preload` only makes a best-effort metadata request.
 
 ### Texture rendering
 

@@ -2,11 +2,11 @@
 // ABOUTME: Covers title rendering, speed clamping, and cancel/confirm navigation.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 
 // Sentinel shown on the base route so navigation-back tests can confirm
@@ -20,7 +20,7 @@ class _HomeScreen extends StatelessWidget {
 
 Widget _buildSubject({double initialSpeed = 1.0}) {
   return MaterialApp.router(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     routerConfig: GoRouter(
       routes: [

@@ -4,8 +4,8 @@
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/detached_clip_thumbnails/detached_clip_thumbnails_cubit.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart'
     show detachedClipSourceKey;

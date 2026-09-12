@@ -1,8 +1,8 @@
 // ABOUTME: Tests BackgroundActivityManager's lifecycle fan-out and reset.
 // ABOUTME: Gives each test a fresh manager and resets it to cancel its timers.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 
 class TestBackgroundService implements BackgroundAwareService {

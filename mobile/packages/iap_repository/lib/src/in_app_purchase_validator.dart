@@ -97,7 +97,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
     switch (purchase.status) {
       case PurchaseStatus.purchased:
       case PurchaseStatus.restored:
-        if (context?.silent != true) {
+        if (context != null && !context.silent) {
           _lifecycleController.add(EntitlementLifecycle.confirming);
         }
         final proof = _proofFromPurchase(purchase, context);
@@ -117,7 +117,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
         }
       case PurchaseStatus.canceled:
         const exception = PurchaseFailedException(
-          null,
+          'cancelled',
           'Purchase was cancelled.',
         );
         pending?.completer?.completeError(exception);
@@ -127,7 +127,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
         if (pending != null) {
           _pendingPurchases[purchase.productID] = pending;
         }
-        if (context?.silent != true) {
+        if (context != null && !context.silent) {
           _lifecycleController.add(EntitlementLifecycle.pending);
         }
     }
@@ -207,7 +207,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
     if (!initiated) {
       _pendingPurchases.remove(productId);
       throw const PurchaseFailedException(
-        null,
+        'not_started',
         'Store did not start the purchase.',
       );
     }
@@ -267,7 +267,13 @@ class InAppPurchaseValidator implements EntitlementValidator {
   @override
   Future<void> completePurchase(SupporterPurchaseProof proof) async {
     final purchase = _unacknowledgedPurchases[proof.attemptId];
-    if (purchase == null || !purchase.pendingCompletePurchase) return;
+    if (purchase == null) return;
+    // StoreKit 2 sets pendingCompletePurchase=false for restored transactions,
+    // including those redelivered after a crash before finishTransaction.
+    final restoredApplePurchase =
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        purchase.status == PurchaseStatus.restored;
+    if (!purchase.pendingCompletePurchase && !restoredApplePurchase) return;
     await _store.completePurchase(purchase);
     _unacknowledgedPurchases.remove(proof.attemptId);
   }

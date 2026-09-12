@@ -2315,6 +2315,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ریلے سے منسلک نہیں ہو سکا۔ براہ کرم اپنا نیٹ ورک کنکشن چیک کریں۔';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'ریلے سے ابھی بھی منسلک ہو رہا ہے۔ براہ کرم تھوڑا انتظار کریں۔';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'اس ڈیوائس پر محفوظ ہو گیا۔ اشاعت دوبارہ کام کرنے لگے تو ہم اسے آپ کے اکاؤنٹ سے ہم آہنگ کر دیں گے۔';
 
@@ -2964,6 +2968,24 @@ class AppLocalizationsUr extends AppLocalizations {
       'جیسے جیسے Funnelcake سامعین کے تجزیات اینڈ پوائنٹس شامل کرے گا، سامعین کے ذریعہ/جغرافیہ/وقت کی تفصیلات بھر جائیں گی۔';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'برقراری';
 
   @override
@@ -3190,6 +3212,10 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'اکاؤنٹ بنائیں';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'دعوتی کوڈ پر واپس';
@@ -8936,6 +8962,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'کلپ کے پیچھے جو کچھ ہے، وہ اس کے آر پار نظر آئے گا۔';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔';
 
@@ -9223,6 +9253,17 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'اسکیل آغاز';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ویڈیو پر وہاں ٹیپ کریں جہاں سے یہ سلائیڈ ہو کر آئے';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ویڈیو پر وہاں ٹیپ کریں جہاں یہ سلائیڈ ہو کر جائے';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11049,6 +11090,51 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'کیش صاف ہو گئی';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'آپ کی کلپس اور ڈرافٹس';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'آپ کی بنائی ہوئی ریکارڈنگز، ڈرافٹس اور آوازیں۔ کیش صاف کرنے سے ان پر کوئی اثر نہیں پڑتا — یہاں جگہ خالی کرنے کے لیے اپنی لائبریری سے کلپس حذف کریں۔';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'کوئی بچی ہوئی فائل نہیں';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count بچی ہوئی فائلیں، $size',
+      one: '$count بچی ہوئی فائل، $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'بچی ہوئی فائلیں ہٹائیں';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'بچی ہوئی فائلیں ہٹائیں؟';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'اس سے $count فائلیں حذف ہو جائیں گی جنہیں اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
+      one:
+          'اس سے $count فائل حذف ہو جائے گی جسے اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'بچی ہوئی فائلیں ہٹا دی گئیں';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'کلپ لائبریری';

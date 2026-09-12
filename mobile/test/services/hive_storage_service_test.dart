@@ -281,12 +281,61 @@ void main() {
 
     test('removes stranded lock files', () async {
       final lockFile = File(
-        p.join(documentsDir.path, '${HiveBoxNames.personalEvents}.lock'),
+        p.join(documentsDir.path, '${HiveBoxNames.notifications}.lock'),
       )..writeAsStringSync('');
 
       await HiveStorageService.initialize();
 
       expect(lockFile.existsSync(), isFalse);
+    });
+
+    group('retired boxes', () {
+      // personal_events / personal_events_metadata moved to Drift in #6986.
+      // They are out of HiveBoxNames.all, so the stranded-box sweep no longer
+      // walks them and they have to be deleted explicitly — from both homes,
+      // because a pre-#6958 build could have left a copy in documents.
+      for (final boxName in const [
+        'personal_events',
+        'personal_events_metadata',
+      ]) {
+        test('deletes a retired $boxName left in the home', () async {
+          final home = Directory(homePath)..createSync(recursive: true);
+          _writeBoxFile(home, boxName, 'retired');
+          _writeCompactedBoxFile(home, boxName, 'retired compacted');
+          final lockFile = File(p.join(home.path, '$boxName.lock'))
+            ..writeAsStringSync('');
+
+          await HiveStorageService.initialize();
+
+          expect(_boxFile(home, boxName).existsSync(), isFalse);
+          expect(_compactedBoxFile(home, boxName).existsSync(), isFalse);
+          expect(lockFile.existsSync(), isFalse);
+        });
+
+        test('deletes a retired $boxName stranded in documents', () async {
+          _writeBoxFile(documentsDir, boxName, 'stranded retired');
+
+          await HiveStorageService.initialize();
+
+          expect(_boxFile(documentsDir, boxName).existsSync(), isFalse);
+          expect(
+            _boxFile(Directory(homePath), boxName).existsSync(),
+            isFalse,
+            reason: 'a retired box must not be migrated into the home',
+          );
+        });
+      }
+
+      test('leaves live boxes alone', () async {
+        _writeBoxFile(documentsDir, HiveBoxNames.notifications, 'live');
+
+        await HiveStorageService.initialize();
+
+        expect(
+          _readBoxFile(Directory(homePath), HiveBoxNames.notifications),
+          'live',
+        );
+      });
     });
   });
 }

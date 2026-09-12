@@ -2372,6 +2372,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'N-am putut conecta la relay-uri. Verifică-ți conexiunea la rețea.';
 
   @override
+  String get relaySettingsStillConnecting =>
+      'Încă ne conectăm la relay-uri. Mai așteaptă puțin.';
+
+  @override
   String get relaySettingsSavedLocallyPublishPending =>
       'Salvat pe acest dispozitiv. Îl vom sincroniza cu contul tău când publicarea funcționează din nou.';
 
@@ -3066,6 +3070,24 @@ class AppLocalizationsRo extends AppLocalizations {
       'Detaliile despre sursa/geografia/timpul audienței se vor popula pe măsură ce Funnelcake adaugă endpoint-uri de statistici de audiență.';
 
   @override
+  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+
+  @override
+  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+
+  @override
+  String get analyticsFollowerCountsBody =>
+      'Your follower count shows the people who follow you on Divine.';
+
+  @override
+  String get analyticsSocialCountsLearnMore => 'Learn more';
+
+  @override
+  String analyticsSocialCountsLearnMoreSemantics(String url) {
+    return 'Learn more at $url';
+  }
+
+  @override
   String get analyticsRetention => 'Retenție';
 
   @override
@@ -3291,6 +3313,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get authCreateAccountTitle => 'Creează cont';
+
+  @override
+  String get authCreateAccountMarketingOptIn =>
+      'Get Divine app updates and news';
 
   @override
   String get authBackToInviteCode => 'Înapoi la codul de invitație';
@@ -9148,6 +9174,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipul nu poate păstra transparența, așa că la export iese negru.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Ce se află în spatele clipului se vede prin el.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.';
 
@@ -9435,6 +9465,17 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationScaleFrom => 'Scalare de la';
+
+  @override
+  String get videoEditorLayerAnimationCustomPoint => 'Punct personalizat';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Atinge videoclipul acolo de unde trebuie să gliseze';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Atinge videoclipul acolo unde trebuie să gliseze';
 
   @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
@@ -11313,6 +11354,54 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get settingsStorageCleared => 'Cache golit';
+
+  @override
+  String get settingsStorageContentSectionTitle => 'Clipurile și schițele tale';
+
+  @override
+  String get settingsStorageContentDescription =>
+      'Înregistrări, schițe și sunete create de tine. Golirea cache-ului nu le atinge niciodată – șterge clipuri din bibliotecă pentru a elibera spațiu aici.';
+
+  @override
+  String get settingsStorageNoOrphanedFiles => 'Niciun fișier rămas';
+
+  @override
+  String settingsStorageOrphanedFilesFound(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fișiere rămase, $size',
+      few: '$count fișiere rămase, $size',
+      one: '$count fișier rămas, $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageRemoveOrphanedButton => 'Elimină fișierele rămase';
+
+  @override
+  String get settingsStorageRemoveOrphanedConfirmTitle =>
+      'Elimini fișierele rămase?';
+
+  @override
+  String settingsStorageRemoveOrphanedConfirmMessage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Se șterg $count de fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
+      few:
+          'Se șterg $count fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
+      one:
+          'Se șterge $count fișier pe care niciun clip, schiță sau încărcare nu îl mai folosește și se eliberează $size. Nu se poate anula.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsStorageOrphanedFilesRemoved =>
+      'Fișierele rămase au fost eliminate';
 
   @override
   String get settingsStorageLibrarySectionTitle => 'Bibliotecă de clipuri';

@@ -120,11 +120,13 @@ void main() {
 
     VideoFeedBloc createBloc({
       FeedTuningRepository? feedTuningRepository,
+      FeedPerformanceTracker? feedTracker,
     }) => VideoFeedBloc(
       videosRepository: mockVideosRepository,
       followRepository: mockFollowRepository,
       curatedListRepository: mockCuratedListRepository,
       feedTuningRepository: feedTuningRepository,
+      feedTracker: feedTracker,
     );
 
     VideoEvent createTestVideo(
@@ -1428,7 +1430,7 @@ void main() {
       );
 
       test(
-        'keeps startup subscriptions when initial source load becomes stale',
+        'abandons the telemetry session when a source load becomes stale',
         () async {
           final followingVideos = createTestVideos(2, idPrefix: 'following');
           final newVideos = createTestVideos(2, idPrefix: 'new');
@@ -1456,7 +1458,10 @@ void main() {
             ),
           ).thenAnswer((_) => newVideosResult.future);
 
-          final bloc = createBloc();
+          final feedTracker = FeedPerformanceTracker(
+            sink: const NoOpAnalyticsEventSink(),
+          );
+          final bloc = createBloc(feedTracker: feedTracker);
           addTearDown(bloc.close);
 
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
@@ -1474,6 +1479,7 @@ void main() {
           expect(bloc.state.source, const VideoFeedSource.newVideos());
           expect(followingController.hasListener, isTrue);
           expect(curatedListsController.hasListener, isTrue);
+          expect(feedTracker.activeSessionCount, 0);
         },
       );
     });
@@ -3616,9 +3622,14 @@ void main() {
 
     group('feed performance tracking', () {
       late _MockFeedPerformanceTracker mockTracker;
+      late FeedLoadHandle feedLoad;
 
       setUp(() {
         mockTracker = _MockFeedPerformanceTracker();
+        feedLoad = FeedPerformanceTracker(
+          sink: const NoOpAnalyticsEventSink(),
+        ).startFeedLoad('test');
+        when(() => mockTracker.startFeedLoad(any())).thenReturn(feedLoad);
       });
 
       VideoFeedBloc createBlocWithTracker() => VideoFeedBloc(
@@ -3652,7 +3663,7 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'calls markFirstVideosReceived and markFeedDisplayed on success',
+        'records first-visible and fresh-result milestones on success',
         setUp: () {
           final videos = createTestVideos(3);
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -3664,16 +3675,34 @@ void main() {
               limit: any(named: 'limit'),
               until: any(named: 'until'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: videos,
+              followingPageCount: 2,
+            ),
+          );
         },
         build: createBlocWithTracker,
         act: (bloc) =>
             bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
         verify: (_) {
           verify(
-            () => mockTracker.markFirstVideosReceived('following', 3),
+            () => mockTracker.markFirstVideosReceived(feedLoad, 3),
           ).called(1);
-          verify(() => mockTracker.markFeedDisplayed('following', 3)).called(1);
+          verify(
+            () => mockTracker.markFirstVisibleContent(
+              feedLoad,
+              3,
+              servedFromCache: false,
+            ),
+          ).called(1);
+          verify(
+            () => mockTracker.markFreshResultCompleted(
+              feedLoad,
+              3,
+              followingPageCount: 2,
+            ),
+          ).called(1);
         },
       );
 
@@ -3702,8 +3731,12 @@ void main() {
               errorMessage: any(named: 'errorMessage'),
             ),
           ).called(1);
-          verifyNever(() => mockTracker.markFirstVideosReceived(any(), any()));
-          verifyNever(() => mockTracker.markFeedDisplayed(any(), any()));
+          verifyNever(
+            () => mockTracker.markFirstVideosReceived(feedLoad, any()),
+          );
+          verifyNever(
+            () => mockTracker.markFreshResultCompleted(feedLoad, any()),
+          );
         },
       );
 
@@ -3725,9 +3758,11 @@ void main() {
         verify: (_) {
           verify(() => mockTracker.startFeedLoad('latest')).called(1);
           verify(
-            () => mockTracker.markFirstVideosReceived('latest', 3),
+            () => mockTracker.markFirstVideosReceived(feedLoad, 3),
           ).called(1);
-          verify(() => mockTracker.markFeedDisplayed('latest', 3)).called(1);
+          verify(
+            () => mockTracker.markFreshResultCompleted(feedLoad, 3),
+          ).called(1);
         },
       );
     });

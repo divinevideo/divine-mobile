@@ -3,10 +3,10 @@
 // ABOUTME: status-bar inset never reappears as a gap above the first button.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
@@ -44,7 +44,7 @@ void main() {
             curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: ExploreListsTab()),
           ),

@@ -1,9 +1,9 @@
-import '../nip19/pubkey_for_logs.dart';
 import 'dart:convert';
 import 'dart:developer';
 
 import '../event.dart';
 import '../event_kind.dart';
+import '../nip19/pubkey_for_logs.dart';
 import 'nostr_signer.dart';
 
 Future<void> signerTest(NostrSigner nostrSigner) async {

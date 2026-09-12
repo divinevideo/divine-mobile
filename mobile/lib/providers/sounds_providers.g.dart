@@ -476,13 +476,13 @@ final class SoundsByCreatorFamily extends $Family
 
 /// Family provider for video usage count of a specific sound.
 ///
-/// Returns the number of Kind 34236 video events that reference the audio event.
-/// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+/// Returns the number of Kind 34236 video events that reference the audio
+/// event, or `null` when the count is unknown because no relay answered.
 ///
 /// Usage:
 /// ```dart
 /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-/// final count = countAsync.valueOrNull ?? 0;
+/// final count = countAsync.value; // null while loading or when unknown
 /// ```
 
 @ProviderFor(soundUsageCount)
@@ -490,27 +490,27 @@ final soundUsageCountProvider = SoundUsageCountFamily._();
 
 /// Family provider for video usage count of a specific sound.
 ///
-/// Returns the number of Kind 34236 video events that reference the audio event.
-/// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+/// Returns the number of Kind 34236 video events that reference the audio
+/// event, or `null` when the count is unknown because no relay answered.
 ///
 /// Usage:
 /// ```dart
 /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-/// final count = countAsync.valueOrNull ?? 0;
+/// final count = countAsync.value; // null while loading or when unknown
 /// ```
 
 final class SoundUsageCountProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
-    with $FutureModifier<int>, $FutureProvider<int> {
+    extends $FunctionalProvider<AsyncValue<int?>, int?, FutureOr<int?>>
+    with $FutureModifier<int?>, $FutureProvider<int?> {
   /// Family provider for video usage count of a specific sound.
   ///
-  /// Returns the number of Kind 34236 video events that reference the audio event.
-  /// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+  /// Returns the number of Kind 34236 video events that reference the audio
+  /// event, or `null` when the count is unknown because no relay answered.
   ///
   /// Usage:
   /// ```dart
   /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-  /// final count = countAsync.valueOrNull ?? 0;
+  /// final count = countAsync.value; // null while loading or when unknown
   /// ```
   SoundUsageCountProvider._({
     required SoundUsageCountFamily super.from,
@@ -535,11 +535,11 @@ final class SoundUsageCountProvider
 
   @$internal
   @override
-  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+  $FutureProviderElement<int?> $createElement($ProviderPointer pointer) =>
       $FutureProviderElement(pointer);
 
   @override
-  FutureOr<int> create(Ref ref) {
+  FutureOr<int?> create(Ref ref) {
     final argument = this.argument as String;
     return soundUsageCount(ref, argument);
   }
@@ -555,21 +555,21 @@ final class SoundUsageCountProvider
   }
 }
 
-String _$soundUsageCountHash() => r'0006d93e606657fae006e7309d2f8cb8e1c0140d';
+String _$soundUsageCountHash() => r'1e8f4436c83dfe5b149c6a5c92ff53de304d639a';
 
 /// Family provider for video usage count of a specific sound.
 ///
-/// Returns the number of Kind 34236 video events that reference the audio event.
-/// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+/// Returns the number of Kind 34236 video events that reference the audio
+/// event, or `null` when the count is unknown because no relay answered.
 ///
 /// Usage:
 /// ```dart
 /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-/// final count = countAsync.valueOrNull ?? 0;
+/// final count = countAsync.value; // null while loading or when unknown
 /// ```
 
 final class SoundUsageCountFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<int>, String> {
+    with $FunctionalFamilyOverride<FutureOr<int?>, String> {
   SoundUsageCountFamily._()
     : super(
         retry: null,
@@ -581,13 +581,13 @@ final class SoundUsageCountFamily extends $Family
 
   /// Family provider for video usage count of a specific sound.
   ///
-  /// Returns the number of Kind 34236 video events that reference the audio event.
-  /// Uses NIP-45 COUNT if supported by relay, otherwise falls back to client-side count.
+  /// Returns the number of Kind 34236 video events that reference the audio
+  /// event, or `null` when the count is unknown because no relay answered.
   ///
   /// Usage:
   /// ```dart
   /// final countAsync = ref.watch(soundUsageCountProvider('audio-event-id'));
-  /// final count = countAsync.valueOrNull ?? 0;
+  /// final count = countAsync.value; // null while loading or when unknown
   /// ```
 
   SoundUsageCountProvider call(String audioEventId) =>

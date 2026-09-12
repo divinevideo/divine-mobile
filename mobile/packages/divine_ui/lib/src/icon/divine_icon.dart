@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs, Icon names are self-documenting
 
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Icon names from the Divine design system icon set.
 ///
@@ -96,6 +96,13 @@ enum DivineIconName {
   flag('flag'),
   flipHorizontal('flip_horizontal'),
   follow('Icon-Follow'),
+
+  /// The check glyph of the follow badge, exported from the Figma component
+  /// with the 20dp disc as its box, so it lands where the design puts it.
+  followCheck('follow_check'),
+
+  /// The plus glyph of the follow badge, exported like [followCheck].
+  followPlus('follow_plus'),
   folderOpen('folder_open'),
   funnelSimple('funnel_simple'),
   gear('gear'),

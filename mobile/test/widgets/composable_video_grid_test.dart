@@ -24,13 +24,13 @@ import 'dart:async';
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -158,7 +158,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -187,7 +187,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -212,7 +212,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -239,7 +239,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -278,7 +278,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -315,7 +315,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -346,7 +346,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -376,7 +376,7 @@ void main() {
         ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -423,7 +423,7 @@ void main() {
                 authService: _authenticatedAuthService(_ownPubkey),
               ),
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: ComposableVideoGrid(
@@ -501,7 +501,7 @@ void main() {
               ],
             ),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -602,7 +602,7 @@ void main() {
               ],
             ),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -669,7 +669,7 @@ void main() {
         return ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -720,7 +720,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -790,7 +790,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -840,7 +840,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Directionality(
                 textDirection: TextDirection.rtl,
@@ -891,7 +891,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -923,7 +923,7 @@ void main() {
         return ProviderScope(
           overrides: _gridOverrides(mockTracker, subscribedListCache: cache),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -956,7 +956,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker, subscribedListCache: cache),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -988,7 +988,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -1013,7 +1013,7 @@ void main() {
           ProviderScope(
             overrides: _gridOverrides(mockTracker),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(
@@ -1046,7 +1046,7 @@ void main() {
         return ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -1139,7 +1139,7 @@ void main() {
         return ProviderScope(
           overrides: _gridOverrides(mockTracker),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
@@ -1257,7 +1257,7 @@ void main() {
               authService: mockAuth,
             ),
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ComposableVideoGrid(

@@ -6,16 +6,16 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -23,6 +23,7 @@ import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockProfileEditorBloc
@@ -60,7 +61,7 @@ void main() {
     }) {
       return MaterialApp(
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: Scaffold(
@@ -74,7 +75,7 @@ void main() {
       UsernameValidationError? error,
     }) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: BlocProvider<ProfileEditorBloc>.value(
@@ -297,7 +298,7 @@ void main() {
   group('username field input formatters', () {
     Widget buildField(TextEditingController controller) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: TextField(
@@ -350,7 +351,7 @@ void main() {
 
     Widget buildDialog(String username) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: BlocProvider<ProfileEditorBloc>.value(
@@ -410,7 +411,7 @@ void main() {
     testWidgets('Close button dismisses dialog', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<ProfileEditorBloc>.value(
@@ -448,7 +449,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: BlocProvider<ProfileEditorBloc>.value(
@@ -501,7 +502,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -633,7 +634,7 @@ void main() {
       return testProviderScope(
         additionalOverrides: baseOverrides(),
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: const ProfileSetupScreen(isNewUser: false),
@@ -699,7 +700,7 @@ void main() {
       // claims the copy already happened.
       expect(announced.label, contains(l10n.profileCopyPublicKey));
       expect(announced.label, isNot(contains(l10n.profilePublicKeyCopied)));
-      expect(find.byTooltip(l10n.profileCopyPublicKey), findsOneWidget);
+      expect(findByTooltip(l10n.profileCopyPublicKey), findsOneWidget);
 
       handle.dispose();
     });
@@ -754,7 +755,7 @@ void main() {
             ).overrideWith((ref) => Stream<models.UserProfile?>.value(null)),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             home: MultiBlocProvider(
@@ -817,7 +818,7 @@ void main() {
             ).overrideWith((ref) => Stream<models.UserProfile?>.value(null)),
           ],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             routerConfig: router,
@@ -1363,7 +1364,7 @@ void main() {
                 ),
               ],
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 home: MultiBlocProvider(
@@ -1448,7 +1449,7 @@ void main() {
       /// picker.
       Future<void> openBannerColorSheet(WidgetTester tester) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.profileSetupBannerChangeColor));
         await tester.pumpAndSettle();
@@ -1549,7 +1550,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.profileSetupChangeBannerTitle), findsOneWidget);
@@ -1564,7 +1565,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.profileSetupImagePasteLink));
         await tester.pumpAndSettle();
@@ -1598,7 +1599,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.profileSetupImagePasteLink));
         await tester.pumpAndSettle();
@@ -1623,7 +1624,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.profileSetupImagePasteLink));
         await tester.pumpAndSettle();
@@ -1661,7 +1662,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.profileSetupBannerClearButton), findsNothing);
@@ -1675,7 +1676,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+        await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
         await tester.pumpAndSettle();
 
         // Label stays as the caption, with the chosen colour beneath it.
@@ -1724,7 +1725,7 @@ void main() {
           await tester.pumpAndSettle();
 
           final l10n = lookupAppLocalizations(const Locale('en'));
-          await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+          await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
           await tester.pumpAndSettle();
           final clearButton = find.text(l10n.profileSetupBannerClearButton);
           await tester.ensureVisible(clearButton);

@@ -3,9 +3,9 @@
 // ABOUTME: which are not available in unit tests (same limitation as
 // ABOUTME: video_editor_text_font_selector_test.dart).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_preset_sheet.dart';
