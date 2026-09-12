@@ -25,4 +25,4 @@ jobs:
     with:
       working_directory: "mobile/packages/upload_repository"
       flutter_version: "3.47.2"
-      min_coverage: 32
+      min_coverage: 40
