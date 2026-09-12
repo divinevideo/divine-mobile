@@ -437,6 +437,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             r"(?:shorebird (?:release|patch) ios|flutter build ios(?! --config-only))"
         )
 
+        selected = []
         missing = []
         for name, workflow in resolved["workflows"].items():
             scripts = "\n".join(
@@ -446,10 +447,20 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             )
             if not real_ios_build.search(scripts):
                 continue
+            selected.append(name)
             declared = set((workflow.get("environment") or {}).get("vars") or {})
             if "FIREBASE_ANALYTICS_WITHOUT_ADID" not in declared:
                 missing.append(name)
 
+        # Pin the selection itself. Without this the loop enforces nothing when
+        # the build commands move behind a helper script and the match set
+        # silently empties — and a new iOS lane must force a human to look.
+        self.assertEqual(
+            sorted(selected),
+            ["e2e-smoke-ios", "ios-build", "ios-patch", "ios-simulator-build"],
+            "the set of iOS-building workflows changed; update this pin and "
+            "confirm each lane still sets FIREBASE_ANALYTICS_WITHOUT_ADID (#7303)",
+        )
         self.assertEqual(
             missing,
             [],
