@@ -1341,7 +1341,7 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.addListener(capture(listenerSlot)) } just runs
 
         withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
-            instance.onMethodCall(
+            feedInstance().onMethodCall(
                 trimmingSetClipsCall("https://cdn.example/playing.mp4"),
                 mockk(relaxed = true),
             )
@@ -1372,7 +1372,7 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.addListener(capture(listenerSlot)) } just runs
 
         withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
-            instance.onMethodCall(
+            feedInstance().onMethodCall(
                 trimmingSetClipsCall("https://cdn.example/playing.mp4"),
                 mockk(relaxed = true),
             )
@@ -1402,7 +1402,7 @@ class DivineVideoPlayerInstanceTest {
         every { mockPlayer.addListener(capture(listenerSlot)) } just runs
 
         withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
-            instance.onMethodCall(
+            feedInstance().onMethodCall(
                 trimmingSetClipsCall("https://cdn.example/playing.mp4"),
                 mockk(relaxed = true),
             )
