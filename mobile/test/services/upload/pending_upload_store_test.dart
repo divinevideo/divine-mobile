@@ -142,6 +142,19 @@ void main() {
         expect(store.isReady, isFalse);
       });
 
+      test('ensureOpen() stays inert when dispose lands mid-open', () async {
+        final store = PendingUploadStore(
+          scopeUploadsToCurrentUser: false,
+          currentNostrPubkey: null,
+        );
+
+        final reopen = store.ensureOpen();
+        store.disposeStore();
+        await reopen;
+
+        expect(store.isReady, isFalse);
+      });
+
       test('length returns 0 before open', () {
         final store = PendingUploadStore(
           scopeUploadsToCurrentUser: false,

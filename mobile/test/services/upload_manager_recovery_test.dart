@@ -494,6 +494,22 @@ void main() {
       expect(manager.isInitialized, isFalse);
     });
 
+    test('initialize after dispose stays inert', () async {
+      final mockBlossom = _MockBlossomUploadService();
+      final mockBgManager = _MockBackgroundActivityManager();
+      final manager = UploadManager(
+        blossomService: mockBlossom,
+        backgroundActivityManager: mockBgManager,
+      );
+      addTearDown(manager.dispose);
+
+      manager.dispose();
+      await manager.initialize();
+
+      verifyNever(() => mockBgManager.registerService(manager));
+      expect(manager.isInitialized, isFalse);
+    });
+
     test('serviceName is UploadManager', () {
       final mockBlossom = _MockBlossomUploadService();
       final mockBgManager = _MockBackgroundActivityManager();
