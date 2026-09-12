@@ -1,10 +1,10 @@
 // ABOUTME: Tests the in-app deep link handler that used to be a build() closure
 // ABOUTME: Asserts where each DeepLinkType lands, per #3337 AC 2
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
 import 'package:openvine/services/auth_service.dart';

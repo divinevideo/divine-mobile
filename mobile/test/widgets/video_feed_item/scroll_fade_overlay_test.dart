@@ -1,8 +1,8 @@
 // ABOUTME: Tests for ScrollFadeOverlay — the scroll-driven opacity wrapper
 // ABOUTME: that must not rebuild its overlay child on page-position ticks.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/utils/scroll_driven_opacity.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 

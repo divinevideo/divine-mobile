@@ -2,15 +2,15 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/storage/storage_cubit.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/services/storage_management_service.dart';
@@ -33,7 +33,7 @@ void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   Widget wrap(StorageCubit cubit) => MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: BlocProvider.value(
       value: cubit,

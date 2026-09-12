@@ -2,7 +2,7 @@
 // ABOUTME: Render-only widget used beside names after cache lookup.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 class OgVinerBadge extends StatelessWidget {

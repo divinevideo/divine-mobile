@@ -1,7 +1,7 @@
 // ABOUTME: Rounds the metadata clip-preview hero while it is in flight.
 // ABOUTME: Both destinations on that tag wrap their shuttle in this.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 
 /// Carries a rounded shape through a [VideoEditorConstants.heroMetaPreviewId]

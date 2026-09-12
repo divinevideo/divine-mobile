@@ -1,8 +1,8 @@
 // ABOUTME: Forwards hit-tests from the whole parent box into a smaller child
 // ABOUTME: Lets letterbox taps reach the editor canvas underneath
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Forwards hit-tests from the entire parent box into [child], even
 /// when the pointer falls outside [child]'s painted area.

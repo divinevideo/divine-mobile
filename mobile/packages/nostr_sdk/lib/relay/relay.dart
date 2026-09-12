@@ -7,9 +7,9 @@ import 'dart:developer';
 import '../count_response.dart';
 import '../subscription.dart';
 import 'client_connected.dart';
+import 'relay_diagnostics.dart';
 import 'relay_info.dart';
 import 'relay_info_util.dart';
-import 'relay_diagnostics.dart';
 import 'relay_status.dart';
 
 enum WriteAccess { readOnly, writeOnly, readWrite, nothing }

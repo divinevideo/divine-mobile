@@ -3,12 +3,11 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   group('DiVineAppBar', () {
@@ -345,7 +344,7 @@ void main() {
             find.bySemanticsIdentifier('back_button'),
           );
           // MaterialLocalizations.backButtonTooltip — 'Back' in English,
-          // translated by flutter_localizations everywhere else.
+          // translated by material_ui everywhere else.
           expect(node.label, 'Back');
           expect(
             node.getSemanticsData().hasAction(SemanticsAction.tap),
@@ -969,7 +968,7 @@ void main() {
     // The default back label used to be a hardcoded 'Go back', which shipped
     // untranslated to 21 locales because only 6 of 92 call sites passed
     // backButtonSemanticLabel. It now defaults to
-    // MaterialLocalizations.backButtonTooltip, which flutter_localizations
+    // MaterialLocalizations.backButtonTooltip, which material_ui
     // translates. This test is the thing that would catch a regression back to
     // a constant: a hardcoded English default cannot produce 'Atrás'.
     Widget buildLocalized(Locale locale) => MaterialApp(

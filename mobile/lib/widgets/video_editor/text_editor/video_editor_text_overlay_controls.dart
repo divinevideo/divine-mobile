@@ -1,8 +1,8 @@
 // ABOUTME: Top overlay controls for the text editor screen.
 // ABOUTME: Displays close/done buttons and vertical font size slider.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_text_editor_scope.dart';

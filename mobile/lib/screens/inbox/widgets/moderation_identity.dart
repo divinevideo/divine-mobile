@@ -4,7 +4,7 @@
 // ABOUTME: The account's NAME is resolved by dmPeerName, not here.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 

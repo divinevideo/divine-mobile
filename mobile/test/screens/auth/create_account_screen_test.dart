@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
@@ -20,7 +20,7 @@ import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/create_account_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
@@ -123,7 +123,7 @@ void main() {
                   initialState: InviteGateState(accessGrant: inviteAccessGrant),
                 ),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             builder: textScaler == null
@@ -444,7 +444,7 @@ void main() {
           await tester.pumpWidget(
             MaterialApp.router(
               theme: VineTheme.theme,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),
@@ -546,7 +546,7 @@ void main() {
           await tester.pumpWidget(
             MaterialApp.router(
               theme: VineTheme.theme,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),

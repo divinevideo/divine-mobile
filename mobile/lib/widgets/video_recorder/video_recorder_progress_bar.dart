@@ -2,7 +2,7 @@
 // ABOUTME: Shared by capture-mode recording progress and the stop-motion budget
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Thin three-segment budget bar with a label.
 ///

@@ -2,8 +2,8 @@
 // ABOUTME: Uses BlocSelector for efficient rebuilds on count changes only
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// A title widget that shows a label with a count subtitle.

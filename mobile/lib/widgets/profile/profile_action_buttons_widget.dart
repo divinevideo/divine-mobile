@@ -2,9 +2,9 @@
 // ABOUTME: Shows different buttons for own profile vs other user profiles
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notify_bell/notify_bell_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';

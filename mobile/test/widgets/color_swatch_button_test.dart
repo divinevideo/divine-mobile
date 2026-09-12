@@ -4,9 +4,9 @@
 import 'dart:ui' show Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/color_swatch_button.dart';
 
 void main() {

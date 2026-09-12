@@ -3,8 +3,8 @@
 // ABOUTME: muted relative-timestamp suffix appended inline at the end.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_span_builder.dart';

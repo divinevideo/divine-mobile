@@ -215,9 +215,11 @@ State management:
 Testing:
 
 - [ ] Any widget test that pumps code calling `context.l10n` includes
-  `localizationsDelegates: AppLocalizations.localizationsDelegates` and
+  `localizationsDelegates: appLocalizationsDelegates` and
   `supportedLocales: AppLocalizations.supportedLocales` on its
-  `MaterialApp`.
+  `MaterialApp` — the generated `AppLocalizations.localizationsDelegates`
+  alone covers the framework's `MaterialLocalizations`, not `material_ui`'s
+  (#8916).
 - [ ] New public method on a strict-coverage package has a matching test
   **in the same PR**. 30 of the 58 packages under `mobile/packages/` gate
   at 100%, not just `divine_ui` — see

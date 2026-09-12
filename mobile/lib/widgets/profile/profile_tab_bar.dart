@@ -2,7 +2,7 @@
 // ABOUTME: Extracted from profile_grid.dart to keep that file focused (#4339).
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/profile/profile_cache_load_indicator.dart';
 
 /// How one profile tab is presented.

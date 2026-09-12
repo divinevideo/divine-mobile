@@ -1,9 +1,9 @@
 // ABOUTME: Widget tests for environment indicator components
 // ABOUTME: Tests badge, banner visibility and behavior across environments
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/widgets/environment_indicator.dart';
@@ -24,7 +24,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -45,7 +45,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -68,7 +68,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -90,7 +90,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => false),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -111,7 +111,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -140,7 +140,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [EnvironmentBadge()])),
           ),
@@ -170,7 +170,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),
@@ -196,7 +196,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),
@@ -220,7 +220,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),
@@ -245,7 +245,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => false),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),
@@ -270,7 +270,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(
@@ -303,7 +303,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),
@@ -332,7 +332,7 @@ void main() {
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Stack(children: [EnvironmentBanner(onTap: () {})]),

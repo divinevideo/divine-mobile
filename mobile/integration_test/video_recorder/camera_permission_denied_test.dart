@@ -1,9 +1,9 @@
 // ABOUTME: Tests camera permission denial flow using Patrol native automation
 // ABOUTME: Verifies fallback UI renders when user denies camera permission
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:patrol/patrol.dart';

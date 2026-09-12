@@ -1,7 +1,7 @@
 // ABOUTME: Placeholder shown while the video editor sets up its player
 // ABOUTME: Renders the clip thumbnail clipped to the contain-fitted target rect
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_thumbnail.dart';

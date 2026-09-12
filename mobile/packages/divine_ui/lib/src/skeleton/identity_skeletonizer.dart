@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/src/skeleton/vine_skeleton_effect.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// Wraps an avatar + name subtree with the identity-loading skeleton pattern

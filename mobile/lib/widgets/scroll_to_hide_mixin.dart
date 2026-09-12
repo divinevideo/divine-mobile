@@ -1,7 +1,7 @@
 // ABOUTME: Mixin providing scroll-to-hide behavior for overlay headers
 // ABOUTME: Used by tabs with a collapsible header above a scrollable grid
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Mixin that provides scroll-to-hide behavior for an overlay header widget.
 ///

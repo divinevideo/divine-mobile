@@ -22,7 +22,7 @@ A reusable styled icon button component that renders the 48x48 container with 32
 **Location:** `lib/widgets/vine_icon_button.dart`
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
@@ -74,7 +74,7 @@ A reusable `PreferredSizeWidget` with configurable parameters for title, leading
 **Location:** `lib/widgets/vine_app_bar.dart`
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/vine_icon_button.dart';
 

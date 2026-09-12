@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/database_corruption_provider.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/startup/database_corruption_gate.dart';
@@ -32,7 +32,7 @@ void main() {
         databaseCorruptionServiceProvider.overrideWithValue(service),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const Text('app content'),
         builder: (context, child) =>
@@ -88,7 +88,7 @@ void main() {
       Future<void> Function()? awaitRecoveryPersisted,
       bool? canCloseApp,
     }) => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: DatabaseCorruptionScreen(
         awaitRecoveryPersisted: awaitRecoveryPersisted,
@@ -147,7 +147,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: DatabaseCorruptionScreen(),
         ),

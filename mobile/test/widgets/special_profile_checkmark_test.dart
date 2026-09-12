@@ -4,12 +4,12 @@
 import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/og_beta_testers.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
 
 Widget _buildSubject() {
@@ -17,7 +17,7 @@ Widget _buildSubject() {
   // notifier off the enclosing ProviderScope.
   return const ProviderScope(
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: Center(child: SpecialProfileCheckmark())),
     ),

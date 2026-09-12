@@ -10,9 +10,9 @@ import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/app/startup/startup_coordinator.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';

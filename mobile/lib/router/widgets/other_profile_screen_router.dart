@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';

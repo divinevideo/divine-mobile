@@ -16,14 +16,13 @@ export 'nip02/contact_list.dart';
 export 'nip02/nip02.dart';
 export 'nip04/nip04.dart';
 export 'nip05/nip05_validor.dart';
-export 'nip17/file_encryption.dart';
 // Advanced NIPs - exported for users who need them
 export 'nip07/nip07_signer.dart';
+export 'nip17/file_encryption.dart';
 export 'nip19/hrps.dart';
 export 'nip19/nip19.dart';
 export 'nip19/pubkey_for_logs.dart';
 export 'nip19/pubkeys_equal.dart';
-export 'nip49/nip49.dart';
 export 'nip23/long_form_info.dart';
 export 'nip29/group_identifier.dart';
 export 'nip29/nip29.dart';
@@ -32,6 +31,7 @@ export 'nip46/nostr_connect_session.dart';
 export 'nip46/nostr_remote_signer.dart';
 export 'nip46/nostr_remote_signer_info.dart';
 export 'nip47/nwc_info.dart';
+export 'nip49/nip49.dart';
 export 'nip51/follow_set.dart';
 // Platform-specific (conditionally exported)
 export 'nip55/android_nostr_signer.dart';
@@ -48,24 +48,24 @@ export 'nip94/file_metadata.dart';
 // Core classes - essential for any Nostr application
 export 'nostr.dart';
 export 'relay/event_filter.dart';
-// Relay management
-export 'relay/relay_mode.dart';
+export 'relay/event_verify_isolate.dart';
+export 'relay/publish_outcome.dart';
 export 'relay/relay.dart';
 export 'relay/relay_base.dart';
 export 'relay/relay_diagnostics.dart';
-export 'relay/publish_outcome.dart';
 export 'relay/query_outcome.dart';
 export 'relay/query_result.dart';
-export 'relay/event_verify_isolate.dart';
+// Relay management
+export 'relay/relay_mode.dart';
 export 'relay/relay_pool.dart';
 export 'relay/relay_status.dart';
 export 'relay/relay_type.dart';
 export 'relay/signature_verification_policy.dart';
 export 'relay/web_socket_connection_manager.dart';
-// Local storage
-export 'signer/local_nostr_signer.dart';
 // Signing implementations
 export 'signer/isolate_decrypt_signer.dart';
+// Local storage
+export 'signer/local_nostr_signer.dart';
 export 'signer/nostr_signer.dart';
 export 'signer/signer_failure.dart';
 export 'signer/unauthenticated_signer.dart';

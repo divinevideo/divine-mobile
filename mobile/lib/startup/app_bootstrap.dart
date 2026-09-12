@@ -10,12 +10,12 @@ import 'package:divine_video_player/divine_video_player.dart'
 import 'package:dm_repository/dm_repository.dart' show DmSyncState;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app/divine_app.dart';
 import 'package:openvine/bootstrap/font_licenses.dart';
 import 'package:openvine/bootstrap/shorebird_licenses.dart';

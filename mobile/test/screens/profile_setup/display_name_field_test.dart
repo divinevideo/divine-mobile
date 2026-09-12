@@ -2,9 +2,9 @@
 // ABOUTME: Covers label rendering, card shape, and controller binding.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/profile_setup/widgets/display_name_field.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_rows.dart';
 
@@ -28,7 +28,7 @@ void main() {
     Future<void> pump(WidgetTester tester) {
       return tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: Scaffold(
@@ -78,7 +78,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: Scaffold(

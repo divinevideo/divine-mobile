@@ -26,8 +26,10 @@
 //
 // So a site counts when, and only when, it is an actual `MaterialApp(...)` or
 // `MaterialApp.router(...)` construction whose argument list has no
-// `localizationsDelegates:` value that references `AppLocalizations`. Anything
-// that merely *contains* the identifier — `testMaterialApp`,
+// `localizationsDelegates:` value that references `AppLocalizations` — or
+// `appLocalizationsDelegates`, the app's own aggregate, which spreads that
+// generated list and adds material_ui's `Global*` delegates on top (#8916).
+// Anything that merely *contains* the identifier — `testMaterialApp`,
 // `MyMaterialAppWrapper`, a doc comment, a string literal — is not a
 // construction and is never counted.
 //
@@ -49,6 +51,14 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/source/line_info.dart';
 
 const _delegatesArg = 'localizationsDelegates';
+
+/// Identifiers that prove a delegates list registers `AppLocalizations`.
+///
+/// `appLocalizationsDelegates` (lib/l10n/l10n.dart) is the app's own list; it
+/// spreads `AppLocalizations.localizationsDelegates` and appends material_ui's
+/// `GlobalMaterialLocalizations.delegates`, so a site using it is registered
+/// exactly like one naming the generated list directly.
+const _delegateSources = {'AppLocalizations', 'appLocalizationsDelegates'};
 
 /// Thrown when a scanned file cannot be parsed.
 ///
@@ -166,7 +176,7 @@ class _AppLocalizationsReferenceVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
-    if (node.name == 'AppLocalizations') found = true;
+    if (_delegateSources.contains(node.name)) found = true;
     super.visitSimpleIdentifier(node);
   }
 }

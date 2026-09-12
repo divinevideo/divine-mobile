@@ -1,8 +1,8 @@
 // ABOUTME: Always-mounted app-shell listener (#176) that pumps DM-restriction
 // ABOUTME: flips into the inbox gate so the list and unread badge re-filter.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 

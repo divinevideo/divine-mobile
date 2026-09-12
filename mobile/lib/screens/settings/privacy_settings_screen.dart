@@ -2,9 +2,9 @@
 // ABOUTME: Reads and writes AnalyticsService's stored consent preference.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/analytics_consent/analytics_consent_cubit.dart';
 import 'package:openvine/blocs/analytics_consent/analytics_consent_state.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';

@@ -4,10 +4,10 @@
 import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/others_following/others_following_bloc.dart';

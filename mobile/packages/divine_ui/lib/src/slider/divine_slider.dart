@@ -1,5 +1,5 @@
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A custom slider matching the Divine design system.
 ///

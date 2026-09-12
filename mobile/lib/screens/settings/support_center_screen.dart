@@ -2,10 +2,10 @@
 // ABOUTME: Replaces the old support dialog and drawer legal links
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clear_logs/clear_logs_cubit.dart';
 import 'package:openvine/blocs/export_logs/export_logs_cubit.dart';
 import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';

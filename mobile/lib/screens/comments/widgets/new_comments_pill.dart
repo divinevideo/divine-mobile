@@ -2,7 +2,7 @@
 // ABOUTME: Displayed next to the comments title; tapping scrolls to top
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A green capsule pill that shows "# new" for unread real-time comments.
 ///

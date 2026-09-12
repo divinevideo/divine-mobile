@@ -1,10 +1,10 @@
 // ABOUTME: Tests for UploadProgressDialog widget that shows blocking upload progress UI
 // ABOUTME: Validates progress display, non-dismissibility, auto-close, and polling behavior
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/widgets/upload_progress_dialog.dart';
 
@@ -36,7 +36,7 @@ void main() {
       // Act: Show dialog
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
@@ -69,7 +69,7 @@ void main() {
       // Act: Show dialog
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
@@ -128,7 +128,7 @@ void main() {
           MockGoRouterProvider(
             goRouter: goRouter,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Builder(
@@ -191,7 +191,7 @@ void main() {
         MockGoRouterProvider(
           goRouter: goRouter,
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: UploadProgressDialog(
@@ -229,7 +229,7 @@ void main() {
         MockGoRouterProvider(
           goRouter: goRouter,
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(

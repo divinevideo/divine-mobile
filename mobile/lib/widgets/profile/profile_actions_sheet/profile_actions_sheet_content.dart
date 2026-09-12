@@ -3,9 +3,8 @@
 // ABOUTME: prompts using AnimatedSwitcher for cross-fade transitions.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';

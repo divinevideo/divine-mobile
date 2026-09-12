@@ -2,16 +2,16 @@
 // ABOUTME: Verifies default explore navigation is /explore (grid) not /explore/0 (feed)
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -58,7 +58,7 @@ void main() {
             child: UncontrolledProviderScope(
               container: container,
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 locale: const Locale('en'),
                 routerConfig: container.read(goRouterProvider),

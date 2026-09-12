@@ -2,7 +2,7 @@
 // ABOUTME: Uses fixed over-video chrome and allows text to wrap without clipping.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// A scrim-backed sponsorship label rendered over fullscreen video.

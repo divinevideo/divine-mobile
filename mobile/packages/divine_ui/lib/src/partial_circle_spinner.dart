@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Custom circular progress spinner.
 /// Animates like a clock from 0 to 360 degrees based on progress.

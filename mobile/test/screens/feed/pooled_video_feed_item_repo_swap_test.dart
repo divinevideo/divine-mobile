@@ -10,12 +10,12 @@
 // changes, the stale bloc is closed, and a fresh one wraps the new repos.
 
 import 'package:comments_repository/comments_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:likes_repository/likes_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -151,7 +151,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: _Fixture(),
             ),
@@ -207,7 +207,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: _Fixture(),
             ),
@@ -271,7 +271,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: _Fixture(),
             ),

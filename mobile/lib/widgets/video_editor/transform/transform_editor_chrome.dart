@@ -2,7 +2,7 @@
 // ABOUTME: Used by the clip (video) and the stop-motion frame (image) screens
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show CropRotateEditorState;

@@ -1,7 +1,7 @@
 import 'package:divine_ui/divine_ui.dart'
     show DiVineAppBar, VineTheme, VineThemeColors;
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Style configuration for [DiVineAppBar] components.
 ///

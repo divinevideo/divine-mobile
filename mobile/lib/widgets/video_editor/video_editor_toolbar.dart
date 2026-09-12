@@ -2,7 +2,7 @@
 // ABOUTME: Provides close/done buttons with optional center widgets.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 
 /// Reusable top bar for video editor sub-editors.

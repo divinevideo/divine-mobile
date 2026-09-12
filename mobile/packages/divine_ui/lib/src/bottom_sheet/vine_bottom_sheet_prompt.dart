@@ -2,7 +2,7 @@
 // ABOUTME: action buttons. Used for permissions, onboarding, and confirmations.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A prompt-style bottom sheet with a centered sticker illustration, title,
 /// subtitle, and up to three optional action buttons

@@ -2,10 +2,10 @@
 // ABOUTME: Bluesky-inspired grouped layout with segmented buttons per content category
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/content_filters/content_filters_cubit.dart';
 import 'package:openvine/blocs/content_filters/content_filters_state.dart';
 import 'package:openvine/constants/text_scale_limits.dart';

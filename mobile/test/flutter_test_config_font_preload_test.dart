@@ -3,8 +3,8 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// No asset provides this family, so it measures as the engine fallback —
 /// which is exactly what an un-preloaded bundled face also measures as.

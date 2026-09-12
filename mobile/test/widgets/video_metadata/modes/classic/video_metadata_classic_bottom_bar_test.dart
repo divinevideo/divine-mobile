@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -42,7 +42,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoMetadataClassicBottomBar()),
           ),
@@ -56,7 +56,7 @@ void main() {
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoMetadataClassicBottomBar()),
           ),
@@ -90,7 +90,7 @@ void main() {
             ),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoMetadataClassicBottomBar()),
           ),
@@ -129,7 +129,7 @@ void main() {
             ),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoMetadataClassicBottomBar()),
           ),
@@ -166,7 +166,7 @@ void main() {
             ),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: VideoMetadataClassicBottomBar()),
           ),

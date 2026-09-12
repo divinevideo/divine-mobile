@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';

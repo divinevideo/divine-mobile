@@ -2,11 +2,11 @@
 // ABOUTME: Split out of _DivineAppState.build() (#3337)
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show Intl;
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/app_review/app_review_coordinator.dart';
 import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';
@@ -47,7 +47,7 @@ class DivineMaterialApp extends ConsumerWidget {
         // the app with no routes (#7869).
         routerConfig: ref.read(routerConfigProvider),
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         localeListResolutionCallback: resolveAppUiLocale,
         // One gate above every route: once the local database reports
@@ -59,11 +59,27 @@ class DivineMaterialApp extends ConsumerWidget {
         // The rasterizer host sits above both: baking a draft's editor layers
         // needs them mounted somewhere, and that has to keep working while the
         // corruption gate swaps out everything below it.
-        builder: (context, child) => LayerRasterizerHost(
-          rasterizer: ref.read(layerRasterizerProvider),
-          child: DatabaseCorruptionGate(
-            child: AppReviewCoordinator(
-              child: child ?? const SizedBox.shrink(),
+        //
+        // The compatibility bridge is outermost. Packages that still build on
+        // `package:flutter/material.dart` — skeletonizer is the one that
+        // renders on Divine screens today — read the framework's
+        // `Theme.of(context)`, which no longer finds this app's theme and
+        // silently degrades to `ThemeData.fallback()`: a light theme, so
+        // skeletonizer picks its light shimmer on every dark page. The bridge
+        // maps the material_ui theme back onto the framework types for the
+        // whole subtree, which is what the material_ui migration guide
+        // prescribes (#8916). It goes away when the last such package moves.
+        // The bridge ships deprecated on purpose, to mark it as migration
+        // scaffolding rather than API.
+        // TODO(#9078): Remove after all rendered dependencies use material_ui.
+        // ignore: deprecated_member_use
+        builder: (context, child) => MaterialUiCompatibilityBridge(
+          child: LayerRasterizerHost(
+            rasterizer: ref.read(layerRasterizerProvider),
+            child: DatabaseCorruptionGate(
+              child: AppReviewCoordinator(
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),

@@ -1,10 +1,10 @@
 // ABOUTME: TDD test for profile screen empty container issue - tests proper loading/error states
 // ABOUTME: These will fail first, then we fix the profile screen to return proper widgets
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 void main() {
   group('Profile Screen Empty Container TDD - Loading/Error State Tests', () {
@@ -42,7 +42,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: GridView.builder(
@@ -137,7 +137,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: GridView.builder(
@@ -231,7 +231,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               backgroundColor: Colors.black, // VineTheme.backgroundColor

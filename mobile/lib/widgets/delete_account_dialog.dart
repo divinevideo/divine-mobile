@@ -5,10 +5,10 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyStorageException;
 import 'package:openvine/l10n/l10n.dart';

@@ -2,9 +2,9 @@
 // ABOUTME: parameter and hands it to a caller-supplied builder once available.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/blocs/sandbox_route/sandbox_route_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';

@@ -2,7 +2,7 @@
 // ABOUTME: Displays animated stat values with loading states
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';

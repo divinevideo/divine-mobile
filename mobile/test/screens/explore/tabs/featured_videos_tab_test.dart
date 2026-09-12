@@ -2,10 +2,10 @@
 // ABOUTME: Tapping a featured tile must open the curated snapshot with campaign attribution.
 
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';

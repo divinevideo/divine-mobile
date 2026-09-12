@@ -1,7 +1,7 @@
 // ABOUTME: Grows late-arriving content into place instead of snapping it in.
 // ABOUTME: A null child is the empty state, keeping the box mounted at 0 high.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Reveals content that arrives after its surroundings have painted.
 ///

@@ -2,12 +2,10 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, invalid_runtime_check_with_js_interop_types
 
 import 'dart:convert';
+import 'dart:js' as js;
+import 'dart:js_interop';
 
 import '../event.dart';
-
-import 'dart:js_interop';
-import 'dart:js' as js;
-
 import '../utils/platform_util.dart';
 
 @JS()

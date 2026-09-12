@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/appearance/models/appearance_mode.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
 import 'package:unified_logger/unified_logger.dart';

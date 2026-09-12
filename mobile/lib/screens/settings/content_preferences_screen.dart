@@ -4,10 +4,10 @@
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/audio_device/audio_device_cubit.dart';
 import 'package:openvine/blocs/audio_sharing/audio_sharing_cubit.dart';
 import 'package:openvine/blocs/language_setting/language_setting_cubit.dart';

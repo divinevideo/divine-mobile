@@ -6,7 +6,7 @@ import 'dart:ui' show SemanticsRole;
 
 import 'package:divine_camera/divine_camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A widget that displays the camera preview with built-in gesture support.
 ///

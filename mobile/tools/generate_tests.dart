@@ -280,7 +280,7 @@ String _generateDefaultWidgetTest(String className, String inputPath) {
 // ABOUTME: Generated widget test suite for $className
 // ABOUTME: Tests widget rendering, interactions, and state changes
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '$importPath';

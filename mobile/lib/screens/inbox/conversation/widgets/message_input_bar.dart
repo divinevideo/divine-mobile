@@ -4,7 +4,7 @@
 // ABOUTME: markdown (bold / italic / strike / code) — #4621.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Markdown delimiters the selection toolbar can wrap selected text

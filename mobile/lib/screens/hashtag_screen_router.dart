@@ -1,8 +1,8 @@
 // ABOUTME: Router-aware hashtag screen that shows the hashtag grid
 // ABOUTME: Reads route context to determine which hashtag to display
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';

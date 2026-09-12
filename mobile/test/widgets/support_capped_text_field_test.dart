@@ -1,10 +1,10 @@
 // ABOUTME: Widget tests for support form text-field feedback
 // ABOUTME: Covers rejected keyboard images alongside paste truncation notices
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 
 import '../helpers/keyboard_content_insertion.dart';
@@ -18,7 +18,7 @@ void main() {
 
   Widget buildSubject({String? imageInsertionNotice = notice}) {
     return MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SupportCappedTextField(

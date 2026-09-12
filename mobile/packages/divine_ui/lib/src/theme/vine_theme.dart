@@ -1,9 +1,9 @@
 // ABOUTME: Vine-inspired theme with green colors and clean design
 // ABOUTME: Matches the classic Vine app aesthetic with proper styling
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A decorative accent chip: a tinted container and the content color drawn
 /// on it.

@@ -2,7 +2,7 @@
 // ABOUTME: Shows npub, nsec, and username explanations with bullet points
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 

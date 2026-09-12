@@ -1,8 +1,8 @@
 // ABOUTME: Tests for PinchZoomGrid - pinch-to-zoom column stepping
 // ABOUTME: Verifies column reporting, clamping, and the residual scale settle
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 
 /// Surface the grid under test sits on.

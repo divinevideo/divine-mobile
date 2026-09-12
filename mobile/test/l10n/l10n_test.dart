@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 
@@ -12,7 +12,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(
@@ -34,7 +34,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -54,7 +54,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('bg'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -75,7 +75,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('te'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -96,7 +96,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('am'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -117,7 +117,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('vi'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -138,7 +138,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ur'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -159,7 +159,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('zh'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -180,7 +180,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ms'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
@@ -204,7 +204,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ru'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(
@@ -224,7 +224,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(
@@ -244,7 +244,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(
@@ -272,7 +272,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(
@@ -295,7 +295,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           localeListResolutionCallback: resolveAppUiLocale,
           home: Builder(

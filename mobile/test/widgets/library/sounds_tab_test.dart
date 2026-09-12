@@ -5,17 +5,17 @@ import 'dart:async';
 
 import 'package:creator_sync/creator_sync.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
@@ -153,7 +153,7 @@ void main() {
             mediaProbe: const _NoopSavedSoundMediaProbe(),
             localFileExists: localFileExists,
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: GoRouter(
@@ -585,7 +585,7 @@ void main() {
               service: SavedSoundsService(sharedPreferences),
               mediaProbe: const _NoopSavedSoundMediaProbe(),
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 routerConfig: GoRouter(
@@ -710,8 +710,7 @@ void main() {
                 service: SavedSoundsService(sharedPreferences),
                 mediaProbe: const _NoopSavedSoundMediaProbe(),
                 child: MaterialApp.router(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   routerConfig: GoRouter(

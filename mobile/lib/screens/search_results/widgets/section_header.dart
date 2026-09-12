@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Section header with a title and optional trailing chevron.
 ///

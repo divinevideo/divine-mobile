@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';

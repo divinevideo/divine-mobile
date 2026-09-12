@@ -1,6 +1,6 @@
 import 'package:divine_ui/src/icon/divine_icon.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The states of a [DivineFollowButton], one per variant of the Figma
 /// follow-button component.

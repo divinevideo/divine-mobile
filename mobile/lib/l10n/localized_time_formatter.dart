@@ -2,7 +2,7 @@
 // ABOUTME: Maps TimeFormatter output to l10n strings from ARB.
 
 import 'package:clock/clock.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 

@@ -4,7 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show AnimationCurve;
 

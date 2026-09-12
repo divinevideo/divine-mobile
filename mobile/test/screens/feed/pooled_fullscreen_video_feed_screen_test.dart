@@ -14,13 +14,13 @@ import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
@@ -28,7 +28,7 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
@@ -772,7 +772,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -946,7 +946,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               child: MaterialApp.router(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 routerConfig: router,
               ),
@@ -993,7 +993,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 navigatorObservers: [observer],
                 home: Builder(
@@ -1062,7 +1062,7 @@ void main() {
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 navigatorObservers: [observer],
                 home: Builder(
@@ -1321,7 +1321,7 @@ void main() {
 
           await tester.pumpWidget(
             MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               navigatorObservers: [observer],
               home: Builder(

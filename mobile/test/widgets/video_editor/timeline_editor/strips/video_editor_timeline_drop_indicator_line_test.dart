@@ -1,9 +1,9 @@
 // ABOUTME: Widget tests for TimelineDropIndicatorLine.
 // ABOUTME: Verifies positioning and line thickness.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 
 void main() {
@@ -11,7 +11,7 @@ void main() {
     testWidgets('renders positioned one-pixel line', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Stack(children: [TimelineDropIndicatorLine(lineY: 24)]),

@@ -4,7 +4,7 @@
 import 'dart:ui';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/utils/string_utils.dart';
 
 /// Base widget for video overlay action buttons (like, comment, repost, share).

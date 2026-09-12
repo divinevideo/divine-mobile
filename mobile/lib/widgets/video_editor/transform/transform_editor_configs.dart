@@ -2,7 +2,7 @@
 // ABOUTME: Keeps the clip (video) and stop-motion still (image) editors in step
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_chrome.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'

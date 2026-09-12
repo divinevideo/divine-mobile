@@ -1,10 +1,10 @@
 // ABOUTME: Bottom sheet with a wheel picker for stop-motion frames-per-image
 // ABOUTME: Returns the chosen frames-per-image as an int via context.pop
 
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPicker;
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/cupertino.dart' show CupertinoPicker;
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 

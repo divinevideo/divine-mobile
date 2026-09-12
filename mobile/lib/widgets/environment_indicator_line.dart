@@ -1,8 +1,8 @@
 // ABOUTME: Full-width bottom indicator bar signalling the environment / relay
 // ABOUTME: scope, with rounded top corners that curve up to meet the feed above.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/environment_indicator_provider.dart';
 
 /// A full-width bar pinned at the bottom edge of the app, colored by

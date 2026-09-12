@@ -1,8 +1,8 @@
 // ABOUTME: Router widget for followers screen
 // ABOUTME: Decides between MyFollowersScreen and OthersFollowersScreen
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/followers/my_followers_screen.dart';

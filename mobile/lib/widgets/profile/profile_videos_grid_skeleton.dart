@@ -2,7 +2,7 @@
 // ABOUTME: profile-feed load is in flight, mirroring the real grid layout.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 

@@ -2,8 +2,8 @@
 // ABOUTME: Provides UI for toggling flags, viewing descriptions, and resetting to defaults
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';

@@ -4,8 +4,8 @@
 import 'dart:typed_data';
 import 'dart:ui' show ImageByteFormat;
 
-import 'package:flutter/material.dart' hide AspectRatio;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' hide AspectRatio;
 import 'package:models/models.dart' show AspectRatio, AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';

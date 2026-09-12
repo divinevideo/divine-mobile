@@ -3,16 +3,16 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_bridge.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -47,7 +47,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -70,7 +70,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -103,7 +103,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -136,7 +136,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -176,7 +176,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureBadgesApp(),
@@ -202,7 +202,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -223,7 +223,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -251,7 +251,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureBadgesApp(),
@@ -294,7 +294,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -332,7 +332,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -380,7 +380,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: NostrAppSandboxScreen(
             app: _fixtureApp(),
@@ -437,7 +437,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -476,7 +476,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -522,7 +522,7 @@ void main() {
       Future<void> pumpSandbox(WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NostrAppSandboxScreen(
               app: _fixtureApp(),
@@ -604,7 +604,7 @@ void main() {
 
           await tester.pumpWidget(
             MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: NostrAppSandboxScreen(
                 app: _fixtureApp(),

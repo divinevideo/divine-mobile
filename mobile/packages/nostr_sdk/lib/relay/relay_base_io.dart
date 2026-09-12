@@ -2,9 +2,10 @@
 // ABOUTME: Provides access to IOWebSocketChannel and HttpClient for SSL certificate handling
 
 import 'dart:io';
+
 import 'package:nostr_sdk/utils/loopback_host.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Creates a WebSocket channel for non-web platforms.
 ///

@@ -3,16 +3,16 @@
 // ABOUTME: to request preview, and app bar title.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/message_requests/message_requests_view.dart';
@@ -317,7 +317,7 @@ void main() {
           additionalOverrides: [goRouterProvider.overrideWithValue(router)],
           child: MaterialApp.router(
             routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: ThemeData.dark(),
           ),

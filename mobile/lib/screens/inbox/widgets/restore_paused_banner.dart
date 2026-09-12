@@ -3,7 +3,7 @@
 // ABOUTME: are still hidden. Offers the retry that re-arms the drain.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Banner shown at the top of the conversation list while the #5304 recovery

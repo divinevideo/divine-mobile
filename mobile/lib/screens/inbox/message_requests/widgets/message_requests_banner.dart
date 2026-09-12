@@ -3,7 +3,7 @@
 // ABOUTME: Only rendered when there are pending requests.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Banner row displayed at the top of the conversation list when there are

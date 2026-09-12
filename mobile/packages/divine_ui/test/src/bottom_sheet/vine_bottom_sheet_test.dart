@@ -4,8 +4,8 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Matches the unkeyed 64x4 rounded Container the header paints as the drag
 // handle. Asserting the rendered tree, rather than the forwarded

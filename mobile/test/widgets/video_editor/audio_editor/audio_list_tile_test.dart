@@ -1,11 +1,11 @@
 // ABOUTME: Tests for AudioListTile widget
 // ABOUTME: Validates rendering, selected state, and tap callback
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
 
 AudioEvent _createTestAudioEvent({
@@ -47,7 +47,7 @@ void main() {
       String? semanticIdentifier,
     }) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: AudioListTile(
@@ -317,7 +317,7 @@ void main() {
     group('playing indicator motion', () {
       Widget buildWithMotion({required bool disableAnimations}) {
         return MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: MediaQuery(
             data: MediaQueryData(disableAnimations: disableAnimations),

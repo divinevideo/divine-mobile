@@ -2,7 +2,7 @@
 // ABOUTME: a text field for its wording, shared by every caption editor.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The editing row for a single caption cue.
 ///

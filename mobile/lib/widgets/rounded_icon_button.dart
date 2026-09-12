@@ -2,7 +2,7 @@
 // ABOUTME: Used for auth screen navigation buttons (back, info, switch account).
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A rounded-square icon button matching the design system's "icon button"
 /// component.

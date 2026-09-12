@@ -2,7 +2,7 @@
 // ABOUTME: double-tap to like, press-and-hold to peek at the unobstructed frame.
 // ABOUTME: Extracted so its semantics can be tested without a video player pool.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// The tap/double-tap/long-press surface painted under a feed item's chrome.

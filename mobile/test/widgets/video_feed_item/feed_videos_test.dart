@@ -7,13 +7,13 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:likes_repository/likes_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
@@ -28,7 +28,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag_state.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
@@ -365,7 +365,7 @@ Future<ProviderContainer> _pumpFeedVideos(
       container: container,
       child: MaterialApp(
         navigatorObservers: navigatorObservers,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: MultiBlocProvider(
           providers: [
@@ -456,7 +456,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider<FeedLoadingModerationCubit>.value(
               value: restrictedCubit,
@@ -1870,7 +1870,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
@@ -2090,7 +2090,7 @@ void main() {
         UncontrolledProviderScope(
           container: ProviderContainer(overrides: _buildOverrides().cast()),
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: MultiBlocProvider(
               providers: [

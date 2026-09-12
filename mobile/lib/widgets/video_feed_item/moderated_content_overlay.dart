@@ -2,7 +2,7 @@
 // ABOUTME: playback failure. Replaces the normal interactive feed overlay.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 

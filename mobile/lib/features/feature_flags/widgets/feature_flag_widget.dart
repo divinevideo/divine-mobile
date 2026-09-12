@@ -1,8 +1,8 @@
 // ABOUTME: Conditional rendering widget based on feature flag state
 // ABOUTME: Provides declarative way to show/hide UI components based on feature flags
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 

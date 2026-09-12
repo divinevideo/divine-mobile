@@ -2,11 +2,11 @@
 // ABOUTME: Prevents public/private state from becoming invisible again.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/list_card.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -21,7 +21,7 @@ void main() {
         overrides: [...getStandardTestOverrides()],
         child: MaterialApp(
           theme: VineTheme.theme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CuratedListCard(

@@ -5,7 +5,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_configs.dart';

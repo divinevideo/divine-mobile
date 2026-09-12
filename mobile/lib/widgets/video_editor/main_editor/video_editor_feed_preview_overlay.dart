@@ -2,8 +2,8 @@
 // ABOUTME: Shows where action buttons and author info will appear in the feed,
 // ABOUTME: so creators can position layers to avoid being hidden.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';

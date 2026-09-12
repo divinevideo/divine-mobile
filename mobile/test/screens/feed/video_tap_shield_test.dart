@@ -3,8 +3,8 @@
 // ABOUTME: input has primary focus, so dismissing the keyboard does
 // ABOUTME: not also toggle video playback.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 
@@ -22,7 +22,7 @@ void main() {
       required void Function() onVideoTap,
     }) {
       return MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Column(

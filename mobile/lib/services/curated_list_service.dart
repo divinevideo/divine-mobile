@@ -11,7 +11,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';

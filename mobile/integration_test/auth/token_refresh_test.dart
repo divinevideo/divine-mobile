@@ -4,9 +4,9 @@
 // ABOUTME: Requires: local Docker stack with TOKEN_EXPIRY_SECONDS=15
 // ABOUTME: Run with: TOKEN_EXPIRY_SECONDS=15 mise run local_up && mise run e2e_test
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';

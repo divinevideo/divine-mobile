@@ -3,14 +3,14 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_rows.dart';
 import 'package:openvine/screens/profile_setup/widgets/verified_accounts_section.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
@@ -63,7 +63,7 @@ void main() {
       addTearDown(router.dispose);
       return tester.pumpWidget(
         MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           routerConfig: router,

@@ -1,8 +1,8 @@
 // ABOUTME: Widget tests for MessageRequestsBanner.
 // ABOUTME: Verifies count badge, tap callback, and visibility.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/message_requests_banner.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';

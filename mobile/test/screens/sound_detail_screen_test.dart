@@ -4,16 +4,16 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
@@ -139,7 +139,7 @@ Widget createTestWidget({
   return ProviderScope(
     overrides: [authServiceProvider.overrideWithValue(mockAuth), ...?overrides],
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
       builder: (context, navigator) => MediaQuery(
@@ -1292,8 +1292,7 @@ void main() {
                 child: MockGoRouterProvider(
                   goRouter: mockGoRouter,
                   child: MaterialApp(
-                    localizationsDelegates:
-                        AppLocalizations.localizationsDelegates,
+                    localizationsDelegates: appLocalizationsDelegates,
                     supportedLocales: AppLocalizations.supportedLocales,
                     theme: VineTheme.theme,
                     home: SoundDetailScreen(sound: testSound),
@@ -1345,8 +1344,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1803,8 +1801,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1869,7 +1866,7 @@ void main() {
               audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: VineTheme.theme,
               routerConfig: router,
@@ -1912,8 +1909,7 @@ void main() {
               child: MockGoRouterProvider(
                 goRouter: mockGoRouter,
                 child: MaterialApp(
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
+                  localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   theme: VineTheme.theme,
                   home: SoundDetailScreen(sound: testSound),
@@ -1948,7 +1944,7 @@ void main() {
             child: MockGoRouterProvider(
               goRouter: mockGoRouter,
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: VineTheme.theme,
                 home: SoundDetailScreen(sound: testSound),

@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Background activity manager to control network and battery usage

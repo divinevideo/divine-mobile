@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_feed_item/center_playback_control.dart';
 import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart';

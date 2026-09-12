@@ -299,24 +299,31 @@ bool minorAccountReviewStatusAffectsRouting(
 /// un-rewritten universal-link URL into the matcher (Page Not Found).
 ///
 /// Both deep-link steps resolve a destination and then *keep going*, so the
-/// gating below still applies to them. go_router calls this at most once per
-/// navigation, so returning a destination early would put the caller past
-/// every gate — see [divineSchemeRedirectTarget] and
-/// [universalLinkToRouterPath].
+/// gating below applies in the same redirect pass. Although go_router now
+/// resolves chained top-level redirects, carrying the resolved location keeps
+/// every gate reasoning about one destination — see
+/// [divineSchemeRedirectTarget] and [universalLinkToRouterPath].
 String? appRouterRedirect(Ref ref, GoRouterState state) {
   final authService = ref.read(authServiceProvider);
 
   // Resolve a divine:// location to the internal path it addresses — but do
   // not return it here.
   //
-  // go_router runs this top-level redirect at most once per navigation and
-  // does not re-evaluate what it redirects to
-  // (`RouteConfiguration.applyTopLegacyRedirect`). Returning a destination
-  // from this point is therefore terminal, and terminal means every gate
-  // below is skipped: a restricted-minor account reached the feed by opening
-  // any divine:// URI, and a signed-out user reached /saved-videos and
-  // /video/:id. Carry the destination down to the gates instead and let them
-  // have the last word.
+  // Returning a destination from this point used to be terminal: go_router
+  // ran this top-level redirect at most once per navigation and did not
+  // re-evaluate what it redirected to. Terminal meant every gate below was
+  // skipped, and a restricted-minor account reached the feed by opening any
+  // divine:// URI while a signed-out user reached /saved-videos and
+  // /video/:id. Carrying the destination down to the gates instead is what
+  // fixed that (#7146), and it is still the right shape: it keeps the gates
+  // reasoning about one resolved location rather than a URI scheme.
+  //
+  // go_router 17.2.1 then started resolving chained top-level redirects, so
+  // an early return is no longer terminal — it comes back through here as an
+  // ordinary location and the gates get a second look at it. That is why the
+  // one deliberately ungated destination, /nostr-connect for a live NIP-46
+  // pairing, needs its own allowance in the authenticated-auth-route gate
+  // below rather than relying on the early return alone.
   final divineScheme = divineSchemeRedirectTarget(state.uri, authService);
   if (divineScheme != null) {
     Log.info(
@@ -520,6 +527,17 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
           location == WelcomeScreen.inviteGatePath ||
           location == WelcomeScreen.createAccountPath ||
           location == WelcomeScreen.loginOptionsPath)) {
+    // A live NIP-46 pairing returns through divine://nostrconnect, which
+    // divineSchemeRedirectTarget resolves to this route ungated. go_router
+    // 17.2.1 started re-evaluating this top-level redirect on its own result
+    // (#8916 brought that in with the 18.x bump), so the ungated destination
+    // now arrives back here as an ordinary location. Without this the gate
+    // below hands a signed-in user straight to the feed and drops the pairing
+    // they just approved.
+    if (location == NostrConnectScreen.path &&
+        authService.nostrConnectUrl != null) {
+      return deepLinkRewrite;
+    }
     // Allow expired-session users through to login options
     // so they can re-authenticate instead of being bounced home
     if (authService.hasExpiredOAuthSession &&

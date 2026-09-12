@@ -2,7 +2,7 @@
 // ABOUTME: Provides user control over viewing filtered content with clear warnings
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/content_moderation_types.dart';

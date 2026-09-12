@@ -1,9 +1,9 @@
 // ABOUTME: Verifies authenticated follow state survives app background/reopen
 // ABOUTME: Covers the #4577 auth/following persistence path end-to-end
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';

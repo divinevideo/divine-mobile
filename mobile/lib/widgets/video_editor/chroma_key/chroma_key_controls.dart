@@ -2,8 +2,8 @@
 // ABOUTME: the three tolerance sliders, and the background choice.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';

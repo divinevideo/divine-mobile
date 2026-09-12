@@ -2,7 +2,7 @@
 // ABOUTME: Keeps tags and decorative fallback thumbnails consistent
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 String videoClipPreviewHeroTag(String clipId) => 'Video-Clip-Preview-$clipId';
 

@@ -4,7 +4,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Constants for waveform bar rendering.
 abstract final class WaveformConstants {

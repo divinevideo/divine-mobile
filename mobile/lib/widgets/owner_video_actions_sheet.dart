@@ -2,8 +2,8 @@
 // ABOUTME: Used by the profile grid and the composable (mixed-owner) grid.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';

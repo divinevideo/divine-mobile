@@ -4,7 +4,7 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 
 /// Owns a [TabController] that honours the platform's reduced-motion setting.

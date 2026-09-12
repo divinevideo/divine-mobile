@@ -1,8 +1,8 @@
 import 'package:divine_ui/src/app_bar/icon_source.dart';
 import 'package:divine_ui/src/icon/divine_icon.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The visual style type of a [DivineIconButton].
 enum DivineIconButtonType {

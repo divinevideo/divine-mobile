@@ -2,8 +2,8 @@
 // ABOUTME: Covers slot reporting and the edge auto-scroll
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/library/drag_select_region.dart';
 
 void main() {

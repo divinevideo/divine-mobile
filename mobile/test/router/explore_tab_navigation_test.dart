@@ -1,10 +1,10 @@
 // ABOUTME: Test that verifies Explore tab always resets to grid mode when tapped
 // ABOUTME: Prevents bug where returning to Explore shows "No videos available" in feed mode
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/router.dart';
@@ -55,7 +55,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Consumer(
@@ -115,7 +115,7 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               locale: Locale('en'),
               home: Scaffold(body: ExploreScreen()),

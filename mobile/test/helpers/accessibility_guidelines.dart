@@ -2,8 +2,8 @@
 // ABOUTME: Owns the SemanticsHandle so a failing check cannot leak one.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Guidelines that read the semantics tree only.
 ///

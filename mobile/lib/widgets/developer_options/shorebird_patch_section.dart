@@ -2,8 +2,8 @@
 // ABOUTME: Keeps a test device on staging across the validation relaunch
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_cubit.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_state.dart';
 import 'package:openvine/l10n/l10n.dart';

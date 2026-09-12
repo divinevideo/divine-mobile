@@ -2,8 +2,8 @@
 // ABOUTME: Supports destructive actions and disabled states
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Data class representing an action tile in the bottom sheet menu.
 class VineBottomSheetTileData {

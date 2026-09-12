@@ -3,9 +3,9 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/notification_comment_quote.dart';
@@ -33,7 +33,7 @@ Future<void> _pump(
         // The widget reads AppLocalizations for the video-reference label;
         // without the delegates it silently falls back to rendering the raw
         // reference, which masks link regressions.
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: NotificationCommentQuote(text: text, timestamp: timestamp),

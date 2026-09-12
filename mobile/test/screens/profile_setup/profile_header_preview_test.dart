@@ -7,17 +7,18 @@ import 'dart:io';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/image_crop_launcher_provider.dart';
 import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_header_preview.dart';
 
+import '../../helpers/finders.dart';
 import '../../helpers/image_picker_stub.dart';
 import '../../helpers/test_provider_overrides.dart';
 
@@ -83,7 +84,7 @@ void main() {
             imageCropLauncherProvider.overrideWithValue(cropLauncher),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
             home: Scaffold(
@@ -100,7 +101,7 @@ void main() {
     /// Opens the banner sheet from its own pencil — the avatar has one too —
     /// and picks the gallery row.
     Future<void> pickBannerFromGallery(WidgetTester tester) async {
-      await tester.tap(find.byTooltip(l10n.profileSetupEditBannerLabel));
+      await tester.tap(findByTooltip(l10n.profileSetupEditBannerLabel));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.profileSetupImageUploadFromCameraRoll));
       await tester.pumpAndSettle();

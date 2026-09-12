@@ -7,15 +7,15 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
@@ -83,7 +83,7 @@ Widget _routerTestApp(
     additionalOverrides: additionalOverrides,
     mockNostrService: mockNostrService,
     child: MaterialApp.router(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
     ),
@@ -124,7 +124,7 @@ void main() {
       var tapped = false;
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(
@@ -163,7 +163,7 @@ void main() {
       // tells a screen-reader user the wrong thing about what will happen.
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(
@@ -195,7 +195,7 @@ void main() {
       // a pending bubble announcing the resend hint.
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(
@@ -226,7 +226,7 @@ void main() {
       // conveyed to sighted users alone.
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(
@@ -256,7 +256,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(
@@ -285,7 +285,7 @@ void main() {
       testWidgets('renders message text', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -306,7 +306,7 @@ void main() {
         final prefix = 'a' * dmInitialDisplayCodeUnits;
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -331,7 +331,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -366,7 +366,7 @@ void main() {
         final second = 'b' * dmDisplayIncrementCodeUnits;
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -407,7 +407,7 @@ void main() {
         final visible = 'a' * dmMaxDisplayCodeUnits;
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -441,7 +441,7 @@ void main() {
         // the accent green would sit green-on-green (1.4:1 in dark mode).
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -476,7 +476,7 @@ void main() {
           'bubble', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -505,7 +505,7 @@ void main() {
         // shared across the whole message instead.
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -529,7 +529,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -549,7 +549,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -568,7 +568,7 @@ void main() {
       testWidgets('aligns right for sent messages', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -588,7 +588,7 @@ void main() {
       testWidgets('aligns left for received messages', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -616,7 +616,7 @@ void main() {
           final malformed = 'before${String.fromCharCode(0xD83D)}after';
           await tester.pumpWidget(
             MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MessageBubble(
@@ -643,7 +643,7 @@ void main() {
       testWidgets('renders no indicator for delivered status', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -665,7 +665,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -689,7 +689,7 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MessageBubble(
@@ -713,7 +713,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -736,7 +736,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -767,7 +767,7 @@ void main() {
           // ignore the parameter when isSent is false.
           await tester.pumpWidget(
             const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MessageBubble(
@@ -791,7 +791,7 @@ void main() {
       testWidgets('renders plain text without $RichText', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -809,7 +809,7 @@ void main() {
       testWidgets('renders URL as tappable rich text', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -946,7 +946,7 @@ void main() {
       testWidgets('URL span has $TapGestureRecognizer', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -982,7 +982,7 @@ void main() {
       testWidgets('renders multiple URLs in one message', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -1017,7 +1017,7 @@ void main() {
       testWidgets('renders bare domain as tappable link', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -1052,7 +1052,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -1086,7 +1086,7 @@ void main() {
       testWidgets('renders email address as tappable link', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -1120,7 +1120,7 @@ void main() {
       testWidgets('URL-only message renders as link', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2258,7 +2258,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2280,7 +2280,7 @@ void main() {
       testWidgets('does not crash when onLongPress is null', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2305,7 +2305,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2331,7 +2331,7 @@ void main() {
       testWidgets('does not crash when onDoubleTap is null', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2361,7 +2361,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -2392,7 +2392,7 @@ void main() {
           'place', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2405,7 +2405,7 @@ void main() {
         );
         await tester.pumpWidget(
           const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: MessageBubble(
@@ -2427,7 +2427,7 @@ void main() {
         final second = 'b' * dmInitialDisplayCodeUnits;
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -2447,7 +2447,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SingleChildScrollView(
@@ -2494,7 +2494,7 @@ void main() {
 
       Widget bubble(String message, {bool isSent = true}) {
         return MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: testProviderScope(

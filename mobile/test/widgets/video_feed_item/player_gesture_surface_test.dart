@@ -2,9 +2,9 @@
 // ABOUTME: Pins that the LABEL and the TAP ACTION land on the same semantics
 // ABOUTME: node, which is what shipped broken and what a device caught.
 
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 
