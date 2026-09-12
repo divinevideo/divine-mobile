@@ -594,7 +594,7 @@ class FunnelcakeApiClient {
   }
 
   /// Fetches recent videos sorted by original publication time, preserving how
-  /// many rows the server actually returned.
+  /// many rows the server actually returned and the server's opaque cursor.
   ///
   /// Prefer this over [getRecentVideos] when paginating: [getRecentVideos]
   /// drops malformed rows, so its length cannot distinguish "the source ran
@@ -604,6 +604,7 @@ class FunnelcakeApiClient {
   Future<RecentVideosResponse> getRecentVideosPage({
     int limit = 50,
     int? before,
+    String? cursor,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -616,16 +617,19 @@ class FunnelcakeApiClient {
     if (before != null) {
       queryParams['before'] = before.toString();
     }
+    if (cursor != null) {
+      queryParams['cursor'] = cursor;
+    }
 
     final uri = Uri.parse(
-      '$_baseUrl/api/videos',
+      '$_baseUrl/api/v2/videos',
     ).replace(queryParameters: queryParams);
 
     try {
       final response = await _get(uri);
 
       if (response.statusCode == 200) {
-        final (:items, :hasMore, nextCursor: _) = _unwrapListResponse(
+        final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
           jsonDecode(response.body),
         );
 
@@ -636,6 +640,7 @@ class FunnelcakeApiClient {
               .toList(),
           serverItemCount: items.length,
           hasMore: hasMore,
+          nextCursor: nextCursor,
         );
       } else {
         throw FunnelcakeApiException(

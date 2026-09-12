@@ -1894,7 +1894,7 @@ void main() {
           when(
             () => mockVideosRepository.getNewVideos(
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: 'p:next-page',
               skipCache: any(named: 'skipCache'),
               revalidate: any(named: 'revalidate'),
             ),
@@ -1907,6 +1907,7 @@ void main() {
           status: VideoFeedStatus.success,
           source: const VideoFeedSource.newVideos(),
           videos: createTestVideos(3),
+          paginationCursor: 'p:next-page',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
         skip: 1,

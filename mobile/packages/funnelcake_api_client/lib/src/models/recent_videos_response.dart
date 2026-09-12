@@ -7,6 +7,7 @@ class RecentVideosResponse {
     required this.videos,
     required this.serverItemCount,
     this.hasMore,
+    this.nextCursor,
   });
 
   /// Videos returned for this page, with malformed rows dropped.
@@ -22,7 +23,10 @@ class RecentVideosResponse {
 
   /// Server-provided "has more" flag, when the response carries an envelope.
   ///
-  /// `null` for the bare-list shape `/api/videos` returns today, in which
-  /// case callers fall back to comparing [serverItemCount] against the limit.
+  /// `null` only when a legacy bare-list response is returned, in which case
+  /// callers fall back to comparing [serverItemCount] against the limit.
   final bool? hasMore;
+
+  /// Opaque server cursor for the next publication-ordered page.
+  final String? nextCursor;
 }

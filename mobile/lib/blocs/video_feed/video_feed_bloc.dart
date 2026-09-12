@@ -142,14 +142,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       source.type == VideoFeedSourceType.newVideos ||
       source.type == VideoFeedSourceType.classic;
 
-  /// Whether [source] paginates via an opaque server cursor (recommendation
-  /// and popular feeds) rather than a `createdAt` "until" timestamp.
+  /// Whether [source] paginates via an opaque server cursor rather than a
+  /// `createdAt` "until" timestamp.
   ///
   /// Cursor-backed feeds arrive in server-ranked order, so pages must be
   /// appended as-is (no `createdAt` re-sort) and exhaustion is signalled by a
   /// null [HomeFeedResult.paginationCursor] rather than an empty page.
   bool _usesCursorPagination(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
+      source.type == VideoFeedSourceType.newVideos ||
       source.type == VideoFeedSourceType.classic;
 
   bool _canEmitForSource(
@@ -1068,11 +1069,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             _curatedListRepository.getOrderedVideoIds(source.listId!),
           )
           .then((videos) => HomeFeedResult(videos: videos)),
-    VideoFeedSourceType.newVideos => _videosRepository.getNewVideos(
-      until: until,
-      skipCache: skipCache,
-      revalidate: revalidate,
-    ),
+    VideoFeedSourceType.newVideos =>
+      paginationCursor == null
+          ? _videosRepository.getNewVideos(
+              until: until,
+              skipCache: skipCache,
+              revalidate: revalidate,
+            )
+          : _videosRepository.getNewVideos(
+              cursor: paginationCursor,
+              skipCache: skipCache,
+              revalidate: revalidate,
+            ),
     // Classics is offset-paginated behind an opaque cursor and has no
     // time-window pagination, so `until` does not apply. `revalidate` does
     // not apply either: the source's 15-minute first-page cache exists so
