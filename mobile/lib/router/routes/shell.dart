@@ -88,7 +88,7 @@ List<RouteBase> shellRoutes() {
               // while rendering the home branch's Following feed. Keep the exact
               // literal ahead of /following/:pubkey so `new` is never treated as
               // an account identifier.
-              pageBuilder: (ctx, st) => _branchPage(
+              pageBuilder: (ctx, st) => branchPage(
                 st,
                 const VideoFeedPage(initialMode: FeedMode.following),
               ),
