@@ -2,7 +2,7 @@
 // ABOUTME: Opens the chroma-key screen and writes the live key onto its layer
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
