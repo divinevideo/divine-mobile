@@ -8,7 +8,6 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/utils/pro_editor_theme.dart';
 import 'package:openvine/widgets/video_editor/transform/transform_editor_configs.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -61,7 +60,7 @@ class _StopMotionFrameTransformScreenState
     return CropRotateEditor.file(
       File(widget.framePath),
       initConfigs: CropRotateEditorInitConfigs(
-        theme: proEditorTheme(context),
+        theme: Theme.of(context),
         // Required so the editor rasterizes the cropped still instead of only
         // reporting the transform — the frame list stores image files, not
         // transforms.

@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/utils/pro_editor_theme.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_style_bar.dart';
@@ -235,7 +234,7 @@ class _TextEditor extends StatelessWidget {
       child: TextEditor(
         key: editorKey,
         layer: layer,
-        theme: proEditorTheme(context),
+        theme: Theme.of(context),
         heroTag: layer?.id,
         callbacks: ProImageEditorCallbacks(
           textEditorCallbacks: TextEditorCallbacks(

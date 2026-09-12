@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/image_crop_editor/widgets/image_crop_editor_bottom_bar.dart';
 import 'package:openvine/screens/image_crop_editor/widgets/image_crop_editor_toolbar.dart';
-import 'package:openvine/utils/pro_editor_theme.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -132,7 +131,7 @@ class _ImageCropEditorScreenState extends State<ImageCropEditorScreen> {
       file: widget.file,
       byteArray: widget.bytes,
       initConfigs: CropRotateEditorInitConfigs(
-        theme: proEditorTheme(context),
+        theme: Theme.of(context),
         convertToUint8List: true,
         callbacks: ProImageEditorCallbacks(
           onImageEditingComplete: (bytes) async {

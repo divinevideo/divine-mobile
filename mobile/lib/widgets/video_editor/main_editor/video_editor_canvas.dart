@@ -41,7 +41,6 @@ import 'package:openvine/services/video_editor/transition_seam_render_service.da
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
-import 'package:openvine/utils/pro_editor_theme.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
@@ -2653,12 +2652,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _proVideoController,
           key: scope.editorKey,
           configs: ProImageEditorConfigs(
-            // Styles the editor's own chrome. Since 14.0.0 the editor
-            // themes itself through material_ui, whose Theme does not
-            // shadow the SDK one, so the app's widgets below it (layer
-            // widgets, sticker and detached-clip views) keep resolving
-            // context.vineColors from the real app theme.
-            theme: proEditorTheme(context),
+            theme: Theme.of(context),
             stateHistory: StateHistoryConfigs(
               initStateHistory: editorStateHistory.isNotEmpty
                   ? .fromMap(
