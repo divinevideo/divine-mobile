@@ -1075,6 +1075,65 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    /**
+     * Brings a looping single clip up with [loop] installed as its private
+     * audio path, and hands back the player listener the instance registered.
+     */
+    private fun installLoopTrack(loop: ClipAudioLoopTrack): Player.Listener {
+        every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+        every { mockPlayer.duration } returns 3_000L
+        captureAudioTrackDisables()
+        val listener = capturePlayerListener()
+
+        instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        capturePostedRunnables().forEach { it.run() }
+        return listener
+    }
+
+    @Test
+    fun `a pause the player makes by itself pauses the loop track too`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            val listener = installLoopTrack(loop)
+            every { mockPlayer.currentPosition } returns 1_250L
+            every { mockPlayer.volume } returns 0.5f
+
+            // Backgrounding, a buffering stall and an Activity detach all stop
+            // the player without a `pause` from Dart. The track has to follow,
+            // or it keeps sounding over a still picture.
+            listener.onIsPlayingChanged(false)
+
+            verify(exactly = 1) { loop.pause() }
+
+            // And it picks up from where the picture now is, at the player's
+            // own volume, when playback resumes.
+            listener.onIsPlayingChanged(true)
+
+            verify(exactly = 1) { loop.play(1_250L, 0.5f) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `stopForActivityDetach releases the loop track`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            installLoopTrack(loop)
+
+            // Nothing resumes after a detach, so the AudioTrack is freed here
+            // rather than kept until dispose.
+            instance.stopForActivityDetach()
+
+            verify(exactly = 1) { loop.release() }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
     private fun trimmingSetClipsCall(uri: String): MethodCall =
         MethodCall(
             "setClips",
