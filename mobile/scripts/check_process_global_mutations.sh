@@ -19,7 +19,7 @@
 # hard-zero regardless of tag because the root harness already performs the
 # initialization for every non-web test.
 #
-# Three detection classes, each HARD-ZERO (no baseline, no tolerated debt):
+# Four detection classes, each HARD-ZERO (no baseline, no tolerated debt):
 #
 #   1. CAPTURE-RESTORE (GLOBALS) — `<Singleton>.instance` and static hooks whose
 #      documented resting value is the *prior runtime value*. Every untagged
@@ -49,7 +49,14 @@
 #      harness, before `testMain`, or in the isolated golden tree. Calling one
 #      from an ordinary merged suite makes every later test order-dependent.
 #
-# Detection is textual for all three classes, after comments and string-literal
+#   4. OWNED INITIALIZERS — `Hive.init` changes the home directory used by all
+#      subsequently opened boxes, but Hive's public API does not expose the
+#      previous value for a capture-and-restore pair. Test files must go through
+#      an owning helper that registers cleanup when it changes the path. A bare
+#      call is forbidden even when the file also calls `Hive.init(null)`: an
+#      exception before that inline reset otherwise strands the override.
+#
+# Detection is textual for all four classes, after comments and string-literal
 # bodies are removed by dart_code_only.awk. It cannot prove the restore is
 # reachable or lives in a tearDown (an inline end-of-body reset satisfies the
 # check but not a mid-test throw). The snapshot+restore / reset-to-default pair
@@ -285,6 +292,19 @@ run_scan() {
     violations="$violations  $rel  (loadAppFonts) [irreversible initializer]"$'\n'
   done
 
+  # --- Class 4: initializers whose cleanup must be owned by a helper ---
+  local owned_initializer
+  owned_initializer='(^|[^[:alnum:]_.])Hive\.init[[:space:]]*\('
+  files=$(grep -rlE --include='*_test.dart' "$owned_initializer" "${SCAN_ROOTS[@]}" || true)
+  for f in $files; do
+    body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
+    if ! grep -qE "$owned_initializer" <<<"$body"; then
+      continue
+    fi
+    rel="${f#"$MOBILE_DIR"/}"
+    violations="$violations  $rel  (Hive.init) [owned initializer]"$'\n'
+  done
+
   if [[ -n "$violations" ]]; then
     echo "FAIL [process_global_mutations]: test mutates a process-global"
     echo "outside its required restoration or isolation boundary:"
@@ -294,6 +314,7 @@ run_scan() {
     echo "into every later test in the shared very_good --optimization isolate."
     echo "An irreversible initializer is banned outside the root harness and"
     echo "isolated golden tree, where its process-wide lifetime is intentional."
+    echo "Hive.init must be called through a test helper that owns its cleanup."
     echo "(generalizes PR #5163; cascades #5159 / #5180; parent #3137; residual #5185)."
     echo ""
     echo "Remediation — pick one:"
@@ -323,10 +344,12 @@ run_scan() {
     echo "      package 'integration' excludes nothing and the file still RUNS."
     echo "  (d) [irreversible initializer] Move it to flutter_test_config.dart"
     echo "      before testMain, or keep it under the isolated test/goldens tree."
+    echo "  (e) [owned initializer] Replace bare Hive.init with the app or"
+    echo "      package test helper that registers a guaranteed reset."
     return 1
   fi
 
-  echo "OK: no test leaks a process-global (capture-restore + reset-to-default + irreversible initializer)."
+  echo "OK: no test leaks a process-global (capture-restore + reset-to-default + irreversible + owned initializers)."
   return 0
 }
 
@@ -589,6 +612,28 @@ void main() {
 'import "x";
 void main() {
   /* await loadAppFonts(); */
+}
+'
+  _case "bare Hive home initializer → FAIL" 1 \
+'import "x";
+void main() { Hive.init("/tmp/hive-test"); }
+'
+  _case "inline Hive reset cannot own cleanup → FAIL" 1 \
+'import "x";
+void main() {
+  Hive.init("/tmp/hive-test");
+  addTearDown(() => Hive.init(null));
+}
+'
+  _case "owned Hive test helper → PASS" 0 \
+'import "x";
+void main() { TestHelpers.setHiveHomeForTesting("/tmp/hive-test"); }
+'
+  _case "Hive initializer named in a string and comment → PASS" 0 \
+'import "x";
+void main() {
+  final message = "Hive.init(path)";
+  // Hive.init(path);
 }
 '
   tmp="$(mktemp -d)"
