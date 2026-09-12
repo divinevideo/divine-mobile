@@ -416,19 +416,10 @@ class KeycastOAuth {
       // Keycast's register handler does not emit 429 today. Anything in front
       // of it can, and waiting is the only useful action — do not flatten it.
       if (response.statusCode == 429) {
-        String? message;
-        try {
-          final json = jsonDecode(response.body) as Map<String, dynamic>;
-          message =
-              json['error'] as String? ??
-              json['error_description'] as String? ??
-              json['message'] as String?;
-        } catch (_) {
-          // Proxy 429s are often non-JSON; status is enough to classify.
-        }
         return (
           HeadlessRegisterResult.error(
-            message ?? 'Too many attempts. Please try again later.',
+            _errorMessageFrom(response) ??
+                'Too many attempts. Please try again later.',
             code: 'rate_limited',
           ),
           verifier,
@@ -551,19 +542,9 @@ class KeycastOAuth {
       // Keycast's login handler does not emit 429 today. Anything in front of
       // it can, and waiting is the only useful action — do not flatten it.
       if (response.statusCode == 429) {
-        String? message;
-        try {
-          final json = jsonDecode(response.body) as Map<String, dynamic>;
-          message =
-              json['error'] as String? ??
-              json['error_description'] as String? ??
-              json['message'] as String?;
-        } catch (_) {
-          // Proxy 429s are often non-JSON; status is enough to classify.
-        }
         return (
           HeadlessLoginResult.error(
-            message ?? 'Too many sign-in attempts',
+            _errorMessageFrom(response) ?? 'Too many sign-in attempts',
             code: 'TOO_MANY_ATTEMPTS',
           ),
           verifier,
@@ -1029,12 +1010,13 @@ class KeycastOAuth {
     return ResendVerificationError.declined;
   }
 
-  /// The server's own `message` (falling back to `error`) from a JSON error
-  /// body, or null when the body is absent or not JSON.
+  /// The server's own message from a JSON error body, or null when absent.
   static String? _errorMessageFrom(http.Response response) {
     try {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return json['message'] as String? ?? json['error'] as String?;
+      return json['message'] as String? ??
+          json['error'] as String? ??
+          json['error_description'] as String?;
     } catch (_) {
       return null;
     }

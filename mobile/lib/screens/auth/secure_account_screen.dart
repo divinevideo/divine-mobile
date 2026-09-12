@@ -166,7 +166,8 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
       // the raw server text: sign in for the recoverable case, contact support
       // for the ones we can't resolve in-app (duplicate or credential-less
       // accounts).
-      if (result.errorCode == 'CONFLICT') {
+      if (result.errorCode == 'CONFLICT' ||
+          result.errorCode == 'EMAIL_ALREADY_EXISTS') {
         if (!mounted) return;
         setState(() {
           _hasConflict = true;

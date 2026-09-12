@@ -682,7 +682,13 @@ void main() {
     });
 
     group('Key conflict recovery', () {
-      Future<GoRouter> pumpConflict(WidgetTester tester) async {
+      Future<GoRouter> pumpConflict(
+        WidgetTester tester, {
+        String errorCode = 'CONFLICT',
+        String errorDescription =
+            'This Nostr key is already registered. '
+            'Please log in instead or use a different key.',
+      }) async {
         await setRegistrationTestSurface(tester);
         when(
           () => mockOAuth.headlessRegister(
@@ -694,9 +700,8 @@ void main() {
         ).thenAnswer(
           (_) async => (
             HeadlessRegisterResult.error(
-              'This Nostr key is already registered. '
-              'Please log in instead or use a different key.',
-              code: 'CONFLICT',
+              errorDescription,
+              code: errorCode,
             ),
             'test-verifier',
           ),
@@ -812,6 +817,25 @@ void main() {
           expect(find.textContaining('Nostr key'), findsNothing);
         },
       );
+
+      testWidgets('offers recovery for an existing email', (tester) async {
+        await pumpConflict(
+          tester,
+          errorCode: 'EMAIL_ALREADY_EXISTS',
+          errorDescription: 'Email already registered',
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(
+          find.text(l10n.authSecureAccountAlreadyRegistered),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(DivineButton, l10n.authSignInButton),
+          findsOneWidget,
+        );
+        expect(find.text('Email already registered'), findsNothing);
+      });
 
       testWidgets('editing the email clears the conflict for a fresh retry', (
         tester,

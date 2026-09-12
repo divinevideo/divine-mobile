@@ -540,7 +540,13 @@ void main() {
 
       test('classifies a 429 without a machine code', () async {
         final mockClient = MockClient((request) async {
-          return http.Response(jsonEncode({'error': 'Slow down'}), 429);
+          return http.Response(
+            jsonEncode({
+              'error': 'rate_limited',
+              'message': 'Slow down',
+            }),
+            429,
+          );
         });
 
         final oauth = KeycastOAuth(config: config, httpClient: mockClient);
@@ -822,7 +828,10 @@ void main() {
       test('classifies a 429 without a machine code', () async {
         final mockClient = MockClient((request) async {
           return http.Response(
-            jsonEncode({'error': 'Slow down'}),
+            jsonEncode({
+              'error': 'rate_limited',
+              'message': 'Slow down',
+            }),
             429,
           );
         });
