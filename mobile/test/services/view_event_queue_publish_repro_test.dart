@@ -81,6 +81,7 @@ void main() {
       publisher = ViewEventPublisher(
         nostrService: mockNostr,
         authService: mockAuth,
+        appVersion: '1.0.23',
         onDrop: (reason, {required String videoId, required String method}) =>
             drops.add(reason),
       );

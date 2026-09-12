@@ -11,6 +11,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
@@ -333,6 +334,7 @@ ViewEventPublisher viewEventPublisher(Ref ref) {
   return ViewEventPublisher(
     nostrService: nostrService,
     authService: authService,
+    appVersion: ref.watch(appVersionProvider),
     onDrop: (reason, {required String videoId, required String method}) {
       if (!reason.isStructural) return;
       ref
