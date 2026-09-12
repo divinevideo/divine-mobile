@@ -223,6 +223,7 @@ class NotificationRepository {
 
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
+  Future<void> _readMutationTail = Future<void>.value();
 
   _NotificationFeed _feedFor(NotificationKind? filter) {
     if (_closed) {
@@ -1077,50 +1078,71 @@ class NotificationRepository {
     return getNotifications(filter: filter);
   }
 
-  void _restoreSnapshots(Map<_NotificationFeed, NotificationPage> values) {
+  void _restoreSnapshots(
+    Map<_NotificationFeed, ({NotificationPage page, int fetchGeneration})>
+    values,
+  ) {
     for (final entry in values.entries) {
-      entry.key.snapshot.add(entry.value);
+      final feed = entry.key;
+      if (feed.snapshot.isClosed ||
+          feed.fetchGeneration != entry.value.fetchGeneration) {
+        continue;
+      }
+      final readBefore = <String, bool>{
+        for (final item in entry.value.page.items) item.id: item.isRead,
+      };
+      final current = feed.snapshot.value;
+      // Restore only the optimistic read flags. Concurrent pagination remains
+      // authoritative for item membership and page metadata.
+      final restored = current.items.map((item) {
+        final wasRead = readBefore[item.id];
+        return wasRead == null ? item : _withRead(item, wasRead);
+      }).toList();
+      feed.snapshot.add(current.copyWith(items: restored));
     }
   }
 
-  void _restorePagesLoaded(Map<_NotificationFeed, int> values) {
-    for (final entry in values.entries) {
-      entry.key.pagesLoaded = entry.value;
-    }
+  Future<void> _enqueueReadMutation(Future<void> Function() operation) {
+    final result = _readMutationTail.then((_) => operation());
+    _readMutationTail = result.then<void>((_) {}, onError: (_, _) {});
+    return result;
   }
 
   /// Marks specific notifications as read on the server and locally.
   ///
   /// Optimistically flips matching items in the snapshot to `isRead:
   /// true`, then writes through to the API and the local DAO. On
-  /// failure, restores the pre-write snapshot so subscribers see the
-  /// authoritative state, and rethrows so callers can surface the
-  /// error.
+  /// failure, restores prior read flags without replacing fresher pages, and
+  /// rethrows so callers can surface the error.
   ///
-  /// Rollback is scoped to the feeds the flip actually changed. Capturing
-  /// every live feed would revert a tab that landed a fresh page while the
-  /// POST was in flight — the common case being a tab swipe during the
-  /// `markAllAsRead` that runs on inbox open.
-  Future<void> markAsRead(List<String> ids) async {
-    if (ids.isEmpty) return;
+  /// Rollback is scoped to the feeds the flip actually changed. A newer refresh
+  /// supersedes it, while pagination on the same generation keeps its new rows.
+  Future<void> markAsRead(List<String> ids) {
+    if (ids.isEmpty) return Future<void>.value();
+    return _enqueueReadMutation(() => _markAsRead(ids));
+  }
 
+  Future<void> _markAsRead(List<String> ids) async {
+    if (_closed) return;
     final idSet = ids.toSet();
     final itemsBefore = <NotificationItem>[];
-    final snapshotsBefore = <_NotificationFeed, NotificationPage>{};
-    final pagesLoadedBefore = <_NotificationFeed, int>{};
-    for (final feed in _liveFeeds.toList()) {
-      final page = feed.snapshot.value;
-      itemsBefore.addAll(page.items);
-      if (!page.items.any((n) => !n.isRead && _matchesMarkReadId(n, idSet))) {
-        continue;
-      }
-      snapshotsBefore[feed] = page;
-      pagesLoadedBefore[feed] = feed.pagesLoaded;
-      feed.snapshot.add(page.copyWith(items: _flipIsRead(page.items, idSet)));
-    }
-    final notificationIds = _expandServerNotificationIds(itemsBefore, idSet);
+    final snapshotsBefore =
+        <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
 
     try {
+      for (final feed in _liveFeeds.toList()) {
+        final page = feed.snapshot.value;
+        itemsBefore.addAll(page.items);
+        if (!page.items.any((n) => !n.isRead && _matchesMarkReadId(n, idSet))) {
+          continue;
+        }
+        snapshotsBefore[feed] = (
+          page: page,
+          fetchGeneration: feed.fetchGeneration,
+        );
+        feed.snapshot.add(page.copyWith(items: _flipIsRead(page.items, idSet)));
+      }
+      final notificationIds = _expandServerNotificationIds(itemsBefore, idSet);
       // Sign the exact URL + body the request will use, otherwise the
       // funnelcake server 401s with `URL mismatch` / `payload hash
       // mismatch` and the rollback bounces the badge back to N.
@@ -1144,7 +1166,6 @@ class NotificationRepository {
         await _notificationsDao.markAsRead(id, ownerPubkey: _userPubkey);
       }
     } catch (_) {
-      _restorePagesLoaded(pagesLoadedBefore);
       _restoreSnapshots(snapshotsBefore);
       rethrow;
     }
@@ -1155,25 +1176,28 @@ class NotificationRepository {
   /// Always sends the explicit server mark-all request, even when no live
   /// snapshot has local unread rows. The optimistic local flip still only
   /// touches feeds that contain unread rows. On failure, restores the
-  /// pre-write snapshot for those feeds — preserving the rollback semantics
-  /// introduced by PR #4034 at the repository layer so every consumer
-  /// (badge cubit, feed bloc) recovers consistently.
+  /// prior read flags for those feeds so every consumer (badge cubit, feed
+  /// bloc) recovers consistently without replacing concurrent fetch results.
   ///
-  /// As in [markAsRead], only the feeds this call actually flipped are
-  /// captured for rollback, so a tab that paginated while the POST was in
-  /// flight keeps its fresher page.
-  Future<void> markAllAsRead() async {
-    final snapshotsBefore = <_NotificationFeed, NotificationPage>{};
-    final pagesLoadedBefore = <_NotificationFeed, int>{};
-    for (final feed in _liveFeeds.toList()) {
-      final page = feed.snapshot.value;
-      if (page.items.every((n) => n.isRead)) continue;
-      snapshotsBefore[feed] = page;
-      pagesLoadedBefore[feed] = feed.pagesLoaded;
-      feed.snapshot.add(page.copyWith(items: _flipAllRead(page.items)));
-    }
+  /// As in [markAsRead], only the feeds this call actually flipped are captured
+  /// for rollback, and a page that lands while the POST is pending is retained.
+  Future<void> markAllAsRead() => _enqueueReadMutation(_markAllAsRead);
+
+  Future<void> _markAllAsRead() async {
+    if (_closed) return;
+    final snapshotsBefore =
+        <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
 
     try {
+      for (final feed in _liveFeeds.toList()) {
+        final page = feed.snapshot.value;
+        if (page.items.every((n) => n.isRead)) continue;
+        snapshotsBefore[feed] = (
+          page: page,
+          fetchGeneration: feed.fetchGeneration,
+        );
+        feed.snapshot.add(page.copyWith(items: _flipAllRead(page.items)));
+      }
       final url = _funnelcakeApiClient
           .notificationsReadUri(pubkey: _userPubkey)
           .toString();
@@ -1189,7 +1213,6 @@ class NotificationRepository {
 
       await _notificationsDao.markAllAsRead(ownerPubkey: _userPubkey);
     } catch (_) {
-      _restorePagesLoaded(pagesLoadedBefore);
       _restoreSnapshots(snapshotsBefore);
       rethrow;
     }
@@ -1427,10 +1450,7 @@ class NotificationRepository {
   ) {
     return items.map((n) {
       if (!_matchesMarkReadId(n, ids) || n.isRead) return n;
-      return switch (n) {
-        VideoNotification() => n.copyWith(isRead: true),
-        ActorNotification() => n.copyWith(isRead: true),
-      };
+      return _withRead(n, true);
     }).toList();
   }
 
@@ -1474,11 +1494,15 @@ class NotificationRepository {
   static List<NotificationItem> _flipAllRead(List<NotificationItem> items) {
     return items.map((n) {
       if (n.isRead) return n;
-      return switch (n) {
-        VideoNotification() => n.copyWith(isRead: true),
-        ActorNotification() => n.copyWith(isRead: true),
-      };
+      return _withRead(n, true);
     }).toList();
+  }
+
+  static NotificationItem _withRead(NotificationItem item, bool isRead) {
+    return switch (item) {
+      VideoNotification() => item.copyWith(isRead: isRead),
+      ActorNotification() => item.copyWith(isRead: isRead),
+    };
   }
 
   /// Enriches raw relay notifications with profile + video metadata, then

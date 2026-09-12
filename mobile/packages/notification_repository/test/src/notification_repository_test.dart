@@ -6124,7 +6124,26 @@ void main() {
         expect(await repository.watchUnreadCount().first, equals(1));
       });
 
-      test('markAsRead rollback restores pagination depth', () async {
+      test(
+        'markAsRead ignores a closed repository without mutating feeds',
+        () async {
+          stubNotifications([makeNotification()], unreadCount: 1);
+          await repository.refresh();
+          await repository.close();
+
+          await repository.markAsRead(['n1']);
+
+          verifyNever(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          );
+        },
+      );
+
+      test('markAsRead rollback preserves a newer refresh depth', () async {
         stubProfiles({});
         stubNotifications(
           [makeNotification()],
@@ -6172,7 +6191,7 @@ void main() {
         markGate.completeError(const FunnelcakeException('boom'));
         await expectLater(markFuture, throwsA(isA<FunnelcakeException>()));
 
-        expect(repository.hasPaginatedBeyondFirstPage, isTrue);
+        expect(repository.hasPaginatedBeyondFirstPage, isFalse);
       });
 
       test('markAllAsRead posts when nothing is unread locally', () async {
@@ -6190,6 +6209,24 @@ void main() {
           ),
         ).called(1);
       });
+
+      test(
+        'markAllAsRead ignores a closed repository without mutating feeds',
+        () async {
+          stubNotifications([makeNotification()], unreadCount: 1);
+          await repository.refresh();
+          await repository.close();
+
+          await repository.markAllAsRead();
+
+          verifyNever(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          );
+        },
+      );
 
       test('markAllAsRead does not emit when nothing flips', () async {
         stubNotifications([
@@ -6236,6 +6273,42 @@ void main() {
         expect(await repository.watchUnreadCount().first, equals(0));
       });
 
+      test('serializes overlapping read mutations so a failed rollback cannot '
+          'undo a later success', () async {
+        stubProfiles({});
+        stubNotifications([makeNotification()], unreadCount: 1);
+        await repository.refresh();
+        final loadedId =
+            (await repository.watchSnapshot().first).items.single.id;
+
+        final firstGate = Completer<MarkReadResponse>();
+        var attempt = 0;
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((_) {
+          attempt += 1;
+          return attempt == 1
+              ? firstGate.future
+              : Future.value(
+                  const MarkReadResponse(success: true, markedCount: 1),
+                );
+        });
+
+        final first = repository.markAsRead([loadedId]);
+        final second = repository.markAsRead([loadedId]);
+        firstGate.completeError(const FunnelcakeException('boom'));
+
+        await expectLater(first, throwsA(isA<FunnelcakeException>()));
+        await second;
+
+        expect(attempt, equals(2));
+        expect(await repository.watchUnreadCount().first, equals(0));
+      });
+
       test('markAllAsRead rolls back when API throws', () async {
         stubProfiles({
           'pubkey_alice': makeProfile('pubkey_alice', displayName: 'Alice'),
@@ -6259,7 +6332,7 @@ void main() {
         expect(await repository.watchUnreadCount().first, equals(1));
       });
 
-      test('markAllAsRead rollback restores pagination depth', () async {
+      test('markAllAsRead rollback preserves a newer refresh depth', () async {
         stubProfiles({});
         stubNotifications(
           [makeNotification()],
@@ -6304,7 +6377,7 @@ void main() {
         markGate.completeError(const FunnelcakeException('boom'));
         await expectLater(markFuture, throwsA(isA<FunnelcakeException>()));
 
-        expect(repository.hasPaginatedBeyondFirstPage, isTrue);
+        expect(repository.hasPaginatedBeyondFirstPage, isFalse);
       });
 
       test('markAllAsRead rollback keeps a page that landed mid-flight on a '
@@ -6348,6 +6421,50 @@ void main() {
         expect(follows.items, hasLength(1));
         // The unfiltered feed was flipped, so it still rolls back.
         expect(await repository.watchUnreadCount().first, equals(1));
+      });
+
+      test('markAllAsRead rollback keeps a page that landed mid-flight on the '
+          'same flipped feed', () async {
+        stubProfiles({});
+        stubNotifications(
+          [makeNotification()],
+          unreadCount: 1,
+          nextCursor: 'c1',
+          hasMore: true,
+        );
+        await repository.refresh();
+
+        final markGate = Completer<MarkReadResponse>();
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((_) => markGate.future);
+        final markFuture = repository.markAllAsRead();
+
+        stubNotifications([
+          makeNotification(
+            id: 'n2',
+            sourceEventId: 'evt2',
+            referencedEventId: 'video_2',
+          ),
+        ]);
+        await repository.loadNextPage();
+
+        markGate.completeError(const FunnelcakeException('boom'));
+        await expectLater(markFuture, throwsA(isA<FunnelcakeException>()));
+
+        final snapshot = await repository.watchSnapshot().first;
+        expect(
+          snapshot.items.map((item) => item.id),
+          containsAll(['n1', 'n2']),
+        );
+        expect(
+          snapshot.items.firstWhere((item) => item.id == 'n1').isRead,
+          isFalse,
+        );
+        expect(repository.hasPaginatedBeyondFirstPage, isTrue);
       });
     });
 

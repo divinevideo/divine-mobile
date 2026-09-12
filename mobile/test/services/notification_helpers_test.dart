@@ -62,6 +62,25 @@ void main() {
       expect(parseFcmPayload(const {'referencedEventId': ''}), isNull);
     });
 
+    test('parses a campaign payload without a Nostr event target', () {
+      final result = parseFcmPayload(const {
+        'type': 'campaign',
+        'category': 'engagement',
+        'title': 'New videos',
+        'body': 'See what people made.',
+        'campaignRevisionId': 'revision-1',
+        'tapTargetType': 'app_route',
+        'tapTargetValue': '/following/new',
+      });
+
+      expect(result, isNotNull);
+      expect(result!.notificationType, equals('campaign'));
+      expect(result.tapTargetType, equals('app_route'));
+      expect(result.tapTargetValue, equals('/following/new'));
+      expect(result.eventId, isNull);
+      expect(result.senderPubkey, isNull);
+    });
+
     test('parses a like payload (referencedEventId + sender)', () {
       final result = parseFcmPayload(const {
         'type': 'like',
@@ -260,6 +279,18 @@ void main() {
         'notificationType': 'comment',
         'senderPubkey': 'actor_hex',
       });
+    });
+
+    test('preserves a campaign app-route target', () {
+      final payload = localNotificationTapPayload(const {
+        'type': 'campaign',
+        'tapTargetType': 'app_route',
+        'tapTargetValue': '/following/new',
+      });
+
+      expect(payload['notificationType'], equals('campaign'));
+      expect(payload['tapTargetType'], equals('app_route'));
+      expect(payload['tapTargetValue'], equals('/following/new'));
     });
 
     test('preserves senderPubkey for a follow with no referencedEventId', () {

@@ -4,11 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_feed/video_feed_bloc.dart' show FeedMode;
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -80,6 +82,17 @@ List<RouteBase> shellRoutes() {
           navigatorKey: NavigatorKeys.home,
           initialLocation: VideoFeedPage.pathForIndex(0),
           routes: [
+            GoRoute(
+              path: RoutePaths.followingNew,
+              // This contract location intentionally parses as RouteType.following
+              // while rendering the home branch's Following feed. Keep the exact
+              // literal ahead of /following/:pubkey so `new` is never treated as
+              // an account identifier.
+              pageBuilder: (ctx, st) => branchPage(
+                st,
+                const VideoFeedPage(initialMode: FeedMode.following),
+              ),
+            ),
             GoRoute(
               path: VideoFeedPage.pathWithIndex,
               name: VideoFeedPage.routeName,

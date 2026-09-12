@@ -2,9 +2,13 @@
 // ABOUTME: Proves follow/mention are no longer dropped and that the push path
 // ABOUTME: shares the same routing contract as in-app notification rows.
 
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/notifications/notification_tap_router.dart' as app;
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
+import 'package:openvine/router/router.dart';
 
 void main() {
   const actor = 'follower_pubkey_hex';
@@ -14,6 +18,69 @@ void main() {
   const videoCoordinate = '34236:owner_hex:my-vine-id';
 
   group('pushNotificationTapTarget', () {
+    test('campaign app_route opens the supplied in-app location', () {
+      final result = app.pushNotificationTapTarget(
+        referencedAddress: null,
+        referencedEventId: null,
+        eventId: null,
+        notificationType: 'campaign',
+        senderPubkey: null,
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
+      );
+
+      expect(result.target, const OpenAppRouteTarget('/following/new'));
+      expect(result.targetEventId, isNull);
+    });
+
+    test('campaign with an unknown or unsafe target opens the inbox', () {
+      for (final target in const [
+        (type: 'web_url', value: 'https://example.com'),
+        (type: 'app_route', value: '//example.com/path'),
+        (type: 'app_route', value: 'settings'),
+      ]) {
+        final result = app.pushNotificationTapTarget(
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          tapTargetType: target.type,
+          tapTargetValue: target.value,
+        );
+
+        expect(result.target, const OpenInboxTarget());
+      }
+    });
+
+    test('campaign executor navigates to the supported app route', () async {
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const SizedBox()),
+          GoRoute(path: '/following/new', builder: (_, _) => const SizedBox()),
+        ],
+      );
+      addTearDown(router.dispose);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
+
+      await app.routeNotificationTap(
+        referencedAddress: null,
+        referencedEventId: null,
+        eventId: null,
+        notificationType: 'campaign',
+        senderPubkey: null,
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
+        container: container,
+      );
+
+      expect(router.routeInformationProvider.value.uri.path, '/following/new');
+    });
+
     test('follow opens the actor profile (carries no referencedEventId)', () {
       final result = app.pushNotificationTapTarget(
         referencedAddress: null,

@@ -3,6 +3,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' show NIP71VideoKinds, NotificationKind;
+import 'package:openvine/router/route_paths.dart' show RoutePaths;
 import 'package:openvine/services/notification_helpers.dart'
     show parseAddressableId;
 
@@ -11,9 +12,8 @@ const int _curatedListKind = 30005;
 /// Normalized destination for a notification tap.
 ///
 /// Built from either a `NotificationItem` (in-app row tap) or a push/local
-/// payload (`type` + `referencedEventId`/`eventId` [+ `senderPubkey`]). All
-/// three entry points resolve through [resolveNotificationTapTarget] so the
-/// kind -> destination decision cannot drift.
+/// payload carrying event, actor, or campaign-route fields. All entry points
+/// share these target values so destination handling cannot drift.
 ///
 /// This is intentionally Flutter-free: it decides *what* to open, not *how*.
 /// Each executor maps the target to its own navigation mechanism (the in-app
@@ -67,6 +67,17 @@ class OpenListTarget extends NotificationTapTarget {
 
   @override
   List<Object?> get props => [pubkey, listId];
+}
+
+/// Open an absolute route inside the app.
+class OpenAppRouteTarget extends NotificationTapTarget {
+  const OpenAppRouteTarget(this.location);
+
+  /// Absolute GoRouter location supplied by the campaign contract.
+  final String location;
+
+  @override
+  List<Object?> get props => [location];
 }
 
 /// Deterministic safe fallback: open the notifications inbox.
@@ -128,6 +139,12 @@ NotificationKind? notificationKindFromPushType(String? type) {
       // should still fall back to the best available target.
       return null;
   }
+}
+
+/// Returns a safe in-app route for a campaign target, or null when unsupported.
+String? campaignAppRoute({required String? type, required String? value}) {
+  if (type != 'app_route') return null;
+  return value == RoutePaths.followingNew ? value : null;
 }
 
 /// Parses a public curated-list coordinate into an in-app route target.
