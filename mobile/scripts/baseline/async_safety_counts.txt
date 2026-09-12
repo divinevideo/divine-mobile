@@ -141,9 +141,6 @@ discarded_futures|lib/services/shake_detector_service.dart	3
 discarded_futures|lib/services/startup_performance_service.dart	4
 discarded_futures|lib/services/subscription_manager.dart	2
 discarded_futures|lib/services/supporter_repository.dart	4
-discarded_futures|lib/services/upload/upload_progress_reporter.dart	3
-discarded_futures|lib/services/upload/upload_retry_policy.dart	2
-discarded_futures|lib/services/upload_manager.dart	1
 discarded_futures|lib/services/video_editor/clip_speed_render_service.dart	2
 discarded_futures|lib/services/video_editor/clip_thumbnail_manager.dart	3
 discarded_futures|lib/services/video_editor/video_editor_render_service.dart	1
@@ -403,7 +400,6 @@ unawaited_futures|lib/services/analytics_service.dart	3
 unawaited_futures|lib/services/crash_reporting_service.dart	1
 unawaited_futures|lib/services/curated_list_service.dart	1
 unawaited_futures|lib/services/push_notification_session_coordinator.dart	1
-unawaited_futures|lib/services/upload_manager.dart	1
 unawaited_futures|lib/services/video_editor/stop_motion_render_service.dart	1
 unawaited_futures|lib/services/video_editor/transition_seam_render_service.dart	1
 unawaited_futures|lib/services/video_editor/video_editor_render_service.dart	1

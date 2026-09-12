@@ -188,9 +188,6 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
   void onAppResumed() => unawaited(recoverInterruptedUploads());
 
   @override
-  void onPeriodicCleanup() {}
-
-  @override
   void dispose() {
     if (_isBackgroundRegistered) {
       _backgroundActivityManager.unregisterService(this);
