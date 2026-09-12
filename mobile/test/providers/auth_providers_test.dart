@@ -543,7 +543,7 @@ void main() {
       container
           .read(registeredKeyConflictStoreProvider)
           .record(expectedPubkeyHex: pubkey, email: 'existing@example.com');
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(
         container.read(registeredKeyConflictProvider)?.email,
         'existing@example.com',
@@ -551,7 +551,38 @@ void main() {
 
       authState = AuthState.unauthenticated;
       authStateController.add(authState);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
+
+      expect(container.read(registeredKeyConflictProvider), isNull);
+    });
+
+    test('clears the conflict when the active key changes', () async {
+      const authState = AuthState.authenticated;
+      final authStateController = StreamController<AuthState>.broadcast();
+      addTearDown(authStateController.close);
+      final authService = _MockAuthService();
+      when(() => authService.authState).thenAnswer((_) => authState);
+      when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => authStateController.stream);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(authService)],
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(registeredKeyConflictStoreProvider)
+          .record(expectedPubkeyHex: pubkey, email: 'existing@example.com');
+      await pumpEventQueue();
+      expect(
+        container.read(registeredKeyConflictProvider)?.email,
+        'existing@example.com',
+      );
+
+      when(() => authService.currentPublicKeyHex).thenReturn(_accountPubkey);
+      authStateController.add(authState);
+      await pumpEventQueue();
 
       expect(container.read(registeredKeyConflictProvider), isNull);
     });

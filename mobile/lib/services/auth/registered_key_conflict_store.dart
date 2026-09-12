@@ -43,7 +43,7 @@ class RegisteredKeyConflictStore {
     if (_controller.isClosed) return;
     final conflict = _conflict;
     if (conflict == null) return;
-    if (state == AuthState.authenticated &&
+    if (state != AuthState.unauthenticated &&
         conflict.pubkeyHex == _authService.currentPublicKeyHex) {
       return;
     }

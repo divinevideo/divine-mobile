@@ -290,12 +290,17 @@ final registeredKeyConflictStoreProvider = Provider<RegisteredKeyConflictStore>(
 
 final registeredKeyConflictProvider = Provider<RegisteredKeyConflict?>((ref) {
   final authState = ref.watch(currentAuthStateProvider);
+  final authService = ref.watch(authServiceProvider);
   final store = ref.watch(registeredKeyConflictStoreProvider);
   store.syncAuthState(authState);
-  final subscription = store.stream.listen((_) {
+  final storeSubscription = store.stream.listen((_) {
     ref.invalidateSelf();
   });
-  ref.onDispose(subscription.cancel);
+  final authSubscription = authService.authStateStream.listen(
+    store.syncAuthState,
+  );
+  ref.onDispose(storeSubscription.cancel);
+  ref.onDispose(authSubscription.cancel);
   return store.current;
 });
 

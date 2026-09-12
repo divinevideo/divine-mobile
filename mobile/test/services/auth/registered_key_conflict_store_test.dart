@@ -70,5 +70,17 @@ void main() {
       await expectLater(cleared, completion(isNull));
       expect(store.current, isNull);
     });
+
+    test('keeps recovery context while auth re-checks the same key', () {
+      store.record(
+        expectedPubkeyHex: firstPubkey,
+        email: 'existing@example.com',
+      );
+
+      store.syncAuthState(AuthState.checking);
+      store.syncAuthState(AuthState.authenticating);
+
+      expect(store.current?.email, 'existing@example.com');
+    });
   });
 }
