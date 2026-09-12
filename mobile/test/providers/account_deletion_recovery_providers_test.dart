@@ -42,6 +42,11 @@ final _authStateProbe = NotifierProvider<_AuthStateProbe, AuthState>(
   _AuthStateProbe.new,
 );
 
+class _TestCurrentAuthState extends CurrentAuthState {
+  @override
+  AuthState build() => ref.watch(_authStateProbe);
+}
+
 class _TestNostrSession extends NostrSession {
   @override
   NostrSessionReadiness build() =>
@@ -410,9 +415,7 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(preferences),
               authServiceProvider.overrideWithValue(authService),
-              currentAuthStateProvider.overrideWith(
-                (ref) => ref.watch(_authStateProbe),
-              ),
+              currentAuthStateProvider.overrideWith(_TestCurrentAuthState.new),
               accountDeletionRecoveryRepositoryProvider.overrideWithValue(
                 repository,
               ),
@@ -530,9 +533,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(preferences),
             authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWith(
-              (ref) => ref.watch(_authStateProbe),
-            ),
+            currentAuthStateProvider.overrideWith(_TestCurrentAuthState.new),
             currentAuthRpcCapabilityProvider.overrideWithValue(
               AuthRpcCapability.rpcReady,
             ),
@@ -620,9 +621,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
           authServiceProvider.overrideWithValue(authService),
-          currentAuthStateProvider.overrideWith(
-            (ref) => ref.watch(_authStateProbe),
-          ),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuthState.new),
           currentAuthRpcCapabilityProvider.overrideWithValue(
             AuthRpcCapability.rpcReady,
           ),
