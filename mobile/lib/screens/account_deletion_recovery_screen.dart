@@ -34,10 +34,6 @@ class AccountDeletionRecoveryScreen extends ConsumerWidget {
     );
 
     if (receipt != null && submittedMonitor != null) {
-      if (submittedMonitor.state.status ==
-          AccountDeletionRecoveryStatus.initial) {
-        unawaited(submittedMonitor.resume(receipt.attempt));
-      }
       return BlocProvider<AccountDeletionRecoveryCubit>.value(
         value: submittedMonitor,
         child: const AccountDeletionRecoveryView(),

@@ -417,6 +417,79 @@ void main() {
       },
     );
 
+    test(
+      'startup resumes a durable receipt while another account is active',
+      () async {
+        const completed = AccountDeletionAttempt(
+          id: 'attempt-id',
+          status: AccountDeletionAttemptStatus.completed,
+        );
+        await container
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: pubkey,
+              attempt: completed,
+              vanishEventId: _vanishEventId,
+            );
+        when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyB);
+        when(
+          () => authService.deleteLocalAccount(pubkey),
+        ).thenAnswer((_) async {});
+
+        final restarted = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+        addTearDown(restarted.dispose);
+        final cleared = Completer<void>();
+        final receiptSubscription = restarted.listen(
+          submittedAccountDeletionAttemptProvider,
+          (_, next) {
+            if (next == null && !cleared.isCompleted) cleared.complete();
+          },
+        );
+        addTearDown(receiptSubscription.close);
+
+        restarted.read(accountDeletionRecoveryStartupProvider);
+        await cleared.future;
+
+        verify(() => authService.deleteLocalAccount(pubkey)).called(1);
+        expect(restarted.read(submittedAccountDeletionAttemptProvider), isNull);
+      },
+    );
+
+    test('a receipt recorded after startup is not pre-empted', () async {
+      container.read(accountDeletionRecoveryStartupProvider);
+      await container
+          .read(submittedAccountDeletionAttemptProvider.notifier)
+          .record(
+            pubkeyHex: pubkey,
+            attempt: processing,
+            vanishEventId: _vanishEventId,
+          );
+      await pumpEventQueue();
+
+      verifyNever(
+        () => repository.submit(
+          attemptId: any(named: 'attemptId'),
+          vanishEventId: any(named: 'vanishEventId'),
+        ),
+      );
+      final cubit = container.read(submittedAccountDeletionMonitorProvider);
+      expect(cubit, isNotNull);
+      expect(cubit!.state.status, AccountDeletionRecoveryStatus.initial);
+      await cubit.close();
+    });
+
     for (final cleanupFailsBeforeSignIn in [false, true]) {
       test(
         'submitted monitor ${cleanupFailsBeforeSignIn ? 'retries' : 'resolves'} '

@@ -201,6 +201,10 @@ class _DivineAppState extends ConsumerState<DivineApp>
     final initialSubmittedDeletionAttempt = ref.read(
       currentSubmittedAccountDeletionAttemptProvider,
     );
+    // Starts the app-scoped owner for a receipt restored from storage, even
+    // when the active account is not the receipt's: the recovery gate keeps
+    // its screen away from that account, so the screen cannot be the trigger.
+    ref.read(accountDeletionRecoveryStartupProvider);
     _authenticatedDeletionLookupSettled = authenticatedDeletionLookupSettled(
       authService.authState,
       initialDeletionAttempt,

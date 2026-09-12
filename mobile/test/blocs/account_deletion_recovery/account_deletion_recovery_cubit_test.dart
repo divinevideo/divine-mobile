@@ -355,6 +355,94 @@ void main() {
       expect(cubit.state.failure, AccountDeletionRecoveryFailure.signOut);
       expect(cubit.state.attempt, same(_processing));
     });
+
+    test(
+      'a dialog-owned submission leaves processing without signing out',
+      () async {
+        when(
+          () => repository.submit(
+            attemptId: _recoverable.id,
+            vanishEventId: 'b' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final cubit = buildCubit(withReceipt: true);
+        addTearDown(cubit.close);
+
+        await cubit.resume(_recoverable, signOutWhenProcessing: false);
+
+        expect(
+          cubit.state.attempt?.status,
+          AccountDeletionAttemptStatus.processing,
+        );
+        verifyNever(() => authService.signOut());
+        expect(timers.timers.where((timer) => timer.isActive), hasLength(1));
+      },
+    );
+
+    test('a later poll signs out when it confirms processing', () async {
+      var submits = 0;
+      when(
+        () => repository.submit(
+          attemptId: _recoverable.id,
+          vanishEventId: 'b' * 64,
+        ),
+      ).thenAnswer((_) async {
+        submits++;
+        if (submits == 1) {
+          throw const AccountDeletionRecoveryException('offline');
+        }
+        return _processing;
+      });
+      when(
+        () => repository.fetchStatus(
+          attemptId: _recoverable.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _recoverable);
+      when(authService.signOut).thenAnswer((_) async {});
+      final cubit = buildCubit(withReceipt: true);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_recoverable, signOutWhenProcessing: false);
+      expect(submits, 1);
+      verifyNever(() => authService.signOut());
+
+      await timers.fireNext();
+
+      expect(submits, 2);
+      verify(authService.signOut).called(1);
+      expect(
+        cubit.state.attempt?.status,
+        AccountDeletionAttemptStatus.processing,
+      );
+    });
+
+    test('concurrent resumes share one in-flight operation', () async {
+      var updates = 0;
+      final gate = Completer<void>();
+      final cubit = buildCubit(
+        onAttemptUpdated: (_) async {
+          updates++;
+          await gate.future;
+        },
+      );
+      addTearDown(cubit.close);
+
+      final first = cubit.resume(_processing);
+      final second = cubit.resume(
+        const AccountDeletionAttempt(
+          id: 'other-attempt-id',
+          status: AccountDeletionAttemptStatus.processing,
+        ),
+      );
+      gate.complete();
+      await first;
+      await second;
+
+      expect(updates, 1);
+      expect(cubit.state.attempt, same(_processing));
+      expect(timers.timers.where((timer) => timer.isActive), hasLength(1));
+    });
   });
 
   group('load', () {

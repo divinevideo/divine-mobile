@@ -244,8 +244,32 @@ submittedAccountDeletionMonitorProvider =
         disposed = true;
         unawaited(cubit.close());
       });
+      // Deferred fallback: resume an adopted receipt when nobody is driving
+      // this owner yet. Running a microtask later rather than here lets an
+      // immediate caller — the deletion dialog's resume, which owns the
+      // sign-out ordering — start first and win the single-flight resume.
+      scheduleMicrotask(() {
+        if (cubit.isClosed) return;
+        if (cubit.state.status != AccountDeletionRecoveryStatus.initial) return;
+        unawaited(cubit.resume(receipt.attempt));
+      });
       return cubit;
     });
+
+/// App-scoped kick for a receipt that survived a restart.
+///
+/// Read once during app startup. Every access is [Ref.read], so this provider
+/// has no dependencies and never recomputes: a receipt recorded later by the
+/// deletion dialog is started by that flow, which owns the sign-out ordering,
+/// and must not be pre-empted here. Without this, a receipt whose account is
+/// not the active one would never start polling, because the recovery gate
+/// deliberately keeps its screen away from the active account.
+final accountDeletionRecoveryStartupProvider = Provider<void>((ref) {
+  final receipt = ref.read(submittedAccountDeletionAttemptProvider);
+  if (receipt == null) return;
+  // Instantiates the owner; its deferred resume starts the polling.
+  ref.read(submittedAccountDeletionMonitorProvider);
+});
 
 final currentAccountDeletionAttemptProvider =
     FutureProvider<AccountDeletionAttempt?>(
