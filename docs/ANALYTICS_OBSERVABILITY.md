@@ -204,6 +204,14 @@ Use Firebase Performance to inspect:
 - network request traces for media/API domains
 - custom traces when the span represents a real user wait
 
+The iOS `NETWORK_REQUEST` export also carries the Google SDKs' own traffic —
+`app-analytics-services.com` is the upload path for every event above, at
+roughly 3.5 requests and 4 KB per app start. Its expected volume, host by
+host, is recorded in
+[Google SDK traffic in the export](../mobile/docs/NETWORK_PERFORMANCE_MONITORING.md#google-sdk-traffic-in-the-export)
+so it is read as SDK cost rather than as a finding; the same section says why
+the `*.app-ads-services.com` rows stop at the first store release after #7303.
+
 The existing `feed_load_*` traces are an exception: they measure subscription
 attempts, including background retries and re-subscriptions, rather than a
 user-visible surface load. Filter them by `completion` and follow the

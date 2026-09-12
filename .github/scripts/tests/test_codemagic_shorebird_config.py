@@ -424,6 +424,51 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                 if re.search(rf"\${{?{variable}}}?\b", scripts):
                     self.assertIn(variable, declared, f"{name} reads ${variable} without declaring it")
 
+    def test_ios_build_workflows_select_the_ads_measurement_free_product(self) -> None:
+        # #7303: firebase_analytics links FirebaseAnalyticsCore — no IDFA
+        # support, no Google ads-measurement SDK — only while
+        # FIREBASE_ANALYTICS_WITHOUT_ADID is present as Xcode evaluates its
+        # Package.swift. Xcode reads the variable, never a workflow script, so
+        # no other check in this file sees it. Pin it on every workflow that
+        # builds the iOS product; one that builds without it silently ships the
+        # full FirebaseAnalytics product.
+        resolved = self._resolved_config()
+        real_ios_build = re.compile(
+            r"(?:shorebird (?:release|patch) ios|flutter build ios(?! --config-only))"
+        )
+
+        selected = []
+        missing = []
+        for name, workflow in resolved["workflows"].items():
+            scripts = "\n".join(
+                step.get("script", "")
+                for step in workflow.get("scripts", [])
+                if isinstance(step, dict)
+            )
+            if not real_ios_build.search(scripts):
+                continue
+            selected.append(name)
+            declared = set((workflow.get("environment") or {}).get("vars") or {})
+            if "FIREBASE_ANALYTICS_WITHOUT_ADID" not in declared:
+                missing.append(name)
+
+        # Pin the selection itself. Without this the loop enforces nothing when
+        # the build commands move behind a helper script and the match set
+        # silently empties — and a new iOS lane must force a human to look.
+        self.assertEqual(
+            sorted(selected),
+            ["e2e-smoke-ios", "ios-build", "ios-patch", "ios-simulator-build"],
+            "the set of iOS-building workflows changed; update this pin and "
+            "confirm each lane still sets FIREBASE_ANALYTICS_WITHOUT_ADID (#7303)",
+        )
+        self.assertEqual(
+            missing,
+            [],
+            "iOS-building workflows must set FIREBASE_ANALYTICS_WITHOUT_ADID so "
+            "firebase_analytics links FirebaseAnalyticsCore (#7303): "
+            f"{missing}",
+        )
+
     def test_store_release_workflows_require_main_and_emit_provenance(self) -> None:
         for workflow_name in ("ios-build", "android-build"):
             workflow = self._workflow_block(workflow_name)

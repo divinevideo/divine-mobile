@@ -610,6 +610,12 @@ definitions:
         # Shorebird archive before later steps can promote its artifacts.
         bash scripts/check_privacy_manifest_coverage.sh \
           --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+
+        # Prove FIREBASE_ANALYTICS_WITHOUT_ADID reached Swift package
+        # resolution: the archive must link FirebaseAnalyticsCore, not the
+        # ads-measurement SDK the default product carries (#7303).
+        bash scripts/check_ios_analytics_product.sh \
+          --app build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |
@@ -694,6 +700,9 @@ definitions:
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
           --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
           --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+
+        bash scripts/check_ios_analytics_product.sh \
+          --app build/ios/iphonesimulator/Runner.app
     # GH_ACTIONS_PR_PREVIEW sets forceOpenOnboarding on the invite client
     # (main.dart), so getClientConfig() reports OnboardingMode.open and the
     # invite gate self-redirects to account creation. Without it every flow
@@ -977,6 +986,12 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+        # firebase_analytics links FirebaseAnalyticsCore — no IDFA support, no
+        # Google ads-measurement SDK — when this is present while Xcode
+        # evaluates its Package.swift (#7303). Presence is what counts, not the
+        # value. scripts/check_ios_analytics_product.sh proves it reached the
+        # build product.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: co.openvine.app
@@ -1039,6 +1054,9 @@ workflows:
       groups:
         - zendesk_credentials
         - proofmode_credentials
+      vars:
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1204,6 +1222,8 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: co.openvine.app
@@ -1400,6 +1420,8 @@ workflows:
         # resolve and render playback chrome. Never replace this with a private
         # account credential or mutable search result.
         QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
