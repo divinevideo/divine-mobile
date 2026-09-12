@@ -103,4 +103,13 @@ class _FakeFirebaseApp implements FirebaseApp {
 
   @override
   Future<void> setAutomaticResourceManagementEnabled(bool enabled) async {}
+
+  @override
+  T? getService<T extends FirebaseService>() => null;
+
+  @override
+  void registerService<T extends FirebaseService>(
+    T service, {
+    Future<void> Function(T service)? dispose,
+  }) {}
 }
