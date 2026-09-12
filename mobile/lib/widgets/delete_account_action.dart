@@ -92,6 +92,9 @@ Future<void> startAccountDeletionFlow({
     handle: profile?.displayNip05,
   );
 
+  // Deletion can replace this route before its callbacks finish.
+  final container = ProviderScope.containerOf(context, listen: false);
+
   await showDeleteAllContentWarningSheet(
     context: context,
     confirmation: confirmation,
@@ -108,7 +111,7 @@ Future<void> startAccountDeletionFlow({
         // deletes the Keycast user right after accepting, and a lookup signed
         // through that signer fails, which used to leave the user signed in on
         // the settings screen (#8583).
-        onDeletionSubmitted: (attempt, vanishEventId) => ref
+        onDeletionSubmitted: (attempt, vanishEventId) => container
             .read(submittedAccountDeletionAttemptProvider.notifier)
             .record(
               pubkeyHex: pubkey,
@@ -116,11 +119,11 @@ Future<void> startAccountDeletionFlow({
               vanishEventId: vanishEventId,
               submissionOwnedLocally: true,
             ),
-        onDeletionFlowFinished: ref
+        onDeletionFlowFinished: container
             .read(submittedAccountDeletionAttemptProvider.notifier)
             .releaseSubmissionOwnership,
       );
-      ref.invalidate(currentAccountDeletionAttemptProvider);
+      container.invalidate(currentAccountDeletionAttemptProvider);
     },
   );
 }
