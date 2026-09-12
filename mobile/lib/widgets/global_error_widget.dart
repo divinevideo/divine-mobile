@@ -1,85 +1,40 @@
-// ABOUTME: Global error widget shown when a widget throws during build
-// ABOUTME: The Divine "tangled vine" - our version of Twitter's fail whale
+// ABOUTME: The app's ErrorWidget.builder: the branded "tangled vine" surface
+// ABOUTME: shown in place of any widget that throws during build
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:unified_logger/unified_logger.dart';
 
-/// Builds the global error widget, with a fallback for pre-MaterialApp errors.
+/// Builds the surface the framework shows in place of a widget whose build
+/// failed. The startup sequence installs it as [ErrorWidget.builder].
 ///
-/// When a widget throws during build, Flutter replaces it with this.
-/// Inside the MaterialApp tree we get the full "tangled vine" experience.
-/// Before MaterialApp is ready (early startup), we fall back to a minimal
-/// branded container that doesn't require Directionality or Theme.
+/// It has to render anywhere in the tree, including before [MaterialApp]
+/// exists, so it brings its own [Directionality] and sets raw text styles with
+/// an explicit `TextDecoration.none` rather than reaching for a [VineTheme]
+/// font helper: those resolve a Google font asynchronously, and a crash screen
+/// is the worst place to start a font fetch. Colours come from
+/// `context.vineColors`, which follows the ambient appearance inside the app
+/// shell and falls back to the dark palette when no theme exists yet.
+///
+/// Reporting is not this widget's job. Every framework call site reports
+/// [details] through [FlutterError.onError] before it asks the builder for a
+/// replacement, and that handler already owns classification and Crashlytics.
+/// A second report from here would count every build failure twice and file
+/// as fatal the ones the handler deliberately downgraded.
 Widget buildGlobalErrorWidget(FlutterErrorDetails details) {
-  _reportToCrashlytics(details);
-
-  // Try the nice widget first; fall back if the tree isn't ready yet.
-  try {
-    return _GlobalErrorWidget(details: details);
-  } catch (_) {
-    // Pre-MaterialApp: no Directionality, no Theme, no Text allowed.
-    return _MinimalFallbackError();
-  }
-}
-
-/// Tracks which errors we've already reported to avoid spamming Crashlytics
-/// on widget rebuilds.
-final Set<int> _reportedErrors = {};
-
-void _reportToCrashlytics(FlutterErrorDetails details) {
-  final errorHash = Object.hash(
-    details.exception.toString(),
-    details.stack.toString(),
-  );
-
-  if (_reportedErrors.contains(errorHash)) return;
-  _reportedErrors.add(errorHash);
-
-  // Keep the set from growing unbounded during long sessions.
-  if (_reportedErrors.length > 200) {
-    final toRemove = _reportedErrors.take(100).toList();
-    _reportedErrors.removeAll(toRemove);
-  }
-
-  try {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(details);
-  } catch (_) {
-    // Crashlytics not initialized yet - that's fine.
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Minimal fallback (pre-MaterialApp)
-// ---------------------------------------------------------------------------
-
-class _MinimalFallbackError extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: context.vineColors.background,
-      child: const Center(
-        child: SizedBox(
-          width: 80,
-          height: 80,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              // vineGreen at 40% opacity - gentle, branded, not alarming
-              color: Color(0x6627C58B),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ),
+  // On web, log error details for debugging
+  if (kIsWeb) {
+    Log.error(
+      'ErrorWidget: ${details.exception}\n${details.stack}',
+      name: 'ErrorWidget',
+      category: LogCategory.system,
     );
   }
+  return _GlobalErrorWidget(details: details);
 }
 
-// ---------------------------------------------------------------------------
-// Full error widget (inside MaterialApp tree)
-// ---------------------------------------------------------------------------
-
+/// The surface itself: the illustration, the copy, and a details block.
 class _GlobalErrorWidget extends StatelessWidget {
   const _GlobalErrorWidget({required this.details});
 
@@ -145,8 +100,9 @@ class _GlobalErrorWidget extends StatelessWidget {
                   ),
                 ),
 
-                // Debug info for developers
-                if (kDebugMode) ...[
+                // Debug info for developers; on web the exception text is
+                // shown in every build mode.
+                if (kDebugMode || kIsWeb) ...[
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(12),

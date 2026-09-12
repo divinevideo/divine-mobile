@@ -8,7 +8,6 @@
 # Issue: #6145. Regenerate after migrating:
 #   UPDATE_BASELINE=1 bash scripts/check_raw_textstyle_ceiling.sh
 lib/app_update/view/update_dialog.dart	2
-lib/main.dart	2
 lib/mixins/async_value_ui_helpers_mixin.dart	1
 lib/router/widgets/sound_detail_loader.dart	2
 lib/screens/auth/create_account_screen.dart	7
