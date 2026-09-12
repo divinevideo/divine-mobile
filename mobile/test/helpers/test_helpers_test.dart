@@ -6,9 +6,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/constants/hive_box_names.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 import '../mocks/mock_path_provider_platform.dart';
 import 'test_helpers.dart';
