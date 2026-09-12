@@ -79,9 +79,8 @@ void main() {
         ..writeAsBytesSync(List<int>.generate(32, (index) => index));
 
       mockBlossomService = _MockBlossomUploadService();
-      when(
-        () => mockBlossomService.isBlossomEnabled(),
-      ).thenAnswer((_) async => false);
+      when(() => mockBlossomService.isBlossomEnabled())
+          .thenAnswer((_) async => false);
       _mockConnectivity('wifi');
 
       uploadManager = UploadManager(
@@ -447,6 +446,52 @@ void main() {
       manager.dispose();
 
       verify(() => mockBgManager.unregisterService(manager)).called(1);
+    });
+
+    test('dispose during initialize prevents late registration', () async {
+      await TestHelpers.cleanupHiveBox('pending_uploads');
+      SharedPreferences.setMockInitialValues({});
+
+      final tempDir = await Directory.systemTemp.createTemp(
+        'upload_recovery_dispose_',
+      );
+      final originalPathProvider = PathProviderPlatform.instance;
+      final mockPathProvider = MockPathProviderPlatform()
+        ..setTemporaryPath(tempDir.path)
+        ..setApplicationDocumentsPath('${tempDir.path}/documents')
+        ..setApplicationSupportPath('${tempDir.path}/support');
+      PathProviderPlatform.instance = mockPathProvider;
+      await TestHelpers.initHiveHome();
+
+      final mockBlossom = _MockBlossomUploadService();
+      when(mockBlossom.isBlossomEnabled).thenAnswer((_) => Future.value(false));
+      _mockConnectivity('wifi');
+
+      final mockBgManager = _MockBackgroundActivityManager();
+      final manager = UploadManager(
+        blossomService: mockBlossom,
+        backgroundActivityManager: mockBgManager,
+      );
+
+      addTearDown(() async {
+        manager.dispose();
+        try {
+          await TestHelpers.cleanupHiveBox('pending_uploads');
+        } finally {
+          Hive.init(null);
+          PathProviderPlatform.instance = originalPathProvider;
+          if (tempDir.existsSync()) {
+            await tempDir.delete(recursive: true);
+          }
+        }
+      });
+
+      final initialization = manager.initialize();
+      manager.dispose();
+      await initialization;
+
+      verifyNever(() => mockBgManager.registerService(manager));
+      expect(manager.isInitialized, isFalse);
     });
 
     test('serviceName is UploadManager', () {
