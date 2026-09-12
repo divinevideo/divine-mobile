@@ -406,6 +406,22 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   }
 
   Future<void> _signOutForProcessing(AccountDeletionAttempt attempt) async {
+    final receiptPubkeyHex = _receiptPubkeyHex;
+    final activePubkeyHex = _authService.currentPublicKeyHex;
+    if (receiptPubkeyHex != null && activePubkeyHex != receiptPubkeyHex) {
+      // Another account is signed in, or the receipt's session is already
+      // gone. The coordinator accepted the receipt's deletion, but ending
+      // the active session is not this owner's job; keep polling so the
+      // completed path deletes the receipt account's local data, the same
+      // split `completeLocalCleanup` makes.
+      final generation = _beginOperation();
+      await _emitPollingState(
+        AccountDeletionRecoveryStatus.processing,
+        attempt,
+        generation,
+      );
+      return;
+    }
     final generation = _beginOperation();
     emitIfOpen(
       AccountDeletionRecoveryState(

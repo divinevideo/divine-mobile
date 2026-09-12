@@ -381,6 +381,7 @@ void main() {
 
     test('a later poll signs out when it confirms processing', () async {
       var submits = 0;
+      when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
       when(
         () => repository.submit(
           attemptId: _recoverable.id,
@@ -393,12 +394,7 @@ void main() {
         }
         return _processing;
       });
-      when(
-        () => repository.fetchStatus(
-          attemptId: _recoverable.id,
-          pubkeyHex: 'a' * 64,
-        ),
-      ).thenAnswer((_) async => _recoverable);
+      when(repository.fetchCurrent).thenAnswer((_) async => _recoverable);
       when(authService.signOut).thenAnswer((_) async {});
       final cubit = buildCubit(withReceipt: true);
       addTearDown(cubit.close);
@@ -416,6 +412,30 @@ void main() {
         AccountDeletionAttemptStatus.processing,
       );
     });
+
+    test(
+      'an accepted submission does not sign out a different active account',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.submit(
+            attemptId: _recoverable.id,
+            vanishEventId: 'b' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final cubit = buildCubit(withReceipt: true);
+        addTearDown(cubit.close);
+
+        await cubit.resume(_recoverable);
+
+        expect(
+          cubit.state.attempt?.status,
+          AccountDeletionAttemptStatus.processing,
+        );
+        verifyNever(() => authService.signOut());
+        expect(timers.timers.where((timer) => timer.isActive), hasLength(1));
+      },
+    );
 
     test('concurrent resumes share one in-flight operation', () async {
       var updates = 0;
