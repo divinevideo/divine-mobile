@@ -13,13 +13,16 @@ import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show parseFcmPayload;
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_format_preference.dart';
 import 'package:openvine/startup/app_bootstrap.dart';
 import 'package:openvine/startup/startup_phases.dart';
@@ -150,12 +153,21 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
     name: 'PerformanceMonitoring',
     phase: StartupPhase.critical,
     initialize: () async {
+      // Read here rather than at registration: both providers are
+      // override-only, and the coordinator is also built in tests that never
+      // run this phase.
+      final distributedBuild = PerformanceMonitoringService.isDistributedBuild(
+        shorebirdAvailable: container.read(shorebirdAvailableProvider),
+        installSource: container.read(installSourceProvider),
+      );
       await runTimedStartupTask(
         startupPerformance: startupPerformance,
         crashReporting: crashReporting,
         phaseName: 'performance_monitoring',
         initializationStep: 'Initializing performance monitoring',
-        task: container.read(performanceMonitoringServiceProvider).initialize,
+        task: () => container
+            .read(performanceMonitoringServiceProvider)
+            .initialize(distributedBuild: distributedBuild),
       );
     },
     optional: true,

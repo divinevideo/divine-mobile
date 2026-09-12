@@ -653,6 +653,11 @@ Future<void> startOpenVineApp({
     dbCipherKey: dbCipherKey,
     databaseCorruptionService: databaseCorruptionService,
     installSource: installSource,
+    // The updater the recovery-critical patch check constructed above; its
+    // availability is what tells a `shorebird release` artifact apart from a
+    // local release build for performance collection (#7302).
+    shorebirdAvailable:
+        (startupShorebirdUpdater ??= ShorebirdUpdater()).isAvailable,
     accountOverrides: [
       // Screenshot mode: lead the 01_classics OG-Viner row with returning
       // Vine OGs who all have avatars, so the marketing shot has no

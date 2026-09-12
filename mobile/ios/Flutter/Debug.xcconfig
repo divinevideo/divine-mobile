@@ -9,7 +9,8 @@
 // that trace is captured natively before Dart runs.
 //
 // To collect from a local build, set this to NO AND flip
-// `PerformanceMonitoringService.collectionEnabled` to `true`. Changing this
-// alone does nothing: that gate re-asserts `false` on every launch and the SDK
-// persists it, so resolution just falls through to the cache it wrote.
+// `PerformanceMonitoringService.collectionEnabled` to `true` AND
+// `PerformanceMonitoringService.distributedBuildsOnly` to `false`. Changing
+// this alone does nothing: that gate re-asserts `false` on every launch and
+// the SDK persists it, so resolution just falls through to the cache it wrote.
 FIREBASE_PERFORMANCE_COLLECTION_DEACTIVATED=YES

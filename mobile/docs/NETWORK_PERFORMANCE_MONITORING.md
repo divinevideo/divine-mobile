@@ -147,10 +147,15 @@ slow; check the cheap things first.
    opt that one run back in: undo the native deactivation for your platform
    (`android/app/src/debug/AndroidManifest.xml`, or
    `FIREBASE_PERFORMANCE_COLLECTION_DEACTIVATED=NO` in `ios/Flutter/Debug.xcconfig`)
-   **and** flip `PerformanceMonitoringService.collectionEnabled` to `true` —
-   either alone leaves collection off. Revert both before committing; a debug
-   run that reports lands `http://localhost:<port>/…` patterns in the
-   production project under a build number no store build uses — exactly the
+   **and** flip `PerformanceMonitoringService.collectionEnabled` to `true`
+   **and** `PerformanceMonitoringService.distributedBuildsOnly` to `false` —
+   any one alone leaves collection off. A `flutter run --release` needs only
+   the last flip: release mode passes the first two gates, and the third is
+   what keeps a local release build out (#7302) — the Shorebird engine that
+   only `shorebird release` links, or a Zapstore installer, is what marks a
+   build as distributed. Revert every flip before committing; a run that
+   reports lands `http://localhost:<port>/…` patterns in the production
+   project under a build number no store build uses — exactly the
    contamination that skewed #7123.
 3. Console: **Performance → Network Requests**, filtered to `divine.video` /
    `dvines.org`. Confirm requests appear from **both** platforms and that each
