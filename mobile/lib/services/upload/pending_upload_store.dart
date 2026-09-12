@@ -89,9 +89,14 @@ class PendingUploadStore {
     // store with a live, open box (isReady → true while _disposed). open() — the
     // deliberate re-init entrypoint — clears the latch and is the only revival.
     if (_disposed) return;
-    _box = await UploadInitializationHelper.initializeUploadsBox(
+    final box = await UploadInitializationHelper.initializeUploadsBox(
       forceReinit: true,
     );
+    // disposeStore() can land while the open above is suspended. The entry check
+    // is before the await, so re-check before reviving _box, or a disposed store
+    // comes back alive (isReady → true while _disposed).
+    if (_disposed) return;
+    _box = box;
   }
 
   /// Cancel timers, drain the queue reference, and null the box pointer.
