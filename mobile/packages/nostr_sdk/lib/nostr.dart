@@ -578,7 +578,7 @@ class Nostr {
       // hold and keeps its prompt empty answer.
       timedOut:
           read.endedAtDeadline ||
-          (requireAllRelaysSettled && noRelaysParticipated),
+          (requireAllRelaysSettled && !read.result.isComplete),
       noRelaysParticipated: noRelaysParticipated,
     );
   }

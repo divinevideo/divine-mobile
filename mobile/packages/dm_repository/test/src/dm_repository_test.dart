@@ -8665,7 +8665,7 @@ void main() {
 
       test('automatic timer resumes stop at the session cap', () {
         fakeAsync((async) {
-          stubRelayStatus(
+          final relayStatus = stubRelayStatus(
             connectedNow: connected(['wss://silent.example']),
           );
           var giftWrapPages = 0;
@@ -8712,6 +8712,20 @@ void main() {
           );
           expect(syncState.drainCursorOverride, cursorBefore);
           expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(
+            relayStatus.hasListener,
+            isFalse,
+            reason:
+                'relay reconnects must share the same no-progress budget as '
+                'timers instead of re-driving the drain forever',
+          );
+          relayStatus.add(connected(['wss://new-capacity.example']));
+          async.flushMicrotasks();
+          expect(
+            giftWrapPages,
+            (DmHistoryDrainConfig.deferredRetryDelays.length + 1) *
+                (DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1),
+          );
         });
       });
 
