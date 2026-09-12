@@ -25,7 +25,7 @@ discarded_futures|lib/mixins/grid_prefetch_mixin.dart	2
 discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
 discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
 discarded_futures|lib/notifications/notification_tap_router.dart	1
-discarded_futures|lib/notifications/view/inbox_notifications_page.dart	5
+discarded_futures|lib/notifications/view/inbox_notifications_page.dart	4
 discarded_futures|lib/notifications/view/notifications_view.dart	3
 discarded_futures|lib/providers/auth_providers.dart	1
 discarded_futures|lib/providers/curation_providers.dart	1
@@ -55,7 +55,7 @@ discarded_futures|lib/screens/apps/apps_directory_screen.dart	1
 discarded_futures|lib/screens/apps/apps_permissions_screen.dart	1
 discarded_futures|lib/screens/apps/nostr_app_sandbox_screen.dart	1
 discarded_futures|lib/screens/auth/create_account_screen.dart	1
-discarded_futures|lib/screens/auth/email_verification_screen.dart	10
+discarded_futures|lib/screens/auth/email_verification_screen.dart	9
 discarded_futures|lib/screens/auth/login_options_screen.dart	2
 discarded_futures|lib/screens/auth/nostr_connect_screen.dart	3
 discarded_futures|lib/screens/auth/secure_account_screen.dart	2
@@ -149,7 +149,6 @@ discarded_futures|lib/services/video_editor/video_render_watchdog.dart	1
 discarded_futures|lib/services/video_event_service.dart	31
 discarded_futures|lib/services/video_moderation_status_service.dart	1
 discarded_futures|lib/services/web_auth_service.dart	1
-discarded_futures|lib/startup/app_composition_root.dart	1
 discarded_futures|lib/startup/app_side_effects.dart	1
 discarded_futures|lib/startup/database_corruption_gate.dart	1
 discarded_futures|lib/startup/upload_failure_listener.dart	1
@@ -265,7 +264,7 @@ discarded_futures|test/blocs/dm/message_requests/message_request_actions_cubit_t
 discarded_futures|test/blocs/dm/restore_status/dm_restore_status_cubit_test.dart	1
 discarded_futures|test/blocs/dm/unread_count/dm_unread_count_cubit_test.dart	6
 discarded_futures|test/blocs/drafts_library/drafts_library_bloc_test.dart	1
-discarded_futures|test/blocs/email_verification/email_verification_cubit_test.dart	54
+discarded_futures|test/blocs/email_verification/email_verification_cubit_test.dart	48
 discarded_futures|test/blocs/explore_tabs/explore_tabs_cubit_test.dart	1
 discarded_futures|test/blocs/feed_loading_moderation/feed_loading_moderation_cubit_test.dart	9
 discarded_futures|test/blocs/fullscreen_feed/fullscreen_feed_bloc_test.dart	5
