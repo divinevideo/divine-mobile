@@ -47,22 +47,14 @@ const _expectedClaimPatternsByHost = <String, List<String>>{
 };
 
 const _allowlistedClaims = <String, String>{
-  'divine.video /app/callback':
-      'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
-  'www.divine.video /app/callback':
-      'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
-  'divine.video /invite/*':
-      'The served web claim remains during coordinated retirement; mobile no longer routes it.',
-  'www.divine.video /invite/*':
-      'The served web claim remains during coordinated retirement; mobile no longer routes it.',
-  'login.divine.video /app/callback':
-      'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
-  'login.divine.video /app/callback/*':
-      'Keycast OAuth redirect with path params, consumed before app deep-link routing.',
-  'login.divine.video /verify-email':
-      'Auth link path matches an internal GoRoute directly; no DeepLinkType is emitted.',
-  'login.divine.video /reset-password':
-      'Auth link path matches an internal GoRoute redirect directly; no DeepLinkType is emitted.',
+  'divine.video /app/callback': 'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
+  'www.divine.video /app/callback': 'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
+  'divine.video /invite/*': 'The served web claim remains during coordinated retirement; mobile no longer routes it.',
+  'www.divine.video /invite/*': 'The served web claim remains during coordinated retirement; mobile no longer routes it.',
+  'login.divine.video /app/callback': 'Keycast OAuth redirect consumed by the OAuth client, not DeepLinkService.',
+  'login.divine.video /app/callback/*': 'Keycast OAuth redirect with path params, consumed before app deep-link routing.',
+  'login.divine.video /verify-email': 'Auth link path matches an internal GoRoute directly; no DeepLinkType is emitted.',
+  'login.divine.video /reset-password': 'Auth link path matches an internal GoRoute redirect directly; no DeepLinkType is emitted.',
 };
 
 // divine.video AASA claims the `divine://` scheme deliberately does NOT
@@ -71,8 +63,7 @@ const _allowlistedClaims = <String, String>{
 const _customSchemeExclusions = <String, String>{
   '/app/callback':
       'Keycast OAuth redirect consumed by the OAuth client, not routing.',
-  '/invite/*':
-      'The served web claim remains during coordinated retirement; mobile no longer routes it.',
+  '/invite/*': 'The served web claim remains during coordinated retirement; mobile no longer routes it.',
 };
 
 void main() {

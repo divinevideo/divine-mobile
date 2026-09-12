@@ -13,7 +13,6 @@
 // bound to stale repositories.
 
 import 'package:badge_repository/badge_repository.dart';
-import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
