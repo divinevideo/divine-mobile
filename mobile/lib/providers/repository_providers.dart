@@ -18,7 +18,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
-import 'package:hive_ce/hive_ce.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -40,6 +39,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -543,7 +543,7 @@ const String _peopleListsBoxName = HiveBoxNames.peopleLists;
 PeopleListsRepository peopleListsRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
   final cache = LocalPeopleListsCache(
-    openBox: () => Hive.openBox<dynamic>(_peopleListsBoxName),
+    openBox: () => HiveBoxOpener.open<dynamic>(_peopleListsBoxName),
   );
 
   return PeopleListsRepositoryImpl(

@@ -819,7 +819,7 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
-| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` heals any box left **open** and blames under `DIVINE_STRICT_HIVE_BOXES`; the rest of the row is convention, not a check. |
+| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | Production opens go through `HiveBoxOpener`; tests use `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` observes pending app opens, heals any box left **open**, and blames under `DIVINE_STRICT_HIVE_BOXES`. |
 | A service you registered with `BackgroundActivityManager` (`AuthService`, `UploadManager`, `AnalyticsService`) | Dispose the service. All three unregister in `dispose()`. If a test drives a manager directly, keep that exact instance and call `addTearDown(manager.resetForTesting)`. Each provider container owns a separate manager, so constructing a new manager cannot reset the instance under test. |
 
 ### Heal-and-blame harness (the 5 shared channels)
@@ -874,16 +874,21 @@ hook and the repo has exactly one, under `mobile/test/`. `mobile/integration_tes
 and `mobile/packages/*/test` get no guard, no heal and no signal — nothing there
 opens a shared box today, so this is a gap to know about rather than a live one.
 
-**What the guard can and cannot see.** It observes one thing: whether a box in
-`HiveBoxNames.all` is still open when a test ends. So `await Hive.close()`
+**What the guard can and cannot see.** Production opens use `HiveBoxOpener`,
+whose test observer starts Hive's operation outside `testWidgets` fake async
+and records it until settlement. Root teardown can therefore await and
+attribute an app-owned open that was still pending when the test ended. It also
+observes whether a box in `HiveBoxNames.all` is still open. So `await Hive.close()`
 satisfies it too — twelve suites clean up that way — and an `openBox` still
-in flight is invisible to `Hive.isBoxOpen`, which reads `HiveImpl._boxes` while
-a pending open sits in `_openingBoxes`. Neither is enforcement of the row above:
+started directly by test code is invisible to `Hive.isBoxOpen`, which reads
+`HiveImpl._boxes` while a pending open sits in `_openingBoxes`. Neither is
+enforcement of the row above:
 "clean up with `cleanupHiveBox`, in both `setUp` and `tearDown`" is the
 convention, and only the open-box half is mechanically checked. The
 MethodChannel harness pairs its runtime guard with a static
-`check_shared_channel_overrides.sh` ratchet for exactly this reason; there is
-no Hive equivalent yet.
+`check_shared_channel_overrides.sh` ratchet for exactly this reason; the Hive
+production ratchet likewise prevents app code from bypassing its observable
+seam.
 
 Package suites have no equivalent runtime harness; see the package-specific
 guard below.
