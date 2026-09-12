@@ -18,10 +18,14 @@ import '../mocks/mock_path_provider_platform.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  final rootHiveOpenObserver = HiveBoxOpener.observerForTesting;
   late Directory tempDir;
+  late HiveBoxOpenObserver? originalHiveOpenObserver;
   late PathProviderPlatform originalPathProvider;
 
   setUp(() async {
+    expect(HiveBoxOpener.observerForTesting, same(rootHiveOpenObserver));
+    originalHiveOpenObserver = HiveBoxOpener.observerForTesting;
     tempDir = await Directory.systemTemp.createTemp('hive_box_opener_test_');
     originalPathProvider = PathProviderPlatform.instance;
     PathProviderPlatform.instance = MockPathProviderPlatform()
@@ -34,7 +38,7 @@ void main() {
 
   tearDown(() async {
     PathProviderPlatform.instance = originalPathProvider;
-    HiveBoxOpener.observerForTesting = null;
+    HiveBoxOpener.observerForTesting = originalHiveOpenObserver;
     await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
     Hive.init(null);
     if (tempDir.existsSync()) {
