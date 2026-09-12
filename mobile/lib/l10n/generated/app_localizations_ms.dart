@@ -9269,6 +9269,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala daripada';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Tersuai';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Ketik video pada tempat ia patut meluncur masuk';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Ketik video pada tempat ia patut meluncur keluar';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Selesai menyunting garis masa';
 

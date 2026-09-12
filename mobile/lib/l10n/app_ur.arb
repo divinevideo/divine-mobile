@@ -5081,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "اپنی مرضی کا",
+  "videoEditorLayerAnimationPointEnterHint": "ویڈیو پر وہاں ٹیپ کریں جہاں سے یہ سلائیڈ ہو کر آئے",
+  "videoEditorLayerAnimationPointLeaveHint": "ویڈیو پر وہاں ٹیپ کریں جہاں یہ سلائیڈ ہو کر جائے",
   "videoEditorFinishTimelineEditingSemanticLabel": "ٹائم لائن ترمیم مکمل کریں",
   "videoEditorAudioPlayPreviewSemanticLabel": "پیش منظر چلائیں",
   "videoEditorAudioPausePreviewSemanticLabel": "پیش منظر روکیں",

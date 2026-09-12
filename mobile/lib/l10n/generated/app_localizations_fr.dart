@@ -9394,6 +9394,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Échelle depuis';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Point personnalisé';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Touche la vidéo là où le glissement doit commencer';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Touche la vidéo là où le glissement doit finir';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Terminer l\'édition de la timeline';
 

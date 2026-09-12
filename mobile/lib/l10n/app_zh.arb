@@ -5081,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "自定义",
+  "videoEditorLayerAnimationPointEnterHint": "点按视频中你想让它滑入的位置",
+  "videoEditorLayerAnimationPointLeaveHint": "点按视频中你想让它滑出的位置",
   "videoEditorFinishTimelineEditingSemanticLabel": "完成时间线编辑",
   "videoEditorAudioPlayPreviewSemanticLabel": "播放预览",
   "videoEditorAudioPausePreviewSemanticLabel": "暂停预览",

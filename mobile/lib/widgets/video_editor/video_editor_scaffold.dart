@@ -691,9 +691,14 @@ class _TimelineSection extends StatefulWidget {
 }
 
 class _TimelineSectionState extends State<_TimelineSection>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final CurvedAnimation _animation;
+
+  /// Collapses the whole section — timeline and bottom actions alike — while a
+  /// slide point is being placed, so the canvas has the full screen.
+  late final AnimationController _collapseController;
+  late final CurvedAnimation _collapseAnimation;
 
   static bool _shouldHide(SubEditorType? type) =>
       type == .draw || type == .filter || type == .tune;
@@ -703,49 +708,79 @@ class _TimelineSectionState extends State<_TimelineSection>
     super.initState();
     _controller = AnimationController(vsync: this, duration: _switchDuration);
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _collapseController = AnimationController(
+      vsync: this,
+      duration: _switchDuration,
+    );
+    _collapseAnimation = CurvedAnimation(
+      parent: _collapseController,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
     _animation.dispose();
     _controller.dispose();
+    _collapseAnimation.dispose();
+    _collapseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
-      listenWhen: (prev, curr) =>
-          _shouldHide(prev.openSubEditor) != _shouldHide(curr.openSubEditor),
-      listener: (context, state) {
-        if (_shouldHide(state.openSubEditor)) {
-          _controller.forward();
-        } else {
-          _controller.reverse();
-        }
-      },
-      child: ColoredBox(
-        color: context.vineColors.surfaceContainerHigh,
-        child: Column(
-          mainAxisSize: .min,
-          crossAxisAlignment: .stretch,
-          children: [
-            // Keep timeline always in tree to preserve thumbnail
-            // cache. SizeTransition clips without unmounting.
-            SizeTransition(
-              sizeFactor: ReverseAnimation(_animation),
-              alignment: AlignmentDirectional.topStart,
-              child: const Padding(
-                padding: .only(top: 12),
-                child: VideoEditorTimelineScaffold(),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              _shouldHide(prev.openSubEditor) !=
+              _shouldHide(curr.openSubEditor),
+          listener: (context, state) {
+            if (_shouldHide(state.openSubEditor)) {
+              _controller.forward();
+            } else {
+              _controller.reverse();
+            }
+          },
+        ),
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              prev.isPlacingSlidePoint != curr.isPlacingSlidePoint,
+          listener: (context, state) {
+            if (state.isPlacingSlidePoint) {
+              _collapseController.forward();
+            } else {
+              _collapseController.reverse();
+            }
+          },
+        ),
+      ],
+      child: SizeTransition(
+        sizeFactor: ReverseAnimation(_collapseAnimation),
+        alignment: AlignmentDirectional.topStart,
+        child: ColoredBox(
+          color: context.vineColors.surfaceContainerHigh,
+          child: Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .stretch,
+            children: [
+              // Keep timeline always in tree to preserve thumbnail
+              // cache. SizeTransition clips without unmounting.
+              SizeTransition(
+                sizeFactor: ReverseAnimation(_animation),
+                alignment: AlignmentDirectional.topStart,
+                child: const Padding(
+                  padding: .only(top: 12),
+                  child: VideoEditorTimelineScaffold(),
+                ),
               ),
-            ),
-            SizeTransition(
-              sizeFactor: _animation,
-              alignment: AlignmentDirectional.topStart,
-              child: const _BottomActions(),
-            ),
-          ],
+              SizeTransition(
+                sizeFactor: _animation,
+                alignment: AlignmentDirectional.topStart,
+                child: const _BottomActions(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -761,8 +796,11 @@ class _OverlayControls extends StatelessWidget {
       buildWhen: (previous, current) =>
           previous.isLayerInteractionActive !=
               current.isLayerInteractionActive ||
-          previous.openSubEditor != current.openSubEditor,
+          previous.openSubEditor != current.openSubEditor ||
+          previous.isPlacingSlidePoint != current.isPlacingSlidePoint,
       builder: (context, state) => switch (state) {
+        // The point picker brings its own toolbar and owns the whole screen.
+        _ when state.isPlacingSlidePoint => const SizedBox.shrink(),
         _ when state.isLayerInteractionActive => const SizedBox(),
         // Text-Editor
         VideoEditorMainState(openSubEditor: .text) => const SizedBox.shrink(),

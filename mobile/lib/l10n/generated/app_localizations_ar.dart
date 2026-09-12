@@ -9206,6 +9206,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'التحجيم من';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'مخصص';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'النقر على الفيديو لتحديد نقطة بدء الانزلاق';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'النقر على الفيديو لتحديد نقطة نهاية الانزلاق';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'إنهاء تحرير الجدول الزمني';
 

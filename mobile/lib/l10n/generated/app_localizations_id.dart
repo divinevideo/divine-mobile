@@ -9176,6 +9176,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala dari';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Kustom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Ketuk video di tempat geserannya dimulai';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Ketuk video di tempat geserannya berakhir';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Selesai mengedit timeline';
 

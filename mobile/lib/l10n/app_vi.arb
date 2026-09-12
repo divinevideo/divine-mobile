@@ -5081,6 +5081,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "Tùy chỉnh",
+  "videoEditorLayerAnimationPointEnterHint": "Chạm vào video tại nơi bạn muốn hiệu ứng trượt bắt đầu",
+  "videoEditorLayerAnimationPointLeaveHint": "Chạm vào video tại nơi bạn muốn hiệu ứng trượt kết thúc",
   "videoEditorFinishTimelineEditingSemanticLabel": "Hoàn tất chỉnh sửa timeline",
   "videoEditorAudioPlayPreviewSemanticLabel": "Phát thử",
   "videoEditorAudioPausePreviewSemanticLabel": "Tạm dừng nghe thử",

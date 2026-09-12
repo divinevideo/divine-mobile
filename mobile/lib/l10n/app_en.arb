@@ -6097,6 +6097,18 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "Custom",
+  "@videoEditorLayerAnimationCustomPoint": {
+    "description": "Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge."
+  },
+  "videoEditorLayerAnimationPointEnterHint": "Tap the video where this should slide in from",
+  "@videoEditorLayerAnimationPointEnterHint": {
+    "description": "Instruction shown over the video while the creator picks the point an enter slide animation starts from."
+  },
+  "videoEditorLayerAnimationPointLeaveHint": "Tap the video where this should slide out to",
+  "@videoEditorLayerAnimationPointLeaveHint": {
+    "description": "Instruction shown over the video while the creator picks the point a leave slide animation ends at."
+  },
   "videoEditorFinishTimelineEditingSemanticLabel": "Finish timeline editing",
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",

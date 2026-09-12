@@ -9342,6 +9342,17 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Мащаб от';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'По избор';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Докосни видеото там, откъдето да се плъзне навътре';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Докосни видеото там, накъдето да се плъзне навън';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Завършете редактирането на времевата линия';
 

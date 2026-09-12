@@ -37,6 +37,7 @@ class VideoEditorMainBloc
     on<VideoEditorReorderingChanged>(_onReorderingChanged);
     on<VideoEditorTimelineVisibilityToggled>(_onTimelineVisibilityToggled);
     on<VideoEditorMarkerModeChanged>(_onMarkerModeChanged);
+    on<VideoEditorSlidePointPlacementChanged>(_onSlidePointPlacementChanged);
   }
 
   /// Updates undo/redo/subEditor state based on editor capabilities.
@@ -186,5 +187,12 @@ class VideoEditorMainBloc
     Emitter<VideoEditorMainState> emit,
   ) {
     emit(state.copyWith(isMarkerMode: event.isActive));
+  }
+
+  void _onSlidePointPlacementChanged(
+    VideoEditorSlidePointPlacementChanged event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    emit(state.copyWith(isPlacingSlidePoint: event.isPlacing));
   }
 }

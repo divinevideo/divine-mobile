@@ -9173,6 +9173,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Ölçek başlangıcı';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Videoda nereden kayarak gireceğine dokun';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Videoda nereye kayarak çıkacağına dokun';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Zaman çizelgesi düzenlemeyi bitir';
 

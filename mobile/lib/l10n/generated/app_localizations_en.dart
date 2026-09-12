@@ -9364,6 +9364,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Scale from';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'Custom';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'Tap the video where this should slide in from';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'Tap the video where this should slide out to';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'Finish timeline editing';
 

@@ -5992,6 +5992,9 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationCustomPoint": "అనుకూలం",
+  "videoEditorLayerAnimationPointEnterHint": "ఇది ఎక్కడి నుండి జారి రావాలో వీడియోలో నొక్కండి",
+  "videoEditorLayerAnimationPointLeaveHint": "ఇది ఎక్కడికి జారి పోవాలో వీడియోలో నొక్కండి",
   "videoEditorFinishTimelineEditingSemanticLabel": "టైమ్‌లైన్ సవరణను ముగించండి",
   "videoEditorAudioPlayPreviewSemanticLabel": "ప్రివ్యూని ప్లే చేయండి",
   "videoEditorAudioPausePreviewSemanticLabel": "ప్రివ్యూను పాజ్ చేయండి",

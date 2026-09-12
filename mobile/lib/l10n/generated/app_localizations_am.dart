@@ -9038,6 +9038,17 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'ከመጠን';
 
   @override
+  String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
+
+  @override
+  String get videoEditorLayerAnimationPointEnterHint =>
+      'ይህ ከየት እንደሚገባ ቪዲዮው ላይ ይንኩ';
+
+  @override
+  String get videoEditorLayerAnimationPointLeaveHint =>
+      'ይህ ወዴት እንደሚወጣ ቪዲዮው ላይ ይንኩ';
+
+  @override
   String get videoEditorFinishTimelineEditingSemanticLabel =>
       'የጊዜ መስመር አርትዖትን ጨርስ';
 
