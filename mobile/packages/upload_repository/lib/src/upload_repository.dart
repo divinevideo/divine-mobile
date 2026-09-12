@@ -594,7 +594,7 @@ class UploadRepository {
     uploadFuture = _performUploadInternal(upload, onProgress: onProgress)
         .whenComplete(() {
           if (identical(_inFlightUploads[upload.id], uploadFuture)) {
-            _inFlightUploads.remove(upload.id);
+            unawaited(_inFlightUploads.remove(upload.id));
           }
         });
     _inFlightUploads[upload.id] = uploadFuture;
@@ -878,13 +878,17 @@ class UploadRepository {
         );
 
         // Send timeout crash report asynchronously
-        _reporter.sendTimeoutCrashReport(upload, timeoutError).catchError((e) {
-          Log.error(
-            'Failed to send timeout crash report: $e',
-            name: 'UploadManager',
-            category: LogCategory.video,
-          );
-        });
+        unawaited(
+          _reporter.sendTimeoutCrashReport(upload, timeoutError).catchError((
+            e,
+          ) {
+            Log.error(
+              'Failed to send timeout crash report: $e',
+              name: 'UploadManager',
+              category: LogCategory.video,
+            );
+          }),
+        );
 
         rethrow;
       } finally {

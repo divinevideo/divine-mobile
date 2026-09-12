@@ -151,7 +151,7 @@ class UploadRetryPolicy {
       if (completer != null && !completer.isCompleted) {
         completer.complete();
       }
-      _sessionPersistFutures.remove(uploadId);
+      unawaited(_sessionPersistFutures.remove(uploadId));
     }
   }
 
@@ -180,7 +180,7 @@ class UploadRetryPolicy {
     unawaited(
       persistFuture.whenComplete(() {
         if (identical(_sessionPersistFutures[uploadId], persistFuture)) {
-          _sessionPersistFutures.remove(uploadId);
+          unawaited(_sessionPersistFutures.remove(uploadId));
         }
       }),
     );
