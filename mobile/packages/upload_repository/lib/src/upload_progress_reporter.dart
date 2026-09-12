@@ -97,7 +97,7 @@ class UploadProgressReporter {
 
   /// Cancel and remove the progress subscription for [uploadId].
   void cancelAndRemoveSubscription(String uploadId) {
-    _progressSubscriptions[uploadId]?.cancel();
+    unawaited(_progressSubscriptions[uploadId]?.cancel());
     _progressSubscriptions.remove(uploadId);
   }
 
@@ -111,7 +111,7 @@ class UploadProgressReporter {
     if (upload != null &&
         (upload.status == UploadStatus.uploading ||
             upload.status == UploadStatus.retrying)) {
-      _store.update(upload.copyWith(uploadProgress: progress));
+      unawaited(_store.update(upload.copyWith(uploadProgress: progress)));
     }
   }
 
@@ -658,7 +658,7 @@ Upload Timeout Failure:
 
   void dispose() {
     for (final subscription in _progressSubscriptions.values) {
-      subscription.cancel();
+      unawaited(subscription.cancel());
     }
     _progressSubscriptions.clear();
     // Drop all metrics (not just the 7-day prune) so a later initialize()
