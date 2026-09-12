@@ -61,7 +61,7 @@ text_sanitizer 100
 time_formatter 100
 tv_static_effect 100
 unified_logger 40
-upload_repository 32
+upload_repository 40
 verifier_client 76
 video_event_cache 0
 videos_repository 100
