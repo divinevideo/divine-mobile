@@ -2,6 +2,7 @@ import XCTest
 import WebKit
 import divine_camera
 import LibProofMode
+import ObjectivePGP
 @testable import Runner
 
 /// Native coverage for the Nostr bridge frame-attestation plugin. The plugin's
@@ -281,6 +282,7 @@ final class MediaSessionScopePolicyTests: XCTestCase {
 final class LibProofModeNetworkFieldsTests: XCTestCase {
   private var folder: URL!
   private var originalDocumentFolder: URL?
+  private var originalPgpKey: Key?
 
   override func setUpWithError() throws {
     folder = FileManager.default.temporaryDirectory
@@ -291,12 +293,13 @@ final class LibProofModeNetworkFieldsTests: XCTestCase {
     // Generate the throwaway signing key here, not in the host app's
     // Documents folder.
     originalDocumentFolder = Proof.shared.defaultDocumentFolder
+    originalPgpKey = Proof.shared.pgpKey
     Proof.shared.defaultDocumentFolder = folder
     Proof.shared.pgpKey = nil
   }
 
   override func tearDownWithError() throws {
-    Proof.shared.pgpKey = nil
+    Proof.shared.pgpKey = originalPgpKey
     Proof.shared.defaultDocumentFolder = originalDocumentFolder
     try? FileManager.default.removeItem(at: folder)
   }

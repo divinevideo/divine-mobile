@@ -56,9 +56,10 @@ when refreshing it until each change is present upstream:
   `DataType`, `Network` and `NetworkType`) only when `showMobileNetwork` is
   true. Upstream records them in every proof whatever the options say, so a
   refresh that drops this change puts the phone's IP addresses back into every
-  signed proof (#9073). `LibProofModeNetworkFieldsTests` in
-  `ios/RunnerTests/RunnerTests.swift` fails when the change is missing. No CI
-  job runs `RunnerTests`, so run it after every refresh.
+  signed proof (#9073). `check_libproofmode_network_privacy.py` protects the
+  vendor delta in CI, and `LibProofModeNetworkFieldsTests` in
+  `ios/RunnerTests/RunnerTests.swift` verifies the generated proof when the
+  native test suite runs.
 
 The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
 sets `showDeviceIds: false`, so compiling out `AdSupport` and
