@@ -77,7 +77,7 @@ void main() {
           description: '',
           hashtags: const {},
           selectedApproach: 'native',
-          inspiredByNpub: 'npub1testvalue123',
+          inspiredByNpubs: const ['npub1testvalue123'],
         );
 
         expect(draft.inspiredByNpub, equals('npub1testvalue123'));
@@ -190,21 +190,21 @@ void main() {
         expect(json.containsKey('inspiredByVideo'), isFalse);
       });
 
-      test('includes inspiredByNpub when set', () {
+      test('includes inspiredByNpubs when set', () {
         final draft = DivineVideoDraft.create(
           clips: [_testClip()],
           title: 'Test',
           description: '',
           hashtags: const {},
           selectedApproach: 'native',
-          inspiredByNpub: 'npub1abc',
+          inspiredByNpubs: const ['npub1abc'],
         );
 
         final json = draft.toJson();
-        expect(json['inspiredByNpub'], equals('npub1abc'));
+        expect(json['inspiredByNpubs'], equals(const ['npub1abc']));
       });
 
-      test('omits inspiredByNpub when null', () {
+      test('omits inspiredByNpubs when empty', () {
         final draft = DivineVideoDraft.create(
           clips: [_testClip()],
           title: 'Test',
@@ -214,7 +214,7 @@ void main() {
         );
 
         final json = draft.toJson();
-        expect(json.containsKey('inspiredByNpub'), isFalse);
+        expect(json.containsKey('inspiredByNpubs'), isFalse);
       });
 
       test('includes contentWarning when set', () {
@@ -294,7 +294,7 @@ void main() {
           description: 'Inspired by person',
           hashtags: const {},
           selectedApproach: 'native',
-          inspiredByNpub: 'npub1testvalue',
+          inspiredByNpubs: const ['npub1testvalue'],
         );
 
         final json = original.toJson();
@@ -380,7 +380,7 @@ void main() {
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           },
           inspiredByVideo: ib,
-          inspiredByNpub: 'npub1both',
+          inspiredByNpubs: const ['npub1both'],
         );
 
         final json = original.toJson();
@@ -427,7 +427,7 @@ void main() {
           collaboratorPubkeys: {
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           },
-          inspiredByNpub: 'npub1keep',
+          inspiredByNpubs: const ['npub1keep'],
         );
 
         final updated = draft.copyWith(title: 'Updated Title');

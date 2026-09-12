@@ -718,6 +718,77 @@ void main() {
     const creatorPubkey =
         'dddd567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
+    test('collects every inspired-by p-tag, not just the first', () {
+      // The NIP-27 content line can only name one creator, so the p-tags are
+      // what carry the rest — parsing only the first would silently drop
+      // everyone the author credited after the first.
+      const secondCreator =
+          'eeee567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+      final nostrEvent = Event(
+        authorPubkey,
+        34236,
+        [
+          ['url', 'https://example.com/video.mp4'],
+          ['p', creatorPubkey, 'wss://relay.divine.video', 'inspired-by'],
+          ['p', secondCreator, 'wss://relay.divine.video', 'inspired-by'],
+        ],
+        'Test video',
+        createdAt: 1757385263,
+      );
+
+      final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
+
+      expect(
+        videoEvent.inspiredByPubkeys,
+        equals([creatorPubkey, secondCreator]),
+      );
+      expect(videoEvent.hasInspiredBy, isTrue);
+      expect(videoEvent.inspiredByCreatorPubkey, equals(creatorPubkey));
+    });
+
+    test(
+      'does not treat collaborator or clip-source p-tags as inspired by',
+      () {
+        const collaborator =
+            'eeee567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+        final nostrEvent = Event(
+          authorPubkey,
+          34236,
+          [
+            ['url', 'https://example.com/video.mp4'],
+            ['p', collaborator, 'wss://relay.divine.video', 'collaborator'],
+            ['p', creatorPubkey, 'wss://relay.divine.video', 'clip-source'],
+          ],
+          'Test video',
+          createdAt: 1757385263,
+        );
+
+        final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
+
+        expect(videoEvent.inspiredByPubkeys, isEmpty);
+        expect(videoEvent.collaboratorPubkeys, equals([collaborator]));
+      },
+    );
+
+    test('deduplicates a repeated inspired-by p-tag', () {
+      final nostrEvent = Event(
+        authorPubkey,
+        34236,
+        [
+          ['url', 'https://example.com/video.mp4'],
+          ['p', creatorPubkey, 'wss://relay.divine.video', 'inspired-by'],
+          ['p', creatorPubkey, 'wss://relay.divine.video', 'inspired-by'],
+        ],
+        'Test video',
+        createdAt: 1757385263,
+      );
+
+      expect(
+        VideoEvent.fromNostrEvent(nostrEvent).inspiredByPubkeys,
+        equals([creatorPubkey]),
+      );
+    });
+
     test('should parse a-tag as inspiredByVideo for Kind 34236 references', () {
       final nostrEvent = Event(
         authorPubkey,

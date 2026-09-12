@@ -438,19 +438,17 @@ class VideoMetadataUpdateService {
           buildInspiredByPTags(
             existingTags: tags,
             addressableId: editorState.inspiredByVideo?.addressableId,
-            npub: editorState.inspiredByNpub,
+            npubs: editorState.inspiredByNpubs,
             relayHint: editorState.inspiredByVideo?.relayUrl,
             selfPubkey: _authService.currentPublicKeyHex,
           ),
         );
       }
 
-      var content = editorState.description.trim();
-      final inspiredByNpub = editorState.inspiredByNpub;
-      if (inspiredByNpub != null && inspiredByNpub.isNotEmpty) {
-        final ibText = '\n\nInspired by nostr:$inspiredByNpub';
-        content = content.isEmpty ? ibText.trim() : '$content$ibText';
-      }
+      final content = withInspiredByContentReference(
+        editorState.description.trim(),
+        editorState.inspiredByNpubs,
+      );
 
       // Use raw Nostr created_at, not the stable NIP-71 published_at value
       // exposed through VideoEvent.createdAt, so relays accept replacements.

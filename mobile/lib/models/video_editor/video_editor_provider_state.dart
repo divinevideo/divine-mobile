@@ -39,7 +39,7 @@ class VideoEditorProviderState {
     this.editorEditingParameters,
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
-    this.inspiredByNpub,
+    this.inspiredByNpubs = const [],
     this.captionMentions = const [],
     this.selectedSound,
     this.seedSelectedSoundAsAudioTrack = false,
@@ -134,8 +134,11 @@ class VideoEditorProviderState {
   /// Reference to a specific video that inspired this one (a-tag).
   final InspiredByInfo? inspiredByVideo;
 
-  /// NIP-27 npub reference for general "Inspired By" a creator.
-  final String? inspiredByNpub;
+  /// Ordered NIP-27 npub references for credited creators.
+  final List<String> inspiredByNpubs;
+
+  String? get inspiredByNpub =>
+      inspiredByNpubs.isEmpty ? null : inspiredByNpubs.first;
 
   /// Accounts picked from the caption's mention autocomplete.
   final List<CaptionMention> captionMentions;
@@ -262,7 +265,7 @@ class VideoEditorProviderState {
     Set<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
     bool clearInspiredByVideo = false,
-    String? inspiredByNpub,
+    List<String>? inspiredByNpubs,
     List<CaptionMention>? captionMentions,
     bool clearInspiredByNpub = false,
     AudioEvent? selectedSound,
@@ -317,9 +320,9 @@ class VideoEditorProviderState {
           ? null
           : (inspiredByVideo ?? this.inspiredByVideo),
       captionMentions: captionMentions ?? this.captionMentions,
-      inspiredByNpub: clearInspiredByNpub
-          ? null
-          : (inspiredByNpub ?? this.inspiredByNpub),
+      inspiredByNpubs: clearInspiredByNpub
+          ? const []
+          : (inspiredByNpubs ?? this.inspiredByNpubs),
       selectedSound: clearSelectedSound
           ? null
           : (selectedSound ?? this.selectedSound),

@@ -382,6 +382,53 @@ void main() {
       });
     });
 
+    group('setInspiredByPeople', () {
+      final npubA = NostrKeyUtils.encodePubKey('a' * 64);
+      final npubB = NostrKeyUtils.encodePubKey('b' * 64);
+
+      test('normalizes the picked list and keeps its order', () {
+        container.read(videoEditorProvider.notifier).setInspiredByPeople([
+          '  $npubA  ',
+          '',
+          npubB,
+          npubA,
+        ]);
+
+        final state = container.read(videoEditorProvider);
+        expect(state.inspiredByNpubs, equals([npubA, npubB]));
+        // Position 0 is the creator the NIP-27 content line names.
+        expect(state.inspiredByNpub, equals(npubA));
+      });
+
+      test('an empty list clears the credited creators', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..setInspiredByPeople([npubA]);
+        expect(container.read(videoEditorProvider).inspiredByNpubs, [npubA]);
+
+        notifier.setInspiredByPeople([]);
+
+        final state = container.read(videoEditorProvider);
+        expect(state.inspiredByNpubs, isEmpty);
+        expect(state.inspiredByNpub, isNull);
+      });
+
+      test('crediting a creator drops an inspiring-video reference', () {
+        // The two are alternative modes of the same attribution slot, so
+        // picking a person replaces a video the audio-reuse flow set.
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..setInspiredByVideo(
+            InspiredByInfo(addressableId: '34236:${'c' * 64}:vine1'),
+          );
+        expect(container.read(videoEditorProvider).inspiredByVideo, isNotNull);
+
+        notifier.setInspiredByPeople([npubA]);
+
+        final state = container.read(videoEditorProvider);
+        expect(state.inspiredByVideo, isNull);
+        expect(state.inspiredByNpubs, equals([npubA]));
+      });
+    });
+
     group('audio render mapping', () {
       test('selected local import is rendered as file audio', () {
         final sound = AudioEvent.fromLocalImport(

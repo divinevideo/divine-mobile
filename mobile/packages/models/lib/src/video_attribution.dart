@@ -65,6 +65,13 @@ class InspiredByInfo {
   String toString() => 'InspiredByInfo(addressableId: $addressableId)';
 }
 
+/// Marker on Divine inspired-by `p` tags.
+///
+/// Distinct from `'mention'` so the edit flow can own this tag's lifecycle
+/// without touching caption-mention p-tags, and from `'collaborator'` so no
+/// consumer renders the inspired-by creator as a collaborator.
+const inspiredByPTagMarker = 'inspired-by';
+
 /// Marker used on Nostr `a`/`p` tags that carry factual reused-clip credit.
 const clipSourceCreditTagMarker = 'clip-source';
 

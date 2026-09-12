@@ -102,7 +102,9 @@ void main() {
     });
 
     test('copyWith with clearInspiredByNpub sets npub to null', () {
-      final state = VideoEditorProviderState(inspiredByNpub: 'npub123');
+      final state = VideoEditorProviderState(
+        inspiredByNpubs: const ['npub123'],
+      );
 
       final cleared = state.copyWith(clearInspiredByNpub: true);
 

@@ -52,6 +52,7 @@ void main() {
   late _MockVideoEventService videoEventService;
   late VideoEventPublisher publisher;
   late List<List<String>> capturedTags;
+  late String capturedContent;
 
   const testPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -80,6 +81,7 @@ void main() {
     authService = _MockAuthService();
     videoEventService = _MockVideoEventService();
     capturedTags = [];
+    capturedContent = '';
 
     publisher = VideoEventPublisher(
       uploadManager: uploadManager,
@@ -135,6 +137,7 @@ void main() {
       ),
     ).thenAnswer((invocation) async {
       capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
+      capturedContent = invocation.namedArguments[#content] as String;
       return publishedEvent = Event(
         testPubkey,
         NIP71VideoKinds.getPreferredAddressableKind(),
@@ -261,7 +264,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
-            inspiredByNpub: npub,
+            inspiredByNpubs: [npub],
           );
 
           expect(result, isTrue);
@@ -276,6 +279,61 @@ void main() {
       );
 
       test(
+        'p-tags every credited creator but names only the first in content',
+        () async {
+          // The content line is what other clients render and what the reader
+          // parses back, and its regex matches a single trailing reference —
+          // so extra creators ride on p-tags instead. Emitting a second line
+          // would break that parse for every client, including ours.
+          stubSignAndPublish();
+          final first = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+          final second = NostrKeyUtils.encodePubKey(secondClipCreatorPubkey);
+
+          final result = await publisher.publishDirectUpload(
+            createUpload(),
+            inspiredByNpubs: [first, second],
+          );
+
+          expect(result, isTrue);
+          expect(_countPTagsFor(capturedTags, inspiredPersonPubkey), equals(1));
+          expect(
+            _countPTagsFor(capturedTags, secondClipCreatorPubkey),
+            equals(1),
+          );
+          expect(capturedContent, contains('Inspired by nostr:$first'));
+          expect(capturedContent, isNot(contains(second)));
+        },
+      );
+
+      test(
+        'credits every picked creator alongside an inspiring video',
+        () async {
+          stubSignAndPublish();
+          final first = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+          final second = NostrKeyUtils.encodePubKey(secondClipCreatorPubkey);
+
+          final result = await publisher.publishDirectUpload(
+            createUpload(),
+            inspiredByAddressableId: inspiredByAddressableId,
+            inspiredByNpubs: [first, second],
+          );
+
+          expect(result, isTrue);
+          for (final pubkey in [
+            inspiredCreatorPubkey,
+            inspiredPersonPubkey,
+            secondClipCreatorPubkey,
+          ]) {
+            expect(
+              _countPTagsFor(capturedTags, pubkey),
+              equals(1),
+              reason: 'expected exactly one p-tag for $pubkey',
+            );
+          }
+        },
+      );
+
+      test(
         'emits p-tags for both creators when video and person co-occur',
         () async {
           stubSignAndPublish();
@@ -284,7 +342,7 @@ void main() {
           final result = await publisher.publishDirectUpload(
             createUpload(),
             inspiredByAddressableId: inspiredByAddressableId,
-            inspiredByNpub: npub,
+            inspiredByNpubs: [npub],
           );
 
           expect(result, isTrue);
@@ -431,7 +489,7 @@ void main() {
           final result = await publisher.publishDirectUpload(
             createUpload(),
             inspiredByAddressableId: inspiredByAddressableId,
-            inspiredByNpub: npub,
+            inspiredByNpubs: [npub],
           );
 
           expect(result, isTrue);
@@ -549,7 +607,7 @@ void main() {
           createUpload(),
           replyContext: replyContext,
           inspiredByAddressableId: inspiredByAddressableId,
-          inspiredByNpub: NostrKeyUtils.encodePubKey(inspiredPersonPubkey),
+          inspiredByNpubs: [NostrKeyUtils.encodePubKey(inspiredPersonPubkey)],
         );
 
         expect(result, isTrue);
