@@ -95,7 +95,6 @@ test/providers/supporter_providers_test.dart	1
 test/providers/user_profile_providers_test.dart	31
 test/providers/video_editor_provider_test.dart	1
 test/providers/video_events_provider_blocklist_test.dart	8
-test/providers/video_events_provider_listener_test.dart	1
 test/providers/video_recorder_audio_service_factory_test.dart	4
 test/providers/videos_repository_filter_reactivity_test.dart	2
 test/repositories/account_deletion_recovery_repository_test.dart	1
