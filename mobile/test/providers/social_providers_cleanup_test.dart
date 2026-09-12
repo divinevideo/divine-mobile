@@ -117,6 +117,8 @@ void main() {
       // inherit a previous suite's box -- and the non-destructive test below
       // then asserts on rows it never wrote.
       await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+      // UserDataCleanupService clears push preferences through the Hive-backed
+      // store, so this suite also owns the notifications box it opens.
       await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
 
       uploadManager = UploadManager(
