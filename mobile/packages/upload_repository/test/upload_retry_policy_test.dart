@@ -313,7 +313,7 @@ void main() {
         }, isRetriable: (_) => false);
 
         await persistStarted.future;
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(executeCalled, isFalse);
 
         allowPersistToFinish.complete();
@@ -402,7 +402,7 @@ void main() {
       );
 
       // Fire microtasks from unawaited calls
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isTrue);
     });
 
@@ -419,7 +419,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isTrue);
     });
 
@@ -434,7 +434,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isFalse);
     });
 
@@ -450,7 +450,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isFalse);
     });
   });
@@ -572,7 +572,7 @@ void main() {
       policy.enqueueSessionPersist('upload-1', session, 1024000);
 
       // Allow chained future to run
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       final captured = verify(() => store.update(captureAny())).captured;
       expect(captured, hasLength(1));
@@ -599,7 +599,7 @@ void main() {
         );
 
         policy.enqueueSessionPersist('upload-1', session, 1024000);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         final captured = verify(() => store.update(captureAny())).captured;
         final updated = captured.first as PendingUpload;
@@ -622,7 +622,7 @@ void main() {
       );
 
       policy.enqueueSessionPersist('upload-1', session, 1000000);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       final captured = verify(() => store.update(captureAny())).captured;
       final updated = captured.first as PendingUpload;
@@ -643,7 +643,7 @@ void main() {
       );
 
       policy.enqueueSessionPersist('upload-1', session, 1000);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       verifyNever(() => store.update(any()));
     });
