@@ -4804,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "Imej",
   "videoEditorChromaKeyBackgroundVideo": "Klip",
   "videoEditorChromaKeyTransparentHint": "Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.",
+  "videoEditorChromaKeyCanvasTransparentHint": "Apa sahaja di belakang klip akan kelihatan menembusinya.",
   "videoEditorChromaKeySurfaceHint": "Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.",
   "videoEditorChromaKeyDetectFailed": "Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.",
   "videoEditorChromaKeyPickClipTitle": "Pilih klip",

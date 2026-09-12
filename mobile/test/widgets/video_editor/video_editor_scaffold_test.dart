@@ -15,11 +15,16 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_scaffold.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
@@ -32,6 +37,17 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
 }
 
 class _MockStateManager extends Mock implements StateManager {}
+
+class _FakeLayer extends Fake implements Layer {}
+
+DivineVideoClip _detachedClip({String file = 'clip-1.mp4'}) => DivineVideoClip(
+  id: 'clip-1',
+  video: EditorVideo.file('/docs/$file'),
+  duration: const Duration(seconds: 6),
+  recordedAt: DateTime(2026),
+  targetAspectRatio: .square,
+  originalAspectRatio: 1,
+);
 
 void main() {
   group(VideoEditorScaffold, () {
@@ -540,6 +556,171 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.videoEditorTransformFailed), findsOneWidget);
     });
+
+    testWidgets(
+      "writes a cropped detached clip back without dropping the layer's "
+      'own settings',
+      (tester) async {
+        registerFallbackValue(_FakeLayer());
+        final clipBloc = _MockClipEditorBloc();
+        final mockEditor = _MockProImageEditorState();
+        // A split tail with a live green screen: both belong to the layer,
+        // not to the footage the crop replaces.
+        final meta = DetachedClipLayerData(
+          clip: _detachedClip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+          chromaKey: const ClipChromaKey(key: ChromaKey.blueScreen()),
+        ).toMeta();
+        final layer = WidgetLayer(
+          id: 'layer-1',
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          exportConfigs: WidgetLayerExportConfigs(id: 'layer-1', meta: meta),
+        );
+        final result = ClipEditorState(
+          lastDetachedClipTransformResult: DetachedClipTransformSuccess(
+            layerId: 'layer-1',
+            clip: _detachedClip(file: 'clip-1_cropped.mp4'),
+          ),
+        );
+
+        when(() => clipBloc.state).thenReturn(const ClipEditorState());
+        whenListen(
+          clipBloc,
+          Stream<ClipEditorState>.fromIterable([result]),
+          initialState: const ClipEditorState(),
+        );
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(
+          () => mockEditor.replaceLayer(
+            index: any(named: 'index'),
+            layer: any(named: 'layer'),
+          ),
+        ).thenAnswer((_) {});
+
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBloc,
+            editorOverride: mockEditor,
+          ),
+        );
+        await tester.pump();
+
+        final written =
+            verify(
+                  () => mockEditor.replaceLayer(
+                    index: 0,
+                    layer: captureAny(named: 'layer'),
+                  ),
+                ).captured.single
+                as WidgetLayer;
+        final restored = DetachedClipLayerData.fromMeta(
+          DetachedClipLayerData.metaOf(written),
+          '/docs',
+        )!;
+        expect(restored.clip.video?.file?.path, '/docs/clip-1_cropped.mp4');
+        // Rebuilding the meta from the clip alone used to rewind the tail
+        // to the clip's first frame and drop the key with it.
+        expect(restored.sourceOffset, const Duration(seconds: 2));
+        expect(
+          restored.chromaKey?.key.color,
+          const ChromaKey.blueScreen().color,
+        );
+      },
+    );
+
+    testWidgets(
+      'keeps a detached last clip on the timeline when its slot closes',
+      (tester) async {
+        registerFallbackValue(_FakeLayer());
+        final clipBloc = _MockClipEditorBloc();
+        final mockEditor = _MockProImageEditorState();
+        final mockStateManager = _MockStateManager();
+        // 4 s then 3 s; the 3 s tail is detached and its slot closed, so
+        // the timeline is 4 s long afterwards.
+        final head = DivineVideoClip(
+          id: 'head',
+          video: EditorVideo.file('/docs/head.mp4'),
+          duration: const Duration(seconds: 4),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+        );
+        final tail = DivineVideoClip(
+          id: 'tail',
+          video: EditorVideo.file('/docs/tail.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+        );
+        final detached = ClipEditorState(
+          clips: [head],
+          lastDetachResult: ClipDetachSuccess(
+            previousClips: [head, tail],
+            detachedClip: tail,
+          ),
+        );
+
+        when(() => clipBloc.state).thenReturn(const ClipEditorState());
+        whenListen(
+          clipBloc,
+          Stream<ClipEditorState>.fromIterable([detached]),
+          initialState: const ClipEditorState(),
+        );
+        when(() => mockEditor.stateManager).thenReturn(mockStateManager);
+        when(() => mockStateManager.activeMeta).thenReturn(const {});
+        when(
+          () => mockEditor.addHistory(
+            layers: any(named: 'layers'),
+            filters: any(named: 'filters'),
+            meta: any(named: 'meta'),
+            newLayer: any(named: 'newLayer'),
+            transformConfigs: any(named: 'transformConfigs'),
+            tuneAdjustments: any(named: 'tuneAdjustments'),
+            blur: any(named: 'blur'),
+            heroScreenshotRequired: any(named: 'heroScreenshotRequired'),
+            blockCaptureScreenshot: any(named: 'blockCaptureScreenshot'),
+          ),
+        ).thenAnswer((_) {});
+
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            clipBlocOverride: clipBloc,
+            editorOverride: mockEditor,
+          ),
+        );
+        await tester.pump();
+
+        final layer =
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: any(named: 'layers'),
+                    filters: any(named: 'filters'),
+                    meta: any(named: 'meta'),
+                    newLayer: captureAny(named: 'newLayer'),
+                    transformConfigs: any(named: 'transformConfigs'),
+                    tuneAdjustments: any(named: 'tuneAdjustments'),
+                    blur: any(named: 'blur'),
+                    heroScreenshotRequired: any(
+                      named: 'heroScreenshotRequired',
+                    ),
+                    blockCaptureScreenshot: any(
+                      named: 'blockCaptureScreenshot',
+                    ),
+                  ),
+                ).captured.single
+                as Layer;
+        // The slot started at 4 s — the new end of the timeline — so a
+        // window kept there would never be on screen. It is pulled back to
+        // end on the composition's end instead.
+        expect(layer.startTime, const Duration(seconds: 1));
+        expect(layer.endTime, const Duration(seconds: 4));
+      },
+    );
 
     testWidgets('shows a snackbar when a clip transform has no local file', (
       tester,

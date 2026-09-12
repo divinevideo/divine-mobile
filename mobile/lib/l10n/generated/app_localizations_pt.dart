@@ -9035,6 +9035,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'O vídeo não guarda transparência, por isso isto é exportado a preto.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'O que estiver atrás do clipe aparece através dele.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Qualquer superfície lisa atrás de você funciona — uma parede já serve — desde que preencha todo o quadro.';
 

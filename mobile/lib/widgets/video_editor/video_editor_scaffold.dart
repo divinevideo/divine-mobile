@@ -12,6 +12,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/detached_clip_window.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart';
@@ -406,9 +407,18 @@ class _ClipDetachResultListener extends StatelessWidget {
     // time, is hidden outside it, and the export draws it over exactly the same
     // stretch. Without a window the clip sat frozen on its last frame for the
     // rest of the composition while the export showed nothing there.
+    //
+    // Measured against the composition as it is *now*: closing the slot
+    // shortened it, and a slot at the old tail end would otherwise sit past
+    // the new end where nothing plays it.
     final slotStart = previousClips
         .takeWhile((c) => c.id != detachedClip.id)
         .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+    final window = detachedClipWindow(
+      slotStart: slotStart,
+      playbackDuration: detachedClip.playbackDuration,
+      compositionDuration: state.totalDuration,
+    );
 
     final layerId = 'detached_${detachedClip.id}';
     final meta = DetachedClipLayerData(
@@ -417,8 +427,8 @@ class _ClipDetachResultListener extends StatelessWidget {
     ).toMeta();
     final layer = WidgetLayer(
       id: layerId,
-      startTime: slotStart,
-      endTime: slotStart + detachedClip.playbackDuration,
+      startTime: window.start,
+      endTime: window.end,
       width: width,
       widget: DetachedClipLayerView(meta: meta),
       meta: meta,
@@ -495,7 +505,14 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
     final layer = editor.activeLayers[index];
     if (layer is! WidgetLayer) return;
 
-    final meta = DetachedClipLayerData(clip: clip, layerId: layerId).toMeta();
+    // Only the clip is swapped. The layer's own settings — where a split tail
+    // starts inside the clip, and its live green screen — describe the layer,
+    // not the footage, and a crop changes neither.
+    final meta = DetachedClipLayerData.withClip(
+      DetachedClipLayerData.metaOf(layer),
+      clip,
+    );
+    if (meta == null) return;
 
     // The layer keeps its width; the crop changes the content's aspect ratio,
     // so the height follows on its own through the frame that lays it out. A

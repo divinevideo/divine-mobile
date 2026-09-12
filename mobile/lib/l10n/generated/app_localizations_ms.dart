@@ -8978,6 +8978,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Video tidak boleh menyimpan ketelusan, jadi ini dieksport sebagai hitam.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Apa sahaja di belakang klip akan kelihatan menembusinya.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.';
 

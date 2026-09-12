@@ -9081,6 +9081,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Video kann keine Transparenz speichern – das wird beim Export schwarz.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Was hinter dem Clip liegt, scheint durch.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Jede glatte Fläche hinter dir funktioniert – eine Wand reicht –, solange sie das ganze Bild füllt.';
 

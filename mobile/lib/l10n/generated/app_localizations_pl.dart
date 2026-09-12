@@ -9150,6 +9150,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wideo nie przechowuje przezroczystości, więc w eksporcie będzie czarne.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'To, co jest za klipem, prześwituje.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.';
 

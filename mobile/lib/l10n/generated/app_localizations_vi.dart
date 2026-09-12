@@ -8930,6 +8930,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Bất cứ thứ gì phía sau clip sẽ hiện xuyên qua.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.';
 

@@ -47,6 +47,7 @@ class ChromaKeyBackdrop extends StatelessWidget {
   const ChromaKeyBackdrop({
     required this.chromaKey,
     this.sync,
+    this.previewTransparency = true,
     super.key,
   });
 
@@ -56,6 +57,14 @@ class ChromaKeyBackdrop extends StatelessWidget {
   /// [ChromaKeyBackdropSync].
   final ChromaKeyBackdropSync? sync;
 
+  /// Whether "nothing behind the subject" is drawn as a checkerboard.
+  ///
+  /// Off when the widget sits on the editor canvas, where what is underneath is
+  /// the real backdrop and must stay visible — see
+  /// `ChromaKeyedVideo.previewTransparency`. Also covers a backdrop whose own
+  /// source is gone, which reads as "nothing" either way.
+  final bool previewTransparency;
+
   @override
   Widget build(BuildContext context) {
     final backgroundColor = chromaKey.key.backgroundColor;
@@ -64,17 +73,21 @@ class ChromaKeyBackdrop extends StatelessWidget {
     final imagePath = chromaKey.key.backgroundImage?.file?.path;
     final videoPath = chromaKey.backgroundVideoPath;
 
+    final transparent = previewTransparency
+        ? const ChromaKeyTransparencyCheckerboard()
+        : const SizedBox.shrink();
+
     return switch (chromaKey.backgroundType) {
       ClipChromaKeyBackgroundType.color when backgroundColor != null =>
         ColoredBox(color: backgroundColor),
       ClipChromaKeyBackgroundType.image when imagePath != null =>
-        _ImageBackdrop(path: imagePath),
+        _ImageBackdrop(path: imagePath, fallback: transparent),
       ClipChromaKeyBackgroundType.video when videoPath != null =>
         _VideoBackdrop(path: videoPath, sync: sync),
       // Transparent — and the degenerate cases where a background type's own
       // source went missing (a deleted library clip, a pruned cache file),
       // which read as "no backdrop" rather than as a crash.
-      _ => const ChromaKeyTransparencyCheckerboard(),
+      _ => transparent,
     };
   }
 }
@@ -82,18 +95,20 @@ class ChromaKeyBackdrop extends StatelessWidget {
 /// A still image backdrop, stretched to the frame the way the renderer
 /// stretches the key's background image.
 class _ImageBackdrop extends StatelessWidget {
-  const _ImageBackdrop({required this.path});
+  const _ImageBackdrop({required this.path, required this.fallback});
 
   final String path;
+
+  /// Shown in place of a file that cannot be loaded, so the user still sees
+  /// the matte — which is the point of the preview.
+  final Widget fallback;
 
   @override
   Widget build(BuildContext context) {
     return Image.file(
       File(path),
       fit: BoxFit.fill,
-      // A missing file degrades to the checkerboard: the user still sees the
-      // matte, which is the point of the preview.
-      errorBuilder: (_, _, _) => const ChromaKeyTransparencyCheckerboard(),
+      errorBuilder: (_, _, _) => fallback,
     );
   }
 }

@@ -8965,6 +8965,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Video kan inte spara transparens, så det här exporteras som svart.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Det som ligger bakom klippet syns igenom.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.';
 

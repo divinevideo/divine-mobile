@@ -9233,6 +9233,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీడియో పారదర్శకతను కలిగి ఉండదు, కనుక ఇది నలుపు రంగులో ఎగుమతి అవుతుంది.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'క్లిప్ వెనుక ఉన్నది దాని ద్వారా కనిపిస్తుంది.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.';
 

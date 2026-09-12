@@ -2,9 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorLayerImage, EditorVideo;
 
 DivineVideoClip _clip({
   String id = 'clip-1',
@@ -77,6 +79,36 @@ void main() {
       },
     );
 
+    test(
+      "protects the backdrop photo a layer's own green screen points at",
+      () {
+        final history = <String, dynamic>{
+          'history': [
+            {
+              'layers': [
+                DetachedClipLayerData(
+                  clip: _clip(filePath: '/old/clip-1.mp4'),
+                  layerId: 'layer-1',
+                  chromaKey: ClipChromaKey(
+                    key: ChromaKey(
+                      backgroundImage: EditorLayerImage.file('/old/wall.png'),
+                    ),
+                  ),
+                ).toMeta(),
+              ],
+            },
+          ],
+        };
+
+        // No clip references the photo — it belongs to the layer's key — so
+        // without this the draft sweep would reap it.
+        expect(
+          DetachedClipLayerData.ownedFilePathsInHistory(history, '/documents'),
+          {'/documents/clip-1.mp4', '/documents/wall.png'},
+        );
+      },
+    );
+
     group('toMeta', () {
       test('marks the map as a detached clip and carries the clip', () {
         final meta = DetachedClipLayerData(
@@ -118,6 +150,7 @@ void main() {
         expect(restored.clip.video?.file?.path, '/new-docs/clip-1.mp4');
         expect(restored.clip.trimStart, const Duration(seconds: 1));
         expect(restored.clip.volume, 0.5);
+        expect(restored.chromaKey, isNull);
       });
 
       test('returns null for a sticker meta', () {
@@ -144,6 +177,171 @@ void main() {
             detachedClipLayerKindKey: detachedClipLayerKind,
             detachedClipLayerClipKey: 'nonsense',
           }, '/docs'),
+          isNull,
+        );
+      });
+    });
+
+    group('chromaKey', () {
+      final keyed = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+        chromaKey: ClipChromaKey(
+          key: ChromaKey(
+            color: const Color(0xFF19A55B),
+            similarity: 0.1,
+            backgroundImage: EditorLayerImage.file('/old/wall.png'),
+          ),
+        ),
+      ).toMeta();
+
+      test('round-trips through the meta, re-anchoring the backdrop photo', () {
+        final restored = DetachedClipLayerData.fromMeta(keyed, '/new-docs');
+
+        final key = restored!.chromaKey!.key;
+        expect(key.color, const Color(0xFF19A55B));
+        expect(key.similarity, 0.1);
+        // Stored as a basename like every other clip asset, so an iOS
+        // container move cannot strand the layer's backdrop.
+        expect(
+          restored.chromaKey!.backgroundImagePath,
+          '/new-docs/wall.png',
+        );
+      });
+
+      test('hasChromaKey reads the map without resolving paths', () {
+        expect(DetachedClipLayerData.hasChromaKey(keyed), isTrue);
+        expect(
+          DetachedClipLayerData.hasChromaKey(
+            DetachedClipLayerData(clip: _clip(), layerId: 'l').toMeta(),
+          ),
+          isFalse,
+        );
+        expect(
+          DetachedClipLayerData.hasChromaKey({'kind': 'sticker'}),
+          isFalse,
+        );
+      });
+
+      test('drops an unreadable key rather than the whole layer', () {
+        final corrupt = {...keyed, detachedClipLayerChromaKeyKey: 'nope'};
+
+        final restored = DetachedClipLayerData.fromMeta(corrupt, '/docs');
+
+        expect(restored, isNotNull);
+        expect(restored!.clip.id, 'clip-1');
+        expect(restored.chromaKey, isNull);
+      });
+
+      test('withChromaKey puts a key on a layer that had none', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+        ).toMeta();
+
+        final updated = DetachedClipLayerData.withChromaKey(
+          meta,
+          const ClipChromaKey(key: ChromaKey.blueScreen()),
+        );
+
+        expect(DetachedClipLayerData.hasChromaKey(updated), isTrue);
+        expect(
+          DetachedClipLayerData.fromMeta(
+            updated,
+            '/docs',
+          )!.chromaKey!.key.color,
+          const ChromaKey.blueScreen().color,
+        );
+        // The rest of the layer is untouched.
+        expect(DetachedClipLayerData.layerIdOf(updated), 'layer-1');
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(updated),
+          const Duration(seconds: 2),
+        );
+        expect(
+          updated![detachedClipLayerClipKey],
+          meta[detachedClipLayerClipKey],
+        );
+      });
+
+      test('withChromaKey takes the key off again', () {
+        final updated = DetachedClipLayerData.withChromaKey(keyed, null);
+
+        expect(DetachedClipLayerData.hasChromaKey(updated), isFalse);
+        expect(updated, isNot(contains(detachedClipLayerChromaKeyKey)));
+      });
+
+      test('withChromaKey leaves a sticker alone', () {
+        expect(
+          DetachedClipLayerData.withChromaKey({'kind': 'sticker'}, null),
+          isNull,
+        );
+      });
+
+      test('rebase carries the key onto a copy', () {
+        final copy = DetachedClipLayerData.rebase(keyed, layerId: 'copy');
+
+        expect(DetachedClipLayerData.hasChromaKey(copy), isTrue);
+      });
+    });
+
+    group('withClip', () {
+      test("swaps the footage and keeps the layer's own settings", () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+          chromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+        ).toMeta();
+        // A crop re-renders to a new file with a new shape.
+        final cropped = DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/docs/clip-1_cropped.mp4'),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.square,
+          originalAspectRatio: 0.5,
+          trimStart: const Duration(seconds: 1),
+        );
+
+        final updated = DetachedClipLayerData.withClip(meta, cropped);
+        final restored = DetachedClipLayerData.fromMeta(updated, '/docs')!;
+
+        expect(restored.clip.video?.file?.path, '/docs/clip-1_cropped.mp4');
+        expect(restored.clip.originalAspectRatio, 0.5);
+        // Rebuilding the meta from the clip alone reset both of these: the
+        // split tail rewound to the clip's first frame and the key was gone.
+        expect(restored.layerId, 'layer-1');
+        expect(restored.sourceOffset, const Duration(seconds: 2));
+        expect(restored.chromaKey, isNotNull);
+      });
+
+      test('re-snapshots how long the new footage plays', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+        final shorter = DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/docs/clip-1.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.square,
+          originalAspectRatio: 1,
+        );
+
+        final updated = DetachedClipLayerData.withClip(meta, shorter);
+
+        expect(
+          DetachedClipLayerData.playbackDurationOf(updated),
+          const Duration(seconds: 3),
+        );
+      });
+
+      test('leaves a sticker alone', () {
+        expect(
+          DetachedClipLayerData.withClip({'kind': 'sticker'}, _clip()),
           isNull,
         );
       });

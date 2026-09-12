@@ -9067,6 +9067,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Video can\'t hold transparency, so this exports as black.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Whatever\'s behind the clip shows through.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Any plain surface behind you works — a wall is fine — as long as it fills the frame.';
 

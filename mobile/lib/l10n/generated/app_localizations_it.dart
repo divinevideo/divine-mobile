@@ -9066,6 +9066,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il video non supporta la trasparenza, quindi in esportazione diventa nero.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Quello che c\'è dietro la clip si vede in trasparenza.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l\'inquadratura.';
 

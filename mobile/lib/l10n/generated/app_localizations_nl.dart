@@ -9008,6 +9008,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Video kan geen transparantie bevatten, dus dit wordt zwart geëxporteerd.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Wat achter de clip zit, schijnt erdoorheen.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.';
 

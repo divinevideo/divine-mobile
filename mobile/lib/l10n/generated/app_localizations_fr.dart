@@ -9098,6 +9098,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'La vidéo ne gère pas la transparence : à l\'export, ce sera du noir.';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'Ce qu\'il y a derrière le clip apparaît à travers.';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'N\'importe quelle surface unie derrière toi fait l\'affaire — un mur suffit — tant qu\'elle remplit tout le cadre.';
 

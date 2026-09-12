@@ -3812,6 +3812,7 @@
     "videoEditorChromaKeyBackgroundImage": "Изображение",
     "videoEditorChromaKeyBackgroundVideo": "Клип",
     "videoEditorChromaKeyTransparentHint": "Видеото не може да носи прозрачност, затова това ще излезе черно при експорт.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Каквото е зад клипа, прозира през него.",
     "videoEditorChromaKeySurfaceHint": "Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.",
     "videoEditorChromaKeyDetectFailed": "Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.",
     "videoEditorChromaKeyPickClipTitle": "Избери клип",

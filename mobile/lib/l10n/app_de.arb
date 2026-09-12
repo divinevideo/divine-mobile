@@ -3674,6 +3674,7 @@
     "videoEditorChromaKeyBackgroundImage": "Bild",
     "videoEditorChromaKeyBackgroundVideo": "Clip",
     "videoEditorChromaKeyTransparentHint": "Video kann keine Transparenz speichern – das wird beim Export schwarz.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Was hinter dem Clip liegt, scheint durch.",
     "videoEditorChromaKeySurfaceHint": "Jede glatte Fläche hinter dir funktioniert – eine Wand reicht –, solange sie das ganze Bild füllt.",
     "videoEditorChromaKeyDetectFailed": "Kein Screen gefunden – er muss das ganze Bild hinter dir füllen. Eine glatte Wand zählt. Oder wähl die Farbe von Hand.",
     "videoEditorChromaKeyPickClipTitle": "Clip auswählen",

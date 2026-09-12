@@ -3806,6 +3806,7 @@
     "videoEditorChromaKeyBackgroundImage": "ምስል",
     "videoEditorChromaKeyBackgroundVideo": "ቅንጥብ",
     "videoEditorChromaKeyTransparentHint": "ቪዲዮ ግልጽነት መያዝ አይችልም፣ ስለዚህ ሲወጣ ጥቁር ይሆናል።",
+    "videoEditorChromaKeyCanvasTransparentHint": "ከቅንጥቡ ጀርባ ያለው ነገር በውስጡ ይታያል።",
     "videoEditorChromaKeySurfaceHint": "ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።",
     "videoEditorChromaKeyDetectFailed": "ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።",
     "videoEditorChromaKeyPickClipTitle": "ቅንጥብ ምረጥ",

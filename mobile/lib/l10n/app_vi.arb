@@ -4804,6 +4804,7 @@
   "videoEditorChromaKeyBackgroundImage": "Ảnh",
   "videoEditorChromaKeyBackgroundVideo": "Clip",
   "videoEditorChromaKeyTransparentHint": "Video không giữ được độ trong suốt, nên phần này sẽ xuất ra màu đen.",
+  "videoEditorChromaKeyCanvasTransparentHint": "Bất cứ thứ gì phía sau clip sẽ hiện xuyên qua.",
   "videoEditorChromaKeySurfaceHint": "Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.",
   "videoEditorChromaKeyDetectFailed": "Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.",
   "videoEditorChromaKeyPickClipTitle": "Chọn một clip",

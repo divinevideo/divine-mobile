@@ -8962,6 +8962,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ویڈیو شفافیت محفوظ نہیں رکھ سکتی، اس لیے یہ سیاہ ایکسپورٹ ہوگی۔';
 
   @override
+  String get videoEditorChromaKeyCanvasTransparentHint =>
+      'کلپ کے پیچھے جو کچھ ہے، وہ اس کے آر پار نظر آئے گا۔';
+
+  @override
   String get videoEditorChromaKeySurfaceHint =>
       'آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔';
 

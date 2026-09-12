@@ -3674,6 +3674,7 @@
     "videoEditorChromaKeyBackgroundImage": "Gambar",
     "videoEditorChromaKeyBackgroundVideo": "Klip",
     "videoEditorChromaKeyTransparentHint": "Video tidak bisa menyimpan transparansi, jadi hasil ekspornya hitam.",
+    "videoEditorChromaKeyCanvasTransparentHint": "Apa pun yang ada di belakang klip akan terlihat tembus.",
     "videoEditorChromaKeySurfaceHint": "Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.",
     "videoEditorChromaKeyDetectFailed": "Layar tidak ditemukan: harus memenuhi seluruh bingkai di belakang kamu. Tembok polos juga bisa. Atau pilih warnanya sendiri.",
     "videoEditorChromaKeyPickClipTitle": "Pilih klip",

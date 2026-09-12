@@ -3674,6 +3674,7 @@
     "videoEditorChromaKeyBackgroundImage": "Imagem",
     "videoEditorChromaKeyBackgroundVideo": "Clipe",
     "videoEditorChromaKeyTransparentHint": "O vídeo não guarda transparência, por isso isto é exportado a preto.",
+    "videoEditorChromaKeyCanvasTransparentHint": "O que estiver atrás do clipe aparece através dele.",
     "videoEditorChromaKeySurfaceHint": "Qualquer superfície lisa atrás de você funciona — uma parede já serve — desde que preencha todo o quadro.",
     "videoEditorChromaKeyDetectFailed": "Nenhum fundo encontrado: ele precisa preencher todo o quadro atrás de você. Uma parede lisa vale. Ou escolha a cor na mão.",
     "videoEditorChromaKeyPickClipTitle": "Escolher um clipe",
