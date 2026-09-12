@@ -377,7 +377,13 @@ class VideosRepository {
         before: cursor,
       );
 
-      final videos = _transformVideoStats(response.videos);
+      // Keep Funnelcake's order: the Following feed is revision-ordered and
+      // pages on a revision-time `next_cursor`, so re-sorting the page on
+      // publication time would order rows against the clock the cursor walks.
+      final videos = _transformVideoStats(
+        response.videos,
+        sortByCreatedAt: false,
+      );
       final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
       _appendUniqueVideos(
         visible,
@@ -717,10 +723,11 @@ class VideosRepository {
     return _transformAndFilter(events);
   }
 
-  /// Fetches the latest videos in chronological order (newest first).
+  /// Fetches the latest originally published videos (newest first).
   ///
   /// This is the "New" feed mode - shows all public videos sorted by
-  /// creation time.
+  /// their original publication time. Editing an older video does not move it
+  /// back to the front of the feed.
   ///
   /// Deliberately does not apply seen-freshness reordering. This feed is
   /// surfaced as "New", and that label is a chronological promise: a video
@@ -741,7 +748,7 @@ class VideosRepository {
   ///
   /// Parameters:
   /// - [limit]: Maximum number of videos to return (default 5)
-  /// - [until]: Only return videos created before this Unix timestamp
+  /// - [until]: Only return videos published before this Unix timestamp
   ///   (for pagination - pass `previousVideo.createdAt`)
   /// - [skipCache]: Full manual refresh (pull-to-refresh) — bypasses the
   ///   in-memory first-page cache and merges newer relay events into a
@@ -751,7 +758,7 @@ class VideosRepository {
   ///   fresh first page is wanted but the pull-to-refresh relay round-trip
   ///   is not.
   ///
-  /// Returns a [HomeFeedResult] whose videos are sorted by creation time
+  /// Returns a [HomeFeedResult] whose videos are sorted by publication time
   /// (newest first), with [HomeFeedResult.hasMore] reporting whether more
   /// sits behind this page — the source's own flag where it states one,
   /// otherwise whether the page filled.
@@ -766,11 +773,12 @@ class VideosRepository {
   Future<HomeFeedResult> getNewVideos({
     int limit = _defaultLimit,
     int? until,
+    String? cursor,
     bool skipCache = false,
     bool revalidate = false,
   }) async {
     // Return in-memory cached result when available (initial page only).
-    if (!skipCache && !revalidate && until == null) {
+    if (!skipCache && !revalidate && until == null && cursor == null) {
       final cached = _inMemoryFeedCache?.get('latest');
       if (cached != null) {
         return HomeFeedResult(
@@ -787,8 +795,9 @@ class VideosRepository {
         final page = await _fetchVisibleRecentVideosFromStatsApi(
           limit: limit,
           until: until,
+          cursor: cursor,
         );
-        final mergedVideos = skipCache && until == null
+        final mergedVideos = skipCache && until == null && cursor == null
             ? await _mergeRecentApiVideosWithRelayRefresh(
                 page.videos,
                 limit: limit,
@@ -801,8 +810,16 @@ class VideosRepository {
           limit: limit,
           until: until,
           serverHasMore: page.serverHasMore,
+          paginationCursor: page.nextCursor,
+          cacheResult: until == null && cursor == null,
         );
       } on FunnelcakeException {
+        // An opaque Funnelcake cursor cannot be translated into a relay time
+        // boundary. Replaying the relay's first page here would duplicate the
+        // opening feed and falsely keep pagination alive.
+        if (cursor != null) {
+          return const HomeFeedResult(videos: [], hasMore: false);
+        }
         // Fall through to Nostr
       }
     }
@@ -813,7 +830,12 @@ class VideosRepository {
       until: until,
     );
     final hydrated = await _hydrateVideosWithBulkStats(videos);
-    return _recentVideosResult(hydrated, limit: limit, until: until);
+    return _recentVideosResult(
+      hydrated,
+      limit: limit,
+      until: until,
+      cacheResult: until == null && cursor == null,
+    );
   }
 
   /// Wraps a latest-feed page, recording whether more sits behind it so
@@ -828,33 +850,45 @@ class VideosRepository {
     required int limit,
     required int? until,
     bool? serverHasMore,
+    String? paginationCursor,
+    bool cacheResult = false,
   }) {
     final result = HomeFeedResult(
       videos: videos,
       hasMore: serverHasMore ?? videos.length >= limit,
+      paginationCursor: paginationCursor,
     );
-    if (until == null) {
+    if (cacheResult) {
       _inMemoryFeedCache?.set('latest', result);
     }
     return result;
   }
 
-  Future<({List<VideoEvent> videos, bool? serverHasMore})>
+  Future<({List<VideoEvent> videos, bool? serverHasMore, String? nextCursor})>
   _fetchVisibleRecentVideosFromStatsApi({
     required int limit,
     int? until,
+    String? cursor,
   }) async {
-    var cursor = until;
+    var pageCursor = cursor;
+    var legacyBefore = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     bool? serverHasMore;
+    String? nextPageCursor;
 
     while (visible.length < limit) {
-      final page = await _funnelcakeApiClient!.getRecentVideosPage(
-        limit: limit,
-        before: cursor,
-      );
+      final page = pageCursor == null
+          ? await _funnelcakeApiClient!.getRecentVideosPage(
+              limit: limit,
+              before: legacyBefore,
+            )
+          : await _funnelcakeApiClient!.getRecentVideosPage(
+              limit: limit,
+              cursor: pageCursor,
+            );
       serverHasMore = page.hasMore;
+      nextPageCursor = page.nextCursor;
 
       final videos = _transformVideoStats(page.videos);
       _appendUniqueVideos(visible, videos, seenVideoKeys: seenVideoKeys);
@@ -864,9 +898,20 @@ class VideosRepository {
       // premature `hasMore: false` into the feed cache.
       if (page.serverItemCount < limit) break;
 
-      final nextCursor = _cursorBeforeOldestStats(page.videos);
-      if (nextCursor == null || nextCursor == cursor) break;
-      cursor = nextCursor;
+      if (nextPageCursor != null) {
+        if (nextPageCursor == pageCursor) break;
+        pageCursor = nextPageCursor;
+        legacyBefore = null;
+      } else {
+        // Older Funnelcake builds returned a bare list with no cursor. Keep
+        // top-up behavior available for that response shape, but never expose
+        // the lossy timestamp fallback to feed pagination: current v2 builds
+        // supply the composite `(published_at, id)` cursor above.
+        final nextBefore = _cursorBeforeOldestStats(page.videos);
+        if (nextBefore == null || nextBefore == legacyBefore) break;
+        legacyBefore = nextBefore;
+        pageCursor = null;
+      }
     }
 
     return (
@@ -874,6 +919,7 @@ class VideosRepository {
       // whatever the last page claimed.
       videos: visible.take(limit).toList(),
       serverHasMore: visible.length > limit ? true : serverHasMore,
+      nextCursor: nextPageCursor,
     );
   }
 
@@ -887,7 +933,20 @@ class VideosRepository {
       ).timeout(_recentRelayRefreshTimeout);
       if (relayVideos.isEmpty) return apiVideos;
 
-      final candidates = [...relayVideos, ...apiVideos]
+      final oldestApiPublication = apiVideos.isEmpty
+          ? null
+          : apiVideos
+                .map((video) => video.createdAt)
+                .reduce(
+                  (oldest, current) => current < oldest ? current : oldest,
+                );
+      final relayRefresh = oldestApiPublication == null
+          ? relayVideos
+          : relayVideos
+                .where((video) => video.createdAt >= oldestApiPublication)
+                .toList();
+
+      final candidates = [...relayRefresh, ...apiVideos]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final merged = <VideoEvent>[];
       _appendUniqueVideos(merged, candidates, seenVideoKeys: <String>{});
@@ -1810,7 +1869,10 @@ class VideosRepository {
   int? _cursorBeforeOldestStats(List<VideoStats> stats) {
     if (stats.isEmpty) return null;
     final oldest = stats
-        .map((stat) => stat.createdAt.millisecondsSinceEpoch ~/ 1000)
+        .map(
+          (stat) =>
+              stat.publishedAt ?? stat.createdAt.millisecondsSinceEpoch ~/ 1000,
+        )
         .reduce((a, b) => a < b ? a : b);
     return oldest - 1;
   }

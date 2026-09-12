@@ -317,6 +317,20 @@ class VideoStats {
     // Fall back to summary tag if content is empty
     description ??= summaryFromTag;
 
+    // Funnelcake list/stats rows send published_at as a top-level field and
+    // omit `tags`. The tag loop above never runs, so without this fallback
+    // every REST-loaded video has publishedAt == null and New pagination
+    // walks event created_at instead of original publication time.
+    // Tags stay authoritative when present (NIP-71).
+    publishedAt ??= _parseOptionalUnixSeconds(
+      eventData['published_at'] ??
+          json['published_at'] ??
+          statsData['published_at'],
+    );
+    if (publishedAt != null) {
+      rawTags.putIfAbsent('published_at', () => publishedAt.toString());
+    }
+
     // Normalize empty sha256 to null
     if (sha256 != null && sha256.isEmpty) sha256 = null;
 
@@ -791,6 +805,17 @@ int _parseInt(dynamic value) {
   if (value is double) return value.toInt();
   if (value is String) return int.tryParse(value) ?? 0;
   return 0;
+}
+
+int? _parseOptionalUnixSeconds(dynamic value) {
+  final parsed = switch (value) {
+    final int n => n,
+    final double n => n.toInt(),
+    final String s => int.tryParse(s),
+    _ => null,
+  };
+  if (parsed == null || parsed <= 0) return null;
+  return parsed;
 }
 
 final _hexPattern = RegExp(r'^[0-9a-fA-F]+$');
