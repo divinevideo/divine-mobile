@@ -54,7 +54,7 @@ void main() {
     }
 
     group('initial state', () {
-      test('has correct initial state', () {
+      test('has correct initial state', () async {
         final cubit = buildCubit();
 
         expect(cubit.state, const EmailVerificationState());
@@ -63,7 +63,7 @@ void main() {
         expect(cubit.state.pendingEmail, isNull);
         expect(cubit.state.errorCode, isNull);
 
-        cubit.close();
+        await cubit.close();
       });
     });
 
@@ -146,7 +146,7 @@ void main() {
             reason: 'the edge-case error log itself must still fire',
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -171,12 +171,14 @@ void main() {
           );
 
           late EmailTokenVerificationResult verifyResult;
-          cubit
-              .verifyEmailToken(
-                token: 'verify-token',
-                keepPollingOnTransient: true,
-              )
-              .then((result) => verifyResult = result);
+          unawaited(
+            cubit
+                .verifyEmailToken(
+                  token: 'verify-token',
+                  keepPollingOnTransient: true,
+                )
+                .then((result) => verifyResult = result),
+          );
           fake.flushMicrotasks();
 
           expect(
@@ -194,7 +196,7 @@ void main() {
           );
           expect(cubit.state.pendingEmail, testEmail);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -232,12 +234,14 @@ void main() {
             );
 
             late EmailTokenVerificationResult firstResult;
-            cubit
-                .verifyEmailToken(
-                  token: 'verify-token',
-                  keepPollingOnTransient: true,
-                )
-                .then((result) => firstResult = result);
+            unawaited(
+              cubit
+                  .verifyEmailToken(
+                    token: 'verify-token',
+                    keepPollingOnTransient: true,
+                  )
+                  .then((result) => firstResult = result),
+            );
 
             fake.flushMicrotasks();
             fake.elapse(const Duration(seconds: 4));
@@ -260,7 +264,7 @@ void main() {
               () => mockOAuth.pollForCode(testDeviceCode),
             ).called(greaterThan(0));
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -299,7 +303,7 @@ void main() {
           fake.flushMicrotasks();
           verify(() => mockOAuth.pollForCode(testDeviceCode)).called(1);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -333,7 +337,7 @@ void main() {
           fake.flushMicrotasks();
           verify(() => mockOAuth.pollForCode(testDeviceCode)).called(2);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -366,7 +370,7 @@ void main() {
             EmailVerificationError.verificationLinkExpired,
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -512,8 +516,8 @@ void main() {
           // because the static guard fires before the network call
           verifyNever(() => zombieOAuth.pollForCode(any()));
 
-          cubit1.close();
-          cubit2.close();
+          unawaited(cubit1.close());
+          unawaited(cubit2.close());
           fake.flushMicrotasks();
         });
       });
@@ -569,8 +573,8 @@ void main() {
           // pollForCode SHOULD have been called — different device code
           verify(() => newOAuth.pollForCode(newDeviceCode)).called(1);
 
-          cubit1.close();
-          cubit2.close();
+          unawaited(cubit1.close());
+          unawaited(cubit2.close());
           fake.flushMicrotasks();
         });
       });
@@ -611,7 +615,7 @@ void main() {
             ).called(greaterThanOrEqualTo(2));
 
             // Cancel timers before fakeAsync exits
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -643,7 +647,7 @@ void main() {
             // (The cubit stops its timer silently without emitting a state change.)
             verifyNever(() => mockOAuth.pollForCode(any()));
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -867,7 +871,7 @@ void main() {
             () => mockAuthService.signInWithDivineOAuth(any()),
           ]);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -905,7 +909,7 @@ void main() {
               ),
             );
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -943,7 +947,7 @@ void main() {
           expect(cubit.state.pinStatus, PinSubmissionStatus.idle);
           expect(cubit.state.pinErrorCode, isNull);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1004,7 +1008,7 @@ void main() {
             verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
             expect(cubit.state.status, isNot(EmailVerificationStatus.success));
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1058,7 +1062,7 @@ void main() {
             expect(cubit.state.pinStatus, PinSubmissionStatus.idle);
             expect(cubit.state.pinErrorCode, isNull);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1099,7 +1103,7 @@ void main() {
             ),
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1120,7 +1124,7 @@ void main() {
 
           expect(cubit.state.pinErrorCode, EmailVerificationError.pinExpired);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1141,7 +1145,7 @@ void main() {
 
           expect(cubit.state.pinErrorCode, EmailVerificationError.pinLocked);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1165,27 +1169,30 @@ void main() {
             EmailVerificationError.pinUnavailable,
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
 
-      test('without pending context fails without calling the server', () {
-        final cubit = buildCubit();
+      test(
+        'without pending context fails without calling the server',
+        () async {
+          final cubit = buildCubit();
 
-        cubit.submitPin(pin);
+          await cubit.submitPin(pin);
 
-        expect(cubit.state.pinStatus, PinSubmissionStatus.failure);
-        expect(cubit.state.pinErrorCode, EmailVerificationError.pinFailed);
-        verifyNever(
-          () => mockOAuth.verifyPin(
-            deviceCode: any(named: 'deviceCode'),
-            pin: any(named: 'pin'),
-          ),
-        );
+          expect(cubit.state.pinStatus, PinSubmissionStatus.failure);
+          expect(cubit.state.pinErrorCode, EmailVerificationError.pinFailed);
+          verifyNever(
+            () => mockOAuth.verifyPin(
+              deviceCode: any(named: 'deviceCode'),
+              pin: any(named: 'pin'),
+            ),
+          );
 
-        cubit.close();
-      });
+          await cubit.close();
+        },
+      );
     });
 
     group('completion race (poll vs PIN submit)', () {
@@ -1268,7 +1275,7 @@ void main() {
               () => mockAuthService.signInWithDivineOAuth(any()),
             ).called(1);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1324,7 +1331,7 @@ void main() {
             () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
           ).called(1);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1397,7 +1404,7 @@ void main() {
 
             verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1452,7 +1459,7 @@ void main() {
 
             verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1529,7 +1536,7 @@ void main() {
             // B's scheduled poll should still be alive.
             verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1572,7 +1579,7 @@ void main() {
             () => mockOAuth.resendHeadlessVerification(testDeviceCode),
           ).called(1);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1604,7 +1611,7 @@ void main() {
             () => mockOAuth.resendHeadlessVerification(testDeviceCode),
           ).called(1);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1637,7 +1644,7 @@ void main() {
           expect(cubit.state.resendStatus, ResendStatus.failure);
           expect(cubit.state.resendCooldownSeconds, 0);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1669,7 +1676,7 @@ void main() {
 
           expect(cubit.state.resendStatus, ResendStatus.unavailable);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1701,7 +1708,7 @@ void main() {
           expect(cubit.state.resendStatus, ResendStatus.expired);
           expect(cubit.state.resendCooldownSeconds, 0);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1730,7 +1737,7 @@ void main() {
           expect(cubit.state.resendStatus, ResendStatus.failure);
           expect(cubit.state.resendCooldownSeconds, 0);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1778,7 +1785,7 @@ void main() {
             reason: 'orphaned resend timer must be cancelled on re-init',
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -1834,7 +1841,7 @@ void main() {
               () => mockOAuth.resendHeadlessVerification(testDeviceCode),
             ).called(1);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1887,12 +1894,12 @@ void main() {
                 mockOAuth.exchangeCode(code: lateCode, verifier: testVerifier),
           ).called(1);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
 
-      test('no-ops when not timed out', () {
+      test('no-ops when not timed out', () async {
         final cubit = buildCubit();
 
         cubit.resumePollingAfterTimeout();
@@ -1900,7 +1907,7 @@ void main() {
         expect(cubit.state.status, EmailVerificationStatus.initial);
         verifyNever(() => mockOAuth.pollForCode(any()));
 
-        cubit.close();
+        await cubit.close();
       });
     });
 
@@ -1953,7 +1960,7 @@ void main() {
             );
             expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
 
-            cubit.close();
+            unawaited(cubit.close());
             fake.flushMicrotasks();
           });
         },
@@ -1979,7 +1986,7 @@ void main() {
           expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
           expect(cubit.state.pendingEmail, testEmail);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -2020,7 +2027,7 @@ void main() {
 
           expect(cubit.state.status, EmailVerificationStatus.success);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -2069,7 +2076,7 @@ void main() {
           fake.elapse(const Duration(minutes: 6));
           expect(cubit.state.status, EmailVerificationStatus.success);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -2113,7 +2120,7 @@ void main() {
           );
           expect(cubit.state.pendingEmail, testEmail);
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -2156,7 +2163,7 @@ void main() {
             EmailVerificationError.verificationLinkExpired,
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
@@ -2203,7 +2210,7 @@ void main() {
             reason: 'resend timer must be cancelled on timeout',
           );
 
-          cubit.close();
+          unawaited(cubit.close());
           fake.flushMicrotasks();
         });
       });
