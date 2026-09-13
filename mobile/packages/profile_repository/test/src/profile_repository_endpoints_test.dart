@@ -158,7 +158,7 @@ void main() {
     group('NIP-98 signed URL equals requested URL', () {
       // The signed 'u' tag and the wire URL must be the same string: the name
       // server compares them byte-for-byte. Nothing else in the suite covers
-      // this coupling, and a divergence 401s every claim and release.
+      // this coupling, and a divergence 401s every claim.
       test('claimUsername signs exactly the URL it posts to', () async {
         when(
           () => nostrClient.createNip98AuthHeader(
