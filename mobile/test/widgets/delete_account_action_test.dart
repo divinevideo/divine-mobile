@@ -183,7 +183,7 @@ void main() {
     );
 
     testWidgets(
-      'a completed submit finishes cleanup without a recovery snackbar',
+      'a completed submit finishes cleanup without a dialog snackbar',
       (tester) async {
         String? activePubkey = _pubkeyHex;
         when(
@@ -280,7 +280,7 @@ void main() {
         verifyNever(() => authService.signOut());
         expect(find.text(l10n.accountDeletionRecoveryBody), findsNothing);
         expect(find.text(l10n.accountDeletionCancelAttemptBody), findsNothing);
-        expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
+        expect(find.text(l10n.accountDeletionFinishingBody), findsNothing);
         await container.read(submittedAccountDeletionMonitorProvider)?.close();
       },
     );

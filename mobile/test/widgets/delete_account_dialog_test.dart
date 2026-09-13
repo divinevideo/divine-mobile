@@ -87,7 +87,7 @@ Future<void> runDeletion({
   ownedUsernameLookup: lookupFuture ?? Future.value(lookup),
   confirmedPubkey: confirmedPubkey,
   screenName: screenName,
-  onDeletionSubmitted: onDeletionSubmitted,
+  onDeletionSubmitted: onDeletionSubmitted ?? (_, _, _) async => false,
 );
 
 DeleteAccountConfirmation _deleteFallback() => DeleteAccountConfirmation(

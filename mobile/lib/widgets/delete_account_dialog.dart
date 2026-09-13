@@ -379,29 +379,29 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 /// [authService] - Service for Keycast deletion and sign out
 /// [ownedUsernameLookup] - The eventual found / confirmed-not-found / unknown
 ///   ownership result. Unknown and lookup failures abort before deletion.
-/// [confirmedPubkey] - When set, aborts before any step if the signed-in
-///   account no longer matches, binding deletion to the confirmed account
-/// [screenName] - Name of the calling screen for logging
-/// [onDeletionSubmitted] - Persists the attempt, the vanish event, and whether
-///   the content sweep could not confirm every existing post, then lets the
-///   app-scoped recovery owner submit. A lost response is ambiguous, so the
+/// [onDeletionSubmitted] - Required. Persists the attempt, the vanish event, and
+///   whether the content sweep could not confirm every existing post, then lets
+///   the app-scoped recovery owner submit. A lost response is ambiguous, so the
 ///   caller must keep the user gated from the receipt rather than returning to
 ///   normal account use (#8583). Returns true when the owner already completed
 ///   the account's destructive sign-out.
+/// [confirmedPubkey] - When set, aborts before any step if the signed-in
+///   account no longer matches, binding deletion to the confirmed account
+/// [screenName] - Name of the calling screen for logging
 Future<void> executeAccountDeletion({
   required BuildContext context,
   required AccountDeletionService deletionService,
   required AuthService authService,
   required AccountDeletionRecoveryRepository deletionRecoveryRepository,
   required Future<DivineUsernameLookup> ownedUsernameLookup,
-  String? confirmedPubkey,
-  String screenName = 'AccountDeletion',
-  Future<bool> Function(
+  required Future<bool> Function(
     AccountDeletionAttempt attempt,
     String vanishEventId,
     bool contentDeletionUnverified,
-  )?
+  )
   onDeletionSubmitted,
+  String? confirmedPubkey,
+  String screenName = 'AccountDeletion',
 }) async {
   if (!context.mounted) return;
 
@@ -796,13 +796,11 @@ Future<void> executeAccountDeletion({
       }
       var ownerCompletedSignOut = false;
       try {
-        ownerCompletedSignOut =
-            await onDeletionSubmitted?.call(
-              attempt,
-              eventId,
-              result.contentQueryFailed || result.contentDeletionIncomplete,
-            ) ??
-            false;
+        ownerCompletedSignOut = await onDeletionSubmitted(
+          attempt,
+          eventId,
+          result.contentQueryFailed || result.contentDeletionIncomplete,
+        );
       } on AccountDeletionRecoveryException catch (error) {
         Log.error(
           'Could not submit durable deletion attempt',
@@ -829,11 +827,12 @@ Future<void> executeAccountDeletion({
 
       if (stopCleanupIfAccountChanged()) return;
       dismissProgressSheet();
-      showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
-      // An immediate completed response lets the app-scoped owner perform the
-      // destructive sign-out while resuming the receipt. Only sign out here
-      // when the submitted attempt left the owner's session active.
+      // An immediate completed response means the app-scoped owner already ran
+      // the completed recovery path: it signed out and deleted local data, and
+      // the completed recovery screen reports the result. The processing copy
+      // would contradict that, so only the processing outcome is announced here.
       if (!ownerCompletedSignOut) {
+        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
         await authService.signOut();
       }
       return;
