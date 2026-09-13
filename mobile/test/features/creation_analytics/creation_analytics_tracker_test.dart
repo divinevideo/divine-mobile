@@ -23,12 +23,6 @@ class _RecordingSink implements AnalyticsEventSink {
 
   @override
   Future<void> setUserId(String? userId) async {}
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
 }
 
 void main() {

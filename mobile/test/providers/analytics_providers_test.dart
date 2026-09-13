@@ -7,16 +7,9 @@ import 'package:openvine/providers/analytics_providers.dart';
 
 class _RecordingSink implements AnalyticsEventSink {
   final userIds = <String?>[];
-  final properties = <({String name, String? value})>[];
 
   @override
   Future<void> setUserId(String? userId) async => userIds.add(userId);
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async => properties.add((name: name, value: value));
 
   @override
   Future<void> logEvent({
@@ -161,10 +154,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(screenAnalyticsServiceProvider),
-        same(replacement),
-      );
+      expect(container.read(screenAnalyticsServiceProvider), same(replacement));
     });
   });
 }

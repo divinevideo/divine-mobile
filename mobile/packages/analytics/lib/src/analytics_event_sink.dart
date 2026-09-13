@@ -3,8 +3,6 @@
 abstract interface class AnalyticsEventSink {
   Future<void> setUserId(String? userId);
 
-  Future<void> setUserProperty({required String name, required String? value});
-
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -22,12 +20,6 @@ class NoOpAnalyticsEventSink implements AnalyticsEventSink {
 
   @override
   Future<void> setUserId(String? userId) async {}
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
 
   @override
   Future<void> logEvent({

@@ -66,27 +66,6 @@ void main() {
       verify(analytics.resetAnalyticsData).called(1);
     });
 
-    test('forwards user properties to Firebase Analytics', () async {
-      when(
-        () => analytics.setUserProperty(
-          name: 'experiment_variant',
-          value: 'variant-a',
-        ),
-      ).thenAnswer((_) async {});
-
-      await sink.setUserProperty(
-        name: 'experiment_variant',
-        value: 'variant-a',
-      );
-
-      verify(
-        () => analytics.setUserProperty(
-          name: 'experiment_variant',
-          value: 'variant-a',
-        ),
-      ).called(1);
-    });
-
     test('forwards custom events to Firebase Analytics', () async {
       const parameters = <String, Object>{
         'surface_name': 'comments_sheet',
