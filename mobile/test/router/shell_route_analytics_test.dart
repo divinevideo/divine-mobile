@@ -1,6 +1,8 @@
 // ABOUTME: Characterizes root-observer events from StatefulShellRoute.
 // ABOUTME: Pins branch navigation isolation so analytics stays deterministic.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -88,7 +90,7 @@ void main() {
         (action: _ObserverAction.push, name: 'home'),
       ]);
 
-      router.push('/details');
+      unawaited(router.push('/details'));
       await tester.pump();
 
       expect(observer.events, [
