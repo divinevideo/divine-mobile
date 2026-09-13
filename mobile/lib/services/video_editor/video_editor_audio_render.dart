@@ -43,12 +43,15 @@ EditorAudio? _resolveRenderAudioSource(AudioEvent event) {
 ///
 /// Returns `null` (and logs a warning) when the sound has no resolvable source
 /// or no known duration.
-AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
+AudioTrack? audioTrackFromSoundForRender(
+  AudioEvent sound, {
+  String logName = _logName,
+}) {
   final durationMs = ((sound.duration ?? 0) * 1000).toInt();
   if (durationMs <= 0) {
     Log.warning(
       'Skipping selected sound ${sound.id} for render: unknown duration',
-      name: _logName,
+      name: logName,
       category: LogCategory.video,
     );
     return null;
@@ -58,6 +61,7 @@ AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
       startTime: Duration.zero,
       endTime: Duration(milliseconds: durationMs),
     ),
+    logName: logName,
   );
 }
 
@@ -68,12 +72,15 @@ AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
 /// source, so a single unusable track is skipped instead of aborting the whole
 /// render with a thrown null-check. Routes bundled → asset, local-import or
 /// absolute path → file, and everything else (http(s)) → network.
-AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
+AudioTrack? audioTrackFromMetaForRender(
+  AudioEvent track, {
+  String logName = _logName,
+}) {
   final audio = _resolveRenderAudioSource(track);
   if (audio == null) {
     Log.warning(
       'Skipping audio track ${track.id} for render: no resolvable source',
-      name: _logName,
+      name: logName,
       category: LogCategory.video,
     );
     return null;
@@ -103,6 +110,30 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
   );
 }
 
+/// Records the timing boundary between editor state and render parameters.
+///
+/// Source paths and URLs are deliberately omitted: local paths can contain
+/// user-identifying directory names, while the timing fields are sufficient
+/// to distinguish source-offset failures from composition-placement failures.
+void _logPreparedTrack(
+  AudioTrack track, {
+  required String origin,
+  required String logName,
+}) {
+  Log.warning(
+    'Prepared $origin audio track ${track.id}: '
+    'composition=[${_durationMs(track.startTime)}, '
+    '${_durationMs(track.endTime)}], '
+    'source=[${_durationMs(track.audioStartTime)}, '
+    '${_durationMs(track.audioEndTime)}]',
+    name: logName,
+    category: LogCategory.video,
+  );
+}
+
+String _durationMs(Duration? duration) =>
+    duration == null ? 'unbounded' : '${duration.inMilliseconds}ms';
+
 /// Builds the render audio tracks for a session from its timeline
 /// [metaTracks], falling back to the recorder's [selectedSound].
 ///
@@ -110,7 +141,9 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
 /// the timeline already carries audio it is the same sound, so adding it again
 /// duplicates the audio — hence the fallback only applies to an empty
 /// timeline. Tracks that resolve to no usable source are dropped by the
-/// mappers and logged there.
+/// mappers and logged there under [logName]; every successfully-built track
+/// is also logged under [logName] here so bug-report diagnostics can be
+/// attributed to the caller that produced them.
 ///
 /// Both render entry points go through this: the in-editor export and the
 /// headless draft render used when publishing from the library. Keeping it in
@@ -119,11 +152,28 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
 List<AudioTrack> buildRenderAudioTracks({
   required List<AudioEvent> metaTracks,
   required AudioEvent? selectedSound,
-}) => [
-  for (final track in metaTracks) ?audioTrackFromMetaForRender(track),
-  if (metaTracks.isEmpty && selectedSound != null)
-    ?audioTrackFromSoundForRender(selectedSound),
-];
+  required String logName,
+}) {
+  final tracks = <AudioTrack>[];
+  for (final event in metaTracks) {
+    final track = audioTrackFromMetaForRender(event, logName: logName);
+    if (track == null) continue;
+    _logPreparedTrack(track, origin: 'timeline', logName: logName);
+    tracks.add(track);
+  }
+  if (metaTracks.isEmpty && selectedSound != null) {
+    final track = audioTrackFromSoundForRender(selectedSound, logName: logName);
+    if (track != null) {
+      _logPreparedTrack(
+        track,
+        origin: 'selected-sound fallback',
+        logName: logName,
+      );
+      tracks.add(track);
+    }
+  }
+  return tracks;
+}
 
 /// Clamps an audio composition window so it cannot extend past [videoDuration],
 /// or returns `null` when the window lies entirely past the video and the track
@@ -162,7 +212,9 @@ List<AudioTrack> buildRenderAudioTracks({
 /// A track that cannot be resolved (e.g. a failed network download) is skipped
 /// and logged rather than aborting the whole render. A warning is logged when
 /// audio was requested but none could be resolved, so a silent (audio-less)
-/// export is diagnosable from logs.
+/// export is diagnosable from logs. Every successfully-resolved track is also
+/// logged under [logName], recording its final composition and source timing
+/// for mux diagnostics.
 ///
 /// When [videoDuration] is set, each track's composition window is clamped to
 /// it (see [clampAudioWindowToVideo]) so audio cannot outlast the video track.
@@ -190,16 +242,25 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
         continue;
       }
       final (:startTime, :endTime) = window;
-      audioTracks.add(
-        VideoAudioTrack(
-          path: audioPath,
-          startTime: startTime,
-          endTime: endTime,
-          audioStartTime: track.audioStartTime,
-          audioEndTime: track.audioEndTime,
-          loop: track.loop,
-          volume: track.volume,
-        ),
+      final resolvedTrack = VideoAudioTrack(
+        path: audioPath,
+        startTime: startTime,
+        endTime: endTime,
+        audioStartTime: track.audioStartTime,
+        audioEndTime: track.audioEndTime,
+        loop: track.loop,
+        volume: track.volume,
+      );
+      audioTracks.add(resolvedTrack);
+      Log.warning(
+        'Resolved audio track ${track.id} for mux: '
+        'composition=[${_durationMs(resolvedTrack.startTime)}, '
+        '${_durationMs(resolvedTrack.endTime)}], '
+        'source=[${_durationMs(resolvedTrack.audioStartTime)}, '
+        '${_durationMs(resolvedTrack.audioEndTime)}], '
+        'videoDuration=${_durationMs(videoDuration)}',
+        name: logName,
+        category: LogCategory.video,
       );
     } catch (e, stackTrace) {
       Log.error(
