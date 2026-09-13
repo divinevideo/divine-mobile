@@ -54,6 +54,16 @@ const _completedAttemptWithoutUsername = AccountDeletionAttempt(
   status: AccountDeletionAttemptStatus.completed,
 );
 
+const _stalePreparingAttemptWithoutUsername = AccountDeletionAttempt(
+  id: 'stale-attempt',
+  status: AccountDeletionAttemptStatus.preparing,
+);
+
+const _cancelledStaleAttempt = AccountDeletionAttempt(
+  id: 'stale-attempt',
+  status: AccountDeletionAttemptStatus.cancelled,
+);
+
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
 
@@ -1387,6 +1397,66 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('stale username-free attempt offers immediate cancellation', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(() => recoveryRepository.prepare(username: 'alice')).thenThrow(
+        const AccountDeletionRecoveryException(
+          'Preparing username attempt did not include a username',
+          stage: AccountDeletionRecoveryStage.usernamePreparation,
+          attempt: _stalePreparingAttemptWithoutUsername,
+        ),
+      );
+      when(
+        () => recoveryRepository.cancelAndWait(attemptId: 'stale-attempt'),
+      ).thenAnswer((_) async => _cancelledStaleAttempt);
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+        lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _englishL10n();
+      expect(find.text(l10n.deleteAccountDeletionIncomplete), findsOneWidget);
+      expect(find.text(l10n.accountDeletionCancelAttempt), findsOneWidget);
+      verifyNever(
+        () => deletionService.deleteAccount(
+          onProgress: any(named: 'onProgress'),
+          expectedPubkey: any(named: 'expectedPubkey'),
+        ),
+      );
+
+      await tester.tap(find.text(l10n.accountDeletionCancelAttempt));
+      await tester.pump();
+      await tester.pump();
+
+      verify(
+        () => recoveryRepository.cancelAndWait(attemptId: 'stale-attempt'),
+      ).called(1);
     });
 
     testWidgets('coordinator outage explains deletion is unavailable', (
