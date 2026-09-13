@@ -116,7 +116,7 @@ set -eu
 # Plain `flutter test` compiles and spins a fresh isolate per file; the VGV
 # optimizer bundles the untagged files into one. Measured on an identical
 # 31-file / 277-test subset: 60s plain vs 17s optimized.
-VERY_GOOD_CLI_VERSION=1.3.0
+VERY_GOOD_CLI_VERSION=1.5.0
 PUB_CACHE_BIN="${PUB_CACHE:-$HOME/.pub-cache}/bin"
 VERY_GOOD_BIN=""
 if command -v very_good >/dev/null 2>&1; then
