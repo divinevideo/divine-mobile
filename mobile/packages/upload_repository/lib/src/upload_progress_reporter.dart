@@ -146,8 +146,6 @@ class UploadProgressReporter {
         return 'VPN';
       case UploadConnectivity.none:
         return 'Offline';
-      case UploadConnectivity.other:
-        return 'Unknown';
     }
   }
 
@@ -523,7 +521,6 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
         UploadConnectivity.ethernet => 'ConnectivityResult.ethernet',
         UploadConnectivity.vpn => 'ConnectivityResult.vpn',
         UploadConnectivity.none => 'ConnectivityResult.none',
-        UploadConnectivity.other => 'ConnectivityResult.other',
       };
 
   /// Send an initialization-failure report to Crashlytics.
