@@ -145,7 +145,13 @@ void main() {
 
         for (final (index, type) in feedTypes.indexed) {
           service.addVideoEventForTesting(
-            _video(type.name, createdAt: index + 1),
+            _video(
+              type.name,
+              createdAt: index + 1,
+              hashtags: type == SubscriptionType.hashtag
+                  ? const ['vine']
+                  : const [],
+            ),
             type,
             isHistorical: false,
           );
@@ -156,6 +162,16 @@ void main() {
             type.name,
           ], reason: '${type.name} consumers must only observe their own feed');
         }
+
+        // getVideos(hashtag) reads the generic per-type list; real
+        // hashtag-route consumers read the tag-keyed bucket instead
+        // (VideoEventService.hashtagVideos), which is only populated when
+        // the video actually carries the hashtag.
+        expect(
+          service.hashtagVideos('vine').map((video) => video.id),
+          ['hashtag'],
+          reason: 'hashtag-route consumers must read from the tag bucket',
+        );
       },
     );
 
@@ -213,6 +229,7 @@ VideoEvent _video(
   String id, {
   required int createdAt,
   List<String> contentWarningLabels = const [],
+  List<String> hashtags = const [],
 }) => VideoEvent(
   id: id,
   pubkey: 'pubkey-$id',
@@ -221,4 +238,5 @@ VideoEvent _video(
   timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
   videoUrl: 'https://media.example.com/$id.mp4',
   contentWarningLabels: contentWarningLabels,
+  hashtags: hashtags,
 );
