@@ -43,23 +43,26 @@ EditorAudio? _resolveRenderAudioSource(AudioEvent event) {
 ///
 /// Returns `null` (and logs a warning) when the sound has no resolvable source
 /// or no known duration.
-AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
+AudioTrack? audioTrackFromSoundForRender(
+  AudioEvent sound, {
+  String logName = _logName,
+}) {
   final durationMs = ((sound.duration ?? 0) * 1000).toInt();
   if (durationMs <= 0) {
     Log.warning(
       'Skipping selected sound ${sound.id} for render: unknown duration',
-      name: _logName,
+      name: logName,
       category: LogCategory.video,
     );
     return null;
   }
-  final track = audioTrackFromMetaForRender(
+  return audioTrackFromMetaForRender(
     sound.copyWith(
       startTime: Duration.zero,
       endTime: Duration(milliseconds: durationMs),
     ),
+    logName: logName,
   );
-  return track;
 }
 
 /// Builds the render [AudioTrack] for a timeline audio [track] taken from the
@@ -69,12 +72,15 @@ AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
 /// source, so a single unusable track is skipped instead of aborting the whole
 /// render with a thrown null-check. Routes bundled → asset, local-import or
 /// absolute path → file, and everything else (http(s)) → network.
-AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
+AudioTrack? audioTrackFromMetaForRender(
+  AudioEvent track, {
+  String logName = _logName,
+}) {
   final audio = _resolveRenderAudioSource(track);
   if (audio == null) {
     Log.warning(
       'Skipping audio track ${track.id} for render: no resolvable source',
-      name: _logName,
+      name: logName,
       category: LogCategory.video,
     );
     return null;
@@ -148,13 +154,13 @@ List<AudioTrack> buildRenderAudioTracks({
 }) {
   final tracks = <AudioTrack>[];
   for (final event in metaTracks) {
-    final track = audioTrackFromMetaForRender(event);
+    final track = audioTrackFromMetaForRender(event, logName: logName);
     if (track == null) continue;
     _logPreparedTrack(track, origin: 'timeline', logName: logName);
     tracks.add(track);
   }
   if (metaTracks.isEmpty && selectedSound != null) {
-    final track = audioTrackFromSoundForRender(selectedSound);
+    final track = audioTrackFromSoundForRender(selectedSound, logName: logName);
     if (track != null) {
       _logPreparedTrack(
         track,
