@@ -14,6 +14,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 VideoEvent _restVideo({
   required String id,
   int? originalLoops,
+  bool isVerifiedArchive = false,
+  bool archiveAudioReuseEnabled = false,
   Map<String, String> extraTags = const {},
 }) {
   return VideoEvent(
@@ -27,6 +29,8 @@ VideoEvent _restVideo({
     ),
     videoUrl: 'https://example.com/$id.mp4',
     originalLoops: originalLoops,
+    isVerifiedArchive: isVerifiedArchive,
+    archiveAudioReuseEnabled: archiveAudioReuseEnabled,
     // Base REST rawTags are intentionally sparse (1 entry) so the enrichment
     // trigger in enrichVideosWithNostrTags — `rawTags.length < 4` — fires on
     // every test. Each test adds `views`, `title`, etc. via [extraTags].
@@ -190,6 +194,42 @@ void main() {
 
       expect(enriched.single.rawTags['title'], equals('Nostr Title Wins'));
       expect(enriched.single.rawTags['views'], equals('7'));
+    });
+
+    test('Nostr tags cannot overwrite server archive verification', () async {
+      const pubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      final nostrEvent = Event(
+        pubkey,
+        34236,
+        const [
+          ['d', 'verified-archive-video'],
+          ['url', 'https://example.com/verified-archive-video.mp4'],
+          ['verified_archive', 'false'],
+          ['archive_audio_reuse_enabled', 'false'],
+          ['platform', 'vine'],
+        ],
+        'Nostr content',
+        createdAt: 1704067200,
+      );
+      final restVideo = _restVideo(
+        id: nostrEvent.id,
+        isVerifiedArchive: true,
+        archiveAudioReuseEnabled: true,
+      );
+
+      when(
+        () => mockNostrClient.queryEvents(any()),
+      ).thenAnswer((_) async => [nostrEvent]);
+
+      final enriched = await enrichVideosWithNostrTags(
+        [restVideo],
+        nostrService: mockNostrClient,
+      );
+
+      expect(enriched.single.isVerifiedArchive, isTrue);
+      expect(enriched.single.archiveAudioReuseEnabled, isTrue);
+      expect(enriched.single.rawTags['verified_archive'], equals('false'));
     });
 
     test(
