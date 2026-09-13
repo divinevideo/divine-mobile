@@ -3,8 +3,9 @@
 Status: Current contract with semantic route screen views, comments sheet
 surface load instrumentation, authenticated identity, and creator funnel
 instrumentation live.
-Baseline validated against: `mobile/lib/services/screen_analytics_service.dart`,
-`mobile/lib/services/page_load_observer.dart`,
+Baseline validated against:
+`mobile/packages/analytics/lib/src/screen_analytics_service.dart`,
+`mobile/packages/analytics/lib/src/page_load_observer.dart`,
 `mobile/lib/screens/comments/comments_screen.dart`.
 
 Current code still contains legacy `screen_load` and `screen_data_loaded`
@@ -61,6 +62,30 @@ Required parameters:
 - `screen_name`
 - `entry_point`
 - `route_name`
+
+#### Bottom-navigation shell
+
+The root navigation observers see the shell as one full-screen route. On a
+cold start they receive one push named for the initial branch, such as `home`,
+and emit one corresponding `screen_view`. A route pushed above the shell, such
+as settings or video detail, is also observed normally.
+
+Branch navigators do not notify the root observers. Switching tabs, returning
+to an already-mounted tab, and replacing one route with another inside a tab
+therefore emit no root `screen_view` or page-load lifecycle events. Analytics
+owned by an individual surface remains independent of this observer contract.
+
+This isolation is deliberate. A stateful shell keeps branch navigators alive,
+so their events describe navigator lifecycle rather than user arrival:
+
+- the initial branch and shell both push at startup, duplicating the event;
+- another branch pushes only on its first mount, not on later visits;
+- a sibling route change produces a push plus a remove, while
+  `PageLoadObserver` ends sessions only on pop.
+
+For that reason the shell permanently sets `notifyRootObserver: false`.
+`mobile/test/router/shell_route_analytics_test.dart` pins both the production
+setting and the representative observer sequences.
 
 ### `surface_load`
 
