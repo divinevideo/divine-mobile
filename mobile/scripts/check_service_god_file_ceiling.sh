@@ -238,7 +238,7 @@ validate_baseline_growth_policy() {
       fail=1
       continue
     fi
-    rename_status="$(git -C "$repo_root" -c core.quotePath=false diff --find-renames=15% --find-copies-harder --name-status "$BASE_REF"...HEAD -- "$old_path" "$new_path" || true)"
+    rename_status="$(git -C "$repo_root" -c core.quotePath=false diff --find-renames=15% --find-copies-harder --name-status "$BASE_REF"...HEAD || true)"
     if ! awk -F "$TAB" -v old="$old_path" -v new="$new_path" '
       $1 ~ /^[RC][0-9]+$/ && $2 == old && $3 == new { found=1 }
       END { exit !found }
