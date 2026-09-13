@@ -593,7 +593,7 @@ class UploadRepository {
     uploadFuture = _performUploadInternal(upload, onProgress: onProgress)
         .whenComplete(() {
           if (identical(_inFlightUploads[upload.id], uploadFuture)) {
-            unawaited(_inFlightUploads.remove(upload.id));
+            final _ = _inFlightUploads.remove(upload.id);
           }
         });
     _inFlightUploads[upload.id] = uploadFuture;
