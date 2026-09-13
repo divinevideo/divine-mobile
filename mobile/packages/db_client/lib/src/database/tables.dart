@@ -1556,8 +1556,8 @@ class PendingViewEvents extends Table {
 /// One row per report. The kind-1984 relay publish and the Zendesk ticket each
 /// retire independently (`relay_status` / `zendesk_status`), so a report whose
 /// relay leg succeeded but whose Zendesk leg is still failing keeps only the
-/// Zendesk leg queued. The moderation DM is NOT tracked here; it keeps its own
-/// `outgoing_dms` outbox. See #8053.
+/// Zendesk leg queued. Private moderation intent is saved here before its
+/// handoff to the `outgoing_dms` outbox. See #8053.
 @DataClassName('PendingReportRow')
 class PendingReports extends Table {
   @override
@@ -1571,8 +1571,8 @@ class PendingReports extends Table {
 
   TextColumn get userPubkey => text().named('user_pubkey')();
 
-  /// The signed kind-1984 (NIP-56) event, serialized. Republished as-is on
-  /// retry: the id is stable, so the relay dedupes rather than double-storing.
+  /// Serialized kind-1984 intent, initially unsigned for offline acceptance.
+  /// Delivery saves its signature before publishing and reuses it on retries.
   TextColumn get eventJson => text().named('event_json')();
 
   /// JSON list of target relays for the report, or null for the default set.
@@ -1580,6 +1580,16 @@ class PendingReports extends Table {
 
   /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
   TextColumn get zendeskPayload => text().named('zendesk_payload')();
+
+  /// Private moderation-DM intent, redacted before storage.
+  TextColumn get moderationPayload =>
+      text().nullable().named('moderation_payload')();
+
+  TextColumn get moderationStatus =>
+      text().withDefault(const Constant('done')).named('moderation_status')();
+
+  IntColumn get moderationAttempts =>
+      integer().withDefault(const Constant(0)).named('moderation_attempts')();
 
   /// `pending` | `done` | `deadLetter` (parsed throw-on-unknown).
   TextColumn get relayStatus => text().named('relay_status')();

@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for the durable content-report outbox.
-// ABOUTME: Holds reports until the kind-1984 publish and Zendesk ticket land.
+// ABOUTME: Tracks relay, support ticket, and private moderation delivery.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
@@ -7,17 +7,15 @@ import 'package:meta/meta.dart';
 
 part 'pending_reports_dao.g.dart';
 
-/// The two off-device channels a report row tracks. The moderation DM is not
-/// here: it keeps its own `outgoing_dms` outbox.
-enum ReportChannel { relay, zendesk }
+/// Independently retried destinations for a saved report.
+enum ReportChannel { relay, zendesk, moderation }
 
 /// Per-channel delivery state.
 ///
-/// A channel that failed an attempt stays [pending] (with an incremented
-/// attempt count) and is retried after backoff; it moves to [deadLetter] only
-/// once it exhausts its attempt budget. There is deliberately no transient
-/// "in-flight" state: a crash mid-drive leaves the channel [pending], so it is
-/// simply retried, and republish/re-file are idempotent.
+/// Failed attempts remain [pending] across restarts. The retry worker does not
+/// exhaust a retry budget; [deadLetter] remains readable for stored rows.
+/// There is no transient in-flight state to lose during a crash. Relay events
+/// and moderation rumors keep stable ids; ticket retries are at-least-once.
 enum PendingReportChannelStatus { pending, done, deadLetter }
 
 class UnknownPendingReportStatusException implements Exception {
@@ -45,6 +43,9 @@ class PendingReport {
     required this.zendeskPayload,
     required this.createdAt,
     this.targetRelays,
+    this.moderationPayload,
+    this.moderationStatus = PendingReportChannelStatus.done,
+    this.moderationAttempts = 0,
     this.relayStatus = PendingReportChannelStatus.pending,
     this.zendeskStatus = PendingReportChannelStatus.pending,
     this.relayAttempts = 0,
@@ -57,6 +58,9 @@ class PendingReport {
   final String userPubkey;
   final String eventJson;
   final String? targetRelays;
+  final String? moderationPayload;
+  final PendingReportChannelStatus moderationStatus;
+  final int moderationAttempts;
   final String zendeskPayload;
   final PendingReportChannelStatus relayStatus;
   final PendingReportChannelStatus zendeskStatus;
@@ -68,11 +72,18 @@ class PendingReport {
 
   /// The delivery state of one channel.
   PendingReportChannelStatus statusOf(ReportChannel channel) =>
-      channel == ReportChannel.relay ? relayStatus : zendeskStatus;
+      switch (channel) {
+        ReportChannel.relay => relayStatus,
+        ReportChannel.zendesk => zendeskStatus,
+        ReportChannel.moderation => moderationStatus,
+      };
 
   /// The attempt count of one channel.
-  int attemptsOf(ReportChannel channel) =>
-      channel == ReportChannel.relay ? relayAttempts : zendeskAttempts;
+  int attemptsOf(ReportChannel channel) => switch (channel) {
+    ReportChannel.relay => relayAttempts,
+    ReportChannel.zendesk => zendeskAttempts,
+    ReportChannel.moderation => moderationAttempts,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -96,6 +107,9 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
       userPubkey: report.userPubkey,
       eventJson: report.eventJson,
       targetRelays: Value(report.targetRelays),
+      moderationPayload: Value(report.moderationPayload),
+      moderationStatus: Value(report.moderationStatus.name),
+      moderationAttempts: Value(report.moderationAttempts),
       zendeskPayload: report.zendeskPayload,
       relayStatus: report.relayStatus.name,
       zendeskStatus: report.zendeskStatus.name,
@@ -113,6 +127,9 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
       userPubkey: row.userPubkey,
       eventJson: row.eventJson,
       targetRelays: row.targetRelays,
+      moderationPayload: row.moderationPayload,
+      moderationStatus: _parseStatus(row.moderationStatus),
+      moderationAttempts: row.moderationAttempts,
       zendeskPayload: row.zendeskPayload,
       relayStatus: _parseStatus(row.relayStatus),
       zendeskStatus: _parseStatus(row.zendeskStatus),
@@ -156,7 +173,9 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
       ..where(
         (t) =>
             t.userPubkey.equals(userPubkey) &
-            (t.relayStatus.equals(pending) | t.zendeskStatus.equals(pending)),
+            (t.relayStatus.equals(pending) |
+                t.zendeskStatus.equals(pending) |
+                t.moderationStatus.equals(pending)),
       )
       ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]);
     if (limit != null) {
@@ -223,20 +242,27 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
       if (row == null) return false;
 
       final isRelay = channel == ReportChannel.relay;
-      final attempts = isRelay ? row.relayAttempts : row.zendeskAttempts;
+      final attempts = _rowToModel(row).attemptsOf(channel);
       final nextAttempts = incrementAttempt ? attempts + 1 : attempts;
 
       final companion = PendingReportsCompanion(
         relayStatus: isRelay && status != null
             ? Value(status.name)
             : const Value.absent(),
-        zendeskStatus: !isRelay && status != null
+        zendeskStatus: channel == ReportChannel.zendesk && status != null
             ? Value(status.name)
             : const Value.absent(),
         relayAttempts: isRelay && incrementAttempt
             ? Value(nextAttempts)
             : const Value.absent(),
-        zendeskAttempts: !isRelay && incrementAttempt
+        zendeskAttempts: channel == ReportChannel.zendesk && incrementAttempt
+            ? Value(nextAttempts)
+            : const Value.absent(),
+        moderationStatus: channel == ReportChannel.moderation && status != null
+            ? Value(status.name)
+            : const Value.absent(),
+        moderationAttempts:
+            channel == ReportChannel.moderation && incrementAttempt
             ? Value(nextAttempts)
             : const Value.absent(),
         lastError: error != null ? Value(error) : const Value.absent(),
@@ -248,6 +274,28 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
       )..where((t) => t.reportId.equals(reportId))).write(companion);
       return rows > 0;
     });
+  }
+
+  /// Retire only after every requested destination has acknowledged the report.
+  Future<int> deleteIfDelivered(String reportId) =>
+      (delete(pendingReports)..where(
+            (row) =>
+                row.reportId.equals(reportId) &
+                row.relayStatus.equals(PendingReportChannelStatus.done.name) &
+                row.zendeskStatus.equals(PendingReportChannelStatus.done.name) &
+                row.moderationStatus.equals(
+                  PendingReportChannelStatus.done.name,
+                ),
+          ))
+          .go();
+
+  /// Freeze the signed event before any publish so every retry uses its id.
+  Future<bool> saveSignedEvent(String reportId, String eventJson) async {
+    final count =
+        await (update(pendingReports)
+              ..where((t) => t.reportId.equals(reportId)))
+            .write(PendingReportsCompanion(eventJson: Value(eventJson)));
+    return count == 1;
   }
 
   Future<int> deleteById(String reportId) {

@@ -4739,11 +4739,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذر الإبلاغ عن المحتوى. يرجى المحاولة مرّة أخرى.';
 
   @override
-  String get reportNotSent =>
-      'تعذّر إرسال بلاغك. تحقق من اتصالك وحاول مرة أخرى.';
-
-  @override
-  String get reportReceivedTitle => 'تم استلام البلاغ';
+  String get reportReceivedTitle => 'تم حفظ البلاغ';
 
   @override
   String get reportReceivedThankYou =>
@@ -4751,11 +4747,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'سيُراجع فريقنا بلاغك ويتخذ الإجراء المناسب. قد تتلقى تحديثات عبر رسالة مباشرة.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'تعذّر علينا الوصول إلى فريق الإشراف مباشرةً الآن، لكن تم استلام بلاغك وسيُراجَع.';
+      'سنرسله تلقائيًا عندما تتصل بالإنترنت. سيُراجع فريقنا بلاغك ويتخذ الإجراء المناسب. قد تتلقى تحديثات عبر رسالة مباشرة.';
 
   @override
   String get reportContactModeration => 'راسل فريق الإشراف';

@@ -4921,11 +4921,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportFailed => 'N-am putut raporta conținutul. Încearcă din nou.';
 
   @override
-  String get reportNotSent =>
-      'Nu s-a putut trimite raportarea. Verifică conexiunea și încearcă din nou.';
-
-  @override
-  String get reportReceivedTitle => 'Raport primit';
+  String get reportReceivedTitle => 'Raport salvat';
 
   @override
   String get reportReceivedThankYou =>
@@ -4933,11 +4929,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Nu am putut contacta direct echipa de moderare chiar acum, dar raportul tău a fost primit și va fi analizat.';
+      'Îl vom trimite automat când te conectezi la internet. Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.';
 
   @override
   String get reportContactModeration => 'Scrie echipei de moderare';

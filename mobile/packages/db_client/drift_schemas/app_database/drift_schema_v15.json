@@ -2822,6 +2822,36 @@
             "dsl_features": []
           },
           {
+            "name": "moderation_payload",
+            "getter_name": "moderationPayload",
+            "moor_type": "string",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "moderation_status",
+            "getter_name": "moderationStatus",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('\\'done\\'')",
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "moderation_attempts",
+            "getter_name": "moderationAttempts",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('0')",
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
             "name": "relay_status",
             "getter_name": "relayStatus",
             "moor_type": "string",
@@ -3914,7 +3944,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"pending_reports\" (\"report_id\" TEXT NOT NULL, \"user_pubkey\" TEXT NOT NULL, \"event_json\" TEXT NOT NULL, \"target_relays\" TEXT NULL, \"zendesk_payload\" TEXT NOT NULL, \"relay_status\" TEXT NOT NULL, \"zendesk_status\" TEXT NOT NULL, \"relay_attempts\" INTEGER NOT NULL DEFAULT 0, \"zendesk_attempts\" INTEGER NOT NULL DEFAULT 0, \"last_error\" TEXT NULL, \"last_attempt_at\" INTEGER NULL, \"created_at\" INTEGER NOT NULL, PRIMARY KEY (\"report_id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"pending_reports\" (\"report_id\" TEXT NOT NULL, \"user_pubkey\" TEXT NOT NULL, \"event_json\" TEXT NOT NULL, \"target_relays\" TEXT NULL, \"zendesk_payload\" TEXT NOT NULL, \"moderation_payload\" TEXT NULL, \"moderation_status\" TEXT NOT NULL DEFAULT 'done', \"moderation_attempts\" INTEGER NOT NULL DEFAULT 0, \"relay_status\" TEXT NOT NULL, \"zendesk_status\" TEXT NOT NULL, \"relay_attempts\" INTEGER NOT NULL DEFAULT 0, \"zendesk_attempts\" INTEGER NOT NULL DEFAULT 0, \"last_error\" TEXT NULL, \"last_attempt_at\" INTEGER NULL, \"created_at\" INTEGER NOT NULL, PRIMARY KEY (\"report_id\"));"
         }
       ]
     },

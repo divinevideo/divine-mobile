@@ -8197,16 +8197,10 @@ abstract class AppLocalizations {
   /// **'Failed to report content. Please try again.'**
   String get reportFailed;
 
-  /// Shown when a submitted report reached no channel off the device — every publish target refused it, which in practice almost always means no connectivity. Covers both content and user reports, so it must not name either subject.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t send your report. Check your connection and try again.'**
-  String get reportNotSent;
-
   /// No description provided for @reportReceivedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Report Received'**
+  /// **'Report saved'**
   String get reportReceivedTitle;
 
   /// No description provided for @reportReceivedThankYou.
@@ -8218,14 +8212,8 @@ abstract class AppLocalizations {
   /// No description provided for @reportReceivedReviewNotice.
   ///
   /// In en, this message translates to:
-  /// **'Our team will review your report and take appropriate action. You may receive updates via direct message.'**
+  /// **'We’ll send it automatically when you’re connected. Our team will review your report and take appropriate action. You may receive updates via direct message.'**
   String get reportReceivedReviewNotice;
-
-  /// Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels.
-  ///
-  /// In en, this message translates to:
-  /// **'We couldn\'t reach the moderation team directly just now, but your report was received and will be reviewed.'**
-  String get reportModerationDmDelayed;
 
   /// Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report.
   ///

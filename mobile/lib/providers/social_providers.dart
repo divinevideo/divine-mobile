@@ -3,6 +3,7 @@
 // ABOUTME: userDataCleanup, contentReporting, contentDeletion, collaborator-3
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -1033,6 +1034,45 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     // Durable outbox for the relay + Zendesk channels; ReportRetryService
     // sweeps it. #8053.
     pendingReportsDao: ref.watch(databaseProvider).pendingReportsDao,
+    moderationPubkey: ref
+        .watch(moderationLabelServiceProvider)
+        .divineModerationPubkeyHex,
+    onReportQueued: () async {
+      if (!ref.mounted) return;
+      final retry = await ref.read(reportRetryServiceProvider.future);
+      await retry?.sweep();
+    },
+    deliverModerationDm: (report) async {
+      if (!ref.mounted ||
+          authService.currentPublicKeyHex != report.userPubkey) {
+        return false;
+      }
+      final payload =
+          jsonDecode(report.moderationPayload!) as Map<String, dynamic>;
+      final repository = ref.read(dmRepositoryProvider);
+      if (repository.userPubkey != report.userPubkey) return false;
+      final queued = await repository.enqueueSend(
+        recipientPubkey: payload['recipientPubkey'] as String,
+        content: payload['content'] as String,
+        additionalTags: (payload['tags'] as List)
+            .map((tag) => (tag as List).cast<String>())
+            .toList(),
+        idempotencyKey: report.reportId,
+        createdAt: report.createdAt.millisecondsSinceEpoch ~/ 1000,
+      );
+      if (!queued.accepted ||
+          !ref.mounted ||
+          authService.currentPublicKeyHex != report.userPubkey) {
+        return false;
+      }
+      // Recovery publishes only NIP-17. The persisted report identity makes a
+      // crash between DM enqueue and report bookkeeping safe to replay.
+      final result = await repository.recoverFullSend(
+        rumorId: queued.queuedRumorId!,
+        resetRetryBudget: true,
+      );
+      return result.success;
+    },
   );
 
   // Initialize the service to enable reporting
@@ -1061,6 +1101,7 @@ Future<ReportRetryService?> reportRetryService(Ref ref) async {
 
   final db = ref.watch(databaseProvider);
   final driver = await ref.watch(contentReportingServiceProvider.future);
+  if (!ref.mounted) return null;
   final foregroundController = StreamController<bool>();
   ref.onDispose(foregroundController.close);
 
@@ -1069,6 +1110,7 @@ Future<ReportRetryService?> reportRetryService(Ref ref) async {
     pendingReportsDao: db.pendingReportsDao,
     userPubkey: userPubkey,
     appForegroundStream: foregroundController.stream,
+    retryTriggerStream: _dmRetryConnectivityTriggerStream(),
   );
 
   unawaited(

@@ -4473,20 +4473,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportFailed => '举报内容失败，请重试。';
 
   @override
-  String get reportNotSent => '举报发送失败。请检查连接后重试。';
-
-  @override
-  String get reportReceivedTitle => '举报已收到';
+  String get reportReceivedTitle => '举报已保存';
 
   @override
   String get reportReceivedThankYou => '谢谢你帮助维护 Divine 的安全。';
 
   @override
   String get reportReceivedReviewNotice =>
-      '我们的团队会审核你的举报并采取适当措施。你可能会通过私信收到进展通知。';
-
-  @override
-  String get reportModerationDmDelayed => '暂时没能直接联系上管理团队，但你的举报已收到，我们会审核的。';
+      '联网后我们会自动发送。 我们的团队会审核你的举报并采取适当措施。你可能会通过私信收到进展通知。';
 
   @override
   String get reportContactModeration => '给管理团队发消息';

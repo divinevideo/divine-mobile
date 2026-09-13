@@ -4836,11 +4836,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get reportFailed => 'Impossibile segnalare il contenuto. Riprova.';
 
   @override
-  String get reportNotSent =>
-      'Impossibile inviare la segnalazione. Controlla la connessione e riprova.';
-
-  @override
-  String get reportReceivedTitle => 'Segnalazione ricevuta';
+  String get reportReceivedTitle => 'Segnalazione salvata';
 
   @override
   String get reportReceivedThankYou =>
@@ -4848,11 +4844,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Il nostro team esaminerà la tua segnalazione e prenderà i provvedimenti del caso. Potresti ricevere aggiornamenti tramite messaggio diretto.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Non siamo riusciti a contattare direttamente il team di moderazione in questo momento, ma la tua segnalazione è stata ricevuta e sarà esaminata.';
+      'La invieremo automaticamente quando avrai una connessione. Il nostro team esaminerà la tua segnalazione e prenderà i provvedimenti del caso. Potresti ricevere aggiornamenti tramite messaggio diretto.';
 
   @override
   String get reportContactModeration => 'Scrivi al team di moderazione';

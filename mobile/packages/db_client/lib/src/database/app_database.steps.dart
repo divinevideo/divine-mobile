@@ -11278,6 +11278,9 @@ final class Schema15 extends i0.VersionedSchema {
         _column_191,
         _column_192,
         _column_193,
+        _column_194,
+        _column_195,
+        _column_196,
         _column_80,
         _column_81,
         _column_2,
@@ -11494,6 +11497,12 @@ class Shape38 extends i0.VersionedTable {
       columnsByName['target_relays']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get zendeskPayload =>
       columnsByName['zendesk_payload']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get moderationPayload =>
+      columnsByName['moderation_payload']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get moderationStatus =>
+      columnsByName['moderation_status']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get moderationAttempts =>
+      columnsByName['moderation_attempts']! as i1.GeneratedColumn<int>;
   i1.GeneratedColumn<String> get relayStatus =>
       columnsByName['relay_status']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get zendeskStatus =>
@@ -11544,13 +11553,39 @@ i1.GeneratedColumn<String> _column_189(String aliasedName) =>
     );
 i1.GeneratedColumn<String> _column_190(String aliasedName) =>
     i1.GeneratedColumn<String>(
+      'moderation_payload',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_191(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'moderation_status',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL DEFAULT \'done\'',
+      defaultValue: const i1.CustomExpression('\'done\''),
+    );
+i1.GeneratedColumn<int> _column_192(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'moderation_attempts',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<String> _column_193(String aliasedName) =>
+    i1.GeneratedColumn<String>(
       'relay_status',
       aliasedName,
       false,
       type: i1.DriftSqlType.string,
       $customConstraints: 'NOT NULL',
     );
-i1.GeneratedColumn<String> _column_191(String aliasedName) =>
+i1.GeneratedColumn<String> _column_194(String aliasedName) =>
     i1.GeneratedColumn<String>(
       'zendesk_status',
       aliasedName,
@@ -11558,7 +11593,7 @@ i1.GeneratedColumn<String> _column_191(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: 'NOT NULL',
     );
-i1.GeneratedColumn<int> _column_192(String aliasedName) =>
+i1.GeneratedColumn<int> _column_195(String aliasedName) =>
     i1.GeneratedColumn<int>(
       'relay_attempts',
       aliasedName,
@@ -11567,7 +11602,7 @@ i1.GeneratedColumn<int> _column_192(String aliasedName) =>
       $customConstraints: 'NOT NULL DEFAULT 0',
       defaultValue: const i1.CustomExpression('0'),
     );
-i1.GeneratedColumn<int> _column_193(String aliasedName) =>
+i1.GeneratedColumn<int> _column_196(String aliasedName) =>
     i1.GeneratedColumn<int>(
       'zendesk_attempts',
       aliasedName,

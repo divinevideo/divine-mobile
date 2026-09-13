@@ -1164,23 +1164,42 @@ class AppDatabase extends _$AppDatabase {
 
     if (pendingReportsResult.isEmpty) {
       await customStatement('''
-        CREATE TABLE "pending_reports" (
-          "report_id" TEXT NOT NULL,
-          "user_pubkey" TEXT NOT NULL,
-          "event_json" TEXT NOT NULL,
-          "target_relays" TEXT NULL,
-          "zendesk_payload" TEXT NOT NULL,
-          "relay_status" TEXT NOT NULL,
-          "zendesk_status" TEXT NOT NULL,
-          "relay_attempts" INTEGER NOT NULL DEFAULT 0,
-          "zendesk_attempts" INTEGER NOT NULL DEFAULT 0,
-          "last_error" TEXT NULL,
-          "last_attempt_at" INTEGER NULL,
-          "created_at" INTEGER NOT NULL,
-          PRIMARY KEY ("report_id")
+        CREATE TABLE pending_reports (
+          report_id TEXT NOT NULL,
+          user_pubkey TEXT NOT NULL,
+          event_json TEXT NOT NULL,
+          target_relays TEXT NULL,
+          zendesk_payload TEXT NOT NULL,
+          moderation_payload TEXT NULL,
+          moderation_status TEXT NOT NULL DEFAULT 'done',
+          moderation_attempts INTEGER NOT NULL DEFAULT 0,
+          relay_status TEXT NOT NULL,
+          zendesk_status TEXT NOT NULL,
+          relay_attempts INTEGER NOT NULL DEFAULT 0,
+          zendesk_attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NULL,
+          last_attempt_at INTEGER NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (report_id)
         )
       ''');
     }
+
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_payload',
+      'TEXT NULL',
+    );
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_status',
+      "TEXT NOT NULL DEFAULT 'done'",
+    );
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_attempts',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
 
     final pendingProductEventsResult = await customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' "
@@ -1497,6 +1516,9 @@ class AppDatabase extends _$AppDatabase {
         'app_version',
       ],
       'pending_reports': [
+        'moderation_payload',
+        'moderation_status',
+        'moderation_attempts',
         'report_id',
         'relay_status',
         'zendesk_status',

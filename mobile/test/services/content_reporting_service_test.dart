@@ -15,6 +15,7 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,6 +30,16 @@ class _FakeEvent extends Fake implements Event {}
 String _validEventId(String hexDigit) => List.filled(64, hexDigit).join();
 
 void main() {
+  setUp(() async {
+    ZendeskSupportService.resetForTesting();
+    await ZendeskSupportService.initialize(
+      appId: '',
+      clientId: '',
+      zendeskUrl: '',
+    );
+  });
+  tearDown(ZendeskSupportService.resetForTesting);
+
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(ReportChannel.relay);
@@ -1836,6 +1847,31 @@ void main() {
       if (dir.existsSync()) dir.deleteSync(recursive: true);
     });
 
+    test('accepts an offline report before asking a remote signer', () async {
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => null);
+      final result = await service.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('b'),
+        reason: ContentFilterReason.spam,
+        details: 'Report saved offline',
+      );
+      expect(result.isSilentSuccess, isTrue);
+      expect(await dao.getById(result.reportId!), isNotNull);
+      verifyNever(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      );
+    });
+
     test('enqueues a row and, on a relay success with Zendesk unavailable, '
         'keeps it with relay done and zendesk queued', () async {
       final reportEvent = signedEvent('a' * 64);
@@ -1844,6 +1880,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((_) async => reportEvent);
       when(
@@ -1862,10 +1899,15 @@ void main() {
 
       // Optimistic: the report is reported reached as soon as it is durably
       // queued, before the channels are driven.
-      expect(result.delivery, ReportDelivery.reached);
+      expect(result.delivery, ReportDelivery.queued);
 
       // The channels are driven unawaited in the background; let that run.
-      await pumpEventQueue();
+      await ReportRetryService(
+        driver: service,
+        pendingReportsDao: dao,
+        userPubkey: testPublicKey,
+        appForegroundStream: const Stream.empty(),
+      ).sweep();
 
       // Zendesk is not configured under test, so its leg stays queued for the
       // background sweep while the relay leg is retired.
@@ -1884,6 +1926,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((_) async => reportEvent);
       when(
@@ -1901,7 +1944,12 @@ void main() {
       );
 
       // The background drive runs unawaited; let it attempt and fail.
-      await pumpEventQueue();
+      await ReportRetryService(
+        driver: service,
+        pendingReportsDao: dao,
+        userPubkey: testPublicKey,
+        appForegroundStream: const Stream.empty(),
+      ).sweep();
 
       final row = await dao.getById(result.reportId!);
       expect(row!.relayStatus, PendingReportChannelStatus.pending);
@@ -1929,6 +1977,7 @@ void main() {
         createdAt: DateTime.utc(2026),
       );
 
+      await dao.enqueue(row);
       final ok = await service.deliverReportChannel(row, ReportChannel.relay);
 
       expect(ok, isTrue);
@@ -1941,62 +1990,91 @@ void main() {
       expect((captured.single as Event).id, 'e' * 64);
     });
 
-    test('a queue enqueue failure does not block the report send', () async {
-      // The queue is enrichment; a DB failure must degrade to the pre-queue
-      // one-shot send rather than sinking a (possibly child-safety) report.
-      final throwingDao = _MockPendingReportsDao();
-      when(() => throwingDao.enqueue(any())).thenThrow(
-        StateError('database is locked'),
-      );
+    test(
+      'a failed disk write never claims acceptance or starts a send',
+      () async {
+        final throwingDao = _MockPendingReportsDao();
+        when(() => throwingDao.enqueue(any()))
+            .thenThrow(StateError('disk full'));
+        final crs = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: throwingDao,
+        );
+        final result = await crs.reportContent(
+          eventId: _validEventId('a'),
+          authorPubkey: _validEventId('c'),
+          reason: ContentFilterReason.spam,
+          details: 'spam',
+        );
+        expect(result.success, isFalse);
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
 
+    test('stores all delivery intents while the signer and relay are unavailable', () async {
+      when(() => mockNostrService.isInitialized).thenReturn(false);
       final crs = ContentReportingService(
         nostrService: mockNostrService,
         authService: mockAuthService,
         prefs: prefs,
         moderationRelayUrl: 'wss://relay.divine.video',
-        pendingReportsDao: throwingDao,
+        pendingReportsDao: dao,
+        moderationPubkey: _validEventId('f'),
       );
-      await crs.initialize();
-
-      final reportEvent = signedEvent('f' * 64);
-      when(
-        () => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        ),
-      ).thenAnswer((_) async => reportEvent);
-      when(
-        () => mockNostrService.publishEvent(
-          any(),
-          targetRelays: any(named: 'targetRelays'),
-        ),
-      ).thenAnswer((_) async => PublishSuccess(event: reportEvent));
-
       final result = await crs.reportContent(
         eventId: _validEventId('a'),
         authorPubkey: _validEventId('c'),
-        reason: ContentFilterReason.spam,
-        details: 'spam',
+        reason: ContentFilterReason.aiGenerated,
+        details: 'api_key=secret-value',
+        moderationContent: 'Private report: api_key=secret-value',
       );
-
-      // The relay leg still ran and the report is reported delivered; the
-      // enqueue throw never reached the caller.
-      expect(result.success, isTrue);
-      expect(result.delivery, ReportDelivery.reached);
-      verify(
-        () => mockNostrService.publishEvent(
-          any(),
-          targetRelays: any(named: 'targetRelays'),
-        ),
-      ).called(1);
-      // No channel bookkeeping was attempted because the enqueue failed.
-      verifyNever(
-        () => throwingDao.markChannelDone(
-          reportId: any(named: 'reportId'),
-          channel: any(named: 'channel'),
-        ),
+      expect(result.delivery, ReportDelivery.queued);
+      final row = (await dao.getById(result.reportId!))!;
+      expect(row.moderationStatus, PendingReportChannelStatus.pending);
+      expect(row.moderationPayload, contains('NS-aiGenerated'));
+      expect(row.moderationPayload, isNot(contains('secret-value')));
+      expect(row.eventJson, isNot(contains('secret-value')));
+      expect(row.zendeskPayload, isNot(contains('secret-value')));
+      expect(row.userPubkey, testPublicKey);
+      // A newly opened connection sees the accepted report after process loss.
+      final reopened = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+      expect(
+        await reopened.pendingReportsDao.getById(result.reportId!),
+        isNotNull,
       );
+      await reopened.close();
     });
+
+    test(
+      'does not deliver a queued report under a different account',
+      () async {
+        final result = await service.reportContent(
+          eventId: _validEventId('a'),
+          authorPubkey: _validEventId('c'),
+          reason: ContentFilterReason.spam,
+          details: 'spam',
+        );
+        final row = (await dao.getById(result.reportId!))!;
+        when(() => mockAuthService.currentPublicKeyHex)
+            .thenReturn(_validEventId('e'));
+        for (final channel in ReportChannel.values) {
+          expect(await service.deliverReportChannel(row, channel), isFalse);
+        }
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
   });
 }

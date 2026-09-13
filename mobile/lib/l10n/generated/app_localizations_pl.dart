@@ -4906,11 +4906,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reportFailed => 'Nie udało się zgłosić treści. Spróbuj ponownie.';
 
   @override
-  String get reportNotSent =>
-      'Nie udało się wysłać zgłoszenia. Sprawdź połączenie i spróbuj ponownie.';
-
-  @override
-  String get reportReceivedTitle => 'Zgłoszenie odebrane';
+  String get reportReceivedTitle => 'Zgłoszenie zapisane';
 
   @override
   String get reportReceivedThankYou =>
@@ -4918,11 +4914,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Nasz zespół przejrzy twoje zgłoszenie i podejmie odpowiednie działania. Możesz otrzymać aktualizacje przez wiadomość bezpośrednią.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Nie udało nam się teraz bezpośrednio skontaktować z zespołem moderacji, ale twoje zgłoszenie zostało przyjęte i zostanie rozpatrzone.';
+      'Wyślemy je automatycznie, gdy połączysz się z internetem. Nasz zespół przejrzy twoje zgłoszenie i podejmie odpowiednie działania. Możesz otrzymać aktualizacje przez wiadomość bezpośrednią.';
 
   @override
   String get reportContactModeration => 'Napisz do zespołu moderacji';

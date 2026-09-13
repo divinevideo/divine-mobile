@@ -4845,11 +4845,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Inhalt konnte nicht gemeldet werden. Bitte versuch es nochmal.';
 
   @override
-  String get reportNotSent =>
-      'Deine Meldung konnte nicht gesendet werden. Überprüfe deine Verbindung und versuch es nochmal.';
-
-  @override
-  String get reportReceivedTitle => 'Meldung erhalten';
+  String get reportReceivedTitle => 'Meldung gespeichert';
 
   @override
   String get reportReceivedThankYou =>
@@ -4857,11 +4853,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Unser Team prüft deine Meldung und ergreift entsprechende Maßnahmen. Du erhältst möglicherweise Updates per Direktnachricht.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Wir konnten das Moderationsteam gerade nicht direkt erreichen, aber deine Meldung ist eingegangen und wird geprüft.';
+      'Wir senden sie automatisch, sobald du verbunden bist. Unser Team prüft deine Meldung und ergreift entsprechende Maßnahmen. Du erhältst möglicherweise Updates per Direktnachricht.';
 
   @override
   String get reportContactModeration => 'Moderationsteam anschreiben';

@@ -4685,6 +4685,8 @@ class DmRepository {
     required String recipientPubkey,
     required String content,
     String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
     List<List<String>> additionalTags = const [],
   }) async {
     _assertInitialized();
@@ -4762,7 +4764,7 @@ class DmRepository {
     // side needs no new case. It rides inside the encrypted gift-wrapped rumor
     // (only the recipient and the sender's own self-wrap ever decrypt it) and
     // is independent secure random, so it discloses nothing. See #7326.
-    final sendBatchId = _newSendBatchId();
+    final sendBatchId = idempotencyKey ?? _newSendBatchId();
 
     // Build the rumor up front so the queue row PK matches the rumor id
     // the relay will see — receiver-side gift-wrap dedup keys on this id
@@ -4775,6 +4777,7 @@ class DmRepository {
     final rumor = _messageService!.buildRumor(
       recipientPubkey: recipientPubkey,
       content: content,
+      createdAt: createdAt,
       additionalTags: [
         ...rumorTags,
         [_sendBatchTagKey, sendBatchId],
@@ -4836,22 +4839,33 @@ class DmRepository {
   /// delivery afterward (via [recoverFullSend] or the retry sweep). The
   /// optimistic counterpart of [sendMessage]. #8053.
   ///
-  /// Coalescing (#6610): a caller that wants to try the same report DM again
-  /// must re-drive the returned [EnqueueSendResult.queuedRumorId] with
-  /// [recoverFullSend], never call [enqueueSend] again — a second call mints a
-  /// fresh rumor and a second durable row, so the sweep and the retry each
-  /// deliver a copy.
+  /// Retry a returned rumor with [recoverFullSend]. For replayable durable
+  /// intents, pass both [idempotencyKey] and [createdAt] (Unix seconds) with
+  /// identical content, recipient, and tags on every call. This reproduces the
+  /// same rumor across restarts. Omitting them creates a new message each time.
   @useResult
   Future<EnqueueSendResult> enqueueSend({
     required String recipientPubkey,
     required String content,
     String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
     List<List<String>> additionalTags = const [],
   }) async {
+    if (_outgoingDmsDao == null) {
+      throw StateError('enqueueSend requires a durable outgoing queue');
+    }
+    if ((idempotencyKey == null) != (createdAt == null)) {
+      throw ArgumentError(
+        'An idempotent send needs both its key and timestamp',
+      );
+    }
     final prep = await _prepareAndEnqueueSend(
       recipientPubkey: recipientPubkey,
       content: content,
       replyToId: replyToId,
+      idempotencyKey: idempotencyKey,
+      createdAt: createdAt,
       additionalTags: additionalTags,
     );
     final refusal = prep.refusal;

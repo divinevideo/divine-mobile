@@ -1,4 +1,4 @@
-// ABOUTME: Tests for ReportRetryService sweep, backoff, dead-letter, cleanup.
+// ABOUTME: Tests durable report sweeps, reconnects, backoff, and acknowledgements.
 // ABOUTME: Uses a real in-memory PendingReportsDao and a scripted driver.
 
 import 'dart:async';
@@ -14,6 +14,7 @@ class _FakeDriver implements ReportChannelDriver {
   final Map<String, bool> _results = {};
   final Set<String> _throws = {};
   final List<String> calls = [];
+  void Function(String)? onCall;
 
   String _key(String reportId, ReportChannel c) => '$reportId:${c.name}';
 
@@ -31,6 +32,7 @@ class _FakeDriver implements ReportChannelDriver {
   ) async {
     final key = _key(report.reportId, channel);
     calls.add(key);
+    onCall?.call(key);
     if (_throws.contains(key)) throw StateError('boom');
     return _results[key] ?? false;
   }
@@ -178,9 +180,9 @@ void main() {
     });
 
     test(
-      'dead-letters a channel at the attempt cap and keeps the row',
+      'retains failed reports after ten attempts for later reconnect',
       () async {
-        // zendesk already delivered; relay on its final attempt.
+        // A long outage has already used nine relay attempts.
         await dao.enqueue(
           makeReport(
             reportId: 'r1',
@@ -190,15 +192,192 @@ void main() {
         );
         driver.fail('r1', ReportChannel.relay);
 
-        // Default config caps at 10 attempts per channel.
+        // A long outage must not silently exhaust the report.
         await buildService().sweep();
 
         final r = await dao.getById('r1');
         expect(r, isNotNull);
-        expect(r!.relayStatus, PendingReportChannelStatus.deadLetter);
+        expect(r!.relayStatus, PendingReportChannelStatus.pending);
         expect(r.relayAttempts, 10);
       },
     );
+
+    test(
+      'a stalled channel cannot hold later reports past its deadline',
+      () async {
+        final held = Completer<bool>();
+        final service = ReportRetryService(
+          driver: _BlockedFirstDriver(held.future),
+          pendingReportsDao: dao,
+          userPubkey: user,
+          appForegroundStream: foreground.stream,
+          retryConfig: const ReportRetryConfig(attemptTimeout: Duration.zero),
+        );
+        await dao.enqueue(makeReport(reportId: 'slow'));
+        await dao.enqueue(makeReport(reportId: 'next'));
+        await service.sweep();
+        expect(await dao.getById('next'), isNull);
+        expect(
+          (await dao.getById('slow'))!.relayStatus,
+          PendingReportChannelStatus.pending,
+        );
+        held.complete(false);
+      },
+    );
+
+    test('does not redeliver a later row retired during the sweep', () async {
+      final held = Completer<bool>();
+      final blocked = _BlockedFirstDriver(held.future);
+      final service = ReportRetryService(
+        driver: blocked,
+        pendingReportsDao: dao,
+        userPubkey: user,
+        appForegroundStream: foreground.stream,
+      );
+      await dao.enqueue(makeReport(reportId: 'slow'));
+      await dao.enqueue(makeReport(reportId: 'next'));
+      final sweep = service.sweep();
+      await blocked.started.future;
+      await dao.markChannelDone(reportId: 'next', channel: ReportChannel.relay);
+      await dao.markChannelDone(
+        reportId: 'next',
+        channel: ReportChannel.zendesk,
+      );
+      await dao.deleteIfDelivered('next');
+      held.complete(true);
+      await sweep;
+      expect(blocked.calls.where((key) => key.startsWith('next:')), isEmpty);
+    });
+
+    test('a late acknowledgement retires the timed-out channel', () async {
+      final held = Completer<bool>();
+      final service = ReportRetryService(
+        driver: _BlockedFirstDriver(held.future),
+        pendingReportsDao: dao,
+        userPubkey: user,
+        appForegroundStream: foreground.stream,
+        retryConfig: const ReportRetryConfig(attemptTimeout: Duration.zero),
+      );
+      await dao.enqueue(makeReport(reportId: 'slow'));
+      await service.sweep();
+      final acknowledged =
+          (database.select(database.pendingReports)
+                ..where((row) => row.reportId.equals('slow')))
+              .watchSingleOrNull()
+              .firstWhere((row) => row == null);
+      held.complete(true);
+      await acknowledged;
+      expect(await dao.getRetryableForUser(userPubkey: user), isEmpty);
+      await service.sweep(force: true);
+      expect(await dao.getById('slow'), isNull);
+    });
+
+    test(
+      'schedules a retry while the app stays open on the same network',
+      () async {
+        await dao.enqueue(makeReport(reportId: 'scheduled'));
+        final firstAttempt = Completer<void>();
+        driver.onCall = (key) {
+          if (key == 'scheduled:relay' && !firstAttempt.isCompleted) {
+            firstAttempt.complete();
+          }
+        };
+        final service = buildService(
+          config: const ReportRetryConfig(
+            initialDelay: Duration.zero,
+            maxDelay: Duration.zero,
+          ),
+        );
+        addTearDown(service.dispose);
+        await service.initialize();
+        await firstAttempt.future;
+        driver
+          ..succeed('scheduled', ReportChannel.relay)
+          ..succeed('scheduled', ReportChannel.zendesk);
+        await database
+            .select(database.pendingReports)
+            .watch()
+            .firstWhere((rows) => rows.isEmpty);
+        expect(
+          driver.calls.where((key) => key == 'scheduled:relay').length,
+          greaterThan(1),
+        );
+      },
+    );
+
+    test('reconnect retries without a foreground transition', () async {
+      final reconnect = StreamController<void>();
+      final service = ReportRetryService(
+        driver: driver,
+        pendingReportsDao: dao,
+        userPubkey: user,
+        appForegroundStream: foreground.stream,
+        retryTriggerStream: reconnect.stream,
+      );
+      addTearDown(service.dispose);
+      addTearDown(reconnect.close);
+      await service.initialize();
+      await pumpEventQueue();
+      await dao.enqueue(
+        makeReport(
+          reportId: 'offline',
+          relayAttempts: 20,
+          zendeskAttempts: 20,
+          lastAttemptAt: DateTime.now(),
+        ),
+      );
+      driver
+        ..succeed('offline', ReportChannel.relay)
+        ..succeed('offline', ReportChannel.zendesk);
+      reconnect.add(null);
+      await pumpEventQueue();
+      expect(await dao.getById('offline'), isNull);
+    });
+
+    test(
+      'one slow channel does not prevent another channel delivering',
+      () async {
+        final relay = Completer<bool>();
+        final concurrent = _ConcurrentDriver(relay.future);
+        final service = ReportRetryService(
+          driver: concurrent,
+          pendingReportsDao: dao,
+          userPubkey: user,
+          appForegroundStream: foreground.stream,
+        );
+        await dao.enqueue(makeReport(reportId: 'slow'));
+        final pass = service.sweep();
+        await concurrent.zendeskStarted.future;
+        await pumpEventQueue();
+        expect(
+          (await dao.getById('slow'))!.zendeskStatus,
+          PendingReportChannelStatus.done,
+        );
+        relay.complete(true);
+        await pass;
+        expect(await dao.getById('slow'), isNull);
+      },
+    );
+
+    test('reports in backoff do not starve newly queued reports', () async {
+      for (var i = 0; i < 25; i++) {
+        await dao.enqueue(
+          makeReport(
+            reportId: 'old-$i',
+            relayAttempts: 20,
+            zendeskAttempts: 20,
+            lastAttemptAt: DateTime.now(),
+          ),
+        );
+      }
+      await dao.enqueue(makeReport(reportId: 'new'));
+      driver
+        ..succeed('new', ReportChannel.relay)
+        ..succeed('new', ReportChannel.zendesk);
+      await buildService().sweep();
+      expect(await dao.getById('new'), isNull);
+      expect(driver.calls, ['new:relay', 'new:zendesk']);
+    });
 
     test('foreground true triggers a sweep', () async {
       await dao.enqueue(makeReport(reportId: 'r1'));
@@ -216,4 +395,38 @@ void main() {
       await service.dispose();
     });
   });
+}
+
+class _ConcurrentDriver implements ReportChannelDriver {
+  _ConcurrentDriver(this.relay);
+  final Future<bool> relay;
+  final zendeskStarted = Completer<void>();
+  @override
+  Future<bool> deliverReportChannel(
+    PendingReport report,
+    ReportChannel channel,
+  ) {
+    if (channel == ReportChannel.relay) return relay;
+    zendeskStarted.complete();
+    return Future.value(true);
+  }
+}
+
+class _BlockedFirstDriver implements ReportChannelDriver {
+  _BlockedFirstDriver(this.held);
+  final Future<bool> held;
+  final started = Completer<void>();
+  final calls = <String>[];
+  @override
+  Future<bool> deliverReportChannel(
+    PendingReport report,
+    ReportChannel channel,
+  ) {
+    calls.add('${report.reportId}:${channel.name}');
+    if (report.reportId == 'slow' && channel == ReportChannel.relay) {
+      if (!started.isCompleted) started.complete();
+      return held;
+    }
+    return Future.value(true);
+  }
 }

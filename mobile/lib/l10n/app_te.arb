@@ -2914,17 +2914,9 @@
   "reportReasonOther": "ఇతర పాలసీ ఉల్లంఘన",
   "reportReasonOtherSubtitle": "ఉల్లంఘనలు పైన జాబితా చేయబడలేదు",
   "reportFailed": "కంటెంట్‌ని నివేదించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "reportNotSent": "మీ నివేదికను పంపడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
-  "@reportNotSent": {
-    "description": "Shown when a submitted report reached no channel off the device — every publish target refused it, which in practice almost always means no connectivity. Covers both content and user reports, so it must not name either subject."
-  },
-  "reportReceivedTitle": "నివేదిక స్వీకరించబడింది",
+  "reportReceivedTitle": "రిపోర్ట్ సేవ్ అయింది",
   "reportReceivedThankYou": "Divineని సురక్షితంగా ఉంచడంలో సహాయం చేసినందుకు ధన్యవాదాలు.",
-  "reportReceivedReviewNotice": "మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.",
-  "reportModerationDmDelayed": "మేము ఇప్పుడే మోడరేషన్ బృందాన్ని నేరుగా చేరుకోలేకపోయాము, కానీ మీ నివేదిక స్వీకరించబడింది మరియు సమీక్షించబడుతుంది.",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
+  "reportReceivedReviewNotice": "నువ్వు ఇంటర్నెట్‌కు కనెక్ట్ అయినప్పుడు మేము దాన్ని ఆటోమేటిక్‌గా పంపుతాం. మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.",
   "reportContactModeration": "మోడరేషన్ బృందానికి సందేశం పంపండి",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

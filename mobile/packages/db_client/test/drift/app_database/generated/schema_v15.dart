@@ -12188,6 +12188,33 @@ class PendingReports extends Table
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
+  late final GeneratedColumn<String> moderationPayload =
+      GeneratedColumn<String>(
+        'moderation_payload',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: 'NULL',
+      );
+  late final GeneratedColumn<String> moderationStatus = GeneratedColumn<String>(
+    'moderation_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'done\'',
+    defaultValue: const CustomExpression('\'done\''),
+  );
+  late final GeneratedColumn<int> moderationAttempts = GeneratedColumn<int>(
+    'moderation_attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
   late final GeneratedColumn<String> relayStatus = GeneratedColumn<String>(
     'relay_status',
     aliasedName,
@@ -12253,6 +12280,9 @@ class PendingReports extends Table
     eventJson,
     targetRelays,
     zendeskPayload,
+    moderationPayload,
+    moderationStatus,
+    moderationAttempts,
     relayStatus,
     zendeskStatus,
     relayAttempts,
@@ -12291,6 +12321,18 @@ class PendingReports extends Table
       zendeskPayload: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}zendesk_payload'],
+      )!,
+      moderationPayload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}moderation_payload'],
+      ),
+      moderationStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}moderation_status'],
+      )!,
+      moderationAttempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}moderation_attempts'],
       )!,
       relayStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -12341,6 +12383,9 @@ class PendingReportsData extends DataClass
   final String eventJson;
   final String? targetRelays;
   final String zendeskPayload;
+  final String? moderationPayload;
+  final String moderationStatus;
+  final int moderationAttempts;
   final String relayStatus;
   final String zendeskStatus;
   final int relayAttempts;
@@ -12354,6 +12399,9 @@ class PendingReportsData extends DataClass
     required this.eventJson,
     this.targetRelays,
     required this.zendeskPayload,
+    this.moderationPayload,
+    required this.moderationStatus,
+    required this.moderationAttempts,
     required this.relayStatus,
     required this.zendeskStatus,
     required this.relayAttempts,
@@ -12372,6 +12420,11 @@ class PendingReportsData extends DataClass
       map['target_relays'] = Variable<String>(targetRelays);
     }
     map['zendesk_payload'] = Variable<String>(zendeskPayload);
+    if (!nullToAbsent || moderationPayload != null) {
+      map['moderation_payload'] = Variable<String>(moderationPayload);
+    }
+    map['moderation_status'] = Variable<String>(moderationStatus);
+    map['moderation_attempts'] = Variable<int>(moderationAttempts);
     map['relay_status'] = Variable<String>(relayStatus);
     map['zendesk_status'] = Variable<String>(zendeskStatus);
     map['relay_attempts'] = Variable<int>(relayAttempts);
@@ -12395,6 +12448,11 @@ class PendingReportsData extends DataClass
           ? const Value.absent()
           : Value(targetRelays),
       zendeskPayload: Value(zendeskPayload),
+      moderationPayload: moderationPayload == null && nullToAbsent
+          ? const Value.absent()
+          : Value(moderationPayload),
+      moderationStatus: Value(moderationStatus),
+      moderationAttempts: Value(moderationAttempts),
       relayStatus: Value(relayStatus),
       zendeskStatus: Value(zendeskStatus),
       relayAttempts: Value(relayAttempts),
@@ -12420,6 +12478,11 @@ class PendingReportsData extends DataClass
       eventJson: serializer.fromJson<String>(json['eventJson']),
       targetRelays: serializer.fromJson<String?>(json['targetRelays']),
       zendeskPayload: serializer.fromJson<String>(json['zendeskPayload']),
+      moderationPayload: serializer.fromJson<String?>(
+        json['moderationPayload'],
+      ),
+      moderationStatus: serializer.fromJson<String>(json['moderationStatus']),
+      moderationAttempts: serializer.fromJson<int>(json['moderationAttempts']),
       relayStatus: serializer.fromJson<String>(json['relayStatus']),
       zendeskStatus: serializer.fromJson<String>(json['zendeskStatus']),
       relayAttempts: serializer.fromJson<int>(json['relayAttempts']),
@@ -12438,6 +12501,9 @@ class PendingReportsData extends DataClass
       'eventJson': serializer.toJson<String>(eventJson),
       'targetRelays': serializer.toJson<String?>(targetRelays),
       'zendeskPayload': serializer.toJson<String>(zendeskPayload),
+      'moderationPayload': serializer.toJson<String?>(moderationPayload),
+      'moderationStatus': serializer.toJson<String>(moderationStatus),
+      'moderationAttempts': serializer.toJson<int>(moderationAttempts),
       'relayStatus': serializer.toJson<String>(relayStatus),
       'zendeskStatus': serializer.toJson<String>(zendeskStatus),
       'relayAttempts': serializer.toJson<int>(relayAttempts),
@@ -12454,6 +12520,9 @@ class PendingReportsData extends DataClass
     String? eventJson,
     Value<String?> targetRelays = const Value.absent(),
     String? zendeskPayload,
+    Value<String?> moderationPayload = const Value.absent(),
+    String? moderationStatus,
+    int? moderationAttempts,
     String? relayStatus,
     String? zendeskStatus,
     int? relayAttempts,
@@ -12467,6 +12536,11 @@ class PendingReportsData extends DataClass
     eventJson: eventJson ?? this.eventJson,
     targetRelays: targetRelays.present ? targetRelays.value : this.targetRelays,
     zendeskPayload: zendeskPayload ?? this.zendeskPayload,
+    moderationPayload: moderationPayload.present
+        ? moderationPayload.value
+        : this.moderationPayload,
+    moderationStatus: moderationStatus ?? this.moderationStatus,
+    moderationAttempts: moderationAttempts ?? this.moderationAttempts,
     relayStatus: relayStatus ?? this.relayStatus,
     zendeskStatus: zendeskStatus ?? this.zendeskStatus,
     relayAttempts: relayAttempts ?? this.relayAttempts,
@@ -12490,6 +12564,15 @@ class PendingReportsData extends DataClass
       zendeskPayload: data.zendeskPayload.present
           ? data.zendeskPayload.value
           : this.zendeskPayload,
+      moderationPayload: data.moderationPayload.present
+          ? data.moderationPayload.value
+          : this.moderationPayload,
+      moderationStatus: data.moderationStatus.present
+          ? data.moderationStatus.value
+          : this.moderationStatus,
+      moderationAttempts: data.moderationAttempts.present
+          ? data.moderationAttempts.value
+          : this.moderationAttempts,
       relayStatus: data.relayStatus.present
           ? data.relayStatus.value
           : this.relayStatus,
@@ -12518,6 +12601,9 @@ class PendingReportsData extends DataClass
           ..write('eventJson: $eventJson, ')
           ..write('targetRelays: $targetRelays, ')
           ..write('zendeskPayload: $zendeskPayload, ')
+          ..write('moderationPayload: $moderationPayload, ')
+          ..write('moderationStatus: $moderationStatus, ')
+          ..write('moderationAttempts: $moderationAttempts, ')
           ..write('relayStatus: $relayStatus, ')
           ..write('zendeskStatus: $zendeskStatus, ')
           ..write('relayAttempts: $relayAttempts, ')
@@ -12536,6 +12622,9 @@ class PendingReportsData extends DataClass
     eventJson,
     targetRelays,
     zendeskPayload,
+    moderationPayload,
+    moderationStatus,
+    moderationAttempts,
     relayStatus,
     zendeskStatus,
     relayAttempts,
@@ -12553,6 +12642,9 @@ class PendingReportsData extends DataClass
           other.eventJson == this.eventJson &&
           other.targetRelays == this.targetRelays &&
           other.zendeskPayload == this.zendeskPayload &&
+          other.moderationPayload == this.moderationPayload &&
+          other.moderationStatus == this.moderationStatus &&
+          other.moderationAttempts == this.moderationAttempts &&
           other.relayStatus == this.relayStatus &&
           other.zendeskStatus == this.zendeskStatus &&
           other.relayAttempts == this.relayAttempts &&
@@ -12568,6 +12660,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
   final Value<String> eventJson;
   final Value<String?> targetRelays;
   final Value<String> zendeskPayload;
+  final Value<String?> moderationPayload;
+  final Value<String> moderationStatus;
+  final Value<int> moderationAttempts;
   final Value<String> relayStatus;
   final Value<String> zendeskStatus;
   final Value<int> relayAttempts;
@@ -12582,6 +12677,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
     this.eventJson = const Value.absent(),
     this.targetRelays = const Value.absent(),
     this.zendeskPayload = const Value.absent(),
+    this.moderationPayload = const Value.absent(),
+    this.moderationStatus = const Value.absent(),
+    this.moderationAttempts = const Value.absent(),
     this.relayStatus = const Value.absent(),
     this.zendeskStatus = const Value.absent(),
     this.relayAttempts = const Value.absent(),
@@ -12597,6 +12695,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
     required String eventJson,
     this.targetRelays = const Value.absent(),
     required String zendeskPayload,
+    this.moderationPayload = const Value.absent(),
+    this.moderationStatus = const Value.absent(),
+    this.moderationAttempts = const Value.absent(),
     required String relayStatus,
     required String zendeskStatus,
     this.relayAttempts = const Value.absent(),
@@ -12618,6 +12719,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
     Expression<String>? eventJson,
     Expression<String>? targetRelays,
     Expression<String>? zendeskPayload,
+    Expression<String>? moderationPayload,
+    Expression<String>? moderationStatus,
+    Expression<int>? moderationAttempts,
     Expression<String>? relayStatus,
     Expression<String>? zendeskStatus,
     Expression<int>? relayAttempts,
@@ -12633,6 +12737,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
       if (eventJson != null) 'event_json': eventJson,
       if (targetRelays != null) 'target_relays': targetRelays,
       if (zendeskPayload != null) 'zendesk_payload': zendeskPayload,
+      if (moderationPayload != null) 'moderation_payload': moderationPayload,
+      if (moderationStatus != null) 'moderation_status': moderationStatus,
+      if (moderationAttempts != null) 'moderation_attempts': moderationAttempts,
       if (relayStatus != null) 'relay_status': relayStatus,
       if (zendeskStatus != null) 'zendesk_status': zendeskStatus,
       if (relayAttempts != null) 'relay_attempts': relayAttempts,
@@ -12650,6 +12757,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
     Value<String>? eventJson,
     Value<String?>? targetRelays,
     Value<String>? zendeskPayload,
+    Value<String?>? moderationPayload,
+    Value<String>? moderationStatus,
+    Value<int>? moderationAttempts,
     Value<String>? relayStatus,
     Value<String>? zendeskStatus,
     Value<int>? relayAttempts,
@@ -12665,6 +12775,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
       eventJson: eventJson ?? this.eventJson,
       targetRelays: targetRelays ?? this.targetRelays,
       zendeskPayload: zendeskPayload ?? this.zendeskPayload,
+      moderationPayload: moderationPayload ?? this.moderationPayload,
+      moderationStatus: moderationStatus ?? this.moderationStatus,
+      moderationAttempts: moderationAttempts ?? this.moderationAttempts,
       relayStatus: relayStatus ?? this.relayStatus,
       zendeskStatus: zendeskStatus ?? this.zendeskStatus,
       relayAttempts: relayAttempts ?? this.relayAttempts,
@@ -12693,6 +12806,15 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
     }
     if (zendeskPayload.present) {
       map['zendesk_payload'] = Variable<String>(zendeskPayload.value);
+    }
+    if (moderationPayload.present) {
+      map['moderation_payload'] = Variable<String>(moderationPayload.value);
+    }
+    if (moderationStatus.present) {
+      map['moderation_status'] = Variable<String>(moderationStatus.value);
+    }
+    if (moderationAttempts.present) {
+      map['moderation_attempts'] = Variable<int>(moderationAttempts.value);
     }
     if (relayStatus.present) {
       map['relay_status'] = Variable<String>(relayStatus.value);
@@ -12729,6 +12851,9 @@ class PendingReportsCompanion extends UpdateCompanion<PendingReportsData> {
           ..write('eventJson: $eventJson, ')
           ..write('targetRelays: $targetRelays, ')
           ..write('zendeskPayload: $zendeskPayload, ')
+          ..write('moderationPayload: $moderationPayload, ')
+          ..write('moderationStatus: $moderationStatus, ')
+          ..write('moderationAttempts: $moderationAttempts, ')
           ..write('relayStatus: $relayStatus, ')
           ..write('zendeskStatus: $zendeskStatus, ')
           ..write('relayAttempts: $relayAttempts, ')

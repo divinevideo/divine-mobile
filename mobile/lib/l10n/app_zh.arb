@@ -2394,14 +2394,9 @@
   "reportReasonOther": "其他违规",
   "reportReasonOtherSubtitle": "以上未列出的违规行为",
   "reportFailed": "举报内容失败，请重试。",
-  "reportNotSent": "举报发送失败。请检查连接后重试。",
-  "reportReceivedTitle": "举报已收到",
+  "reportReceivedTitle": "举报已保存",
   "reportReceivedThankYou": "谢谢你帮助维护 Divine 的安全。",
-  "reportReceivedReviewNotice": "我们的团队会审核你的举报并采取适当措施。你可能会通过私信收到进展通知。",
-  "reportModerationDmDelayed": "暂时没能直接联系上管理团队，但你的举报已收到，我们会审核的。",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
+  "reportReceivedReviewNotice": "联网后我们会自动发送。 我们的团队会审核你的举报并采取适当措施。你可能会通过私信收到进展通知。",
   "reportContactModeration": "给管理团队发消息",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

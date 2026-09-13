@@ -120,6 +120,49 @@ void main() {
       },
     );
 
+    test(
+      'replays one report intent with the same rumor after restart',
+      () async {
+        DmRepository rebuildRepository() => DmRepository(
+          nostrClient: nostrClient,
+          messageService: NIP17MessageService(
+            signer: LocalNostrSigner(_privateKey),
+            senderPublicKey: _owner,
+            nostrService: nostrClient,
+          ),
+          directMessagesDao: DirectMessagesDao(db),
+          conversationsDao: ConversationsDao(db),
+          outgoingDmsDao: outgoingDao,
+          userPubkey: _owner,
+          signer: LocalNostrSigner(_privateKey),
+        );
+        final first = await rebuildRepository().enqueueSend(
+          recipientPubkey: _peer,
+          content: 'One offline report',
+          idempotencyKey: 'report-identity',
+          createdAt: 1700000000,
+        );
+        final replay = await rebuildRepository().enqueueSend(
+          recipientPubkey: _peer,
+          content: 'One offline report',
+          idempotencyKey: 'report-identity',
+          createdAt: 1700000000,
+        );
+        final distinct = await rebuildRepository().enqueueSend(
+          recipientPubkey: _peer,
+          content: 'One offline report',
+          idempotencyKey: 'another-report',
+          createdAt: 1700000000,
+        );
+        expect(replay.queuedRumorId, first.queuedRumorId);
+        expect(distinct.queuedRumorId, isNot(first.queuedRumorId));
+        final count = await db
+            .customSelect('SELECT COUNT(*) AS n FROM outgoing_dms')
+            .getSingle();
+        expect(count.read<int>('n'), 2);
+      },
+    );
+
     test('refuses a self-addressed send and enqueues nothing', () async {
       final result = await repository.enqueueSend(
         recipientPubkey: _owner,
