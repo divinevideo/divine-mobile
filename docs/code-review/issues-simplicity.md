@@ -7,7 +7,19 @@ Issues related to duplication, oversized files, unused code, and unnecessary com
 > their linked ticket status recorded below. Current maintainability work is
 > tracked by
 > [#4339](https://github.com/divinevideo/divine-mobile/issues/4339) and its
-> GitHub Sub-issues list.
+> GitHub Sub-issues list. Some decomposition work is filed under sibling epics
+> instead: the architecture epic
+> [#4338](https://github.com/divinevideo/divine-mobile/issues/4338) carries the
+> `auth_service`
+> ([#4741](https://github.com/divinevideo/divine-mobile/issues/4741)),
+> `VideoEventService`
+> ([#3334](https://github.com/divinevideo/divine-mobile/issues/3334)), and
+> `main.dart`
+> ([#3337](https://github.com/divinevideo/divine-mobile/issues/3337)) splits,
+> and the video-editor epic
+> [#4341](https://github.com/divinevideo/divine-mobile/issues/4341) carries the
+> video-editor cluster
+> ([#6933](https://github.com/divinevideo/divine-mobile/issues/6933)).
 
 Newer features like `features/feature_flags/` demonstrate clean co-location,
 and the BLoC migration has produced focused classes. The remaining issues cover
@@ -24,10 +36,14 @@ files added or grown relative to `origin/main`. The check deliberately avoids
 a committed line-count snapshot, which becomes stale as soon as `main` moves.
 
 The video editor and recorder remain a concentrated growth cluster spanning
-widgets, BLoCs, providers, and rendering services. Large authentication,
-publishing, upload, and event-processing services also remain expensive to
-review and test. GitHub sub-issues, rather than this historical audit, are the
-source of truth for current decomposition work.
+widgets, BLoCs, providers, and rendering services
+([#6933](https://github.com/divinevideo/divine-mobile/issues/6933)). Large
+authentication
+([#4741](https://github.com/divinevideo/divine-mobile/issues/4741)),
+publishing, upload, and event-processing
+([#3334](https://github.com/divinevideo/divine-mobile/issues/3334)) services
+also remain expensive to review and test. GitHub sub-issues, rather than this
+historical audit, are the source of truth for current decomposition work.
 
 **Impact**: High. These files are hard to test, review, and modify; they create
 merge-conflict pressure when multiple engineers touch the same surface; and
@@ -36,15 +52,22 @@ branch-to-main advisory keeps that pressure visible without blocking unrelated
 PRs.
 
 **Effort**: High. Each oversized file requires a domain-specific decomposition
-strategy. Track general maintainability work through #4339's Sub-issues list
-and feature-specific work, such as the video-editor cluster, through the owning
-product epic. Existing hard ratchets remain authoritative for the narrower
-patterns they cover.
+strategy. Track general maintainability work through #4339's Sub-issues list,
+the `auth_service` and `VideoEventService` splits through
+[#4338](https://github.com/divinevideo/divine-mobile/issues/4338), and the
+video-editor cluster through
+[#4341](https://github.com/divinevideo/divine-mobile/issues/4341). Existing
+hard ratchets remain authoritative for the narrower patterns they cover;
+remaining production `Future.delayed` paydown is tracked separately in
+[#6934](https://github.com/divinevideo/divine-mobile/issues/6934).
 
 **GitHub ticket**: [#3594](https://github.com/divinevideo/divine-mobile/issues/3594)
 — closed 2026-05-13; superseded by epic
 [#4339](https://github.com/divinevideo/divine-mobile/issues/4339). Its GitHub
-Sub-issues list is the current inventory.
+Sub-issues list is the current inventory, together with the decomposition
+issues filed under
+[#4338](https://github.com/divinevideo/divine-mobile/issues/4338) and
+[#4341](https://github.com/divinevideo/divine-mobile/issues/4341) named above.
 
 ---
 
