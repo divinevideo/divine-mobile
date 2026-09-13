@@ -264,7 +264,18 @@ internal class ClipAudioLoopTrack private constructor(
                     return null
                 }
                 // -1 repeats forever. Loop points count frames, not bytes.
-                track.setLoopPoints(0, loopFrames, -1)
+                // A rejected loop reports its failure in the return value
+                // rather than throwing, and the caller has already taken the
+                // audio away from the renderer — so an unchecked failure here
+                // plays the clip once and leaves it silent for good.
+                if (track.setLoopPoints(0, loopFrames, -1) != AudioTrack.SUCCESS) {
+                    DivineVideoPlayerLog.warning(
+                        "Could not loop clip audio for $uri; leaving it with ExoPlayer",
+                        name = "DivineVideoPlayer.AudioLoop",
+                    )
+                    track.release()
+                    return null
+                }
 
                 DivineVideoPlayerLog.debug(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
