@@ -137,10 +137,10 @@ void main() {
           ..add(_relayVideoEvent(0, createdAt: 300))
           ..add(_relayVideoEvent(1, createdAt: 100))
           ..add(_relayVideoEvent(2, createdAt: 200));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         onEoseCallbacks.single!();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         final state = service
             .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
