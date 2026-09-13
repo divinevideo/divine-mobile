@@ -2510,6 +2510,9 @@ void main() {
 
         expect(requestedIds, hasLength(2));
         expect(requestedIds.toSet(), hasLength(2));
+        for (final id in requestedIds) {
+          expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(id), isTrue);
+        }
         verify(
           () => mockNostr.subscribe(
             any(),
