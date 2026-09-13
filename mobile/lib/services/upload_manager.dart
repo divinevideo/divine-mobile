@@ -15,10 +15,10 @@ import 'package:openvine/services/video_publish/publish_timeline.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:upload_repository/upload_repository.dart';
 
-// Re-exported deliberately as an allowlist rather than the whole package:
-// callers of the facade need the upload vocabulary that appears in
-// `UploadManager`'s own signatures, not the store, retry policy, progress
-// reporter or circuit breaker behind them.
+// An allowlist rather than the whole package: this is the upload vocabulary
+// facade callers actually use. Anything else -- the store, retry policy,
+// progress reporter, circuit breaker -- means importing upload_repository
+// directly, which is the signal that a caller is reaching past the facade.
 export 'package:upload_repository/upload_repository.dart'
     show
         BlossomUploadFailureException,
