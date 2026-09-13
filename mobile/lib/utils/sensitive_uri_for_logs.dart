@@ -10,8 +10,9 @@ const redactedSensitiveLogPlaceholder = '[REDACTED]';
 /// not percent-encode bracket punctuation.
 const redactedUriComponentForLogs = 'REDACTED';
 
-/// Returns a URI string safe for logs: clears [userInfo] and redacts query and
-/// fragment values while keeping path segments verbatim.
+/// Returns a URI string safe for logs: clears [userInfo], redacts query and
+/// fragment values, and redacts legacy `/invite/<code>` path segments while
+/// keeping public route identifiers verbatim.
 ///
 /// On parse failure, returns `[invalid-uri]` without echoing [uriString].
 String redactUriStringForLogs(String uriString) {
@@ -19,6 +20,16 @@ String redactUriStringForLogs(String uriString) {
   final uri = Uri.tryParse(trimmed);
   if (uri == null || trimmed.isEmpty) {
     return '[invalid-uri]';
+  }
+
+  var pathSegments = List<String>.from(uri.pathSegments);
+  if (pathSegments.length >= 2 &&
+      pathSegments.first.toLowerCase() == 'invite') {
+    pathSegments = [
+      pathSegments.first,
+      redactedUriComponentForLogs,
+      ...pathSegments.skip(2),
+    ];
   }
 
   final Map<String, dynamic>? qp;
@@ -33,7 +44,11 @@ String redactUriStringForLogs(String uriString) {
     };
   }
 
-  var redactedUri = uri.replace(userInfo: '', queryParameters: qp);
+  var redactedUri = uri.replace(
+    userInfo: '',
+    pathSegments: pathSegments,
+    queryParameters: qp,
+  );
   if (uri.fragment.isNotEmpty) {
     redactedUri = redactedUri.replace(fragment: redactedUriComponentForLogs);
   }
