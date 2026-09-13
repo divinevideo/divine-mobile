@@ -254,7 +254,7 @@ class SeenVideosService {
             category: LogCategory.system,
           );
           phases.startPhase('legacy_migration_ms');
-          await _saveSeenVideosNow();
+          await _saveSeenVideosNow(initializationTrace: trace);
           await _prefs!.remove(legacySeenVideosStorageKey);
         }
       }
@@ -342,7 +342,9 @@ class SeenVideosService {
     }
   }
 
-  Future<void> _saveSeenVideosNow() async {
+  Future<void> _saveSeenVideosNow({
+    PerformanceTrace? initializationTrace,
+  }) async {
     if (_prefs == null) return;
     try {
       final sortedVideos = _seenVideos.values.toList()
@@ -367,6 +369,9 @@ class SeenVideosService {
         category: LogCategory.system,
       );
     } catch (e) {
+      initializationTrace
+        ?..putAttribute('completion', 'partial')
+        ..putAttribute('failed_phase', 'legacy_migration_ms');
       Log.error(
         'Error saving seen videos: $e',
         name: 'SeenVideosService',

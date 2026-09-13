@@ -12,6 +12,8 @@ class _Database extends Mock implements AppDatabase {}
 
 class _SeenDao extends Mock implements SeenVideosDao {}
 
+class _Preferences extends Mock implements SharedPreferences {}
+
 class _Trace implements PerformanceTrace {
   final attributes = <String, String>{};
   final metrics = <String, int>{};
@@ -192,6 +194,32 @@ void main() {
         verifyNever(() => dao.getAll());
       },
     );
+
+    test('legacy preference write failures are labeled partial', () async {
+      final failingPrefs = _Preferences();
+      when(
+        () => failingPrefs.getStringList(
+          SeenVideosService.legacySeenVideosStorageKey,
+        ),
+      ).thenReturn([videoId]);
+      when(() => failingPrefs.setString(any(), any())).thenThrow(
+        StateError('write unavailable'),
+      );
+      when(() => failingPrefs.remove(any())).thenAnswer((_) async => true);
+      service = SeenVideosService(
+        prefsOverride: failingPrefs,
+        performanceMonitor: monitor,
+      );
+
+      await service.initialize();
+
+      final trace = monitor.traces['seen_videos_initialize']!.single;
+      expect(trace.attributes['completion'], 'partial');
+      expect(trace.attributes['failed_phase'], 'legacy_migration_ms');
+      expect(trace.metrics, contains('legacy_migration_ms'));
+      expect(trace.stopCount, 1);
+      expect(service.hasSeenVideo(videoId), isTrue);
+    });
 
     for (final migrationFails in [false, true]) {
       test('records migration work (failure: $migrationFails)', () async {
