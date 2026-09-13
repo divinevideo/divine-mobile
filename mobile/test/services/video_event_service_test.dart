@@ -32,11 +32,13 @@ void main() {
   late VideoEventService service;
   late List<List<Filter>> requestedFilters;
   late List<StreamController<Event>> subscriptions;
+  late List<void Function()?> onEoseCallbacks;
 
   setUp(() {
     nostrClient = _MockNostrClient();
     requestedFilters = [];
     subscriptions = [];
+    onEoseCallbacks = [];
 
     when(() => nostrClient.isInitialized).thenReturn(true);
     when(() => nostrClient.publicKey).thenReturn('');
@@ -45,6 +47,9 @@ void main() {
         .thenAnswer((invocation) {
           requestedFilters.add(
             invocation.positionalArguments.single as List<Filter>,
+          );
+          onEoseCallbacks.add(
+            invocation.namedArguments[#onEose] as void Function()?,
           );
           final controller = StreamController<Event>.broadcast();
           subscriptions.add(controller);
@@ -115,23 +120,41 @@ void main() {
       },
     );
 
-    test('pagination keeps the oldest timestamp and page-size contract', () {
-      final state = service
-          .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
+    test(
+      'pagination keeps the oldest timestamp and page-size contract',
+      () async {
+        // Drives pagination bookkeeping through the public subscribe +
+        // relay-delivery + EOSE path rather than calling PaginationState's
+        // own methods directly, so this locks subscribeToVideoFeed's wiring
+        // rather than re-testing PaginationState in isolation (already
+        // covered by video_event_service_pagination_state_test.dart).
+        const limit = 5;
+        await service.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: limit,
+        );
 
-      state
-        ..startQuery()
-        ..updateOldestTimestamp(300)
-        ..updateOldestTimestamp(100)
-        ..updateOldestTimestamp(200)
-        ..recordReceivedCount(3)
-        ..completeQuery(5);
+        // Out-of-order arrival: the true minimum lands second, so only a
+        // real running-min tracker — not a hardcoded value — makes the
+        // oldestTimestamp assertion below pass.
+        subscriptions.single
+          ..add(_relayVideoEvent(0, createdAt: 300))
+          ..add(_relayVideoEvent(1, createdAt: 100))
+          ..add(_relayVideoEvent(2, createdAt: 200));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(state.oldestTimestamp, 100);
-      expect(state.eventsReceivedInCurrentQuery, 3);
-      expect(state.hasMore, isFalse);
-      expect(state.isLoading, isFalse);
-    });
+        onEoseCallbacks.single!();
+        await Future<void>.delayed(Duration.zero);
+
+        final state = service
+            .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
+
+        expect(state.oldestTimestamp, 100);
+        expect(state.eventsReceivedInCurrentQuery, 3);
+        expect(state.hasMore, isFalse);
+        expect(state.isLoading, isFalse);
+      },
+    );
 
     test(
       'keeps home, explore, profile, hashtag, and search feeds isolated',
@@ -264,3 +287,23 @@ VideoEvent _video(
   contentWarningLabels: contentWarningLabels,
   hashtags: hashtags,
 );
+
+/// A minimal, valid NIP-71 kind-34236 relay event — enough for
+/// VideoEvent.fromNostrEvent to parse a usable video URL, matching the
+/// shape proven in video_event_service_initial_page_pagination_test.dart.
+Event _relayVideoEvent(int index, {required int createdAt}) {
+  final event = Event(
+    'f' * 64,
+    34236,
+    [
+      ['url', 'https://media.example.com/relay-$index.mp4'],
+      ['m', 'video/mp4'],
+    ],
+    'relay video $index',
+    createdAt: createdAt,
+  );
+  event.id = index.toRadixString(16).padLeft(64, '0');
+  event.sig = 'f' * 128;
+  event.sources.add('wss://relay.example.com');
+  return event;
+}
