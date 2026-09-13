@@ -123,16 +123,13 @@ migrations.
 Startup repair SQL may be used only as a narrow compatibility bridge for
 already-shipped damage, and should not be the pattern for new schema changes.
 
-`db_client`'s v1 is a special case for whoever writes its first real
-migration. Because the repair block lives in `beforeOpen`, two installs can
-both report `user_version = 1` with different tables, columns, and indexes on
-disk — and Drift runs `onUpgrade` *before* `beforeOpen`, so the repair has not
-run yet when the upgrade step executes. Make the first `1 -> 2` step
-idempotent (probe `sqlite_master` / `PRAGMA table_info` before altering), and
-treat the generated v1 snapshot as the declared schema rather than as what
-every install actually has.
-
-See #6921 for the tracked `db_client` repair-to-migration cleanup.
+`db_client` now has a versioned `onUpgrade` chain and committed snapshots for
+every schema version. Its `1 -> 2` normalization remains deliberately
+idempotent because historical v1 installs can report the same `user_version`
+while carrying different tables, columns, and indexes. The guarded
+`beforeOpen` repair path is retained only for damaged or manually mutated
+databases that opened without an upgrade; extend the versioned migration chain,
+not that recovery path, for new schema changes.
 
 ## Account-Boundary Cleanup
 
