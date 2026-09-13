@@ -222,7 +222,7 @@ class UploadManager implements BackgroundAwareService {
     _isBackgroundRegistered = true;
   }
 
-  /// Initializes the upload manager and recovers persisted uploads.
+  /// Initializes unless disposed; disposal is terminal and requires a new manager.
   Future<void> initialize() async {
     if (_isDisposed) return;
 
