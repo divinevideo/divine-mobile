@@ -252,8 +252,8 @@ void main() {
         ).called(1);
 
         // Sign out — auth service emits `unauthenticated`. The stream
-        // event invalidates `currentAuthStateProvider`, which rebuilds
-        // with a genuinely different enum value and propagates.
+        // event becomes `currentAuthStateProvider`'s new state, a genuinely
+        // different enum value, so dependents rebuild.
         when(
           () => mockAuthService.authState,
         ).thenReturn(AuthState.unauthenticated);
