@@ -1671,19 +1671,18 @@ class RelayPool {
     // completing on CLOSED out of order would drop the events already in
     // flight. Frames of different subscriptions carry no ordering obligation
     // toward each other and run on independent chains (#7301). A frame whose
-    // subscription id is not a string is malformed; it takes the relay-wide
-    // chain so [_dispatchTypedFrame] can log and drop it in turn. With no
+    // subscription id is not a string is malformed and belongs to no chain;
+    // [_dispatchTypedFrame] logs and drops it without awaiting. With no
     // worker the original synchronous path runs unchanged.
     if (_verifyWorker != null &&
+        json.length > 1 &&
+        json[1] is String &&
         (messageType == 'EVENT' ||
             messageType == 'EOSE' ||
             messageType == 'CLOSED')) {
-      final subId = json.length > 1 && json[1] is String
-          ? json[1] as String
-          : '';
       return _enqueueOrdered(
         relay,
-        subId,
+        json[1] as String,
         () => _dispatchTypedFrame(relay, json, messageType),
       );
     }
