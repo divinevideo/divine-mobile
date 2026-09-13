@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # Service god-file ceiling ratchet (epic #4338): oversized Dart files under
-# mobile/lib/services are frozen at their current line count in
-# scripts/baseline/service_god_file_sizes.txt. A service file's ceiling may only
-# ever DECREASE. CI fails if:
+# mobile/lib/services plus the package roots in EXTRA_SCAN_DIRS are frozen at
+# their current line count in scripts/baseline/service_god_file_sizes.txt. A
+# service file's ceiling may only ever DECREASE. CI fails if:
 #   * a baselined service file grows past its recorded ceiling,
 #   * a NEW service file crosses the oversized threshold,
 #   * the branch baseline adds a service file or raises a ceiling vs origin/main.
+#
+# The package root exists because #8301 lifted the upload core out of
+# lib/services into packages/upload_repository; the oversized file keeps its
+# carried ceiling there while #4339 tracks the split. A move may land as a Git
+# rename (source deleted) or as a Git copy (source survives below the threshold
+# as a thin facade); the same `renamed-from` claim approves either when the
+# provenance verifies, so the package copy cannot grow either.
 #
 # This deliberately does not replace check_file_size_ceiling.sh. The broad
 # 800-line app-wide file-size check remains advisory per the #4339 team
@@ -30,6 +37,9 @@ TAB="$(printf '\t')"
 RATCHET_LABEL="service_god_file_ceiling"
 THRESHOLD="${SERVICE_GOD_FILE_THRESHOLD:-1500}"
 SCAN_DIR="${SERVICE_GOD_FILE_SCAN_DIR:-$MOBILE_DIR/lib/services}"
+# Package homes that inherited a carried ceiling from a moved service god-file.
+# Colon-separated; a directory that does not exist is skipped.
+EXTRA_SCAN_DIRS="${SERVICE_GOD_FILE_EXTRA_SCAN_DIRS:-$MOBILE_DIR/packages/upload_repository/lib}"
 PATH_PREFIX="${SERVICE_GOD_FILE_PATH_PREFIX:-$MOBILE_DIR}"
 BASELINE_FILE="${SERVICE_GOD_FILE_BASELINE_FILE:-$SCRIPT_DIR/baseline/service_god_file_sizes.txt}"
 BASELINE_REPO_PATH="${SERVICE_GOD_FILE_BASELINE_REPO_PATH:-mobile/scripts/baseline/service_god_file_sizes.txt}"
@@ -37,26 +47,31 @@ BASE_REF="${SERVICE_GOD_FILE_BASELINE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE"
 
-NEW_HINT="Do not grow service-layer god files under mobile/lib/services. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. For an in-tree move, annotate the new baseline row with '# renamed-from: <old-key>' after reviewing the provenance. See epic #4338."
+NEW_HINT="Do not grow service-layer god files under mobile/lib/services or the package scan roots. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. For an in-tree move, annotate the new baseline row with '# renamed-from: <old-key>' after reviewing the provenance. See epic #4338."
 STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold. If this is paired with a NEW key for an in-tree move, UPDATE_BASELINE alone cannot approve the moved oversized service."
 FOOTER="Service-layer god-file sizes are frozen and may only decrease. Keep new
 work out of oversized services and continue the UI -> BLoC/Cubit -> Repository
 -> Client extraction path from epic #4338."
 
 emit_current() {
-  find "$SCAN_DIR" \
-    -type f -name '*.dart' \
-    -not -path '*/.dart_tool/*' \
-    -not -path '*/build/*' \
-    ! -name '*.g.dart' ! -name '*.freezed.dart' ! -name '*.gr.dart' \
-    ! -name '*.config.dart' ! -name '*.mocks.dart' \
-    -print0 2>/dev/null \
-  | while IFS= read -r -d '' f; do
-      loc="$(wc -l < "$f" | tr -d '[:space:]')"
-      if [[ "${loc:-0}" -gt "$THRESHOLD" ]]; then
-        printf '%s\t%s\n' "${f#"$PATH_PREFIX"/}" "$loc"
-      fi
-    done \
+  local dir
+  local IFS=':'
+  for dir in $SCAN_DIR $EXTRA_SCAN_DIRS; do
+    [[ -d "$dir" ]] || continue
+    find "$dir" \
+      -type f -name '*.dart' \
+      -not -path '*/.dart_tool/*' \
+      -not -path '*/build/*' \
+      ! -name '*.g.dart' ! -name '*.freezed.dart' ! -name '*.gr.dart' \
+      ! -name '*.config.dart' ! -name '*.mocks.dart' \
+      -print0 2>/dev/null \
+    | while IFS= read -r -d '' f; do
+        loc="$(wc -l < "$f" | tr -d '[:space:]')"
+        if [[ "${loc:-0}" -gt "$THRESHOLD" ]]; then
+          printf '%s\t%s\n' "${f#"$PATH_PREFIX"/}" "$loc"
+        fi
+      done
+  done \
   | LC_ALL=C sort -t "$TAB" -k1,1
 }
 
@@ -223,13 +238,13 @@ validate_baseline_growth_policy() {
       fail=1
       continue
     fi
-    rename_status="$(git -C "$repo_root" -c core.quotePath=false diff --find-renames=15% --name-status "$BASE_REF"...HEAD || true)"
+    rename_status="$(git -C "$repo_root" -c core.quotePath=false diff --find-renames=15% --find-copies-harder --name-status "$BASE_REF"...HEAD -- "$old_path" "$new_path" || true)"
     if ! awk -F "$TAB" -v old="$old_path" -v new="$new_path" '
-      $1 ~ /^R[0-9]+$/ && $2 == old && $3 == new { found=1 }
+      $1 ~ /^[RC][0-9]+$/ && $2 == old && $3 == new { found=1 }
       END { exit !found }
     ' <<< "$rename_status"; then
-      echo "FAIL [$RATCHET_LABEL]: rename claim $new_key <- $old_key is not a Git rename"
-      echo "  -> expected $old_path to be renamed to $new_path vs the merge base with $BASE_REF"
+      echo "FAIL [$RATCHET_LABEL]: rename claim $new_key <- $old_key is not a Git rename or copy"
+      echo "  -> expected $old_path to be renamed or copied to $new_path vs the merge base with $BASE_REF"
       fail=1
       continue
     fi
@@ -253,8 +268,9 @@ filter_added_baseline_growth() {
 
 print_baseline_header() {
   cat <<EOF
-# Frozen baseline: Dart files under mobile/lib/services over ${THRESHOLD} lines,
-# each with its current line count as a CEILING (format: relpath<TAB>loc).
+# Frozen baseline: Dart files under mobile/lib/services plus the package scan
+# roots over ${THRESHOLD} lines, each with its current line count as a CEILING
+# (format: relpath<TAB>loc).
 # Generated by scripts/check_service_god_file_ceiling.sh. A ceiling may only
 # SHRINK; more lines, a new oversized service file, or a raised ceiling fails CI
 # vs ${BASE_REF}. Epic: #4338.
@@ -262,6 +278,8 @@ print_baseline_header() {
 # service god-file ceilings.
 # A verified in-tree move may replace its old row with:
 # <new-relpath><TAB><current-count> # renamed-from: <old-relpath>
+# A move detected as a Git copy (the source survives below the threshold as a
+# facade) qualifies on the same provenance check.
 # Rename chains and swaps are deliberately unsupported.
 # Regenerate after shrinking/removing: UPDATE_BASELINE=1 bash scripts/check_service_god_file_ceiling.sh
 EOF
