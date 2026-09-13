@@ -22,10 +22,28 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
 
     private var player: AVQueuePlayer?
     private var playerLooper: AVPlayerLooper?
+
+    /// The range `AVPlayerLooper` repeats, when that is shorter than the item.
+    ///
+    /// The direct path plays the asset untouched, so unlike the composition it
+    /// cannot cut the common track end into a time range. Without this range
+    /// the loop runs on to the end of the container, and over the stretch where
+    /// the shorter track has already run out the picture stands still —
+    /// measured on the simulator as 86 ms of held frame per lap.
+    private var loopTimeRange: CMTimeRange?
     private var templateItem: AVPlayerItem?
     private var eventSink: FlutterEventSink?
     private var timeObserver: Any?
     private var currentItemObservation: NSKeyValueObservation?
+
+    /// The edge-declick mix built for the loaded composition, kept so it can be
+    /// re-applied to every item `AVPlayerLooper` makes.
+    ///
+    /// The looper does not replay the template item — it builds its own copies,
+    /// and a copy does not carry the template's `audioMix`. Setting it once at
+    /// load time therefore declicks the first lap and no other, which is
+    /// exactly the lap nobody is listening for.
+    private var loopAudioMix: AVAudioMix?
     private var statusObservation: NSKeyValueObservation?
     private var bufferingObservation: NSKeyValueObservation?
     private var likelyToKeepUpObservation: NSKeyValueObservation?
@@ -249,9 +267,24 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
                 let playerItem: AVPlayerItem
                 let offsets: [Double]
                 let durations: [Double]
-                if let hlsClip = Self.soleHlsClip(in: clipsRaw) {
-                    (playerItem, offsets, durations) =
-                        try await self.makeHlsPlayerItem(from: hlsClip)
+                // The direct path is the better one, but it cannot represent
+                // every clip — a rotated video needs the composition's layer
+                // instruction. It reports that itself.
+                var direct: (AVPlayerItem, [Double], [Double])?
+                if let clip = Self.soleDirectItemClip(in: clipsRaw) {
+                    do {
+                        direct = try await self.makeDirectPlayerItem(from: clip)
+                    } catch CompositionError.directItemNotApplicable {
+                        direct = nil
+                        DivineVideoPlayerLog.shared.warning(
+                            "Player \(self.playerId) uses the composition: "
+                                + "clip needs rotation",
+                            name: "DivineVideoPlayer.Load"
+                        )
+                    }
+                }
+                if let direct {
+                    (playerItem, offsets, durations) = direct
                 } else {
                     (playerItem, offsets, durations) =
                         try await self.makeCompositionPlayerItem(from: clipsRaw)
@@ -364,28 +397,70 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         }
     }
 
-    /// The single clip of [clipsRaw] when it is an HLS source the direct-item
-    /// path can represent exactly, otherwise nil.
+    /// Whether a clip may skip the composition once its asset is loaded.
     ///
-    /// An HLS `AVURLAsset` exposes **no** tracks — `loadTracks` returns an
-    /// empty array — so a composition built from one always ends in
-    /// [CompositionError.noPlayableVideoTracks] and can never play. Such
-    /// clips take the direct-item path in [makeHlsPlayerItem] instead.
+    /// The composition rights a rotated track with a layer instruction.
+    /// `AVPlayerItemVideoOutput` hands the pixel buffer over as decoded and
+    /// applies no `preferredTransform`, and the Apple side — unlike Android —
+    /// sends Dart no rotation to compensate with. HLS is exempt: its renditions
+    /// are upright, and an HLS asset exposes no tracks to inspect anyway.
+    private static func directItemSuitsRotation(
+        _ asset: AVURLAsset,
+        isHls: Bool
+    ) async -> Bool {
+        if isHls { return true }
+        do {
+            guard
+                let track = try await asset.loadTracks(withMediaType: .video).first
+            else { return false }
+            let (naturalSize, transform) = try await track.load(
+                .naturalSize, .preferredTransform
+            )
+            return transform.standardized(for: naturalSize).isEffectivelyIdentity
+        } catch {
+            // Unreadable is not upright; let the composition handle it.
+            return false
+        }
+    }
+
+    /// Whether [uri] may skip the composition and be played from the asset.
+    ///
+    /// A single unchanged clip has nothing to compose, and `AVPlayerLooper`
+    /// only closes the seam over the asset itself — over a composition of the
+    /// same file it does not. Remote URLs stay on the composition path, which
+    /// owns the buffering and header handling for them.
+    ///
+    /// Rotation is decided later, against the loaded asset, in
+    /// [directItemSuitsRotation] — it cannot be read from the URL.
+    private static func takesDirectItemPath(_ uri: String) -> Bool {
+        if URL(string: uri)?.pathExtension.lowercased() == "m3u8" { return true }
+        return !uri.hasPrefix("http")
+    }
+
+    /// The single clip of [clipsRaw] the direct-item path can represent
+    /// exactly, otherwise nil.
+    ///
+    /// Two sources qualify, for different reasons. An HLS `AVURLAsset` exposes
+    /// **no** tracks — `loadTracks` returns an empty array — so a composition
+    /// built from one always ends in
+    /// [CompositionError.noPlayableVideoTracks] and can never play. A local
+    /// file qualifies because there is nothing to compose: `AVPlayerLooper`
+    /// closes the seam over the asset itself and does not over a composition
+    /// of the same file.
     ///
     /// The diversion is deliberately narrow. A composition can start a clip
     /// part-way in and rescale it; an `AVPlayerItem` carries the whole asset
     /// from zero, so a non-zero `startMs` or an off-speed clip has no exact
     /// representation here and would report a timeline that does not match
-    /// what plays. Those keep failing on the composition path exactly as they
-    /// do today rather than playing something subtly wrong. Multi-clip
-    /// timelines likewise still need a composition to stitch — the editor's
-    /// multi-clip sources are local files, never HLS.
-    private static func soleHlsClip(
+    /// what plays. Those keep taking the composition path exactly as they do
+    /// today rather than playing something subtly wrong. Multi-clip timelines
+    /// likewise still need a composition to stitch.
+    private static func soleDirectItemClip(
         in clipsRaw: [[String: Any]]
     ) -> [String: Any]? {
         guard clipsRaw.count == 1, let clip = clipsRaw.first,
             let uri = clip["uri"] as? String,
-            URL(string: uri)?.pathExtension.lowercased() == "m3u8",
+            Self.takesDirectItemPath(uri),
             (clip["startMs"] as? NSNumber)?.int64Value ?? 0 == 0,
             (clip["volume"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0,
             (clip["playbackSpeed"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0
@@ -393,25 +468,47 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         return clip
     }
 
-    /// Builds a player item straight from an HLS asset, bypassing the
+    /// Builds a player item straight from the asset, bypassing the
     /// composition.
     ///
-    /// Trimming is applied with `forwardPlaybackEndTime` rather than a
-    /// composition time range. Orientation needs no video composition because
-    /// HLS renditions are already upright. Per-clip volume changes stay on the
-    /// composition path because a direct item has no audio mix. The cost is that
-    /// the audio-mix edge de-click fades do not apply, so an HLS loop seam can
-    /// click; HLS is only ever reached as a last-resort fallback source, which
-    /// does not justify rebuilding those ramps here.
+    /// This is the path every unchanged single clip takes, HLS and local file
+    /// alike, because `AVPlayerLooper` only closes the loop seam over an asset
+    /// and not over a composition of the same file.
     ///
-    /// `trimToCommonTrackEnd` is ignored here, and cannot be honoured: the
-    /// common track end comes from `load(.timeRange)` on the asset's video and
-    /// audio tracks, and an HLS asset has none to load. The clip plays to the
+    /// Trimming has no composition time range to live in, so it is applied
+    /// twice over: as `forwardPlaybackEndTime`, which bounds playback, and —
+    /// when the trim is what decides the loop — as the looper's own range,
+    /// which is the only one honoured when it wraps.
+    ///
+    /// `trimToCommonTrackEnd` cannot be honoured for an HLS asset: the common
+    /// track end comes from `load(.timeRange)` on the asset's video and audio
+    /// tracks, and an HLS asset has none to load, so the clip plays to the
     /// playlist's end, as it does on Android (#8897).
-    private func makeHlsPlayerItem(
+    ///
+    /// A rotated clip cannot come here at all; [directItemSuitsRotation] sends
+    /// it back to the composition, which rights it with a layer instruction.
+    /// Per-clip volume changes likewise stay on the composition path, because a
+    /// direct item has no audio mix. The cost is that the audio-mix edge
+    /// de-click fades do not apply, so the loop seam can click.
+    ///
+    /// Throws [CompositionError.directItemNotApplicable] when the loaded asset
+    /// turns out to need the composition after all.
+    private func makeDirectPlayerItem(
         from clipMap: [String: Any]
     ) async throws -> (AVPlayerItem, [Double], [Double]) {
-        guard let uri = clipMap["uri"] as? String, let url = URL(string: uri) else {
+        guard let uri = clipMap["uri"] as? String else {
+            throw CompositionError.noPlayableVideoTracks
+        }
+        // A bare file path is not a URL with a scheme, and URL(string:) turns
+        // one into something AVURLAsset cannot load. The composition path
+        // already draws this distinction; this one never needed to, because
+        // until now it only ever saw HLS URLs.
+        let url: URL
+        if uri.hasPrefix("/") {
+            url = URL(fileURLWithPath: uri)
+        } else if let parsed = URL(string: uri) {
+            url = parsed
+        } else {
             throw CompositionError.noPlayableVideoTracks
         }
         let httpHeaders = clipMap["httpHeaders"] as? [String: String]
@@ -419,9 +516,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             [Self.avURLAssetHTTPHeaderFieldsKey: $0]
         }
         let asset = AVURLAsset(url: url, options: assetOptions)
+        let isHls = url.pathExtension.lowercased() == "m3u8"
+        guard await Self.directItemSuitsRotation(asset, isHls: isHls) else {
+            throw CompositionError.directItemNotApplicable
+        }
         let assetDuration = try await asset.load(.duration)
 
-        // soleHlsClip guarantees startMs == 0, so the item's timeline is
+        // soleDirectItemClip guarantees startMs == 0, so the item's timeline is
         // [0, endTime] and the reported duration is endTime itself.
         let endTime = Self.clampedEndTime(
             requestedEndMs: clipMap["endMs"] as? NSNumber,
@@ -431,11 +532,56 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             throw CompositionError.noPlayableVideoTracks
         }
 
-        let playerItem = AVPlayerItem(asset: asset)
-        if CMTimeCompare(endTime, assetDuration) < 0 {
-            playerItem.forwardPlaybackEndTime = endTime
+        // The same cut the composition makes: playback ends where the shorter
+        // of the two tracks runs out, not at the end of the container. Here it
+        // cannot be cut into a time range — the asset stays untouched — so the
+        // looper is given it as its range instead.
+        var loopEnd = endTime
+        let trimToCommonTrackEnd =
+            (clipMap["trimToCommonTrackEnd"] as? NSNumber)?.boolValue ?? false
+        if trimToCommonTrackEnd {
+            let videoTracks = try await asset.loadTracks(withMediaType: .video)
+            let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+            if let videoTrack = videoTracks.first, let audioTrack = audioTracks.first {
+                do {
+                    let videoRange = try await videoTrack.load(.timeRange)
+                    let audioRange = try await audioTrack.load(.timeRange)
+                    if let commonEnd = boundedCommonTrackEnd(
+                        startTime: .zero,
+                        requestedEnd: endTime,
+                        videoEnd: videoRange.end,
+                        audioEnd: audioRange.end
+                    ) {
+                        loopEnd = CMTimeMinimum(loopEnd, commonEnd)
+                    }
+                } catch {
+                    DivineVideoPlayerLog.shared.warning(
+                        "Player \(playerId) could not read track durations: "
+                            + "\(error.localizedDescription)",
+                        name: "DivineVideoPlayer.Load"
+                    )
+                }
+            }
         }
-        return (playerItem, [0], [endTime.seconds])
+
+        let playerItem = AVPlayerItem(asset: asset)
+        // A direct item has no audio mix, so anything the last composition left
+        // behind has to go — otherwise every item the looper builds is handed a
+        // mix whose input parameters address a different asset's tracks.
+        loopAudioMix = nil
+        // forwardPlaybackEndTime and the looper describe the same boundary two
+        // ways, and both are needed: the looper honours only its own range
+        // when it wraps, while a player that is not looping — or stops looping
+        // later — has only forwardPlaybackEndTime to end the item where Dart
+        // was told it ends. loopEnd never exceeds endTime, so one comparison
+        // covers both trims.
+        if CMTimeCompare(loopEnd, assetDuration) < 0 {
+            loopTimeRange = CMTimeRange(start: .zero, end: loopEnd)
+            playerItem.forwardPlaybackEndTime = loopEnd
+        } else {
+            loopTimeRange = nil
+        }
+        return (playerItem, [0], [loopEnd.seconds])
     }
 
     /// Builds a player item backed by an AVMutableComposition of every clip.
@@ -445,6 +591,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         let (composition, videoComposition, offsets, durations, audioMix) =
             try await buildComposition(from: clipsRaw)
 
+        loopTimeRange = nil
         let playerItem = AVPlayerItem(asset: composition)
         // Validate BEFORE assigning. -[AVPlayerItem setVideoComposition:]
         // throws an Objective-C NSInvalidArgumentException on an invalid
@@ -462,6 +609,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             }
             playerItem.videoComposition = videoComposition
         }
+        loopAudioMix = audioMix
         if let audioMix { playerItem.audioMix = audioMix }
         return (playerItem, offsets, durations)
     }
@@ -955,10 +1103,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         playerLooper = nil
         player.removeAllItems()
         if isLooping {
-            playerLooper = AVPlayerLooper(player: player, templateItem: item)
+            if let range = loopTimeRange {
+                playerLooper = AVPlayerLooper(
+                    player: player,
+                    templateItem: item,
+                    timeRange: range
+                )
+            } else {
+                playerLooper = AVPlayerLooper(player: player, templateItem: item)
+            }
         } else {
             player.insert(item, after: nil)
         }
+        prewarmLoopingOutputs()
         attachCurrentItemOutputs()
     }
 
@@ -1119,8 +1276,27 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         attachCurrentItemOutputs()
     }
 
+    /// Hands the looper's queued items to the texture output so each one
+    /// carries a video output before it becomes current.
+    ///
+    /// `AVPlayerLooper` builds its copies asynchronously, so the set can still
+    /// be empty right after the looper is created and fills in later; running
+    /// this again on every current-item change picks up whatever it has by
+    /// then. It is idempotent — an item already warmed is skipped.
+    ///
+    /// With no looper the set is empty on purpose: that is what drops the
+    /// previous looper's items, outputs and decoders when looping is switched
+    /// off, instead of holding them until dispose.
+    private func prewarmLoopingOutputs() {
+        textureOutput?.prewarm(items: playerLooper?.loopingPlayerItems ?? [])
+    }
+
     private func attachCurrentItemOutputs() {
         guard let item = player?.currentItem else { return }
+        prewarmLoopingOutputs()
+        if let loopAudioMix, item.audioMix !== loopAudioMix {
+            item.audioMix = loopAudioMix
+        }
         textureOutput?.attach(to: item)
         observeStatus(for: item)
         observeBuffering(for: item)
@@ -1578,6 +1754,7 @@ private enum CompositionError: Error, LocalizedError {
     case noPlayableVideoTracks
     case invalidRenderSize
     case invalidFrameDuration
+    case directItemNotApplicable
 
     var errorDescription: String? {
         switch self {
@@ -1589,6 +1766,8 @@ private enum CompositionError: Error, LocalizedError {
             return "Video composition has an invalid render size."
         case .invalidFrameDuration:
             return "Video composition has an invalid frame duration."
+        case .directItemNotApplicable:
+            return "Clip needs the composition path."
         }
     }
 }

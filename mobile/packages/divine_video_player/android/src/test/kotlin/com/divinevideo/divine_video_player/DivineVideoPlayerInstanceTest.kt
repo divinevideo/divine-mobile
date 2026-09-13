@@ -7,10 +7,12 @@ import android.net.Uri
 import android.os.Handler
 import android.os.SystemClock
 import android.view.Surface
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.VideoSize
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
@@ -25,10 +27,12 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.unmockkConstructor
+import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -949,6 +953,187 @@ class DivineVideoPlayerInstanceTest {
 
     // -- common-track-end clamp resolution --
 
+    private fun loopingCall(looping: Boolean): MethodCall =
+        MethodCall("setLooping", mapOf("looping" to looping))
+
+    private fun twoClipSetClipsCall(): MethodCall =
+        MethodCall(
+            "setClips",
+            mapOf(
+                "clips" to listOf(
+                    mapOf("uri" to "file:///tmp/a.mp4", "startMs" to 0, "endMs" to 1000),
+                    mapOf("uri" to "file:///tmp/b.mp4", "startMs" to 0, "endMs" to 1000),
+                ),
+            ),
+        )
+
+    @Test
+    fun `a clip list that grows leaves single-clip repeat behind`() {
+        instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+        verify { mockPlayer.repeatMode = Player.REPEAT_MODE_ONE }
+
+        // The editor swaps its clip list without calling setLooping again — a
+        // split turns one clip into two. A repeat mode left on the single-clip
+        // setting would repeat the first clip forever instead of walking the
+        // timeline.
+        instance.onMethodCall(twoClipSetClipsCall(), mockk(relaxed = true))
+
+        verify { mockPlayer.repeatMode = Player.REPEAT_MODE_ALL }
+    }
+
+    /**
+     * Records the audio-renderer selections the instance makes, newest last.
+     *
+     * `true` means the player's own audio was switched off in favour of the
+     * private loop track.
+     */
+    private fun captureAudioTrackDisables(): List<Boolean> {
+        val params = mockk<TrackSelectionParameters>(relaxed = true)
+        val builder = mockk<TrackSelectionParameters.Builder>(relaxed = true)
+        val disabled = mutableListOf<Boolean>()
+        every { mockPlayer.trackSelectionParameters } returns params
+        every { params.buildUpon() } returns builder
+        every { builder.build() } returns params
+        every {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, capture(disabled))
+        } returns builder
+        return disabled
+    }
+
+    @Test
+    fun `a clip whose audio will not decode gets the player's audio back`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { mockPlayer.duration } returns 3_000L
+            val disabled = captureAudioTrackDisables()
+
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+            capturePostedRunnables().forEach { it.run() }
+
+            // The renderer is switched off before the decode is attempted, so a
+            // decode that yields nothing has to switch it back on. Leaving it
+            // off plays the video silent for the rest of its life.
+            assertEquals(true, disabled.contains(true))
+            assertEquals(false, disabled.last())
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a fresh clip list waits for its own timeline before cutting the audio`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            // A reused player still holds the outgoing item while the new clips
+            // are applied, so its duration describes that one.
+            every { mockPlayer.duration } returns 3_000L
+            captureAudioTrackDisables()
+            val listener = capturePlayerListener()
+
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+
+            // Cutting to that duration here would loop the incoming video's
+            // sound at the previous video's length, drifting a little further
+            // from the picture every lap.
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any()) }
+
+            listener.onPlaybackStateChanged(Player.STATE_READY)
+
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `an off-speed player keeps its own audio`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { mockPlayer.duration } returns 3_000L
+            val disabled = captureAudioTrackDisables()
+
+            instance.onMethodCall(
+                MethodCall("setPlaybackSpeed", mapOf("speed" to 2.0)),
+                mockk(relaxed = true),
+            )
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // A static track plays the recording at its own rate, so it would
+            // drift away from a picture running at twice the speed.
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any()) }
+            assertEquals(false, disabled.contains(true))
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    /**
+     * Brings a looping single clip up with [loop] installed as its private
+     * audio path, and hands back the player listener the instance registered.
+     */
+    private fun installLoopTrack(loop: ClipAudioLoopTrack): Player.Listener {
+        every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+        every { mockPlayer.duration } returns 3_000L
+        captureAudioTrackDisables()
+        val listener = capturePlayerListener()
+
+        instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        capturePostedRunnables().forEach { it.run() }
+        return listener
+    }
+
+    @Test
+    fun `a pause the player makes by itself pauses the loop track too`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            val listener = installLoopTrack(loop)
+            every { mockPlayer.currentPosition } returns 1_250L
+            every { mockPlayer.volume } returns 0.5f
+
+            // Backgrounding, a buffering stall and an Activity detach all stop
+            // the player without a `pause` from Dart. The track has to follow,
+            // or it keeps sounding over a still picture.
+            listener.onIsPlayingChanged(false)
+
+            verify(exactly = 1) { loop.pause() }
+
+            // And it picks up from where the picture now is, at the player's
+            // own volume, when playback resumes.
+            listener.onIsPlayingChanged(true)
+
+            verify(exactly = 1) { loop.play(1_250L, 0.5f) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `stopForActivityDetach releases the loop track`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            installLoopTrack(loop)
+
+            // Nothing resumes after a detach, so the AudioTrack is freed here
+            // rather than kept until dispose.
+            instance.stopForActivityDetach()
+
+            verify(exactly = 1) { loop.release() }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
     private fun trimmingSetClipsCall(uri: String): MethodCall =
         MethodCall(
             "setClips",
@@ -1172,8 +1357,22 @@ class DivineVideoPlayerInstanceTest {
         assertEquals(6_000L, replaced.captured.clippingConfiguration.endPositionMs)
     }
 
+    /** A [Player.PositionInfo] carrying only the field the listener reads. */
+    private fun positionInfo(mediaItemIndex: Int): Player.PositionInfo =
+        Player.PositionInfo(
+            /* windowUid = */ null,
+            /* mediaItemIndex = */ mediaItemIndex,
+            /* mediaItem = */ null,
+            /* periodUid = */ null,
+            /* periodIndex = */ mediaItemIndex,
+            /* positionMs = */ 0L,
+            /* contentPositionMs = */ 0L,
+            /* adGroupIndex = */ C.INDEX_UNSET,
+            /* adIndexInAdGroup = */ C.INDEX_UNSET,
+        )
+
     @Test
-    fun `a resolved clamp is not applied over a playlist already playing`() {
+    fun `a resolved clamp is parked rather than applied mid-watch`() {
         every { mockPlayer.mediaItemCount } returns 1
         every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
         every { mockPlayer.playWhenReady } returns true
@@ -1186,9 +1385,98 @@ class DivineVideoPlayerInstanceTest {
             capturePostedRunnables().forEach { it.run() }
         }
 
-        // A clipping configuration cannot be updated in place, so this would
-        // remove and re-insert the period being played and restart the video
-        // from zero mid-watch — worse than the seam it removes.
+        // A clipping configuration cannot be updated in place, so applying it
+        // here would remove and re-insert the period being played and restart
+        // the video from zero mid-watch — worse than the seam it removes.
+        verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
+    }
+
+    @Test
+    fun `a parked clamp is applied at the loop restart`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            feedInstance().onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+        verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
+
+        // A single repeating clip reports the same media item index on both
+        // sides of the restart, which is why the clamp hook sits outside the
+        // index guard the speed/volume block uses.
+        listenerSlot.captured.onPositionDiscontinuity(
+            positionInfo(mediaItemIndex = 0),
+            positionInfo(mediaItemIndex = 0),
+            Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+        )
+
+        val replaced = slot<MediaItem>()
+        verify { mockPlayer.replaceMediaItem(0, capture(replaced)) }
+        assertEquals(6_000L, replaced.captured.clippingConfiguration.endPositionMs)
+    }
+
+    @Test
+    fun `a parked clamp is applied only once`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            feedInstance().onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+
+        repeat(3) {
+            listenerSlot.captured.onPositionDiscontinuity(
+                positionInfo(mediaItemIndex = 0),
+                positionInfo(mediaItemIndex = 0),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+            )
+        }
+
+        // Every later lap must cost nothing: re-installing the same clipping
+        // configuration would rebuild the period at each loop, which is the
+        // stutter the clamp exists to remove.
+        verify(exactly = 1) { mockPlayer.replaceMediaItem(0, any()) }
+    }
+
+    @Test
+    fun `a parked clamp is not applied on a seek`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            feedInstance().onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+
+        // A seek lands anywhere, so the remove-and-insert would drop playback
+        // back to the default position — the mid-watch restart the parking
+        // exists to avoid.
+        listenerSlot.captured.onPositionDiscontinuity(
+            positionInfo(mediaItemIndex = 0),
+            positionInfo(mediaItemIndex = 0),
+            Player.DISCONTINUITY_REASON_SEEK,
+        )
+
         verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
     }
 
