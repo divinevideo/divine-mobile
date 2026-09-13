@@ -13,16 +13,17 @@ import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_publish/publish_timeline.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
-import 'package:upload_repository/upload_repository.dart'
-    hide ThumbnailExtractor;
-import 'package:upload_repository/upload_repository.dart'
-    as upload_core
-    show ThumbnailExtractor;
+import 'package:upload_repository/upload_repository.dart';
 
-export 'package:upload_repository/upload_repository.dart'
-    hide ThumbnailExtractor;
+export 'package:upload_repository/upload_repository.dart';
 
-typedef ThumbnailExtractor = Future<ThumbnailFileResult?> Function({
+/// Extracts a thumbnail frame as a file, the shape
+/// [VideoThumbnailService.extractThumbnail] already has.
+///
+/// Deliberately not named `ThumbnailExtractor`: the package declares its own
+/// under that name, and two same-named typedefs would make the name ambiguous
+/// in any file importing both libraries.
+typedef VideoThumbnailExtractor = Future<ThumbnailFileResult?> Function({
   required String videoPath,
   required Duration targetTimestamp,
   required int quality,
@@ -69,7 +70,7 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
     UploadCrashReporter? crashReporter,
     CrashReporter crashReporting = const SilentCrashReporter(),
     super.useBackgroundUpload = false,
-    ThumbnailExtractor? thumbnailExtractor,
+    VideoThumbnailExtractor? thumbnailExtractor,
     TransientRenderCleaner? transientRenderCleaner,
   }) : _backgroundActivityManager = backgroundActivityManager,
        _crashReporting = crashReporting,
@@ -108,8 +109,8 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
     }
   }
 
-  static upload_core.ThumbnailExtractor _adaptThumbnailExtractor(
-    ThumbnailExtractor extractor,
+  static ThumbnailExtractor _adaptThumbnailExtractor(
+    VideoThumbnailExtractor extractor,
   ) =>
       ({
         required String videoPath,
