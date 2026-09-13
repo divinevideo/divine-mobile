@@ -1,6 +1,16 @@
 # Opt-in @divine.video username burn on delete — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Superseded (2026-09-13).** The direct `POST /api/username/release` burn
+> endpoint and `ProfileRepository.releaseUsername()` described below were
+> removed from divine-mobile in #9144. The live path is the two-phase
+> `POST /api/username/release/prepare` handshake in
+> `mobile/lib/repositories/account_deletion_recovery_repository.dart`. Kept for
+> design context; do not build against the API described here.
+
+> **For agentic workers:** Do not resume or implement this plan, task-by-task
+> or otherwise — see the superseded notice above. The steps below are kept
+> unchecked as a historical record of the original design, not as a worklist;
+> none of them describe what to build next.
 
 **Goal:** Let a user opt in, during account deletion, to permanently burn their `@divine.video` username so it stops resolving and cannot be re-registered.
 
@@ -47,7 +57,7 @@
 - `403 { ok:false, error }` — caller owns a *different* active name than the one requested.
 - `400 { ok:false, error }` — invalid/missing name.
 
-- [ ] **Step 1: Write the failing tests**
+**Step 1: Write the failing tests**
 
 Add to `src/routes/username.test.ts`. Mirror the existing claim tests' harness: reuse `createMockDB(initialUsernames)`, the `vi.mock('../middleware/nip98')` and `vi.mock('../utils/fastly-sync')` blocks already at the top of the file, and the `verifyNip98Event` mock accessor pattern used by the existing `describe('POST /claim')` block (read that block first to copy the exact `beforeEach`/import-of-mock wiring).
 
@@ -122,16 +132,16 @@ describe('POST /release', () => {
 
 Verify `createMockDB` handles: (a) `getUsernameByPubkey` — `SELECT * FROM usernames WHERE pubkey = ? AND status = ?` returning the fixture whose `pubkey` matches and `status='active'`; (b) `revokeUsername` — the `UPDATE usernames SET status = ?...` no-op is fine for the mock (assertion is on the response, not DB mutation). If the existing `createMockDB` lacks the by-pubkey SELECT branch, add it next to the existing username SELECT branches, matching their style.
 
-- [ ] **Step 2: Run tests, verify they fail**
+**Step 2: Run tests, verify they fail**
 
 Run: `cd /Users/mjb/code/divine-name-server/.worktrees/username-release && npm test -- src/routes/username.test.ts`
 Expected: the four `POST /release` tests FAIL (404 — route not defined yet).
 
-- [ ] **Step 3: Add `revokeUsername` to imports**
+**Step 3: Add `revokeUsername` to imports**
 
 In `src/routes/username.ts`, add `revokeUsername,` to the destructured `../db/queries` import (lines 8-20).
 
-- [ ] **Step 4: Implement the route**
+**Step 4: Implement the route**
 
 Insert before `export default username` (line 543):
 
@@ -204,16 +214,16 @@ username.post('/release', async (c) => {
 })
 ```
 
-- [ ] **Step 5: Run tests, verify they pass**
+**Step 5: Run tests, verify they pass**
 
 Run: `cd /Users/mjb/code/divine-name-server/.worktrees/username-release && npm test -- src/routes/username.test.ts`
 Expected: all `POST /release` tests PASS. Then run the full suite: `npm test`. Expected: all green.
 
-- [ ] **Step 6: Update the file's ABOUTME header**
+**Step 6: Update the file's ABOUTME header**
 
 In `src/routes/username.ts` line 2, add `POST /release` to the Authenticated endpoints list.
 
-- [ ] **Step 7: Commit**
+**Step 7: Commit**
 
 ```bash
 git add src/routes/username.ts src/routes/username.test.ts
@@ -240,7 +250,7 @@ git commit -m "feat(username): add POST /api/username/release to burn caller's o
 - Produces: `sealed class UsernameReleaseResult` with `UsernameReleaseSuccess`, `UsernameReleaseNotOwner`, `UsernameReleaseNetworkError`, `UsernameReleaseError(String message)`; and `Future<UsernameReleaseResult> releaseUsername({required String name})`.
 - Consumes: `_nostrClient.createNip98AuthHeader({url, method, payload})` and `_httpClient.post(...)` — same as `claimUsername` (`profile_repository.dart:750-832`).
 
-- [ ] **Step 1: Write the result type**
+**Step 1: Write the result type**
 
 Create `mobile/packages/profile_repository/lib/src/username_release_result.dart`:
 
@@ -287,7 +297,7 @@ Add to `mobile/packages/profile_repository/lib/profile_repository.dart` after li
 export 'src/username_release_result.dart';
 ```
 
-- [ ] **Step 2: Write the failing test**
+**Step 2: Write the failing test**
 
 Create `mobile/packages/profile_repository/test/src/profile_repository_release_test.dart`. Mirror the existing claim test's setup (find it: `grep -rl "claimUsername" test/`) for how `ProfileRepository` is constructed with a mock `NostrClient` + mock `http.Client`. Then:
 
@@ -326,12 +336,12 @@ group('releaseUsername', () {
 });
 ```
 
-- [ ] **Step 3: Run test, verify it fails**
+**Step 3: Run test, verify it fails**
 
 Run: `cd mobile/packages/profile_repository && flutter test test/src/profile_repository_release_test.dart`
 Expected: FAIL — `releaseUsername` not defined.
 
-- [ ] **Step 4: Implement `releaseUsername`**
+**Step 4: Implement `releaseUsername`**
 
 In `profile_repository.dart`, add near line 22:
 ```dart
@@ -407,12 +417,12 @@ Future<UsernameReleaseResult> releaseUsername({required String name}) async {
 
 Note: a `200 released:false` (no_active_name) maps to `UsernameReleaseSuccess` — from the client's perspective "the name is not active" is a satisfied post-condition (nothing to burn), so the deletion may proceed. Document this with a one-line comment on the `200 =>` arm.
 
-- [ ] **Step 5: Run test, verify it passes**
+**Step 5: Run test, verify it passes**
 
 Run: `cd mobile/packages/profile_repository && flutter test test/src/profile_repository_release_test.dart`
 Expected: PASS. Then `flutter test` (package) + confirm coverage gate.
 
-- [ ] **Step 6: Commit**
+**Step 6: Commit**
 
 ```bash
 git add mobile/packages/profile_repository/lib/src/username_release_result.dart \
@@ -433,7 +443,7 @@ git commit -m "feat(profile): add releaseUsername() to burn @divine.video handle
 **Interfaces:**
 - Produces: `Future<String?> getUsernameByPubkey({required String pubkeyHex})` — returns the active display name, or `null` if the pubkey owns no active `@divine.video` name.
 
-- [ ] **Step 1: Write the failing test**
+**Step 1: Write the failing test**
 
 ```dart
 group('getUsernameByPubkey', () {
@@ -471,12 +481,12 @@ group('getUsernameByPubkey', () {
 });
 ```
 
-- [ ] **Step 2: Run test, verify it fails**
+**Step 2: Run test, verify it fails**
 
 Run: `cd mobile/packages/profile_repository && flutter test test/src/profile_repository_by_pubkey_test.dart`
 Expected: FAIL — method undefined.
 
-- [ ] **Step 3: Implement**
+**Step 3: Implement**
 
 Add const near line 22:
 ```dart
@@ -509,11 +519,11 @@ Future<String?> getUsernameByPubkey({required String pubkeyHex}) async {
 }
 ```
 
-- [ ] **Step 4: Run test, verify it passes**
+**Step 4: Run test, verify it passes**
 
 Run: `cd mobile/packages/profile_repository && flutter test test/src/profile_repository_by_pubkey_test.dart` → PASS. Then `flutter test` (package) + coverage gate.
 
-- [ ] **Step 5: Commit**
+**Step 5: Commit**
 
 ```bash
 git add mobile/packages/profile_repository/lib/src/profile_repository.dart \
@@ -531,7 +541,7 @@ git commit -m "feat(profile): add getUsernameByPubkey() ownership lookup (#6126)
 - Consumes: `profileRepositoryProvider` (nullable, gated on `isNostrReadyProvider`), `authServiceProvider.currentPublicKeyHex`.
 - Produces: `final ownedDivineUsernameProvider = FutureProvider.autoDispose<String?>(...)` returning the active owned name or null.
 
-- [ ] **Step 1: Write the failing test**
+**Step 1: Write the failing test**
 
 Use `ProviderContainer` with overrides for `profileRepositoryProvider` (a mock returning `getUsernameByPubkey` → 'alice') and `authServiceProvider` (currentPublicKeyHex → a full hex). Assert `await container.read(ownedDivineUsernameProvider.future)` == 'alice'; and null when pubkey is null.
 
@@ -550,9 +560,9 @@ test('resolves owned name from repository', () async {
 });
 ```
 
-- [ ] **Step 2: Run test, verify it fails.** `cd mobile && flutter test test/providers/owned_divine_username_provider_test.dart` → FAIL (provider undefined).
+**Step 2: Run test, verify it fails.** `cd mobile && flutter test test/providers/owned_divine_username_provider_test.dart` → FAIL (provider undefined).
 
-- [ ] **Step 3: Implement.** (Match the exact provider names for auth/profile repo by reading `mobile/lib/providers/` — `authServiceProvider`, `profileRepositoryProvider`.)
+**Step 3: Implement.** (Match the exact provider names for auth/profile repo by reading `mobile/lib/providers/` — `authServiceProvider`, `profileRepositoryProvider`.)
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -571,9 +581,9 @@ final ownedDivineUsernameProvider =
 });
 ```
 
-- [ ] **Step 4: Run test, verify it passes.** → PASS.
+**Step 4: Run test, verify it passes.** → PASS.
 
-- [ ] **Step 5: Commit.**
+**Step 5: Commit.**
 ```bash
 git add mobile/lib/providers/owned_divine_username_provider.dart \
         mobile/test/providers/owned_divine_username_provider_test.dart
@@ -591,7 +601,7 @@ git commit -m "feat(account): add owned-divine-username provider for burn gate (
 **Interfaces:**
 - Produces: `showDeleteAllContentWarningDialog({required BuildContext context, String? ownedUsername, required void Function({required bool burnUsername}) onConfirm})`.
 
-- [ ] **Step 1: Add l10n keys.** In `app_en.arb`:
+**Step 1: Add l10n keys.** In `app_en.arb`:
 ```json
 "deleteAccountBurnUsernameToggle": "Also permanently give up {username}",
 "@deleteAccountBurnUsernameToggle": {
@@ -605,15 +615,15 @@ git commit -m "feat(account): add owned-divine-username provider for burn gate (
 ```
 Mirror both keys into every other `app_*.arb` (or `_knownUntranslatedDebt`). Run `cd mobile && flutter gen-l10n`.
 
-- [ ] **Step 2: Write the failing widget test.** Pump `showDeleteAllContentWarningDialog` inside a `MaterialApp` with `AppLocalizations.localizationsDelegates`/`supportedLocales`. Assert: with `ownedUsername: 'alice'` the checkbox label (resolved from `AppLocalizations`, not hardcoded) is present; with `ownedUsername: null` it is absent; checking it + confirming invokes `onConfirm(burnUsername: true)`.
+**Step 2: Write the failing widget test.** Pump `showDeleteAllContentWarningDialog` inside a `MaterialApp` with `AppLocalizations.localizationsDelegates`/`supportedLocales`. Assert: with `ownedUsername: 'alice'` the checkbox label (resolved from `AppLocalizations`, not hardcoded) is present; with `ownedUsername: null` it is absent; checking it + confirming invokes `onConfirm(burnUsername: true)`.
 
-- [ ] **Step 3: Run test, verify it fails.** `cd mobile && flutter test test/widgets/delete_account_dialog_test.dart` → FAIL.
+**Step 3: Run test, verify it fails.** `cd mobile && flutter test test/widgets/delete_account_dialog_test.dart` → FAIL.
 
-- [ ] **Step 4: Implement.** Change the `onConfirm` signature to `void Function({required bool burnUsername})`; add a local `bool burnUsername = false` inside the dialog's `StatefulBuilder`; when `ownedUsername != null`, render a `CheckboxListTile` (dark-mode `VineTheme` colors) above the confirm button with label `context.l10n.deleteAccountBurnUsernameToggle('@$ownedUsername.divine.video')`; pass `burnUsername` into `onConfirm`. Update `_DeleteAccountTile._handleDeleteAllContent` to `ref.watch(ownedDivineUsernameProvider).valueOrNull` and pass it as `ownedUsername`, and update its `onConfirm` to accept `{required bool burnUsername}` and forward it to `executeAccountDeletion` (Task B5 adds the param).
+**Step 4: Implement.** Change the `onConfirm` signature to `void Function({required bool burnUsername})`; add a local `bool burnUsername = false` inside the dialog's `StatefulBuilder`; when `ownedUsername != null`, render a `CheckboxListTile` (dark-mode `VineTheme` colors) above the confirm button with label `context.l10n.deleteAccountBurnUsernameToggle('@$ownedUsername.divine.video')`; pass `burnUsername` into `onConfirm`. Update `_DeleteAccountTile._handleDeleteAllContent` to `ref.watch(ownedDivineUsernameProvider).valueOrNull` and pass it as `ownedUsername`, and update its `onConfirm` to accept `{required bool burnUsername}` and forward it to `executeAccountDeletion` (Task B5 adds the param).
 
-- [ ] **Step 5: Run test, verify it passes.** → PASS. Run `flutter test test/l10n/arb_consistency_test.dart`.
+**Step 5: Run test, verify it passes.** → PASS. Run `flutter test test/l10n/arb_consistency_test.dart`.
 
-- [ ] **Step 6: Commit.**
+**Step 6: Commit.**
 ```bash
 git add mobile/lib/l10n/ mobile/lib/widgets/delete_account_dialog.dart \
         mobile/lib/screens/settings/nostr_settings_screen.dart \
@@ -631,16 +641,16 @@ git commit -m "feat(account): add opt-in burn-username checkbox to delete dialog
 **Interfaces:**
 - Consumes: `profileRepository.releaseUsername(name:)` (B1), `UsernameReleaseSuccess` (B1).
 
-- [ ] **Step 1: Write the failing orchestration tests.**
+**Step 1: Write the failing orchestration tests.**
   - burn opted-in + `releaseUsername` returns non-success → `deletionService.deleteAccount` is **never** called; an error snackbar with `deleteAccountBurnUsernameFailed` shows.
   - burn opted-in + `releaseUsername` returns `UsernameReleaseSuccess` → proceeds and `deleteAccount` **is** called.
   - burn not opted-in → `releaseUsername` **never** called; existing flow unchanged.
 
 Use mocktail mocks for `AccountDeletionService`, `AuthService`, `ProfileRepository`; `verify`/`verifyNever` on the calls.
 
-- [ ] **Step 2: Run tests, verify they fail.** → FAIL (params/behavior absent).
+**Step 2: Run tests, verify they fail.** → FAIL (params/behavior absent).
 
-- [ ] **Step 3: Implement.** Add params to `executeAccountDeletion`. Insert, as the first action inside the `try` (before `deletionService.deleteAccount`):
+**Step 3: Implement.** Add params to `executeAccountDeletion`. Insert, as the first action inside the `try` (before `deletionService.deleteAccount`):
 ```dart
 if (burnUsername && ownedUsername != null) {
   final releaseResult =
@@ -661,16 +671,16 @@ if (burnUsername && ownedUsername != null) {
 ```
 Wire `_DeleteAccountTile` to pass `profileRepository: ref.read(profileRepositoryProvider)!`, `burnUsername`, `ownedUsername`. (If `profileRepositoryProvider` is null-gated, guard the toggle path so it is non-null whenever `ownedUsername != null`.)
 
-- [ ] **Step 4: Run tests, verify they pass.** → PASS.
+**Step 4: Run tests, verify they pass.** → PASS.
 
-- [ ] **Step 5: Full verification.**
+**Step 5: Full verification.**
 ```bash
 cd mobile && dart format lib/widgets/delete_account_dialog.dart lib/screens/settings/nostr_settings_screen.dart
 flutter analyze lib test
 flutter test test/widgets/delete_account_dialog_test.dart test/l10n/arb_consistency_test.dart
 ```
 
-- [ ] **Step 6: Commit.**
+**Step 6: Commit.**
 ```bash
 git add mobile/lib/widgets/delete_account_dialog.dart \
         mobile/lib/screens/settings/nostr_settings_screen.dart \

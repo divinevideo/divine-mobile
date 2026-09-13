@@ -17,10 +17,10 @@ import 'package:profile_repository/profile_repository.dart';
 ///
 /// `profileReadRepositoryProvider` therefore hands over a [ProfileReader] as
 /// soon as the identity is known. Because the type cannot express
-/// `saveProfileEvent`, `claimUsername`, `releaseUsername` or
-/// `drivePendingSave`, a consumer of the loose provider cannot publish even
-/// by accident — the ungated phase carries a pubkey but no client, so signing
-/// there is unsafe while Drift reads are not.
+/// `saveProfileEvent`, `claimUsername` or `drivePendingSave`, a consumer of
+/// the loose provider cannot publish even by accident — the ungated phase
+/// carries a pubkey but no client, so signing there is unsafe while Drift
+/// reads are not.
 ///
 /// Every member below is signer-free: each either reads Drift directly or
 /// performs a network read without signing. Fresh profile reads may fall back

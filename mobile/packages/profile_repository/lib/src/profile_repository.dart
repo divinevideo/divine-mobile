@@ -201,8 +201,6 @@ class ProfileRepository implements ProfileReader {
 
   String get _usernameCheckUrl => '$_nameServerBaseUrl/api/username/check';
 
-  String get _usernameReleaseUrl => '$_nameServerBaseUrl/api/username/release';
-
   String get _usernameByPubkeyUrl =>
       '$_nameServerBaseUrl/api/username/by-pubkey';
 
@@ -1612,7 +1610,6 @@ class ProfileRepository implements ProfileReader {
       // own handler below is `on Exception`, so without this the throw left
       // claimUsername entirely — including for a fully keyed account. The
       // request never reached the server, so no name was claimed.
-      // Mirrors releaseUsername, which already contains the same throw.
       Log.error(
         'NIP-98 auth header generation threw '
         '(username: $normalizedUsername): $e',
@@ -1681,96 +1678,6 @@ class ProfileRepository implements ProfileReader {
         stackTrace: st,
       );
       return const UsernameClaimNetworkError();
-    }
-  }
-
-  /// Permanently burns the caller's own `@divine.video` username via a NIP-98
-  /// authenticated request to the name server's `/api/username/release`.
-  ///
-  /// The server verifies the authenticated pubkey owns [name] as an active
-  /// username before burning it. Returns a [UsernameReleaseResult]; never
-  /// throws. A `200` (including the server's idempotent no-op when the caller
-  /// holds no active name) maps to [UsernameReleaseSuccess]. A signer failure
-  /// maps to [UsernameReleaseError] — the request never left the device, so the
-  /// burn did not happen. A network/timeout failure or a `5xx` response maps to
-  /// [UsernameReleaseNetworkError]: the burn state is ambiguous (the request
-  /// may have reached the server), so callers should re-check ownership.
-  Future<UsernameReleaseResult> releaseUsername({required String name}) async {
-    final payload = jsonEncode({'name': name});
-
-    final String authHeader;
-    try {
-      final header = await _nostrClient.createNip98AuthHeader(
-        url: _usernameReleaseUrl,
-        method: 'POST',
-        payload: payload,
-      );
-      if (header == null) {
-        Log.error(
-          'NIP-98 auth header generation returned null (release: $name)',
-          name: 'ProfileRepository.releaseUsername',
-          category: LogCategory.auth,
-        );
-        return const UsernameReleaseError('Nip98 authorization failed');
-      }
-      authHeader = header;
-    } on Object catch (e, st) {
-      // Signer threw (e.g. Keycast RPC error or timeout). The request never
-      // left the device, so the burn definitely did not happen.
-      Log.error(
-        'release signing failed (username: $name)',
-        name: 'ProfileRepository.releaseUsername',
-        category: LogCategory.auth,
-        error: e,
-        stackTrace: st,
-      );
-      return const UsernameReleaseError('Signing failed');
-    }
-
-    try {
-      final response = await _httpClient
-          .post(
-            Uri.parse(_usernameReleaseUrl),
-            headers: {
-              'Authorization': authHeader,
-              'Content-Type': 'application/json',
-            },
-            body: payload,
-          )
-          .timeout(_nameServerHttpTimeout);
-
-      String? serverError;
-      if (response.statusCode != 200) {
-        try {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          serverError = data['error'] as String?;
-        } on Object {
-          // Ignore parse/cast failures on the error body.
-        }
-      }
-
-      return switch (response.statusCode) {
-        200 => const UsernameReleaseSuccess(),
-        401 => UsernameReleaseError(serverError ?? 'Authentication failed'),
-        403 => const UsernameReleaseNotOwner(),
-        // 5xx can arrive after the burn committed but before the response
-        // survived, so the state is ambiguous; route through the re-check.
-        final code when code >= 500 => const UsernameReleaseNetworkError(),
-        _ => UsernameReleaseError(
-          serverError ?? 'Unexpected response: ${response.statusCode}',
-        ),
-      };
-    } on Object catch (e, st) {
-      // Network / timeout: the request may or may not have reached the server,
-      // so the burn state is ambiguous.
-      Log.error(
-        'release network error (username: $name)',
-        name: 'ProfileRepository.releaseUsername',
-        category: LogCategory.api,
-        error: e,
-        stackTrace: st,
-      );
-      return const UsernameReleaseNetworkError();
     }
   }
 
