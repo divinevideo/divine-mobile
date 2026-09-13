@@ -7,14 +7,13 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Forwards native diagnostics emitted by `pro_video_editor` (the renderer,
-/// thumbnail, metadata and audio operations) into the app's [UnifiedLogger],
-/// so video-editor problems — e.g. a render that fails after many short clips
-/// (#4801) — are captured for bug reports.
+/// thumbnail, metadata and audio operations) into the app's [UnifiedLogger].
+/// Warnings and errors also become sanitized crash-report breadcrumbs, so
+/// video-editor failures retain native diagnostic context.
 ///
 /// Native forwarding is gated per call by the `nativeLogLevel` argument passed
-/// to each operation; this forwarder just pipes whatever the plugin emits into
-/// the unified log under [LogCategory.video]. The plugin's stream stays empty
-/// on Web, Windows, and Linux.
+/// to each operation. The plugin's stream stays empty on Web, Windows, and
+/// Linux.
 class ProVideoEditorLogForwarder {
   ProVideoEditorLogForwarder._();
 
@@ -43,7 +42,7 @@ class ProVideoEditorLogForwarder {
     _subscription = null;
   }
 
-  /// Maps a single [NativeLogEntry] onto the [UnifiedLogger].
+  /// Forwards one [NativeLogEntry] to local and crash-report logging.
   @visibleForTesting
   static void forwardEntry(
     NativeLogEntry entry, {
