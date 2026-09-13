@@ -1506,6 +1506,9 @@ workflows:
               timeout 10s adb shell dumpsys media.codec || true
               echo "## top"
               timeout 10s adb shell top -b -n 1 || true
+              echo "## impeller"
+              timeout 10s adb logcat -d -s flutter Flutter 2>/dev/null \
+                | grep -i "impeller" | tail -5 || true
             } > test_reports/feed_ttff_emulator.txt 2>&1 || true
             kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
           }
@@ -1537,6 +1540,14 @@ workflows:
             -d "$DEVICE_ID" \
             --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
             --machine | tee test_reports/feed_ttff.jsonl
+          # Frame timing for #9045: UI/raster frame times while the feed plays
+          # and animates between pages. Raster is reported, not gated, on an
+          # emulator; a budget-device run uses the same command against a real
+          # phone.
+          flutter test integration_test/perf/feed_frame_test.dart \
+            -d "$DEVICE_ID" \
+            --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
+            --machine | tee test_reports/feed_frame.jsonl
     artifacts:
       - test_reports/*.jsonl
       - test_reports/feed_ttff_fixture_server.log
