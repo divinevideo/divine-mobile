@@ -76,6 +76,7 @@ class _FakeRelay extends RelayBase {
 
   /// Messages to deliver via [onMessage] when connecting.
   List<List<dynamic>> fakeResponses = [];
+  final List<List<dynamic>> sentMessages = [];
 
   /// Whether [connect] should succeed.
   final bool shouldConnect;
@@ -113,6 +114,7 @@ class _FakeRelay extends RelayBase {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
+    sentMessages.add(message);
     // Only throw on CLOSE messages (not REQ sent by onConnected)
     if (throwOnSend && message.isNotEmpty && message[0] == 'CLOSE') {
       throw Exception('Send failed');
@@ -6345,35 +6347,43 @@ void main() {
         });
 
         test(
-          'returns follower count from indexer relay',
+          'uses an opaque id for the follower-count request',
           () async {
+            late _FakeRelay relay;
             repository = FollowRepository(
               nostrClient: mockNostrClient,
               isCacheInitialized: () => cacheIsInitialized,
               getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
               cacheUserEvent: cachedUserEvents.add,
               indexerRelayUrls: const [indexerUrl],
-              relayFactory: fakeRelayFactory(
-                responses: [
-                  [
-                    'EVENT',
-                    'sub1',
-                    {'pubkey': followerPubkey1},
-                  ],
-                  [
-                    'EVENT',
-                    'sub1',
-                    {'pubkey': followerPubkey2},
-                  ],
-                  ['EOSE', 'sub1'],
-                ],
-              ),
+              relayFactory: (url, status) {
+                return relay = _FakeRelay(url, status)
+                  ..fakeResponses = [
+                    [
+                      'EVENT',
+                      'sub1',
+                      {'pubkey': followerPubkey1},
+                    ],
+                    [
+                      'EVENT',
+                      'sub1',
+                      {'pubkey': followerPubkey2},
+                    ],
+                    ['EOSE', 'sub1'],
+                  ];
+              },
             );
 
             final stats = await repository.getFollowerStats(testTargetPubkey);
 
-            // 2 EVENT messages with distinct pubkeys → followers=2
             expect(stats.followers, equals(2));
+            final request = relay.sentMessages.firstWhere(
+              (message) => message.first == 'REQ',
+            );
+            expect(
+              RegExp(r'^[0-9a-z]{16}$').hasMatch(request[1] as String),
+              isTrue,
+            );
           },
         );
 
@@ -6723,7 +6733,8 @@ void main() {
           expect(followers, [followerPubkey1]);
         });
 
-        test('bounds CLOSE after follower refs complete', () async {
+        test('uses an opaque id for the follower-list request', () async {
+          late _FakeRelay relay;
           when(() => mockNostrClient.queryEvents(any())).thenAnswer(
             (_) async => [],
           );
@@ -6734,12 +6745,12 @@ void main() {
             cacheUserEvent: cachedUserEvents.add,
             indexerRelayUrls: const [indexerUrl],
             indexerOperationTimeout: const Duration(milliseconds: 20),
-            relayFactory: fakeRelayFactory(
-              responses: const [
-                ['EOSE', 'sub1'],
-              ],
-              neverCloses: true,
-            ),
+            relayFactory: (url, status) {
+              return relay = _FakeRelay(url, status, neverCloses: true)
+                ..fakeResponses = const [
+                  ['EOSE', 'sub1'],
+                ];
+            },
           );
 
           final followers = await repository
@@ -6747,6 +6758,13 @@ void main() {
               .timeout(const Duration(milliseconds: 200));
 
           expect(followers, isEmpty);
+          final request = relay.sentMessages.firstWhere(
+            (message) => message.first == 'REQ',
+          );
+          expect(
+            RegExp(r'^[0-9a-z]{16}$').hasMatch(request[1] as String),
+            isTrue,
+          );
         });
 
         test(
@@ -7854,7 +7872,7 @@ void main() {
       );
 
       test(
-        '_queryIndexerForContactList picks newer of two events',
+        '_queryIndexerForContactList uses an opaque id',
         () async {
           final olderContactList = {
             'pubkey': testCurrentUserPubkey,
@@ -7897,6 +7915,7 @@ void main() {
             ),
           ).thenAnswer((_) => const Stream<Event>.empty());
 
+          late _FakeRelay relay;
           repository = FollowRepository(
             nostrClient: mockNostrClient,
             isCacheInitialized: () => cacheIsInitialized,
@@ -7904,8 +7923,7 @@ void main() {
             cacheUserEvent: cachedUserEvents.add,
             indexerRelayUrls: const ['wss://idx.test'],
             relayFactory: (url, status) {
-              // Two EVENTs (older then newer) + EOSE
-              return _FakeRelay(url, status)
+              return relay = _FakeRelay(url, status)
                 ..fakeResponses = [
                   ['EVENT', 'sub1', olderContactList],
                   ['EVENT', 'sub1', newerContactList],
@@ -7930,6 +7948,13 @@ void main() {
           );
           expect(
             repository.isFollowing(testTargetPubkey2),
+            isTrue,
+          );
+          final request = relay.sentMessages.firstWhere(
+            (message) => message.first == 'REQ',
+          );
+          expect(
+            RegExp(r'^[0-9a-z]{16}$').hasMatch(request[1] as String),
             isTrue,
           );
         },
