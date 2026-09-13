@@ -1,12 +1,14 @@
 // ABOUTME: Model for tracking video uploads to Cloudinary in various states.
 // ABOUTME: Supports local persistence and state management for async upload.
 //
-// TODO(dedup): This model is duplicated in lib/models/pending_upload.dart.
+// TODO(dedup): This model is duplicated in
+// packages/upload_repository/lib/src/pending_upload.dart.
 // Migration follows the same pattern as UserProfile (completed):
 // 1. Create manual Hive TypeAdapter in lib/adapters/ (preserving binary format)
 // 2. Move Flutter-dependent getters to app-layer extensions
 // 3. Update ~30 consumer files to import from package:models
-// 4. Delete lib/models/pending_upload.dart and its .g.dart file
+// 4. Delete packages/upload_repository/lib/src/pending_upload.dart and its
+//    .g.dart file
 // See lib/adapters/user_profile_hive_adapter.dart for the proven pattern.
 
 import 'dart:convert';
