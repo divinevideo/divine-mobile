@@ -1,30 +1,63 @@
 // ABOUTME: Comprehensive widget test for LinkifiedText covering core functionality
 // ABOUTME: Tests hashtag parsing, tap interactions, navigation, styling, and edge cases
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 
-class _MockNavigatorObserver extends Mock implements NavigatorObserver {}
+TapGestureRecognizer _hashtagRecognizer(WidgetTester tester, String hashtag) {
+  final text = tester.widget<Text>(find.byType(Text));
+  final textSpan = text.textSpan! as TextSpan;
+  final hashtagSpan = textSpan.children!.cast<TextSpan>().firstWhere(
+    (span) => span.text == '#$hashtag',
+  );
+  return hashtagSpan.recognizer! as TapGestureRecognizer;
+}
 
-class _FakeRoute extends Fake implements Route<dynamic> {}
+Future<GoRouter> _pumpRoutedText(
+  WidgetTester tester, {
+  required String text,
+  VoidCallback? onVideoStateChange,
+}) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, _) => Scaffold(
+          body: LinkifiedText(
+            text: text,
+            onVideoStateChange: onVideoStateChange,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: HashtagScreenRouter.path,
+        builder: (_, state) => Scaffold(
+          body: Text('hashtag:${state.pathParameters['tag']}'),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    MaterialApp.router(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: router,
+    ),
+  );
+  await tester.pump();
+  return router;
+}
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(_FakeRoute());
-  });
-
   group('LinkifiedText - Comprehensive Tests', () {
-    late _MockNavigatorObserver mockObserver;
-
-    setUp(() {
-      mockObserver = _MockNavigatorObserver();
-    });
-
     group('Text Display and Structure', () {
       testWidgets('renders plain text without hashtags as simple Text', (
         tester,
@@ -192,11 +225,10 @@ void main() {
           (span) => span.text!.startsWith('#'),
         );
 
-        expect(hashtagSpan.style?.color, Colors.blue);
-        expect(hashtagSpan.style?.decoration, TextDecoration.underline);
+        expect(hashtagSpan.style?.color, VineTheme.info);
+        expect(hashtagSpan.style?.fontSize, 14);
         expect(hashtagSpan.style?.fontWeight, FontWeight.w500);
-        // TODO(Any): Fix and re-enable these tests
-      }, skip: true);
+      });
 
       testWidgets('respects maxLines property', (tester) async {
         const longText =
@@ -224,113 +256,58 @@ void main() {
       testWidgets('calls onVideoStateChange when hashtag is tapped', (
         tester,
       ) async {
-        bool callbackCalled = false;
-
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            navigatorObservers: [mockObserver],
-            home: Scaffold(
-              body: LinkifiedText(
-                text: 'Check out #vine',
-                onVideoStateChange: () => callbackCalled = true,
-              ),
-            ),
-          ),
+        var callbackCount = 0;
+        await _pumpRoutedText(
+          tester,
+          text: 'Check out #vine',
+          onVideoStateChange: () => callbackCount++,
         );
 
-        // Find and tap the hashtag
-        final text = tester.widget<Text>(find.byType(Text));
-        final textSpan = text.textSpan! as TextSpan;
-        final spans = textSpan.children!.cast<TextSpan>();
-        final hashtagSpan = spans.firstWhere(
-          (span) => span.text!.startsWith('#'),
-        );
-        final tapRecognizer = hashtagSpan.recognizer! as TapGestureRecognizer;
-
-        tapRecognizer.onTap!();
+        _hashtagRecognizer(tester, 'vine').onTap!();
         await tester.pumpAndSettle();
 
-        expect(callbackCalled, isTrue);
-        // TODO(Any): Fix and re-enable these tests
-      }, skip: true);
+        expect(callbackCount, 1);
+        expect(find.text('hashtag:vine'), findsOneWidget);
+      });
 
       testWidgets('navigates to hashtag feed when hashtag is tapped', (
         tester,
       ) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            navigatorObservers: [mockObserver],
-            home: const Scaffold(
-              body: LinkifiedText(text: 'Check out #test'),
-            ),
-          ),
+        await _pumpRoutedText(
+          tester,
+          text: 'Check out #test',
         );
 
-        // Find and tap the hashtag
-        final text = tester.widget<Text>(find.byType(Text));
-        final textSpan = text.textSpan! as TextSpan;
-        final spans = textSpan.children!.cast<TextSpan>();
-        final hashtagSpan = spans.firstWhere(
-          (span) => span.text!.startsWith('#'),
-        );
-        final tapRecognizer = hashtagSpan.recognizer! as TapGestureRecognizer;
-
-        tapRecognizer.onTap!();
+        _hashtagRecognizer(tester, 'test').onTap!();
         await tester.pumpAndSettle();
 
-        // Verify navigation occurred
-        verify(() => mockObserver.didPush(any(), any()));
-        // TODO(Any): Fix and re-enable these tests
-      }, skip: true);
+        expect(find.text('hashtag:test'), findsOneWidget);
+      });
 
       testWidgets('handles tap on different hashtags correctly', (
         tester,
       ) async {
-        // Mock the navigation to capture hashtag values
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            navigatorObservers: [mockObserver],
-            home: Scaffold(
-              body: LinkifiedText(
-                text: '#first and #second hashtags',
-                onVideoStateChange: () {},
-              ),
-            ),
-          ),
+        var callbackCount = 0;
+        final router = await _pumpRoutedText(
+          tester,
+          text: '#first and #second hashtags',
+          onVideoStateChange: () => callbackCount++,
         );
 
-        final text = tester.widget<Text>(find.byType(Text));
-        final textSpan = text.textSpan! as TextSpan;
-        final spans = textSpan.children!.cast<TextSpan>();
-
-        // Tap first hashtag
-        final firstHashtagSpan = spans.firstWhere(
-          (span) => span.text == '#first',
-        );
-        final firstTapRecognizer =
-            firstHashtagSpan.recognizer! as TapGestureRecognizer;
-        firstTapRecognizer.onTap!();
+        _hashtagRecognizer(tester, 'first').onTap!();
         await tester.pumpAndSettle();
 
-        // Tap second hashtag
-        final secondHashtagSpan = spans.firstWhere(
-          (span) => span.text == '#second',
-        );
-        final secondTapRecognizer =
-            secondHashtagSpan.recognizer! as TapGestureRecognizer;
-        secondTapRecognizer.onTap!();
+        expect(find.text('hashtag:first'), findsOneWidget);
+
+        router.pop();
         await tester.pumpAndSettle();
 
-        // Verify both navigation calls
-        verify(() => mockObserver.didPush(any(), any())).called(2);
-        // TODO(Any): Fix and re-enable these tests
-      }, skip: true);
+        _hashtagRecognizer(tester, 'second').onTap!();
+        await tester.pumpAndSettle();
+
+        expect(find.text('hashtag:second'), findsOneWidget);
+        expect(callbackCount, 2);
+      });
     });
 
     group('Edge Cases', () {
