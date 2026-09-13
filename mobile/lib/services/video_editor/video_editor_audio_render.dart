@@ -141,7 +141,9 @@ String _durationMs(Duration? duration) =>
 /// the timeline already carries audio it is the same sound, so adding it again
 /// duplicates the audio — hence the fallback only applies to an empty
 /// timeline. Tracks that resolve to no usable source are dropped by the
-/// mappers and logged there.
+/// mappers and logged there under [logName]; every successfully-built track
+/// is also logged under [logName] here so bug-report diagnostics can be
+/// attributed to the caller that produced them.
 ///
 /// Both render entry points go through this: the in-editor export and the
 /// headless draft render used when publishing from the library. Keeping it in
@@ -210,7 +212,9 @@ List<AudioTrack> buildRenderAudioTracks({
 /// A track that cannot be resolved (e.g. a failed network download) is skipped
 /// and logged rather than aborting the whole render. A warning is logged when
 /// audio was requested but none could be resolved, so a silent (audio-less)
-/// export is diagnosable from logs.
+/// export is diagnosable from logs. Every successfully-resolved track is also
+/// logged under [logName], recording its final composition and source timing
+/// for mux diagnostics.
 ///
 /// When [videoDuration] is set, each track's composition window is clamped to
 /// it (see [clampAudioWindowToVideo]) so audio cannot outlast the video track.
