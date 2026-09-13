@@ -182,3 +182,89 @@ final class LanguagePreferenceServiceProvider
 
 String _$languagePreferenceServiceHash() =>
     r'a6e5b3c32d40108a2c44f422fcb95f64e4a68214';
+
+/// Rebuild trigger for consumers that need the latest content-language
+/// preference in request parameters.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// publishes the next version to this notifier's state instead of rebuilding
+/// the provider. Kept alive so the subscription survives while no consumer
+/// is mounted.
+
+@ProviderFor(LanguagePreferenceVersionNotifier)
+final languagePreferenceVersionProvider =
+    LanguagePreferenceVersionNotifierProvider._();
+
+/// Rebuild trigger for consumers that need the latest content-language
+/// preference in request parameters.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// publishes the next version to this notifier's state instead of rebuilding
+/// the provider. Kept alive so the subscription survives while no consumer
+/// is mounted.
+final class LanguagePreferenceVersionNotifierProvider
+    extends $NotifierProvider<LanguagePreferenceVersionNotifier, int> {
+  /// Rebuild trigger for consumers that need the latest content-language
+  /// preference in request parameters.
+  ///
+  /// The subscription is installed once per provider lifetime; a notification
+  /// publishes the next version to this notifier's state instead of rebuilding
+  /// the provider. Kept alive so the subscription survives while no consumer
+  /// is mounted.
+  LanguagePreferenceVersionNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'languagePreferenceVersionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$languagePreferenceVersionNotifierHash();
+
+  @$internal
+  @override
+  LanguagePreferenceVersionNotifier create() =>
+      LanguagePreferenceVersionNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$languagePreferenceVersionNotifierHash() =>
+    r'969953bf80994f99019689400e86a3fa3442e0ad';
+
+/// Rebuild trigger for consumers that need the latest content-language
+/// preference in request parameters.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// publishes the next version to this notifier's state instead of rebuilding
+/// the provider. Kept alive so the subscription survives while no consumer
+/// is mounted.
+
+abstract class _$LanguagePreferenceVersionNotifier extends $Notifier<int> {
+  int build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<int, int>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<int, int>,
+              int,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

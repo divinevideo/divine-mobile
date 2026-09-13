@@ -61,23 +61,25 @@ final class EnvironmentServiceProvider
 String _$environmentServiceHash() =>
     r'838df3b92839b030c0bae0c59566ffe7ea45e2da';
 
-/// Provider for current environment config (reactive)
+/// Provider for current environment config that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new config to this notifier's state instead of rebuilding it.
 
-@ProviderFor(currentEnvironment)
-final currentEnvironmentProvider = CurrentEnvironmentProvider._();
+@ProviderFor(CurrentEnvironmentNotifier)
+final currentEnvironmentProvider = CurrentEnvironmentNotifierProvider._();
 
-/// Provider for current environment config (reactive)
-
-final class CurrentEnvironmentProvider
-    extends
-        $FunctionalProvider<
-          EnvironmentConfig,
-          EnvironmentConfig,
-          EnvironmentConfig
-        >
-    with $Provider<EnvironmentConfig> {
-  /// Provider for current environment config (reactive)
-  CurrentEnvironmentProvider._()
+/// Provider for current environment config that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new config to this notifier's state instead of rebuilding it.
+final class CurrentEnvironmentNotifierProvider
+    extends $NotifierProvider<CurrentEnvironmentNotifier, EnvironmentConfig> {
+  /// Provider for current environment config that publishes service changes.
+  ///
+  /// The subscription is installed once per provider lifetime; a notification
+  /// assigns the new config to this notifier's state instead of rebuilding it.
+  CurrentEnvironmentNotifierProvider._()
     : super(
         from: null,
         argument: null,
@@ -89,18 +91,11 @@ final class CurrentEnvironmentProvider
       );
 
   @override
-  String debugGetCreateSourceHash() => _$currentEnvironmentHash();
+  String debugGetCreateSourceHash() => _$currentEnvironmentNotifierHash();
 
   @$internal
   @override
-  $ProviderElement<EnvironmentConfig> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  EnvironmentConfig create(Ref ref) {
-    return currentEnvironment(ref);
-  }
+  CurrentEnvironmentNotifier create() => CurrentEnvironmentNotifier();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(EnvironmentConfig value) {
@@ -111,21 +106,53 @@ final class CurrentEnvironmentProvider
   }
 }
 
-String _$currentEnvironmentHash() =>
-    r'7e9c79685df1563e6772cd47f6cbf7a06256fb6a';
+String _$currentEnvironmentNotifierHash() =>
+    r'c7c7e76b1b44e62ed21a2c23873125a63a019be8';
 
-/// Provider for developer mode enabled state
+/// Provider for current environment config that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new config to this notifier's state instead of rebuilding it.
 
-@ProviderFor(isDeveloperModeEnabled)
-final isDeveloperModeEnabledProvider = IsDeveloperModeEnabledProvider._();
+abstract class _$CurrentEnvironmentNotifier
+    extends $Notifier<EnvironmentConfig> {
+  EnvironmentConfig build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<EnvironmentConfig, EnvironmentConfig>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<EnvironmentConfig, EnvironmentConfig>,
+              EnvironmentConfig,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
-/// Provider for developer mode enabled state
+/// Provider for developer mode state that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new value to this notifier's state instead of rebuilding it.
 
-final class IsDeveloperModeEnabledProvider
-    extends $FunctionalProvider<bool, bool, bool>
-    with $Provider<bool> {
-  /// Provider for developer mode enabled state
-  IsDeveloperModeEnabledProvider._()
+@ProviderFor(IsDeveloperModeEnabledNotifier)
+final isDeveloperModeEnabledProvider =
+    IsDeveloperModeEnabledNotifierProvider._();
+
+/// Provider for developer mode state that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new value to this notifier's state instead of rebuilding it.
+final class IsDeveloperModeEnabledNotifierProvider
+    extends $NotifierProvider<IsDeveloperModeEnabledNotifier, bool> {
+  /// Provider for developer mode state that publishes service changes.
+  ///
+  /// The subscription is installed once per provider lifetime; a notification
+  /// assigns the new value to this notifier's state instead of rebuilding it.
+  IsDeveloperModeEnabledNotifierProvider._()
     : super(
         from: null,
         argument: null,
@@ -137,17 +164,11 @@ final class IsDeveloperModeEnabledProvider
       );
 
   @override
-  String debugGetCreateSourceHash() => _$isDeveloperModeEnabledHash();
+  String debugGetCreateSourceHash() => _$isDeveloperModeEnabledNotifierHash();
 
   @$internal
   @override
-  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  bool create(Ref ref) {
-    return isDeveloperModeEnabled(ref);
-  }
+  IsDeveloperModeEnabledNotifier create() => IsDeveloperModeEnabledNotifier();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(bool value) {
@@ -158,8 +179,31 @@ final class IsDeveloperModeEnabledProvider
   }
 }
 
-String _$isDeveloperModeEnabledHash() =>
-    r'3f5028fa51095861d0d08202e70435540443fe84';
+String _$isDeveloperModeEnabledNotifierHash() =>
+    r'c67445459e1ce3db51edb2228ceb32cf37cb825d';
+
+/// Provider for developer mode state that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new value to this notifier's state instead of rebuilding it.
+
+abstract class _$IsDeveloperModeEnabledNotifier extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 /// Provider to check if showing environment indicator
 
