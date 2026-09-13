@@ -1,5 +1,7 @@
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 
+import 'feed_percentile.dart';
+
 /// Number of distinct feed activations in the TTFF sample.
 const feedTtffSampleCount = 10;
 
@@ -11,15 +13,10 @@ Duration feedTtffPercentile(
   Iterable<FeedFirstFrameMetric> metrics, {
   required int percentile,
 }) {
-  if (percentile < 1 || percentile > 100) {
-    throw RangeError.range(percentile, 1, 100, 'percentile');
-  }
-  final sorted = metrics.map((metric) => metric.duration).toList()..sort();
-  if (sorted.isEmpty) {
-    throw ArgumentError.value(metrics, 'metrics', 'must not be empty');
-  }
-  final rank = (percentile * sorted.length + 99) ~/ 100;
-  return sorted[rank - 1];
+  return feedPercentile(
+    metrics.map((metric) => metric.duration).toList(),
+    percentile,
+  );
 }
 
 /// Human-readable sample table included in assertion failures and CI logs.

@@ -23,7 +23,8 @@
 // Read the `FEED_FRAME window=...` lines. Build time is the UI-thread half and
 // is CPU-bound; raster time is the GPU half the report's rendering path lives
 // in. The Impeller backend is not queryable from Dart — read the `## impeller`
-// section of the perf lane's emulator dump, or `adb logcat -s flutter` on the
+// section of this lane's emulator dump
+// (`test_reports/feed_frame_emulator.txt`), or `adb logcat -s flutter` on the
 // device.
 
 import 'dart:async';
@@ -34,6 +35,7 @@ import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'feed_percentile.dart';
 import 'feed_perf_fixtures.dart';
 
 /// Minimum frames the playback window must render for its statistics to mean
@@ -41,15 +43,15 @@ import 'feed_perf_fixtures.dart';
 /// this only catches a window that fell silent.
 const int _minPlaybackFrames = 30;
 
-/// Minimum frames each page transition must render, so the transition window
-/// fails when the frame-clock filter matched nothing rather than when the
-/// device is slow. The transition window is bounded by real animation time
-/// ([_pageTransitions] × `_pageJumpDuration` 300 ms), and the point of the
-/// report is the frame distribution on the device under test — a device
-/// rendering the transition at 10 fps is a finding, not a harness failure.
-/// Two frames per transition is enough to prove the filter is keyed to the
-/// right clock; a genuinely frozen window produces none. The effective floor is
-/// ~7 fps over the 1.5 s window, below which the window is too sparse to report.
+/// Minimum frames each page transition must render, enforced as
+/// [_pageTransitions] × this value across the whole window. The window is
+/// bounded by real animation time ([_pageTransitions] × `_pageJumpDuration`
+/// 300 ms), and the point of the report is the frame distribution on the
+/// device under test — a device rendering the transition at 10 fps is a
+/// finding, not a harness failure. Two frames per transition is enough to
+/// prove the filter is keyed to the right clock; a genuinely frozen window
+/// produces none. The effective floor is ~7 fps over the 1.5 s window, below
+/// which the window is too sparse to report.
 const int _minFramesPerTransition = 2;
 
 /// Ceiling for the p90 UI-thread (build) frame time. Build is CPU-bound and
@@ -83,18 +85,18 @@ class _WindowStats {
     double frameBudgetMs,
   ) {
     double ms(Duration d) => d.inMicroseconds / 1000.0;
-    final build = timings.map((t) => ms(t.buildDuration)).toList()..sort();
-    final raster = timings.map((t) => ms(t.rasterDuration)).toList()..sort();
-    double p(List<double> xs, double q) =>
-        xs.isEmpty ? 0 : xs[(xs.length * q).floor().clamp(0, xs.length - 1)];
+    final build = timings.map((t) => ms(t.buildDuration)).toList();
+    final raster = timings.map((t) => ms(t.rasterDuration)).toList();
+    double p(List<double> xs, int percentile) =>
+        xs.isEmpty ? 0 : feedPercentile(xs, percentile);
 
     return _WindowStats._(
       label: label,
       frames: timings.length,
-      buildP50Ms: p(build, 0.5),
-      buildP90Ms: p(build, 0.9),
-      rasterP50Ms: p(raster, 0.5),
-      rasterP90Ms: p(raster, 0.9),
+      buildP50Ms: p(build, 50),
+      buildP90Ms: p(build, 90),
+      rasterP50Ms: p(raster, 50),
+      rasterP90Ms: p(raster, 90),
       buildOverBudget: build.where((d) => d > frameBudgetMs).length,
       rasterOverBudget: raster.where((d) => d > frameBudgetMs).length,
     );
@@ -199,22 +201,18 @@ void main() {
         // is "more or less arbitrary" in the SDK docs), but both derive from
         // the engine's frame timestamps on Android and the emulator run matched
         // 42 of the captured frames; if they ever diverge the filter matches
-        // nothing and the per-transition floor below fails loudly.
-        final transitionRaw = <FrameTiming>[];
+        // nothing and the frame floor below fails loudly.
         final intervals = <(int, int)>[];
-        void transitionCallback(List<FrameTiming> timings) =>
-            transitionRaw.addAll(timings);
-        binding.addTimingsCallback(transitionCallback);
-        for (var index = 1; index <= _pageTransitions; index++) {
-          final start = binding.currentSystemFrameTimeStamp.inMicroseconds;
-          await feedKey.currentState!.animateToPage(index);
-          intervals.add((
-            start,
-            binding.currentSystemFrameTimeStamp.inMicroseconds,
-          ));
-        }
-        await Future<void>.delayed(const Duration(seconds: 2));
-        binding.removeTimingsCallback(transitionCallback);
+        final transitionRaw = await record(() async {
+          for (var index = 1; index <= _pageTransitions; index++) {
+            final start = binding.currentSystemFrameTimeStamp.inMicroseconds;
+            await feedKey.currentState!.animateToPage(index);
+            intervals.add((
+              start,
+              binding.currentSystemFrameTimeStamp.inMicroseconds,
+            ));
+          }
+        });
         final transition = transitionRaw.where((timing) {
           final at = timing.timestampInMicroseconds(FramePhase.vsyncStart);
           return intervals.any((i) => at >= i.$1 && at <= i.$2);
@@ -263,18 +261,23 @@ void main() {
 
         expect(
           playbackStats.frames,
-          greaterThan(_minPlaybackFrames),
+          greaterThanOrEqualTo(_minPlaybackFrames),
           reason:
               'playback rendered only ${playbackStats.frames} frames; the '
               'window measured nothing',
         );
+        const minTransitionFrames = _pageTransitions * _minFramesPerTransition;
+        final transitionFrames = transitionStats.frames;
         expect(
-          transitionStats.frames,
-          greaterThan(_pageTransitions * _minFramesPerTransition),
-          reason:
-              'page_transition rendered only ${transitionStats.frames} frames '
-              'across $_pageTransitions transitions; the frame-clock filter '
-              'matched nothing',
+          transitionFrames,
+          greaterThanOrEqualTo(minTransitionFrames),
+          reason: transitionFrames == 0
+              ? 'page_transition matched no frames; the frame-clock filter did '
+                    'not line up with the engine timings'
+              : 'page_transition rendered only $transitionFrames frames across '
+                    '$_pageTransitions transitions, below the '
+                    '$minTransitionFrames-frame floor; the sample is too sparse '
+                    'to report',
         );
         for (final window in stats) {
           expect(
