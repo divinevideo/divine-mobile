@@ -4,10 +4,12 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -36,6 +38,10 @@ class _FakeExtension extends NostrExtension {
   Future<String> getPublicKey() async =>
       'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
 }
+
+final _authStateMirrorProvider = Provider<AuthState>(
+  (ref) => ref.watch(currentAuthStateProvider),
+);
 
 class _RecordingAnalytics implements AnalyticsEventSink {
   final userIds = <String?>[];
@@ -255,6 +261,93 @@ void main() {
       container.dispose();
 
       expect(service.isAuthenticated, isFalse);
+    });
+  });
+
+  group('currentAuthStateProvider', () {
+    testWidgets(
+      'updates dependent providers without rebuilding its subscription',
+      (
+        tester,
+      ) async {
+        final authStateController = StreamController<AuthState>.broadcast();
+        addTearDown(authStateController.close);
+        final authService = _MockAuthService();
+        var authState = AuthState.checking;
+        when(() => authService.authState).thenAnswer((_) => authState);
+        when(
+          () => authService.authStateStream,
+        ).thenAnswer((_) => authStateController.stream);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [authServiceProvider.overrideWithValue(authService)],
+            child: Consumer(
+              builder: (context, ref, child) {
+                return SizedBox(
+                  key: ValueKey(ref.watch(_authStateMirrorProvider)),
+                );
+              },
+            ),
+          ),
+        );
+        expect(find.byKey(const ValueKey(AuthState.checking)), findsOneWidget);
+
+        authState = AuthState.authenticated;
+        authStateController.add(authState);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey(AuthState.authenticated)),
+          findsOneWidget,
+        );
+        verify(() => authService.authStateStream).called(1);
+      },
+    );
+  });
+
+  group('currentAuthRpcCapabilityProvider', () {
+    testWidgets('updates consumers without rebuilding its subscription', (
+      tester,
+    ) async {
+      final capabilityController =
+          StreamController<AuthRpcCapability>.broadcast();
+      addTearDown(capabilityController.close);
+      final authService = _MockAuthService();
+      when(
+        () => authService.authRpcCapability,
+      ).thenReturn(AuthRpcCapability.unavailable);
+      when(
+        () => authService.authRpcCapabilityStream,
+      ).thenAnswer((_) => capabilityController.stream);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [authServiceProvider.overrideWithValue(authService)],
+          child: Consumer(
+            builder: (context, ref, child) {
+              return SizedBox(
+                key: ValueKey(ref.watch(currentAuthRpcCapabilityProvider)),
+              );
+            },
+          ),
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey(AuthRpcCapability.unavailable)),
+        findsOneWidget,
+      );
+
+      capabilityController.add(AuthRpcCapability.rpcReady);
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey(AuthRpcCapability.rpcReady)),
+        findsOneWidget,
+      );
+      verify(() => authService.authRpcCapabilityStream).called(1);
     });
   });
 

@@ -474,9 +474,7 @@ void main() {
             return isAccountEnforced;
           }),
           badgeRepositoryProvider.overrideWithValue(badgeRepository),
-          currentAuthStateProvider.overrideWith(
-            (ref) => AuthState.authenticated,
-          ),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           isFeatureEnabledProvider(
             FeatureFlag.curatedLists,
           ).overrideWith((ref) => curatedListsEnabled),
@@ -2849,8 +2847,8 @@ void main() {
                   ).overrideWith((ref) => const Stream.empty()),
                   authServiceProvider.overrideWithValue(authService),
                   badgeRepositoryProvider.overrideWithValue(badgeRepository),
-                  currentAuthStateProvider.overrideWith(
-                    (ref) => AuthState.authenticated,
+                  currentAuthStateProvider.overrideWithValue(
+                    AuthState.authenticated,
                   ),
                   isFeatureEnabledProvider(
                     FeatureFlag.curatedLists,
@@ -2966,8 +2964,8 @@ void main() {
                   ).overrideWith((ref) => const Stream.empty()),
                   authServiceProvider.overrideWithValue(authService),
                   badgeRepositoryProvider.overrideWithValue(badgeRepository),
-                  currentAuthStateProvider.overrideWith(
-                    (ref) => AuthState.authenticated,
+                  currentAuthStateProvider.overrideWithValue(
+                    AuthState.authenticated,
                   ),
                   isFeatureEnabledProvider(
                     FeatureFlag.curatedLists,
