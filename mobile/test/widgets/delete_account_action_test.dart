@@ -178,9 +178,14 @@ void main() {
           await tester.pumpAndSettle();
 
           if (unmountDuring != null) {
-            expect(find.byKey(const Key('delete')), findsNothing);
-            expect(find.text('Finished'), findsOneWidget);
-            pendingOperation.complete();
+            try {
+              expect(find.byKey(const Key('delete')), findsNothing);
+              expect(find.text('Finished'), findsOneWidget);
+            } finally {
+              // Keep the mocked repository/authService callback from hanging
+              // forever if either assertion above fails.
+              pendingOperation.complete();
+            }
             await tester.pumpAndSettle();
           }
           expect(tester.takeException(), isNull);
