@@ -101,6 +101,10 @@ void main() {
       expect(log.name, 'recorder-render');
       expect(log.level, LogLevel.warning);
       expect(log.message, contains('Prepared selected-sound fallback'));
+      expect(
+        log.message,
+        contains('composition=[0ms, 30000ms], source=[12000ms, unbounded]'),
+      );
     });
 
     test('timeline timing wins over the recorder-selected fallback', () {
@@ -123,6 +127,10 @@ void main() {
       expect(log.name, 'timeline-render');
       expect(log.level, LogLevel.warning);
       expect(log.message, contains('Prepared timeline'));
+      expect(
+        log.message,
+        contains('composition=[1300ms, 20000ms], source=[0ms, unbounded]'),
+      );
     });
   });
 
