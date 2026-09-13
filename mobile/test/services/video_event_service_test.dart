@@ -64,10 +64,9 @@ void main() {
   });
 
   tearDown(() async {
-    // Cancel subscriptions and clear params BEFORE closing the controllers,
-    // so onDone never fires on a still-registered listener and no 5s
-    // reconnection Timer leaks into later suites in the merged VGV isolate.
-    // Mirrors video_event_service_deduplication_test.dart.
+    // Unsubscribe before closing controllers so onDone can't arm a 5s
+    // reconnection Timer that leaks into later suites in the merged VGV
+    // isolate. Mirrors video_event_service_deduplication_test.dart.
     await service.unsubscribeFromVideoFeed();
     service.dispose();
     for (final subscription in subscriptions) {
@@ -123,20 +122,17 @@ void main() {
     test(
       'pagination keeps the oldest timestamp and page-size contract',
       () async {
-        // Drives pagination bookkeeping through the public subscribe +
-        // relay-delivery + EOSE path rather than calling PaginationState's
-        // own methods directly, so this locks subscribeToVideoFeed's wiring
-        // rather than re-testing PaginationState in isolation (already
-        // covered by video_event_service_pagination_state_test.dart).
+        // Drives pagination through subscribe + EOSE rather than
+        // PaginationState's own methods (isolated coverage for those lives
+        // in video_event_service_pagination_state_test.dart).
         const limit = 5;
         await service.subscribeToVideoFeed(
           subscriptionType: SubscriptionType.discovery,
           limit: limit,
         );
 
-        // Out-of-order arrival: the true minimum lands second, so only a
-        // real running-min tracker — not a hardcoded value — makes the
-        // oldestTimestamp assertion below pass.
+        // Out-of-order arrival: only a real running-min tracker gets
+        // oldestTimestamp right below, not a hardcoded value.
         subscriptions.single
           ..add(_relayVideoEvent(0, createdAt: 300))
           ..add(_relayVideoEvent(1, createdAt: 100))
@@ -181,13 +177,9 @@ void main() {
           );
         }
 
-        // Discovery gives Classic Vines pubkeys their own real-time-insert
-        // branch. Nothing else in the suite exercises it, so a future
-        // change that diverges it from the regular real-time branch would
-        // pass unnoticed without this. createdAt is set well above the
-        // loop's index-derived values so engagement-score sort (a tie at
-        // zero engagement falls back to newest-createdAt-first) places it
-        // deterministically ahead of the other discovery video below.
+        // Discovery's classic-vine branch is otherwise uncovered. createdAt
+        // is set above the loop's values so the equal-engagement tiebreak
+        // (newest createdAt first) sorts this one first, deterministically.
         service.addVideoEventForTesting(
           _video(
             'classic-vine',
@@ -209,10 +201,8 @@ void main() {
           );
         }
 
-        // getVideos(hashtag) reads the generic per-type list; real
-        // hashtag-route consumers read the tag-keyed bucket instead
-        // (VideoEventService.hashtagVideos), which is only populated when
-        // the video actually carries the hashtag.
+        // getVideos(hashtag) reads a different, generic list; real
+        // hashtag routes read the tag-keyed bucket via hashtagVideos().
         expect(
           service.hashtagVideos('vine').map((video) => video.id),
           ['hashtag'],
@@ -224,9 +214,8 @@ void main() {
     test(
       'filtering removes hidden videos and preserves accepted feed order',
       () async {
-        // Without a ContentFilterService, filterVideoList only exercises its
-        // null-passthrough branch. Wire up the real service so the
-        // hide/warn decision this test claims to lock actually runs.
+        // filterVideoList's hide/warn decision only runs with a real
+        // ContentFilterService attached; unset, it's a no-op passthrough.
         SharedPreferences.setMockInitialValues({});
         final contentFilterService = ContentFilterService(
           ageVerificationService: AgeVerificationService(
