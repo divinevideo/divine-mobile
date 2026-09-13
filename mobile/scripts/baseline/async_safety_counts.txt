@@ -365,7 +365,6 @@ discarded_futures|test/unit/providers/relay_set_change_bridge_test.dart	13
 discarded_futures|test/unit/services/video_event_service_expiration_test.dart	2
 discarded_futures|test/unit/services/video_event_service_force_refresh_test.dart	2
 discarded_futures|test/unit/services/video_event_service_reset_resubscribe_test.dart	2
-discarded_futures|test/unit/subscription_manager_tdd_test.dart	2
 discarded_futures|test/utils/pause_aware_modals_test.dart	6
 discarded_futures|test/widgets/find_people_sheet_test.dart	1
 discarded_futures|test/widgets/profile/profile_actions_sheet/profile_actions_sheet_content_test.dart	1
@@ -449,7 +448,6 @@ unawaited_futures|test/unit/curated_list_relay_sync_test.dart	4
 unawaited_futures|test/unit/services/video_event_service_infinite_scroll_test.dart	7
 unawaited_futures|test/unit/services/video_event_service_reset_resubscribe_test.dart	1
 unawaited_futures|test/unit/services/video_event_service_search_test.dart	2
-unawaited_futures|test/unit/subscription_manager_tdd_test.dart	1
 unawaited_futures|test/widgets/community_suggest/community_suggest_sheet_test.dart	1
 unawaited_futures|test/widgets/composable_video_grid_test.dart	1
 unawaited_futures|test/widgets/metadata_sounds_section_test.dart	1
