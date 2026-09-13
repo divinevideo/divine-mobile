@@ -13,7 +13,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:upload_repository/upload_repository.dart';
+import 'package:upload_repository/upload_repository.dart' show PendingUpload;
 
 /// A draft resolved down to one uploadable file plus its probed metadata.
 ///

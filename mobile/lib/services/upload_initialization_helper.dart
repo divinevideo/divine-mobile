@@ -12,7 +12,8 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:upload_repository/upload_repository.dart';
+import 'package:upload_repository/upload_repository.dart'
+    show PendingUpload, PendingUploadAdapter, UploadStatusAdapter;
 
 /// Robust initialization helper for UploadManager
 class UploadInitializationHelper {

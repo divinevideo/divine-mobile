@@ -6,7 +6,8 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/upload_progress/upload_progress_state.dart';
-import 'package:upload_repository/upload_repository.dart';
+import 'package:upload_repository/upload_repository.dart'
+    show PendingUpload, UploadStatus;
 
 /// Lookup callable hiding the dynamically-typed `UploadManager.getUpload`
 /// surface so the Cubit can be tested without standing up a real manager.
