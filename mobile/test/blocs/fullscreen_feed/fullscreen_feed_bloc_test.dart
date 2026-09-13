@@ -2371,60 +2371,57 @@ void main() {
         },
       );
 
-      late StreamController<String> removedController;
+      group('removedIdsStream', () {
+        late StreamController<String> removedController;
 
-      blocTest<FullscreenFeedBloc, FullscreenFeedState>(
-        'subscribes to removedIdsStream and dispatches removals',
-        build: () {
+        setUp(() {
           removedController = StreamController<String>.broadcast();
-          addTearDown(removedController.close);
-          return FullscreenFeedBloc(
-            videosStream: videosController.stream,
-            initialIndex: 0,
-            removedIdsStream: removedController.stream,
-            mediaCache: mockMediaCache,
-            blossomAuthService: mockBlossomAuth,
-          );
-        },
-        act: (bloc) async {
-          bloc.add(const FullscreenFeedStarted());
-          await pumpEventQueue();
-          videosController.add([createTestVideo('a'), createTestVideo('b')]);
-          await bloc.stream.firstWhere((state) => state.videos.length == 2);
-          removedController.add('a');
-          await bloc.stream.firstWhere(
-            (state) => state.removedVideoIds.contains('a'),
-          );
-        },
-        verify: (bloc) {
-          expect(bloc.state.videos.map((v) => v.id), equals(['b']));
-          expect(bloc.state.removedVideoIds, contains('a'));
-        },
-      );
+        });
 
-      test('close() cancels the removedIdsStream subscription', () async {
-        final removedController = StreamController<String>.broadcast();
-        addTearDown(removedController.close);
+        tearDown(() => removedController.close());
 
-        final bloc = FullscreenFeedBloc(
+        FullscreenFeedBloc createBlocWithRemovedIds() => FullscreenFeedBloc(
           videosStream: videosController.stream,
           initialIndex: 0,
           removedIdsStream: removedController.stream,
           mediaCache: mockMediaCache,
           blossomAuthService: mockBlossomAuth,
         );
-        bloc.add(const FullscreenFeedStarted());
-        await pumpEventQueue();
-        videosController.add([createTestVideo('a'), createTestVideo('b')]);
-        await pumpEventQueue();
 
-        await bloc.close();
+        blocTest<FullscreenFeedBloc, FullscreenFeedState>(
+          'subscribes to removedIdsStream and dispatches removals',
+          build: createBlocWithRemovedIds,
+          act: (bloc) async {
+            bloc.add(const FullscreenFeedStarted());
+            await pumpEventQueue();
+            videosController.add([createTestVideo('a'), createTestVideo('b')]);
+            await bloc.stream.firstWhere((state) => state.videos.length == 2);
+            removedController.add('a');
+            await bloc.stream.firstWhere(
+              (state) => state.removedVideoIds.contains('a'),
+            );
+          },
+          verify: (bloc) {
+            expect(bloc.state.videos.map((v) => v.id), equals(['b']));
+            expect(bloc.state.removedVideoIds, contains('a'));
+          },
+        );
 
-        // Adding to the stream after close must NOT fire any further state
-        // transitions — the bloc has been disposed.
-        removedController.add('a');
-        await pumpEventQueue();
-        expect(bloc.isClosed, isTrue);
+        test('close() cancels the removedIdsStream subscription', () async {
+          final bloc = createBlocWithRemovedIds();
+          bloc.add(const FullscreenFeedStarted());
+          await pumpEventQueue();
+          videosController.add([createTestVideo('a'), createTestVideo('b')]);
+          await pumpEventQueue();
+
+          await bloc.close();
+
+          // Adding to the stream after close must NOT fire any further state
+          // transitions — the bloc has been disposed.
+          removedController.add('a');
+          await pumpEventQueue();
+          expect(bloc.isClosed, isTrue);
+        });
       });
     });
   });
