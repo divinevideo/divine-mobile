@@ -2,43 +2,32 @@
 
 Issues related to duplication, oversized files, unused code, and unnecessary complexity.
 
-> **Oversized-file status — August 2026.** This document started as the April
-> #3530 audit baseline. The oversized-file section below now reflects current
-> `origin/main` and the live #4339 maintainability inventory. Other historical
-> sections retain their April audit context unless explicitly annotated.
+> **Historical audit.** This document started as the April 2026 #3530 audit.
+> Sections describing completed work are retained as historical context, with
+> their linked ticket status recorded below. Current maintainability work is
+> tracked by
+> [#4339](https://github.com/divinevideo/divine-mobile/issues/4339) and its
+> GitHub Sub-issues list.
 
-Note: Newer features like `features/feature_flags/` demonstrate clean
-co-location, and the BLoC migration has produced focused classes. These issues
-cover legacy complexity and newer growth pressure: 67 non-generated Dart files
-under `mobile/lib` are currently over 800 lines, led by
-`video_event_service.dart` at 6,582 lines.
+Newer features like `features/feature_flags/` demonstrate clean co-location,
+and the BLoC migration has produced focused classes. The remaining issues cover
+legacy complexity and newer growth pressure.
 
 ---
 
-### Oversized files (67 files over 800 lines)
+### Oversized files
 **Problem**: Oversized files remain a visible maintainability backlog. The
-broad file-size ratchet for #4339 is intentionally advisory rather than a
-blocking CI failure. It compares the working tree directly with `origin/main`
-so warnings identify oversized files added or grown by the current branch
-without relying on a committed snapshot that can become stale.
+broad file-size check for #4339 is intentionally advisory rather than a
+blocking CI failure. Run `bash mobile/scripts/check_file_size_ceiling.sh` from
+the repository root to derive the current `mobile/lib` inventory and identify
+files added or grown relative to `origin/main`. The check deliberately avoids
+a committed line-count snapshot, which becomes stale as soon as `main` moves.
 
-**Evidence**: Current largest files over 800 lines, excluding generated/l10n:
-`video_event_service.dart` (6,582), `auth_service.dart` (4,674),
-`main.dart` (3,368), `video_editor_canvas.dart` (3,062),
-`og_beta_testers.dart` (2,989), `video_event_publisher.dart` (2,320),
-`upload_manager.dart` (2,317), `video_recorder_bloc.dart` (2,311),
-`clip_editor_bloc.dart` (2,059), `curated_list_service.dart` (1,763),
-`creator_analytics_screen.dart` (1,763), `video_editor_provider.dart` (1,594),
-`video_editor_render_service.dart` (1,539), `feed_videos.dart` (1,477), and
-`sound_detail_screen.dart` (1,390).
-
-Focused, already-shrunk wins are no longer in the inventory:
-`app_providers.dart` and `app_router.dart` are no longer oversized, and
-`video_feed_page.dart` is below the 800-line threshold. Re-derive these figures
-from a fresh `origin/main` checkout when updating this audit. The largest
-current growth cluster is video editor/recorder code: canvas, recorder bloc,
-clip editor bloc, editor provider, render service, timeline strip, timeline
-widget, and editor scaffold.
+The video editor and recorder remain a concentrated growth cluster spanning
+widgets, BLoCs, providers, and rendering services. Large authentication,
+publishing, upload, and event-processing services also remain expensive to
+review and test. GitHub sub-issues, rather than this historical audit, are the
+source of truth for current decomposition work.
 
 **Impact**: High. These files are hard to test, review, and modify; they create
 merge-conflict pressure when multiple engineers touch the same surface; and
@@ -47,44 +36,25 @@ branch-to-main advisory keeps that pressure visible without blocking unrelated
 PRs.
 
 **Effort**: High. Each oversized file requires a domain-specific decomposition
-strategy. Priority targets are the video-editor cluster
-([#6933](https://github.com/divinevideo/divine-mobile/issues/6933)),
-`video_event_service`, `auth_service`, `main.dart`, and `upload_manager`
-([#6935](https://github.com/divinevideo/divine-mobile/issues/6935)).
-Remaining production `Future.delayed` paydown is tracked separately in
-[#6934](https://github.com/divinevideo/divine-mobile/issues/6934), with the
-existing production timing ratchet staying hard-gated.
+strategy. Track general maintainability work through #4339's Sub-issues list
+and feature-specific work, such as the video-editor cluster, through the owning
+product epic. Existing hard ratchets remain authoritative for the narrower
+patterns they cover.
 
 **GitHub ticket**: [#3594](https://github.com/divinevideo/divine-mobile/issues/3594)
 — closed 2026-05-13; superseded by epic
-[#4339](https://github.com/divinevideo/divine-mobile/issues/4339) Wave 2/4
-([#3337](https://github.com/divinevideo/divine-mobile/issues/3337),
-[#3334](https://github.com/divinevideo/divine-mobile/issues/3334),
-[#4506](https://github.com/divinevideo/divine-mobile/issues/4506),
-[#4507](https://github.com/divinevideo/divine-mobile/issues/4507),
-[#4508](https://github.com/divinevideo/divine-mobile/issues/4508),
-[#4511](https://github.com/divinevideo/divine-mobile/issues/4511)–[#4516](https://github.com/divinevideo/divine-mobile/issues/4516)).
+[#4339](https://github.com/divinevideo/divine-mobile/issues/4339). Its GitHub
+Sub-issues list is the current inventory.
 
 ---
 
-### `main.dart` is an oversized entry point with 7+ responsibilities
-**Problem**: `main.dart` bundles startup orchestration, service initialization, deep link handling, provider wiring, logging configuration, and UI widgets into a single file. Each concern is tightly coupled to the rest, making the startup sequence hard to understand, test, or modify independently.
-
-**Evidence**: `mobile/lib/main.dart` is currently 3,368 lines with 153 imports
-and contains:
-1. **Firebase background message handler** (~50 lines): top-level isolate function for push notifications
-2. **Startup coordinator setup** (~250 lines): phased initialization with timing instrumentation
-3. **`_startOpenVineApp()`** (~600 lines): bindings, crash reporting, video cache config, window manager, DNS overrides, logging config, error zone setup, `debugPrint` override
-4. **Service initialization functions** (~150 lines): 8 separate `_initialize*` functions for core services, audio session, media playback, Hive, video cache manifest, seed data preload, seed media preload, Zendesk
-5. **`DivineApp` widget** (~700 lines): deep link handling, deferred startup, background services, `MultiRepositoryProvider` with 20+ providers, router config, back navigation
-6. **`_UploadFailureListener` widget** (~60 lines): upload failure bottom sheet
-7. **`_CrashProbeHotspot` widget** (~30 lines): hidden dev tool
-
-The `DivineApp.build()` method alone is ~400 lines deep with nested `MultiRepositoryProvider`, `MultiBlocProvider`, and `BlocListener` wrappers.
-
-**Impact**: Medium. Any change to startup, deep linking, provider wiring, or logging requires editing the same file. The 138 imports create a dependency fan-in that makes `main.dart` a merge conflict hotspot. The startup sequence is hard to test because initialization functions depend on global singletons and side effects.
-
-**Effort**: Medium. Extract incrementally: (1) move `_UploadFailureListener` and `_CrashProbeHotspot` to their own files, (2) extract the startup/initialization functions into a dedicated `startup/` module, (3) extract the `MultiRepositoryProvider`/`MultiBlocProvider` wiring into a dedicated provider setup widget, (4) extract deep link handling into its own service (partially exists in `deep_link_service.dart` already).
+### Resolved: `main.dart` was an oversized entry point
+The April audit found that startup orchestration, dependency wiring, deep-link
+handling, and application widgets were concentrated in `main.dart`. That work
+landed through [#3337](https://github.com/divinevideo/divine-mobile/issues/3337),
+which reduced `main.dart` to a small entrypoint and moved those responsibilities
+behind focused boundaries. The old line counts and extraction recipe have been
+removed because they no longer describe the code.
 
 **GitHub ticket**: [#3595](https://github.com/divinevideo/divine-mobile/issues/3595) — closed 2026-05-13; superseded by [#3337](https://github.com/divinevideo/divine-mobile/issues/3337).
 
