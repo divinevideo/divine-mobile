@@ -46,9 +46,10 @@ const int _minPlaybackFrames = 30;
 /// device is slow. The transition window is bounded by real animation time
 /// ([_pageTransitions] × `_pageJumpDuration` 300 ms), and the point of the
 /// report is the frame distribution on the device under test — a device
-/// rendering the transition at 5 fps is a finding, not a harness failure. Two
-/// frames per transition is enough to prove the filter is keyed to the right
-/// clock; a genuinely frozen window produces none.
+/// rendering the transition at 10 fps is a finding, not a harness failure.
+/// Two frames per transition is enough to prove the filter is keyed to the
+/// right clock; a genuinely frozen window produces none. The effective floor is
+/// ~7 fps over the 1.5 s window, below which the window is too sparse to report.
 const int _minFramesPerTransition = 2;
 
 /// Ceiling for the p90 UI-thread (build) frame time. Build is CPU-bound and
