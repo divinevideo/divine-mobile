@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
@@ -157,10 +158,32 @@ void main() {
           );
         }
 
+        // Discovery gives Classic Vines pubkeys their own real-time-insert
+        // branch. Nothing else in the suite exercises it, so a future
+        // change that diverges it from the regular real-time branch would
+        // pass unnoticed without this. createdAt is set well above the
+        // loop's index-derived values so engagement-score sort (a tie at
+        // zero engagement falls back to newest-createdAt-first) places it
+        // deterministically ahead of the other discovery video below.
+        service.addVideoEventForTesting(
+          _video(
+            'classic-vine',
+            createdAt: 99,
+            pubkey: AppConstants.classicVinesPubkey,
+          ),
+          SubscriptionType.discovery,
+          isHistorical: false,
+        );
+
         for (final type in feedTypes) {
-          expect(service.getVideos(type).map((video) => video.id), [
-            type.name,
-          ], reason: '${type.name} consumers must only observe their own feed');
+          final expectedIds = type == SubscriptionType.discovery
+              ? ['classic-vine', type.name]
+              : [type.name];
+          expect(
+            service.getVideos(type).map((video) => video.id),
+            expectedIds,
+            reason: '${type.name} consumers must only observe their own feed',
+          );
         }
 
         // getVideos(hashtag) reads the generic per-type list; real
@@ -228,11 +251,12 @@ void main() {
 VideoEvent _video(
   String id, {
   required int createdAt,
+  String? pubkey,
   List<String> contentWarningLabels = const [],
   List<String> hashtags = const [],
 }) => VideoEvent(
   id: id,
-  pubkey: 'pubkey-$id',
+  pubkey: pubkey ?? 'pubkey-$id',
   createdAt: createdAt,
   content: id,
   timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
