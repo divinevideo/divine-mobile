@@ -48,11 +48,38 @@ void main() {
       expect(findUntestedServices(services, tests), isEmpty);
     });
 
+    test('accepts a split suite that imports a nested service', () {
+      Directory('${services.path}/auth').createSync();
+      File(
+        '${services.path}/auth/nostr_identity.dart',
+      ).writeAsStringSync('class Subject {}');
+      writeTest(
+        'nostr_identity_keycast',
+        "import 'package:openvine/services/auth/nostr_identity.dart';",
+      );
+
+      expect(findUntestedServices(services, tests), isEmpty);
+    });
+
     test('rejects a filename-only prefix match', () {
       writeService('account_service');
       writeTest('account_service_helper', 'void main() {}');
 
       expect(findUntestedServices(services, tests), ['account_service']);
+    });
+
+    test('rejects a prefix match that only imports a sibling service', () {
+      writeService('account_service');
+      writeService('account_service_helper');
+      writeTest(
+        'account_service_sync',
+        "import 'package:openvine/services/account_service_helper.dart';",
+      );
+
+      expect(
+        findUntestedServices(services, tests),
+        ['account_service', 'account_service_helper'],
+      );
     });
 
     test('ignores generated service files', () {
