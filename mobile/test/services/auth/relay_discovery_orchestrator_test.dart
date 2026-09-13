@@ -380,6 +380,43 @@ void main() {
       });
 
       test(
+        'generates a different id for each profile check',
+        () async {
+          final channelFactory = _FakeWebSocketChannelFactory();
+
+          final firstFuture = buildOrchestrator(
+            profileCheckChannelFactory: channelFactory,
+            profileCheckIndexerUrl: indexerUrl,
+          ).checkExistingProfile(testPubkey);
+          await pumpEventQueue();
+          final firstRequest = jsonDecode(
+            channelFactory.createdChannels[0]._sink.added.single as String,
+          ) as List<dynamic>;
+          final firstId = firstRequest[1] as String;
+          channelFactory.createdChannels[0].simulateMessage(
+            jsonEncode(<dynamic>['EOSE', firstId]),
+          );
+          await firstFuture;
+
+          final secondFuture = buildOrchestrator(
+            profileCheckChannelFactory: channelFactory,
+            profileCheckIndexerUrl: indexerUrl,
+          ).checkExistingProfile(testPubkey);
+          await pumpEventQueue();
+          final secondRequest = jsonDecode(
+            channelFactory.createdChannels[1]._sink.added.single as String,
+          ) as List<dynamic>;
+          final secondId = secondRequest[1] as String;
+          channelFactory.createdChannels[1].simulateMessage(
+            jsonEncode(<dynamic>['EOSE', secondId]),
+          );
+          await secondFuture;
+
+          expect(firstId, isNot(equals(secondId)));
+        },
+      );
+
+      test(
         'reports false when the indexer returns EOSE with no event',
         () async {
           final channelFactory = _FakeWebSocketChannelFactory();

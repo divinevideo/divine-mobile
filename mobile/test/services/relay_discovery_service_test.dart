@@ -504,6 +504,23 @@ void _authenticityTests() {
       );
     });
 
+    test('generates a different id for each indexer request', () async {
+      indexer = await _HostileIndexer.start(
+        signedRelayList(privateKey: victimKey),
+      );
+      addTearDown(indexer.stop);
+      service = RelayDiscoveryService(indexerRelays: [indexer.url]);
+
+      await service.queryIndexerDirect(indexer.url, victimPubkey);
+      await service.queryIndexerDirect(indexer.url, victimPubkey);
+
+      expect(indexer.subscriptionIds, hasLength(2));
+      expect(
+        indexer.subscriptionIds[0],
+        isNot(equals(indexer.subscriptionIds[1])),
+      );
+    });
+
     test('rejects a frame with no signature', () async {
       final unsigned = signedRelayList(privateKey: victimKey)..['sig'] = '';
       expect(await query(unsigned), isEmpty);

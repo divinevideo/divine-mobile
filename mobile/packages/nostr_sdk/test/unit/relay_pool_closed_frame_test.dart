@@ -131,6 +131,43 @@ void main() {
       );
     });
 
+    test('generates a different id for each query', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final firstNostr = Nostr(signer, [], dummyTempRelay);
+      final firstRelay = _ControlledQueryRelay('wss://closed-1.example');
+      final secondNostr = Nostr(signer, [], dummyTempRelay);
+      final secondRelay = _ControlledQueryRelay('wss://closed-2.example');
+
+      expect(await firstNostr.relayPool.add(firstRelay), isTrue);
+      expect(await secondNostr.relayPool.add(secondRelay), isTrue);
+
+      const timeout = Duration(seconds: 2);
+      const ids = [
+        '0739befe110ec68c28a33650b84c10b356015ec3b8401787d05a84ae285c976a',
+      ];
+
+      unawaited(
+        firstNostr.queryEventsDetailed([
+          {'ids': ids, 'limit': 1},
+        ], timeout: timeout),
+      );
+      unawaited(
+        secondNostr.queryEventsDetailed([
+          {'ids': ids, 'limit': 1},
+        ], timeout: timeout),
+      );
+
+      final firstId = await firstRelay.awaitPendingQuery();
+      final secondId = await secondRelay.awaitPendingQuery();
+
+      expect(firstId, isNot(equals(secondId)));
+
+      await firstRelay.deliver(['CLOSED', firstId, 'error: query failed']);
+      await secondRelay.deliver(['CLOSED', secondId, 'error: query failed']);
+    });
+
     test('EOSE still completes a pending REQ', () async {
       final signer = LocalNostrSigner(
         '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',

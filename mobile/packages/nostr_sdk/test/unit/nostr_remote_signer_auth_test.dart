@@ -226,6 +226,13 @@ void main() {
         expect(filter['kinds'], [EventKind.nostrRemoteSigning]);
       });
 
+      test('generates a different subscription id on each query', () async {
+        final first = await signer.genQueryMsg();
+        final second = await signer.genQueryMsg();
+
+        expect(first![1] as String, isNot(equals(second![1] as String)));
+      });
+
       test('rejects construction without a valid remote signer pubkey', () {
         expect(
           () => NostrRemoteSigner(

@@ -21,6 +21,17 @@ void main() {
       expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(subscription.id), isTrue);
     });
 
+    test('generates a different id for each subscription', () {
+      final first = Subscription([
+        Filter(kinds: const [1]).toJson(),
+      ], (_) {});
+      final second = Subscription([
+        Filter(kinds: const [1]).toJson(),
+      ], (_) {});
+
+      expect(first.id, isNot(equals(second.id)));
+    });
+
     test('rejects an unparseable filter at construction', () {
       // `kinds` holding strings is the shape a hand-built filter map takes
       // when it skips Filter.toJson. Parsing per event instead would push the
