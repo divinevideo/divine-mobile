@@ -4995,6 +4995,18 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቁልፉን ወደ ውጭ መላክ አልተሳካም። እባክህ እንደገና ሞክር።';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
+
+  @override
   String get keyManagementYourPublicKeyLabel => 'የህዝብ ቁልፍህ (npub)';
 
   @override

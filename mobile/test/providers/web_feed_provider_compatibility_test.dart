@@ -49,13 +49,11 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => null);
       when(
         () => mockKeyStorage.switchToIdentity(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => true);
 

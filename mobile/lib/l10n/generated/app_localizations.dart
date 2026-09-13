@@ -8725,6 +8725,24 @@ abstract class AppLocalizations {
   /// **'Failed to export key. Please try again.'**
   String get keyManagementExportFailed;
 
+  /// Reason shown by the operating system's local-auth prompt before an nsec is copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to copy your private key.'**
+  String get keyManagementExportAuthReason;
+
+  /// Shown when the user cancels or fails device-local authentication for nsec export.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t verify it\'s you. Your private key wasn\'t copied.'**
+  String get keyManagementExportAuthDenied;
+
+  /// Shown when the device cannot perform local authentication for nsec export.
+  ///
+  /// In en, this message translates to:
+  /// **'Device authentication isn\'t available here. Your private key wasn\'t copied.'**
+  String get keyManagementExportAuthUnavailable;
+
   /// Label above the truncated npub display on the key management screen.
   ///
   /// In en, this message translates to:

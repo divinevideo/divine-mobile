@@ -5091,6 +5091,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không xuất được khóa. Vui lòng thử lại.';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
+
+  @override
   String get keyManagementYourPublicKeyLabel => 'Khóa công khai của bạn (npub)';
 
   @override

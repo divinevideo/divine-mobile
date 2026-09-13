@@ -4835,6 +4835,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get keyManagementExportFailed => '키 내보내기에 실패했어요. 다시 시도해보세요.';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
+
+  @override
   String get keyManagementYourPublicKeyLabel => '공개 키 (npub)';
 
   @override

@@ -5170,6 +5170,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo exportar la clave. Probá de nuevo.';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
+
+  @override
   String get keyManagementYourPublicKeyLabel => 'Tu clave pública (npub)';
 
   @override

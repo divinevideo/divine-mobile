@@ -115,13 +115,10 @@ void main() {
     when(
       () => mockKeyStorage.deleteIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async {});
     when(
-      () => mockKeyStorage.generateAndStoreKeys(
-        biometricPrompt: any(named: 'biometricPrompt'),
-      ),
+      () => mockKeyStorage.generateAndStoreKeys(),
     ).thenAnswer((_) async => testKeyContainer);
     when(
       () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
@@ -129,14 +126,12 @@ void main() {
     when(
       () => mockKeyStorage.getIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => testKeyContainer);
     when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
     when(
       () => mockKeyStorage.switchToIdentity(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => true);
 
@@ -193,9 +188,7 @@ void main() {
 
       expect(authService.authState, equals(AuthState.unauthenticated));
       verifyNever(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       );
     });
 
@@ -210,9 +203,7 @@ void main() {
       expect(authService.authState, equals(AuthState.unauthenticated));
       verify(() => mockKeyStorage.hasKeys()).called(1);
       verifyNever(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       );
     });
 
@@ -594,9 +585,7 @@ void main() {
 
       verify(() => mockKeyStorage.deleteKeys()).called(1);
       verify(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       ).called(1);
     });
 
@@ -616,9 +605,7 @@ void main() {
 
     test('throws when identity creation fails', () async {
       when(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       ).thenThrow(Exception('key generation failed'));
 
       await expectLater(
@@ -1037,7 +1024,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -1085,7 +1071,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -1246,7 +1231,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => null);
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
@@ -1284,7 +1268,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => null);
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
@@ -1321,7 +1304,6 @@ void main() {
         verifyNever(
           () => mockKeyStorage.switchToIdentity(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         );
       },
@@ -1401,7 +1383,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => null);
 
@@ -1433,7 +1414,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => testKeyContainer);
 
@@ -1466,7 +1446,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => null);
 
@@ -1703,9 +1682,7 @@ void main() {
         // Local PRIMARY has a DIFFERENT key than the session
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
         when(
-          () => mockKeyStorage.getKeyContainer(
-            biometricPrompt: any(named: 'biometricPrompt'),
-          ),
+          () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => localKeyContainer);
 
         await _ignoringDiscoveryErrors(authService.initialize);
@@ -1788,9 +1765,7 @@ void main() {
 
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
       when(
-        () => mockKeyStorage.getKeyContainer(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => localKeyContainer);
 
       await _ignoringDiscoveryErrors(authService.initialize);
@@ -1855,9 +1830,7 @@ void main() {
 
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
       when(
-        () => mockKeyStorage.getKeyContainer(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => localKeyContainer);
 
       await _ignoringDiscoveryErrors(authService.initialize);
@@ -1893,7 +1866,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           accountBContainer.npub,
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => accountBContainer);
 
@@ -1910,7 +1882,6 @@ void main() {
       verify(
         () => mockKeyStorage.getIdentityKeyContainer(
           accountBContainer.npub,
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).called(1);
     });
@@ -1938,7 +1909,6 @@ void main() {
         verifyNever(
           () => mockKeyStorage.getIdentityKeyContainer(
             accountBContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         );
       },
@@ -1979,7 +1949,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             accountBContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => null);
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
@@ -2064,7 +2033,6 @@ void main() {
         verify(
           () => mockKeyStorage.deleteIdentityKeyContainer(
             expectedNpub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).called(1);
         verify(() => mockKeyStorage.deleteKeys()).called(1);
@@ -2380,7 +2348,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             accountA.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => accountA);
 
@@ -2521,10 +2488,7 @@ void main() {
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => remainingAccount);
       when(
-        () => mockKeyStorage.getIdentityKeyContainer(
-          remainingAccount.npub,
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.getIdentityKeyContainer(remainingAccount.npub),
       ).thenAnswer((_) async => remainingAccount);
       when(
         () => mockCleanupService.deleteAccountData(
@@ -2689,7 +2653,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           accountA.npub,
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => null);
 
