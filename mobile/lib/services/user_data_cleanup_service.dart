@@ -3,12 +3,14 @@
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
@@ -115,10 +118,11 @@ class UserDataCleanupService {
 
   static const String legacyDraftOwnerKey = 'vine_drafts_owner_pubkey_hex';
 
-  /// Key prefixes for dynamic user-specific data (keys that embed pubkey/npub).
-  /// Only cleared on identity change (different user), NOT on same-user logout.
-  /// These caches are keyed by pubkey so they can't leak between users, and the
-  /// redirect logic needs following_list_ at login time before relay responds.
+  /// Classified dynamic cache prefixes whose keys embed their account owner.
+  ///
+  /// The preference-key guard reads this list by name. Cleanup preserves these
+  /// families during identity changes because their scope prevents cross-user
+  /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
     'following_list_', // follow cache per pubkey
     'following_prefetch_complete_', // successful auth prefetch per pubkey
@@ -228,9 +232,9 @@ class UserDataCleanupService {
     for (final key in AgeVerificationService.accountKeys(userPubkey)) {
       await remove(key);
     }
-    await remove('following_list_$userPubkey');
-    await remove('following_prefetch_complete_$userPubkey');
-    await remove('relay_discovery_$userNpub');
+    await remove(FollowingCacheRecord.storageKey(userPubkey));
+    await remove(followingPrefetchMarkerKey(userPubkey));
+    await remove(RelayDiscoveryService.cacheStorageKey(userNpub));
 
     await onDatabaseCleanup?.call(
       userPubkey: userPubkey,
@@ -249,10 +253,8 @@ class UserDataCleanupService {
   /// Returns the number of keys that were cleared for tracking purposes.
   /// Clears user-specific data from SharedPreferences.
   ///
-  /// When [isIdentityChange] is true (different user logging in), also clears
-  /// dynamic pubkey-keyed caches (following_list_, relay/blossom discovery).
-  /// On same-user logout these are preserved so the redirect logic can use them
-  /// at login time before relay data is available.
+  /// Account-scoped caches are preserved across identity changes. Destructive
+  /// cleanup removes only the known account's pubkey-scoped entries.
   Future<int> clearUserSpecificData({
     String? reason,
     bool isIdentityChange = false,
@@ -265,8 +267,7 @@ class UserDataCleanupService {
       'identityChange: $isIdentityChange, '
       'deleteUserData: $deleteUserData, '
       'userPubkey: ${pubkeyForLogs(userPubkey, whenNull: "null")}, '
-      'checking ${userSpecificKeys.length} keys'
-      '${isIdentityChange ? ' + ${identityChangePrefixes.length} prefixes' : ''})',
+      'checking ${userSpecificKeys.length} keys)',
       name: 'UserDataCleanupService',
       category: LogCategory.auth,
     );
@@ -336,6 +337,17 @@ class UserDataCleanupService {
           clearedKeys.add(key);
         }
       }
+
+      for (final key in [
+        FollowingCacheRecord.storageKey(userPubkey),
+        followingPrefetchMarkerKey(userPubkey),
+      ]) {
+        if (_prefs.containsKey(key)) {
+          await _prefs.remove(key);
+          clearedCount++;
+          clearedKeys.add(key);
+        }
+      }
     }
 
     // Clear user-specific database tables (DMs, conversations, notifications,
@@ -364,23 +376,6 @@ class UserDataCleanupService {
         // best-effort unless it is explicitly destructive.
         if (deleteUserData || isIdentityChange) {
           rethrow;
-        }
-      }
-    }
-
-    // Clear prefix-matched dynamic keys only on identity change
-    // These are keyed by pubkey so they can't leak, and the redirect
-    // logic needs following_list_ at login time before relay responds
-    if (isIdentityChange) {
-      final allKeys = _prefs.getKeys();
-      for (final key in allKeys) {
-        for (final prefix in identityChangePrefixes) {
-          if (key.startsWith(prefix)) {
-            await _prefs.remove(key);
-            clearedCount++;
-            clearedKeys.add(key);
-            break;
-          }
         }
       }
     }
