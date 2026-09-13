@@ -53,12 +53,16 @@ AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
     );
     return null;
   }
-  return audioTrackFromMetaForRender(
+  final track = audioTrackFromMetaForRender(
     sound.copyWith(
       startTime: Duration.zero,
       endTime: Duration(milliseconds: durationMs),
     ),
   );
+  if (track != null) {
+    _logPreparedTrack(track, origin: 'selected-sound fallback');
+  }
+  return track;
 }
 
 /// Builds the render [AudioTrack] for a timeline audio [track] taken from the
@@ -103,6 +107,26 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
   );
 }
 
+/// Records the timing boundary between editor state and render parameters.
+///
+/// Source paths and URLs are deliberately omitted: local paths can contain
+/// user-identifying directory names, while the timing fields are sufficient
+/// to distinguish source-offset failures from composition-placement failures.
+void _logPreparedTrack(AudioTrack track, {required String origin}) {
+  Log.info(
+    'Prepared $origin audio track ${track.id}: '
+    'composition=[${_durationMs(track.startTime)}, '
+    '${_durationMs(track.endTime)}], '
+    'source=[${_durationMs(track.audioStartTime)}, '
+    '${_durationMs(track.audioEndTime)}]',
+    name: _logName,
+    category: LogCategory.video,
+  );
+}
+
+String _durationMs(Duration? duration) =>
+    duration == null ? 'unbounded' : '${duration.inMilliseconds}ms';
+
 /// Builds the render audio tracks for a session from its timeline
 /// [metaTracks], falling back to the recorder's [selectedSound].
 ///
@@ -119,11 +143,20 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
 List<AudioTrack> buildRenderAudioTracks({
   required List<AudioEvent> metaTracks,
   required AudioEvent? selectedSound,
-}) => [
-  for (final track in metaTracks) ?audioTrackFromMetaForRender(track),
-  if (metaTracks.isEmpty && selectedSound != null)
-    ?audioTrackFromSoundForRender(selectedSound),
-];
+}) {
+  final tracks = <AudioTrack>[];
+  for (final event in metaTracks) {
+    final track = audioTrackFromMetaForRender(event);
+    if (track == null) continue;
+    _logPreparedTrack(track, origin: 'timeline');
+    tracks.add(track);
+  }
+  if (metaTracks.isEmpty && selectedSound != null) {
+    final track = audioTrackFromSoundForRender(selectedSound);
+    if (track != null) tracks.add(track);
+  }
+  return tracks;
+}
 
 /// Clamps an audio composition window so it cannot extend past [videoDuration],
 /// or returns `null` when the window lies entirely past the video and the track
@@ -190,16 +223,24 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
         continue;
       }
       final (:startTime, :endTime) = window;
-      audioTracks.add(
-        VideoAudioTrack(
-          path: audioPath,
-          startTime: startTime,
-          endTime: endTime,
-          audioStartTime: track.audioStartTime,
-          audioEndTime: track.audioEndTime,
-          loop: track.loop,
-          volume: track.volume,
-        ),
+      final resolvedTrack = VideoAudioTrack(
+        path: audioPath,
+        startTime: startTime,
+        endTime: endTime,
+        audioStartTime: track.audioStartTime,
+        audioEndTime: track.audioEndTime,
+        loop: track.loop,
+        volume: track.volume,
+      );
+      audioTracks.add(resolvedTrack);
+      Log.info(
+        'Resolved audio track ${track.id} for mux: '
+        'composition=[${_durationMs(startTime)}, ${_durationMs(endTime)}], '
+        'source=[${_durationMs(track.audioStartTime)}, '
+        '${_durationMs(track.audioEndTime)}], '
+        'videoDuration=${_durationMs(videoDuration)}',
+        name: logName,
+        category: LogCategory.video,
       );
     } catch (e, stackTrace) {
       Log.error(

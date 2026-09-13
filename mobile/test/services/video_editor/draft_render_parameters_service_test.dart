@@ -144,6 +144,15 @@ void main() {
 
         expect(parameters!.audioTracks, hasLength(1));
         expect(parameters.audioTracks.single.id, equals('sound-1'));
+        expect(parameters.audioTracks.single.startTime, Duration.zero);
+        expect(
+          parameters.audioTracks.single.endTime,
+          const Duration(seconds: 6),
+        );
+        expect(
+          parameters.audioTracks.single.audioStartTime,
+          Duration.zero,
+        );
       },
     );
 
