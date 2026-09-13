@@ -43,23 +43,25 @@ class _PendingTrace extends RecordedPerformanceTrace {
 }
 
 void main() {
-  test('contains start, attribute, and asynchronous stop failures', () async {
-    PerformanceOperation(_ThrowingMonitor(), 'operation').finish();
-    final trace = _FailingTrace();
-    PerformanceOperation(_TraceMonitor(trace), 'operation').finish(
-      attributes: {'outcome': 'success'},
-    );
-    await Future<void>.value();
-    expect(trace.stops, 1);
-  });
+  group('finish', () {
+    test('contains start, attribute, and asynchronous stop failures', () async {
+      PerformanceOperation(_ThrowingMonitor(), 'operation').finish();
+      final trace = _FailingTrace();
+      PerformanceOperation(_TraceMonitor(trace), 'operation').finish(
+        attributes: {'outcome': 'success'},
+      );
+      await Future<void>.value();
+      expect(trace.stops, 1);
+    });
 
-  test('finishes once without waiting for telemetry transport', () {
-    final trace = _PendingTrace();
-    final operation = PerformanceOperation(_TraceMonitor(trace), 'operation');
-    operation.finish(attributes: {'outcome': 'success'});
-    operation.finish(attributes: {'outcome': 'failure'});
-    expect(trace.attributes['outcome'], 'success');
-    expect(trace.stops, 1);
-    trace.completed.complete();
+    test('finishes once without waiting for telemetry transport', () {
+      final trace = _PendingTrace();
+      final operation = PerformanceOperation(_TraceMonitor(trace), 'operation');
+      operation.finish(attributes: {'outcome': 'success'});
+      operation.finish(attributes: {'outcome': 'failure'});
+      expect(trace.attributes['outcome'], 'success');
+      expect(trace.stops, 1);
+      trace.completed.complete();
+    });
   });
 }
