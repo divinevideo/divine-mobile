@@ -144,26 +144,6 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
     return UploadConnectivity.none;
   }
 
-  static UploadConnectivity _mapConnectivity(ConnectivityResult connectivity) {
-    return switch (connectivity) {
-      ConnectivityResult.wifi => UploadConnectivity.wifi,
-      ConnectivityResult.mobile => UploadConnectivity.mobile,
-      ConnectivityResult.ethernet => UploadConnectivity.ethernet,
-      ConnectivityResult.vpn => UploadConnectivity.vpn,
-      ConnectivityResult.none => UploadConnectivity.none,
-      _ => UploadConnectivity.none,
-    };
-  }
-
-  @visibleForTesting
-  String getUserFriendlyErrorMessage(
-    String category,
-    ConnectivityResult connectivity,
-  ) => UploadProgressReporter.userFriendlyErrorMessage(
-    category,
-    _mapConnectivity(connectivity),
-  );
-
   @override
   void onStorageReady() {
     if (!_isBackgroundRegistered) {

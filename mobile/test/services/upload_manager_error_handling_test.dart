@@ -4,7 +4,6 @@
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -620,12 +619,12 @@ void main() {
     });
   });
 
-  group('getUserFriendlyErrorMessage', () {
+  group('userFriendlyErrorMessage', () {
     test('NO_INTERNET', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'NO_INTERNET',
-          ConnectivityResult.none,
+          UploadConnectivity.none,
         ),
         contains('No internet connection'),
       );
@@ -633,9 +632,9 @@ void main() {
 
     test('SLOW_CONNECTION', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'SLOW_CONNECTION',
-          ConnectivityResult.mobile,
+          UploadConnectivity.mobile,
         ),
         contains('WiFi'),
       );
@@ -643,18 +642,18 @@ void main() {
 
     test('TIMEOUT', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'TIMEOUT',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('timed out'),
       );
     });
 
     test('NETWORK_ERROR includes network type', () {
-      final message = uploadManager.getUserFriendlyErrorMessage(
+      final message = UploadProgressReporter.userFriendlyErrorMessage(
         'NETWORK_ERROR',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
 
       expect(message, contains('WiFi'));
@@ -663,9 +662,9 @@ void main() {
 
     test('DNS_ERROR', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'DNS_ERROR',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('Could not reach'),
       );
@@ -673,9 +672,9 @@ void main() {
 
     test('FILE_NOT_FOUND', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'FILE_NOT_FOUND',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('not found'),
       );
@@ -683,9 +682,9 @@ void main() {
 
     test('FILE_TOO_LARGE', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'FILE_TOO_LARGE',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('too large'),
       );
@@ -693,9 +692,9 @@ void main() {
 
     test('AUTHENTICATION', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'AUTHENTICATION',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('sign in'),
       );
@@ -703,18 +702,18 @@ void main() {
 
     test('RATE_LIMITED', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'RATE_LIMITED',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('Too many uploads'),
       );
     });
 
     test('SERVER_UNAVAILABLE', () {
-      final message = uploadManager.getUserFriendlyErrorMessage(
+      final message = UploadProgressReporter.userFriendlyErrorMessage(
         'SERVER_UNAVAILABLE',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
 
       expect(message, contains('temporarily unavailable'));
@@ -723,9 +722,9 @@ void main() {
 
     test('SERVER_ERROR', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'SERVER_ERROR',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('encountered an error'),
       );
@@ -733,9 +732,9 @@ void main() {
 
     test('CLIENT_ERROR', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'CLIENT_ERROR',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('request failed'),
       );
@@ -743,9 +742,9 @@ void main() {
 
     test('UNKNOWN returns default message', () {
       expect(
-        uploadManager.getUserFriendlyErrorMessage(
+        UploadProgressReporter.userFriendlyErrorMessage(
           'UNKNOWN',
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         ),
         contains('Upload failed'),
       );
