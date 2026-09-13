@@ -272,6 +272,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         return SignInFailureReason.emailNotVerified;
       case KeycastLoginFailure.invalidEmail:
         return SignInFailureReason.invalidEmail;
+      case KeycastLoginFailure.rateLimited:
+        return SignInFailureReason.rateLimited;
       case KeycastLoginFailure.network:
         return SignInFailureReason.network;
       case KeycastLoginFailure.unknown:
@@ -308,10 +310,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       );
 
       // Convert server error codes to localized messages
-      final errorMsg = _getLocalizedRegistrationError(
-        result.errorCode,
-        result.errorDescription,
-      );
+      final errorMsg = _getLocalizedRegistrationError(result);
 
       final current = state;
       if (current is DivineAuthFormState) {
@@ -319,7 +318,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
           current.copyWith(
             isSubmitting: false,
             generalError: errorMsg,
-            showLoginOptionsRecovery: result.errorCode == 'CONFLICT',
+            showLoginOptionsRecovery:
+                result.failure == KeycastRegisterFailure.emailAlreadyRegistered,
           ),
         );
       }
@@ -623,42 +623,32 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     }
   }
 
-  /// Convert server error codes to localized messages for registration errors.
-  ///
-  /// Known error codes from the server:
-  /// - 'email_exists': Email is already registered
-  /// - 'invalid_email': Email format is invalid
-  /// - 'weak_password': Password doesn't meet requirements
-  /// - 'registration_failed': Generic registration failure
-  String _getLocalizedRegistrationError(
-    String? errorCode,
-    String? serverDescription,
-  ) {
-    switch (errorCode) {
-      case 'CONFLICT':
+  /// Converts typed registration failures to user-facing messages.
+  String _getLocalizedRegistrationError(HeadlessRegisterResult result) {
+    switch (result.failure) {
+      case KeycastRegisterFailure.emailAlreadyRegistered:
         return 'This email is already registered. Please sign in instead.';
-      case 'invalid_email':
+      case KeycastRegisterFailure.invalidEmail:
         return 'Please enter a valid email address.';
-      case 'weak_password':
-        return 'Password is too weak. Please use a stronger password.';
-      case 'rate_limited':
+      case KeycastRegisterFailure.rateLimited:
         return 'Too many attempts. Please try again later.';
-      case 'server_error':
+      case KeycastRegisterFailure.server:
         return 'Server error. Please try again later.';
-      case 'connection_error':
-      case 'network_error':
+      case KeycastRegisterFailure.network:
         return 'Cannot connect to server. Please check your internet connection.';
-      default:
+      case KeycastRegisterFailure.unknown:
         // For unknown error codes, log it so we can add handling later
-        if (errorCode != null && errorCode != 'registration_failed') {
+        if (result.errorCode != null &&
+            result.errorCode != 'registration_failed') {
           Log.info(
-            'Unhandled registration error code: $errorCode',
+            'Unhandled registration error code: ${result.errorCode}',
             name: 'DivineAuthCubit',
             category: LogCategory.auth,
           );
         }
         // Fall back to server description or generic message
-        return serverDescription ?? 'Registration failed. Please try again.';
+        return result.errorDescription ??
+            'Registration failed. Please try again.';
     }
   }
 }

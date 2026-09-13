@@ -160,13 +160,12 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     );
 
     if (!result.success) {
-      // CONFLICT means the key or the entered email already has an account
-      // (the common case is a registered key the app forgot after falling back
-      // to anonymous). Show recovery choices in place instead of dead-ending on
-      // the raw server text: sign in for the recoverable case, contact support
-      // for the ones we can't resolve in-app (duplicate or credential-less
-      // accounts).
-      if (result.errorCode == 'CONFLICT') {
+      // A registration conflict means the key or entered email already has an
+      // account (commonly a registered key forgotten after anonymous fallback).
+      // Show recovery choices in place instead of dead-ending on raw server
+      // text: sign in for the recoverable case, or contact support for duplicate
+      // or credential-less accounts.
+      if (result.failure == KeycastRegisterFailure.emailAlreadyRegistered) {
         if (!mounted) return;
         setState(() {
           _hasConflict = true;
