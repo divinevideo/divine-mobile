@@ -89,15 +89,12 @@ class RelayPool {
   /// order once verify becomes asynchronous (an EOSE must not complete a query
   /// before its preceding events finish verifying).
   ///
-  /// One entry per (relay, subscription id), not per relay. Only frames of the
-  /// same subscription need ordering, and one shared per-relay chain made a
-  /// live feed subscription wait behind every other subscription's stored
-  /// replay on that socket — thousands of one-shot query events at ~20–40 ms
-  /// of Schnorr verify each, on device — which is how a profile feed the relay
-  /// had answered in 300 ms reached the app 16 s later and ran into the 30 s
-  /// feed-load fuse on slower Android hardware (#7301). Entries are removed
-  /// once their chain drains, so the map stays bounded by the subscriptions
-  /// that are mid-delivery. Only used when [_verifyWorker] is set.
+  /// One entry per (relay, subscription id), not per relay: only frames of the
+  /// same subscription need ordering, and a shared per-relay chain made a live
+  /// feed wait behind every other subscription's stored replay on that socket
+  /// (#7301). Entries are removed once their chain drains, so the map stays
+  /// bounded by the subscriptions that are mid-delivery. Only used when
+  /// [_verifyWorker] is set.
   final Map<(String, String), Future<void>> _orderedFrameTails = {};
 
   // subscription
@@ -391,21 +388,16 @@ class RelayPool {
   /// is treated as evidence against the socket.
   ///
   /// [_repairRelaysThatNeverAnswered] assumed a query is only released once
-  /// its caller gave up waiting. Two release paths never waited at all: a
-  /// read whose deadline had already passed when its slot in the client's
-  /// query pool arrived was written to the relays and unsubscribed a few
-  /// milliseconds later, and a query the settle window completed on the
-  /// first relay's EOSE released the slower relays about a second after the
-  /// REQ. Neither says anything about the socket, but both pass the
-  /// silence test trivially — no relay answers inside 7 ms — so every relay
-  /// that was otherwise idle got force-cycled and replayed its whole stored
-  /// window for every subscription it carried. On device that was a
-  /// three-relay cycle and thousands of frames of replay per profile visit,
-  /// all of it queued ahead of the feed the user was looking at (#7301).
+  /// its caller gave up waiting. Two release paths never waited at all: a read
+  /// whose deadline had already passed when its query-pool slot arrived, and a
+  /// query the settle window completed on the first relay's EOSE. Neither says
+  /// anything about the socket, yet both pass the silence test trivially, so
+  /// every otherwise-idle relay got force-cycled and replayed its whole stored
+  /// window for every subscription it carried (#7301).
   ///
-  /// The default is below the SDK's 5 s default read timeout, so a caller
-  /// that waited its whole budget still gets the repair, and above any
-  /// settle-window completion. Injectable so tests need no wall-clock wait.
+  /// The default is below the SDK's 5 s default read timeout, so a caller that
+  /// waited its whole budget still gets the repair, and above
+  /// [querySettleWindow]. Injectable so tests need no wall-clock wait.
   Duration minQueryAgeBeforeRepair;
 
   /// How long after a subscription's REQ fan-out the pool checks whether any
@@ -1710,13 +1702,10 @@ class RelayPool {
         if (subId == null) return;
 
         // Nothing is listening for [subId] any more: the query was released
-        // or the subscription torn down while the relay was still streaming
-        // its replay. Every check below decides whether the event may be
-        // delivered, and with no recipient there is nothing to decide — the
-        // Schnorr verify it would spend is what the live subscriptions behind
-        // it are waiting on (#7301). Same outcome as the post-verify lookup
-        // below, which stays because the recipient can go away during the
-        // await.
+        // or the subscription torn down mid-replay. The verify this frame
+        // would spend is what the live subscriptions behind it are waiting on
+        // (#7301). The post-verify lookup below stays, because the recipient
+        // can also go away during the await.
         if (_subscriptions[subId] == null &&
             relay.getRequestSubscription(subId) == null) {
           return;
