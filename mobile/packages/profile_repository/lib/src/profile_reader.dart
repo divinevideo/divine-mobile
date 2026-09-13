@@ -17,7 +17,7 @@ import 'package:profile_repository/profile_repository.dart';
 ///
 /// `profileReadRepositoryProvider` therefore hands over a [ProfileReader] as
 /// soon as the identity is known. Because the type cannot express
-/// `saveProfileEvent`, `claimUsername`, `releaseUsername` or
+/// `saveProfileEvent`, `claimUsername` or
 /// `drivePendingSave`, a consumer of the loose provider cannot publish even
 /// by accident — the ungated phase carries a pubkey but no client, so signing
 /// there is unsafe while Drift reads are not.

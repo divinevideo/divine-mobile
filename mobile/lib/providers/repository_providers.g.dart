@@ -433,7 +433,7 @@ String _$profileRepositoryHash() => r'92a8519f8d195b5c33727803820aa82e94a8b0b2';
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
+/// `claimUsername` or `drivePendingSave`, so a consumer of
 /// this provider cannot publish by accident. Everything that signs must keep
 /// using [profileRepository] — today that is
 /// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
@@ -460,7 +460,7 @@ final profileReadRepositoryProvider = ProfileReadRepositoryProvider._();
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
+/// `claimUsername` or `drivePendingSave`, so a consumer of
 /// this provider cannot publish by accident. Everything that signs must keep
 /// using [profileRepository] — today that is
 /// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
@@ -487,7 +487,7 @@ final class ProfileReadRepositoryProvider
   /// **The return type is the security boundary.** The identity-known phase
   /// carries a pubkey but no client, so signing there is unsafe even though
   /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-  /// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
+  /// `claimUsername` or `drivePendingSave`, so a consumer of
   /// this provider cannot publish by accident. Everything that signs must keep
   /// using [profileRepository] — today that is
   /// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and

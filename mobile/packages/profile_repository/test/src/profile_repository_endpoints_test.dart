@@ -202,55 +202,12 @@ void main() {
         expect(signed, equals('$_testNameServer/api/username/claim'));
       });
 
-      test('releaseUsername signs exactly the URL it posts to', () async {
-        when(
-          () => nostrClient.createNip98AuthHeader(
-            url: any(named: 'url'),
-            method: any(named: 'method'),
-            payload: any(named: 'payload'),
-          ),
-        ).thenAnswer((_) async => 'Nostr fake');
-        when(
-          () => httpClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          ),
-        ).thenAnswer((_) async => Response('{}', 500));
-
-        await buildRepository(
-          nameServerBaseUrl: _testNameServer,
-        ).releaseUsername(name: 'alice');
-
-        final signed =
-            verify(
-                  () => nostrClient.createNip98AuthHeader(
-                    url: captureAny(named: 'url'),
-                    method: any(named: 'method'),
-                    payload: any(named: 'payload'),
-                  ),
-                ).captured.single
-                as String;
-        final posted =
-            verify(
-                  () => httpClient.post(
-                    captureAny(),
-                    headers: any(named: 'headers'),
-                    body: any(named: 'body'),
-                  ),
-                ).captured.single
-                as Uri;
-
-        expect(signed, equals(posted.toString()));
-        expect(signed, equals('$_testNameServer/api/username/release'));
-      });
-
       // The request URL is built with Uri.parse, which lowercases the host
       // and drops a default port; the `u` tag is signed from the base
       // verbatim. Unless the base is canonicalized first, the two strings
       // differ and the name server — which compares them raw — 401s every
-      // claim and release, while the unauthenticated /check still returns
-      // 200. Only the signed endpoints can catch this.
+      // claim, while the unauthenticated /check still returns 200. Only the
+      // signed endpoint can catch this.
       test('a non-canonical base still signs the URL it posts to', () async {
         when(
           () => nostrClient.createNip98AuthHeader(

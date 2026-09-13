@@ -371,7 +371,7 @@ ProfileRepository? profileRepository(Ref ref) {
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
+/// `claimUsername` or `drivePendingSave`, so a consumer of
 /// this provider cannot publish by accident. Everything that signs must keep
 /// using [profileRepository] — today that is
 /// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
