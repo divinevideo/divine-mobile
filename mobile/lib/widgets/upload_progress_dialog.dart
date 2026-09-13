@@ -8,7 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/upload_progress/upload_progress_cubit.dart';
 import 'package:openvine/blocs/upload_progress/upload_progress_state.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:upload_repository/upload_repository.dart';
+import 'package:upload_repository/upload_repository.dart'
+    show PendingUpload, UploadStatus;
 
 /// Dialog that shows upload progress and blocks user interaction until complete.
 ///

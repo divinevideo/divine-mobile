@@ -8,6 +8,8 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
+import 'package:upload_repository/upload_repository.dart'
+    show PendingUploadAdapter, UploadStatusAdapter;
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 

@@ -15,7 +15,20 @@ import 'package:openvine/services/video_publish/publish_timeline.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:upload_repository/upload_repository.dart';
 
-export 'package:upload_repository/upload_repository.dart';
+// Re-exported deliberately as an allowlist rather than the whole package:
+// callers of the facade need the upload vocabulary that appears in
+// `UploadManager`'s own signatures, not the store, retry policy, progress
+// reporter or circuit breaker behind them.
+export 'package:upload_repository/upload_repository.dart'
+    show
+        BlossomUploadFailureException,
+        PendingUpload,
+        TransientRenderCleaner,
+        UploadCrashReporter,
+        UploadMetrics,
+        UploadRetryConfig,
+        UploadStatus,
+        videoProgressShare;
 
 /// Extracts a thumbnail frame as a file, the shape
 /// [VideoThumbnailService.extractThumbnail] already has.

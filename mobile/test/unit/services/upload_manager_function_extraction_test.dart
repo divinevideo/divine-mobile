@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/upload_manager.dart';
-import 'package:upload_repository/upload_repository.dart';
 
 // Helper classes to test extracted functionality
 class UploadSuccessResult {

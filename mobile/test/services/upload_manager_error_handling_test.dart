@@ -11,6 +11,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:upload_repository/upload_repository.dart'
+    show
+        PendingUploadAdapter,
+        UploadConnectivity,
+        UploadProgressReporter,
+        UploadStatusAdapter;
 
 import '../mocks/mock_path_provider_platform.dart';
 
