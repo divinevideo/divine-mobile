@@ -304,7 +304,7 @@ class RelayDiscoveryService {
     final relay = RelayBase(indexerUrl, relayStatus);
     final completer = Completer<List<DiscoveredRelay>>();
     Event? newestEvent;
-    final subscriptionId = 'rd_${DateTime.now().millisecondsSinceEpoch}';
+    final subscriptionId = StringUtil.rndSecureNameStr(16);
 
     // Set up message handler before connecting
     relay.onMessage = (relay, json) async {

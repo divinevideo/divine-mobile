@@ -112,6 +112,8 @@ void main() {
       ], timeout: timeout);
 
       final subId = await relay.awaitPendingQuery();
+      expect(subId, hasLength(16));
+      expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(subId), isTrue);
       await relay.deliver(['CLOSED', subId, 'error: query failed']);
 
       final result = await pending;

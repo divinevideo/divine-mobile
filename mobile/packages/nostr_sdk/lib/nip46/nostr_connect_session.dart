@@ -562,7 +562,7 @@ class NostrConnectSession {
       kinds: [EventKind.nostrRemoteSigning],
     );
 
-    final subscriptionId = StringUtil.rndNameStr(12);
+    final subscriptionId = StringUtil.rndSecureNameStr(12);
     final queryMsg = ['REQ', subscriptionId, filter.toJson()];
 
     relay.pendingMessages.add(queryMsg);

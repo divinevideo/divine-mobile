@@ -357,6 +357,28 @@ void main() {
         expect(channelFactory.createdChannels, hasLength(1));
       });
 
+      test('uses an opaque subscription id for the profile check', () async {
+        final channelFactory = _FakeWebSocketChannelFactory();
+
+        final future = buildOrchestrator(
+          profileCheckChannelFactory: channelFactory,
+          profileCheckIndexerUrl: indexerUrl,
+        ).checkExistingProfile(testPubkey);
+
+        await pumpEventQueue();
+        final request = jsonDecode(
+          channelFactory.lastChannel._sink.added.single as String,
+        ) as List<dynamic>;
+        final subscriptionId = request[1] as String;
+        channelFactory.lastChannel.simulateMessage(
+          jsonEncode(<dynamic>['EOSE', subscriptionId]),
+        );
+        await future;
+
+        expect(subscriptionId, hasLength(16));
+        expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(subscriptionId), isTrue);
+      });
+
       test(
         'reports false when the indexer returns EOSE with no event',
         () async {

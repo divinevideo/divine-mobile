@@ -1410,7 +1410,7 @@ class FollowRepository {
     final relay = _relayFactory(indexerUrl, relayStatus);
     final completer = Completer<int>();
     final followerPubkeys = <String>{};
-    final subscriptionId = 'fc_${DateTime.now().millisecondsSinceEpoch}';
+    final subscriptionId = StringUtil.rndSecureNameStr(16);
     var isComplete = false;
 
     relay.onMessage = (relay, jsonMsg) async {
@@ -1842,7 +1842,7 @@ class FollowRepository {
     final relay = _relayFactory(indexerUrl, relayStatus);
     final completer = Completer<List<_FollowerRef>>();
     final followers = <_FollowerRef>[];
-    final subscriptionId = 'fr_${DateTime.now().millisecondsSinceEpoch}';
+    final subscriptionId = StringUtil.rndSecureNameStr(16);
 
     relay.onMessage = (relay, jsonMsg) async {
       if (jsonMsg.isEmpty) return;
@@ -2613,7 +2613,7 @@ class FollowRepository {
     final relayStatus = RelayStatus(indexerUrl);
     final relay = _relayFactory(indexerUrl, relayStatus);
     final completer = Completer<Event?>();
-    final subscriptionId = 'cl_${DateTime.now().millisecondsSinceEpoch}';
+    final subscriptionId = StringUtil.rndSecureNameStr(16);
     Event? bestEvent;
 
     relay.onMessage = (relay, jsonMsg) async {
