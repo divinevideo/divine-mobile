@@ -87,10 +87,19 @@ void main() {
         );
 
         expect(requestedFilters, hasLength(2));
+        // everyElement passes vacuously on an empty list, so the length
+        // check on each call's filter set is what actually proves a filter
+        // (e.g. the kind-5 deletion filter) was not silently dropped.
+        expect(requestedFilters[0], hasLength(2));
         expect(
           requestedFilters[0].map((filter) => filter.authors),
           everyElement(['author-a']),
         );
+        expect(
+          requestedFilters[0].map((filter) => filter.limit),
+          everyElement(20),
+        );
+        expect(requestedFilters[1], hasLength(2));
         expect(
           requestedFilters[1].map((filter) => filter.authors),
           everyElement(['author-b']),
