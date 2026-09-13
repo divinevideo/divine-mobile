@@ -33,6 +33,26 @@ void main() {
       );
     });
 
+    test('adopting a prewarmed output re-arms the first-frame signal', () {
+      final source = _textureOutputSourceFile().readAsStringSync();
+
+      // `attachCurrentItemOutputs` prewarms immediately before it attaches,
+      // so a new clip set's first attach adopts an already-warm output and
+      // takes this branch. `onFirstFrame` fires once per
+      // `hasDeliveredFirstFrame`, and on the texture path it is the only
+      // thing that clears Flutter's loader — so without the reset here the
+      // second video on a reused player renders under the loader forever.
+      expect(
+        _warmAdoptBranch(
+          _functionBody(source, 'func attach(to item: AVPlayerItem)'),
+        ),
+        contains('hasDeliveredFirstFrame = false'),
+        reason:
+            'Adopting a warm output must reset the first-frame flag like the '
+            'cold path does, or onFirstFrame never fires for the next video.',
+      );
+    });
+
     test("switching looping off drops the previous looper's items", () {
       final source = _playerSourceFile().readAsStringSync();
 
@@ -48,6 +68,24 @@ void main() {
       );
     });
   });
+}
+
+/// The branch of `attach(to:)` that adopts an already-warm output, from its
+/// `if let warm` opener to the `return` that ends it.
+String _warmAdoptBranch(String attachBody) {
+  final start = attachBody.indexOf('if let warm');
+  expect(
+    start,
+    greaterThanOrEqualTo(0),
+    reason: 'Expected `attach(to:)` to keep its warm-output adopt branch.',
+  );
+  final end = attachBody.indexOf('return', start);
+  expect(
+    end,
+    greaterThan(start),
+    reason: 'Expected the warm-output adopt branch to return early.',
+  );
+  return attachBody.substring(start, end);
 }
 
 /// Source text of the function opening at [signature], up to the next
