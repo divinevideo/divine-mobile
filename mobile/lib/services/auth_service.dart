@@ -3590,14 +3590,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Handles both local SecureKeyStorage and remote KeycastRpc signing
   ///
   /// Delegates to [SignerFactory.createAndSignEvent]; this facade keeps the
-  /// authenticated/identity guard and the public signature ([biometricPrompt]
-  /// is retained for the 29 existing call sites but unused by the core).
+  /// authenticated/identity guard and the public signature.
   @override
   Future<Event?> createAndSignEvent({
     required int kind,
     required String content,
     List<List<String>>? tags,
-    String? biometricPrompt,
     int? createdAt,
   }) async {
     final identity = _currentIdentity;

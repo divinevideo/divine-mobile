@@ -116,6 +116,27 @@ void main() {
     );
 
     test(
+      'returns unavailable when the device reports an internal error',
+      () async {
+        when(
+          () => localAuthentication.isDeviceSupported(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => localAuthentication.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            persistAcrossBackgrounding: true,
+          ),
+        ).thenThrow(
+          const LocalAuthException(code: LocalAuthExceptionCode.deviceError),
+        );
+
+        final result = await authentication.authenticate(reason: 'Verify');
+
+        expect(result, DeviceAuthenticationResult.unavailable);
+      },
+    );
+
+    test(
       'returns unavailable when the platform channel throws unexpectedly',
       () async {
         when(
