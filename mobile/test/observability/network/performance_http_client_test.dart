@@ -102,65 +102,67 @@ class _FakeInnerClient extends http.BaseClient {
 }
 
 void main() {
-  test(
-    'separates deletion 404 from lookup latency without leaking ids',
-    () async {
-      final monitor = RecordingPerformanceMonitor();
-      final client = PerformanceHttpClient(
-        inner: _FakeInnerClient(statusCode: 404),
-        recorder: _FakeRecorder(),
-        performanceMonitor: monitor,
-      );
-      addTearDown(client.close);
-      final response = await client.post(
-        Uri.parse(
-          'https://moderation-api.divine.video/api/delete/private-event?token=secret',
-        ),
-      );
-      expect(response.statusCode, 404);
-      final trace = monitor.traces.single;
-      expect(trace.name, 'http_operation');
-      expect(trace.attributes, {
-        'operation': 'creator_delete',
-        'method': 'POST',
-        'status': '404',
-        'outcome': 'http_error',
-      });
-      expect(trace.metrics['response_bytes'], 2);
-      expect(trace.metrics['headers_ms'], greaterThanOrEqualTo(0));
-      expect(
-        trace.metrics['total_ms'],
-        greaterThanOrEqualTo(trace.metrics['headers_ms']!),
-      );
-      expect(trace.stops, 1);
-    },
-  );
+  group('send operation telemetry', () {
+    test(
+      'separates deletion 404 from lookup latency without leaking ids',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final client = PerformanceHttpClient(
+          inner: _FakeInnerClient(statusCode: 404),
+          recorder: _FakeRecorder(),
+          performanceMonitor: monitor,
+        );
+        addTearDown(client.close);
+        final response = await client.post(
+          Uri.parse(
+            'https://moderation-api.divine.video/api/delete/private-event?token=secret',
+          ),
+        );
+        expect(response.statusCode, 404);
+        final trace = monitor.traces.single;
+        expect(trace.name, 'http_operation');
+        expect(trace.attributes, {
+          'operation': 'creator_delete',
+          'method': 'POST',
+          'status': '404',
+          'outcome': 'http_error',
+        });
+        expect(trace.metrics['response_bytes'], 2);
+        expect(trace.metrics['headers_ms'], greaterThanOrEqualTo(0));
+        expect(
+          trace.metrics['total_ms'],
+          greaterThanOrEqualTo(trace.metrics['headers_ms']!),
+        );
+        expect(trace.stops, 1);
+      },
+    );
 
-  test(
-    'transport errors emit a terminal operation and preserve the error',
-    () async {
-      final monitor = RecordingPerformanceMonitor();
-      final error = StateError('connection unavailable');
-      final client = PerformanceHttpClient(
-        inner: _FakeInnerClient(error: error),
-        recorder: _FakeRecorder(),
-        performanceMonitor: monitor,
-      );
-      addTearDown(client.close);
-      await expectLater(
-        client.get(
-          Uri.parse('https://moderation-api.divine.video/check-result/id'),
-        ),
-        throwsA(same(error)),
-      );
-      expect(
-        monitor.traces.single.attributes['operation'],
-        'moderation_lookup',
-      );
-      expect(monitor.traces.single.attributes['outcome'], 'transport_error');
-      expect(monitor.traces.single.stops, 1);
-    },
-  );
+    test(
+      'transport errors emit a terminal operation and preserve the error',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final error = StateError('connection unavailable');
+        final client = PerformanceHttpClient(
+          inner: _FakeInnerClient(error: error),
+          recorder: _FakeRecorder(),
+          performanceMonitor: monitor,
+        );
+        addTearDown(client.close);
+        await expectLater(
+          client.get(
+            Uri.parse('https://moderation-api.divine.video/check-result/id'),
+          ),
+          throwsA(same(error)),
+        );
+        expect(
+          monitor.traces.single.attributes['operation'],
+          'moderation_lookup',
+        );
+        expect(monitor.traces.single.attributes['outcome'], 'transport_error');
+        expect(monitor.traces.single.stops, 1);
+      },
+    );
+  });
 
   group(PerformanceHttpClient, () {
     late _FakeRecorder recorder;
@@ -248,10 +250,12 @@ void main() {
     });
 
     test('still sends the request when the recorder declines it', () async {
+      final monitor = RecordingPerformanceMonitor();
       final inner = _FakeInnerClient();
       final client = PerformanceHttpClient(
         inner: inner,
         recorder: _FakeRecorder(enabled: false),
+        performanceMonitor: monitor,
       );
       addTearDown(client.close);
 
@@ -260,6 +264,7 @@ void main() {
       );
 
       expect(response.statusCode, 200);
+      expect(monitor.traces, isEmpty);
       expect(inner.sent, hasLength(1));
     });
 

@@ -47,6 +47,10 @@ class PerformanceHttpClient extends http.BaseClient {
       urlPattern: httpMetricUrlPattern(request.url),
       method: request.method,
     );
+    // Preserve the direct client path while collection is unavailable.
+    // Custom operation traces follow the same gate as native HTTP metrics.
+    if (span == null) return _inner.send(request);
+
     final operation = PerformanceOperation(
       _performanceMonitor,
       'http_operation',
@@ -70,14 +74,14 @@ class PerformanceHttpClient extends http.BaseClient {
 
     final requestPayloadSize = request.contentLength;
     if (requestPayloadSize != null) {
-      span?.setRequestPayloadSize(requestPayloadSize);
+      span.setRequestPayloadSize(requestPayloadSize);
     }
 
     final http.StreamedResponse response;
     try {
       response = await _inner.send(request);
     } catch (_) {
-      span?.complete();
+      span.complete();
       operation.finish(
         attributes: {...attributes, 'outcome': 'transport_error'},
         metrics: {'total_ms': stopwatch.elapsedMilliseconds},
@@ -106,7 +110,7 @@ class PerformanceHttpClient extends http.BaseClient {
 
   Stream<List<int>> _trackBody(
     http.StreamedResponse response,
-    HttpMetricSpan? span,
+    HttpMetricSpan span,
     PerformanceOperation operation,
     Stopwatch stopwatch,
     int headersMs,
@@ -129,7 +133,7 @@ class PerformanceHttpClient extends http.BaseClient {
           'response_bytes': received,
         },
       );
-      span?.complete(
+      span.complete(
         statusCode: response.statusCode,
         responsePayloadSize: received,
         responseContentType: response.headers['content-type'],
