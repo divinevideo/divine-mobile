@@ -206,6 +206,12 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         if let warm = warmOutputs.first(where: { $0.item === item })?.output {
             videoOutput = warm
             attachedItem = item
+            // Reset like the cold path below: a new clip set builds a new
+            // looper whose items are prewarmed before this runs, so this is
+            // the branch a second video takes. Leaving the flag set there
+            // keeps `onFirstFrame` from ever firing again, and the texture
+            // path has no other way to clear Flutter's loader.
+            hasDeliveredFirstFrame = false
             pendingSeekTime = .invalid
             mediaDataRearmCount = 0
             lastDeliveredItemTime = .invalid
