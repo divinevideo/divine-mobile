@@ -7,6 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
 
+/// Ceiling for a delivery this test expects to complete. Without it a
+/// regression makes the awaited future hang to the framework's own timeout,
+/// which reports a bare timeout instead of naming what stalled.
+const _guard = Duration(seconds: 3);
+
 class _FakeRelay extends Relay {
   _FakeRelay(String url) : super(url, RelayStatus(url));
 
@@ -195,7 +200,13 @@ void main() {
       final feed = await _signedEvent('feed');
       final dReplay = relay.deliver(['EVENT', 'query', replay.toJson()]);
       final dFeed = relay.deliver(['EVENT', 'feed', feed.toJson()]);
-      await dFeed;
+      await dFeed.timeout(
+        _guard,
+        onTimeout: () => fail(
+          'the feed subscription was not delivered while another '
+          'subscription on the same relay was still verifying',
+        ),
+      );
 
       expect(feedDelivered.map((e) => e.content), ['feed']);
       expect(replayDelivered, isEmpty, reason: 'still gated');
