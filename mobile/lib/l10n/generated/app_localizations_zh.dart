@@ -3020,9 +3020,6 @@ class AppLocalizationsZh extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => '返回邀请码';
-
-  @override
   String get authUseDivineNoBackup => '不备份，直接用 Divine';
 
   @override
@@ -3126,17 +3123,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authVerificationConnectionError => '无法验证邮箱。请检查网络连接后重试。';
 
   @override
-  String get authWaitlistConfirmTitle => '你进来了！';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return '我们会通过 $email 分享动态。\n有更多邀请码时，会第一时间发给你。';
-  }
-
-  @override
-  String get authOk => '好';
-
-  @override
   String get authTryAgain => '再试一次';
 
   @override
@@ -3146,33 +3132,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '无法打开 $email';
   }
-
-  @override
-  String get authAddInviteCode => '输入你的邀请码';
-
-  @override
-  String get authInviteCodeLabel => '邀请码';
-
-  @override
-  String get authEnterYourCode => '输入邀请码';
-
-  @override
-  String get authNext => '下一步';
-
-  @override
-  String get authJoinWaitlist => '加入等候名单';
-
-  @override
-  String get authJoinWaitlistTitle => '加入等候名单';
-
-  @override
-  String get authJoinWaitlistDescription => '留下你的邮箱，开放注册时我们会发送邀请码。';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => '给我发 Divine 灵感';
-
-  @override
-  String get authInviteAccessHelp => '邀请功能帮助';
 
   @override
   String get authGeneratingConnection => '正在生成连接...';
@@ -3333,39 +3292,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       '暂时无法输入验证码。请点击邮件中的链接，或重新发送获取新码。';
-
-  @override
-  String get authInviteCodeErrorMalformed => '请输入 ABCD-EFGH 格式的邀请码。';
-
-  @override
-  String get authInviteCodeErrorNotFound => '这个邀请码看起来无效。';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed => '这个邀请码已被使用或已撤销。';
-
-  @override
-  String get authInviteGateErrorCreatorFull => '这位创作者的邀请名额已满';
-
-  @override
-  String get authInviteGateErrorUnavailable => '这个邀请码不可用。加入候补名单，有名额时我们会给你发送邀请。';
-
-  @override
-  String get authInviteGateErrorCheckFailed => '无法验证这个邀请码。请重试。';
-
-  @override
-  String get authInviteGateErrorUnknown => '出了点问题。请重新输入你的邀请码。';
-
-  @override
-  String get authInviteErrorAlreadyUsed => '该邀请码已不可用。返回你的邀请码页面、加入等候名单，或联系客服。';
-
-  @override
-  String get authInviteErrorInvalid => '该邀请码暂时无法使用。返回你的邀请码页面、加入等候名单，或联系客服。';
-
-  @override
-  String get authInviteErrorTemporary => '暂时无法确认你的邀请。返回你的邀请码页面重试，或联系客服。';
-
-  @override
-  String get authInviteErrorUnknown => '无法激活你的邀请。返回你的邀请码页面、加入等候名单，或联系客服。';
 
   @override
   String get shareSheetSave => '保存';
@@ -3993,14 +3919,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => '视频缩略图';
-
-  @override
-  String get notificationsInviteSingular => '你有 1 个邀请名额，可以分享给朋友！';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return '你有 $count 个邀请名额，可以分享给朋友！';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7255,61 +7173,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get blueskyTemporarilyUnavailable => 'Bluesky 发布暂时不可用，请稍后再试。';
 
   @override
-  String get invitesTitle => '邀请朋友';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 个邀请名额可生成',
-      one: '1 个邀请名额可生成',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle => '准备好分享时，就生成一个邀请码。';
-
-  @override
-  String get invitesGenerateButtonLabel => '生成邀请码';
-
-  @override
-  String get invitesNoneAvailable => '暂时没有可用邀请';
-
-  @override
-  String get invitesShareWithPeople => '把 Divine 分享给你认识的人';
-
-  @override
-  String get invitesUsedInvites => '已使用的邀请';
-
-  @override
-  String invitesShareMessage(String code) {
-    return '来 Divine 找我玩！使用邀请码 $code 即可开始：\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => '复制邀请';
-
-  @override
-  String get invitesCopied => '邀请已复制！';
-
-  @override
-  String get invitesShareInvite => '分享邀请';
-
-  @override
-  String get invitesShareSubject => '来 Divine 找我玩';
-
-  @override
-  String get invitesClaimed => '已使用';
-
-  @override
-  String get invitesCouldNotLoad => '邀请加载失败';
-
-  @override
-  String get invitesRetry => '重试';
-
-  @override
   String get searchSomethingWentWrong => '出了点问题';
 
   @override
@@ -9985,63 +9848,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => '未成年保护覆盖已清除';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => '注册邀请';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => '当前状态';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading => '服务器值：加载中';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => '服务器值：已启用';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => '服务器值：已禁用';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => '服务器值：未知';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone => '覆盖：使用服务器值';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled => '覆盖：强制启用';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled => '覆盖：强制禁用';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => '使用服务器值';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      '跟随邀请服务的 onboardingMode';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => '强制启用';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      '在本地显示注册邀请门槛和管理界面';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => '强制禁用';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      '在本地隐藏注册邀请界面，不改动服务器';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast => '注册邀请现在跟随服务器';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast => '注册邀请已强制启用';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast => '注册邀请已强制禁用';
 
   @override
   String get commentsRecordVideoButtonLabel => '录制视频评论';

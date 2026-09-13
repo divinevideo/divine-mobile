@@ -1676,7 +1676,6 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "اکاؤنٹ بنائیں",
-  "authBackToInviteCode": "دعوتی کوڈ پر واپس",
   "authUseDivineNoBackup": "بغیر بیک اپ کے Divine استعمال کریں",
   "authSkipConfirmTitle": "ایک آخری بات...",
   "authSkipConfirmKeyCreated": "آپ داخل ہو گئے! ہم ایک محفوظ کلید بنائیں گے جو آپ کے Divine اکاؤنٹ کو چلائے گی۔",
@@ -1718,17 +1717,6 @@
   "authEmailVerifiedLogin": "ای میل تصدیق ہو گئی! جاری رکھنے کے لیے لاگ ان کریں۔",
   "authVerificationLinkExpired": "یہ تصدیقی لنک اب درست نہیں رہا۔",
   "authVerificationConnectionError": "ای میل کی تصدیق نہیں ہو سکی۔ براہ کرم اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
-  "authWaitlistConfirmTitle": "آپ شامل ہو گئے!",
-  "authWaitlistUpdatesAt": "ہم {email} پر اپڈیٹس بھیجیں گے۔\nجب مزید دعوتی کوڈز دستیاب ہوں گے، ہم آپ کو بھیج دیں گے۔",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "ٹھیک ہے",
   "authTryAgain": "دوبارہ کوشش کریں",
   "authContactSupport": "سپورٹ سے رابطہ کریں",
   "authCouldNotOpenEmail": "{email} نہیں کھل سکا",
@@ -1740,15 +1728,6 @@
       }
     }
   },
-  "authAddInviteCode": "اپنا دعوتی کوڈ درج کریں",
-  "authInviteCodeLabel": "دعوتی کوڈ",
-  "authEnterYourCode": "اپنا کوڈ درج کریں",
-  "authNext": "آگے",
-  "authJoinWaitlist": "ویٹ لسٹ میں شامل ہوں",
-  "authJoinWaitlistTitle": "ویٹ لسٹ میں شامل ہوں",
-  "authJoinWaitlistDescription": "اپنی ای میل بتائیں اور رسائی کھلنے پر ہم آپ کو دعوتی کوڈ بھیج دیں گے۔",
-  "authJoinWaitlistNewsletterOptIn": "مجھے Divine کی تحریک بھیجیں",
-  "authInviteAccessHelp": "دعوتی رسائی میں مدد",
   "authGeneratingConnection": "کنکشن بنایا جا رہا ہے...",
   "authConnectedAuthenticating": "منسلک! تصدیق ہو رہی ہے...",
   "authConnectionTimedOut": "کنکشن کا وقت ختم ہو گیا",
@@ -1808,17 +1787,6 @@
   "authVerificationErrorPinLocked": "بہت زیادہ کوششیں۔ تازہ کوڈ پانے کے لیے دوبارہ بھیجیں پر ٹیپ کریں۔",
   "authVerificationErrorPinFailed": "ہم اس کوڈ کی تصدیق نہیں کر سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "authVerificationErrorPinUnavailable": "کوڈ درج کرنا فی الحال دستیاب نہیں۔ اپنی ای میل میں دیا گیا لنک کھولیں، یا تازہ کوڈ کے لیے دوبارہ بھیجیں۔",
-  "authInviteCodeErrorMalformed": "ABCD-EFGH جیسا دعوتی کوڈ درج کریں۔",
-  "authInviteCodeErrorNotFound": "یہ دعوتی کوڈ درست نہیں لگتا۔",
-  "authInviteCodeErrorAlreadyUsed": "یہ دعوتی کوڈ پہلے ہی استعمال ہو چکا ہے یا منسوخ کر دیا گیا ہے۔",
-  "authInviteGateErrorCreatorFull": "اس تخلیق کار کی دعوتیں ختم ہو چکی ہیں",
-  "authInviteGateErrorUnavailable": "یہ دعوتی کوڈ دستیاب نہیں ہے۔ ویٹ لسٹ میں شامل ہوں، جگہ بنتے ہی ہم دعوت بھیج دیں گے۔",
-  "authInviteGateErrorCheckFailed": "ہم اس کوڈ کی تصدیق نہیں کر سکے۔ دوبارہ کوشش کریں۔",
-  "authInviteGateErrorUnknown": "کچھ غلط ہو گیا۔ اپنا دعوتی کوڈ دوبارہ آزمائیں۔",
-  "authInviteErrorAlreadyUsed": "وہ دعوتی کوڈ اب دستیاب نہیں رہا۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔",
-  "authInviteErrorInvalid": "وہ دعوتی کوڈ فی الحال استعمال نہیں ہو سکتا۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔",
-  "authInviteErrorTemporary": "ہم فی الحال آپ کی دعوت کی تصدیق نہیں کر سکے۔ اپنے دعوتی کوڈ پر واپس جا کر دوبارہ کوشش کریں، یا سپورٹ سے رابطہ کریں۔",
-  "authInviteErrorUnknown": "ہم آپ کی دعوت فعال نہیں کر سکے۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔",
   "shareSheetSave": "محفوظ کریں",
   "shareSheetRemoveFromSaved": "محفوظات سے ہٹائیں",
   "shareSheetSaveToGallery": "گیلری میں محفوظ کریں",
@@ -2180,15 +2148,6 @@
   "notificationsVideoThumbnail": "ویڈیو تھمب نیل",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "آپ کے پاس 1 دعوت ہے جو کسی دوست کے ساتھ شیئر کریں!",
-  "notificationsInvitePlural": "آپ کے پاس {count} دعوتیں ہیں جو دوستوں کے ساتھ شیئر کریں!",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsVideoUnavailable": "ویڈیو دستیاب نہیں",
   "feedFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
@@ -4022,42 +3981,6 @@
   "blueskyStatusUnavailableRetry": "ہم آپ کا Divine ہینڈل چیک نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "blueskySetUpHandle": "سیٹ اپ کریں",
   "blueskyTemporarilyUnavailable": "Bluesky اشاعت عارضی طور پر دستیاب نہیں ہے۔ براہ کرم دوبارہ کوشش کریں۔",
-  "invitesTitle": "دوستوں کو دعوت دیں",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 دعوت بنانے کے لیے تیار} other{{count} دعوتیں بنانے کے لیے تیار}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "جب آپ کوئی دعوت شیئر کرنے کے لیے تیار ہوں تو کوڈ بنائیں۔",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "دعوت بنائیں",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "ابھی کوئی دعوت دستیاب نہیں",
-  "invitesShareWithPeople": "جنہیں آپ جانتے ہیں ان کے ساتھ Divine شیئر کریں",
-  "invitesUsedInvites": "استعمال شدہ دعوتیں",
-  "invitesShareMessage": "Divine پر میرے ساتھ آئیں! شروع کرنے کے لیے دعوتی کوڈ {code} استعمال کریں:\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "دعوت کاپی کریں",
-  "invitesCopied": "دعوت کاپی ہو گئی!",
-  "invitesShareInvite": "دعوت شیئر کریں",
-  "invitesShareSubject": "Divine پر میرے ساتھ آئیں",
-  "invitesClaimed": "حاصل کی گئی",
-  "invitesCouldNotLoad": "دعوتیں لوڈ نہیں ہو سکیں",
-  "invitesRetry": "دوبارہ کوشش کریں",
   "searchSomethingWentWrong": "کچھ غلط ہو گیا",
   "searchTryAgain": "دوبارہ کوشش کریں",
   "searchForLists": "فہرستیں تلاش کریں",
@@ -5647,24 +5570,6 @@
   "devOptionsProtectedMinorEnabledToast": "محفوظ نابالغ حالت زبردستی فعال",
   "devOptionsProtectedMinorNonMinorToast": "محفوظ نابالغ حالت زبردستی بند",
   "devOptionsProtectedMinorClearedToast": "محفوظ نابالغ اووررائیڈ صاف ہو گیا",
-  "devOptionsInviteAvailabilityTitle": "سائن اپ دعوت نامے",
-  "devOptionsInviteAvailabilityCurrentLabel": "موجودہ حالت",
-  "devOptionsInviteAvailabilityServerLoading": "سرور ویلیو: لوڈ ہو رہی ہے",
-  "devOptionsInviteAvailabilityServerEnabled": "سرور ویلیو: فعال",
-  "devOptionsInviteAvailabilityServerDisabled": "سرور ویلیو: غیر فعال",
-  "devOptionsInviteAvailabilityServerUnknown": "سرور ویلیو: نامعلوم",
-  "devOptionsInviteAvailabilityOverrideNone": "اوور رائیڈ: سرور ویلیو استعمال کریں",
-  "devOptionsInviteAvailabilityOverrideEnabled": "اوور رائیڈ: زبردستی فعال",
-  "devOptionsInviteAvailabilityOverrideDisabled": "اوور رائیڈ: زبردستی غیر فعال",
-  "devOptionsInviteAvailabilityUseServer": "سرور ویلیو استعمال کریں",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "دعوت سروس کے onboardingMode کی پیروی کریں",
-  "devOptionsInviteAvailabilityForceEnabled": "زبردستی فعال کریں",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "سائن اپ دعوت گیٹس اور انتظام مقامی طور پر دکھائیں",
-  "devOptionsInviteAvailabilityForceDisabled": "زبردستی غیر فعال کریں",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "سرور کو تبدیل کیے بغیر سائن اپ دعوت UI مقامی طور پر چھپائیں",
-  "devOptionsInviteAvailabilityUseServerToast": "سائن اپ دعوت نامے اب سرور کی پیروی کرتے ہیں",
-  "devOptionsInviteAvailabilityForceEnabledToast": "سائن اپ دعوت نامے زبردستی فعال",
-  "devOptionsInviteAvailabilityForceDisabledToast": "سائن اپ دعوت نامے زبردستی غیر فعال",
   "commentsRecordVideoButtonLabel": "ویڈیو تبصرہ ریکارڈ کریں",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

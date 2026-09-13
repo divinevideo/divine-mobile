@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 
 void main() {
   group('DeepLinkService URL Parsing', () {
@@ -191,34 +190,6 @@ void main() {
       test('rejects search URL without term', () {
         final result = DeepLinkService.parseDeepLink(
           'https://divine.video/search',
-        );
-
-        expect(result.type, equals(DeepLinkType.unknown));
-      });
-    });
-
-    group('Invite URL Parsing', () {
-      test('parses /invite/{code} correctly', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite/ABCD-EFGH',
-        );
-
-        expect(result.type, equals(DeepLinkType.invite));
-        expect(result.inviteCode, equals('ABCD-EFGH'));
-      });
-
-      test('parses /invite?code={code} correctly', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite?code=WXYZ-1234',
-        );
-
-        expect(result.type, equals(DeepLinkType.invite));
-        expect(result.inviteCode, equals('WXYZ-1234'));
-      });
-
-      test('rejects invite URL without code', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite',
         );
 
         expect(result.type, equals(DeepLinkType.unknown));
@@ -706,16 +677,6 @@ void main() {
         expect(deepLink.type, equals(DeepLinkType.search));
         expect(deepLink.searchTerm, equals('test'));
       });
-
-      test('creates invite deep link', () {
-        const deepLink = DeepLink(
-          type: DeepLinkType.invite,
-          inviteCode: 'ABCD-EFGH',
-        );
-
-        expect(deepLink.type, equals(DeepLinkType.invite));
-        expect(deepLink.inviteCode, equals('ABCD-EFGH'));
-      });
     });
 
     group('$DeepLink toString', () {
@@ -768,19 +729,6 @@ void main() {
         expect(
           link.toString(),
           equals('DeepLink(type: search, searchTerm: q)'),
-        );
-      });
-
-      test('formats invite deep link without exposing raw invite code', () {
-        const link = DeepLink(
-          type: DeepLinkType.invite,
-          inviteCode: 'ABCD-EFGH',
-        );
-        expect(
-          link.toString(),
-          equals(
-            'DeepLink(type: invite, inviteCode: $redactedSensitiveLogPlaceholder)',
-          ),
         );
       });
 

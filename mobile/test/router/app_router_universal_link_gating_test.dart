@@ -123,7 +123,7 @@ void main() {
 
   // Each entry is (universal link, the plain path it addresses), covering both
   // /list shapes. profile, hashtag, search and list are exactly the types
-  // universalLinkToRouterPath resolves; video, savedVideos, invite,
+  // universalLinkToRouterPath resolves; video and savedVideos,
   // signerCallback and unknown return null and already fell through to the
   // gates.
   const links = <(String, String)>[

@@ -12,8 +12,7 @@
 lib/app_update/view/update_banner.dart	1
 lib/app_update/view/update_dialog.dart	2
 lib/notifications/view/notifications_view.dart	2
-lib/screens/auth/create_account_screen.dart	3
-lib/screens/auth/invite_gate_screen.dart	2
+lib/screens/auth/create_account_screen.dart	2
 lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/comments/widgets/comment_input.dart	3
 lib/screens/comments/widgets/comment_options_modal.dart	1

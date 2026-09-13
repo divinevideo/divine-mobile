@@ -4,7 +4,6 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -327,9 +326,7 @@ class DeepLinkCoordinator {
                   targetPath: targetPath,
                   isRouteFamilyLocation: (location) =>
                       location == SearchResultsPage.emptyPath ||
-                      location.startsWith(
-                        '${SearchResultsPage.pathPrefix}/',
-                      ) ||
+                      location.startsWith('${SearchResultsPage.pathPrefix}/') ||
                       location.startsWith('${SearchResultsPage.emptyPath}?'),
                 );
                 switch (action) {
@@ -386,9 +383,8 @@ class DeepLinkCoordinator {
                 final action = resolveDeepLinkNavAction(
                   currentLocation: currentLocation,
                   targetPath: targetPath,
-                  isRouteFamilyLocation: (location) => location.startsWith(
-                    '${CuratedListFeedScreen.basePath}/',
-                  ),
+                  isRouteFamilyLocation: (location) =>
+                      location.startsWith('${CuratedListFeedScreen.basePath}/'),
                 );
                 switch (action) {
                   case DeepLinkNavAction.skip:
@@ -430,32 +426,6 @@ class DeepLinkCoordinator {
             } else {
               Log.warning(
                 '⚠️ List deep link missing list id',
-                name: 'DeepLinkHandler',
-                category: LogCategory.ui,
-              );
-            }
-          case DeepLinkType.invite:
-            if (deepLink.inviteCode != null) {
-              final targetPath = WelcomeScreen.inviteGatePathWithCode(
-                deepLink.inviteCode!,
-              );
-              Log.info(
-                '📱 Navigating to invite gate: ${redactUriStringForLogs(targetPath)}',
-                name: 'DeepLinkHandler',
-                category: LogCategory.ui,
-              );
-              try {
-                router.go(targetPath);
-              } catch (e) {
-                Log.error(
-                  '❌ Invite navigation failed: $e',
-                  name: 'DeepLinkHandler',
-                  category: LogCategory.ui,
-                );
-              }
-            } else {
-              Log.warning(
-                '⚠️ Invite deep link missing code',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );

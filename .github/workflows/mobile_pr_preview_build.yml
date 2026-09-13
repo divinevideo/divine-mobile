@@ -53,7 +53,6 @@ jobs:
             --pwa-strategy=none \
             --dart-define=BACKEND_URL=https://api.divine.video \
             --dart-define=ENVIRONMENT=production \
-            --dart-define=GH_ACTIONS_PR_PREVIEW=true \
             --no-source-maps
 
       - name: Bundle preview artifact

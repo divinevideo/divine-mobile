@@ -1452,7 +1452,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "የእርስዎን Nostr ቁልፎች ደህንነቱ በተጠበቀ ሁኔታ ለማስተዳደር የAmber ፈራሚ መተግበሪያን በAndroid ይጠቀሙ።",
     "authCreateAccountTitle": "መለያ ይፍጠሩ",
-    "authBackToInviteCode": "ወደ ግብዣ ኮድ ተመለስ",
     "authUseDivineNoBackup": "ምንም ምትኬ ሳይኖር Divine ተጠቀም",
     "authSkipConfirmTitle": "አንድ የመጨረሻ ነገር...",
     "authSkipConfirmKeyCreated": "ገብተሃል! የእርስዎን Divine መለያ የሚያስተናግድ አስተማማኝ ቁልፍ እንፈጥራለን።",
@@ -1487,17 +1486,6 @@
     "authEmailVerifiedLogin": "ኢሜል ተረጋግጧል! ለመቀጠል እባክዎ ይግቡ።",
     "authVerificationLinkExpired": "ይህ የማረጋገጫ አገናኝ ከአሁን በኋላ የሚሰራ አይደለም።",
     "authVerificationConnectionError": "ኢሜይል ማረጋገጥ አልተቻለም። እባክዎ ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
-    "authWaitlistConfirmTitle": "ገብተሃል!",
-    "authWaitlistUpdatesAt": "ዝመናዎችን በ{email} እናጋራለን።\nተጨማሪ የግብዣ ኮዶች ሲገኙ፣ እንልክልሃለን።",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "እሺ",
     "authTryAgain": "እንደገና ይሞክሩ",
     "authContactSupport": "ድጋፍን ያነጋግሩ",
     "authCouldNotOpenEmail": "{email} መክፈት አልተቻለም",
@@ -1509,15 +1497,6 @@
             }
         }
     },
-    "authAddInviteCode": "የግብዣ ኮድዎን ያክሉ",
-    "authInviteCodeLabel": "የግብዣ ኮድ",
-    "authEnterYourCode": "ኮድዎን ያስገቡ",
-    "authNext": "ቀጥሎ",
-    "authJoinWaitlist": "የተጠባባቂ ዝርዝሩን ይቀላቀሉ",
-    "authJoinWaitlistTitle": "የተጠባባቂ ዝርዝሩን ይቀላቀሉ",
-    "authJoinWaitlistDescription": "ኢሜልዎን ያጋሩ እና መዳረሻ ሲከፈት ማሻሻያዎችን እንልካለን።",
-    "authJoinWaitlistNewsletterOptIn": "የDivine መነሳሳት ላክልኝ",
-    "authInviteAccessHelp": "የመዳረሻ እገዛን ጋብዝ",
     "authGeneratingConnection": "ግንኙነት በማመንጨት ላይ...",
     "authConnectedAuthenticating": "ተገናኝቷል! በማረጋገጥ ላይ...",
     "authConnectionTimedOut": "ግንኙነቱ ጊዜው አልፎበታል።",
@@ -1576,17 +1555,6 @@
     "authVerificationErrorPinLocked": "በጣም ብዙ ሙከራዎች። አዲስ ኮድ ለማግኘት እንደገና ላክ የሚለውን ይንኩ።",
     "authVerificationErrorPinFailed": "ያን ኮድ ማረጋገጥ አልቻልንም። እባክዎ እንደገና ይሞክሩ።",
     "authVerificationErrorPinUnavailable": "የኮድ ማስገቢያ አሁን አይገኝም። በኢሜይልዎ ውስጥ ያለውን አገናኝ ይንኩ፣ ወይም አዲስ ለማግኘት እንደገና ይላኩ።",
-    "authInviteCodeErrorMalformed": "እንደ ABCD-EFGH ያለ የግብዣ ኮድ ያስገቡ።",
-    "authInviteCodeErrorNotFound": "ያ የግብዣ ኮድ ትክክል አይመስልም።",
-    "authInviteCodeErrorAlreadyUsed": "ያ የግብዣ ኮድ ቀደም ሲል ጥቅም ላይ ውሏል ወይም ተሰርዟል።",
-    "authInviteGateErrorCreatorFull": "የዚህ ፈጣሪ ግብዣዎች አልቀዋል",
-    "authInviteGateErrorUnavailable": "ያ የግብዣ ኮድ አይገኝም። በተጠባባቂ ዝርዝሩ ይመዝገቡ፣ ቦታ ሲኖር ግብዣ እንልክልዎታለን።",
-    "authInviteGateErrorCheckFailed": "ያንን ኮድ ማረጋገጥ አልቻልንም። እንደገና ይሞክሩ።",
-    "authInviteGateErrorUnknown": "የሆነ ችግር ተፈጥሯል። የግብዣ ኮድዎን እንደገና ይሞክሩ።",
-    "authInviteErrorAlreadyUsed": "ያ የግብዣ ኮድ ከአሁን በኋላ አይገኝም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።",
-    "authInviteErrorInvalid": "ያ የግብዣ ኮድ አሁን መጠቀም አይቻልም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።",
-    "authInviteErrorTemporary": "ግብዣህን አሁን ማረጋገጥ አልቻልንም። ወደ የግብዣ ኮድዎ ይመለሱ እና እንደገና ይሞክሩ፣ ወይም ድጋፍን ያግኙ።",
-    "authInviteErrorUnknown": "ግብዣህን ማግበር አልቻልንም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።",
     "shareSheetSave": "አስቀምጥ",
     "shareSheetRemoveFromSaved": "ከዕልባቶች አስወግድ",
     "shareSheetSaveToGallery": "ወደ ማዕከለ-ስዕላት አስቀምጥ",
@@ -1854,15 +1822,6 @@
     "notificationsViewProfilesSemanticLabel": "መገለጫዎችን ይመልከቱ",
     "@notificationsViewProfilesSemanticLabel": {
         "description": "Screen-reader label for a grouped notification's avatar stack, which opens the list of involved profiles."
-    },
-    "notificationsInviteSingular": "ከጓደኛዎ ጋር ለመጋራት 1 ግብዣ አለዎት!",
-    "notificationsInvitePlural": "ከጓደኞችዎ ጋር ለመጋራት {count} ግብዣዎች አሉዎት!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
     },
     "notificationsVideoUnavailable": "ቪዲዮ አይገኝም",
     "feedFailedToLoadVideos": "ቪዲዮዎችን መጫን አልተሳካም።",
@@ -2735,42 +2694,6 @@
   "blueskyStatusUnavailableRetry": "የDivine መለያህን ማረጋገጥ አልቻልንም። እንደገና ሞክር።",
   "blueskySetUpHandle": "አዘጋጅ",
     "blueskyTemporarilyUnavailable": "በBluesky ማተም ለጊዜው አይገኝም። እባክህ እንደገና ሞክር።",
-    "invitesTitle": "ጓደኞችን ይጋብዙ",
-    "invitesGenerateCardTitle": "{count, plural, =1{{count} ግብዣ ለመፍጠር ዝግጁ ነው} other{{count} ግብዣዎች ለመፍጠር ዝግጁ ናቸው}}",
-    "@invitesGenerateCardTitle": {
-        "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
-    "invitesGenerateCardSubtitle": "አንዱን ለማጋራት ስትዘጋጅ ኮድ ፍጠር።",
-    "@invitesGenerateCardSubtitle": {
-        "description": "Body text on the generate-invite card explaining what tapping the button does."
-    },
-    "invitesGenerateButtonLabel": "ግብዣ ፍጠር",
-    "@invitesGenerateButtonLabel": {
-        "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-    },
-    "invitesNoneAvailable": "አሁን ምንም ግብዣዎች የሉም",
-    "invitesShareWithPeople": "Divineን ከሚያውቋቸው ሰዎች ጋር ያጋሩ",
-    "invitesUsedInvites": "ያገለገሉ ግብዣዎች",
-    "invitesShareMessage": "Divine ላይ አብረኝ ግባ! ለመጀመር የግብዣ ኮድ {code} ተጠቀም፦\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "ግብዣ ቅዳ",
-    "invitesCopied": "ግብዣው ተቀድቷል!",
-    "invitesShareInvite": "ግብዣ አጋራ",
-    "invitesShareSubject": "Divine ላይ አብረኝ ግባ",
-    "invitesClaimed": "ተጠቅመዋል",
-    "invitesCouldNotLoad": "ግብዣዎችን መጫን አልተቻለም",
-    "invitesRetry": "እንደገና ሞክር",
     "searchSomethingWentWrong": "የሆነ ችግር ተፈጥሯል።",
     "searchTryAgain": "እንደገና ይሞክሩ",
     "searchForLists": "ዝርዝሮችን ይፈልጉ",
@@ -4044,24 +3967,6 @@
     "devOptionsProtectedMinorEnabledToast": "የተጠበቀ-ታዳጊ ሁኔታ ተገዷል",
     "devOptionsProtectedMinorNonMinorToast": "የተጠበቀ-ታዳጊ ሁኔታ ጠፍቷል",
     "devOptionsProtectedMinorClearedToast": "የተጠበቀ-ታዳጊ ሽፋን ጸድቷል",
-  "devOptionsInviteAvailabilityTitle": "የምዝገባ ግብዣዎች",
-  "devOptionsInviteAvailabilityCurrentLabel": "የአሁኑ ሁኔታ",
-  "devOptionsInviteAvailabilityServerLoading": "የአገልጋይ እሴት፦ በመጫን ላይ",
-  "devOptionsInviteAvailabilityServerEnabled": "የአገልጋይ እሴት፦ በርቷል",
-  "devOptionsInviteAvailabilityServerDisabled": "የአገልጋይ እሴት፦ ጠፍቷል",
-  "devOptionsInviteAvailabilityServerUnknown": "የአገልጋይ እሴት፦ አይታወቅም",
-  "devOptionsInviteAvailabilityOverrideNone": "ሽፋን፦ የአገልጋዩን እሴት ተጠቀም",
-  "devOptionsInviteAvailabilityOverrideEnabled": "ሽፋን፦ ማብራት አስገድድ",
-  "devOptionsInviteAvailabilityOverrideDisabled": "ሽፋን፦ ማጥፋት አስገድድ",
-  "devOptionsInviteAvailabilityUseServer": "የአገልጋዩን እሴት ተጠቀም",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "የግብዣ አገልግሎቱን onboardingMode ተከተል",
-  "devOptionsInviteAvailabilityForceEnabled": "ማብራት አስገድድ",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "የምዝገባ ግብዣ በሮችንና አስተዳደሩን በአካባቢው አሳይ",
-  "devOptionsInviteAvailabilityForceDisabled": "ማጥፋት አስገድድ",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "አገልጋዩን ሳትቀይር የምዝገባ ግብዣ ገጽታን በአካባቢው ደብቅ",
-  "devOptionsInviteAvailabilityUseServerToast": "የምዝገባ ግብዣዎች አሁን አገልጋዩን ይከተላሉ",
-  "devOptionsInviteAvailabilityForceEnabledToast": "የምዝገባ ግብዣዎች በግድ በርተዋል",
-  "devOptionsInviteAvailabilityForceDisabledToast": "የምዝገባ ግብዣዎች በግድ ጠፍተዋል",
     "minorAccountReviewParentConsentChecklistAgeBand": "ታዳጊው ከ13 እስከ 15 መሆኑንና Divineን ለመጠቀም ፈቃድ እንዳለው የሚገልጽ ግልጽ አነጋገር",
     "minorAccountReviewUnder13FamilyTitle": "ቤተሰብህ በምትኩ ምን ማድረግ ይችላል",
     "minorAccountReviewUnder13FamilyBody": "ወላጅ ወይም አሳዳጊ መለያውን ይዞ መለጠፍ ይችላል፣ አንተም ከእነሱ ጋር በቪዲዮዎቹ ውስጥ በእርግጠኝነት መሆን ትችላለህ። ቤተሰቦች Divineን ለእነሱ በሚስማማ መንገድ እንዲደሰቱበት እንፈልጋለን።",

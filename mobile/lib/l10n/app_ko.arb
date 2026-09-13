@@ -748,7 +748,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "안드로이드에서 Amber 서명 앱으로 Nostr 키를 안전하게 관리해보세요.",
     "authCreateAccountTitle": "계정 만들기",
-    "authBackToInviteCode": "초대 코드로 돌아가기",
     "authUseDivineNoBackup": "백업 없이 Divine 쓰기",
     "authSkipConfirmTitle": "마지막으로...",
     "authSkipConfirmKeyCreated": "들어오셨어요! Divine 계정을 구동할 안전한 키를 만들어드릴게요.",
@@ -783,21 +782,9 @@
     "authEmailVerifiedLogin": "이메일 인증 완료! 계속하려면 로그인해주세요.",
     "authVerificationLinkExpired": "이 인증 링크는 더 이상 유효하지 않아요.",
     "authVerificationConnectionError": "이메일을 인증할 수 없어요. 연결을 확인하고 다시 시도해주세요.",
-    "authWaitlistConfirmTitle": "들어오셨어요!",
-    "authWaitlistUpdatesAt": "{email}로 업데이트를 공유할게요.\n초대 코드가 재고가 생기면 보내드릴게요.",
-    "authOk": "확인",
     "authTryAgain": "다시 시도",
     "authContactSupport": "고객센터 문의",
     "authCouldNotOpenEmail": "{email}을(를) 열 수 없어요",
-    "authAddInviteCode": "초대 코드를 입력해주세요",
-    "authInviteCodeLabel": "초대 코드",
-    "authEnterYourCode": "코드 입력",
-    "authNext": "다음",
-    "authJoinWaitlist": "대기자 명단 등록",
-    "authJoinWaitlistTitle": "대기자 명단에 등록하기",
-    "authJoinWaitlistDescription": "이메일을 알려주시면 접근이 열릴 때 업데이트를 보내드릴게요.",
-    "authJoinWaitlistNewsletterOptIn": "Divine의 영감을 보내주세요",
-    "authInviteAccessHelp": "초대 접근 도움말",
     "authGeneratingConnection": "연결 생성 중...",
     "authConnectedAuthenticating": "연결됨! 인증 중...",
     "authConnectionTimedOut": "연결 시간 초과",
@@ -848,17 +835,6 @@
     "authVerificationErrorPinLocked": "시도 횟수가 너무 많아요. 다시 보내기를 탭해서 새 코드를 받으세요.",
     "authVerificationErrorPinFailed": "코드를 확인할 수 없어요. 다시 시도해주세요.",
     "authVerificationErrorPinUnavailable": "지금은 코드 입력을 사용할 수 없어요. 이메일의 링크를 탭하거나 다시 보내기로 새 코드를 받으세요.",
-    "authInviteCodeErrorMalformed": "ABCD-EFGH 형식의 초대 코드를 입력해요.",
-    "authInviteCodeErrorNotFound": "그 초대 코드는 올바르지 않은 것 같아요.",
-    "authInviteCodeErrorAlreadyUsed": "그 초대 코드는 이미 사용했거나 취소됐어요.",
-    "authInviteGateErrorCreatorFull": "이 크리에이터의 초대장이 모두 소진됐어요",
-    "authInviteGateErrorUnavailable": "그 초대 코드는 사용할 수 없어요. 대기자 명단에 등록하면 자리가 나는 대로 초대장을 보내드릴게요.",
-    "authInviteGateErrorCheckFailed": "그 코드를 확인할 수 없었어요. 다시 시도해 주세요.",
-    "authInviteGateErrorUnknown": "문제가 생겼어요. 초대 코드를 다시 시도해 주세요.",
-    "authInviteErrorAlreadyUsed": "그 초대 코드는 더 이상 쓸 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.",
-    "authInviteErrorInvalid": "그 초대 코드는 지금 쓸 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.",
-    "authInviteErrorTemporary": "지금은 초대 코드를 확인할 수 없어요. 초대 코드로 돌아가서 다시 시도하거나 고객센터에 문의해주세요.",
-    "authInviteErrorUnknown": "초대를 활성화할 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.",
     "shareSheetSave": "저장",
     "shareSheetRemoveFromSaved": "저장 취소",
     "shareSheetSaveToGallery": "갤러리에 저장",
@@ -990,15 +966,6 @@
     "notificationsFailedToLoad": "알림을 불러오지 못했어요",
     "notificationsRetry": "다시 시도",
     "notificationsRefreshError": "새로고침 실패 — 보유 중인 알림을 표시합니다",
-    "notificationsInviteSingular": "친구와 공유할 수 있는 초대장이 1개 있어요!",
-    "notificationsInvitePlural": "친구들과 공유할 수 있는 초대장이 {count}개 있어요!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "영상을 사용할 수 없어요",
     "feedFailedToLoadVideos": "영상을 불러오지 못했어요",
     "feedRetry": "다시 시도",
@@ -1566,7 +1533,6 @@
             }
         }
     },
-    "invitesTitle": "친구 초대",
     "libraryClipsDeletedCount": "{count, plural, =1{클립 1개 삭제됨} other{클립 {count}개 삭제됨}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2395,9 +2361,6 @@
     "videoEditorAudioSegmentInstruction": "동영상에 사용할 오디오 구간을 선택하세요",
     "fullscreenFeedRemovedMessage": "동영상이 삭제됐어요",
     "fullscreenFeedEmptyMessage": "여기에 재생할 영상이 더 없어요",
-    "invitesGenerateCardTitle": "{count, plural, other{생성할 수 있는 초대 {count}개}}",
-    "invitesGenerateCardSubtitle": "공유할 준비가 되면 코드를 생성하세요.",
-    "invitesGenerateButtonLabel": "초대 생성",
     "profileAvatarLightboxBarrierLabel": "아바타 닫기",
     "profileAvatarLightboxCloseSemanticLabel": "아바타 미리보기 닫기",
     "notificationsUnreadPrefix": "읽지 않은 알림",
@@ -2912,24 +2875,6 @@
   "blueskyStatusUnavailableRetry": "Divine 핸들을 확인하지 못했어요. 다시 시도해 주세요.",
   "blueskySetUpHandle": "설정하기",
     "blueskyTemporarilyUnavailable": "Bluesky 게시를 일시적으로 사용할 수 없어요. 다시 시도해 주세요.",
-    "invitesNoneAvailable": "지금은 사용할 수 있는 초대장이 없어요",
-    "invitesShareWithPeople": "Divine을 아는 사람들과 나눠봐요",
-    "invitesUsedInvites": "사용된 초대장",
-    "invitesShareMessage": "Divine에 함께해요! 초대 코드 {code}로 시작해보세요:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "초대장 복사",
-    "invitesCopied": "초대장을 복사했어요!",
-    "invitesShareInvite": "초대장 공유",
-    "invitesShareSubject": "Divine에 함께해요",
-    "invitesClaimed": "사용됨",
-    "invitesCouldNotLoad": "초대장을 불러오지 못했어요",
-    "invitesRetry": "다시 시도",
     "keyImportInsecureBunkerRelay": "Bunker 릴레이는 wss://를 써야 해요 (ws://는 localhost에서만 허용돼요)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3450,24 +3395,6 @@
     "devOptionsProtectedMinorEnabledToast": "보호 대상 미성년자 상태를 강제로 켰어요",
     "devOptionsProtectedMinorNonMinorToast": "보호 대상 미성년자 상태를 강제로 껐어요",
     "devOptionsProtectedMinorClearedToast": "보호 대상 미성년자 재정의를 해제했어요",
-  "devOptionsInviteAvailabilityTitle": "가입 초대",
-  "devOptionsInviteAvailabilityCurrentLabel": "현재 상태",
-  "devOptionsInviteAvailabilityServerLoading": "서버 값: 불러오는 중",
-  "devOptionsInviteAvailabilityServerEnabled": "서버 값: 켜짐",
-  "devOptionsInviteAvailabilityServerDisabled": "서버 값: 꺼짐",
-  "devOptionsInviteAvailabilityServerUnknown": "서버 값: 알 수 없음",
-  "devOptionsInviteAvailabilityOverrideNone": "재정의: 서버 값 사용",
-  "devOptionsInviteAvailabilityOverrideEnabled": "재정의: 켜기 강제",
-  "devOptionsInviteAvailabilityOverrideDisabled": "재정의: 끄기 강제",
-  "devOptionsInviteAvailabilityUseServer": "서버 값 사용",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "초대 서비스의 onboardingMode 따르기",
-  "devOptionsInviteAvailabilityForceEnabled": "켜기 강제",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "가입 초대 게이트와 관리 화면을 로컬에서 표시",
-  "devOptionsInviteAvailabilityForceDisabled": "끄기 강제",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "서버를 바꾸지 않고 가입 초대 UI를 로컬에서 숨김",
-  "devOptionsInviteAvailabilityUseServerToast": "가입 초대가 이제 서버를 따릅니다",
-  "devOptionsInviteAvailabilityForceEnabledToast": "가입 초대를 강제로 켰어요",
-  "devOptionsInviteAvailabilityForceDisabledToast": "가입 초대를 강제로 껐어요",
     "minorAccountReviewParentConsentChecklistAgeBand": "청소년이 13~15세이며 Divine 이용 허락을 받았다는 명확한 진술",
     "minorAccountReviewUnder13FamilyTitle": "대신 가족이 할 수 있는 일",
     "minorAccountReviewUnder13FamilyBody": "부모님이나 보호자가 계정을 만들어 게시할 수 있고, 여러분도 함께 영상에 나와도 전혀 문제없어요. 가족마다 맞는 방식으로 Divine을 즐기셨으면 합니다.",

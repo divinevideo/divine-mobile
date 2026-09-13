@@ -57,9 +57,8 @@ class _MockRouteInformationProvider extends Mock
 _MockGoRouter _routerAt(String location) {
   final router = _MockGoRouter();
   final routeInformation = _MockRouteInformationProvider();
-  when(
-    () => routeInformation.value,
-  ).thenReturn(RouteInformation(uri: Uri.parse(location)));
+  when(() => routeInformation.value)
+      .thenReturn(RouteInformation(uri: Uri.parse(location)));
   when(() => router.routeInformationProvider).thenReturn(routeInformation);
   when(() => router.push<void>(any())).thenAnswer((_) async {});
   return router;
@@ -86,12 +85,6 @@ class _NoOpAnalytics implements AnalyticsEventSink {
 
   @override
   Future<void> setUserId(String? userId) async {}
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
 }
 
 // ---------------------------------------------------------------------------
@@ -329,9 +322,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(
         find.text(
-          lookupAppLocalizations(
-            const Locale('en'),
-          ).postPublishConfirmationView,
+          lookupAppLocalizations(const Locale('en'))
+              .postPublishConfirmationView,
         ),
       );
       await tester.pumpAndSettle();
@@ -339,9 +331,8 @@ void main() {
       // `push`, not `go`: closing the video must pop back to the profile the
       // creator was standing on, not reset to the feed.
       verify(
-        () => router.push<void>(
-          RoutePaths.videoDetailForId(_publishedStableId),
-        ),
+        () =>
+            router.push<void>(RoutePaths.videoDetailForId(_publishedStableId)),
       ).called(1);
       verifyNever(() => router.go(any()));
     });

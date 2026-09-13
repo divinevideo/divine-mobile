@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Gebruik de Amber signer-app op Android om je Nostr-sleutels veilig te beheren.",
     "authCreateAccountTitle": "Account aanmaken",
-    "authBackToInviteCode": "Terug naar invite-code",
     "authUseDivineNoBackup": "Divine gebruiken zonder back-up",
     "authSkipConfirmTitle": "Nog één ding...",
     "authSkipConfirmKeyCreated": "Je zit erin! We maken een veilige sleutel die je Divine-account aandrijft.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "E-mail geverifieerd! Log in om door te gaan.",
     "authVerificationLinkExpired": "Deze verificatielink is niet meer geldig.",
     "authVerificationConnectionError": "E-mail verifiëren lukt niet. Check je verbinding en probeer opnieuw.",
-    "authWaitlistConfirmTitle": "Je staat erop!",
-    "authWaitlistUpdatesAt": "We delen updates via {email}.\nZodra er meer invite-codes beschikbaar zijn, sturen we die naar je toe.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Opnieuw proberen",
     "authContactSupport": "Contact met support",
     "authCouldNotOpenEmail": "{email} openen lukt niet",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Voeg je invite-code toe",
-    "authInviteCodeLabel": "Invite-code",
-    "authEnterYourCode": "Voer je code in",
-    "authNext": "Volgende",
-    "authJoinWaitlist": "Op de wachtlijst",
-    "authJoinWaitlistTitle": "Op de wachtlijst",
-    "authJoinWaitlistDescription": "Deel je e-mailadres en we sturen updates zodra toegang opengaat.",
-    "authJoinWaitlistNewsletterOptIn": "Stuur me inspiratie van Divine",
-    "authInviteAccessHelp": "Hulp bij invite-toegang",
     "authGeneratingConnection": "Verbinding genereren...",
     "authConnectedAuthenticating": "Verbonden! Authenticeren...",
     "authConnectionTimedOut": "Verbinding duurde te lang",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "Te veel pogingen. Tik op Opnieuw versturen voor een nieuwe code.",
     "authVerificationErrorPinFailed": "We konden die code niet verifiëren. Probeer het opnieuw.",
     "authVerificationErrorPinUnavailable": "Een code invoeren is nu niet beschikbaar. Tik op de link in je e-mail, of verstuur opnieuw voor een nieuwe.",
-    "authInviteCodeErrorMalformed": "Voer een uitnodigingscode in zoals ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Deze uitnodigingscode lijkt niet geldig.",
-    "authInviteCodeErrorAlreadyUsed": "Deze uitnodigingscode is al gebruikt of ingetrokken.",
-    "authInviteGateErrorCreatorFull": "De uitnodigingen van deze creator zijn op",
-    "authInviteGateErrorUnavailable": "Deze uitnodigingscode is niet beschikbaar. Zet je op de wachtlijst, dan sturen we een uitnodiging zodra er plek is.",
-    "authInviteGateErrorCheckFailed": "We konden die code niet controleren. Probeer het opnieuw.",
-    "authInviteGateErrorUnknown": "Er ging iets mis. Probeer je uitnodigingscode opnieuw.",
-    "authInviteErrorAlreadyUsed": "Die invite-code is niet meer beschikbaar. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.",
-    "authInviteErrorInvalid": "Die invite-code kan nu niet worden gebruikt. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.",
-    "authInviteErrorTemporary": "We konden je invite nu niet bevestigen. Ga terug naar je invite-code en probeer het opnieuw, of neem contact op met support.",
-    "authInviteErrorUnknown": "We konden je invite niet activeren. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.",
     "shareSheetSave": "Opslaan",
     "shareSheetRemoveFromSaved": "Verwijder bladwijzer",
     "shareSheetSaveToGallery": "Opslaan in galerij",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "Meldingen laden mislukt",
     "notificationsRetry": "Opnieuw",
     "notificationsRefreshError": "Vernieuwen mislukt — toont beschikbare items",
-    "notificationsInviteSingular": "Je hebt 1 uitnodiging om met een vriend te delen!",
-    "notificationsInvitePlural": "Je hebt {count} uitnodigingen om met vrienden te delen!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Video niet beschikbaar",
     "feedFailedToLoadVideos": "Video's laden mislukt",
     "feedRetry": "Opnieuw",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Vrienden uitnodigen",
     "libraryClipsDeletedCount": "{count, plural, =1{1 clip verwijderd} other{{count} clips verwijderd}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Selecteer het audiofragment voor je video",
     "fullscreenFeedRemovedMessage": "Video verwijderd",
     "fullscreenFeedEmptyMessage": "Hier is niets meer om af te spelen",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 uitnodiging klaar om te maken} other{{count} uitnodigingen klaar om te maken}}",
-    "invitesGenerateCardSubtitle": "Maak een code zodra je er een wilt delen.",
-    "invitesGenerateButtonLabel": "Uitnodiging maken",
     "profileAvatarLightboxBarrierLabel": "Avatar sluiten",
     "profileAvatarLightboxCloseSemanticLabel": "Avatarvoorbeeld sluiten",
     "notificationsUnreadPrefix": "Ongelezen melding",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "We konden je Divine-handle niet controleren. Probeer het opnieuw.",
   "blueskySetUpHandle": "Instellen",
     "blueskyTemporarilyUnavailable": "Publiceren op Bluesky is tijdelijk niet beschikbaar. Probeer het opnieuw.",
-    "invitesNoneAvailable": "Op dit moment geen uitnodigingen beschikbaar",
-    "invitesShareWithPeople": "Deel Divine met mensen die je kent",
-    "invitesUsedInvites": "Gebruikte uitnodigingen",
-    "invitesShareMessage": "Doe met me mee op Divine! Gebruik invite-code {code} om te beginnen:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Uitnodiging kopiëren",
-    "invitesCopied": "Uitnodiging gekopieerd!",
-    "invitesShareInvite": "Uitnodiging delen",
-    "invitesShareSubject": "Doe met me mee op Divine",
-    "invitesClaimed": "Geclaimd",
-    "invitesCouldNotLoad": "Uitnodigingen konden niet geladen worden",
-    "invitesRetry": "Opnieuw proberen",
     "keyImportInsecureBunkerRelay": "Bunker-relay moet wss:// gebruiken (ws:// is alleen toegestaan voor localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Status beschermde minderjarige afgedwongen",
     "devOptionsProtectedMinorNonMinorToast": "Status beschermde minderjarige uitgezet",
     "devOptionsProtectedMinorClearedToast": "Overschrijving beschermde minderjarige gewist",
-  "devOptionsInviteAvailabilityTitle": "Aanmelduitnodigingen",
-  "devOptionsInviteAvailabilityCurrentLabel": "Huidige status",
-  "devOptionsInviteAvailabilityServerLoading": "Serverwaarde: laden",
-  "devOptionsInviteAvailabilityServerEnabled": "Serverwaarde: aan",
-  "devOptionsInviteAvailabilityServerDisabled": "Serverwaarde: uit",
-  "devOptionsInviteAvailabilityServerUnknown": "Serverwaarde: onbekend",
-  "devOptionsInviteAvailabilityOverrideNone": "Overschrijving: serverwaarde gebruiken",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Overschrijving: aan afdwingen",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Overschrijving: uit afdwingen",
-  "devOptionsInviteAvailabilityUseServer": "Serverwaarde gebruiken",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "De onboardingMode van de uitnodigingsdienst volgen",
-  "devOptionsInviteAvailabilityForceEnabled": "Aan afdwingen",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Toon lokaal de drempels en het beheer van aanmelduitnodigingen",
-  "devOptionsInviteAvailabilityForceDisabled": "Uit afdwingen",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Verberg de uitnodigingsinterface lokaal zonder de server te wijzigen",
-  "devOptionsInviteAvailabilityUseServerToast": "Aanmelduitnodigingen volgen nu de server",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Aanmelduitnodigingen afgedwongen op aan",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Aanmelduitnodigingen afgedwongen op uit",
     "minorAccountReviewParentConsentChecklistAgeBand": "Een duidelijke verklaring dat de tiener 13 tot 15 is en toestemming heeft om Divine te gebruiken",
     "minorAccountReviewUnder13FamilyTitle": "Wat je gezin in plaats daarvan kan doen",
     "minorAccountReviewUnder13FamilyBody": "Een ouder of voogd kan het account beheren en posten, en jij mag natuurlijk gewoon in de video's staan. We willen dat gezinnen van Divine genieten op de manier die bij hen past.",

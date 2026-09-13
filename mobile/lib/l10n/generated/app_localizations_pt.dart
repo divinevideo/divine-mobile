@@ -3241,9 +3241,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Voltar para o código de convite';
-
-  @override
   String get authUseDivineNoBackup => 'Usar o Divine sem backup';
 
   @override
@@ -3360,17 +3357,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível verificar o e-mail. Verifique sua conexão e tente novamente.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Você entrou!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Vamos mandar novidades para $email.\nQuando houver mais códigos de convite, enviaremos pra você.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Tentar novamente';
 
   @override
@@ -3380,35 +3366,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Não foi possível abrir $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Adicione seu código de convite';
-
-  @override
-  String get authInviteCodeLabel => 'Código de convite';
-
-  @override
-  String get authEnterYourCode => 'Digite seu código';
-
-  @override
-  String get authNext => 'Próximo';
-
-  @override
-  String get authJoinWaitlist => 'Entrar na lista de espera';
-
-  @override
-  String get authJoinWaitlistTitle => 'Entre na lista de espera';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Compartilhe seu e-mail e enviaremos novidades conforme o acesso for liberado.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Me mandem inspiração da Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Ajuda com acesso por convite';
 
   @override
   String get authGeneratingConnection => 'Gerando conexão...';
@@ -3591,50 +3548,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'A entrada de código não está disponível no momento. Toque no link do seu e-mail ou reenvie para receber um novo.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Digite um código de convite como ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Esse código de convite não parece válido.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Esse código de convite já foi usado ou revogado.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Os convites deste criador acabaram';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Esse código de convite não está disponível. Entre na lista de espera e enviaremos um convite quando abrir uma vaga.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Não conseguimos verificar esse código. Tente de novo.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Algo deu errado. Tente seu código de convite de novo.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Esse código de convite não está mais disponível. Volte para o seu código de convite, entre na lista de espera ou contate o suporte.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Esse código de convite não pode ser usado agora. Volte para o seu código de convite, entre na lista de espera ou contate o suporte.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Não conseguimos confirmar seu convite agora. Volte para o seu código de convite e tente novamente ou contate o suporte.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Não conseguimos ativar seu convite. Volte para o seu código de convite, entre na lista de espera ou contate o suporte.';
 
   @override
   String get shareSheetSave => 'Salvar';
@@ -4306,15 +4219,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Miniatura do vídeo';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Você tem 1 convite para compartilhar com um amigo!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Você tem $count convites para compartilhar com amigos!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7779,63 +7683,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Publicar no Bluesky está temporariamente indisponível. Tente de novo.';
 
   @override
-  String get invitesTitle => 'Convidar amigos';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count convites prontos para gerar',
-      one: '$count convite pronto para gerar',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Gere um código quando estiver pronto para compartilhar.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Gerar convite';
-
-  @override
-  String get invitesNoneAvailable => 'Sem convites disponíveis no momento';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Compartilhe o Divine com quem você conhece';
-
-  @override
-  String get invitesUsedInvites => 'Convites usados';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Vem pro Divine comigo! Use o código $code pra começar:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Copiar convite';
-
-  @override
-  String get invitesCopied => 'Convite copiado!';
-
-  @override
-  String get invitesShareInvite => 'Compartilhar convite';
-
-  @override
-  String get invitesShareSubject => 'Vem pro Divine comigo';
-
-  @override
-  String get invitesClaimed => 'Resgatado';
-
-  @override
-  String get invitesCouldNotLoad => 'Não foi possível carregar os convites';
-
-  @override
-  String get invitesRetry => 'Tentar novamente';
-
-  @override
   String get searchSomethingWentWrong => 'Algo deu errado';
 
   @override
@@ -10703,74 +10550,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Substituição de menor protegido limpa';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Convites de cadastro';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Estado atual';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Valor do servidor: carregando';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Valor do servidor: ativado';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Valor do servidor: desativado';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Valor do servidor: desconhecido';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Substituição: usar o valor do servidor';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Substituição: forçar ativado';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Substituição: forçar desativado';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'Usar o valor do servidor';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Seguir o onboardingMode do serviço de convites';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Forçar ativado';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Mostrar localmente as travas e a gestão de convites de cadastro';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Forçar desativado';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Ocultar localmente a interface de convites sem mexer no servidor';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Os convites de cadastro agora seguem o servidor';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Convites de cadastro forçados como ativados';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Convites de cadastro forçados como desativados';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Gravar comentário em vídeo';

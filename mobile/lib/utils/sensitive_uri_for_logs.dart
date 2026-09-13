@@ -11,8 +11,8 @@ const redactedSensitiveLogPlaceholder = '[REDACTED]';
 const redactedUriComponentForLogs = 'REDACTED';
 
 /// Returns a URI string safe for logs: clears [userInfo], redacts query and
-/// fragment values, redacts `/invite/<code>` path segments while keeping routes
-/// like `/video/<ref>` verbatim (including full Nostr-style refs).
+/// fragment values, and redacts legacy `/invite/<code>` path segments while
+/// keeping public route identifiers verbatim.
 ///
 /// On parse failure, returns `[invalid-uri]` without echoing [uriString].
 String redactUriStringForLogs(String uriString) {

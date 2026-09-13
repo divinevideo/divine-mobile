@@ -1172,7 +1172,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Android 向けの Amber 署名アプリで、Nostr 鍵を安全に管理できるよ。",
     "authCreateAccountTitle": "アカウントを作ろう",
-    "authBackToInviteCode": "招待コードに戻る",
     "authUseDivineNoBackup": "バックアップなしで Divine を使う",
     "authSkipConfirmTitle": "最後にひとつだけ...",
     "authSkipConfirmKeyCreated": "やった！ Divine アカウントを動かす安全な鍵を作るよ。",
@@ -1207,17 +1206,6 @@
     "authEmailVerifiedLogin": "メールを確認したよ！ ログインして続けてね。",
     "authVerificationLinkExpired": "この認証リンクはもう使えないよ。",
     "authVerificationConnectionError": "メールを確認できなかった。接続を確認してもう一回試してみて。",
-    "authWaitlistConfirmTitle": "登録完了！",
-    "authWaitlistUpdatesAt": "アップデートは {email} に送るね。\n招待コードが使えるようになったら、すぐお知らせするよ。",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "もう一回",
     "authContactSupport": "サポートに連絡",
     "authCouldNotOpenEmail": "{email} が開けなかった",
@@ -1229,15 +1217,6 @@
             }
         }
     },
-    "authAddInviteCode": "招待コードを入力",
-    "authInviteCodeLabel": "招待コード",
-    "authEnterYourCode": "コードを入力",
-    "authNext": "次へ",
-    "authJoinWaitlist": "ウェイトリストに参加",
-    "authJoinWaitlistTitle": "ウェイトリストに参加",
-    "authJoinWaitlistDescription": "メールアドレスを教えてね。アクセス開放に合わせてアップデートを送るよ。",
-    "authJoinWaitlistNewsletterOptIn": "Divine のインスピレーションを送ってほしい",
-    "authInviteAccessHelp": "招待アクセスのヘルプ",
     "authGeneratingConnection": "接続を生成中...",
     "authConnectedAuthenticating": "接続OK！認証中...",
     "authConnectionTimedOut": "接続がタイムアウトした",
@@ -1296,17 +1275,6 @@
     "authVerificationErrorPinLocked": "試行回数が多すぎるよ。再送信をタップして新しいコードをもらってね。",
     "authVerificationErrorPinFailed": "そのコードを確認できなかったよ。もう一回試してみて。",
     "authVerificationErrorPinUnavailable": "今はコード入力が使えないよ。メールのリンクをタップするか、再送信で新しいのをもらってね。",
-    "authInviteCodeErrorMalformed": "ABCD-EFGH のような招待コードを入力してください。",
-    "authInviteCodeErrorNotFound": "その招待コードは有効ではないようです。",
-    "authInviteCodeErrorAlreadyUsed": "その招待コードはすでに使用済みか、無効になっています。",
-    "authInviteGateErrorCreatorFull": "このクリエイターの招待枠はいっぱいです",
-    "authInviteGateErrorUnavailable": "その招待コードは利用できません。順番待ちリストに登録すると、空きが出しだい招待をお送りします。",
-    "authInviteGateErrorCheckFailed": "そのコードを確認できませんでした。もう一度お試しください。",
-    "authInviteGateErrorUnknown": "問題が発生しました。招待コードをもう一度お試しください。",
-    "authInviteErrorAlreadyUsed": "その招待コードはもう使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。",
-    "authInviteErrorInvalid": "その招待コードは今は使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。",
-    "authInviteErrorTemporary": "今は招待を確認できなかった。招待コードに戻ってもう一回試すか、サポートに連絡してね。",
-    "authInviteErrorUnknown": "招待を有効にできなかった。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。",
     "shareSheetSave": "保存",
     "shareSheetRemoveFromSaved": "保存を外す",
     "shareSheetSaveToGallery": "ギャラリーに保存",
@@ -1452,15 +1420,6 @@
     "notificationsFailedToLoad": "通知の読み込みがうまくいかなかった",
     "notificationsRetry": "もう一回",
     "notificationsRefreshError": "更新できませんでした — 既存の通知を表示しています",
-    "notificationsInviteSingular": "友達に送れる招待が1つあるよ！",
-    "notificationsInvitePlural": "友達に送れる招待が{count}個あるよ！",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "動画を見れないよ",
     "feedFailedToLoadVideos": "動画の読み込みがうまくいかなかった",
     "feedRetry": "もう一回",
@@ -2028,7 +1987,6 @@
             }
         }
     },
-    "invitesTitle": "友達を招待しよう",
     "libraryClipsDeletedCount": "{count, plural, other{{count}件のクリップを削除しました}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2857,9 +2815,6 @@
     "videoEditorAudioSegmentInstruction": "動画に使うオーディオ範囲を選択",
     "fullscreenFeedRemovedMessage": "動画を削除しました",
     "fullscreenFeedEmptyMessage": "ここに再生できる動画はもうありません",
-    "invitesGenerateCardTitle": "{count, plural, other{{count} 件の招待を作成できます}}",
-    "invitesGenerateCardSubtitle": "共有する準備ができたらコードを作成しましょう。",
-    "invitesGenerateButtonLabel": "招待を作成",
     "profileAvatarLightboxBarrierLabel": "アバターを閉じる",
     "profileAvatarLightboxCloseSemanticLabel": "アバタープレビューを閉じる",
     "notificationsUnreadPrefix": "未読の通知",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Divine ハンドルを確認できませんでした。もう一度お試しください。",
   "blueskySetUpHandle": "設定する",
     "blueskyTemporarilyUnavailable": "Bluesky への投稿は一時的に利用できません。もう一度お試しください。",
-    "invitesNoneAvailable": "今は使える招待がないよ",
-    "invitesShareWithPeople": "Divine を周りの人にシェアしよう",
-    "invitesUsedInvites": "使用済みの招待",
-    "invitesShareMessage": "Divine に参加しよう！招待コード {code} で始められるよ:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "招待をコピー",
-    "invitesCopied": "招待をコピーしたよ！",
-    "invitesShareInvite": "招待をシェア",
-    "invitesShareSubject": "Divine に参加しよう",
-    "invitesClaimed": "受け取り済み",
-    "invitesCouldNotLoad": "招待の読み込みに失敗",
-    "invitesRetry": "もう一回",
     "keyImportInsecureBunkerRelay": "Bunker リレーは wss:// を使ってね (ws:// は localhost のみ可)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "保護対象の未成年状態を強制しました",
     "devOptionsProtectedMinorNonMinorToast": "保護対象の未成年状態を解除しました",
     "devOptionsProtectedMinorClearedToast": "保護対象の未成年の上書きを解除しました",
-  "devOptionsInviteAvailabilityTitle": "登録招待",
-  "devOptionsInviteAvailabilityCurrentLabel": "現在の状態",
-  "devOptionsInviteAvailabilityServerLoading": "サーバー値: 読み込み中",
-  "devOptionsInviteAvailabilityServerEnabled": "サーバー値: 有効",
-  "devOptionsInviteAvailabilityServerDisabled": "サーバー値: 無効",
-  "devOptionsInviteAvailabilityServerUnknown": "サーバー値: 不明",
-  "devOptionsInviteAvailabilityOverrideNone": "上書き: サーバー値を使う",
-  "devOptionsInviteAvailabilityOverrideEnabled": "上書き: 有効を強制",
-  "devOptionsInviteAvailabilityOverrideDisabled": "上書き: 無効を強制",
-  "devOptionsInviteAvailabilityUseServer": "サーバー値を使う",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "招待サービスの onboardingMode に従う",
-  "devOptionsInviteAvailabilityForceEnabled": "有効を強制",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "登録招待のゲートと管理画面をローカルで表示",
-  "devOptionsInviteAvailabilityForceDisabled": "無効を強制",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "サーバーを変更せずに登録招待の UI をローカルで非表示",
-  "devOptionsInviteAvailabilityUseServerToast": "登録招待はサーバーに従うようになりました",
-  "devOptionsInviteAvailabilityForceEnabledToast": "登録招待を強制的に有効にしました",
-  "devOptionsInviteAvailabilityForceDisabledToast": "登録招待を強制的に無効にしました",
     "minorAccountReviewParentConsentChecklistAgeBand": "本人が13〜15歳であり、Divine の利用許可を得ているという明確な説明",
     "minorAccountReviewUnder13FamilyTitle": "代わりにご家族ができること",
     "minorAccountReviewUnder13FamilyBody": "保護者の方がアカウントを持って投稿することができ、あなたも一緒に動画に出て大丈夫です。ご家族それぞれに合ったかたちで Divine を楽しんでほしいと思っています。",

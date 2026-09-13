@@ -3186,9 +3186,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'العودة إلى رمز الدعوة';
-
-  @override
   String get authUseDivineNoBackup => 'استخدم Divine بدون نسخة احتياطية';
 
   @override
@@ -3303,17 +3300,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر التحقق من البريد. تحقّق من اتصالك وحاول مرّة أخرى.';
 
   @override
-  String get authWaitlistConfirmTitle => 'أنت في الداخل!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'سنشارك التحديثات على $email.\nعندما تتوفر رموز دعوة إضافية، سنرسلها إليك.';
-  }
-
-  @override
-  String get authOk => 'حسنًا';
-
-  @override
   String get authTryAgain => 'حاول مرّة أخرى';
 
   @override
@@ -3323,34 +3309,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'تعذّر فتح $email';
   }
-
-  @override
-  String get authAddInviteCode => 'أضف رمز الدعوة الخاص بك';
-
-  @override
-  String get authInviteCodeLabel => 'رمز الدعوة';
-
-  @override
-  String get authEnterYourCode => 'أدخل رمزك';
-
-  @override
-  String get authNext => 'التالي';
-
-  @override
-  String get authJoinWaitlist => 'انضم لقائمة الانتظار';
-
-  @override
-  String get authJoinWaitlistTitle => 'انضم إلى قائمة الانتظار';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'شاركنا بريدك وسنرسل لك التحديثات عند فتح الوصول.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'أرسل لي إلهام Divine';
-
-  @override
-  String get authInviteAccessHelp => 'مساعدة وصول الدعوة';
 
   @override
   String get authGeneratingConnection => 'جاري إنشاء الاتصال...';
@@ -3530,47 +3488,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'إدخال الرمز غير متاح حاليًا. اضغط على الرابط في بريدك الإلكتروني، أو أعد الإرسال للحصول على رمز جديد.';
-
-  @override
-  String get authInviteCodeErrorMalformed => 'أدخل رمز دعوة مثل ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'رمز الدعوة هذا لا يبدو صالحًا.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'تم استخدام رمز الدعوة هذا أو إلغاؤه.';
-
-  @override
-  String get authInviteGateErrorCreatorFull => 'نفدت دعوات هذا المنشئ';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'رمز الدعوة هذا غير متاح. انضم إلى قائمة الانتظار وسنرسل دعوة عند توفر مكان.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'تعذّر التحقق من هذا الرمز. حاول مرة أخرى.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'حدث خطأ ما. حاول إدخال رمز الدعوة مرة أخرى.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'رمز الدعوة هذا لم يعد متاحًا. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'رمز الدعوة هذا لا يمكن استخدامه الآن. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'لم نتمكّن من تأكيد دعوتك الآن. عد إلى رمز دعوتك وحاول مرّة أخرى، أو تواصل مع الدعم.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'لم نتمكّن من تفعيل دعوتك. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.';
 
   @override
   String get shareSheetSave => 'حفظ';
@@ -4240,15 +4157,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'صورة مصغرة للفيديو';
-
-  @override
-  String get notificationsInviteSingular =>
-      'لديك دعوة واحدة لمشاركتها مع صديق!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'لديك $count دعوات لمشاركتها مع الأصدقاء!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7665,66 +7573,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'النشر على Bluesky غير متاح مؤقتًا. حاول مرة أخرى.';
 
   @override
-  String get invitesTitle => 'دعوة الأصدقاء';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count دعوة جاهزة للإنشاء',
-      many: '$count دعوة جاهزة للإنشاء',
-      few: '$count دعوات جاهزة للإنشاء',
-      two: 'دعوتان جاهزتان للإنشاء',
-      one: 'دعوة واحدة جاهزة للإنشاء',
-      zero: 'لا توجد دعوات جاهزة للإنشاء',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'أنشئ رمزًا عندما تكون مستعدًا لمشاركة واحد.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'إنشاء دعوة';
-
-  @override
-  String get invitesNoneAvailable => 'لا توجد دعوات متاحة الآن';
-
-  @override
-  String get invitesShareWithPeople => 'شارك Divine مع من تعرفهم';
-
-  @override
-  String get invitesUsedInvites => 'الدعوات المستخدمة';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'انضمّ إليّ على Divine! استخدم رمز الدعوة $code للبدء:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'نسخ الدعوة';
-
-  @override
-  String get invitesCopied => 'تم نسخ الدعوة!';
-
-  @override
-  String get invitesShareInvite => 'مشاركة الدعوة';
-
-  @override
-  String get invitesShareSubject => 'انضمّ إليّ على Divine';
-
-  @override
-  String get invitesClaimed => 'تم استخدامها';
-
-  @override
-  String get invitesCouldNotLoad => 'تعذّر تحميل الدعوات';
-
-  @override
-  String get invitesRetry => 'إعادة المحاولة';
-
-  @override
   String get searchSomethingWentWrong => 'حدث خطأ ما';
 
   @override
@@ -10549,72 +10397,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'تم مسح تجاوز القاصر المحمي';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'دعوات التسجيل';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'الحالة الحالية';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'قيمة الخادم: جارٍ التحميل';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'قيمة الخادم: مفعّلة';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'قيمة الخادم: معطّلة';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'قيمة الخادم: غير معروفة';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'تجاوز: استخدم قيمة الخادم';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'تجاوز: فرض التفعيل';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'تجاوز: فرض التعطيل';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'استخدم قيمة الخادم';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'اتبع onboardingMode الخاص بخدمة الدعوات';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'فرض التفعيل';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'أظهر بوابات دعوات التسجيل وإدارتها محليًا';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'فرض التعطيل';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'أخفِ واجهة دعوات التسجيل محليًا دون تغيير الخادم';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'دعوات التسجيل تتبع الخادم الآن';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'تم فرض تفعيل دعوات التسجيل';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'تم فرض تعطيل دعوات التسجيل';
 
   @override
   String get commentsRecordVideoButtonLabel => 'سجّل تعليق فيديو';

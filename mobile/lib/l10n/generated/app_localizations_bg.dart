@@ -3264,9 +3264,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Назад към кода на поканата';
-
-  @override
   String get authUseDivineNoBackup => 'Използвай Divine без резервно копие';
 
   @override
@@ -3383,17 +3380,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не можем да потвърдим имейла. Провери връзката си и опитай пак.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Вътре си!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Ще пращаме новини на $email.\nКогато има още кодове за покани, ще ти ги изпратим.';
-  }
-
-  @override
-  String get authOk => 'Добре';
-
-  @override
   String get authTryAgain => 'Опитай пак';
 
   @override
@@ -3403,35 +3389,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Не може да се отвори $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Добави своя код за покана';
-
-  @override
-  String get authInviteCodeLabel => 'Код за покана';
-
-  @override
-  String get authEnterYourCode => 'Въведи своя код';
-
-  @override
-  String get authNext => 'Следваща';
-
-  @override
-  String get authJoinWaitlist => 'Присъедини се към списъка с чакащи';
-
-  @override
-  String get authJoinWaitlistTitle => 'Присъедини се към списъка с чакащи';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Остави имейла си и ще ти пишем, когато достъпът се отвори.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Изпращай ми вдъхновение от Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Помощ с поканите';
 
   @override
   String get authGeneratingConnection => 'Генериране на връзка...';
@@ -3614,50 +3571,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Въвеждането на код не е налично в момента. Натисни връзката в имейла си или изпрати отново, за да получиш нова.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Въведи код за покана като ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Този код за покана не изглежда валиден.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Този код за покана вече е използван или е отменен.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Поканите на този създател свършиха';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Този код за покана не е наличен. Запиши се в списъка на чакащите и ще ти изпратим покана, щом се освободи място.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Не успяхме да проверим този код. Опитай пак.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Нещо се обърка. Опитай пак с кода си за покана.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Този код за покана вече не е наличен. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Този код за покана не може да се използва в момента. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Не можахме да потвърдим поканата ти в момента. Върни се към кода за покана и опитай пак или се свържи с поддръжката.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Не успяхме да активираме поканата ти. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.';
 
   @override
   String get shareSheetSave => 'Запази';
@@ -4325,15 +4238,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Миниатюра на видео';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Имаш 1 покана за споделяне с приятел!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Имаш $count покани за споделяне с приятели!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7797,62 +7701,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Публикуването в Bluesky временно не е достъпно. Опитай пак.';
 
   @override
-  String get invitesTitle => 'Покани приятели';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count покани са готови за генериране',
-      one: '1 покана е готова за генериране',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Генерирай код, когато си готов да го споделиш.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Генерирай покана';
-
-  @override
-  String get invitesNoneAvailable => 'В момента няма налични покани';
-
-  @override
-  String get invitesShareWithPeople => 'Сподели Divine с хора, които познаваш';
-
-  @override
-  String get invitesUsedInvites => 'Използвани покани';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Присъедини се към мен в Divine! Използвай код за покана $code, за да започнеш:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Копирай поканата';
-
-  @override
-  String get invitesCopied => 'Поканата е копирана!';
-
-  @override
-  String get invitesShareInvite => 'Сподели поканата';
-
-  @override
-  String get invitesShareSubject => 'Присъедини се към мен в Divine';
-
-  @override
-  String get invitesClaimed => 'Използвана';
-
-  @override
-  String get invitesCouldNotLoad => 'Поканите не се заредиха';
-
-  @override
-  String get invitesRetry => 'Опитай пак';
-
-  @override
   String get searchSomethingWentWrong => 'Нещо се обърка';
 
   @override
@@ -10727,74 +10575,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Замяната „защитен непълнолетен“ е изчистена';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Покани за регистрация';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Текущо състояние';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Стойност от сървъра: зарежда се';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Стойност от сървъра: включено';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Стойност от сървъра: изключено';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Стойност от сървъра: неизвестна';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Замяна: използвай стойността от сървъра';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Замяна: наложено включено';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Замяна: наложено изключено';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'Използвай стойността от сървъра';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Следвай onboardingMode на услугата за покани';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Наложи включено';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Показвай локално ограниченията и управлението на поканите';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Наложи изключено';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Скрий локално интерфейса за покани, без да променяш сървъра';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Поканите за регистрация вече следват сървъра';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Поканите за регистрация са наложено включени';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Поканите за регистрация са наложено изключени';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Запис на видео коментар';

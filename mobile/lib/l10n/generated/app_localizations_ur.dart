@@ -3218,9 +3218,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'دعوتی کوڈ پر واپس';
-
-  @override
   String get authUseDivineNoBackup => 'بغیر بیک اپ کے Divine استعمال کریں';
 
   @override
@@ -3335,17 +3332,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'ای میل کی تصدیق نہیں ہو سکی۔ براہ کرم اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
 
   @override
-  String get authWaitlistConfirmTitle => 'آپ شامل ہو گئے!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'ہم $email پر اپڈیٹس بھیجیں گے۔\nجب مزید دعوتی کوڈز دستیاب ہوں گے، ہم آپ کو بھیج دیں گے۔';
-  }
-
-  @override
-  String get authOk => 'ٹھیک ہے';
-
-  @override
   String get authTryAgain => 'دوبارہ کوشش کریں';
 
   @override
@@ -3355,34 +3341,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email نہیں کھل سکا';
   }
-
-  @override
-  String get authAddInviteCode => 'اپنا دعوتی کوڈ درج کریں';
-
-  @override
-  String get authInviteCodeLabel => 'دعوتی کوڈ';
-
-  @override
-  String get authEnterYourCode => 'اپنا کوڈ درج کریں';
-
-  @override
-  String get authNext => 'آگے';
-
-  @override
-  String get authJoinWaitlist => 'ویٹ لسٹ میں شامل ہوں';
-
-  @override
-  String get authJoinWaitlistTitle => 'ویٹ لسٹ میں شامل ہوں';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'اپنی ای میل بتائیں اور رسائی کھلنے پر ہم آپ کو دعوتی کوڈ بھیج دیں گے۔';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'مجھے Divine کی تحریک بھیجیں';
-
-  @override
-  String get authInviteAccessHelp => 'دعوتی رسائی میں مدد';
 
   @override
   String get authGeneratingConnection => 'کنکشن بنایا جا رہا ہے...';
@@ -3565,49 +3523,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'کوڈ درج کرنا فی الحال دستیاب نہیں۔ اپنی ای میل میں دیا گیا لنک کھولیں، یا تازہ کوڈ کے لیے دوبارہ بھیجیں۔';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'ABCD-EFGH جیسا دعوتی کوڈ درج کریں۔';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'یہ دعوتی کوڈ درست نہیں لگتا۔';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'یہ دعوتی کوڈ پہلے ہی استعمال ہو چکا ہے یا منسوخ کر دیا گیا ہے۔';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'اس تخلیق کار کی دعوتیں ختم ہو چکی ہیں';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'یہ دعوتی کوڈ دستیاب نہیں ہے۔ ویٹ لسٹ میں شامل ہوں، جگہ بنتے ہی ہم دعوت بھیج دیں گے۔';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'ہم اس کوڈ کی تصدیق نہیں کر سکے۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'کچھ غلط ہو گیا۔ اپنا دعوتی کوڈ دوبارہ آزمائیں۔';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'وہ دعوتی کوڈ اب دستیاب نہیں رہا۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'وہ دعوتی کوڈ فی الحال استعمال نہیں ہو سکتا۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'ہم فی الحال آپ کی دعوت کی تصدیق نہیں کر سکے۔ اپنے دعوتی کوڈ پر واپس جا کر دوبارہ کوشش کریں، یا سپورٹ سے رابطہ کریں۔';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'ہم آپ کی دعوت فعال نہیں کر سکے۔ اپنے دعوتی کوڈ پر واپس جائیں، ویٹ لسٹ میں شامل ہوں، یا سپورٹ سے رابطہ کریں۔';
 
   @override
   String get shareSheetSave => 'محفوظ کریں';
@@ -4282,15 +4197,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'ویڈیو تھمب نیل';
-
-  @override
-  String get notificationsInviteSingular =>
-      'آپ کے پاس 1 دعوت ہے جو کسی دوست کے ساتھ شیئر کریں!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'آپ کے پاس $count دعوتیں ہیں جو دوستوں کے ساتھ شیئر کریں!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7722,63 +7628,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'Bluesky اشاعت عارضی طور پر دستیاب نہیں ہے۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
-  String get invitesTitle => 'دوستوں کو دعوت دیں';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count دعوتیں بنانے کے لیے تیار',
-      one: '1 دعوت بنانے کے لیے تیار',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'جب آپ کوئی دعوت شیئر کرنے کے لیے تیار ہوں تو کوڈ بنائیں۔';
-
-  @override
-  String get invitesGenerateButtonLabel => 'دعوت بنائیں';
-
-  @override
-  String get invitesNoneAvailable => 'ابھی کوئی دعوت دستیاب نہیں';
-
-  @override
-  String get invitesShareWithPeople =>
-      'جنہیں آپ جانتے ہیں ان کے ساتھ Divine شیئر کریں';
-
-  @override
-  String get invitesUsedInvites => 'استعمال شدہ دعوتیں';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divine پر میرے ساتھ آئیں! شروع کرنے کے لیے دعوتی کوڈ $code استعمال کریں:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'دعوت کاپی کریں';
-
-  @override
-  String get invitesCopied => 'دعوت کاپی ہو گئی!';
-
-  @override
-  String get invitesShareInvite => 'دعوت شیئر کریں';
-
-  @override
-  String get invitesShareSubject => 'Divine پر میرے ساتھ آئیں';
-
-  @override
-  String get invitesClaimed => 'حاصل کی گئی';
-
-  @override
-  String get invitesCouldNotLoad => 'دعوتیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get invitesRetry => 'دوبارہ کوشش کریں';
-
-  @override
   String get searchSomethingWentWrong => 'کچھ غلط ہو گیا';
 
   @override
@@ -10620,72 +10469,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'محفوظ نابالغ اووررائیڈ صاف ہو گیا';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'سائن اپ دعوت نامے';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'موجودہ حالت';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'سرور ویلیو: لوڈ ہو رہی ہے';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'سرور ویلیو: فعال';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'سرور ویلیو: غیر فعال';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => 'سرور ویلیو: نامعلوم';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'اوور رائیڈ: سرور ویلیو استعمال کریں';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'اوور رائیڈ: زبردستی فعال';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'اوور رائیڈ: زبردستی غیر فعال';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'سرور ویلیو استعمال کریں';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'دعوت سروس کے onboardingMode کی پیروی کریں';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'زبردستی فعال کریں';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'سائن اپ دعوت گیٹس اور انتظام مقامی طور پر دکھائیں';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled =>
-      'زبردستی غیر فعال کریں';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'سرور کو تبدیل کیے بغیر سائن اپ دعوت UI مقامی طور پر چھپائیں';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'سائن اپ دعوت نامے اب سرور کی پیروی کرتے ہیں';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'سائن اپ دعوت نامے زبردستی فعال';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'سائن اپ دعوت نامے زبردستی غیر فعال';
 
   @override
   String get commentsRecordVideoButtonLabel => 'ویڈیو تبصرہ ریکارڈ کریں';

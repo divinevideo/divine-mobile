@@ -16,9 +16,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_event.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -127,7 +124,6 @@ class _EmailVerificationScreenState
         );
         _cubit.stopPolling();
         ref.read(pendingVerificationServiceProvider).clear();
-        context.read<InviteGateBloc>().add(const InviteGateAccessCleared());
         context.go(ExploreScreen.pathForTab('popular'));
       }
     });
@@ -141,7 +137,11 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      unawaited(_startPollingWithHydratedInvite());
+      _cubit.startPolling(
+        deviceCode: widget.deviceCode!,
+        verifier: widget.verifier!,
+        email: widget.email ?? '',
+      );
     } else if (widget.restored) {
       // Cold-start restore: the URL deliberately carries no deviceCode /
       // verifier (they are secrets), so rehydrate the full context from the
@@ -163,32 +163,6 @@ class _EmailVerificationScreenState
         category: LogCategory.auth,
       );
     }
-  }
-
-  /// Starts polling for the URL's device code / verifier (the fresh
-  /// post-registration path), hydrating the invite code from the persisted
-  /// record.
-  ///
-  /// The registration URL carries deviceCode/verifier but not the invite, and
-  /// the in-memory [InviteGateBloc] grant may already be gone. Reading the
-  /// invite from the matching persisted record — mirroring the token-mode path
-  /// — keeps the invite so it is consumed on completion. Falls back to the
-  /// in-memory grant when no matching record is present.
-  Future<void> _startPollingWithHydratedInvite() async {
-    final pending = await ref.read(pendingVerificationServiceProvider).load();
-    if (!mounted) return;
-    final recordInvite =
-        (pending != null && pending.deviceCode == widget.deviceCode)
-        ? pending.inviteCode
-        : null;
-    final inviteCode =
-        recordInvite ?? context.read<InviteGateBloc>().state.accessGrant?.code;
-    _cubit.startPolling(
-      deviceCode: widget.deviceCode!,
-      verifier: widget.verifier!,
-      email: widget.email ?? '',
-      inviteCode: inviteCode,
-    );
   }
 
   /// Rehydrates the full verification context from the persisted record and
@@ -224,7 +198,6 @@ class _EmailVerificationScreenState
       deviceCode: pending.deviceCode,
       verifier: pending.verifier,
       email: pending.email,
-      inviteCode: pending.inviteCode,
     );
   }
 
@@ -262,7 +235,6 @@ class _EmailVerificationScreenState
         deviceCode: pending.deviceCode,
         verifier: pending.verifier,
         email: pending.email,
-        inviteCode: pending.inviteCode,
       );
     } else {
       Log.info(
@@ -433,7 +405,6 @@ class _EmailVerificationScreenState
   void _handleSignInRecovery(String? email, EmailVerificationError errorCode) {
     _cubit.stopPolling();
     ref.read(pendingVerificationServiceProvider).clear();
-    context.read<InviteGateBloc>().add(const InviteGateAccessCleared());
     context.go(
       WelcomeScreen.loginOptionsPathWithRecovery(
         email: email,
@@ -447,29 +418,6 @@ class _EmailVerificationScreenState
   void _maybeClearRestoredRecord() {
     if (!widget.restored) return;
     ref.read(pendingVerificationServiceProvider).clear();
-  }
-
-  void _handleInviteRecovery(
-    String inviteCode,
-    EmailVerificationError? errorCode,
-  ) {
-    _cubit.stopPolling();
-    ref.read(pendingVerificationServiceProvider).clear();
-    context.read<InviteGateBloc>().add(const InviteGateAccessCleared());
-    final errorReason = switch (errorCode) {
-      EmailVerificationError.inviteAlreadyUsed ||
-      EmailVerificationError.inviteInvalid => InviteGateError.inviteUnavailable,
-      EmailVerificationError.inviteTemporary => InviteGateError.checkFailed,
-      EmailVerificationError.inviteUnknown => InviteGateError.unknown,
-      null => null,
-      _ => InviteGateError.unknown,
-    };
-    context.go(
-      WelcomeScreen.inviteGatePathWithCode(
-        inviteCode,
-        errorReason: errorReason,
-      ),
-    );
   }
 
   @override
@@ -615,14 +563,6 @@ class _EmailVerificationScreenState
                                         ? () => _handleSignInRecovery(
                                             state.pendingEmail,
                                             state.errorCode!,
-                                          )
-                                        : null,
-                                    onReturnToInviteGate:
-                                        state.showInviteGateRecovery &&
-                                            state.inviteRecoveryCode != null
-                                        ? () => _handleInviteRecovery(
-                                            state.inviteRecoveryCode!,
-                                            state.errorCode,
                                           )
                                         : null,
                                   ),
@@ -868,9 +808,7 @@ class _PollingContent extends StatelessWidget {
                 const SizedBox(height: 20),
               ],
               if (isActivelyPolling)
-                _StatusButton(
-                  label: context.l10n.authWaitingForVerification,
-                )
+                _StatusButton(label: context.l10n.authWaitingForVerification)
               else
                 Text(
                   context.l10n.authVerificationPollingStopped,
@@ -1149,13 +1087,11 @@ class _ErrorContent extends StatelessWidget {
     required this.onStartOver,
     required this.errorCode,
     this.onSignInInstead,
-    this.onReturnToInviteGate,
   });
 
   final VoidCallback onStartOver;
   final EmailVerificationError? errorCode;
   final VoidCallback? onSignInInstead;
-  final VoidCallback? onReturnToInviteGate;
 
   @override
   Widget build(BuildContext context) {
@@ -1199,10 +1135,8 @@ class _ErrorContent extends StatelessWidget {
           expanded: true,
           label: onSignInInstead != null
               ? l10n.authSignInButton
-              : onReturnToInviteGate == null
-              ? l10n.authStartOver
-              : l10n.authBackToInviteCode,
-          onPressed: onSignInInstead ?? onReturnToInviteGate ?? onStartOver,
+              : l10n.authStartOver,
+          onPressed: onSignInInstead ?? onStartOver,
         ),
       ],
     );

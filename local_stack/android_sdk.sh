@@ -77,7 +77,3 @@ local_stack_has_running_container() {
 
     [[ -n "$container_ids" ]]
 }
-
-android_emulator_invite_server_url() {
-    printf '%s\n' 'http://10.0.2.2:43004'
-}

@@ -53,12 +53,6 @@ class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async {}
 
   @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
-
-  @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -215,12 +209,10 @@ void main() {
           status: CommentsStatus.success,
         ),
       );
-      when(
-        () => mockComposerBloc.state,
-      ).thenReturn(const CommentComposerState());
-      when(
-        () => mockReactionsBloc.state,
-      ).thenReturn(const CommentReactionsState());
+      when(() => mockComposerBloc.state)
+          .thenReturn(const CommentComposerState());
+      when(() => mockReactionsBloc.state)
+          .thenReturn(const CommentReactionsState());
     });
 
     tearDown(() {
@@ -275,9 +267,8 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(mockAuthService),
           nostrServiceProvider.overrideWithValue(mockNostrClient),
-          isFeatureEnabledProvider(
-            FeatureFlag.videoReplies,
-          ).overrideWithValue(false),
+          isFeatureEnabledProvider(FeatureFlag.videoReplies)
+              .overrideWithValue(false),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -988,9 +979,8 @@ void main() {
             (captured.first as OptimisticCommentInserted).placeholder.id,
             'pending_comment_1',
           );
-          verify(
-            () => mockComposerBloc.add(const ComposerOutboxConsumed()),
-          ).called(1);
+          verify(() => mockComposerBloc.add(const ComposerOutboxConsumed()))
+              .called(1);
         },
       );
 
@@ -1020,9 +1010,8 @@ void main() {
             (captured.first as CommentsRemovedByAuthorFromStore).authorPubkey,
             testVideoAuthorPubkey,
           );
-          verify(
-            () => mockReactionsBloc.add(const ReactionsOutboxConsumed()),
-          ).called(1);
+          verify(() => mockReactionsBloc.add(const ReactionsOutboxConsumed()))
+              .called(1);
         },
       );
     });

@@ -5,19 +5,14 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -40,10 +35,6 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
 
-class _MockInviteApiClient extends Mock implements InviteApiClient {}
-
-class _FakeSecureKeyContainer extends Fake implements SecureKeyContainer {}
-
 class _RecordingRegistrationAnalyticsService extends AnalyticsService {
   _RecordingRegistrationAnalyticsService()
     : super(backgroundActivityManager: BackgroundActivityManager());
@@ -59,33 +50,15 @@ class _RecordingRegistrationAnalyticsService extends AnalyticsService {
   }
 }
 
-class _SeededInviteGateBloc extends InviteGateBloc {
-  _SeededInviteGateBloc({
-    required super.inviteApiClient,
-    required InviteGateState initialState,
-  }) : _state = initialState;
-
-  final InviteGateState _state;
-
-  @override
-  InviteGateState get state => _state;
-}
-
 void main() {
   late _MockKeycastOAuth mockOAuth;
   late _MockAuthService mockAuthService;
   late _MockPendingVerificationService mockPendingVerification;
-  late _MockInviteApiClient mockInviteApiClient;
-
-  setUpAll(() {
-    registerFallbackValue(_FakeSecureKeyContainer());
-  });
 
   setUp(() {
     mockOAuth = _MockKeycastOAuth();
     mockAuthService = _MockAuthService();
     mockPendingVerification = _MockPendingVerificationService();
-    mockInviteApiClient = _MockInviteApiClient();
 
     when(
       () => mockAuthService.createAnonymousAccount(),
@@ -93,7 +66,6 @@ void main() {
   });
 
   Widget createTestWidget({
-    InviteAccessGrant? inviteAccessGrant,
     AnalyticsService? analyticsService,
     TextScaler? textScaler,
   }) {
@@ -113,50 +85,32 @@ void main() {
           mockPendingVerification,
         ),
       ],
-      child: RepositoryProvider<InviteApiClient>.value(
-        value: mockInviteApiClient,
-        child: BlocProvider<InviteGateBloc>(
-          create: (_) => inviteAccessGrant == null
-              ? InviteGateBloc(inviteApiClient: mockInviteApiClient)
-              : _SeededInviteGateBloc(
-                  inviteApiClient: mockInviteApiClient,
-                  initialState: InviteGateState(accessGrant: inviteAccessGrant),
-                ),
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            theme: VineTheme.theme,
-            builder: textScaler == null
-                ? null
-                : (context, child) => MediaQuery(
-                    data: MediaQuery.of(
-                      context,
-                    ).copyWith(textScaler: textScaler),
-                    child: child!,
-                  ),
-            home: const CreateAccountScreen(),
-          ),
-        ),
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: VineTheme.theme,
+        builder: textScaler == null
+            ? null
+            : (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: child!,
+              ),
+        home: const CreateAccountScreen(),
       ),
     );
   }
 
   group(CreateAccountScreen, () {
-    testWidgets('records invite registration entry once', (tester) async {
+    testWidgets('records landing registration entry once', (tester) async {
       final analytics = _RecordingRegistrationAnalyticsService();
-      final grant = InviteAccessGrant(
-        code: 'invite-code',
-        validatedAt: DateTime(2026, 8, 20),
-        creatorSlug: 'creator',
-      );
 
       await tester.pumpWidget(
-        createTestWidget(inviteAccessGrant: grant, analyticsService: analytics),
+        createTestWidget(analyticsService: analytics),
       );
       await tester.pump();
 
       expect(analytics.entryPoints, [
-        ProductAnalyticsV2RegistrationEntryPoint.invite,
+        ProductAnalyticsV2RegistrationEntryPoint.landing,
       ]);
     });
 
@@ -221,24 +175,6 @@ void main() {
           find.widgetWithText(DivineButton, 'Create account'),
           findsOneWidget,
         );
-      });
-
-      testWidgets('shows creator invite context when present', (tester) async {
-        await tester.pumpWidget(
-          createTestWidget(
-            inviteAccessGrant: InviteAccessGrant(
-              code: 'LELE-PONS',
-              validatedAt: DateTime(2026, 4, 24),
-              creatorSlug: 'lele-pons',
-              creatorDisplayName: 'Lele Pons',
-              remaining: 842,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.textContaining('Lele Pons invited you'), findsOneWidget);
-        expect(find.textContaining('842 invites left'), findsOneWidget);
       });
 
       testWidgets('displays skip button', (tester) async {
@@ -401,7 +337,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           ).thenAnswer((_) async {});
 
@@ -424,14 +359,7 @@ void main() {
                       mockPendingVerification,
                     ),
                   ],
-                  child: RepositoryProvider<InviteApiClient>.value(
-                    value: mockInviteApiClient,
-                    child: BlocProvider(
-                      create: (_) =>
-                          InviteGateBloc(inviteApiClient: mockInviteApiClient),
-                      child: const CreateAccountScreen(),
-                    ),
-                  ),
+                  child: const CreateAccountScreen(),
                 ),
               ),
               GoRoute(
@@ -521,14 +449,7 @@ void main() {
                       mockPendingVerification,
                     ),
                   ],
-                  child: RepositoryProvider<InviteApiClient>.value(
-                    value: mockInviteApiClient,
-                    child: BlocProvider(
-                      create: (_) =>
-                          InviteGateBloc(inviteApiClient: mockInviteApiClient),
-                      child: const CreateAccountScreen(),
-                    ),
-                  ),
+                  child: const CreateAccountScreen(),
                 ),
               ),
               GoRoute(

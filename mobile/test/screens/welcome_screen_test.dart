@@ -6,16 +6,13 @@ import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
@@ -32,8 +29,6 @@ import 'package:openvine/widgets/auth/auth_hero_section.dart';
 import 'package:openvine/widgets/error_message.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../helpers/invite_availability_harness.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -112,9 +107,8 @@ void main() {
   Widget createTestWidget({
     AuthState authState = AuthState.unauthenticated,
     String? initialSelectedPubkeyHex,
-    InviteAvailabilityCubit? availabilityCubit,
   }) {
-    Widget app = MaterialApp.router(
+    final app = MaterialApp.router(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
@@ -127,11 +121,6 @@ void main() {
               initialSelectedPubkeyHex: initialSelectedPubkeyHex,
             ),
             routes: [
-              GoRoute(
-                path: 'invite',
-                builder: (context, state) =>
-                    const Scaffold(body: Text('Invite Gate')),
-              ),
               GoRoute(
                 path: 'create-account',
                 builder: (context, state) =>
@@ -157,12 +146,6 @@ void main() {
         ],
       ),
     );
-    if (availabilityCubit != null) {
-      app = BlocProvider<InviteAvailabilityCubit>.value(
-        value: availabilityCubit,
-        child: app,
-      );
-    }
     return ProviderScope(
       overrides: [
         authServiceProvider.overrideWithValue(mockAuthService),
@@ -309,7 +292,7 @@ void main() {
       );
 
       testWidgets(
-        'tapping create account defaults to skipping the invite gate',
+        'tapping create account opens account creation',
         (tester) async {
           await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
@@ -320,52 +303,6 @@ void main() {
 
           verify(() => mockAuthService.acceptTerms()).called(1);
           expect(find.text('Create Account'), findsOneWidget);
-          expect(find.text('Invite Gate'), findsNothing);
-        },
-      );
-
-      testWidgets(
-        'tapping create account skips the invite gate while config resolves',
-        (tester) async {
-          await useTallSurface(tester);
-          final availabilityCubit = seededInviteAvailabilityCubit(
-            serverMode: null,
-            hasResolved: false,
-          );
-          addTearDown(availabilityCubit.close);
-
-          await tester.pumpWidget(
-            createTestWidget(availabilityCubit: availabilityCubit),
-          );
-          await tester.pumpAndSettle();
-
-          await tester.tap(find.text('Create a new Divine account'));
-          await tester.pumpAndSettle();
-
-          expect(find.text('Create Account'), findsOneWidget);
-          expect(find.text('Invite Gate'), findsNothing);
-        },
-      );
-
-      testWidgets(
-        'tapping create account skips the invite gate when invites are disabled',
-        (tester) async {
-          await useTallSurface(tester);
-          final availabilityCubit = seededInviteAvailabilityCubit(
-            serverMode: OnboardingMode.open,
-          );
-          addTearDown(availabilityCubit.close);
-
-          await tester.pumpWidget(
-            createTestWidget(availabilityCubit: availabilityCubit),
-          );
-          await tester.pumpAndSettle();
-
-          await tester.tap(find.text('Create a new Divine account'));
-          await tester.pumpAndSettle();
-
-          expect(find.text('Create Account'), findsOneWidget);
-          expect(find.text('Invite Gate'), findsNothing);
         },
       );
 
@@ -793,7 +730,7 @@ void main() {
       });
 
       testWidgets(
-        'tapping "Create new account" defaults to skipping the invite gate',
+        'tapping "Create new account" opens account creation',
         (tester) async {
           await tester.binding.setSurfaceSize(const Size(800, 1200));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -805,7 +742,6 @@ void main() {
 
           verify(() => mockAuthService.acceptTerms()).called(1);
           expect(find.text('Create Account'), findsOneWidget);
-          expect(find.text('Invite Gate'), findsNothing);
         },
       );
 

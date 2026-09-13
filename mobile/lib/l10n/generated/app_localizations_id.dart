@@ -3146,9 +3146,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Kembali ke kode undangan';
-
-  @override
   String get authUseDivineNoBackup => 'Pakai Divine tanpa backup';
 
   @override
@@ -3264,17 +3261,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak bisa memverifikasi email. Silakan cek koneksimu dan coba lagi.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Kamu masuk!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Kami akan membagikan pembaruan di $email.\nSaat kode undangan lebih banyak tersedia, kami akan mengirimnya untukmu.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Coba lagi';
 
   @override
@@ -3284,35 +3270,6 @@ class AppLocalizationsId extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Tidak bisa membuka $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Tambahkan kode undanganmu';
-
-  @override
-  String get authInviteCodeLabel => 'Kode undangan';
-
-  @override
-  String get authEnterYourCode => 'Masukkan kodemu';
-
-  @override
-  String get authNext => 'Lanjut';
-
-  @override
-  String get authJoinWaitlist => 'Gabung daftar tunggu';
-
-  @override
-  String get authJoinWaitlistTitle => 'Gabung daftar tunggu';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Bagikan emailmu dan kami akan mengirim pembaruan saat akses terbuka.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Kirimi aku inspirasi dari Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Bantuan akses undangan';
 
   @override
   String get authGeneratingConnection => 'Membuat koneksi...';
@@ -3495,50 +3452,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Input kode sedang tidak tersedia. Ketuk tautan di emailmu, atau kirim ulang untuk mendapatkan kode baru.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Masukkan kode undangan seperti ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Kode undangan itu sepertinya tidak valid.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Kode undangan itu sudah dipakai atau dicabut.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Undangan kreator ini sudah habis';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Kode undangan itu tidak tersedia. Gabung ke daftar tunggu dan kami akan mengirim undangan begitu ada tempat.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Kami tidak bisa memeriksa kode itu. Coba lagi.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Ada yang salah. Coba lagi dengan kode undanganmu.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Kode undangan itu sudah tidak tersedia. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Kode undangan itu tidak bisa digunakan sekarang. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Kami tidak bisa mengkonfirmasi undanganmu sekarang. Kembali ke kode undanganmu dan coba lagi, atau hubungi dukungan.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Kami tidak bisa mengaktifkan undanganmu. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.';
 
   @override
   String get shareSheetSave => 'Simpan';
@@ -4206,15 +4119,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Thumbnail video';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Kamu punya 1 undangan untuk dibagikan ke teman!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Kamu punya $count undangan untuk dibagikan ke teman!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7645,62 +7549,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Memposting ke Bluesky sementara tidak tersedia. Coba lagi.';
 
   @override
-  String get invitesTitle => 'Undang Teman';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count undangan siap dibuat',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Buat kode kalau kamu sudah siap membagikannya.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Buat undangan';
-
-  @override
-  String get invitesNoneAvailable => 'Tidak ada undangan tersedia saat ini';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Bagikan Divine ke orang yang kamu kenal';
-
-  @override
-  String get invitesUsedInvites => 'Undangan terpakai';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Gabung dengan saya di Divine! Pakai kode undangan $code untuk mulai:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Salin undangan';
-
-  @override
-  String get invitesCopied => 'Undangan tersalin!';
-
-  @override
-  String get invitesShareInvite => 'Bagikan undangan';
-
-  @override
-  String get invitesShareSubject => 'Gabung dengan saya di Divine';
-
-  @override
-  String get invitesClaimed => 'Sudah diklaim';
-
-  @override
-  String get invitesCouldNotLoad => 'Gagal memuat undangan';
-
-  @override
-  String get invitesRetry => 'Coba Lagi';
-
-  @override
   String get searchSomethingWentWrong => 'Terjadi kesalahan';
 
   @override
@@ -10547,72 +10395,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Penggantian anak-dilindungi dibersihkan';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Undangan pendaftaran';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Status saat ini';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Nilai server: memuat';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'Nilai server: aktif';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Nilai server: nonaktif';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Nilai server: tidak diketahui';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Penggantian: pakai nilai server';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Penggantian: paksa aktif';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Penggantian: paksa nonaktif';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Pakai nilai server';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Ikuti onboardingMode dari layanan undangan';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Paksa aktif';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Tampilkan gerbang undangan pendaftaran dan pengelolaannya secara lokal';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Paksa nonaktif';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Sembunyikan antarmuka undangan pendaftaran secara lokal tanpa mengubah server';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Undangan pendaftaran kini mengikuti server';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Undangan pendaftaran dipaksa aktif';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Undangan pendaftaran dipaksa nonaktif';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Rekam komentar video';

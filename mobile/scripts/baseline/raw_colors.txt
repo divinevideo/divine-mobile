@@ -12,7 +12,6 @@ lib/blocs/profile_editor/profile_editor_bloc.dart	1
 lib/constants/video_editor_constants.dart	13
 lib/constants/video_editor_timeline_constants.dart	1
 lib/providers/environment_indicator_provider.dart	1
-lib/screens/auth/invite_gate_screen.dart	1
 lib/screens/category_gallery_screen.dart	5
 lib/screens/developer_options_screen.dart	2
 lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1

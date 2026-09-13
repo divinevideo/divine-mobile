@@ -3230,9 +3230,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Terug naar invite-code';
-
-  @override
   String get authUseDivineNoBackup => 'Divine gebruiken zonder back-up';
 
   @override
@@ -3349,17 +3346,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'E-mail verifiëren lukt niet. Check je verbinding en probeer opnieuw.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Je staat erop!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'We delen updates via $email.\nZodra er meer invite-codes beschikbaar zijn, sturen we die naar je toe.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Opnieuw proberen';
 
   @override
@@ -3369,35 +3355,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email openen lukt niet';
   }
-
-  @override
-  String get authAddInviteCode => 'Voeg je invite-code toe';
-
-  @override
-  String get authInviteCodeLabel => 'Invite-code';
-
-  @override
-  String get authEnterYourCode => 'Voer je code in';
-
-  @override
-  String get authNext => 'Volgende';
-
-  @override
-  String get authJoinWaitlist => 'Op de wachtlijst';
-
-  @override
-  String get authJoinWaitlistTitle => 'Op de wachtlijst';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Deel je e-mailadres en we sturen updates zodra toegang opengaat.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Stuur me inspiratie van Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Hulp bij invite-toegang';
 
   @override
   String get authGeneratingConnection => 'Verbinding genereren...';
@@ -3578,50 +3535,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Een code invoeren is nu niet beschikbaar. Tik op de link in je e-mail, of verstuur opnieuw voor een nieuwe.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Voer een uitnodigingscode in zoals ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Deze uitnodigingscode lijkt niet geldig.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Deze uitnodigingscode is al gebruikt of ingetrokken.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'De uitnodigingen van deze creator zijn op';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Deze uitnodigingscode is niet beschikbaar. Zet je op de wachtlijst, dan sturen we een uitnodiging zodra er plek is.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'We konden die code niet controleren. Probeer het opnieuw.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Er ging iets mis. Probeer je uitnodigingscode opnieuw.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Die invite-code is niet meer beschikbaar. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Die invite-code kan nu niet worden gebruikt. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'We konden je invite nu niet bevestigen. Ga terug naar je invite-code en probeer het opnieuw, of neem contact op met support.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'We konden je invite niet activeren. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.';
 
   @override
   String get shareSheetSave => 'Opslaan';
@@ -4292,15 +4205,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Videominiatuur';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Je hebt 1 uitnodiging om met een vriend te delen!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Je hebt $count uitnodigingen om met vrienden te delen!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7757,63 +7661,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Publiceren op Bluesky is tijdelijk niet beschikbaar. Probeer het opnieuw.';
 
   @override
-  String get invitesTitle => 'Vrienden uitnodigen';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count uitnodigingen klaar om te maken',
-      one: '1 uitnodiging klaar om te maken',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Maak een code zodra je er een wilt delen.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Uitnodiging maken';
-
-  @override
-  String get invitesNoneAvailable =>
-      'Op dit moment geen uitnodigingen beschikbaar';
-
-  @override
-  String get invitesShareWithPeople => 'Deel Divine met mensen die je kent';
-
-  @override
-  String get invitesUsedInvites => 'Gebruikte uitnodigingen';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Doe met me mee op Divine! Gebruik invite-code $code om te beginnen:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Uitnodiging kopiëren';
-
-  @override
-  String get invitesCopied => 'Uitnodiging gekopieerd!';
-
-  @override
-  String get invitesShareInvite => 'Uitnodiging delen';
-
-  @override
-  String get invitesShareSubject => 'Doe met me mee op Divine';
-
-  @override
-  String get invitesClaimed => 'Geclaimd';
-
-  @override
-  String get invitesCouldNotLoad => 'Uitnodigingen konden niet geladen worden';
-
-  @override
-  String get invitesRetry => 'Opnieuw proberen';
-
-  @override
   String get searchSomethingWentWrong => 'Er ging iets mis';
 
   @override
@@ -10684,70 +10531,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Overschrijving beschermde minderjarige gewist';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Aanmelduitnodigingen';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Huidige status';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading => 'Serverwaarde: laden';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'Serverwaarde: aan';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => 'Serverwaarde: uit';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Serverwaarde: onbekend';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Overschrijving: serverwaarde gebruiken';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Overschrijving: aan afdwingen';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Overschrijving: uit afdwingen';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Serverwaarde gebruiken';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'De onboardingMode van de uitnodigingsdienst volgen';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Aan afdwingen';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Toon lokaal de drempels en het beheer van aanmelduitnodigingen';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Uit afdwingen';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Verberg de uitnodigingsinterface lokaal zonder de server te wijzigen';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Aanmelduitnodigingen volgen nu de server';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Aanmelduitnodigingen afgedwongen op aan';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Aanmelduitnodigingen afgedwongen op uit';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Videoreactie opnemen';

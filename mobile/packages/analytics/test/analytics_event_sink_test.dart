@@ -10,8 +10,6 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );
       await sink.setUserId(null);
-      await sink.setUserProperty(name: 'invite_code', value: 'ABCD-EFGH');
-      await sink.setUserProperty(name: 'invite_code', value: null);
       await sink.logEvent(
         name: 'surface_load',
         parameters: const {'surface_name': 'comments_sheet'},

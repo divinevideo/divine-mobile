@@ -2094,7 +2094,6 @@
   },
   "authCreateAccountTitle": "Create account",
   "authCreateAccountMarketingOptIn": "Get Divine app updates and news",
-  "authBackToInviteCode": "Back to invite code",
   "authUseDivineNoBackup": "Use Divine with no backup",
   "authSkipConfirmTitle": "One last thing...",
   "authSkipConfirmKeyCreated": "You're in! We'll create a secure key that powers your Divine account.",
@@ -2145,17 +2144,6 @@
   "authEmailVerifiedLogin": "Email verified! Please log in to continue.",
   "authVerificationLinkExpired": "This verification link is no longer valid.",
   "authVerificationConnectionError": "Unable to verify email. Please check your connection and try again.",
-  "authWaitlistConfirmTitle": "You're in!",
-  "authWaitlistUpdatesAt": "We'll share updates at {email}.\nWhen more invite codes are available, we'll send them your way.",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "OK",
   "authTryAgain": "Try again",
   "authContactSupport": "Contact support",
   "authCouldNotOpenEmail": "Could not open {email}",
@@ -2167,15 +2155,6 @@
       }
     }
   },
-  "authAddInviteCode": "Add your invite code",
-  "authInviteCodeLabel": "Invite code",
-  "authEnterYourCode": "Enter your code",
-  "authNext": "Next",
-  "authJoinWaitlist": "Join waitlist",
-  "authJoinWaitlistTitle": "Join the waitlist",
-  "authJoinWaitlistDescription": "Share your email and we'll send an invite code as access opens up.",
-  "authJoinWaitlistNewsletterOptIn": "Send me Divine inspiration",
-  "authInviteAccessHelp": "Invite access help",
   "authGeneratingConnection": "Generating connection...",
   "authConnectedAuthenticating": "Connected! Authenticating...",
   "authConnectionTimedOut": "Connection timed out",
@@ -2239,38 +2218,6 @@
   "authVerificationErrorPinLocked": "Too many tries. Tap resend to get a fresh code.",
   "authVerificationErrorPinFailed": "We couldn't verify that code. Please try again.",
   "authVerificationErrorPinUnavailable": "Code entry isn't available right now. Tap the link in your email, or resend to get a fresh one.",
-  "authInviteCodeErrorMalformed": "Enter an invite code like ABCD-EFGH.",
-  "@authInviteCodeErrorMalformed": {
-    "description": "Inline error on the invite-code field when the typed text is not shaped like an invite code."
-  },
-  "authInviteCodeErrorNotFound": "That invite code does not look valid.",
-  "@authInviteCodeErrorNotFound": {
-    "description": "Inline error on the invite-code field when the server does not recognise the code."
-  },
-  "authInviteCodeErrorAlreadyUsed": "That invite code has already been used or revoked.",
-  "@authInviteCodeErrorAlreadyUsed": {
-    "description": "Inline error on the invite-code field when the code was already claimed or revoked."
-  },
-  "authInviteGateErrorCreatorFull": "This creator's invites are full",
-  "@authInviteGateErrorCreatorFull": {
-    "description": "Block error on the invite gate when the creator has no invites left."
-  },
-  "authInviteGateErrorUnavailable": "That invite code is unavailable. Join the waitlist and we'll send an invite when there's room.",
-  "@authInviteGateErrorUnavailable": {
-    "description": "Block error on the invite gate when the code is real but no longer usable."
-  },
-  "authInviteGateErrorCheckFailed": "We couldn't check that code. Try again.",
-  "@authInviteGateErrorCheckFailed": {
-    "description": "Block error on the invite gate when the invite service could not give a verdict. Retryable."
-  },
-  "authInviteGateErrorUnknown": "Something went wrong. Try your invite code again.",
-  "@authInviteGateErrorUnknown": {
-    "description": "Block error on the invite gate when an inbound link reported an unclassifiable problem."
-  },
-  "authInviteErrorAlreadyUsed": "That invite code is no longer available. Go back to your invite code, join the waitlist, or contact support.",
-  "authInviteErrorInvalid": "That invite code cannot be used right now. Go back to your invite code, join the waitlist, or contact support.",
-  "authInviteErrorTemporary": "We couldn't confirm your invite right now. Go back to your invite code and try again, or contact support.",
-  "authInviteErrorUnknown": "We couldn't activate your invite. Go back to your invite code, join the waitlist, or contact support.",
   "shareSheetSave": "Save",
   "shareSheetRemoveFromSaved": "Remove from saved",
   "@shareSheetRemoveFromSaved": {
@@ -2683,15 +2630,6 @@
   "notificationsVideoThumbnail": "Video thumbnail",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "You have 1 invite to share with a friend!",
-  "notificationsInvitePlural": "{count, plural, =1{You have {count} invite to share with friends!} other{You have {count} invites to share with friends!}}",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsTabBadges": "{count, plural, =0{Badges} other{Badges ({count})}}",
   "@notificationsTabBadges": {
@@ -4946,42 +4884,6 @@
   "blueskyStatusUnavailableRetry": "We could not check your Divine handle. Try again.",
   "blueskySetUpHandle": "Set up",
   "blueskyTemporarilyUnavailable": "Bluesky publishing is temporarily unavailable. Please try again.",
-  "invitesTitle": "Invite Friends",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 invite ready to generate} other{{count} invites ready to generate}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "Generate a code when you are ready to share one.",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "Generate invite",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "No invites available right now",
-  "invitesShareWithPeople": "Share Divine with people you know",
-  "invitesUsedInvites": "Used invites",
-  "invitesShareMessage": "Join me on Divine! Use invite code {code} to get started:\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "Copy invite",
-  "invitesCopied": "Invite copied!",
-  "invitesShareInvite": "Share invite",
-  "invitesShareSubject": "Join me on Divine",
-  "invitesClaimed": "Claimed",
-  "invitesCouldNotLoad": "Could not load invites",
-  "invitesRetry": "Retry",
   "searchSomethingWentWrong": "Something went wrong",
   "searchTryAgain": "Try again",
   "searchForLists": "Search for lists",
@@ -6785,24 +6687,6 @@
   "devOptionsProtectedMinorEnabledToast": "Protected-minor state forced on",
   "devOptionsProtectedMinorNonMinorToast": "Protected-minor state forced off",
   "devOptionsProtectedMinorClearedToast": "Protected-minor override cleared",
-  "devOptionsInviteAvailabilityTitle": "Signup invites",
-  "devOptionsInviteAvailabilityCurrentLabel": "Current state",
-  "devOptionsInviteAvailabilityServerLoading": "Server value: loading",
-  "devOptionsInviteAvailabilityServerEnabled": "Server value: enabled",
-  "devOptionsInviteAvailabilityServerDisabled": "Server value: disabled",
-  "devOptionsInviteAvailabilityServerUnknown": "Server value: unknown",
-  "devOptionsInviteAvailabilityOverrideNone": "Override: use server value",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Override: force enabled",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Override: force disabled",
-  "devOptionsInviteAvailabilityUseServer": "Use server value",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Follow the invite service onboardingMode",
-  "devOptionsInviteAvailabilityForceEnabled": "Force enabled",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Show signup invite gates and management locally",
-  "devOptionsInviteAvailabilityForceDisabled": "Force disabled",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Hide signup invite UI locally without changing the server",
-  "devOptionsInviteAvailabilityUseServerToast": "Signup invites now follow the server",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Signup invites forced on",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Signup invites forced off",
   "commentsRecordVideoButtonLabel": "Record video comment",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

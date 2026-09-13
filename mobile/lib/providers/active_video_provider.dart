@@ -128,7 +128,6 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.blueskySettings:
     case RouteType.crosspostingSettings:
     case RouteType.editProfile:
-    case RouteType.invites:
     case RouteType.clips:
     case RouteType.clipsOnly:
     case RouteType.drafts:

@@ -5,7 +5,6 @@
 lib/notifications/view/notifications_view.dart
 lib/screens/apps/web_iframe_sandbox_screen_web.dart
 lib/screens/auth/email_verification_screen.dart
-lib/screens/auth/invite_protected_create_account_screen.dart
 lib/screens/auth/nostr_connect_screen.dart
 lib/screens/auth/welcome_screen.dart
 lib/screens/comments/widgets/comment_options_modal.dart

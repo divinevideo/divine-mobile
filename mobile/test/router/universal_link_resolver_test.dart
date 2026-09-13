@@ -35,15 +35,6 @@ void main() {
       );
     });
 
-    test('returns null for invite links', () {
-      expect(
-        divineUrlToPushRoute(
-          Uri.parse('https://divine.video/invite/ABCD-EFGH'),
-        ),
-        isNull,
-      );
-    });
-
     test('maps local list links to the internal list route', () {
       expect(
         divineUrlToPushRoute(Uri.parse('https://divine.video/list/my-vines')),
@@ -242,17 +233,6 @@ void main() {
         expect(
           universalLinkToRouterPath(
             Uri.parse('https://divine.video/video/abc123'),
-          ),
-          isNull,
-        );
-      });
-
-      test('/invite/:code returns null', () {
-        // Invite is not part of the Android intent filter; it reaches the
-        // app via other channels and is handled by the listener.
-        expect(
-          universalLinkToRouterPath(
-            Uri.parse('https://divine.video/invite/ABCD-EFGH'),
           ),
           isNull,
         );

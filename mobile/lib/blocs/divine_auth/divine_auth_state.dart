@@ -52,9 +52,6 @@ class DivineAuthFormState extends DivineAuthState {
     this.confirmPasswordError,
     this.generalError,
     this.signInFailureReason,
-    this.showInviteGateRecovery = false,
-    this.inviteRecoveryCode,
-    this.inviteRecoverySourceSlug,
     this.showLoginOptionsRecovery = false,
     this.obscurePassword = true,
     this.isSubmitting = false,
@@ -94,15 +91,6 @@ class DivineAuthFormState extends DivineAuthState {
   /// Sign-in failures use this instead of [generalError] so the UI can map to
   /// localized copy; other auth flows still use [generalError] pending #4336.
   final SignInFailureReason? signInFailureReason;
-
-  /// Whether the user should be sent back through the invite gate.
-  final bool showInviteGateRecovery;
-
-  /// Invite code to prefill if recovery should return to the invite gate.
-  final String? inviteRecoveryCode;
-
-  /// Creator source slug to preserve when recovery falls back to waitlist.
-  final String? inviteRecoverySourceSlug;
 
   /// Whether the UI should route the user to sign in instead.
   final bool showLoginOptionsRecovery;
@@ -144,9 +132,6 @@ class DivineAuthFormState extends DivineAuthState {
     String? confirmPasswordError,
     String? generalError,
     SignInFailureReason? signInFailureReason,
-    bool? showInviteGateRecovery,
-    String? inviteRecoveryCode,
-    String? inviteRecoverySourceSlug,
     bool? showLoginOptionsRecovery,
     bool? obscurePassword,
     bool? isSubmitting,
@@ -157,7 +142,6 @@ class DivineAuthFormState extends DivineAuthState {
     bool clearConfirmPasswordError = false,
     bool clearGeneralError = false,
     bool clearSignInFailureReason = false,
-    bool clearInviteGateRecovery = false,
   }) {
     return DivineAuthFormState(
       email: email ?? this.email,
@@ -179,15 +163,6 @@ class DivineAuthFormState extends DivineAuthState {
       signInFailureReason: clearSignInFailureReason
           ? null
           : (signInFailureReason ?? this.signInFailureReason),
-      showInviteGateRecovery:
-          !clearInviteGateRecovery &&
-          (showInviteGateRecovery ?? this.showInviteGateRecovery),
-      inviteRecoveryCode: clearInviteGateRecovery
-          ? null
-          : (inviteRecoveryCode ?? this.inviteRecoveryCode),
-      inviteRecoverySourceSlug: clearInviteGateRecovery
-          ? null
-          : (inviteRecoverySourceSlug ?? this.inviteRecoverySourceSlug),
       showLoginOptionsRecovery:
           showLoginOptionsRecovery ?? this.showLoginOptionsRecovery,
       obscurePassword: obscurePassword ?? this.obscurePassword,
@@ -209,9 +184,6 @@ class DivineAuthFormState extends DivineAuthState {
     confirmPasswordError,
     generalError,
     signInFailureReason,
-    showInviteGateRecovery,
-    inviteRecoveryCode,
-    inviteRecoverySourceSlug,
     showLoginOptionsRecovery,
     obscurePassword,
     isSubmitting,

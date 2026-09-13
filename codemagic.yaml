@@ -694,14 +694,6 @@ definitions:
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
           --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
           --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
-    # GH_ACTIONS_PR_PREVIEW sets forceOpenOnboarding on the invite client
-    # (main.dart), so getClientConfig() reports OnboardingMode.open and the
-    # invite gate self-redirects to account creation. Without it every flow
-    # that signs up stops at "Add your invite code" and the suite would need
-    # a live invite code as a managed, expirable secret. The gate itself is
-    # covered directly by invite_gate_screen_test.dart.
-    # The flag is named for its original PR-preview use; it is not
-    # GitHub-Actions specific.
     - &build_ios_e2e
       name: Build iOS Simulator app
       script: |
@@ -710,7 +702,6 @@ definitions:
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
-          --dart-define=GH_ACTIONS_PR_PREVIEW=true \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
           --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
@@ -723,7 +714,6 @@ definitions:
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
-          --dart-define=GH_ACTIONS_PR_PREVIEW=true \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
           --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \

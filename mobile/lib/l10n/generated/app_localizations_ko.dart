@@ -3022,9 +3022,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => '초대 코드로 돌아가기';
-
-  @override
   String get authUseDivineNoBackup => '백업 없이 Divine 쓰기';
 
   @override
@@ -3133,17 +3130,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '이메일을 인증할 수 없어요. 연결을 확인하고 다시 시도해주세요.';
 
   @override
-  String get authWaitlistConfirmTitle => '들어오셨어요!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return '$email로 업데이트를 공유할게요.\n초대 코드가 재고가 생기면 보내드릴게요.';
-  }
-
-  @override
-  String get authOk => '확인';
-
-  @override
   String get authTryAgain => '다시 시도';
 
   @override
@@ -3153,33 +3139,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email을(를) 열 수 없어요';
   }
-
-  @override
-  String get authAddInviteCode => '초대 코드를 입력해주세요';
-
-  @override
-  String get authInviteCodeLabel => '초대 코드';
-
-  @override
-  String get authEnterYourCode => '코드 입력';
-
-  @override
-  String get authNext => '다음';
-
-  @override
-  String get authJoinWaitlist => '대기자 명단 등록';
-
-  @override
-  String get authJoinWaitlistTitle => '대기자 명단에 등록하기';
-
-  @override
-  String get authJoinWaitlistDescription => '이메일을 알려주시면 접근이 열릴 때 업데이트를 보내드릴게요.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'Divine의 영감을 보내주세요';
-
-  @override
-  String get authInviteAccessHelp => '초대 접근 도움말';
 
   @override
   String get authGeneratingConnection => '연결 생성 중...';
@@ -3348,44 +3307,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       '지금은 코드 입력을 사용할 수 없어요. 이메일의 링크를 탭하거나 다시 보내기로 새 코드를 받으세요.';
-
-  @override
-  String get authInviteCodeErrorMalformed => 'ABCD-EFGH 형식의 초대 코드를 입력해요.';
-
-  @override
-  String get authInviteCodeErrorNotFound => '그 초대 코드는 올바르지 않은 것 같아요.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed => '그 초대 코드는 이미 사용했거나 취소됐어요.';
-
-  @override
-  String get authInviteGateErrorCreatorFull => '이 크리에이터의 초대장이 모두 소진됐어요';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      '그 초대 코드는 사용할 수 없어요. 대기자 명단에 등록하면 자리가 나는 대로 초대장을 보내드릴게요.';
-
-  @override
-  String get authInviteGateErrorCheckFailed => '그 코드를 확인할 수 없었어요. 다시 시도해 주세요.';
-
-  @override
-  String get authInviteGateErrorUnknown => '문제가 생겼어요. 초대 코드를 다시 시도해 주세요.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      '그 초대 코드는 더 이상 쓸 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      '그 초대 코드는 지금 쓸 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      '지금은 초대 코드를 확인할 수 없어요. 초대 코드로 돌아가서 다시 시도하거나 고객센터에 문의해주세요.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      '초대를 활성화할 수 없어요. 초대 코드로 돌아가거나, 대기자 명단에 등록하거나, 고객센터에 문의해주세요.';
 
   @override
   String get shareSheetSave => '저장';
@@ -4024,14 +3945,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => '동영상 썸네일';
-
-  @override
-  String get notificationsInviteSingular => '친구와 공유할 수 있는 초대장이 1개 있어요!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return '친구들과 공유할 수 있는 초대장이 $count개 있어요!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7341,60 +7254,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'Bluesky 게시를 일시적으로 사용할 수 없어요. 다시 시도해 주세요.';
 
   @override
-  String get invitesTitle => '친구 초대';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '생성할 수 있는 초대 $count개',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle => '공유할 준비가 되면 코드를 생성하세요.';
-
-  @override
-  String get invitesGenerateButtonLabel => '초대 생성';
-
-  @override
-  String get invitesNoneAvailable => '지금은 사용할 수 있는 초대장이 없어요';
-
-  @override
-  String get invitesShareWithPeople => 'Divine을 아는 사람들과 나눠봐요';
-
-  @override
-  String get invitesUsedInvites => '사용된 초대장';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divine에 함께해요! 초대 코드 $code로 시작해보세요:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => '초대장 복사';
-
-  @override
-  String get invitesCopied => '초대장을 복사했어요!';
-
-  @override
-  String get invitesShareInvite => '초대장 공유';
-
-  @override
-  String get invitesShareSubject => 'Divine에 함께해요';
-
-  @override
-  String get invitesClaimed => '사용됨';
-
-  @override
-  String get invitesCouldNotLoad => '초대장을 불러오지 못했어요';
-
-  @override
-  String get invitesRetry => '다시 시도';
-
-  @override
   String get searchSomethingWentWrong => '문제가 발생했어요';
 
   @override
@@ -10107,63 +9966,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => '보호 대상 미성년자 재정의를 해제했어요';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => '가입 초대';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => '현재 상태';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading => '서버 값: 불러오는 중';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => '서버 값: 켜짐';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => '서버 값: 꺼짐';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => '서버 값: 알 수 없음';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone => '재정의: 서버 값 사용';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled => '재정의: 켜기 강제';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled => '재정의: 끄기 강제';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => '서버 값 사용';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      '초대 서비스의 onboardingMode 따르기';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => '켜기 강제';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      '가입 초대 게이트와 관리 화면을 로컬에서 표시';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => '끄기 강제';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      '서버를 바꾸지 않고 가입 초대 UI를 로컬에서 숨김';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast => '가입 초대가 이제 서버를 따릅니다';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast => '가입 초대를 강제로 켰어요';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast => '가입 초대를 강제로 껐어요';
 
   @override
   String get commentsRecordVideoButtonLabel => '영상 댓글 녹화';

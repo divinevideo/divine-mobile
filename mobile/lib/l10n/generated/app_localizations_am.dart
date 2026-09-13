@@ -3147,9 +3147,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'ወደ ግብዣ ኮድ ተመለስ';
-
-  @override
   String get authUseDivineNoBackup => 'ምንም ምትኬ ሳይኖር Divine ተጠቀም';
 
   @override
@@ -3261,17 +3258,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'ኢሜይል ማረጋገጥ አልተቻለም። እባክዎ ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
 
   @override
-  String get authWaitlistConfirmTitle => 'ገብተሃል!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'ዝመናዎችን በ$email እናጋራለን።\nተጨማሪ የግብዣ ኮዶች ሲገኙ፣ እንልክልሃለን።';
-  }
-
-  @override
-  String get authOk => 'እሺ';
-
-  @override
   String get authTryAgain => 'እንደገና ይሞክሩ';
 
   @override
@@ -3281,34 +3267,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email መክፈት አልተቻለም';
   }
-
-  @override
-  String get authAddInviteCode => 'የግብዣ ኮድዎን ያክሉ';
-
-  @override
-  String get authInviteCodeLabel => 'የግብዣ ኮድ';
-
-  @override
-  String get authEnterYourCode => 'ኮድዎን ያስገቡ';
-
-  @override
-  String get authNext => 'ቀጥሎ';
-
-  @override
-  String get authJoinWaitlist => 'የተጠባባቂ ዝርዝሩን ይቀላቀሉ';
-
-  @override
-  String get authJoinWaitlistTitle => 'የተጠባባቂ ዝርዝሩን ይቀላቀሉ';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'ኢሜልዎን ያጋሩ እና መዳረሻ ሲከፈት ማሻሻያዎችን እንልካለን።';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'የDivine መነሳሳት ላክልኝ';
-
-  @override
-  String get authInviteAccessHelp => 'የመዳረሻ እገዛን ጋብዝ';
 
   @override
   String get authGeneratingConnection => 'ግንኙነት በማመንጨት ላይ...';
@@ -3485,47 +3443,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'የኮድ ማስገቢያ አሁን አይገኝም። በኢሜይልዎ ውስጥ ያለውን አገናኝ ይንኩ፣ ወይም አዲስ ለማግኘት እንደገና ይላኩ።';
-
-  @override
-  String get authInviteCodeErrorMalformed => 'እንደ ABCD-EFGH ያለ የግብዣ ኮድ ያስገቡ።';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'ያ የግብዣ ኮድ ትክክል አይመስልም።';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'ያ የግብዣ ኮድ ቀደም ሲል ጥቅም ላይ ውሏል ወይም ተሰርዟል።';
-
-  @override
-  String get authInviteGateErrorCreatorFull => 'የዚህ ፈጣሪ ግብዣዎች አልቀዋል';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'ያ የግብዣ ኮድ አይገኝም። በተጠባባቂ ዝርዝሩ ይመዝገቡ፣ ቦታ ሲኖር ግብዣ እንልክልዎታለን።';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'ያንን ኮድ ማረጋገጥ አልቻልንም። እንደገና ይሞክሩ።';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'የሆነ ችግር ተፈጥሯል። የግብዣ ኮድዎን እንደገና ይሞክሩ።';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'ያ የግብዣ ኮድ ከአሁን በኋላ አይገኝም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'ያ የግብዣ ኮድ አሁን መጠቀም አይቻልም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'ግብዣህን አሁን ማረጋገጥ አልቻልንም። ወደ የግብዣ ኮድዎ ይመለሱ እና እንደገና ይሞክሩ፣ ወይም ድጋፍን ያግኙ።';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'ግብዣህን ማግበር አልቻልንም። ወደ የግብዣ ኮድዎ ይመለሱ፣ የተጠባባቂ ዝርዝሩን ይቀላቀሉ ወይም ድጋፍ ሰጪን ያግኙ።';
 
   @override
   String get shareSheetSave => 'አስቀምጥ';
@@ -4175,14 +4092,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'የቪዲዮ ድንክዬ';
-
-  @override
-  String get notificationsInviteSingular => 'ከጓደኛዎ ጋር ለመጋራት 1 ግብዣ አለዎት!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'ከጓደኞችዎ ጋር ለመጋራት $count ግብዣዎች አሉዎት!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7540,61 +7449,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'በBluesky ማተም ለጊዜው አይገኝም። እባክህ እንደገና ሞክር።';
 
   @override
-  String get invitesTitle => 'ጓደኞችን ይጋብዙ';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ግብዣዎች ለመፍጠር ዝግጁ ናቸው',
-      one: '$count ግብዣ ለመፍጠር ዝግጁ ነው',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle => 'አንዱን ለማጋራት ስትዘጋጅ ኮድ ፍጠር።';
-
-  @override
-  String get invitesGenerateButtonLabel => 'ግብዣ ፍጠር';
-
-  @override
-  String get invitesNoneAvailable => 'አሁን ምንም ግብዣዎች የሉም';
-
-  @override
-  String get invitesShareWithPeople => 'Divineን ከሚያውቋቸው ሰዎች ጋር ያጋሩ';
-
-  @override
-  String get invitesUsedInvites => 'ያገለገሉ ግብዣዎች';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divine ላይ አብረኝ ግባ! ለመጀመር የግብዣ ኮድ $code ተጠቀም፦\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'ግብዣ ቅዳ';
-
-  @override
-  String get invitesCopied => 'ግብዣው ተቀድቷል!';
-
-  @override
-  String get invitesShareInvite => 'ግብዣ አጋራ';
-
-  @override
-  String get invitesShareSubject => 'Divine ላይ አብረኝ ግባ';
-
-  @override
-  String get invitesClaimed => 'ተጠቅመዋል';
-
-  @override
-  String get invitesCouldNotLoad => 'ግብዣዎችን መጫን አልተቻለም';
-
-  @override
-  String get invitesRetry => 'እንደገና ሞክር';
-
-  @override
   String get searchSomethingWentWrong => 'የሆነ ችግር ተፈጥሯል።';
 
   @override
@@ -10350,67 +10204,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => 'የተጠበቀ-ታዳጊ ሽፋን ጸድቷል';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'የምዝገባ ግብዣዎች';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'የአሁኑ ሁኔታ';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading => 'የአገልጋይ እሴት፦ በመጫን ላይ';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'የአገልጋይ እሴት፦ በርቷል';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => 'የአገልጋይ እሴት፦ ጠፍቷል';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => 'የአገልጋይ እሴት፦ አይታወቅም';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'ሽፋን፦ የአገልጋዩን እሴት ተጠቀም';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled => 'ሽፋን፦ ማብራት አስገድድ';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled => 'ሽፋን፦ ማጥፋት አስገድድ';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'የአገልጋዩን እሴት ተጠቀም';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'የግብዣ አገልግሎቱን onboardingMode ተከተል';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'ማብራት አስገድድ';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'የምዝገባ ግብዣ በሮችንና አስተዳደሩን በአካባቢው አሳይ';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'ማጥፋት አስገድድ';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'አገልጋዩን ሳትቀይር የምዝገባ ግብዣ ገጽታን በአካባቢው ደብቅ';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'የምዝገባ ግብዣዎች አሁን አገልጋዩን ይከተላሉ';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'የምዝገባ ግብዣዎች በግድ በርተዋል';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'የምዝገባ ግብዣዎች በግድ ጠፍተዋል';
 
   @override
   String get commentsRecordVideoButtonLabel => 'የቪዲዮ አስተያየት ቅረጽ';

@@ -1265,7 +1265,6 @@
     "authInfoAmberTitle": "Амбър",
     "authInfoAmberDescription": "Използвай Amber Signer на Android, за да управляваш Nostr ключовете си сигурно.",
     "authCreateAccountTitle": "Създаване на акаунт",
-    "authBackToInviteCode": "Назад към кода на поканата",
     "authUseDivineNoBackup": "Използвай Divine без резервно копие",
     "authSkipConfirmTitle": "Едно последно нещо...",
     "authSkipConfirmKeyCreated": "Готово, вътре си! Ще създадем сигурен ключ за Divine акаунта ти.",
@@ -1300,17 +1299,6 @@
     "authEmailVerifiedLogin": "Имейлът е потвърден! Влез, за да продължиш.",
     "authVerificationLinkExpired": "Тази връзка за потвърждение вече не е валидна.",
     "authVerificationConnectionError": "Не можем да потвърдим имейла. Провери връзката си и опитай пак.",
-    "authWaitlistConfirmTitle": "Вътре си!",
-    "authWaitlistUpdatesAt": "Ще пращаме новини на {email}.\nКогато има още кодове за покани, ще ти ги изпратим.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "Добре",
     "authTryAgain": "Опитай пак",
     "authContactSupport": "Свържи се с поддръжката",
     "authCouldNotOpenEmail": "Не може да се отвори {email}",
@@ -1322,15 +1310,6 @@
             }
         }
     },
-    "authAddInviteCode": "Добави своя код за покана",
-    "authInviteCodeLabel": "Код за покана",
-    "authEnterYourCode": "Въведи своя код",
-    "authNext": "Следваща",
-    "authJoinWaitlist": "Присъедини се към списъка с чакащи",
-    "authJoinWaitlistTitle": "Присъедини се към списъка с чакащи",
-    "authJoinWaitlistDescription": "Остави имейла си и ще ти пишем, когато достъпът се отвори.",
-    "authJoinWaitlistNewsletterOptIn": "Изпращай ми вдъхновение от Divine",
-    "authInviteAccessHelp": "Помощ с поканите",
     "authGeneratingConnection": "Генериране на връзка...",
     "authConnectedAuthenticating": "Свързан! Удостоверява се...",
     "authConnectionTimedOut": "Времето за изчакване на връзката изтече",
@@ -1390,17 +1369,6 @@
     "authVerificationErrorPinLocked": "Твърде много опити. Натисни Изпрати отново, за да получиш нов код.",
     "authVerificationErrorPinFailed": "Не успяхме да потвърдим този код. Опитай пак.",
     "authVerificationErrorPinUnavailable": "Въвеждането на код не е налично в момента. Натисни връзката в имейла си или изпрати отново, за да получиш нова.",
-    "authInviteCodeErrorMalformed": "Въведи код за покана като ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Този код за покана не изглежда валиден.",
-    "authInviteCodeErrorAlreadyUsed": "Този код за покана вече е използван или е отменен.",
-    "authInviteGateErrorCreatorFull": "Поканите на този създател свършиха",
-    "authInviteGateErrorUnavailable": "Този код за покана не е наличен. Запиши се в списъка на чакащите и ще ти изпратим покана, щом се освободи място.",
-    "authInviteGateErrorCheckFailed": "Не успяхме да проверим този код. Опитай пак.",
-    "authInviteGateErrorUnknown": "Нещо се обърка. Опитай пак с кода си за покана.",
-    "authInviteErrorAlreadyUsed": "Този код за покана вече не е наличен. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.",
-    "authInviteErrorInvalid": "Този код за покана не може да се използва в момента. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.",
-    "authInviteErrorTemporary": "Не можахме да потвърдим поканата ти в момента. Върни се към кода за покана и опитай пак или се свържи с поддръжката.",
-    "authInviteErrorUnknown": "Не успяхме да активираме поканата ти. Върни се към кода за покана, присъедини се към списъка с чакащи или се свържи с поддръжката.",
     "shareSheetSave": "Запази",
     "shareSheetRemoveFromSaved": "Премахни от запазени",
     "shareSheetSaveToGallery": "Запази в галерията",
@@ -1668,15 +1636,6 @@
     "notificationsViewProfilesSemanticLabel": "Преглед на профили",
     "@notificationsViewProfilesSemanticLabel": {
         "description": "Screen-reader label for a grouped notification's avatar stack, which opens the list of involved profiles."
-    },
-    "notificationsInviteSingular": "Имаш 1 покана за споделяне с приятел!",
-    "notificationsInvitePlural": "Имаш {count} покани за споделяне с приятели!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
     },
     "notificationsVideoUnavailable": "Видеото е недостъпно",
     "feedFailedToLoadVideos": "Не успяхме да заредим видеата",
@@ -2393,24 +2352,6 @@
     "classicVinersTitle": "OG Viners",
     "blossomFailedToSaveSettings": "Неуспешно запазване на настройките. Опитай пак.",
     "blueskyFailedToUpdateCrosspost": "Неуспешно актуализиране на настройката за кръстосана публикация",
-    "invitesTitle": "Покани приятели",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 покана е готова за генериране} other{{count} покани са готови за генериране}}",
-    "@invitesGenerateCardTitle": {
-        "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
-    "invitesGenerateCardSubtitle": "Генерирай код, когато си готов да го споделиш.",
-    "@invitesGenerateCardSubtitle": {
-        "description": "Body text on the generate-invite card explaining what tapping the button does."
-    },
-    "invitesGenerateButtonLabel": "Генерирай покана",
-    "@invitesGenerateButtonLabel": {
-        "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-    },
     "searchSomethingWentWrong": "Нещо се обърка",
     "searchTryAgain": "Опитай пак",
     "searchForLists": "Търсете списъци",
@@ -3505,24 +3446,6 @@
   "blueskyStatusUnavailableRetry": "Не успяхме да проверим хендъла ти в Divine. Опитай пак.",
   "blueskySetUpHandle": "Настрой",
     "blueskyTemporarilyUnavailable": "Публикуването в Bluesky временно не е достъпно. Опитай пак.",
-    "invitesNoneAvailable": "В момента няма налични покани",
-    "invitesShareWithPeople": "Сподели Divine с хора, които познаваш",
-    "invitesUsedInvites": "Използвани покани",
-    "invitesShareMessage": "Присъедини се към мен в Divine! Използвай код за покана {code}, за да започнеш:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Копирай поканата",
-    "invitesCopied": "Поканата е копирана!",
-    "invitesShareInvite": "Сподели поканата",
-    "invitesShareSubject": "Присъедини се към мен в Divine",
-    "invitesClaimed": "Използвана",
-    "invitesCouldNotLoad": "Поканите не се заредиха",
-    "invitesRetry": "Опитай пак",
     "keyImportInsecureBunkerRelay": "Bunker релето трябва да използва wss:// (ws:// е позволено само за localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -4050,24 +3973,6 @@
     "devOptionsProtectedMinorEnabledToast": "Състоянието „защитен непълнолетен“ е наложено",
     "devOptionsProtectedMinorNonMinorToast": "Състоянието „защитен непълнолетен“ е изключено",
     "devOptionsProtectedMinorClearedToast": "Замяната „защитен непълнолетен“ е изчистена",
-  "devOptionsInviteAvailabilityTitle": "Покани за регистрация",
-  "devOptionsInviteAvailabilityCurrentLabel": "Текущо състояние",
-  "devOptionsInviteAvailabilityServerLoading": "Стойност от сървъра: зарежда се",
-  "devOptionsInviteAvailabilityServerEnabled": "Стойност от сървъра: включено",
-  "devOptionsInviteAvailabilityServerDisabled": "Стойност от сървъра: изключено",
-  "devOptionsInviteAvailabilityServerUnknown": "Стойност от сървъра: неизвестна",
-  "devOptionsInviteAvailabilityOverrideNone": "Замяна: използвай стойността от сървъра",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Замяна: наложено включено",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Замяна: наложено изключено",
-  "devOptionsInviteAvailabilityUseServer": "Използвай стойността от сървъра",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Следвай onboardingMode на услугата за покани",
-  "devOptionsInviteAvailabilityForceEnabled": "Наложи включено",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Показвай локално ограниченията и управлението на поканите",
-  "devOptionsInviteAvailabilityForceDisabled": "Наложи изключено",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Скрий локално интерфейса за покани, без да променяш сървъра",
-  "devOptionsInviteAvailabilityUseServerToast": "Поканите за регистрация вече следват сървъра",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Поканите за регистрация са наложено включени",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Поканите за регистрация са наложено изключени",
     "minorAccountReviewParentConsentChecklistAgeBand": "Ясно изявление, че тийнейджърът е между 13 и 15 и има разрешение да ползва Divine",
     "minorAccountReviewUnder13FamilyTitle": "Какво може да направи семейството ти вместо това",
     "minorAccountReviewUnder13FamilyBody": "Родител или настойник може да държи профила и да публикува, а ти спокойно можеш да си във видеата с тях. Искаме семействата да се радват на Divine така, както им е добре.",

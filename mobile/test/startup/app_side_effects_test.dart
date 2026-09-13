@@ -43,12 +43,6 @@ class _RecordingAnalytics implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async => userIds.add(userId);
 
   @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
-
-  @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -72,11 +66,6 @@ void main() {
   late _RecordingAnalytics analytics;
   late List<String?> crashUserIds;
 
-  // AnalyticsIdentityCoordinator keeps the last applied user ID in a static,
-  // and the VGV merged isolate shares it with every other suite in the bundle.
-  setUp(AnalyticsIdentityCoordinator.resetLastAppliedUserId);
-  tearDown(AnalyticsIdentityCoordinator.resetLastAppliedUserId);
-
   setUp(() {
     authStates = StreamController<AuthState>.broadcast();
     addTearDown(authStates.close);
@@ -84,9 +73,8 @@ void main() {
     authService = _MockAuthService();
     when(() => authService.isAuthenticated).thenReturn(true);
     when(() => authService.currentPublicKeyHex).thenReturn(_pubkey);
-    when(
-      () => authService.authStateStream,
-    ).thenAnswer((_) => authStates.stream);
+    when(() => authService.authStateStream)
+        .thenAnswer((_) => authStates.stream);
 
     analytics = _RecordingAnalytics();
     crashUserIds = <String?>[];

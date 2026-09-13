@@ -1178,7 +1178,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Gunakan aplikasi signer Amber di Android untuk mengelola kunci Nostr-mu dengan aman.",
     "authCreateAccountTitle": "Buat akun",
-    "authBackToInviteCode": "Kembali ke kode undangan",
     "authUseDivineNoBackup": "Pakai Divine tanpa backup",
     "authSkipConfirmTitle": "Satu hal lagi...",
     "authSkipConfirmKeyCreated": "Kamu masuk! Kami akan membuat kunci aman yang menjalankan akun Divine-mu.",
@@ -1213,17 +1212,6 @@
     "authEmailVerifiedLogin": "Email diverifikasi! Silakan login untuk melanjutkan.",
     "authVerificationLinkExpired": "Tautan verifikasi ini sudah tidak berlaku.",
     "authVerificationConnectionError": "Tidak bisa memverifikasi email. Silakan cek koneksimu dan coba lagi.",
-    "authWaitlistConfirmTitle": "Kamu masuk!",
-    "authWaitlistUpdatesAt": "Kami akan membagikan pembaruan di {email}.\nSaat kode undangan lebih banyak tersedia, kami akan mengirimnya untukmu.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Coba lagi",
     "authContactSupport": "Hubungi dukungan",
     "authCouldNotOpenEmail": "Tidak bisa membuka {email}",
@@ -1235,15 +1223,6 @@
             }
         }
     },
-    "authAddInviteCode": "Tambahkan kode undanganmu",
-    "authInviteCodeLabel": "Kode undangan",
-    "authEnterYourCode": "Masukkan kodemu",
-    "authNext": "Lanjut",
-    "authJoinWaitlist": "Gabung daftar tunggu",
-    "authJoinWaitlistTitle": "Gabung daftar tunggu",
-    "authJoinWaitlistDescription": "Bagikan emailmu dan kami akan mengirim pembaruan saat akses terbuka.",
-    "authJoinWaitlistNewsletterOptIn": "Kirimi aku inspirasi dari Divine",
-    "authInviteAccessHelp": "Bantuan akses undangan",
     "authGeneratingConnection": "Membuat koneksi...",
     "authConnectedAuthenticating": "Terhubung! Mengautentikasi...",
     "authConnectionTimedOut": "Koneksi kedaluwarsa",
@@ -1303,17 +1282,6 @@
     "authVerificationErrorPinLocked": "Terlalu banyak percobaan. Ketuk kirim ulang untuk mendapatkan kode baru.",
     "authVerificationErrorPinFailed": "Kami tidak bisa memverifikasi kode itu. Silakan coba lagi.",
     "authVerificationErrorPinUnavailable": "Input kode sedang tidak tersedia. Ketuk tautan di emailmu, atau kirim ulang untuk mendapatkan kode baru.",
-    "authInviteCodeErrorMalformed": "Masukkan kode undangan seperti ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Kode undangan itu sepertinya tidak valid.",
-    "authInviteCodeErrorAlreadyUsed": "Kode undangan itu sudah dipakai atau dicabut.",
-    "authInviteGateErrorCreatorFull": "Undangan kreator ini sudah habis",
-    "authInviteGateErrorUnavailable": "Kode undangan itu tidak tersedia. Gabung ke daftar tunggu dan kami akan mengirim undangan begitu ada tempat.",
-    "authInviteGateErrorCheckFailed": "Kami tidak bisa memeriksa kode itu. Coba lagi.",
-    "authInviteGateErrorUnknown": "Ada yang salah. Coba lagi dengan kode undanganmu.",
-    "authInviteErrorAlreadyUsed": "Kode undangan itu sudah tidak tersedia. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.",
-    "authInviteErrorInvalid": "Kode undangan itu tidak bisa digunakan sekarang. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.",
-    "authInviteErrorTemporary": "Kami tidak bisa mengkonfirmasi undanganmu sekarang. Kembali ke kode undanganmu dan coba lagi, atau hubungi dukungan.",
-    "authInviteErrorUnknown": "Kami tidak bisa mengaktifkan undanganmu. Kembali ke kode undanganmu, gabung daftar tunggu, atau hubungi dukungan.",
     "shareSheetSave": "Simpan",
     "shareSheetRemoveFromSaved": "Hapus dari tersimpan",
     "shareSheetSaveToGallery": "Simpan ke Galeri",
@@ -1459,15 +1427,6 @@
     "notificationsFailedToLoad": "Gagal memuat notifikasi",
     "notificationsRetry": "Coba Lagi",
     "notificationsRefreshError": "Gagal menyegarkan — menampilkan yang tersedia",
-    "notificationsInviteSingular": "Kamu punya 1 undangan untuk dibagikan ke teman!",
-    "notificationsInvitePlural": "Kamu punya {count} undangan untuk dibagikan ke teman!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Video tidak tersedia",
     "feedFailedToLoadVideos": "Gagal memuat video",
     "feedRetry": "Coba Lagi",
@@ -2035,7 +1994,6 @@
             }
         }
     },
-    "invitesTitle": "Undang Teman",
     "libraryClipsDeletedCount": "{count, plural, =1{1 klip dihapus} other{{count} klip dihapus}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Pilih segmen audio untuk videomu",
     "fullscreenFeedRemovedMessage": "Video dihapus",
     "fullscreenFeedEmptyMessage": "Tidak ada lagi yang bisa diputar di sini",
-    "invitesGenerateCardTitle": "{count, plural, other{{count} undangan siap dibuat}}",
-    "invitesGenerateCardSubtitle": "Buat kode kalau kamu sudah siap membagikannya.",
-    "invitesGenerateButtonLabel": "Buat undangan",
     "profileAvatarLightboxBarrierLabel": "Tutup avatar",
     "profileAvatarLightboxCloseSemanticLabel": "Tutup pratinjau avatar",
     "notificationsUnreadPrefix": "Notifikasi belum dibaca",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Kami tidak bisa memeriksa handle Divine kamu. Coba lagi.",
   "blueskySetUpHandle": "Siapkan",
     "blueskyTemporarilyUnavailable": "Memposting ke Bluesky sementara tidak tersedia. Coba lagi.",
-    "invitesNoneAvailable": "Tidak ada undangan tersedia saat ini",
-    "invitesShareWithPeople": "Bagikan Divine ke orang yang kamu kenal",
-    "invitesUsedInvites": "Undangan terpakai",
-    "invitesShareMessage": "Gabung dengan saya di Divine! Pakai kode undangan {code} untuk mulai:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Salin undangan",
-    "invitesCopied": "Undangan tersalin!",
-    "invitesShareInvite": "Bagikan undangan",
-    "invitesShareSubject": "Gabung dengan saya di Divine",
-    "invitesClaimed": "Sudah diklaim",
-    "invitesCouldNotLoad": "Gagal memuat undangan",
-    "invitesRetry": "Coba Lagi",
     "keyImportInsecureBunkerRelay": "Relay bunker harus pakai wss:// (ws:// hanya boleh untuk localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Status anak-dilindungi dipaksa aktif",
     "devOptionsProtectedMinorNonMinorToast": "Status anak-dilindungi dipaksa nonaktif",
     "devOptionsProtectedMinorClearedToast": "Penggantian anak-dilindungi dibersihkan",
-  "devOptionsInviteAvailabilityTitle": "Undangan pendaftaran",
-  "devOptionsInviteAvailabilityCurrentLabel": "Status saat ini",
-  "devOptionsInviteAvailabilityServerLoading": "Nilai server: memuat",
-  "devOptionsInviteAvailabilityServerEnabled": "Nilai server: aktif",
-  "devOptionsInviteAvailabilityServerDisabled": "Nilai server: nonaktif",
-  "devOptionsInviteAvailabilityServerUnknown": "Nilai server: tidak diketahui",
-  "devOptionsInviteAvailabilityOverrideNone": "Penggantian: pakai nilai server",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Penggantian: paksa aktif",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Penggantian: paksa nonaktif",
-  "devOptionsInviteAvailabilityUseServer": "Pakai nilai server",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Ikuti onboardingMode dari layanan undangan",
-  "devOptionsInviteAvailabilityForceEnabled": "Paksa aktif",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Tampilkan gerbang undangan pendaftaran dan pengelolaannya secara lokal",
-  "devOptionsInviteAvailabilityForceDisabled": "Paksa nonaktif",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Sembunyikan antarmuka undangan pendaftaran secara lokal tanpa mengubah server",
-  "devOptionsInviteAvailabilityUseServerToast": "Undangan pendaftaran kini mengikuti server",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Undangan pendaftaran dipaksa aktif",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Undangan pendaftaran dipaksa nonaktif",
     "minorAccountReviewParentConsentChecklistAgeBand": "Pernyataan jelas bahwa remaja tersebut berusia 13 sampai 15 dan diizinkan memakai Divine",
     "minorAccountReviewUnder13FamilyTitle": "Yang bisa dilakukan keluargamu sebagai gantinya",
     "minorAccountReviewUnder13FamilyBody": "Orang tua atau wali bisa memegang akunnya dan yang memposting, dan kamu tentu boleh ikut tampil di videonya bersama mereka. Kami ingin keluarga menikmati Divine dengan cara yang pas buat mereka.",

@@ -2051,7 +2051,6 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "ఖాతాను సృష్టించండి",
-  "authBackToInviteCode": "ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి",
   "authUseDivineNoBackup": "బ్యాకప్ లేకుండా Divineని ఉపయోగించండి",
   "authSkipConfirmTitle": "చివరి విషయం...",
   "authSkipConfirmKeyCreated": "మీరు ఉన్నారు! మేము మీ Divine ఖాతాను శక్తివంతం చేసే సురక్షిత కీని సృష్టిస్తాము.",
@@ -2102,17 +2101,6 @@
   "authEmailVerifiedLogin": "ఇమెయిల్ ధృవీకరించబడింది! దయచేసి కొనసాగించడానికి లాగిన్ చేయండి.",
   "authVerificationLinkExpired": "ఈ ధృవీకరణ లింక్ ఇకపై చెల్లదు.",
   "authVerificationConnectionError": "ఇమెయిల్‌ని ధృవీకరించడం సాధ్యం కాలేదు. దయచేసి మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
-  "authWaitlistConfirmTitle": "మీరు ఉన్నారు!",
-  "authWaitlistUpdatesAt": "మేము అప్‌డేట్‌లను ఇందులో భాగస్వామ్యం చేస్తాము {email}.\nమరిన్ని ఆహ్వాన కోడ్‌లు అందుబాటులో ఉన్నప్పుడు, మేము వాటిని మీకే పంపుతాము.",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "సరే",
   "authTryAgain": "మళ్లీ ప్రయత్నించండి",
   "authContactSupport": "మద్దతును సంప్రదించండి",
   "authCouldNotOpenEmail": "తెరవడం సాధ్యపడలేదు {email}",
@@ -2124,15 +2112,6 @@
       }
     }
   },
-  "authAddInviteCode": "మీ ఆహ్వాన కోడ్‌ని జోడించండి",
-  "authInviteCodeLabel": "ఆహ్వాన కోడ్",
-  "authEnterYourCode": "మీ కోడ్‌ని నమోదు చేయండి",
-  "authNext": "తదుపరి",
-  "authJoinWaitlist": "వెయిట్‌లిస్ట్‌లో చేరండి",
-  "authJoinWaitlistTitle": "వెయిట్‌లిస్ట్‌లో చేరండి",
-  "authJoinWaitlistDescription": "మీ ఇమెయిల్‌ను భాగస్వామ్యం చేయండి మరియు యాక్సెస్ తెరవబడినప్పుడు మేము ఆహ్వాన కోడ్‌ని పంపుతాము.",
-  "authJoinWaitlistNewsletterOptIn": "నాకు Divine స్ఫూర్తిని పంపండి",
-  "authInviteAccessHelp": "యాక్సెస్ సహాయాన్ని ఆహ్వానించండి",
   "authGeneratingConnection": "కనెక్షన్‌ని రూపొందిస్తోంది...",
   "authConnectedAuthenticating": "కనెక్ట్ చేయబడింది! ప్రమాణీకరిస్తోంది...",
   "authConnectionTimedOut": "కనెక్షన్ సమయం ముగిసింది",
@@ -2196,38 +2175,6 @@
   "authVerificationErrorPinLocked": "చాలా ప్రయత్నాలు చేసారు. తాజా కోడ్‌ని పొందడానికి మళ్లీ పంపు నొక్కండి.",
   "authVerificationErrorPinFailed": "మేము ఆ కోడ్‌ని ధృవీకరించలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "authVerificationErrorPinUnavailable": "కోడ్ నమోదు ప్రస్తుతం అందుబాటులో లేదు. మీ ఇమెయిల్‌లోని లింక్‌ను నొక్కండి లేదా తాజాదాన్ని పొందడానికి మళ్లీ పంపండి.",
-  "authInviteCodeErrorMalformed": "ABCD-EFGH వంటి ఆహ్వాన కోడ్‌ని నమోదు చేయండి.",
-  "@authInviteCodeErrorMalformed": {
-    "description": "Inline error on the invite-code field when the typed text is not shaped like an invite code."
-  },
-  "authInviteCodeErrorNotFound": "ఆ ఆహ్వాన కోడ్ చెల్లుబాటు అయ్యేలా లేదు.",
-  "@authInviteCodeErrorNotFound": {
-    "description": "Inline error on the invite-code field when the server does not recognise the code."
-  },
-  "authInviteCodeErrorAlreadyUsed": "ఆ ఆహ్వాన కోడ్ ఇప్పటికే ఉపయోగించబడింది లేదా రద్దు చేయబడింది.",
-  "@authInviteCodeErrorAlreadyUsed": {
-    "description": "Inline error on the invite-code field when the code was already claimed or revoked."
-  },
-  "authInviteGateErrorCreatorFull": "ఈ సృష్టికర్త ఆహ్వానాలు నిండిపోయాయి",
-  "@authInviteGateErrorCreatorFull": {
-    "description": "Block error on the invite gate when the creator has no invites left."
-  },
-  "authInviteGateErrorUnavailable": "ఆ ఆహ్వాన కోడ్ అందుబాటులో లేదు. వెయిట్‌లిస్ట్‌లో చేరండి మరియు స్థలం ఉన్నప్పుడు మేము ఆహ్వానాన్ని పంపుతాము.",
-  "@authInviteGateErrorUnavailable": {
-    "description": "Block error on the invite gate when the code is real but no longer usable."
-  },
-  "authInviteGateErrorCheckFailed": "మేము ఆ కోడ్‌ని తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
-  "@authInviteGateErrorCheckFailed": {
-    "description": "Block error on the invite gate when the invite service could not give a verdict. Retryable."
-  },
-  "authInviteGateErrorUnknown": "ఏదో తప్పు జరిగింది. మీ ఆహ్వాన కోడ్‌ని మళ్లీ ప్రయత్నించండి.",
-  "@authInviteGateErrorUnknown": {
-    "description": "Block error on the invite gate when an inbound link reported an unclassifiable problem."
-  },
-  "authInviteErrorAlreadyUsed": "ఆ ఆహ్వాన కోడ్ అందుబాటులో లేదు. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.",
-  "authInviteErrorInvalid": "ఆ ఆహ్వాన కోడ్ ప్రస్తుతం ఉపయోగించబడదు. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.",
-  "authInviteErrorTemporary": "మేము ప్రస్తుతం మీ ఆహ్వానాన్ని నిర్ధారించలేకపోయాము. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లి, మళ్లీ ప్రయత్నించండి లేదా మద్దతును సంప్రదించండి.",
-  "authInviteErrorUnknown": "మేము మీ ఆహ్వానాన్ని సక్రియం చేయలేకపోయాము. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.",
   "shareSheetSave": "సేవ్ చేయండి",
   "shareSheetRemoveFromSaved": "సేవ్ చేయబడిన వాటి నుండి తీసివేయండి",
   "@shareSheetRemoveFromSaved": {
@@ -2640,15 +2587,6 @@
   "notificationsVideoThumbnail": "వీడియో సూక్ష్మచిత్రం",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "స్నేహితుడితో భాగస్వామ్యం చేయడానికి మీకు 1 ఆహ్వానం ఉంది!",
-  "notificationsInvitePlural": "{count, plural, =1{మీరు కలిగి ఉన్నారు {count}స్నేహితులతో భాగస్వామ్యం చేయడానికి ఆహ్వానించండి!} other{మీరు కలిగి ఉన్నారు {count}స్నేహితులతో భాగస్వామ్యం చేయడానికి ఆహ్వానిస్తున్నారు!}}",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsTabBadges": "{count, plural, =0{బ్యాడ్జ్‌లు} other{బ్యాడ్జ్‌లు ({count})}}",
   "@notificationsTabBadges": {
@@ -4859,42 +4797,6 @@
   "blueskyStatusUnavailableRetry": "మేము మీ Divine హ్యాండిల్‌ని తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "blueskySetUpHandle": "సెటప్",
   "blueskyTemporarilyUnavailable": "Bluesky ప్రచురణ తాత్కాలికంగా అందుబాటులో లేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "invitesTitle": "స్నేహితులను ఆహ్వానించండి",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 ఆహ్వానం రూపొందించడానికి సిద్ధంగా ఉంది} other{{count}ఆహ్వానాలు రూపొందించడానికి సిద్ధంగా ఉన్నాయి}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "మీరు ఒక కోడ్‌ను భాగస్వామ్యం చేయడానికి సిద్ధంగా ఉన్నప్పుడు దాన్ని రూపొందించండి.",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "ఆహ్వానాన్ని రూపొందించండి",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "ప్రస్తుతం ఆహ్వానాలు ఏవీ అందుబాటులో లేవు",
-  "invitesShareWithPeople": "మీకు తెలిసిన వ్యక్తులతో Divineని భాగస్వామ్యం చేయండి",
-  "invitesUsedInvites": "ఉపయోగించిన ఆహ్వానాలు",
-  "invitesShareMessage": "Divineలో నాతో చేరండి! ఆహ్వాన కోడ్‌ని ఉపయోగించండి {code}ప్రారంభించడానికి:\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "ఆహ్వానాన్ని కాపీ చేయండి",
-  "invitesCopied": "ఆహ్వానం కాపీ చేయబడింది!",
-  "invitesShareInvite": "ఆహ్వానాన్ని భాగస్వామ్యం చేయండి",
-  "invitesShareSubject": "Divineలో నాతో చేరండి",
-  "invitesClaimed": "క్లెయిమ్ చేయబడింది",
-  "invitesCouldNotLoad": "ఆహ్వానాలను లోడ్ చేయడం సాధ్యపడలేదు",
-  "invitesRetry": "మళ్లీ ప్రయత్నించండి",
   "searchSomethingWentWrong": "ఏదో తప్పు జరిగింది",
   "searchTryAgain": "మళ్లీ ప్రయత్నించండి",
   "searchForLists": "జాబితాల కోసం శోధించండి",
@@ -6702,24 +6604,6 @@
   "devOptionsProtectedMinorEnabledToast": "రక్షిత-మైనర్ రాష్ట్రం బలవంతంగా ఆన్ చేయబడింది",
   "devOptionsProtectedMinorNonMinorToast": "రక్షిత-మైనర్ రాష్ట్రం బలవంతంగా ఆఫ్ చేయబడింది",
   "devOptionsProtectedMinorClearedToast": "ప్రొటెక్టెడ్-మైనర్ ఓవర్‌రైడ్ క్లియర్ చేయబడింది",
-  "devOptionsInviteAvailabilityTitle": "సైన్అప్ ఆహ్వానాలు",
-  "devOptionsInviteAvailabilityCurrentLabel": "ప్రస్తుత స్థితి",
-  "devOptionsInviteAvailabilityServerLoading": "సర్వర్ విలువ: లోడ్ అవుతోంది",
-  "devOptionsInviteAvailabilityServerEnabled": "సర్వర్ విలువ: ప్రారంభించబడింది",
-  "devOptionsInviteAvailabilityServerDisabled": "సర్వర్ విలువ: నిలిపివేయబడింది",
-  "devOptionsInviteAvailabilityServerUnknown": "సర్వర్ విలువ: తెలియదు",
-  "devOptionsInviteAvailabilityOverrideNone": "ఓవర్‌రైడ్: సర్వర్ విలువను ఉపయోగించండి",
-  "devOptionsInviteAvailabilityOverrideEnabled": "ఓవర్‌రైడ్: ఫోర్స్ ఎనేబుల్ చేయబడింది",
-  "devOptionsInviteAvailabilityOverrideDisabled": "ఓవర్‌రైడ్: ఫోర్స్ డిజేబుల్ చేయబడింది",
-  "devOptionsInviteAvailabilityUseServer": "సర్వర్ విలువను ఉపయోగించండి",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "ఆహ్వాన సేవ ఆన్‌బోర్డింగ్ మోడ్‌ను అనుసరించండి",
-  "devOptionsInviteAvailabilityForceEnabled": "ఫోర్స్ ఎనేబుల్ చేయబడింది",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "సైన్అప్ ఆహ్వాన గేట్‌లు మరియు నిర్వహణను స్థానికంగా చూపండి",
-  "devOptionsInviteAvailabilityForceDisabled": "బలవంతంగా నిలిపివేయబడింది",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "సర్వర్‌ని మార్చకుండా స్థానికంగా సైన్అప్ ఆహ్వాన UIని దాచండి",
-  "devOptionsInviteAvailabilityUseServerToast": "సైన్అప్ ఆహ్వానాలు ఇప్పుడు సర్వర్‌ని అనుసరించాయి",
-  "devOptionsInviteAvailabilityForceEnabledToast": "సైన్అప్ ఆహ్వానాలు బలవంతంగా ఆన్ చేయబడ్డాయి",
-  "devOptionsInviteAvailabilityForceDisabledToast": "సైన్అప్ ఆహ్వానాలు బలవంతంగా ఆఫ్ చేయబడ్డాయి",
   "commentsRecordVideoButtonLabel": "వీడియో వ్యాఖ్యను రికార్డ్ చేయండి",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

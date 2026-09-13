@@ -3156,9 +3156,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Davet koduna geri dön';
-
-  @override
   String get authUseDivineNoBackup => 'Yedek olmadan Divine kullan';
 
   @override
@@ -3275,17 +3272,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'E-posta doğrulanamıyor. Lütfen bağlantını kontrol et ve tekrar dene.';
 
   @override
-  String get authWaitlistConfirmTitle => 'İçerisin!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Güncellemeleri $email adresine göndereceğiz.\nDaha fazla davet kodu çıktığında sana göndereceğiz.';
-  }
-
-  @override
-  String get authOk => 'Tamam';
-
-  @override
   String get authTryAgain => 'Tekrar dene';
 
   @override
@@ -3295,34 +3281,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email açılamadı';
   }
-
-  @override
-  String get authAddInviteCode => 'Davet kodunu ekle';
-
-  @override
-  String get authInviteCodeLabel => 'Davet kodu';
-
-  @override
-  String get authEnterYourCode => 'Kodunu gir';
-
-  @override
-  String get authNext => 'İleri';
-
-  @override
-  String get authJoinWaitlist => 'Bekleme listesine katıl';
-
-  @override
-  String get authJoinWaitlistTitle => 'Bekleme listesine katıl';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'E-postanı paylaş, erişim açıldıkça güncelleme gönderelim.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'Bana Divine ilhamı gönderin';
-
-  @override
-  String get authInviteAccessHelp => 'Davet erişimi yardımı';
 
   @override
   String get authGeneratingConnection => 'Bağlantı oluşturuluyor...';
@@ -3504,49 +3462,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Kod girişi şu anda kullanılamıyor. E-postandaki bağlantıya dokun ya da yenisini almak için tekrar gönder.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'ABCD-EFGH gibi bir davet kodu gir.';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'Bu davet kodu geçerli görünmüyor.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Bu davet kodu zaten kullanılmış ya da iptal edilmiş.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Bu içerik üreticisinin davetleri tükendi';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Bu davet kodu kullanılamıyor. Bekleme listesine katıl, yer açılınca sana davet göndereceğiz.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Bu kodu kontrol edemedik. Tekrar dene.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Bir şeyler ters gitti. Davet kodunu tekrar dene.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Bu davet kodu artık kullanılamıyor. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Bu davet kodu şu anda kullanılamıyor. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Davetini şu anda doğrulayamadık. Davet koduna geri dönüp tekrar dene veya destekle iletişime geç.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Davetini etkinleştiremedik. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.';
 
   @override
   String get shareSheetSave => 'Kaydet';
@@ -4213,15 +4128,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Video küçük resmi';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Bir arkadaşınla paylaşacak 1 davetin var!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Arkadaşlarınla paylaşacak $count davetin var!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7643,62 +7549,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bluesky\'da paylaşım geçici olarak kullanılamıyor. Lütfen tekrar dene.';
 
   @override
-  String get invitesTitle => 'Arkadaşları Davet Et';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Oluşturulmaya hazır $count davet',
-      one: 'Oluşturulmaya hazır 1 davet',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Paylaşmaya hazır olduğunda bir kod oluştur.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Davet oluştur';
-
-  @override
-  String get invitesNoneAvailable => 'Şu anda kullanılabilir davet yok';
-
-  @override
-  String get invitesShareWithPeople => 'Divine\'i tanıdığın insanlarla paylaş';
-
-  @override
-  String get invitesUsedInvites => 'Kullanılmış davetler';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divine\'de bana katıl! Başlamak için $code davet kodunu kullan:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Daveti kopyala';
-
-  @override
-  String get invitesCopied => 'Davet kopyalandı!';
-
-  @override
-  String get invitesShareInvite => 'Daveti paylaş';
-
-  @override
-  String get invitesShareSubject => 'Divine\'de bana katıl';
-
-  @override
-  String get invitesClaimed => 'Kullanıldı';
-
-  @override
-  String get invitesCouldNotLoad => 'Davetler yüklenemedi';
-
-  @override
-  String get invitesRetry => 'Tekrar dene';
-
-  @override
   String get searchSomethingWentWrong => 'Bir şeyler ters gitti';
 
   @override
@@ -10542,72 +10392,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Korunan-reşit olmayan geçersiz kılması temizlendi';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Kayıt davetleri';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Mevcut durum';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Sunucu değeri: yükleniyor';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'Sunucu değeri: açık';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Sunucu değeri: kapalı';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Sunucu değeri: bilinmiyor';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Geçersiz kılma: sunucu değerini kullan';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Geçersiz kılma: açık olarak zorla';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Geçersiz kılma: kapalı olarak zorla';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Sunucu değerini kullan';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Davet servisinin onboardingMode değerini izle';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Açık olarak zorla';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Kayıt daveti kapılarını ve yönetimini yerelde göster';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Kapalı olarak zorla';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Sunucuyu değiştirmeden kayıt daveti arayüzünü yerelde gizle';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Kayıt davetleri artık sunucuyu izliyor';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Kayıt davetleri zorla açıldı';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Kayıt davetleri zorla kapatıldı';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Video yorum kaydet';

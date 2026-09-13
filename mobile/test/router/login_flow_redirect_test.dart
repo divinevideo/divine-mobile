@@ -42,7 +42,6 @@ String? testRedirectLogic({
       location.startsWith(WelcomeScreen.path) ||
       location.startsWith(KeyImportScreen.path) ||
       location.startsWith(NostrConnectScreen.path) ||
-      location.startsWith(WelcomeScreen.inviteGatePath) ||
       location.startsWith(WelcomeScreen.resetPasswordPath) ||
       location.startsWith(ResetPasswordScreen.path) ||
       location.startsWith(EmailVerificationScreen.path);
@@ -82,19 +81,6 @@ void main() {
           redirect,
           isNull,
           reason: '${WelcomeScreen.path} should not redirect',
-        );
-      });
-
-      test('unauthenticated user can access ${WelcomeScreen.inviteGatePath}', () {
-        final redirect = testRedirectLogic(
-          location: WelcomeScreen.inviteGatePath,
-          authState: AuthState.unauthenticated,
-        );
-        expect(
-          redirect,
-          isNull,
-          reason:
-              '${WelcomeScreen.inviteGatePath} is an auth route, should not redirect',
         );
       });
 
@@ -227,21 +213,6 @@ void main() {
       );
 
       test(
-        'authenticated user on ${WelcomeScreen.inviteGatePath} redirects to ${VideoFeedPage.pathForIndex(0)}',
-        () {
-          final redirect = testRedirectLogic(
-            location: WelcomeScreen.inviteGatePath,
-            authState: AuthState.authenticated,
-          );
-          expect(
-            redirect,
-            equals(VideoFeedPage.pathForIndex(0)),
-            reason: 'Authenticated user on invite gate should go to home',
-          );
-        },
-      );
-
-      test(
         'authenticated user on ${WelcomeScreen.loginOptionsPath} redirects to ${VideoFeedPage.pathForIndex(0)}',
         () {
           final redirect = testRedirectLogic(
@@ -332,23 +303,6 @@ void main() {
     });
 
     group('Edge cases', () {
-      test(
-        '${WelcomeScreen.inviteGatePath} should NEVER redirect to ${WelcomeScreen.path} for unauthenticated users',
-        () {
-          final redirect = testRedirectLogic(
-            location: WelcomeScreen.inviteGatePath,
-            authState: AuthState.unauthenticated,
-          );
-
-          expect(
-            redirect,
-            isNot(equals(WelcomeScreen.path)),
-            reason:
-                'BUG: ${WelcomeScreen.inviteGatePath} is part of the auth flow and must remain accessible',
-          );
-        },
-      );
-
       test(
         '${WelcomeScreen.loginOptionsPath} should NEVER redirect to ${WelcomeScreen.path} for unauthenticated users',
         () {
@@ -514,7 +468,6 @@ void main() {
       for (final location in <String>[
         WelcomeScreen.path,
         NostrConnectScreen.path,
-        WelcomeScreen.inviteGatePath,
         WelcomeScreen.createAccountPath,
         WelcomeScreen.loginOptionsPath,
       ]) {

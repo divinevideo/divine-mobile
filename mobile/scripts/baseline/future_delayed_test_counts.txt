@@ -23,8 +23,6 @@ test/blocs/email_verification/email_verification_cubit_test.dart	10
 test/blocs/follow_list_search/follow_list_search_bloc_test.dart	9
 test/blocs/fullscreen_feed/fullscreen_feed_bloc_test.dart	93
 test/blocs/inline_comment_composer/inline_comment_composer_cubit_test.dart	2
-test/blocs/invite_gate/invite_gate_bloc_test.dart	2
-test/blocs/invite_status/invite_status_cubit_test.dart	8
 test/blocs/my_followers/my_followers_bloc_test.dart	7
 test/blocs/my_following/my_following_bloc_test.dart	20
 test/blocs/my_profile/my_profile_bloc_test.dart	1
@@ -85,7 +83,6 @@ test/providers/dm_repository_provider_test.dart	4
 test/providers/feed_background_preservation_test.dart	8
 test/providers/feed_viewer_preference_hints_test.dart	1
 test/providers/follow_relationship_provider_test.dart	2
-test/providers/invite_status_auth_sessions_test.dart	2
 test/providers/list_providers_test.dart	17
 test/providers/moderation_label_provider_session_test.dart	3
 test/providers/moderation_providers_blocked_follow_reconciler_test.dart	19

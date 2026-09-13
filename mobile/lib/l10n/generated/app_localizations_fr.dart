@@ -3265,9 +3265,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Retour au code d\'invitation';
-
-  @override
   String get authUseDivineNoBackup => 'Utiliser Divine sans sauvegarde';
 
   @override
@@ -3384,17 +3381,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de vérifier l\'e-mail. Vérifie ta connexion et réessaie.';
 
   @override
-  String get authWaitlistConfirmTitle => 'C\'est bon !';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'On partagera les mises à jour à $email.\nQuand plus de codes d\'invitation seront disponibles, on t\'en enverra.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Réessayer';
 
   @override
@@ -3404,35 +3390,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Impossible d\'ouvrir $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Ajoute ton code d\'invitation';
-
-  @override
-  String get authInviteCodeLabel => 'Code d\'invitation';
-
-  @override
-  String get authEnterYourCode => 'Entre ton code';
-
-  @override
-  String get authNext => 'Suivant';
-
-  @override
-  String get authJoinWaitlist => 'Rejoindre la liste d\'attente';
-
-  @override
-  String get authJoinWaitlistTitle => 'Rejoindre la liste d\'attente';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Partage ton e-mail et on t\'enverra des mises à jour dès que l\'accès s\'ouvre.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Envoyez-moi de l\'inspiration Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Aide pour l\'accès par invitation';
 
   @override
   String get authGeneratingConnection => 'Génération de la connexion...';
@@ -3618,50 +3575,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'La saisie du code n\'est pas disponible pour l\'instant. Appuie sur le lien dans ton e-mail, ou renvoie pour en recevoir un nouveau.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Saisis un code d\'invitation comme ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Ce code d\'invitation ne semble pas valide.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Ce code d\'invitation a déjà été utilisé ou révoqué.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Les invitations de ce créateur sont épuisées';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Ce code d\'invitation n\'est pas disponible. Inscris-toi sur la liste d\'attente et on t\'enverra une invitation dès qu\'il y aura de la place.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Impossible de vérifier ce code. Réessaie.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Un problème est survenu. Réessaie avec ton code d\'invitation.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Ce code d\'invitation n\'est plus disponible. Retourne à ton code d\'invitation, rejoins la liste d\'attente, ou contacte le support.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Ce code d\'invitation ne peut pas être utilisé pour l\'instant. Retourne à ton code d\'invitation, rejoins la liste d\'attente, ou contacte le support.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'On n\'a pas pu confirmer ton invitation pour l\'instant. Retourne à ton code d\'invitation et réessaie, ou contacte le support.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'On n\'a pas pu activer ton invitation. Retourne à ton code d\'invitation, rejoins la liste d\'attente, ou contacte le support.';
 
   @override
   String get shareSheetSave => 'Enregistrer';
@@ -4339,15 +4252,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Miniature de la vidéo';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Tu as 1 invitation à partager avec un ami !';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Tu as $count invitations à partager avec des amis !';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7823,64 +7727,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'La publication sur Bluesky est temporairement indisponible. Réessaie.';
 
   @override
-  String get invitesTitle => 'Inviter des amis';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count invitations prêtes à générer',
-      one: '$count invitation prête à générer',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Génère un code quand tu es prêt à le partager.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Générer une invitation';
-
-  @override
-  String get invitesNoneAvailable =>
-      'Aucune invitation disponible pour l\'instant';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Partage Divine avec les gens que tu connais';
-
-  @override
-  String get invitesUsedInvites => 'Invitations utilisées';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Rejoins-moi sur Divine ! Utilise le code d\'invitation $code pour démarrer :\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Copier l\'invitation';
-
-  @override
-  String get invitesCopied => 'Invitation copiée !';
-
-  @override
-  String get invitesShareInvite => 'Partager l\'invitation';
-
-  @override
-  String get invitesShareSubject => 'Rejoins-moi sur Divine';
-
-  @override
-  String get invitesClaimed => 'Utilisée';
-
-  @override
-  String get invitesCouldNotLoad => 'Impossible de charger les invitations';
-
-  @override
-  String get invitesRetry => 'Réessayer';
-
-  @override
   String get searchSomethingWentWrong => 'Quelque chose s\'est mal passé';
 
   @override
@@ -10780,74 +10626,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Surcharge mineur protégé effacée';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Invitations d\'inscription';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'État actuel';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Valeur serveur : chargement';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Valeur serveur : activé';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Valeur serveur : désactivé';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Valeur serveur : inconnue';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Surcharge : utiliser la valeur serveur';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Surcharge : forcer activé';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Surcharge : forcer désactivé';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'Utiliser la valeur serveur';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Suivre l\'onboardingMode du service d\'invitations';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Forcer activé';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Afficher en local les blocages et la gestion des invitations';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Forcer désactivé';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Masquer en local l\'interface des invitations sans toucher au serveur';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Les invitations d\'inscription suivent maintenant le serveur';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Invitations d\'inscription forcées comme activées';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Invitations d\'inscription forcées comme désactivées';
 
   @override
   String get commentsRecordVideoButtonLabel =>

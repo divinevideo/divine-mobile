@@ -30,7 +30,6 @@ void main() {
       expect(RoutePaths.generalSettings, equals('/general-settings'));
       expect(RoutePaths.hashtagBase, equals('/hashtag'));
       expect(RoutePaths.inbox, equals('/inbox'));
-      expect(RoutePaths.invites, equals('/invites'));
       expect(RoutePaths.keyImport, equals('/import-key'));
       expect(RoutePaths.keyManagement, equals('/key-management'));
       expect(RoutePaths.legal, equals('/legal'));

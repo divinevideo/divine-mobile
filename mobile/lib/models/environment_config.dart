@@ -2,7 +2,6 @@
 // ABOUTME: Each environment maps to exactly one relay URL and API base URL
 
 import 'package:flutter/foundation.dart';
-import 'package:openvine/config/app_config.dart';
 
 /// Host address from Android emulator to reach the host machine's localhost.
 ///
@@ -39,7 +38,6 @@ const localRelayPort = 47777;
 /// `/api/*` to funnelcake-api, everything else to the relay WebSocket).
 const int localApiPort = localRelayPort;
 const localBlossomPort = 43003;
-const localInvitePort = 43004;
 
 /// Not in local_stack: wrangler dev default for divine-relay-manager,
 /// which is run separately.
@@ -157,21 +155,6 @@ class EnvironmentConfig {
       return 'http://$localHost:$localBlossomPort';
     }
     return 'https://media.divine.video';
-  }
-
-  /// Base URL for the invite service.
-  ///
-  /// LOCAL resolves to the local_stack `invite` service on the current
-  /// platform's host, so a LOCAL run cannot silently fall back to the
-  /// production invite service. An explicit
-  /// `--dart-define=INVITE_SERVER_URL` still wins, which is what
-  /// `local_stack/run_android_local.sh` passes.
-  String get inviteBaseUrl {
-    if (environment == AppEnvironment.local &&
-        !const bool.hasEnvironment('INVITE_SERVER_URL')) {
-      return 'http://$localHost:$localInvitePort';
-    }
-    return AppConfig.inviteServerBaseUrl;
   }
 
   /// Indexer relay URLs for the current environment.
