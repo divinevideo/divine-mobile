@@ -134,6 +134,18 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
 
       expect(offenders, isEmpty);
     });
+
+    test('operational guidance points to the active paydown tracker', () {
+      for (final path in [
+        'scripts/check_async_safety_ceiling.sh',
+        'scripts/baseline/async_safety_counts.txt',
+        '../.github/workflows/mobile_ci.yaml',
+      ]) {
+        final contents = File(path).readAsStringSync();
+        expect(contents, contains('#9118'), reason: path);
+        expect(contents, isNot(contains('#3342')), reason: path);
+      }
+    });
   });
 
   // Everything above drives the guard through ASYNC_SAFETY_DIAGNOSTICS_FILE,
@@ -197,7 +209,7 @@ analyzer:
       const body = '''
 analyzer:
   errors:
-    discarded_futures: ignore  # see #3342
+    discarded_futures: ignore  # intentionally reformatted for this fixture
     unawaited_futures: ignore
 ''';
       options.writeAsStringSync(body);
