@@ -1456,7 +1456,9 @@ workflows:
   perf-feed-ttff:
     name: Feed Time to First Frame (Android)
     working_directory: mobile
-    max_build_duration: 20
+    # Two device tests plus pub get, the Gradle app build and emulator boot;
+    # 20 min was tight once the frame-timing test joined the lane.
+    max_build_duration: 25
     instance_type: linux_x2
     environment:
       flutter: 3.47.2
@@ -1536,18 +1538,27 @@ workflows:
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
           DEVICE_ID=$(adb get-serialno)
+          # Both tests run and both artifacts are produced even when one budget
+          # fails: `set -e`/`pipefail` would otherwise hide the frame report on
+          # exactly the run whose frame data matters. The step still fails if
+          # either test failed.
+          ttff_status=0
+          frame_status=0
           flutter test integration_test/perf/feed_ttff_test.dart \
             -d "$DEVICE_ID" \
             --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
-            --machine | tee test_reports/feed_ttff.jsonl
-          # Frame timing for #9045: UI/raster frame times while the feed plays
-          # and animates between pages. Raster is reported, not gated, on an
-          # emulator; a budget-device run uses the same command against a real
-          # phone.
+            --machine | tee test_reports/feed_ttff.jsonl || ttff_status=$?
+          # Frame timing for #9045: UI/raster frame times while the pooled feed
+          # player plays and transitions between pages. Raster is reported, not
+          # gated, on an emulator; a budget-device run uses the same command
+          # against a real phone.
           flutter test integration_test/perf/feed_frame_test.dart \
             -d "$DEVICE_ID" \
             --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
-            --machine | tee test_reports/feed_frame.jsonl
+            --machine | tee test_reports/feed_frame.jsonl || frame_status=$?
+          if [ "$ttff_status" -ne 0 ] || [ "$frame_status" -ne 0 ]; then
+            exit 1
+          fi
     artifacts:
       - test_reports/*.jsonl
       - test_reports/feed_ttff_fixture_server.log

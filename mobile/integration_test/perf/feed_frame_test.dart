@@ -1,6 +1,15 @@
 // ABOUTME: #9045 — captures real UI (build) and raster frame times while the
-// ABOUTME: fullscreen feed plays and animates between pages on the device under
-// ABOUTME: test, so budget-Android jank can be measured before any fix.
+// ABOUTME: pooled feed player plays and transitions between pages on the device
+// ABOUTME: under test, so budget-Android jank can be measured before any fix.
+//
+// Scope: this measures `InfiniteVideoFeed` — the player page, its loading
+// placeholder, and the page transition. The app's item builders are supplied by
+// `mobile/lib/widgets/video_feed_item/feed_videos.dart` (`videoBuilder` at
+// :398, `overlayBuilder` at :507) and carry the app-layer overlay tree — the
+// `ScrollFadeOverlay` group Opacity, the blurred backdrop, the action rail. It
+// does NOT render that overlay tree, so a raster reading here cannot confirm or
+// exonerate a change inside it; measuring those needs the full screen
+// composition, not this harness.
 //
 // Run it against a budget Android device (the class #9045 reports) with:
 //
@@ -37,6 +46,12 @@ const int _minFramesPerWindow = 30;
 /// software-rendered and not comparable to the budget hardware the report
 /// ([#9045]) is about.
 const double _maxBuildP90Ms = 50;
+
+/// Page transitions in the transition window. Five keeps the animating frames
+/// a large share of the window when the engine flushes timings about a second
+/// after they render; the window's stats are filtered to the animation
+/// intervals regardless.
+const int _pageTransitions = 5;
 
 class _WindowStats {
   _WindowStats._({
@@ -106,7 +121,7 @@ void main() {
 
   group('feed frame timing', () {
     testWidgets(
-      '#9045 playback and page-animation frame times',
+      '#9045 playback and page-transition frame times',
       (tester) async {
         final view = PlatformDispatcher.instance.views.first;
         final refreshHz = view.display.refreshRate;
@@ -124,13 +139,13 @@ void main() {
         final feedKey = GlobalKey<InfiniteVideoFeedState>();
 
         // Production defaults for the player window and prefetch: the point is
-        // to measure the app's real scroll/playback work, not an isolated page.
+        // to measure the package's real playback work, not an isolated page.
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: InfiniteVideoFeed(
                 key: feedKey,
-                videos: feedPerfVideos(6),
+                videos: feedPerfVideos(_pageTransitions + 1),
                 cache: cache,
               ),
             ),
@@ -147,10 +162,7 @@ void main() {
           reason: 'no native first frame before the frame windows started',
         );
 
-        Future<_WindowStats> measure(
-          String label,
-          Future<void> Function() action,
-        ) async {
+        Future<List<FrameTiming>> record(Future<void> Function() action) async {
           final raw = <FrameTiming>[];
           void callback(List<FrameTiming> timings) => raw.addAll(timings);
           binding.addTimingsCallback(callback);
@@ -159,22 +171,41 @@ void main() {
           // the tail before detaching the callback.
           await Future<void>.delayed(const Duration(seconds: 2));
           binding.removeTimingsCallback(callback);
-          return _WindowStats.from(label, raw, frameBudgetMs);
+          return raw;
         }
 
+        // Watching the active video, the "just watch a video" half of #9045.
+        final playback = await record(
+          () => Future<void>.delayed(const Duration(seconds: 4)),
+        );
+
+        // Page transitions. Each interval is bounded by the frame clock the
+        // engine timestamps `FrameTiming`s with, so the transition window's
+        // stats cover animating frames only — the flush drain is not idle
+        // playback diluted into the percentiles.
+        final transitionRaw = <FrameTiming>[];
+        final intervals = <(int, int)>[];
+        void transitionCallback(List<FrameTiming> timings) =>
+            transitionRaw.addAll(timings);
+        binding.addTimingsCallback(transitionCallback);
+        for (var index = 1; index <= _pageTransitions; index++) {
+          final start = binding.currentSystemFrameTimeStamp.inMicroseconds;
+          await feedKey.currentState!.animateToPage(index);
+          intervals.add((
+            start,
+            binding.currentSystemFrameTimeStamp.inMicroseconds,
+          ));
+        }
+        await Future<void>.delayed(const Duration(seconds: 2));
+        binding.removeTimingsCallback(transitionCallback);
+        final transition = transitionRaw.where((timing) {
+          final at = timing.timestampInMicroseconds(FramePhase.vsyncStart);
+          return intervals.any((i) => at >= i.$1 && at <= i.$2);
+        }).toList();
+
         final stats = <_WindowStats>[
-          // Watching the active video, the "just watch a video" half of #9045.
-          await measure(
-            'playback',
-            () => Future<void>.delayed(const Duration(seconds: 4)),
-          ),
-          // Page transitions exercise the scroll path and its overlay fade.
-          await measure('page_animation', () async {
-            for (var index = 1; index <= 3; index++) {
-              await feedKey.currentState!.animateToPage(index);
-            }
-            await Future<void>.delayed(const Duration(seconds: 1));
-          }),
+          _WindowStats.from('playback', playback, frameBudgetMs),
+          _WindowStats.from('page_transition', transition, frameBudgetMs),
         ];
 
         final report = StringBuffer()
@@ -186,6 +217,11 @@ void main() {
             'frameBudget=${frameBudgetMs.toStringAsFixed(2)}ms '
             'backend=not queryable from Dart (read logcat for the Impeller '
             'line on the device under test)',
+          )
+          ..writeln(
+            'scope=InfiniteVideoFeed player page and page transitions; the '
+            'app-layer video/overlay builders (feed_videos.dart) are not part '
+            'of this tree',
           );
         for (final window in stats) {
           // Machine-readable for the retained Codemagic log artifact.
