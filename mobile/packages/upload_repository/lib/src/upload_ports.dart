@@ -12,7 +12,7 @@ typedef PendingUploadBoxOpener =
     Future<Box<PendingUpload>> Function({bool forceReinit});
 
 /// Network classes needed for upload diagnostics and user-facing errors.
-enum UploadConnectivity { wifi, mobile, ethernet, vpn, none, other }
+enum UploadConnectivity { wifi, mobile, ethernet, vpn, none }
 
 /// Returns the current network class without coupling to a platform plugin.
 typedef UploadConnectivityProvider = Future<UploadConnectivity> Function();
