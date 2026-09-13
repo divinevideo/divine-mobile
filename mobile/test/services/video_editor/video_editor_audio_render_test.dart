@@ -1,5 +1,5 @@
-// ABOUTME: Unit tests for resolveRenderAudioTracks.
-// ABOUTME: Covers resolution, per-track skip-on-failure, and empty fallback.
+// ABOUTME: Unit tests for building and resolving render audio tracks.
+// ABOUTME: Covers timing, diagnostics, skip-on-failure, and empty fallback.
 
 import 'dart:io';
 
@@ -56,6 +56,15 @@ AudioTrack _unresolvableTrack(String id) {
 }
 
 void main() {
+  late LogCaptureService capture;
+
+  setUp(() async {
+    capture = LogCaptureService();
+    await capture.clearAllLogs();
+  });
+
+  tearDown(() => capture.clearAllLogs());
+
   group('buildRenderAudioTracks', () {
     AudioEvent sound({
       Duration startOffset = Duration.zero,
@@ -81,12 +90,17 @@ void main() {
           startTime: const Duration(milliseconds: 1300),
           endTime: const Duration(seconds: 20),
         ),
+        logName: 'recorder-render',
       );
 
       expect(tracks, hasLength(1));
       expect(tracks.single.startTime, Duration.zero);
       expect(tracks.single.endTime, const Duration(seconds: 30));
       expect(tracks.single.audioStartTime, const Duration(seconds: 12));
+      final log = capture.getRecentLogs(limit: 1).single;
+      expect(log.name, 'recorder-render');
+      expect(log.level, LogLevel.warning);
+      expect(log.message, contains('Prepared selected-sound fallback'));
     });
 
     test('timeline timing wins over the recorder-selected fallback', () {
@@ -98,12 +112,17 @@ void main() {
           ),
         ],
         selectedSound: sound(startOffset: const Duration(seconds: 12)),
+        logName: 'timeline-render',
       );
 
       expect(tracks, hasLength(1));
       expect(tracks.single.startTime, const Duration(milliseconds: 1300));
       expect(tracks.single.endTime, const Duration(seconds: 20));
       expect(tracks.single.audioStartTime, Duration.zero);
+      final log = capture.getRecentLogs(limit: 1).single;
+      expect(log.name, 'timeline-render');
+      expect(log.level, LogLevel.warning);
+      expect(log.message, contains('Prepared timeline'));
     });
   });
 
@@ -200,6 +219,7 @@ void main() {
           duration: 30,
           startOffset: const Duration(seconds: 12),
         ),
+        logName: 'test',
       );
 
       final result = await resolveRenderAudioTracks(
@@ -217,9 +237,6 @@ void main() {
     test(
       'captures resolved timing without exposing the local source path',
       () async {
-        final capture = LogCaptureService();
-        await capture.clearAllLogs();
-
         await resolveRenderAudioTracks(
           [
             _fileTrack(
@@ -237,6 +254,7 @@ void main() {
 
         final log = capture.getRecentLogs(limit: 1).single;
         expect(log.name, 'test-audio-render');
+        expect(log.level, LogLevel.warning);
         expect(log.category, LogCategory.video);
         expect(
           log.message,

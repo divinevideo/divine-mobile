@@ -1717,6 +1717,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     final audioTracks = buildRenderAudioTracks(
       metaTracks: audioEvents,
       selectedSound: soundTrack,
+      logName: 'VideoEditorNotifier',
     );
 
     // Surface the resolution result so a silent export (no audio) is

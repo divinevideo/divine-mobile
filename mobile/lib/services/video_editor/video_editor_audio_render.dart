@@ -59,9 +59,6 @@ AudioTrack? audioTrackFromSoundForRender(AudioEvent sound) {
       endTime: Duration(milliseconds: durationMs),
     ),
   );
-  if (track != null) {
-    _logPreparedTrack(track, origin: 'selected-sound fallback');
-  }
   return track;
 }
 
@@ -112,14 +109,18 @@ AudioTrack? audioTrackFromMetaForRender(AudioEvent track) {
 /// Source paths and URLs are deliberately omitted: local paths can contain
 /// user-identifying directory names, while the timing fields are sufficient
 /// to distinguish source-offset failures from composition-placement failures.
-void _logPreparedTrack(AudioTrack track, {required String origin}) {
-  Log.info(
+void _logPreparedTrack(
+  AudioTrack track, {
+  required String origin,
+  required String logName,
+}) {
+  Log.warning(
     'Prepared $origin audio track ${track.id}: '
     'composition=[${_durationMs(track.startTime)}, '
     '${_durationMs(track.endTime)}], '
     'source=[${_durationMs(track.audioStartTime)}, '
     '${_durationMs(track.audioEndTime)}]',
-    name: _logName,
+    name: logName,
     category: LogCategory.video,
   );
 }
@@ -143,17 +144,25 @@ String _durationMs(Duration? duration) =>
 List<AudioTrack> buildRenderAudioTracks({
   required List<AudioEvent> metaTracks,
   required AudioEvent? selectedSound,
+  required String logName,
 }) {
   final tracks = <AudioTrack>[];
   for (final event in metaTracks) {
     final track = audioTrackFromMetaForRender(event);
     if (track == null) continue;
-    _logPreparedTrack(track, origin: 'timeline');
+    _logPreparedTrack(track, origin: 'timeline', logName: logName);
     tracks.add(track);
   }
   if (metaTracks.isEmpty && selectedSound != null) {
     final track = audioTrackFromSoundForRender(selectedSound);
-    if (track != null) tracks.add(track);
+    if (track != null) {
+      _logPreparedTrack(
+        track,
+        origin: 'selected-sound fallback',
+        logName: logName,
+      );
+      tracks.add(track);
+    }
   }
   return tracks;
 }
@@ -233,11 +242,12 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
         volume: track.volume,
       );
       audioTracks.add(resolvedTrack);
-      Log.info(
+      Log.warning(
         'Resolved audio track ${track.id} for mux: '
-        'composition=[${_durationMs(startTime)}, ${_durationMs(endTime)}], '
-        'source=[${_durationMs(track.audioStartTime)}, '
-        '${_durationMs(track.audioEndTime)}], '
+        'composition=[${_durationMs(resolvedTrack.startTime)}, '
+        '${_durationMs(resolvedTrack.endTime)}], '
+        'source=[${_durationMs(resolvedTrack.audioStartTime)}, '
+        '${_durationMs(resolvedTrack.audioEndTime)}], '
         'videoDuration=${_durationMs(videoDuration)}',
         name: logName,
         category: LogCategory.video,
