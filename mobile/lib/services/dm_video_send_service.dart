@@ -9,6 +9,12 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 
+/// Progress stages reported by [DmVideoSendService.sendVideo].
+///
+/// The pipeline is a single call so the composer can show where a send is
+/// spending its time without owning the orchestration.
+enum DmVideoSendPhase { encrypting, uploading, sending }
+
 /// Composes the encrypted-video DM pipeline:
 /// encrypt the file, upload the ciphertext to Blossom, then send a NIP-17
 /// kind 15 file message carrying the decryption metadata.
@@ -44,6 +50,10 @@ class DmVideoSendService {
   ///
   /// Returns an upload failure result if the encryption upload does not
   /// succeed, without calling [DmRepository.sendFileMessage].
+  ///
+  /// [onPhase], when supplied, is invoked at each real pipeline stage (before
+  /// encryption, before upload, before the NIP-17 send) so a caller can render
+  /// progress. It is never invoked for a stage that has not started.
   @useResult
   Future<NIP17SendResult> sendVideo({
     required String recipientPubkey,
@@ -51,9 +61,12 @@ class DmVideoSendService {
     required String mimeType,
     String? blurhash,
     String? dimensions,
+    void Function(DmVideoSendPhase phase)? onPhase,
   }) async {
+    onPhase?.call(DmVideoSendPhase.encrypting);
     final enc = await _encryption.encryptFile(videoFile);
     try {
+      onPhase?.call(DmVideoSendPhase.uploading);
       final upload = await _blossom.uploadEncryptedFile(
         ciphertextFile: enc.ciphertextFile,
       );
@@ -67,6 +80,7 @@ class DmVideoSendService {
           upload.url ??
           '${BlossomUploadService.defaultBlossomServer}/${upload.videoId}';
 
+      onPhase?.call(DmVideoSendPhase.sending);
       return await _dmRepository.sendFileMessage(
         recipientPubkey: recipientPubkey,
         fileUrl: fileUrl,

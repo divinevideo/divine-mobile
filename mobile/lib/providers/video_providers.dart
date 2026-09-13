@@ -36,6 +36,7 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
+import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/feed_unavailability_gate.dart';
@@ -458,6 +459,18 @@ VideoSharingService? videoSharingService(Ref ref) {
     dmRepository: dmRepository,
   );
 }
+
+/// Encrypted video DM send pipeline: encrypt the file, upload the ciphertext
+/// to Blossom, then publish the NIP-17 kind 15 metadata.
+///
+/// A plain [Provider] rather than `@riverpod`: it is a stateless composition
+/// of two existing providers and needs no generated override.
+final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
+  return DmVideoSendService(
+    dmRepository: ref.watch(dmRepositoryProvider),
+    blossom: ref.watch(blossomUploadServiceProvider),
+  );
+});
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].

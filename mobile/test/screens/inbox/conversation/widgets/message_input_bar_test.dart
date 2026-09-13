@@ -130,6 +130,80 @@ void main() {
       });
     });
 
+    group('attach video', () {
+      testWidgets('tapping the attach affordance invokes onAttachVideo', (
+        tester,
+      ) async {
+        var attachCalls = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MessageInputBar(
+                onSend: (_) {},
+                onAttachVideo: () => attachCalls++,
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+        );
+        await tester.pump();
+
+        expect(attachCalls, equals(1));
+      });
+
+      testWidgets('hides the attach affordance when no callback is provided', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: MessageInputBar(onSend: (_) {})),
+          ),
+        );
+
+        expect(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+          findsNothing,
+        );
+      });
+
+      testWidgets('shows progress and blocks taps while a send is busy', (
+        tester,
+      ) async {
+        var attachCalls = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MessageInputBar(
+                onSend: (_) {},
+                onAttachVideo: () => attachCalls++,
+                isAttachVideoBusy: true,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        await tester.tap(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+        );
+        await tester.pump();
+
+        expect(attachCalls, isZero);
+      });
+    });
+
     group('multiline composition', () {
       testWidgets('grows from 1 to 5 lines and uses the multiline keyboard', (
         tester,

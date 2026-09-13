@@ -271,4 +271,47 @@ void main() {
       );
     },
   );
+
+  test('reports encrypt, upload, then send phases in order', () async {
+    final videoFile = File('${tempDir.path}/clip.mp4')
+      ..writeAsBytesSync(const [9, 9, 9]);
+    final ciphertext = ciphertextFile();
+    final enc = encryptedVideo(ciphertext);
+
+    when(() => encryption.encryptFile(videoFile)).thenAnswer((_) async => enc);
+    when(
+      () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
+    ).thenAnswer(
+      (_) async => const BlossomUploadResult(
+        success: true,
+        videoId: _ciphertextHash,
+        url: _fileUrl,
+      ),
+    );
+    when(
+      () => dmRepository.sendFileMessage(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        fileUrl: any(named: 'fileUrl'),
+        fileMetadata: any(named: 'fileMetadata'),
+      ),
+    ).thenAnswer(
+      (_) async => NIP17SendResult.success(
+        rumorEventId: 'rumor-1',
+        messageEventId: 'wrap-1',
+        recipientPubkey: _recipientPubkey,
+      ),
+    );
+
+    final phases = <DmVideoSendPhase>[];
+    final service = createService();
+    final result = await service.sendVideo(
+      recipientPubkey: _recipientPubkey,
+      videoFile: videoFile,
+      mimeType: 'video/mp4',
+      onPhase: phases.add,
+    );
+
+    expect(result.success, isTrue);
+    expect(phases, DmVideoSendPhase.values);
+  });
 }

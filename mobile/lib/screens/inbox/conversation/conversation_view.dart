@@ -1,6 +1,9 @@
 // ABOUTME: Main view for a single DM conversation.
 // ABOUTME: Displays grouped message bubbles and a bottom input bar.
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart' show DmRepository;
 import 'package:flutter/semantics.dart' show SemanticsService;
@@ -10,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart'
     show FollowRelationship;
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
@@ -17,6 +21,7 @@ import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
+import 'package:openvine/blocs/dm/video_dm_send/video_dm_send_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -690,22 +695,73 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
 /// OK-confirmed publish can legitimately run for tens of seconds on a slow
 /// relay or remote signer — freezing the composer for that window swallowed
 /// every follow-up message the user tried to type.
-class _SendBar extends StatefulWidget {
+class _SendBar extends ConsumerStatefulWidget {
   const _SendBar({required this.participantPubkeys});
 
   final List<String> participantPubkeys;
 
   @override
-  State<_SendBar> createState() => _SendBarState();
+  ConsumerState<_SendBar> createState() => _SendBarState();
 }
 
-class _SendBarState extends State<_SendBar> {
+class _SendBarState extends ConsumerState<_SendBar> {
   final _controller = TextEditingController();
+  VideoDmSendCubit? _videoCubit;
+  StreamSubscription<VideoDmSendState>? _videoSubscription;
+  VideoDmSendStatus _videoStatus = VideoDmSendStatus.idle;
+
+  bool get _isVideoSendBusy =>
+      _videoStatus == VideoDmSendStatus.encrypting ||
+      _videoStatus == VideoDmSendStatus.uploading ||
+      _videoStatus == VideoDmSendStatus.sending;
 
   @override
   void dispose() {
+    _videoSubscription?.cancel();
+    _videoCubit?.close();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Picks a video from the gallery and sends it to the thread's counterparty.
+  ///
+  /// Recipient selection for video DMs is Plan B's mutual-follow work; this
+  /// task sends to the conversation's existing 1:1 counterparty. A group has no
+  /// single recipient to address, so it is left to that follow-up.
+  Future<void> _onAttachVideo() async {
+    final participantPubkeys = widget.participantPubkeys;
+    if (participantPubkeys.length != 1) return;
+    final recipient = participantPubkeys.first;
+    if (recipient.isEmpty) return;
+
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Picking a video to attach to a DM failed',
+        name: 'ConversationView',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    final cubit = _videoCubit ??= VideoDmSendCubit(
+      service: ref.read(dmVideoSendServiceProvider),
+    );
+    _videoSubscription ??= cubit.stream.listen((state) {
+      if (!mounted) return;
+      setState(() => _videoStatus = state.status);
+    });
+
+    await cubit.send(
+      recipientPubkey: recipient,
+      videoFile: File(picked.path),
+      mimeType: _videoMimeTypeFor(picked.path),
+    );
   }
 
   @override
@@ -728,6 +784,8 @@ class _SendBarState extends State<_SendBar> {
       },
       child: MessageInputBar(
         controller: _controller,
+        onAttachVideo: _onAttachVideo,
+        isAttachVideoBusy: _isVideoSendBusy,
         onSend: (text) {
           _lastSubmitted = text;
           context.read<ConversationBloc>().add(
@@ -742,6 +800,22 @@ class _SendBarState extends State<_SendBar> {
   }
 
   String? _lastSubmitted;
+}
+
+/// Maps a picked file's extension to the plaintext MIME type recorded in the
+/// kind 15 metadata. Defaults to `video/mp4`, the format the gallery picker
+/// returns on both platforms.
+String _videoMimeTypeFor(String path) {
+  final extension = path.split('.').last.toLowerCase();
+  return switch (extension) {
+    'mov' => 'video/quicktime',
+    'm4v' => 'video/x-m4v',
+    'webm' => 'video/webm',
+    'avi' => 'video/x-msvideo',
+    'mkv' => 'video/x-matroska',
+    '3gp' => 'video/3gpp',
+    _ => 'video/mp4',
+  };
 }
 
 /// Takes the composer's place in a thread keyed on a retired moderation
