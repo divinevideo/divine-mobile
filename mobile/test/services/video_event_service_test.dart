@@ -37,16 +37,15 @@ void main() {
     when(() => nostrClient.isInitialized).thenReturn(true);
     when(() => nostrClient.publicKey).thenReturn('');
     when(() => nostrClient.connectedRelayCount).thenReturn(1);
-    when(
-      () => nostrClient.subscribe(any(), onEose: any(named: 'onEose')),
-    ).thenAnswer((invocation) {
-      requestedFilters.add(
-        invocation.positionalArguments.single as List<Filter>,
-      );
-      final controller = StreamController<Event>.broadcast();
-      subscriptions.add(controller);
-      return controller.stream;
-    });
+    when(() => nostrClient.subscribe(any(), onEose: any(named: 'onEose')))
+        .thenAnswer((invocation) {
+          requestedFilters.add(
+            invocation.positionalArguments.single as List<Filter>,
+          );
+          final controller = StreamController<Event>.broadcast();
+          subscriptions.add(controller);
+          return controller.stream;
+        });
 
     service = VideoEventService(
       nostrClient,
@@ -56,6 +55,11 @@ void main() {
   });
 
   tearDown(() async {
+    // Cancel subscriptions and clear params BEFORE closing the controllers,
+    // so onDone never fires on a still-registered listener and no 5s
+    // reconnection Timer leaks into later suites in the merged VGV isolate.
+    // Mirrors video_event_service_deduplication_test.dart.
+    await service.unsubscribeFromVideoFeed();
     service.dispose();
     for (final subscription in subscriptions) {
       await subscription.close();
@@ -136,11 +140,9 @@ void main() {
         }
 
         for (final type in feedTypes) {
-          expect(
-            service.getVideos(type).map((video) => video.id),
-            [type.name],
-            reason: '${type.name} consumers must only observe their own feed',
-          );
+          expect(service.getVideos(type).map((video) => video.id), [
+            type.name,
+          ], reason: '${type.name} consumers must only observe their own feed');
         }
       },
     );
