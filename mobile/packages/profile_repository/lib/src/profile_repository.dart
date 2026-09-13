@@ -219,8 +219,9 @@ class ProfileRepository implements ProfileReader {
   final _rawKind0ConfirmedMissing = <String>{};
 
   /// In-memory set of pubkeys known to have cached profiles.
-  /// Enables synchronous [hasProfile] checks for subscription
-  /// manager filtering.
+  /// Backs the synchronous [hasProfile] check. No production caller reads it
+  /// today; the subscription-manager filtering it was built for was removed
+  /// with the dead wiring in #9130.
   final _knownCached = <String>{};
 
   /// Pubkeys with a NIP-62 request to vanish, mirroring the durable
@@ -313,15 +314,19 @@ class ProfileRepository implements ProfileReader {
 
   /// Synchronous check for whether a profile is cached.
   ///
-  /// Returns `true` if the pubkey was previously fetched and cached in
-  /// this session. Used by the subscription manager to skip redundant
-  /// Kind 0 relay requests.
+  /// Returns `true` if the pubkey was cached during this session. It reflects
+  /// only what this instance has written, because nothing calls
+  /// [loadKnownCachedPubkeys] to pre-populate it.
   ///
-  /// Call [loadKnownCachedPubkeys] once at startup to pre-populate.
+  /// Has no production caller. It fed the subscription manager's Kind 0
+  /// skip-list until that wiring was removed in #9130.
   bool hasProfile(String pubkey) => _knownCached.contains(pubkey);
 
   /// Pre-loads the in-memory [_knownCached] set from all profiles
-  /// currently in the Drift cache. Call once after construction.
+  /// currently in the Drift cache.
+  ///
+  /// No production caller. Note this reads the DAO directly, so it would
+  /// re-admit a vanished pubkey that [cacheProfile] deliberately keeps out.
   Future<void> loadKnownCachedPubkeys() async {
     final all = await _userProfilesDao.getAllProfiles();
     _knownCached.addAll(all.map((p) => p.pubkey));
