@@ -282,12 +282,12 @@ void main() {
           build: () => createBloc(feedTuningRepository: tuningRepository),
           act: (bloc) async {
             bloc.add(const FullscreenFeedStarted());
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             videosController.add([
               createTestVideo('video1'),
               createTestVideo('video2'),
             ]);
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             bloc.add(
               const FullscreenFeedTuningSwipeCommitted(
                 videoId: 'video1',
@@ -323,9 +323,9 @@ void main() {
           build: () => createBloc(feedTuningRepository: tuningRepository),
           act: (bloc) async {
             bloc.add(const FullscreenFeedStarted());
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             videosController.add([createTestVideo('video1')]);
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             bloc
               ..add(
                 const FullscreenFeedTuningSwipeCommitted(
@@ -357,9 +357,9 @@ void main() {
           build: () => createBloc(feedTuningRepository: tuningRepository),
           act: (bloc) async {
             bloc.add(const FullscreenFeedStarted());
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             videosController.add([createTestVideo('video1')]);
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
             bloc.add(
               const FullscreenFeedTuningSwipeCommitted(
                 videoId: 'missing',
@@ -386,7 +386,7 @@ void main() {
             bloc.add(
               const FullscreenFeedTuningUndoRequested('tuning-event-id'),
             );
-            await Future<void>.delayed(const Duration(milliseconds: 50));
+            await pumpEventQueue();
           },
           wait: const Duration(milliseconds: 100),
           verify: (_) {
@@ -484,9 +484,9 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           hasMoreController.add(true);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           hasMoreController.add(false);
         },
         wait: const Duration(milliseconds: 200),
@@ -509,7 +509,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
         },
         wait: const Duration(milliseconds: 100),
@@ -526,9 +526,9 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('video1'),
             createTestVideo('video2'),
@@ -558,9 +558,9 @@ void main() {
           final prepended = createTestVideo('video3');
 
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([first, second]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([prepended, first, second]);
         },
         wait: const Duration(milliseconds: 200),
@@ -579,9 +579,9 @@ void main() {
         build: () => createBloc(initialIndex: 4),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('video0'),
             createTestVideo('video1'),
@@ -613,9 +613,9 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
         },
         wait: const Duration(milliseconds: 200),
@@ -636,11 +636,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
         },
         wait: const Duration(milliseconds: 250),
@@ -657,11 +657,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video2')]);
         },
         wait: const Duration(milliseconds: 250),
@@ -681,7 +681,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
         },
         wait: const Duration(milliseconds: 150),
@@ -700,9 +700,9 @@ void main() {
             createBloc(unavailableFilter: (videoId) => videoId == 'video2'),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video2')]);
         },
         wait: const Duration(milliseconds: 250),
@@ -723,7 +723,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
         },
         wait: const Duration(milliseconds: 200),
@@ -742,7 +742,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController
             ..add(const [])
             ..close();
@@ -761,7 +761,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController
             ..add([createTestVideo('video1')])
             ..close();
@@ -787,9 +787,9 @@ void main() {
           );
 
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add(const []);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('newer-video'),
             createTestVideo('another-video'),
@@ -819,7 +819,7 @@ void main() {
           final tapped = createTestVideo('tapped-video');
 
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('grid-video-after-filtered-item'),
             tapped,
@@ -853,9 +853,9 @@ void main() {
           );
 
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([fallback]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('newer-video'), target]);
         },
         wait: const Duration(milliseconds: 200),
@@ -897,15 +897,15 @@ void main() {
           );
 
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Two identical placeholder emits before the target arrives. The
           // second one previously latched initialTargetResolved via the
           // preserve branch, which then blocked the real target from ever
           // being resolved (regression behind #5306's profile feed cache).
           videosController.add([placeholder]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([placeholder]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('newer-video'), target]);
         },
         wait: const Duration(milliseconds: 250),
@@ -937,9 +937,9 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
         },
         wait: const Duration(milliseconds: 200),
@@ -963,7 +963,7 @@ void main() {
         build: () => createBloc(hideFilter: (video) => video.pubkey == authorB),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a', pubkey: authorA),
             createTestVideo('b', pubkey: authorB),
@@ -990,7 +990,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a', pubkey: authorA),
             createTestVideo('reposted', pubkey: authorC).copyWith(
@@ -1018,13 +1018,13 @@ void main() {
         build: () => createBloc(hideFilter: (video) => video.pubkey == authorB),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a', pubkey: authorA),
             createTestVideo('b', pubkey: authorB),
             createTestVideo('c', pubkey: authorC),
           ]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Source re-emits the same blocked author (plus a new unblocked one)
           // — 'b' must stay filtered out on the re-push.
           videosController.add([
@@ -1233,7 +1233,7 @@ void main() {
         );
 
         bloc.add(const FullscreenFeedLoadMoreRequested());
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         expect(called, isTrue);
         await bloc.close();
@@ -1358,7 +1358,7 @@ void main() {
       test('cancels videos subscription', () async {
         final bloc = createBloc();
         bloc.add(const FullscreenFeedStarted());
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         await bloc.close();
 
@@ -1405,7 +1405,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
         },
         wait: const Duration(milliseconds: 100),
@@ -1425,7 +1425,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
         },
         wait: const Duration(milliseconds: 100),
@@ -1453,7 +1453,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
         },
         wait: const Duration(milliseconds: 100),
@@ -1563,9 +1563,9 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoCacheStarted(index: 0));
         },
         wait: const Duration(milliseconds: 200),
@@ -1699,7 +1699,7 @@ void main() {
         build: () => createBloc(unavailableFilter: (id) => id == 'broken'),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('broken'),
@@ -1724,12 +1724,12 @@ void main() {
         build: () => createBloc(unavailableFilter: (id) => id == 'broken'),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('broken'),
           ]);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('broken'),
@@ -1901,9 +1901,9 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const FullscreenFeedVideoUnavailable('video1'));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoUnavailable('video1'));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoUnavailable('video1'));
         },
         wait: const Duration(milliseconds: 200),
@@ -2046,13 +2046,13 @@ void main() {
         );
         addTearDown(bloc.close);
         bloc.add(const FullscreenFeedStarted());
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
         videosController.add([
           createTestVideo('video1'),
           createTestVideo('video2'),
           createTestVideo('video3'),
         ]);
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await pumpEventQueue();
 
         bloc.add(const FullscreenFeedVideoUnavailable('video2'));
         await started.future;
@@ -2061,9 +2061,9 @@ void main() {
           createTestVideo('video1'),
           createTestVideo('video2'),
         ]);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
         release.complete();
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await pumpEventQueue();
 
         expect(bloc.state.videos.map((v) => v.id), ['video3', 'video1']);
         expect(bloc.state.removedVideoIds, equals({'video2'}));
@@ -2079,16 +2079,16 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('video1'),
             createTestVideo('video2'),
           ]);
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await pumpEventQueue();
           expect(bloc.state.videos.map((v) => v.id), ['video1', 'video2']);
 
           bloc.add(const FullscreenFeedVideoUnavailable('video1'));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await pumpEventQueue();
           expect(bloc.state.videos.map((v) => v.id), ['video2']);
           expect(bloc.state.removedVideoIds, equals({'video1'}));
 
@@ -2096,7 +2096,7 @@ void main() {
             createTestVideo('video1'),
             createTestVideo('video2'),
           ]);
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await pumpEventQueue();
           expect(bloc.state.videos.map((v) => v.id), ['video2']);
         },
       );
@@ -2164,9 +2164,9 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const FullscreenFeedVideoUnavailable('video1'));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedSkipAcknowledged());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoUnavailable('video2'));
         },
         wait: const Duration(milliseconds: 300),
@@ -2241,15 +2241,15 @@ void main() {
         build: () => createBloc(initialIndex: 1),
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('b'),
             createTestVideo('c'),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('b'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['a', 'c']));
@@ -2267,11 +2267,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([createTestVideo('only')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('only'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos, isEmpty);
@@ -2285,13 +2285,13 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([createTestVideo('a'), createTestVideo('b')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('a'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('a'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['b']));
@@ -2304,11 +2304,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([createTestVideo('a')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('not-present'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['a']));
@@ -2321,20 +2321,20 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('b'),
             createTestVideo('c'),
             createTestVideo('d'),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Move cursor to 'c' (index 2).
           bloc.add(const FullscreenFeedIndexChanged(2));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Remove 'a' (index 0, before the cursor).
           bloc.add(const FullscreenFeedVideoRemoved('a'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['b', 'c', 'd']));
@@ -2351,18 +2351,18 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           videosController.add([
             createTestVideo('a'),
             createTestVideo('b'),
             createTestVideo('c'),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Cursor on 'a'.
           bloc.add(const FullscreenFeedIndexChanged(0));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const FullscreenFeedVideoRemoved('c'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['a', 'b']));
@@ -2371,30 +2371,30 @@ void main() {
         },
       );
 
+      late StreamController<String> removedController;
+
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'subscribes to removedIdsStream and dispatches removals',
         build: () {
-          final removedController = StreamController<String>.broadcast();
+          removedController = StreamController<String>.broadcast();
           addTearDown(removedController.close);
-          final bloc = FullscreenFeedBloc(
+          return FullscreenFeedBloc(
             videosStream: videosController.stream,
             initialIndex: 0,
             removedIdsStream: removedController.stream,
             mediaCache: mockMediaCache,
             blossomAuthService: mockBlossomAuth,
           );
-          // Schedule the removal AFTER the bloc subscribes inside _onStarted.
-          Future<void>(() async {
-            await Future<void>.delayed(const Duration(milliseconds: 1));
-            videosController.add([createTestVideo('a'), createTestVideo('b')]);
-            await Future<void>.delayed(const Duration(milliseconds: 1));
-            removedController.add('a');
-          });
-          return bloc;
         },
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          videosController.add([createTestVideo('a'), createTestVideo('b')]);
+          await bloc.stream.firstWhere((state) => state.videos.length == 2);
+          removedController.add('a');
+          await bloc.stream.firstWhere(
+            (state) => state.removedVideoIds.contains('a'),
+          );
         },
         verify: (bloc) {
           expect(bloc.state.videos.map((v) => v.id), equals(['b']));
@@ -2414,16 +2414,16 @@ void main() {
           blossomAuthService: mockBlossomAuth,
         );
         bloc.add(const FullscreenFeedStarted());
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        await pumpEventQueue();
         videosController.add([createTestVideo('a'), createTestVideo('b')]);
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        await pumpEventQueue();
 
         await bloc.close();
 
         // Adding to the stream after close must NOT fire any further state
         // transitions — the bloc has been disposed.
         removedController.add('a');
-        await Future<void>.delayed(const Duration(milliseconds: 5));
+        await pumpEventQueue();
         expect(bloc.isClosed, isTrue);
       });
     });
