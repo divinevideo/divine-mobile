@@ -76,5 +76,10 @@ final instrumentedHttpClientFactoryProvider = Provider<http.Client Function()>((
   ref,
 ) {
   final recorder = ref.watch(httpMetricRecorderProvider);
-  return () => PerformanceHttpClient(inner: http.Client(), recorder: recorder);
+  final monitor = ref.watch(performanceMonitoringServiceProvider);
+  return () => PerformanceHttpClient(
+    inner: http.Client(),
+    recorder: recorder,
+    performanceMonitor: monitor,
+  );
 });

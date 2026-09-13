@@ -21,6 +21,7 @@ final creatorDeleteEnforcementRepositoryProvider =
         enabled: environment.creatorDeleteEnforcementEnabled,
         httpClient: client,
         nip98AuthService: ref.watch(nip98AuthServiceProvider),
+        performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
         shouldBoundSigning: () =>
             ref
                 .read(authServiceProvider)

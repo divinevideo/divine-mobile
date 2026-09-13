@@ -169,6 +169,10 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
             .read(performanceMonitoringServiceProvider)
             .initialize(distributedBuild: distributedBuild),
       );
+      final monitor = container.read(performanceMonitoringServiceProvider);
+      if (monitor.isEnabled) {
+        startupPerformance.attachPerformanceMonitor(monitor);
+      }
     },
     optional: true,
   );
