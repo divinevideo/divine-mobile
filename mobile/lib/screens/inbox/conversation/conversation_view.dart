@@ -784,7 +784,12 @@ class _SendBarState extends ConsumerState<_SendBar> {
       },
       child: MessageInputBar(
         controller: _controller,
-        onAttachVideo: _onAttachVideo,
+        // Video DMs are 1:1 in this task; a group has no single recipient to
+        // address, so the affordance is hidden rather than a dead tap. Group
+        // support is Plan B's mutual-follow work.
+        onAttachVideo: widget.participantPubkeys.length == 1
+            ? _onAttachVideo
+            : null,
         isAttachVideoBusy: _isVideoSendBusy,
         onSend: (text) {
           _lastSubmitted = text;
