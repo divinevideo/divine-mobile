@@ -390,14 +390,11 @@ void main() {
           ),
         );
 
-        // This test would need enhancement of the hashtag regex to ignore URL fragments
-        // Current implementation would incorrectly identify #anchor as a hashtag
         final text = tester.widget<Text>(find.byType(Text));
         final textSpan = text.textSpan! as TextSpan;
         final spans = textSpan.children!.cast<TextSpan>();
 
-        // Should have spans but #anchor should not be clickable in ideal implementation
-        expect(spans.length, greaterThan(1));
+        expect(spans.any((span) => span.text == '#anchor'), isFalse);
       });
 
       testWidgets('handles single hashtag character', (tester) async {
