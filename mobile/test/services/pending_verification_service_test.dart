@@ -73,11 +73,11 @@ void main() {
         (invocation) async =>
             storedValues[invocation.namedArguments[#key]! as String],
       );
-      when(() => storage.delete(key: any(named: 'key'))).thenAnswer(
-        (invocation) async {
-          storedValues.remove(invocation.namedArguments[#key]! as String);
-        },
-      );
+      when(() => storage.delete(key: any(named: 'key'))).thenAnswer((
+        invocation,
+      ) async {
+        storedValues.remove(invocation.namedArguments[#key]! as String);
+      });
     });
 
     test('round-trips the full owner public-key hex', () async {
@@ -116,6 +116,45 @@ void main() {
         verifier: 'verifier456',
         email: 'test@example.com',
       );
+
+      expect(storedValues, isNot(contains('pending_verification_invite_code')));
+    });
+
+    test(
+      'load removes retired invite-code data during startup restore',
+      () async {
+        storedValues['pending_verification_invite_code'] = 'ABCD-EFGH';
+
+        await service.load();
+
+        expect(
+          storedValues,
+          isNot(contains('pending_verification_invite_code')),
+        );
+      },
+    );
+
+    test('load continues when retired invite-code deletion fails', () async {
+      storedValues
+        ..['pending_verification_device_code'] = 'device123'
+        ..['pending_verification_verifier'] = 'verifier456'
+        ..['pending_verification_email'] = 'test@example.com'
+        ..['pending_verification_created_at'] = DateTime.now()
+            .toIso8601String();
+      when(
+        () => storage.delete(key: 'pending_verification_invite_code'),
+      ).thenThrow(Exception('delete failed'));
+
+      final pending = await service.load();
+
+      expect(pending, isNotNull);
+      expect(pending!.deviceCode, 'device123');
+    });
+
+    test('clear removes retired invite-code data', () async {
+      storedValues['pending_verification_invite_code'] = 'ABCD-EFGH';
+
+      await service.clear();
 
       expect(storedValues, isNot(contains('pending_verification_invite_code')));
     });

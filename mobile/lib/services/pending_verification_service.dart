@@ -49,6 +49,8 @@ class PendingVerificationService {
   static const _keyVerifier = 'pending_verification_verifier';
   static const _keyEmail = 'pending_verification_email';
   static const _keyCreatedAt = 'pending_verification_created_at';
+  // TODO(#9116): Remove after the supported upgrade window no longer includes
+  // releases that persisted invite codes with pending verification data.
   static const _retiredInviteCodeKey = 'pending_verification_invite_code';
   static const _keyOwnerPublicKeyHex =
       'pending_verification_owner_public_key_hex';
@@ -100,6 +102,16 @@ class PendingVerificationService {
         _storage.read(key: _keyCreatedAt),
         _storage.read(key: _keyOwnerPublicKeyHex),
       ]);
+
+      try {
+        await _storage.delete(key: _retiredInviteCodeKey);
+      } catch (e) {
+        Log.warning(
+          'Failed to remove retired pending-verification invite data: $e',
+          name: 'PendingVerificationService',
+          category: LogCategory.auth,
+        );
+      }
 
       final deviceCode = results[0];
       final verifier = results[1];
