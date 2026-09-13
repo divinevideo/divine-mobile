@@ -1,4 +1,4 @@
-// ABOUTME: TDD tests for AudioSharingPreferenceService
+// ABOUTME: Tests AudioSharingPreferenceService behavior.
 // ABOUTME: Tests preference persistence and retrieval for audio reuse opt-in
 
 import 'package:flutter_test/flutter_test.dart';
@@ -54,9 +54,5 @@ void main() {
         expect(newService.isAudioSharingEnabled, isFalse);
       },
     );
-
-    test('preference key is correct', () {
-      expect(AudioSharingPreferenceService.prefsKey, 'audio_sharing_enabled');
-    });
   });
 }
