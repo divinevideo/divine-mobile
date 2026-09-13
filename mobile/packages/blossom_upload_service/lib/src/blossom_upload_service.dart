@@ -1770,6 +1770,7 @@ class BlossomUploadService {
     required String fileHash,
     required int fileSize,
     required String contentType,
+    String contentDescription = 'Upload video to Blossom server',
     String? proofManifestJson,
     void Function(double)? onProgress,
   }) async {
@@ -1791,7 +1792,7 @@ class BlossomUploadService {
         method: 'PUT',
         fileHash: fileHash,
         fileSize: fileSize,
-        contentDescription: 'Upload video to Blossom server',
+        contentDescription: contentDescription,
       );
       if (authHeader == null) {
         return const BlossomUploadResult(
@@ -3294,6 +3295,75 @@ class BlossomUploadService {
       return BlossomUploadResult(
         success: false,
         errorMessage: 'Subtitle VTT upload failed: $e',
+        failureReason: _classifyUploadException(e),
+      );
+    }
+  }
+
+  /// Uploads pre-encrypted ciphertext to the Blossom server as an opaque
+  /// `application/octet-stream` payload.
+  ///
+  /// Unlike [uploadVideo], the bytes are never transcoded or moderated: the
+  /// server stores exactly the ciphertext it receives. The BUD-01 auth event
+  /// still carries `t=upload` and `x=<sha256 of the ciphertext>`, and the
+  /// returned [BlossomUploadResult.videoId] is that same ciphertext hash with
+  /// [BlossomUploadResult.url] `'<serverUrl>/<hash>'`.
+  Future<BlossomUploadResult> uploadEncryptedFile({
+    required File ciphertextFile,
+    void Function(double)? onProgress,
+  }) async {
+    try {
+      if (!authProvider.isAuthenticated) {
+        return const BlossomUploadResult(
+          success: false,
+          errorMessage: 'Not authenticated',
+          failureReason: BlossomUploadFailureReason.auth,
+        );
+      }
+
+      onProgress?.call(0.1);
+
+      final hashAndSize = await HashUtil.sha256File(ciphertextFile);
+      final fileHash = hashAndSize.hash;
+      final fileSize = hashAndSize.size;
+
+      final serverUrls = await _getServerUrlsForUpload();
+      BlossomUploadResult? lastError;
+
+      for (final serverUrl in serverUrls) {
+        final result = await _uploadToServer(
+          serverUrl: serverUrl,
+          source: _FileUploadSource(ciphertextFile),
+          fileHash: fileHash,
+          fileSize: fileSize,
+          contentType: 'application/octet-stream',
+          contentDescription: 'Upload encrypted file to Blossom server',
+          onProgress: onProgress,
+        );
+
+        if (result.success) {
+          final canonicalUrl = '$_defaultServerUrl/$fileHash';
+          return BlossomUploadResult(
+            success: true,
+            url: canonicalUrl,
+            fallbackUrl: canonicalUrl,
+            videoId: fileHash,
+          );
+        }
+
+        lastError = result;
+      }
+
+      return lastError ??
+          const BlossomUploadResult(
+            success: false,
+            errorMessage: 'All servers failed',
+            failureReason: BlossomUploadFailureReason.unknown,
+          );
+    } on Object catch (e) {
+      return BlossomUploadResult(
+        success: false,
+        errorMessage: 'Encrypted file upload failed: $e',
         failureReason: _classifyUploadException(e),
       );
     }
