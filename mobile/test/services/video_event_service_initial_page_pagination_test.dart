@@ -9,12 +9,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 const _author =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -44,11 +41,9 @@ void main() {
   group('VideoEventService initial-page pagination', () {
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn('');
@@ -66,7 +61,6 @@ void main() {
 
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

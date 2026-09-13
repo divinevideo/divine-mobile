@@ -9,13 +9,10 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 VideoEvent _videoEvent({required String id}) {
   final event =
@@ -44,13 +41,11 @@ void main() {
   group('VideoEventService broken-video filtering', () {
     late VideoEventService service;
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
     late BrokenVideoTracker tracker;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.publicKey).thenReturn(
@@ -62,7 +57,6 @@ void main() {
 
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
 

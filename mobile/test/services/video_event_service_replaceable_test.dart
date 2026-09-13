@@ -8,29 +8,23 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
-
 void main() {
   group('VideoEventService - Replaceable Events (NIP-33)', () {
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late VideoEventService service;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn('');
 
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });
@@ -283,19 +277,16 @@ void main() {
 
   group('VideoEventService - updateVideoEvent()', () {
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late VideoEventService service;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn('');
 
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

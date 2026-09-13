@@ -11,13 +11,10 @@ import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -67,7 +64,6 @@ void main() {
   const otherPubkey =
       '2222222222222222222222222222222222222222222222222222222222222222';
   late _MockNostrClient mockNostrClient;
-  late _MockSubscriptionManager mockSubscriptionManager;
   late _MockAuthService mockAuthService;
   late VideoEventService videoEventService;
   late ModerationLabelService moderationLabelService;
@@ -106,7 +102,6 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     mockNostrClient = _MockNostrClient();
-    mockSubscriptionManager = _MockSubscriptionManager();
     mockAuthService = _MockAuthService();
     when(() => mockNostrClient.publicKey).thenReturn(
       '1111111111111111111111111111111111111111111111111111111111111111',
@@ -139,7 +134,6 @@ void main() {
 
     videoEventService = VideoEventService(
       mockNostrClient,
-      subscriptionManager: mockSubscriptionManager,
       crashReporter: const SilentCrashReporter(),
     );
     videoEventService.setContentFilterService(contentFilterService);

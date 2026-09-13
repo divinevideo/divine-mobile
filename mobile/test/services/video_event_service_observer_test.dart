@@ -7,12 +7,9 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _FakeFilter extends Fake implements Filter {}
 
@@ -33,16 +30,13 @@ void main() {
   });
 
   late _MockNostrClient mockNostrClient;
-  late _MockSubscriptionManager mockSubscriptionManager;
   late VideoEventService service;
 
   setUp(() {
     mockNostrClient = _MockNostrClient();
-    mockSubscriptionManager = _MockSubscriptionManager();
     when(() => mockNostrClient.publicKey).thenReturn('');
     service = VideoEventService(
       mockNostrClient,
-      subscriptionManager: mockSubscriptionManager,
       crashReporter: const SilentCrashReporter(),
     );
   });

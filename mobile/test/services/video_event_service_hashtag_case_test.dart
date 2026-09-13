@@ -6,12 +6,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 Event _videoEvent({required String id, required String hashtag}) {
   final event = Event(
@@ -33,18 +30,15 @@ Event _videoEvent({required String id, required String hashtag}) {
 void main() {
   group(VideoEventService, () {
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
     late VideoEventService service;
 
     setUp(() {
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.isDisposed).thenReturn(false);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

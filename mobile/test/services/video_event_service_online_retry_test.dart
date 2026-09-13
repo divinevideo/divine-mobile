@@ -12,12 +12,9 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockPerformanceTraceMonitor extends Mock
     implements PerformanceTraceMonitor {}
@@ -53,7 +50,6 @@ void main() {
         '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd';
 
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockPerformanceTraceMonitor mockPerformanceMonitor;
     late _FakeConnectionStatusService connectionService;
     late VideoEventService service;
@@ -65,7 +61,6 @@ void main() {
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockPerformanceMonitor = _MockPerformanceTraceMonitor();
       connectionService = _FakeConnectionStatusService();
       subscribeCalls = [];
@@ -103,7 +98,6 @@ void main() {
 
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
         performanceMonitor: mockPerformanceMonitor,
         connectionService: connectionService,

@@ -3,53 +3,18 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements NostrClient {}
 
 class MockEvent extends Mock implements Event {}
-
-class TestSubscriptionManager extends Mock implements SubscriptionManager {
-  TestSubscriptionManager(this.eventStreamController);
-  final StreamController<Event> eventStreamController;
-  final List<Map<String, dynamic>> subscriptionCalls = [];
-
-  @override
-  Future<String> createSubscription({
-    required String name,
-    required List<Filter> filters,
-    required Function(Event) onEvent,
-    Function(dynamic)? onError,
-    VoidCallback? onComplete,
-    Duration? timeout,
-    int priority = 5,
-  }) async {
-    // Track the subscription call
-    subscriptionCalls.add({
-      'name': name,
-      'filters': filters,
-      'priority': priority,
-    });
-
-    // Set up a stream listener that calls onEvent for each event
-    eventStreamController.stream.listen(onEvent);
-    return 'mock_sub_$name';
-  }
-
-  @override
-  Future<void> cancelSubscription(String subscriptionId) async {
-    // No-op for tests
-  }
-}
 
 // Fake classes for setUpAll
 class FakeFilter extends Fake implements Filter {}
@@ -64,7 +29,6 @@ void main() {
     late VideoEventService videoEventService;
     late MockNostrService mockNostrService;
     late StreamController<Event> eventStreamController;
-    late TestSubscriptionManager testSubscriptionManager;
 
     setUp(() {
       mockNostrService = MockNostrService();
@@ -76,11 +40,8 @@ void main() {
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((_) => eventStreamController.stream);
 
-      testSubscriptionManager = TestSubscriptionManager(eventStreamController);
-
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: testSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

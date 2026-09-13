@@ -330,7 +330,6 @@ discarded_futures|test/services/auth/oauth_session_coordinator_test.dart	6
 discarded_futures|test/services/auth_service_bootstrap_relay_list_test.dart	2
 discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
 discarded_futures|test/services/crossposting_api_client_test.dart	1
-discarded_futures|test/services/hashtag_filtering_integration_test.dart	1
 discarded_futures|test/services/media_viewer_auth_service_test.dart	3
 discarded_futures|test/services/network/rate_limiter_test.dart	1
 discarded_futures|test/services/page_load_observer_test.dart	1
