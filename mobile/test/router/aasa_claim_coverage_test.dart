@@ -63,7 +63,9 @@ const _allowlistedClaims = <String, String>{
 const _customSchemeExclusions = <String, String>{
   '/app/callback':
       'Keycast OAuth redirect consumed by the OAuth client, not routing.',
-  '/invite/*': 'The served web claim remains during coordinated retirement; mobile no longer routes it.',
+  '/invite/*':
+      'The served web claim remains during coordinated retirement; mobile no '
+      'longer routes it.',
 };
 
 void main() {

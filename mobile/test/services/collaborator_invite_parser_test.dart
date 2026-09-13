@@ -106,7 +106,8 @@ void main() {
 
     // #3661 — NIP-17 rumors arrive with the recipient p tag at index 0
     // (injected by NIP17MessageService.sendPrivateMessage). The creator
-    // p tag the collaborator invitation sender appends comes after. Match by membership.
+    // p tag the collaborator invitation sender appends comes after. Match by
+    // membership.
     test('parses invite when recipient p tag precedes creator p tag', () {
       const recipientPubkey =
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';

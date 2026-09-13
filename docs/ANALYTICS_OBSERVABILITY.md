@@ -152,6 +152,7 @@ does not make them queryable as dimensions retroactively.
 
 1. Create an event-scoped custom dimension named `mode` for event parameter
    `mode`.
+
 The GA4 reporting identity setting does not gate the BigQuery `user_id` field;
 use BigQuery as the campaign source of truth.
 
