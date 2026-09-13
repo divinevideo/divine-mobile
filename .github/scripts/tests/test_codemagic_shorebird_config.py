@@ -196,6 +196,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("within 30 seconds", runner)
         self.assertIn("dumpsys SurfaceFlinger", runner)
         self.assertIn("dumpsys media.codec", runner)
+        self.assertIn("test_reports/feed_frame.jsonl", workflow["artifacts"])
         self.assertIn(
             "test_reports/feed_frame_emulator.txt", workflow["artifacts"]
         )
