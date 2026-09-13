@@ -1,17 +1,12 @@
 // ABOUTME: Tests VideoPublishService.classifyPublishErrorMessage + the drift
-// ABOUTME: guard that every UploadManager error category maps to a stable kind.
+// ABOUTME: guard that every upload error category maps to a stable kind.
 
-import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
-import 'package:openvine/services/background_activity_manager.dart';
-import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
-
-class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+import 'package:upload_repository/upload_repository.dart'
+    show UploadConnectivity, UploadProgressReporter;
 
 void main() {
   group('classifyPublishErrorObject', () {
@@ -138,17 +133,8 @@ void main() {
     });
   });
 
-  group('UploadManager error-message drift guard', () {
-    late UploadManager uploadManager;
-
-    setUp(() {
-      uploadManager = UploadManager(
-        backgroundActivityManager: BackgroundActivityManager(),
-        blossomService: _MockBlossomUploadService(),
-      );
-    });
-
-    // If UploadManager.getUserFriendlyErrorMessage copy ever drifts, these
+  group('upload error-message drift guard', () {
+    // If UploadProgressReporter.userFriendlyErrorMessage copy ever drifts, these
     // assertions fail loudly — closing the window where an upload failure
     // would silently fall back to verbatim English instead of re-localizing.
     const expectations = <(String, PublishErrorKind)>[
@@ -171,9 +157,9 @@ void main() {
 
     for (final (category, expected) in expectations) {
       test('$category renders to a sentence that classifies as $expected', () {
-        final message = uploadManager.getUserFriendlyErrorMessage(
+        final message = UploadProgressReporter.userFriendlyErrorMessage(
           category,
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
         );
         expect(
           VideoPublishService.classifyPublishErrorMessage(message),
@@ -184,9 +170,9 @@ void main() {
     }
 
     test('the default (unknown category) message classifies as generic', () {
-      final message = uploadManager.getUserFriendlyErrorMessage(
+      final message = UploadProgressReporter.userFriendlyErrorMessage(
         'SOME_FUTURE_CATEGORY',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
       expect(
         VideoPublishService.classifyPublishErrorMessage(message),
@@ -196,11 +182,11 @@ void main() {
 
     test('NETWORK_ERROR maps regardless of the interpolated network type', () {
       for (final connectivity in [
-        ConnectivityResult.wifi,
-        ConnectivityResult.mobile,
-        ConnectivityResult.ethernet,
+        UploadConnectivity.wifi,
+        UploadConnectivity.mobile,
+        UploadConnectivity.ethernet,
       ]) {
-        final message = uploadManager.getUserFriendlyErrorMessage(
+        final message = UploadProgressReporter.userFriendlyErrorMessage(
           'NETWORK_ERROR',
           connectivity,
         );

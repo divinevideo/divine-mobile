@@ -1091,7 +1091,7 @@ class VideoPublishService {
   /// through as English `rawFallback`.
   ///
   /// The upload-manager sentence substrings must stay in sync with
-  /// [UploadManager.getUserFriendlyErrorMessage]; the drift guard in
+  /// [UploadProgressReporter.userFriendlyErrorMessage]; the drift guard in
   /// `video_publish_service_test.dart` fails loudly if that copy changes.
   @visibleForTesting
   static PublishErrorKind? classifyPublishErrorMessage(String error) {
