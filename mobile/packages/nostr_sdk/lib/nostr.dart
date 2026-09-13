@@ -665,11 +665,13 @@ class Nostr {
               '${now.difference(deadline).inMilliseconds}ms',
         ),
       );
+      // Growable, like every other exit: the normal path hands back
+      // [EventMemBox.all], which callers are free to sort or append to.
       return (
-        result: const QueryResult(events: [], endedBy: QueryEnd.deadline),
+        result: QueryResult(events: <Event>[], endedBy: QueryEnd.deadline),
         endedAtDeadline: true,
-        relays: const <QueryRelaySummary>[],
-        cappedWithoutEvents: const <String>[],
+        relays: <QueryRelaySummary>[],
+        cappedWithoutEvents: <String>[],
         sentTo: null,
       );
     }

@@ -525,6 +525,14 @@ void main() {
           );
           expect(result.endedBy, QueryEnd.deadline);
           expect(result.events, isEmpty);
+          final extra = await signedEvents(1);
+          expect(
+            () => result.events.addAll(extra),
+            returnsNormally,
+            reason:
+                'every other exit returns the growable list [EventMemBox.all] '
+                'builds, so a caller may sort or append to this one too',
+          );
           expect(completionLines(), hasLength(1));
           expect(completionLines().single.level, RelayDiagnosticLevel.warning);
           expect(
