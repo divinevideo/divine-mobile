@@ -228,6 +228,48 @@ void main() {
       session.dispose();
     });
 
+    test(
+      'uses a 12-character subscription id from the name alphabet',
+      () async {
+        final relay = await TestRelayServer.start();
+        addTearDown(relay.close);
+        final session = NostrConnectSession(relays: [relay.url]);
+        addTearDown(session.dispose);
+
+        await session.start();
+        await _waitUntil(() => relay.receivedMessages.any(_isReqMessage));
+        final request = relay.receivedMessages.firstWhere(_isReqMessage);
+        final subscriptionId = request[1] as String;
+
+        expect(subscriptionId, hasLength(12));
+        expect(RegExp(r'^[0-9a-z]{12}$').hasMatch(subscriptionId), isTrue);
+      },
+    );
+
+    test('uses a different subscription id for each session', () async {
+      final firstRelay = await TestRelayServer.start();
+      addTearDown(firstRelay.close);
+      final firstSession = NostrConnectSession(relays: [firstRelay.url]);
+      addTearDown(firstSession.dispose);
+
+      final secondRelay = await TestRelayServer.start();
+      addTearDown(secondRelay.close);
+      final secondSession = NostrConnectSession(relays: [secondRelay.url]);
+      addTearDown(secondSession.dispose);
+
+      await firstSession.start();
+      await secondSession.start();
+      await _waitUntil(() => firstRelay.receivedMessages.any(_isReqMessage));
+      await _waitUntil(() => secondRelay.receivedMessages.any(_isReqMessage));
+
+      final firstId =
+          firstRelay.receivedMessages.firstWhere(_isReqMessage)[1] as String;
+      final secondId =
+          secondRelay.receivedMessages.firstWhere(_isReqMessage)[1] as String;
+
+      expect(firstId, isNot(equals(secondId)));
+    });
+
     test('cancel from idle state transitions to cancelled', () {
       final session = NostrConnectSession(relays: ['wss://relay.example.com']);
 

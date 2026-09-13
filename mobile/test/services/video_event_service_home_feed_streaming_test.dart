@@ -138,6 +138,10 @@ void main() {
 
       // Verify unsubscribe was called with the seed subscription ID
       expect(capturedSubscriptionId, isNotNull);
+      expect(
+        RegExp(r'^seed_home_[0-9a-z]{16}$').hasMatch(capturedSubscriptionId!),
+        isTrue,
+      );
       verify(
         () => mockNostrService.unsubscribe(capturedSubscriptionId!),
       ).called(1);

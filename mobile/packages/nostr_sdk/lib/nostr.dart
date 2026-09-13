@@ -635,7 +635,7 @@ class Nostr {
     required bool requireAllRelaysSettled,
   }) async {
     final eventBox = EventMemBox(sortAfterAdd: false);
-    final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final subscriptionId = id ?? StringUtil.rndSecureNameStr(16);
     final ended = Completer<QueryOutcome>();
     var endedAtDeadline = false;
 

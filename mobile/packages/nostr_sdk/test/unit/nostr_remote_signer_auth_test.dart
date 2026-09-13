@@ -217,10 +217,20 @@ void main() {
       test('constrains authors to the paired remote signer', () async {
         final query = await signer.genQueryMsg();
         expect(query, isNotNull);
-        final filter = query![2] as Map<String, dynamic>;
+        final subscriptionId = query![1] as String;
+        expect(subscriptionId, hasLength(12));
+        expect(RegExp(r'^[0-9a-z]{12}$').hasMatch(subscriptionId), isTrue);
+        final filter = query[2] as Map<String, dynamic>;
         expect(filter['authors'], [bunkerPub]);
         expect(filter['#p'], [clientPub]);
         expect(filter['kinds'], [EventKind.nostrRemoteSigning]);
+      });
+
+      test('generates a different subscription id on each query', () async {
+        final first = await signer.genQueryMsg();
+        final second = await signer.genQueryMsg();
+
+        expect(first![1] as String, isNot(equals(second![1] as String)));
       });
 
       test('rejects construction without a valid remote signer pubkey', () {

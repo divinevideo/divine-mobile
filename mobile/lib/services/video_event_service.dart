@@ -28,6 +28,7 @@ import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/utils/string_util.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -3596,8 +3597,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       );
 
       final completer = Completer<void>();
-      final subscriptionId =
-          'seed_home_${DateTime.now().millisecondsSinceEpoch}';
+      final subscriptionId = 'seed_home_${StringUtil.rndSecureNameStr(16)}';
 
       final eventStream = _nostrService.subscribe(
         [filter],
