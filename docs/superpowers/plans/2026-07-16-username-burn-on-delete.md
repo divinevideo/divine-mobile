@@ -1,5 +1,12 @@
 # Opt-in @divine.video username burn on delete — Implementation Plan
 
+> **Superseded (2026-09-13).** The direct `POST /api/username/release` burn
+> endpoint and `ProfileRepository.releaseUsername()` described below were
+> removed from divine-mobile in #9144. The live path is the two-phase
+> `POST /api/username/release/prepare` handshake in
+> `mobile/lib/repositories/account_deletion_recovery_repository.dart`. Kept for
+> design context; do not build against the API described here.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let a user opt in, during account deletion, to permanently burn their `@divine.video` username so it stops resolving and cannot be re-registered.
