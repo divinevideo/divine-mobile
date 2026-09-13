@@ -267,7 +267,7 @@ void main() {
   // ---------------------------------------------------------------------------
   group('getUserFriendlyErrorMessage', () {
     test('NO_INTERNET → offline copy', () {
-      final msg = reporter.getUserFriendlyErrorMessage(
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'NO_INTERNET',
         UploadConnectivity.none,
       );
@@ -275,7 +275,7 @@ void main() {
     });
 
     test('TIMEOUT → timeout copy', () {
-      final msg = reporter.getUserFriendlyErrorMessage(
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'TIMEOUT',
         UploadConnectivity.wifi,
       );
@@ -283,7 +283,7 @@ void main() {
     });
 
     test('NETWORK_ERROR embeds network type', () {
-      final msg = reporter.getUserFriendlyErrorMessage(
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'NETWORK_ERROR',
         UploadConnectivity.mobile,
       );
@@ -291,7 +291,7 @@ void main() {
     });
 
     test('UPLOAD_SESSION_EXPIRED → session copy', () {
-      final msg = reporter.getUserFriendlyErrorMessage(
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'UPLOAD_SESSION_EXPIRED',
         UploadConnectivity.wifi,
       );
@@ -299,7 +299,7 @@ void main() {
     });
 
     test('unknown category → generic copy', () {
-      final msg = reporter.getUserFriendlyErrorMessage(
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'SOMETHING_NEW',
         UploadConnectivity.wifi,
       );
@@ -311,21 +311,21 @@ void main() {
   group('getNetworkTypeString', () {
     test('wifi → "WiFi"', () {
       expect(
-        reporter.getNetworkTypeString(UploadConnectivity.wifi),
+        UploadProgressReporter.networkTypeString(UploadConnectivity.wifi),
         equals('WiFi'),
       );
     });
 
     test('mobile → "Cellular"', () {
       expect(
-        reporter.getNetworkTypeString(UploadConnectivity.mobile),
+        UploadProgressReporter.networkTypeString(UploadConnectivity.mobile),
         equals('Cellular'),
       );
     });
 
     test('none → "Offline"', () {
       expect(
-        reporter.getNetworkTypeString(UploadConnectivity.none),
+        UploadProgressReporter.networkTypeString(UploadConnectivity.none),
         equals('Offline'),
       );
     });

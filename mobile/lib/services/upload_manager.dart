@@ -1,5 +1,5 @@
-// ABOUTME: App-layer facade for the pure-Dart upload repository.
-// ABOUTME: Owns Flutter/plugin adapters and background lifecycle registration.
+// ABOUTME: App-layer facade for the upload repository, which takes no direct
+// ABOUTME: Flutter dependency. Owns plugin adapters and background lifecycle.
 
 import 'dart:async';
 
@@ -179,10 +179,15 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
   String get serviceName => 'UploadManager';
 
   @override
-  void onAppBackgrounded() {}
+  void onAppBackgrounded() {
+    // No-op: the OS owns an in-flight background transfer, and there is no
+    // Dart-side work to pause. The recovery sweep runs on [onAppResumed].
+  }
 
   @override
-  void onExtendedBackground() {}
+  void onExtendedBackground() {
+    // No-op: same rationale as [onAppBackgrounded].
+  }
 
   @override
   void onAppResumed() => unawaited(recoverInterruptedUploads());

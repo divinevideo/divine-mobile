@@ -241,7 +241,6 @@ class UploadRepository {
       await _reporter.sendInitializationFailureCrashReport(e, stackTrace);
 
       // Don't rethrow - allow the app to continue and retry on demand
-      // rethrow;
     }
   }
 
