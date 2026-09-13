@@ -25,12 +25,6 @@ class _RecordingAnalytics implements AnalyticsEventSink {
 
   @override
   Future<void> setUserId(String? userId) async {}
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
 }
 
 /// A deterministic 64-hex pubkey for sample [i].

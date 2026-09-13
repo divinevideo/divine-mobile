@@ -53,12 +53,6 @@ class _NoopAnalytics implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async {}
 
   @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
-
-  @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -85,25 +79,21 @@ void main() {
       String? activePubkey = pubkey;
       final authService = _MockAuthService();
       when(() => authService.authState).thenAnswer((_) => authState);
-      when(
-        () => authService.currentPublicKeyHex,
-      ).thenAnswer((_) => activePubkey);
+      when(() => authService.currentPublicKeyHex)
+          .thenAnswer((_) => activePubkey);
 
       final statsController = StreamController<ProfileStats?>();
       addTearDown(statsController.close);
       final profileRepository = _MockProfileRepository();
-      when(
-        () => profileRepository.fetchFreshProfile(pubkey: pubkey),
-      ).thenAnswer((_) async => null);
-      when(
-        () => profileRepository.watchProfileStats(pubkey: pubkey),
-      ).thenAnswer((_) => statsController.stream);
+      when(() => profileRepository.fetchFreshProfile(pubkey: pubkey))
+          .thenAnswer((_) async => null);
+      when(() => profileRepository.watchProfileStats(pubkey: pubkey))
+          .thenAnswer((_) => statsController.stream);
 
       SharedPreferences.setMockInitialValues(<String, Object>{
         AppEngagementStore.sessionCountKey: 20,
-        AppEngagementStore.firstLaunchAtKey: DateTime(
-          2026,
-        ).millisecondsSinceEpoch,
+        AppEngagementStore.firstLaunchAtKey: DateTime(2026)
+            .millisecondsSinceEpoch,
       });
       final prefs = await SharedPreferences.getInstance();
       final reviewPlatform = _RecordingReviewPlatform();
