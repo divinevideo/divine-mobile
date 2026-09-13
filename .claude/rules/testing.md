@@ -410,7 +410,7 @@ blocTest<MyBloc, MyState>(
   build: () => MyBloc(),
   act: (bloc) async {
     bloc.add(ChangeValue(add: 1));
-    await Future<void>.delayed(Duration.zero);  // Ensure order
+    await pumpEventQueue(); // Let the first event settle before adding another.
     bloc.add(ChangeValue(remove: 1));
   },
   expect: () => const [
@@ -419,6 +419,10 @@ blocTest<MyBloc, MyState>(
   ],
 );
 ```
+
+Tests must not use `Future.delayed` for synchronization. The
+`scripts/check_future_delayed_ceiling.sh` ratchet enforces this while the
+remaining test debt tracked by #4837 is paid down.
 
 ---
 
