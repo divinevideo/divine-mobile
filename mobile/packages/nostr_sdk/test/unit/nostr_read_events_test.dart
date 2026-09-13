@@ -536,6 +536,13 @@ void main() {
           expect(completionLines(), hasLength(1));
           expect(completionLines().single.level, RelayDiagnosticLevel.warning);
           expect(
+            completionLines().single.relayUrl,
+            RelayDiagnostic.clientScope,
+            reason:
+                'a read the pool never saw must not share the pool key, or '
+                'it spends the rate-limit budget real pool warnings need',
+          );
+          expect(
             completionLines().single.message,
             contains('ended deadline before any REQ was written'),
           );

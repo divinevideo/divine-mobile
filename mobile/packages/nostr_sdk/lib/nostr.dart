@@ -652,13 +652,15 @@ class Nostr {
     final now = DateTime.now();
     if (!deadline.isAfter(now)) {
       // The pool files a completion line for every read it sees; this one
-      // it never will, so the line is filed here.
+      // it never will, so the line is filed here — under [clientScope],
+      // which exists so a layer above the pool cannot spend the pool's
+      // rate-limit budget on reads no relay was asked about.
       emitRelayDiagnostic(
         _pool.diagnosticsSink,
         RelayDiagnostic(
           site: RelayDiagnosticSite.queryCompletion,
           level: RelayDiagnosticLevel.warning,
-          relayUrl: RelayDiagnostic.poolScope,
+          relayUrl: RelayDiagnostic.clientScope,
           message:
               'Query $subscriptionId ended deadline before any REQ was '
               'written: the deadline had already passed by '
