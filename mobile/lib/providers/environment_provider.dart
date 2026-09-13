@@ -19,30 +19,42 @@ EnvironmentService environmentService(Ref ref) {
   return service;
 }
 
-/// Provider for current environment config (reactive)
+/// Provider for current environment config that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new config to this notifier's state instead of rebuilding it.
 @riverpod
-EnvironmentConfig currentEnvironment(Ref ref) {
-  final service = ref.watch(environmentServiceProvider);
+class CurrentEnvironmentNotifier extends _$CurrentEnvironmentNotifier {
+  @override
+  EnvironmentConfig build() {
+    final service = ref.watch(environmentServiceProvider);
 
-  // Proper listener management with cleanup
-  void listener() => ref.invalidateSelf();
-  service.addListener(listener);
-  ref.onDispose(() => service.removeListener(listener));
+    void listener() => state = service.currentConfig;
 
-  return service.currentConfig;
+    service.addListener(listener);
+    ref.onDispose(() => service.removeListener(listener));
+
+    return service.currentConfig;
+  }
 }
 
-/// Provider for developer mode enabled state
+/// Provider for developer mode state that publishes service changes.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new value to this notifier's state instead of rebuilding it.
 @riverpod
-bool isDeveloperModeEnabled(Ref ref) {
-  final service = ref.watch(environmentServiceProvider);
+class IsDeveloperModeEnabledNotifier extends _$IsDeveloperModeEnabledNotifier {
+  @override
+  bool build() {
+    final service = ref.watch(environmentServiceProvider);
 
-  // Proper listener management with cleanup
-  void listener() => ref.invalidateSelf();
-  service.addListener(listener);
-  ref.onDispose(() => service.removeListener(listener));
+    void listener() => state = service.isDeveloperModeEnabled;
 
-  return service.isDeveloperModeEnabled;
+    service.addListener(listener);
+    ref.onDispose(() => service.removeListener(listener));
+
+    return service.isDeveloperModeEnabled;
+  }
 }
 
 /// Provider to check if showing environment indicator

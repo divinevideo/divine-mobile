@@ -305,7 +305,7 @@ void main() {
       });
     });
 
-    // featureFlagStateProvider invalidates itself from these notifications, so
+    // featureFlagStateProvider publishes these notifications to its state, so
     // a mutation that updates state without notifying leaves every consumer of
     // isFeatureEnabledProvider showing the previous value.
     group('change notification', () {

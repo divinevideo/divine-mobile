@@ -442,9 +442,9 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
-          featureFlagStateProvider.overrideWith(
-            (_) => const {FeatureFlag.profileMonetizationLinks: false},
-          ),
+          featureFlagStateProvider.overrideWithValue(const {
+            FeatureFlag.profileMonetizationLinks: false,
+          }),
         ],
       );
       addTearDown(container.dispose);
@@ -458,9 +458,9 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
-          featureFlagStateProvider.overrideWith(
-            (_) => const {FeatureFlag.profileMonetizationLinks: true},
-          ),
+          featureFlagStateProvider.overrideWithValue(const {
+            FeatureFlag.profileMonetizationLinks: true,
+          }),
         ],
       );
       addTearDown(container.dispose);
@@ -669,9 +669,7 @@ void main() {
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-      when(
-        () => mockAuthService.currentPublicKeyHex,
-      ).thenReturn(currentPubkey);
+      when(() => mockAuthService.currentPublicKeyHex).thenReturn(currentPubkey);
       when(
         () => mockAuthService.authStateStream,
       ).thenAnswer((_) => const Stream<AuthState>.empty());

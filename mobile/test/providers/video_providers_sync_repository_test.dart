@@ -86,10 +86,8 @@ void main() {
             videosRepositoryProvider.overrideWith(
               (_) => _MockVideosRepository(),
             ),
-            currentEnvironmentProvider.overrideWith(
-              (_) => const EnvironmentConfig(
-                environment: AppEnvironment.staging,
-              ),
+            currentEnvironmentProvider.overrideWithValue(
+              const EnvironmentConfig(environment: AppEnvironment.staging),
             ),
             nip98AuthServiceProvider.overrideWith(
               (_) => _MockNip98AuthService(),

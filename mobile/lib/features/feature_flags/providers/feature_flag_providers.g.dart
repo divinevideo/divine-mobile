@@ -114,23 +114,26 @@ final class FeatureFlagServiceProvider
 String _$featureFlagServiceHash() =>
     r'f663b9f0232f24e115143321b82371ae100822ba';
 
-/// Feature flag state provider (reactive to service changes)
+/// Feature flag state provider that publishes service changes to its state.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new flags to this notifier's state instead of rebuilding it.
 
-@ProviderFor(featureFlagState)
-final featureFlagStateProvider = FeatureFlagStateProvider._();
+@ProviderFor(FeatureFlagStateNotifier)
+final featureFlagStateProvider = FeatureFlagStateNotifierProvider._();
 
-/// Feature flag state provider (reactive to service changes)
-
-final class FeatureFlagStateProvider
+/// Feature flag state provider that publishes service changes to its state.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new flags to this notifier's state instead of rebuilding it.
+final class FeatureFlagStateNotifierProvider
     extends
-        $FunctionalProvider<
-          Map<FeatureFlag, bool>,
-          Map<FeatureFlag, bool>,
-          Map<FeatureFlag, bool>
-        >
-    with $Provider<Map<FeatureFlag, bool>> {
-  /// Feature flag state provider (reactive to service changes)
-  FeatureFlagStateProvider._()
+        $NotifierProvider<FeatureFlagStateNotifier, Map<FeatureFlag, bool>> {
+  /// Feature flag state provider that publishes service changes to its state.
+  ///
+  /// The subscription is installed once per provider lifetime; a notification
+  /// assigns the new flags to this notifier's state instead of rebuilding it.
+  FeatureFlagStateNotifierProvider._()
     : super(
         from: null,
         argument: null,
@@ -142,18 +145,11 @@ final class FeatureFlagStateProvider
       );
 
   @override
-  String debugGetCreateSourceHash() => _$featureFlagStateHash();
+  String debugGetCreateSourceHash() => _$featureFlagStateNotifierHash();
 
   @$internal
   @override
-  $ProviderElement<Map<FeatureFlag, bool>> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  Map<FeatureFlag, bool> create(Ref ref) {
-    return featureFlagState(ref);
-  }
+  FeatureFlagStateNotifier create() => FeatureFlagStateNotifier();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(Map<FeatureFlag, bool> value) {
@@ -164,7 +160,33 @@ final class FeatureFlagStateProvider
   }
 }
 
-String _$featureFlagStateHash() => r'bf39490bff4b6cb74fd70fff0c499635669fef8d';
+String _$featureFlagStateNotifierHash() =>
+    r'823c19699163b0033ba5b775a75ae7f8ae3e7a13';
+
+/// Feature flag state provider that publishes service changes to its state.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new flags to this notifier's state instead of rebuilding it.
+
+abstract class _$FeatureFlagStateNotifier
+    extends $Notifier<Map<FeatureFlag, bool>> {
+  Map<FeatureFlag, bool> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<Map<FeatureFlag, bool>, Map<FeatureFlag, bool>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<FeatureFlag, bool>, Map<FeatureFlag, bool>>,
+              Map<FeatureFlag, bool>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 /// Individual feature flag check provider family
 
