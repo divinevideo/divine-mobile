@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -46,7 +47,7 @@ class TransitionBoundaryCubit extends Cubit<TransitionBoundaryState> {
            toFramePath: toPlaceholder,
          ),
        ) {
-    _resolve(fromClip, toClip);
+    unawaited(_resolve(fromClip, toClip));
   }
 
   /// Produces the exact boundary frames. Defaults to [_extractBoundaryFrame];

@@ -318,7 +318,7 @@ class VideoRecorderBloc
       prefs.getString(VideoRecorderMode.persistenceKey),
     );
     if (!event.fromEditor && savedMode != state.recorderMode) {
-      _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
+      await _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
     } else if (event.fromEditor &&
         state.recorderMode != VideoRecorderMode.stopMotion &&
         isStopMotionComposition(_readClipManager().clips)) {
@@ -1114,9 +1114,11 @@ class VideoRecorderBloc
       if (clipManager.clips.length == 1) {
         if (clip.processingCompleter != null) {
           unawaited(
-            clip.processingCompleter!.future.then((_) {
-              DivineVideoPlayerController.preload([VideoClip.file(videoPath)]);
-            }),
+            clip.processingCompleter!.future.then(
+              (_) => DivineVideoPlayerController.preload([
+                VideoClip.file(videoPath),
+              ]),
+            ),
           );
         } else {
           unawaited(
@@ -1522,22 +1524,22 @@ class VideoRecorderBloc
     }
   }
 
-  void _onRecorderModeSet(
+  Future<void> _onRecorderModeSet(
     VideoRecorderRecorderModeSet event,
     Emitter<VideoRecorderBlocState> emit,
-  ) {
-    _applyRecorderMode(
+  ) async {
+    await _applyRecorderMode(
       emit,
       event.mode,
       keepAutosavedDraft: event.keepAutosavedDraft,
     );
   }
 
-  void _applyRecorderMode(
+  Future<void> _applyRecorderMode(
     Emitter<VideoRecorderBlocState> emit,
     VideoRecorderMode mode, {
     required bool keepAutosavedDraft,
-  }) {
+  }) async {
     // No assembling-status guard: the assemble is synchronous, so a mode switch
     // cannot land inside it, and the `ready` it leaves behind already carries an
     // empty frame list — so the discard below is a no-op and the queued library
@@ -1561,14 +1563,18 @@ class VideoRecorderBloc
       unawaited(_discardStopMotionSession(previousFrames));
     }
     final prefs = _readSharedPreferences();
-    prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
+    await prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
 
     final touchesRecordingState =
         mode != VideoRecorderMode.upload &&
         previousMode != VideoRecorderMode.upload;
     if (touchesRecordingState) {
-      _readClipManager().clearAll(keepAutosavedDraft: keepAutosavedDraft);
-      _readVideoEditor().reset(keepAutosavedDraft: keepAutosavedDraft);
+      await _readClipManager().clearAll(
+        keepAutosavedDraft: keepAutosavedDraft,
+      );
+      await _readVideoEditor().reset(
+        keepAutosavedDraft: keepAutosavedDraft,
+      );
     }
 
     Log.debug(
@@ -1620,13 +1626,13 @@ class VideoRecorderBloc
     emit(state.copyWith(showLastClipOverlay: !state.showLastClipOverlay));
   }
 
-  void _onGridLinesToggled(
+  Future<void> _onGridLinesToggled(
     VideoRecorderGridLinesToggled event,
     Emitter<VideoRecorderBlocState> emit,
-  ) {
+  ) async {
     final enabled = !state.showGridLines;
     emit(state.copyWith(showGridLines: enabled));
-    _readSharedPreferences().setBool(_kGridLinesEnabledKey, enabled);
+    await _readSharedPreferences().setBool(_kGridLinesEnabledKey, enabled);
   }
 
   /// Whether a grid-supporting [mode] should show the grid: the user's last

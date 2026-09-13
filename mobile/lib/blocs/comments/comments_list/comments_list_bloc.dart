@@ -142,7 +142,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
-      _startWatchingComments();
+      await _startWatchingComments();
     } on CommentsRepositoryException catch (e, stackTrace) {
       // *FailedException + relay timeouts are matrix-NO (API/domain +
       // Network/IO). addError logs without flagging Reportable so they stay
@@ -467,8 +467,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// Called from [_onLoadRequested] after the initial load so the REST-backed
   /// first paint is not blocked by relay backfill. Routes incoming comments
   /// through [NewCommentReceived].
-  void _startWatchingComments() {
-    _commentStreamSubscription?.cancel();
+  Future<void> _startWatchingComments() async {
+    await _commentStreamSubscription?.cancel();
 
     try {
       final stream = _commentsRepository.watchComments(
