@@ -36,11 +36,15 @@ void main() {
         channelFactory: factory,
       );
       await nostr.relayPool.add(relay);
-      // These tests exercise the repair itself with a 100ms read budget; the
-      // floor that keeps a hasty release from counting as evidence is pinned
-      // separately below.
-      nostr.relayPool.minQueryAgeBeforeRepair = Duration.zero;
     });
+
+    /// Removes the age floor so a 100ms read can exercise the repair itself.
+    ///
+    /// Called per test rather than from [setUp]: a group-wide override leaves
+    /// the shipped default exercised by nothing, and silently applies to every
+    /// test added here later.
+    void ignoreQueryAgeFloor() =>
+        nostr.relayPool.minQueryAgeBeforeRepair = Duration.zero;
 
     Future<({List<Event> events, bool timedOut, bool noRelaysParticipated})>
     queryOnce() {
@@ -51,8 +55,32 @@ void main() {
       ], timeout: const Duration(milliseconds: 100));
     }
 
+    test('the shipped age floor sits between the settle window and the '
+        'default read timeout', () {
+      // Every other test here runs the knob at zero or at a value chosen to
+      // suppress the repair, so the shipped default is the one value nothing
+      // exercises -- and its dartdoc leans on both of these bounds.
+      final floor = nostr.relayPool.minQueryAgeBeforeRepair;
+      expect(
+        floor,
+        greaterThan(RelayPool.querySettleWindow),
+        reason:
+            'a query the settle window completed on the first relay\'s EOSE '
+            'says nothing about the slower ones, so it must fall under the '
+            'floor rather than force-cycle them',
+      );
+      expect(
+        floor,
+        lessThan(const Duration(seconds: 5)),
+        reason:
+            'a caller that spent the SDK default read timeout in full waited '
+            'long enough for the silence to be evidence',
+      );
+    });
+
     test('a relay that accepts the REQ and never sends a terminal frame is '
         'force-reconnected', () async {
+      ignoreQueryAgeFloor();
       expect(factory.createdChannels, hasLength(1));
       final zombieChannel = factory.createdChannels.single;
 
@@ -77,6 +105,7 @@ void main() {
     });
 
     test('a relay that answers the REQ is left alone', () async {
+      ignoreQueryAgeFloor();
       final channel = factory.createdChannels.single;
 
       final pending = queryOnce();
@@ -97,6 +126,7 @@ void main() {
     test(
       'a straggler the settle window abandons is still force-reconnected',
       () async {
+        ignoreQueryAgeFloor();
         // A second relay answers, so the caller is released by the settle
         // window rather than by the timeout. Remediation keys off the query
         // being abandoned, not off how the caller was released.
@@ -204,6 +234,7 @@ void main() {
 
     test('a relay that stays inbound-active is left alone — silence '
         'discriminates zombie from slow', () async {
+      ignoreQueryAgeFloor();
       final channel = factory.createdChannels.single;
 
       final pending = queryOnce();
