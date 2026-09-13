@@ -393,21 +393,30 @@ final class AuthServiceProvider
 
 String _$authServiceHash() => r'040363ef2aa7f763b519f11e70bb77eb28a2abe7';
 
-/// Provider that returns current auth state and rebuilds when it changes.
-/// Widgets should watch this instead of authService.authState directly
-/// to get automatic rebuilds when authentication state changes.
+/// Current auth state, kept in sync with [AuthService.authStateStream].
+///
+/// Widgets should watch this instead of `authService.authState` directly
+/// so they rebuild when authentication state changes. Each streamed value
+/// becomes the notifier's state; the provider itself is not rebuilt, so its
+/// stream subscription survives every auth transition.
 
 @ProviderFor(CurrentAuthState)
 final currentAuthStateProvider = CurrentAuthStateProvider._();
 
-/// Provider that returns current auth state and rebuilds when it changes.
-/// Widgets should watch this instead of authService.authState directly
-/// to get automatic rebuilds when authentication state changes.
+/// Current auth state, kept in sync with [AuthService.authStateStream].
+///
+/// Widgets should watch this instead of `authService.authState` directly
+/// so they rebuild when authentication state changes. Each streamed value
+/// becomes the notifier's state; the provider itself is not rebuilt, so its
+/// stream subscription survives every auth transition.
 final class CurrentAuthStateProvider
     extends $NotifierProvider<CurrentAuthState, AuthState> {
-  /// Provider that returns current auth state and rebuilds when it changes.
-  /// Widgets should watch this instead of authService.authState directly
-  /// to get automatic rebuilds when authentication state changes.
+  /// Current auth state, kept in sync with [AuthService.authStateStream].
+  ///
+  /// Widgets should watch this instead of `authService.authState` directly
+  /// so they rebuild when authentication state changes. Each streamed value
+  /// becomes the notifier's state; the provider itself is not rebuilt, so its
+  /// stream subscription survives every auth transition.
   CurrentAuthStateProvider._()
     : super(
         from: null,
@@ -437,9 +446,12 @@ final class CurrentAuthStateProvider
 
 String _$currentAuthStateHash() => r'20a8f224af5db07a98723431b2a8d9781949e553';
 
-/// Provider that returns current auth state and rebuilds when it changes.
-/// Widgets should watch this instead of authService.authState directly
-/// to get automatic rebuilds when authentication state changes.
+/// Current auth state, kept in sync with [AuthService.authStateStream].
+///
+/// Widgets should watch this instead of `authService.authState` directly
+/// so they rebuild when authentication state changes. Each streamed value
+/// becomes the notifier's state; the provider itself is not rebuilt, so its
+/// stream subscription survives every auth transition.
 
 abstract class _$CurrentAuthState extends $Notifier<AuthState> {
   AuthState build();
@@ -459,24 +471,30 @@ abstract class _$CurrentAuthState extends $Notifier<AuthState> {
   }
 }
 
-/// Provider that returns current RPC capability and rebuilds on changes.
+/// Current RPC capability, kept in sync with
+/// [AuthService.authRpcCapabilityStream].
 ///
 /// Widgets and repositories should watch this instead of polling
-/// [AuthService.authRpcCapability] directly.
+/// [AuthService.authRpcCapability] directly. Each streamed value becomes the
+/// notifier's state; the provider itself is not rebuilt on a change.
 
 @ProviderFor(CurrentAuthRpcCapability)
 final currentAuthRpcCapabilityProvider = CurrentAuthRpcCapabilityProvider._();
 
-/// Provider that returns current RPC capability and rebuilds on changes.
+/// Current RPC capability, kept in sync with
+/// [AuthService.authRpcCapabilityStream].
 ///
 /// Widgets and repositories should watch this instead of polling
-/// [AuthService.authRpcCapability] directly.
+/// [AuthService.authRpcCapability] directly. Each streamed value becomes the
+/// notifier's state; the provider itself is not rebuilt on a change.
 final class CurrentAuthRpcCapabilityProvider
     extends $NotifierProvider<CurrentAuthRpcCapability, AuthRpcCapability> {
-  /// Provider that returns current RPC capability and rebuilds on changes.
+  /// Current RPC capability, kept in sync with
+  /// [AuthService.authRpcCapabilityStream].
   ///
   /// Widgets and repositories should watch this instead of polling
-  /// [AuthService.authRpcCapability] directly.
+  /// [AuthService.authRpcCapability] directly. Each streamed value becomes the
+  /// notifier's state; the provider itself is not rebuilt on a change.
   CurrentAuthRpcCapabilityProvider._()
     : super(
         from: null,
@@ -507,10 +525,12 @@ final class CurrentAuthRpcCapabilityProvider
 String _$currentAuthRpcCapabilityHash() =>
     r'fa4b97ab80f61d43b789df8bffd32332acdbd8d0';
 
-/// Provider that returns current RPC capability and rebuilds on changes.
+/// Current RPC capability, kept in sync with
+/// [AuthService.authRpcCapabilityStream].
 ///
 /// Widgets and repositories should watch this instead of polling
-/// [AuthService.authRpcCapability] directly.
+/// [AuthService.authRpcCapability] directly. Each streamed value becomes the
+/// notifier's state; the provider itself is not rebuilt on a change.
 
 abstract class _$CurrentAuthRpcCapability extends $Notifier<AuthRpcCapability> {
   AuthRpcCapability build();

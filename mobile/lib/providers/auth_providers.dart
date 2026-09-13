@@ -238,9 +238,12 @@ Future<void> persistFollowingPrefetchForAuthRedirect({
   await markFollowingPrefetchComplete(prefs, pubkeyHex);
 }
 
-/// Provider that returns current auth state and rebuilds when it changes.
-/// Widgets should watch this instead of authService.authState directly
-/// to get automatic rebuilds when authentication state changes.
+/// Current auth state, kept in sync with [AuthService.authStateStream].
+///
+/// Widgets should watch this instead of `authService.authState` directly
+/// so they rebuild when authentication state changes. Each streamed value
+/// becomes the notifier's state; the provider itself is not rebuilt, so its
+/// stream subscription survives every auth transition.
 @Riverpod(keepAlive: true)
 class CurrentAuthState extends _$CurrentAuthState {
   @override
@@ -291,10 +294,12 @@ class RecorderExitAuthGate {
   }
 }
 
-/// Provider that returns current RPC capability and rebuilds on changes.
+/// Current RPC capability, kept in sync with
+/// [AuthService.authRpcCapabilityStream].
 ///
 /// Widgets and repositories should watch this instead of polling
-/// [AuthService.authRpcCapability] directly.
+/// [AuthService.authRpcCapability] directly. Each streamed value becomes the
+/// notifier's state; the provider itself is not rebuilt on a change.
 @Riverpod(keepAlive: true)
 class CurrentAuthRpcCapability extends _$CurrentAuthRpcCapability {
   @override
