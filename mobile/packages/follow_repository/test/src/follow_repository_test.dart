@@ -6388,6 +6388,51 @@ void main() {
         );
 
         test(
+          'generates a different id for each follower-count request',
+          () async {
+            FollowRepository buildRepository(
+              void Function(_FakeRelay) onRelay,
+            ) => FollowRepository(
+              nostrClient: mockNostrClient,
+              isCacheInitialized: () => cacheIsInitialized,
+              getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+              cacheUserEvent: cachedUserEvents.add,
+              indexerRelayUrls: const [indexerUrl],
+              relayFactory: (url, status) {
+                final relay = _FakeRelay(url, status)
+                  ..fakeResponses = [
+                    ['EOSE', 'sub1'],
+                  ];
+                onRelay(relay);
+                return relay;
+              },
+            );
+
+            late _FakeRelay firstRelay;
+            await buildRepository(
+              (relay) => firstRelay = relay,
+            ).getFollowerStats(testTargetPubkey);
+            late _FakeRelay secondRelay;
+            await buildRepository(
+              (relay) => secondRelay = relay,
+            ).getFollowerStats(testTargetPubkey);
+
+            final firstId =
+                firstRelay.sentMessages
+                        .firstWhere((message) => message.first == 'REQ')
+                        .elementAt(1)
+                    as String;
+            final secondId =
+                secondRelay.sentMessages
+                        .firstWhere((message) => message.first == 'REQ')
+                        .elementAt(1)
+                    as String;
+
+            expect(firstId, isNot(equals(secondId)));
+          },
+        );
+
+        test(
           'returns 0 when indexer relay fails to connect',
           () async {
             repository = FollowRepository(
@@ -6766,6 +6811,56 @@ void main() {
             isTrue,
           );
         });
+
+        test(
+          'generates a different id for each follower-list request',
+          () async {
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [],
+            );
+
+            FollowRepository buildRepository(
+              void Function(_FakeRelay) onRelay,
+            ) => FollowRepository(
+              nostrClient: mockNostrClient,
+              isCacheInitialized: () => cacheIsInitialized,
+              getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+              cacheUserEvent: cachedUserEvents.add,
+              indexerRelayUrls: const [indexerUrl],
+              indexerOperationTimeout: const Duration(milliseconds: 20),
+              relayFactory: (url, status) {
+                final relay = _FakeRelay(url, status, neverCloses: true)
+                  ..fakeResponses = const [
+                    ['EOSE', 'sub1'],
+                  ];
+                onRelay(relay);
+                return relay;
+              },
+            );
+
+            late _FakeRelay firstRelay;
+            await buildRepository((relay) => firstRelay = relay)
+                .getFollowers(testTargetPubkey)
+                .timeout(const Duration(milliseconds: 200));
+            late _FakeRelay secondRelay;
+            await buildRepository((relay) => secondRelay = relay)
+                .getFollowers(testTargetPubkey)
+                .timeout(const Duration(milliseconds: 200));
+
+            final firstId =
+                firstRelay.sentMessages
+                        .firstWhere((message) => message.first == 'REQ')
+                        .elementAt(1)
+                    as String;
+            final secondId =
+                secondRelay.sentMessages
+                        .firstWhere((message) => message.first == 'REQ')
+                        .elementAt(1)
+                    as String;
+
+            expect(firstId, isNot(equals(secondId)));
+          },
+        );
 
         test(
           'orders indexer followers by their contact-list timestamp',
@@ -7957,6 +8052,80 @@ void main() {
             RegExp(r'^[0-9a-z]{16}$').hasMatch(request[1] as String),
             isTrue,
           );
+        },
+      );
+
+      test(
+        'generates a different id for each contact-list query',
+        () async {
+          final contactList = {
+            'pubkey': testCurrentUserPubkey,
+            'kind': EventKind.contactList,
+            'id':
+                'aaaa000000000000000000000000000000000000000000000000000000000000',
+            'sig':
+                'bbbb000000000000000000000000000000000000000000000000000000000000bbbb000000000000000000000000000000000000000000000000000000000000',
+            'content': '',
+            'created_at': 1000000,
+            'tags': [
+              ['p', testTargetPubkey],
+            ],
+          };
+
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => const Stream<Event>.empty());
+
+          FollowRepository buildRepository(
+            void Function(_FakeRelay) onRelay,
+          ) => FollowRepository(
+            nostrClient: mockNostrClient,
+            isCacheInitialized: () => cacheIsInitialized,
+            getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+            cacheUserEvent: cachedUserEvents.add,
+            indexerRelayUrls: const ['wss://idx.test'],
+            relayFactory: (url, status) {
+              final relay = _FakeRelay(url, status)
+                ..fakeResponses = [
+                  ['EVENT', 'sub1', contactList],
+                  ['EOSE', 'sub1'],
+                ];
+              onRelay(relay);
+              return relay;
+            },
+            queryContactList:
+                ({
+                  required eventStream,
+                  required pubkey,
+                  fallbackTimeoutSeconds = 10,
+                }) async => null,
+          );
+
+          late _FakeRelay firstRelay;
+          await buildRepository((relay) => firstRelay = relay).initialize();
+          late _FakeRelay secondRelay;
+          await buildRepository((relay) => secondRelay = relay).initialize();
+
+          final firstId =
+              firstRelay.sentMessages
+                      .firstWhere((message) => message.first == 'REQ')
+                      .elementAt(1)
+                  as String;
+          final secondId =
+              secondRelay.sentMessages
+                      .firstWhere((message) => message.first == 'REQ')
+                      .elementAt(1)
+                  as String;
+
+          expect(firstId, isNot(equals(secondId)));
         },
       );
     });

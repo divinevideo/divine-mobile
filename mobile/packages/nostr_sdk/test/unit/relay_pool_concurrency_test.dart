@@ -826,6 +826,27 @@ void main() {
       expect(RegExp(r'^[0-9a-z]{16}_0$').hasMatch(firstId), isTrue);
     });
 
+    test('generates a different id for each count call', () async {
+      final relay = _CountRelay('wss://relay1.test', countValue: 10);
+      await nostr.relayPool.add(relay);
+
+      await nostr.relayPool.count([
+        {
+          'kinds': [1],
+        },
+      ]);
+      await nostr.relayPool.count([
+        {
+          'kinds': [1],
+        },
+      ]);
+
+      expect(relay.sentMessages, hasLength(2));
+      final firstId = relay.sentMessages[0][1] as String;
+      final secondId = relay.sentMessages[1][1] as String;
+      expect(firstId, isNot(equals(secondId)));
+    });
+
     test('count succeeds when some relays fail and some succeed', () async {
       final countRelay = _CountRelay('wss://good.relay', countValue: 7);
       final failingRelay = _FailingSendRelay('wss://failing.relay');
