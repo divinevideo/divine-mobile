@@ -129,7 +129,10 @@ idempotent because historical v1 installs can report the same `user_version`
 while carrying different tables, columns, and indexes. The guarded
 `beforeOpen` repair path is retained only for damaged or manually mutated
 databases that opened without an upgrade; extend the versioned migration chain,
-not that recovery path, for new schema changes.
+not that recovery path, for new schema changes. Because Drift runs `onUpgrade`
+before `beforeOpen` and marks that open as upgraded, any new migration reachable
+from an older damaged schema must re-run the relevant idempotent repair steps
+within `onUpgrade`.
 
 ## Account-Boundary Cleanup
 
