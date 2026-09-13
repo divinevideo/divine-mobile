@@ -12,6 +12,8 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
+import '../helpers/recording_performance_monitor.dart';
+
 class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 
 class _MockNip98Token extends Mock implements Nip98Token {}
@@ -47,6 +49,86 @@ void main() {
       pollTimeout: const Duration(seconds: 1),
       delay: (_) async {},
       reportError: (error, _) => reports.add(error),
+    );
+
+    test(
+      'records delayed deletion separately from request completion',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final repository = CreatorDeleteEnforcementRepository(
+          baseUrl: 'https://moderation.example',
+          httpClient: MockClient((_) async => http.Response('missing', 404)),
+          nip98AuthService: auth,
+          performanceMonitor: monitor,
+        );
+        final result = await repository.enforce('private-kind5');
+        expect(result.status, CreatorDeleteEnforcementStatus.delayed);
+        final trace = monitor.traces.single;
+        expect(trace.name, 'creator_delete_enforcement');
+        expect(trace.attributes['outcome'], 'delayed');
+        expect(trace.attributes['reason'], 'http_404');
+        expect(trace.metrics['request_count'], 1);
+        expect(trace.metrics['poll_count'], 0);
+        expect(trace.metrics['signing_ms'], greaterThanOrEqualTo(0));
+        expect(trace.metrics['http_ms'], greaterThanOrEqualTo(0));
+        expect(trace.stops, 1);
+        expect(trace.attributes.toString(), isNot(contains('private-kind5')));
+      },
+    );
+
+    test(
+      'tracks polling as part of one completed deletion operation',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final repository = CreatorDeleteEnforcementRepository(
+          baseUrl: 'https://moderation.example',
+          httpClient: MockClient(
+            (request) async => request.method == 'POST'
+                ? http.Response('', 202)
+                : http.Response('{"targets":[{"status":"success"}]}', 200),
+          ),
+          nip98AuthService: auth,
+          performanceMonitor: monitor,
+          delay: (_) async {},
+        );
+        final result = await repository.enforce('private-kind5');
+        expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
+        final trace = monitor.traces.single;
+        expect(trace.attributes['outcome'], 'confirmed');
+        expect(trace.metrics['request_count'], 2);
+        expect(trace.metrics['poll_count'], 1);
+        expect(trace.stops, 1);
+      },
+    );
+
+    test(
+      'overlapping deletions retain independent terminal measurements',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final firstResponse = Completer<http.Response>();
+        var requests = 0;
+        final repository = CreatorDeleteEnforcementRepository(
+          baseUrl: 'https://moderation.example',
+          httpClient: MockClient(
+            (_) async => ++requests == 1
+                ? firstResponse.future
+                : http.Response('missing', 404),
+          ),
+          nip98AuthService: auth,
+          performanceMonitor: monitor,
+        );
+        final first = repository.enforce('first-private-kind5');
+        final second = repository.enforce('second-private-kind5');
+        expect((await second).status, CreatorDeleteEnforcementStatus.delayed);
+        expect(monitor.traces.first.stops, 0);
+        firstResponse.complete(http.Response('{"status":"success"}', 200));
+        expect((await first).status, CreatorDeleteEnforcementStatus.confirmed);
+        expect(monitor.traces.map((trace) => trace.attributes['outcome']), [
+          'confirmed',
+          'delayed',
+        ]);
+        expect(monitor.traces.map((trace) => trace.stops), [1, 1]);
+      },
     );
 
     test('maps synchronous success to confirmed', () async {
@@ -335,6 +417,7 @@ void main() {
     );
 
     test('bounds a non-interactive signer that never completes', () async {
+      final monitor = RecordingPerformanceMonitor();
       final signer = Completer<Nip98Token?>();
       when(
         () => auth.createAuthToken(
@@ -347,6 +430,7 @@ void main() {
         baseUrl: 'https://moderation.example',
         httpClient: MockClient((_) async => http.Response('', 200)),
         nip98AuthService: auth,
+        performanceMonitor: monitor,
         requestTimeout: const Duration(milliseconds: 10),
       );
 
@@ -355,6 +439,9 @@ void main() {
           .timeout(const Duration(milliseconds: 100));
 
       expect(result.status, CreatorDeleteEnforcementStatus.delayed);
+      expect(monitor.traces.single.attributes['reason'], 'signing_timeout');
+      expect(monitor.traces.single.metrics['http_ms'], 0);
+      expect(monitor.traces.single.stops, 1);
     });
 
     test('does not time out a human-approved signer', () async {

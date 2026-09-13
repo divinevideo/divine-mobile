@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 
+import '../helpers/recording_performance_monitor.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -20,6 +22,34 @@ void main() {
         crashReporting: CrashReportingService(),
       );
     });
+
+    test(
+      'flushes early measured milestones once after Firebase is ready',
+      () async {
+        await service.initialize();
+        service.startPhase('bindings');
+        service.completePhase('bindings');
+        service.markFirstFrame();
+        final firstFrameMs = service.getMetrics()['first_frame_ms'];
+        final monitor = RecordingPerformanceMonitor();
+        service.attachPerformanceMonitor(monitor);
+        service.attachPerformanceMonitor(monitor);
+        service.markFirstFrame();
+        service.markAuthShellReady();
+        service.startPhase('private-dynamic-name');
+        service.completePhase('private-dynamic-name');
+        expect(monitor.traces.length, 3);
+        final frame = monitor.traces.singleWhere(
+          (trace) => trace.attributes['milestone'] == 'first_frame',
+        );
+        expect(frame.metrics['elapsed_ms'], firstFrameMs);
+        expect(frame.stops, 1);
+        expect(
+          monitor.traces.map((trace) => trace.attributes.toString()).join(),
+          isNot(contains('private-dynamic-name')),
+        );
+      },
+    );
 
     group('markAuthShellReady', () {
       test('sets authShellReadyTime', () async {
