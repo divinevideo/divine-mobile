@@ -443,10 +443,9 @@ ProfileRepository _buildProfileRepository(Ref ref) {
     blockFilter: blockFilter,
   );
 
-  // Unconditional, not gated on warmCache: the write-path guards in
-  // cacheProfile depend on this set, and every construction of the repository
-  // needs them — a relay Kind 0 can resurrect an evicted account regardless of
-  // whether this instance warms the cache.
+  // Every construction of the repository needs this: the write-path guards in
+  // cacheProfile depend on this set, and a relay Kind 0 can resurrect an
+  // evicted account on any instance.
   unawaited(repo.loadVanishedPubkeys());
   // Prime the vanish source before DM surfaces mount, so the synchronous
   // derived value does not sample it during its initial AsyncLoading state.
