@@ -270,7 +270,7 @@ discarded_futures|test/blocs/drafts_library/drafts_library_bloc_test.dart	1
 discarded_futures|test/blocs/email_verification/email_verification_cubit_test.dart	54
 discarded_futures|test/blocs/explore_tabs/explore_tabs_cubit_test.dart	1
 discarded_futures|test/blocs/feed_loading_moderation/feed_loading_moderation_cubit_test.dart	9
-discarded_futures|test/blocs/fullscreen_feed/fullscreen_feed_bloc_test.dart	5
+discarded_futures|test/blocs/fullscreen_feed/fullscreen_feed_bloc_test.dart	4
 discarded_futures|test/blocs/hashtag_search/hashtag_search_bloc_test.dart	1
 discarded_futures|test/blocs/locale/locale_cubit_test.dart	2
 discarded_futures|test/blocs/my_followers/my_followers_bloc_test.dart	1
