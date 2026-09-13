@@ -15,7 +15,6 @@ import 'package:openvine/repositories/account_deletion_recovery_repository.dart'
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart'
     as dialog_api
@@ -35,12 +34,6 @@ class _MockAccountDeletionRecoveryRepository extends Mock
 const _recoverableAttempt = AccountDeletionAttempt(
   id: 'attempt-id',
   status: AccountDeletionAttemptStatus.recoverable,
-  username: 'alice',
-);
-
-const _completedAttempt = AccountDeletionAttempt(
-  id: 'attempt-id',
-  status: AccountDeletionAttemptStatus.completed,
   username: 'alice',
 );
 
@@ -80,7 +73,11 @@ Future<void> runDeletion({
   Future<DivineUsernameLookup>? lookupFuture,
   String? confirmedPubkey,
   String screenName = 'AccountDeletion',
-  Future<void> Function(AccountDeletionAttempt attempt, String vanishEventId)?
+  Future<bool> Function(
+    AccountDeletionAttempt attempt,
+    String vanishEventId,
+    bool contentDeletionUnverified,
+  )?
   onDeletionSubmitted,
 }) => dialog_api.executeAccountDeletion(
   context: context,
@@ -90,7 +87,7 @@ Future<void> runDeletion({
   ownedUsernameLookup: lookupFuture ?? Future.value(lookup),
   confirmedPubkey: confirmedPubkey,
   screenName: screenName,
-  onDeletionSubmitted: onDeletionSubmitted,
+  onDeletionSubmitted: onDeletionSubmitted ?? (_, _, _) async => false,
 );
 
 DeleteAccountConfirmation _deleteFallback() => DeleteAccountConfirmation(
@@ -586,13 +583,11 @@ void main() {
   });
 
   group('executeAccountDeletion', () {
-    testWidgets('shows failure when local data cleanup fails after sign-out', (
+    testWidgets('records the receipt then signs out without submitting', (
       tester,
     ) async {
       final deletionService = _MockAccountDeletionService();
       final authService = _MockAuthService();
-      // The pre-flight gate runs on every path; default it to ready so
-      // these tests exercise the behaviour under test, not the gate.
       when(
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
@@ -602,13 +597,9 @@ void main() {
           expectedPubkey: any(named: 'expectedPubkey'),
         ),
       ).thenAnswer((_) async => DeleteAccountResult.createSuccess('event-id'));
-      when(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      ).thenThrow(
-        const UserDataCleanupException(
-          'Signed out but local user data cleanup failed',
-        ),
-      );
+      when(authService.signOut).thenAnswer((_) async {});
+      final recoveryRepository = _successfulRecoveryRepository();
+      final recorded = <AccountDeletionAttempt>[];
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -626,16 +617,76 @@ void main() {
         context: capturedContext,
         deletionService: deletionService,
         authService: authService,
-        deletionRecoveryRepository: _successfulRecoveryRepository(),
+        deletionRecoveryRepository: recoveryRepository,
+        onDeletionSubmitted: (attempt, _, _) async {
+          recorded.add(attempt);
+          return false;
+        },
       );
       await tester.pumpAndSettle();
 
-      final l10n = _englishL10n();
+      expect(recorded, [same(_recoverableAttemptWithoutUsername)]);
+      verifyNever(
+        () => recoveryRepository.submit(
+          attemptId: any(named: 'attemptId'),
+          vanishEventId: any(named: 'vanishEventId'),
+        ),
+      );
+      verify(authService.signOut).called(1);
       expect(
-        find.text(l10n.deleteAccountLocalDataDeletionFailed),
+        find.text(_englishL10n().accountDeletionFinishingBody),
         findsOneWidget,
       );
-      expect(find.text(l10n.deleteAccountSuccess), findsNothing);
+    });
+
+    testWidgets('forwards an incomplete content sweep to the receipt', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(
+        () => deletionService.deleteAccount(
+          onProgress: any(named: 'onProgress'),
+          expectedPubkey: any(named: 'expectedPubkey'),
+        ),
+      ).thenAnswer(
+        (_) async => DeleteAccountResult.createSuccess(
+          'event-id',
+          contentDeletionIncomplete: true,
+        ),
+      );
+      when(authService.signOut).thenAnswer((_) async {});
+      final recoveryRepository = _successfulRecoveryRepository();
+      final forwarded = <bool>[];
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+        onDeletionSubmitted: (_, _, contentDeletionUnverified) async {
+          forwarded.add(contentDeletionUnverified);
+          return false;
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(forwarded, [isTrue]);
     });
 
     testWidgets(
@@ -649,10 +700,7 @@ void main() {
         // was started from is gone before signOut returns — the device
         // timeline in #6450.
         final signOutGate = Completer<void>();
-        when(
-          () =>
-              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-        ).thenAnswer((_) async {
+        when(authService.signOut).thenAnswer((_) async {
           redirect.signOut();
           await signOutGate.future;
         });
@@ -673,8 +721,8 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _englishL10n();
-        expect(find.text(l10n.deleteAccountSuccess), findsOneWidget);
-        expect(announced, contains(l10n.deleteAccountSuccess));
+        expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
+        expect(announced, contains(l10n.accountDeletionFinishingBody));
       },
     );
 
@@ -686,10 +734,7 @@ void main() {
         final redirect = _SignOutRedirectNotifier();
         _stubSuccessfulDeletion(deletionService, authService);
         final signOutGate = Completer<void>();
-        when(
-          () =>
-              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-        ).thenAnswer((_) async {
+        when(authService.signOut).thenAnswer((_) async {
           redirect.signOut();
           await signOutGate.future;
         });
@@ -722,7 +767,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(_welcomeMarker), findsOneWidget);
-        expect(find.text(_englishL10n().deleteAccountSuccess), findsOneWidget);
+        expect(
+          find.text(_englishL10n().accountDeletionFinishingBody),
+          findsOneWidget,
+        );
       },
     );
 
@@ -862,20 +910,12 @@ void main() {
         () => recoveryRepository.prepare(username: any(named: 'username')),
       ).thenAnswer((_) async => _recoverableAttempt);
       when(
-        () => recoveryRepository.submit(
-          attemptId: any(named: 'attemptId'),
-          vanishEventId: any(named: 'vanishEventId'),
-        ),
-      ).thenAnswer((_) async => _completedAttempt);
-      when(
         () => deletionService.deleteAccount(
           onProgress: any(named: 'onProgress'),
           expectedPubkey: any(named: 'expectedPubkey'),
         ),
       ).thenAnswer((_) async => DeleteAccountResult.createSuccess('event-id'));
-      when(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      ).thenAnswer((_) async {});
+      when(authService.signOut).thenAnswer((_) async {});
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -905,12 +945,13 @@ void main() {
         ),
       ).called(1);
       verify(() => recoveryRepository.prepare(username: 'alice')).called(1);
-      verify(
+      verifyNever(
         () => recoveryRepository.submit(
-          attemptId: 'attempt-id',
-          vanishEventId: 'event-id',
+          attemptId: any(named: 'attemptId'),
+          vanishEventId: any(named: 'vanishEventId'),
         ),
-      ).called(1);
+      );
+      verify(authService.signOut).called(1);
     });
 
     testWidgets(
@@ -1080,18 +1121,10 @@ void main() {
           expectedPubkey: any(named: 'expectedPubkey'),
         ),
       ).thenAnswer((_) async => DeleteAccountResult.createSuccess('event-id'));
-      when(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      ).thenAnswer((_) async {});
+      when(authService.signOut).thenAnswer((_) async {});
       when(
         recoveryRepository.prepare,
       ).thenAnswer((_) async => _recoverableAttemptWithoutUsername);
-      when(
-        () => recoveryRepository.submit(
-          attemptId: 'attempt-id',
-          vanishEventId: 'event-id',
-        ),
-      ).thenAnswer((_) async => _completedAttemptWithoutUsername);
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -1115,12 +1148,12 @@ void main() {
 
       verify(recoveryRepository.prepare).called(1);
       verifyNever(() => recoveryRepository.prepare(username: 'alice'));
-      verify(
+      verifyNever(
         () => recoveryRepository.submit(
-          attemptId: 'attempt-id',
-          vanishEventId: 'event-id',
+          attemptId: any(named: 'attemptId'),
+          vanishEventId: any(named: 'vanishEventId'),
         ),
-      ).called(1);
+      );
     });
 
     testWidgets('discloses the release when content deletion fails', (
@@ -1194,21 +1227,7 @@ void main() {
         when(
           () => recoveryRepository.prepare(username: any(named: 'username')),
         ).thenAnswer((_) async => _recoverableAttempt);
-        const processingAttempt = AccountDeletionAttempt(
-          id: 'attempt-id',
-          status: AccountDeletionAttemptStatus.processing,
-          username: 'alice',
-        );
         final accepted = <AccountDeletionAttempt>[];
-        when(
-          () => recoveryRepository.submit(
-            attemptId: any(named: 'attemptId'),
-            vanishEventId: any(named: 'vanishEventId'),
-          ),
-        ).thenAnswer((_) async {
-          expect(accepted, [same(_recoverableAttempt)]);
-          return processingAttempt;
-        });
         when(
           () => deletionService.deleteAccount(
             onProgress: any(named: 'onProgress'),
@@ -1235,7 +1254,10 @@ void main() {
           authService: authService,
           deletionRecoveryRepository: recoveryRepository,
           lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
-          onDeletionSubmitted: (attempt, _) async => accepted.add(attempt),
+          onDeletionSubmitted: (attempt, _, _) async {
+            accepted.add(attempt);
+            return false;
+          },
         );
         await tester.pumpAndSettle();
 
@@ -1255,9 +1277,13 @@ void main() {
           ),
           findsNothing,
         );
-        // The caller gates the user from this attempt: a lookup can no longer
-        // be signed once the coordinator has the deletion (#8583).
-        expect(accepted, [same(_recoverableAttempt), same(processingAttempt)]);
+        expect(accepted, [same(_recoverableAttempt)]);
+        verifyNever(
+          () => recoveryRepository.submit(
+            attemptId: any(named: 'attemptId'),
+            vanishEventId: any(named: 'vanishEventId'),
+          ),
+        );
         verify(authService.signOut).called(1);
       },
     );
@@ -1300,7 +1326,7 @@ void main() {
         authService: authService,
         deletionRecoveryRepository: recoveryRepository,
         lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
-        onDeletionSubmitted: (_, _) async {
+        onDeletionSubmitted: (_, _, _) async {
           throw StateError('receipt write failed');
         },
       );
@@ -1855,9 +1881,7 @@ void main() {
           expectedPubkey: any(named: 'expectedPubkey'),
         ),
       ).thenAnswer((_) async => DeleteAccountResult.createSuccess('event-id'));
-      when(
-        () => authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-      ).thenAnswer((_) async {});
+      when(authService.signOut).thenAnswer((_) async {});
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
