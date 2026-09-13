@@ -36,9 +36,20 @@ import 'package:material_ui/material_ui.dart';
 
 import 'feed_perf_fixtures.dart';
 
-/// Minimum frames a measured window must render for its statistics to mean
-/// anything. A window that fell silent is a harness failure, not a fast feed.
-const int _minFramesPerWindow = 30;
+/// Minimum frames the playback window must render for its statistics to mean
+/// anything. The window is a fixed 4 s of playback plus a ~2 s flush drain, so
+/// this only catches a window that fell silent.
+const int _minPlaybackFrames = 30;
+
+/// Minimum frames each page transition must render, so the transition window
+/// fails when the frame-clock filter matched nothing rather than when the
+/// device is slow. The transition window is bounded by real animation time
+/// ([_pageTransitions] × `_pageJumpDuration` 300 ms), and the point of the
+/// report is the frame distribution on the device under test — a device
+/// rendering the transition at 5 fps is a finding, not a harness failure. Two
+/// frames per transition is enough to prove the filter is keyed to the right
+/// clock; a genuinely frozen window produces none.
+const int _minFramesPerTransition = 2;
 
 /// Ceiling for the p90 UI-thread (build) frame time. Build is CPU-bound and
 /// device-relative; this is a catastrophic-regression guard, not the budget
@@ -182,7 +193,12 @@ void main() {
         // Page transitions. Each interval is bounded by the frame clock the
         // engine timestamps `FrameTiming`s with, so the transition window's
         // stats cover animating frames only — the flush drain is not idle
-        // playback diluted into the percentiles.
+        // playback diluted into the percentiles. The two clocks are not
+        // contractually documented to share a base (`currentSystemFrameTimeStamp`
+        // is "more or less arbitrary" in the SDK docs), but both derive from
+        // the engine's frame timestamps on Android and the emulator run matched
+        // 42 of the captured frames; if they ever diverge the filter matches
+        // nothing and the per-transition floor below fails loudly.
         final transitionRaw = <FrameTiming>[];
         final intervals = <(int, int)>[];
         void transitionCallback(List<FrameTiming> timings) =>
@@ -203,10 +219,17 @@ void main() {
           return intervals.any((i) => at >= i.$1 && at <= i.$2);
         }).toList();
 
-        final stats = <_WindowStats>[
-          _WindowStats.from('playback', playback, frameBudgetMs),
-          _WindowStats.from('page_transition', transition, frameBudgetMs),
-        ];
+        final playbackStats = _WindowStats.from(
+          'playback',
+          playback,
+          frameBudgetMs,
+        );
+        final transitionStats = _WindowStats.from(
+          'page_transition',
+          transition,
+          frameBudgetMs,
+        );
+        final stats = <_WindowStats>[playbackStats, transitionStats];
 
         final report = StringBuffer()
           ..writeln(
@@ -221,7 +244,9 @@ void main() {
           ..writeln(
             'scope=InfiniteVideoFeed player page and page transitions; the '
             'app-layer video/overlay builders (feed_videos.dart) are not part '
-            'of this tree',
+            'of this tree. Transitions run back-to-back like a fast swipe, so '
+            'a late transition may composite its loading placeholder rather '
+            'than video.',
           );
         for (final window in stats) {
           // Machine-readable for the retained Codemagic log artifact.
@@ -235,14 +260,22 @@ void main() {
         // ignore: avoid_print
         print(report);
 
+        expect(
+          playbackStats.frames,
+          greaterThan(_minPlaybackFrames),
+          reason:
+              'playback rendered only ${playbackStats.frames} frames; the '
+              'window measured nothing',
+        );
+        expect(
+          transitionStats.frames,
+          greaterThan(_pageTransitions * _minFramesPerTransition),
+          reason:
+              'page_transition rendered only ${transitionStats.frames} frames '
+              'across $_pageTransitions transitions; the frame-clock filter '
+              'matched nothing',
+        );
         for (final window in stats) {
-          expect(
-            window.frames,
-            greaterThan(_minFramesPerWindow),
-            reason:
-                '${window.label} rendered only ${window.frames} frames; the '
-                'window measured nothing',
-          );
           expect(
             window.buildP90Ms,
             lessThanOrEqualTo(_maxBuildP90Ms),
