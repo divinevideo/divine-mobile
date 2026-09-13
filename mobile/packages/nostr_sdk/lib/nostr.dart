@@ -352,7 +352,9 @@ class Nostr {
   /// deadline rather than completing on the relays that answered first.
   ///
   /// A read that ends any other way than a complete, uncapped answer gets one
-  /// [RelayDiagnosticSite.queryCompletion] line, from the pool.
+  /// [RelayDiagnosticSite.queryCompletion] line: from the pool for a read it
+  /// saw, and from here under [RelayDiagnostic.clientScope] for one whose
+  /// deadline had already passed, which never reaches the pool.
   ///
   /// Throws [ArgumentError] when [filters] is empty.
   Future<QueryResult> readEvents(
