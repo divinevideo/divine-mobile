@@ -1,11 +1,13 @@
-// ABOUTME: Unit tests for resolveRenderAudioTracks.
-// ABOUTME: Covers resolution, per-track skip-on-failure, and empty fallback.
+// ABOUTME: Unit tests for building and resolving render audio tracks.
+// ABOUTME: Covers timing, diagnostics, skip-on-failure, and empty fallback.
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// An [EditorAudio] whose [safeFilePath] always fails, standing in for a track
 /// whose source cannot be resolved (e.g. a failed network download).
@@ -54,6 +56,76 @@ AudioTrack _unresolvableTrack(String id) {
 }
 
 void main() {
+  late LogCaptureService capture;
+
+  setUp(() async {
+    capture = LogCaptureService();
+    await capture.clearAllLogs();
+  });
+
+  tearDown(() => capture.clearAllLogs());
+
+  group('buildRenderAudioTracks', () {
+    AudioEvent sound({
+      Duration startOffset = Duration.zero,
+      Duration startTime = Duration.zero,
+      Duration? endTime,
+    }) => AudioEvent(
+      id: 'selected-sound',
+      pubkey: 'a' * 64,
+      createdAt: 1735689600,
+      url: '/tmp/selected-sound.mp3',
+      duration: 30,
+      startOffset: startOffset,
+      startTime: startTime,
+      endTime: endTime,
+    );
+
+    test('recorder-selected sound starts at composition zero while preserving '
+        'the chosen source offset', () {
+      final tracks = buildRenderAudioTracks(
+        metaTracks: const [],
+        selectedSound: sound(
+          startOffset: const Duration(seconds: 12),
+          startTime: const Duration(milliseconds: 1300),
+          endTime: const Duration(seconds: 20),
+        ),
+        logName: 'recorder-render',
+      );
+
+      expect(tracks, hasLength(1));
+      expect(tracks.single.startTime, Duration.zero);
+      expect(tracks.single.endTime, const Duration(seconds: 30));
+      expect(tracks.single.audioStartTime, const Duration(seconds: 12));
+      final log = capture.getRecentLogs(limit: 1).single;
+      expect(log.name, 'recorder-render');
+      expect(log.level, LogLevel.warning);
+      expect(log.message, contains('Prepared selected-sound fallback'));
+    });
+
+    test('timeline timing wins over the recorder-selected fallback', () {
+      final tracks = buildRenderAudioTracks(
+        metaTracks: [
+          sound(
+            startTime: const Duration(milliseconds: 1300),
+            endTime: const Duration(seconds: 20),
+          ),
+        ],
+        selectedSound: sound(startOffset: const Duration(seconds: 12)),
+        logName: 'timeline-render',
+      );
+
+      expect(tracks, hasLength(1));
+      expect(tracks.single.startTime, const Duration(milliseconds: 1300));
+      expect(tracks.single.endTime, const Duration(seconds: 20));
+      expect(tracks.single.audioStartTime, Duration.zero);
+      final log = capture.getRecentLogs(limit: 1).single;
+      expect(log.name, 'timeline-render');
+      expect(log.level, LogLevel.warning);
+      expect(log.message, contains('Prepared timeline'));
+    });
+  });
+
   group('resolveRenderAudioTracks', () {
     test('returns an empty list for empty input', () async {
       final result = await resolveRenderAudioTracks(
@@ -132,6 +204,66 @@ void main() {
 
         expect(result.single.startTime, equals(Duration.zero));
         expect(result.single.endTime, equals(const Duration(seconds: 1)));
+      },
+    );
+
+    test('keeps source offset separate from composition placement for a short '
+        'stop-motion render', () async {
+      final built = buildRenderAudioTracks(
+        metaTracks: const [],
+        selectedSound: AudioEvent(
+          id: 'stop-motion-sound',
+          pubkey: 'b' * 64,
+          createdAt: 1735689600,
+          url: '/tmp/stop-motion-sound.mp3',
+          duration: 30,
+          startOffset: const Duration(seconds: 12),
+        ),
+        logName: 'test',
+      );
+
+      final result = await resolveRenderAudioTracks(
+        built,
+        logName: 'test',
+        videoDuration: const Duration(milliseconds: 1400),
+      );
+
+      expect(result, hasLength(1));
+      expect(result.single.startTime, Duration.zero);
+      expect(result.single.endTime, const Duration(milliseconds: 1400));
+      expect(result.single.audioStartTime, const Duration(seconds: 12));
+    });
+
+    test(
+      'captures resolved timing without exposing the local source path',
+      () async {
+        await resolveRenderAudioTracks(
+          [
+            _fileTrack(
+              id: 'diagnostic-track',
+              path: '/private/user-name/selected-sound.mp3',
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 30),
+              audioStartTime: const Duration(seconds: 12),
+              audioEndTime: const Duration(seconds: 20),
+            ),
+          ],
+          logName: 'test-audio-render',
+          videoDuration: const Duration(milliseconds: 1400),
+        );
+
+        final log = capture.getRecentLogs(limit: 1).single;
+        expect(log.name, 'test-audio-render');
+        expect(log.level, LogLevel.warning);
+        expect(log.category, LogCategory.video);
+        expect(
+          log.message,
+          contains(
+            'composition=[0ms, 1400ms], source=[12000ms, 20000ms], '
+            'videoDuration=1400ms',
+          ),
+        );
+        expect(log.message, isNot(contains('/private/user-name')));
       },
     );
 
