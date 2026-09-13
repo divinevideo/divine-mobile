@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:upload_repository/upload_repository.dart' show UploadPhases;
 
 /// Token every timing line carries, so a log export can be reduced to the
 /// publish timeline with a single `grep PUBTIME`.
@@ -26,11 +27,17 @@ const String publishTraceName = 'video_publish';
 /// metrics lives here, so both ends refer to the same constant.
 abstract class PublishPhases {
   static const String upload = 'upload';
-  static const String uploadTransfer = 'upload.transfer';
-  static const String uploadThumbnail = 'upload.thumbnail';
-  static const String uploadThumbnailExtract = 'upload.thumbnail.extract';
-  static const String uploadThumbnailBlurhash = 'upload.thumbnail.blurhash';
-  static const String uploadThumbnailPut = 'upload.thumbnail.put';
+
+  // The upload leg is timed inside upload_repository, so these name the
+  // package's constants rather than restating their values: a divergence
+  // is then a compile error instead of something a parity test has to catch.
+  static const String uploadTransfer = UploadPhases.uploadTransfer;
+  static const String uploadThumbnail = UploadPhases.uploadThumbnail;
+  static const String uploadThumbnailExtract =
+      UploadPhases.uploadThumbnailExtract;
+  static const String uploadThumbnailBlurhash =
+      UploadPhases.uploadThumbnailBlurhash;
+  static const String uploadThumbnailPut = UploadPhases.uploadThumbnailPut;
   static const String mentions = 'mentions';
   static const String subtitles = 'subtitles';
   static const String nostr = 'nostr';
@@ -42,7 +49,7 @@ abstract class PublishPhases {
   /// Detail marker for a leg that short-circuited on work a previous attempt
   /// already finished — a thumbnail already on the CDN, or an event the
   /// signer already signed.
-  static const String reusedDetail = 'reused';
+  static const String reusedDetail = UploadPhases.reusedDetail;
 
   /// Detail marker on [nostrSign] for a signature this attempt really made.
   static const String signedDetail = 'signed';
