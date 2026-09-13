@@ -10,10 +10,10 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/hive_storage_service.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 import '../test/helpers/real_integration_test_helper.dart';
 

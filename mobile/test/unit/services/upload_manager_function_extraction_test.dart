@@ -2,7 +2,6 @@
 // ABOUTME: Tests function extraction following single responsibility principle
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_manager.dart';
 
 // Helper classes to test extracted functionality

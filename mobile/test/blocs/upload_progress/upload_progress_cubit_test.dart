@@ -6,7 +6,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/upload_progress/upload_progress_cubit.dart';
 import 'package:openvine/blocs/upload_progress/upload_progress_state.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group(UploadProgressCubit, () {

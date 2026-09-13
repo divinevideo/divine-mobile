@@ -3,7 +3,7 @@
 // Check in to version control
 
 import 'package:hive_ce/hive_ce.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/src/pending_upload.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {

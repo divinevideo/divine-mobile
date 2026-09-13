@@ -1,6 +1,6 @@
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('PendingUpload resumable upload sessions', () {

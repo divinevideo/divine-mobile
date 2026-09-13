@@ -14,7 +14,6 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -1092,8 +1091,9 @@ class VideoPublishService {
   /// through as English `rawFallback`.
   ///
   /// The upload-manager sentence substrings must stay in sync with
-  /// [UploadManager.getUserFriendlyErrorMessage]; the drift guard in
-  /// `video_publish_service_test.dart` fails loudly if that copy changes.
+  /// [UploadProgressReporter.userFriendlyErrorMessage]; the drift guard in
+  /// `publish_error_classification_test.dart` fails loudly if that copy
+  /// changes.
   @visibleForTesting
   static PublishErrorKind? classifyPublishErrorMessage(String error) {
     final errorString = error.toLowerCase();

@@ -1,7 +1,7 @@
 // ABOUTME: Helper predicates for deciding whether persisted upload state can publish
 // ABOUTME: Keeps upload-state validation out of the already oversized UploadManager
 
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/src/pending_upload.dart';
 
 bool readyUploadIsPublishable(PendingUpload upload) =>
     upload.status == UploadStatus.readyToPublish &&

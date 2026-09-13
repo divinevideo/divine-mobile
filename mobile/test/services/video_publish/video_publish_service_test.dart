@@ -13,7 +13,6 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/services/auth_service.dart';

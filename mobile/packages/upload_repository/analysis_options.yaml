@@ -1,0 +1,31 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+# The remaining relaxations mirror the app's analysis_options.yaml. The upload
+# core was extracted from lib/services/ and authored under the app's lint
+# configuration; mirroring that posture avoids introducing new lint debt during
+# the move while keeping the package on the same very_good_analysis baseline.
+# `discarded_futures` and `unawaited_futures` are deliberately NOT relaxed here:
+# the app covers them with an app-scoped ratchet, so inside the package they
+# stay enforced by this package's own analyze step.
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+  errors:
+    avoid_catches_without_on_clauses: ignore
+    avoid_types_on_closure_parameters: ignore
+    cascade_invocations: ignore
+    comment_references: ignore
+    inference_failure_on_function_invocation: ignore
+    inference_failure_on_instance_creation: ignore
+    inference_failure_on_untyped_parameter: ignore
+    prefer_int_literals: ignore
+    use_super_parameters: ignore
+
+linter:
+  rules:
+    avoid_dynamic_calls: false
+    lines_longer_than_80_chars: false
+    omit_local_variable_types: false
+    prefer_initializing_formals: false
+    public_member_api_docs: false
+    sort_pub_dependencies: false

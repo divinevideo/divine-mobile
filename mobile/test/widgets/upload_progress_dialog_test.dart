@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/widgets/upload_progress_dialog.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 import '../helpers/go_router.dart';
 
