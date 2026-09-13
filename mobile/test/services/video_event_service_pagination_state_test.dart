@@ -185,7 +185,7 @@ void main() {
 
   group('VideoEventService Pagination', () {
     test(
-      'should return early when pagination state has no more content',
+      'should reset and refetch when pagination state has no more content',
       () async {
         // Arrange - Get the pagination state and set hasMore=false
         await videoEventService.subscribeToVideoFeed(
@@ -195,13 +195,19 @@ void main() {
 
         reset(mockNostrService);
         when(() => mockNostrService.isInitialized).thenReturn(true);
+        when(() => mockNostrService.connectedRelayCount).thenReturn(3);
 
         // Access the pagination state and mark it as having no more
-        // content
+        // content. isLoading is still set from the subscribe above, and it
+        // short-circuits loadMoreEvents first, so clear it — otherwise this
+        // test passes on the already-loading guard the next test covers and
+        // says nothing about hasMore.
         final paginationStates = videoEventService
             .getPaginationStatesForTesting();
         final discoveryState = paginationStates[SubscriptionType.discovery]!;
-        discoveryState.hasMore = false;
+        discoveryState
+          ..isLoading = false
+          ..hasMore = false;
 
         // Act
         await videoEventService.loadMoreEvents(
@@ -209,9 +215,11 @@ void main() {
           limit: 50,
         );
 
-        // Assert - Should not create any subscriptions since
-        // hasMore=false
-        verifyNever(() => mockNostrService.subscribe(any()));
+        // Assert - hasMore=false does not stop the load. loadMoreEvents
+        // resets the pagination state and queries again so a viewer who
+        // reaches the end of the feed can keep scrolling.
+        verify(() => mockNostrService.subscribe(any())).called(1);
+        expect(discoveryState.hasMore, isTrue);
       },
     );
 
