@@ -541,6 +541,23 @@ void main() {
             throwsArgumentError,
           );
         });
+
+        test(
+          'still rejects empty filters when the deadline has passed',
+          () async {
+            // The expired-deadline branch returns before [RelayPool.query] can
+            // raise this, so without its own guard the read answers an empty
+            // result for a call that was never valid (#7301).
+            await expectLater(
+              nostr.readEvents(
+                const [],
+                id: _readId,
+                deadline: DateTime.now().subtract(const Duration(seconds: 1)),
+              ),
+              throwsArgumentError,
+            );
+          },
+        );
       });
     });
 

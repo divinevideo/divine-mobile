@@ -634,6 +634,13 @@ class Nostr {
     required DateTime deadline,
     required bool requireAllRelaysSettled,
   }) async {
+    // [RelayPool.query] rejects an empty filter list, and the deadline branch
+    // below returns before it is ever called. Validate here so a read is
+    // rejected the same way whichever path it takes.
+    if (filters.isEmpty) {
+      throw ArgumentError('No filters given', 'filters');
+    }
+
     // A deadline that has already passed ends the read before it starts. The
     // client's query pool can hand a slot over with the caller's budget fully
     // spent by the wait; a REQ written then was unsubscribed a few
