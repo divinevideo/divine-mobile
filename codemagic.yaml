@@ -1456,9 +1456,9 @@ workflows:
   perf-feed-ttff:
     name: Feed Time to First Frame (Android)
     working_directory: mobile
-    # Two device tests plus pub get, the Gradle app build and emulator boot;
-    # 20 min was tight once the frame-timing test joined the lane.
-    max_build_duration: 25
+    # Pinned at 20 by test_codemagic_shorebird_config.py as part of this lane's
+    # bounded profile; raising it needs measured lane wall time, not a guess.
+    max_build_duration: 20
     instance_type: linux_x2
     environment:
       flutter: 3.47.2
