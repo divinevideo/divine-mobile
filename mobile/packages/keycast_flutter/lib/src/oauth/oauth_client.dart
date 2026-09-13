@@ -1013,10 +1013,9 @@ class KeycastOAuth {
   /// The server's own message from a JSON error body, or null when absent.
   static String? _errorMessageFrom(http.Response response) {
     try {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return json['message'] as String? ??
-          json['error'] as String? ??
-          json['error_description'] as String?;
+      final json = _decodeJsonObject(response.body);
+      final message = _responseErrorMessage(json, '');
+      return message.isEmpty ? null : message;
     } catch (_) {
       return null;
     }

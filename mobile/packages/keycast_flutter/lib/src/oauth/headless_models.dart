@@ -1,6 +1,16 @@
 // ABOUTME: Response models for headless authentication API
 // ABOUTME: Supports native login/register flows without browser redirects
 
+/// Typed classification of a failed `POST /api/headless/register`.
+enum KeycastRegisterFailure {
+  emailAlreadyRegistered,
+  invalidEmail,
+  rateLimited,
+  server,
+  network,
+  unknown,
+}
+
 /// Result from POST /api/headless/register
 class HeadlessRegisterResult {
   HeadlessRegisterResult({
@@ -41,11 +51,31 @@ class HeadlessRegisterResult {
   final String? deviceCode;
   final String? email;
 
-  /// OAuth error code (e.g., 'email_exists', 'invalid_password')
+  /// Machine-readable server or client-generated failure code.
   final String? errorCode;
 
   /// Human-readable error description from server
   final String? errorDescription;
+
+  /// Typed classification of the failure, for handling outside the client.
+  KeycastRegisterFailure get failure {
+    switch (errorCode) {
+      case 'CONFLICT':
+      case 'EMAIL_ALREADY_EXISTS':
+        return KeycastRegisterFailure.emailAlreadyRegistered;
+      case 'INVALID_EMAIL':
+        return KeycastRegisterFailure.invalidEmail;
+      case 'rate_limited':
+        return KeycastRegisterFailure.rateLimited;
+      case 'server_error':
+        return KeycastRegisterFailure.server;
+      case 'connection_error':
+      case 'network_error':
+        return KeycastRegisterFailure.network;
+      default:
+        return KeycastRegisterFailure.unknown;
+    }
+  }
 }
 
 /// Typed classification of a failed `POST /api/headless/login`.

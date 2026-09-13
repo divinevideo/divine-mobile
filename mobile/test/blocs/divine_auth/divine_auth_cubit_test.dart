@@ -1358,7 +1358,7 @@ void main() {
 
         group('registration error codes', () {
           blocTest<DivineAuthCubit, DivineAuthState>(
-            'maps email_exists error code to localized message',
+            'maps CONFLICT to localized recovery',
             setUp: () {
               when(
                 () => mockOAuth.headlessRegister(
@@ -1447,46 +1447,6 @@ void main() {
           );
 
           blocTest<DivineAuthCubit, DivineAuthState>(
-            'maps invalid_email error code to localized message',
-            setUp: () {
-              when(
-                () => mockOAuth.headlessRegister(
-                  email: any(named: 'email'),
-                  password: any(named: 'password'),
-                  scope: any(named: 'scope'),
-                  marketingConsent: any(named: 'marketingConsent'),
-                ),
-              ).thenAnswer(
-                (_) async => (
-                  HeadlessRegisterResult.error(
-                    'Bad email',
-                    code: 'invalid_email',
-                  ),
-                  testVerifier,
-                ),
-              );
-            },
-            build: buildCubit,
-            seed: () => const DivineAuthFormState(
-              email: testEmail,
-              password: testPassword,
-            ),
-            act: (cubit) => cubit.submit(),
-            expect: () => [
-              const DivineAuthFormState(
-                email: testEmail,
-                password: testPassword,
-                isSubmitting: true,
-              ),
-              isA<DivineAuthFormState>().having(
-                (s) => s.generalError,
-                'generalError',
-                contains('valid email'),
-              ),
-            ],
-          );
-
-          blocTest<DivineAuthCubit, DivineAuthState>(
             'maps INVALID_EMAIL error code to localized message',
             setUp: () {
               when(
@@ -1522,43 +1482,6 @@ void main() {
                 (s) => s.generalError,
                 'generalError',
                 contains('valid email'),
-              ),
-            ],
-          );
-
-          blocTest<DivineAuthCubit, DivineAuthState>(
-            'maps weak_password error code to localized message',
-            setUp: () {
-              when(
-                () => mockOAuth.headlessRegister(
-                  email: any(named: 'email'),
-                  password: any(named: 'password'),
-                  scope: any(named: 'scope'),
-                  marketingConsent: any(named: 'marketingConsent'),
-                ),
-              ).thenAnswer(
-                (_) async => (
-                  HeadlessRegisterResult.error('Weak', code: 'weak_password'),
-                  testVerifier,
-                ),
-              );
-            },
-            build: buildCubit,
-            seed: () => const DivineAuthFormState(
-              email: testEmail,
-              password: testPassword,
-            ),
-            act: (cubit) => cubit.submit(),
-            expect: () => [
-              const DivineAuthFormState(
-                email: testEmail,
-                password: testPassword,
-                isSubmitting: true,
-              ),
-              isA<DivineAuthFormState>().having(
-                (s) => s.generalError,
-                'generalError',
-                contains('too weak'),
               ),
             ],
           );

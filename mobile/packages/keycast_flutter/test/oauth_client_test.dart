@@ -541,10 +541,7 @@ void main() {
       test('classifies a 429 without a machine code', () async {
         final mockClient = MockClient((request) async {
           return http.Response(
-            jsonEncode({
-              'error': 'rate_limited',
-              'message': 'Slow down',
-            }),
+            jsonEncode({'error': 'rate_limited', 'message': 'Slow down'}),
             429,
           );
         });
@@ -828,10 +825,7 @@ void main() {
       test('classifies a 429 without a machine code', () async {
         final mockClient = MockClient((request) async {
           return http.Response(
-            jsonEncode({
-              'error': 'rate_limited',
-              'message': 'Slow down',
-            }),
+            jsonEncode({'error': 'rate_limited', 'message': 'Slow down'}),
             429,
           );
         });
@@ -883,6 +877,26 @@ void main() {
           expect(result.errorDescription, 'Slow down for a bit');
         },
       );
+
+      test('prefers error_description over an OAuth error token', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'temporarily_unavailable',
+              'error_description': 'Please try again shortly',
+            }),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorDescription, 'Please try again shortly');
+      });
 
       test('returns error on SocketException', () async {
         final mockClient = MockClient((request) async {

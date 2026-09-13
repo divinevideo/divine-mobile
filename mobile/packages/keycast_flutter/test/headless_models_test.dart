@@ -95,6 +95,40 @@ void main() {
         expect(result.errorDescription, 'Registration failed');
       });
     });
+
+    group('failure classification', () {
+      test('maps each supported code and defaults unknown', () {
+        HeadlessRegisterResult error(String code) =>
+            HeadlessRegisterResult.error('message', code: code);
+
+        expect(
+          error('CONFLICT').failure,
+          KeycastRegisterFailure.emailAlreadyRegistered,
+        );
+        expect(
+          error('EMAIL_ALREADY_EXISTS').failure,
+          KeycastRegisterFailure.emailAlreadyRegistered,
+        );
+        expect(
+          error('INVALID_EMAIL').failure,
+          KeycastRegisterFailure.invalidEmail,
+        );
+        expect(
+          error('rate_limited').failure,
+          KeycastRegisterFailure.rateLimited,
+        );
+        expect(error('server_error').failure, KeycastRegisterFailure.server);
+        expect(
+          error('connection_error').failure,
+          KeycastRegisterFailure.network,
+        );
+        expect(error('network_error').failure, KeycastRegisterFailure.network);
+        expect(
+          error('registration_failed').failure,
+          KeycastRegisterFailure.unknown,
+        );
+      });
+    });
   });
 
   group('HeadlessLoginResult', () {
