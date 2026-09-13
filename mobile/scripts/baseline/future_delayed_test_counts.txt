@@ -163,7 +163,6 @@ test/startup/startup_diagnostics_test.dart	9
 test/unit/services/video_event_service_force_refresh_test.dart	4
 test/unit/services/video_event_service_reset_resubscribe_test.dart	16
 test/unit/services/video_event_service_subscription_test.dart	2
-test/unit/subscription_manager_tdd_test.dart	2
 test/utils/video_nostr_enrichment_streaming_test.dart	2
 test/widgets/popular_videos_tab_test.dart	1
 test/widgets/profile/profile_video_feed_view_test.dart	2

@@ -43,11 +43,15 @@ class GeoBlockResponse {
 }
 
 class GeoBlockingService {
+  GeoBlockingService({http.Client? client}) : _client = client;
+
   static const String _geoBlockApiUrl =
       'https://openvine-geo-blocker.protestnet.workers.dev';
   static const String _cacheKey = 'geo_block_status';
   static const String _cacheTimestampKey = 'geo_block_timestamp';
   static const Duration _cacheDuration = Duration(hours: 24);
+
+  final http.Client? _client;
 
   GeoBlockResponse? _cachedResponse;
   DateTime? _cacheTimestamp;
@@ -82,9 +86,9 @@ class GeoBlockingService {
         category: LogCategory.api,
       );
 
-      final response = await http
-          .get(Uri.parse(_geoBlockApiUrl))
-          .timeout(const Duration(seconds: 10));
+      final response = await (_client?.get ?? http.get)(
+        Uri.parse(_geoBlockApiUrl),
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 451) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;

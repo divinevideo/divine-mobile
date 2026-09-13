@@ -4,10 +4,9 @@
 # scripts/baseline/untested_services.txt and may only ever SHRINK. See
 # lib/list_ratchet.sh for the NEW/STALE/GROWTH semantics.
 #
-# Detector: set-difference of basenames —
-#   {lib/services/*.dart (ex generated)} \ {test/**/*_test.dart}
-# This is a v1 existence check (a same-named test exists), NOT a coverage
-# threshold; "meaningful coverage" is a documented fast-follow (see the plan).
+# Detector: scripts/lib/untested_services_detector.dart. A service is covered by
+# an exact-name test, or by a split <service>_<aspect>_test.dart suite that
+# directly imports it. This remains an existence check, NOT a coverage threshold.
 # NEW fires when a new service ships without a test, OR a service's test is
 # deleted. STALE fires when a baselined service gains a test (shrink the floor).
 #
@@ -38,13 +37,8 @@ FOOTER="Untested services are frozen and may only decrease. Add a same-named
 new untested services. See tasks/plan_4337.md (WS-3)."
 
 emit_current() {
-  comm -23 \
-    <(find "$MOBILE_DIR/lib/services" -name '*.dart' \
-        ! -name '*.g.dart' ! -name '*.freezed.dart' \
-        -exec basename {} .dart \; 2>/dev/null | LC_ALL=C sort -u) \
-    <(find "$MOBILE_DIR/test" -name '*_test.dart' \
-        -exec basename {} _test.dart \; 2>/dev/null | LC_ALL=C sort -u) \
-    || true
+dart run "$SCRIPT_DIR/lib/untested_services_detector.dart" \
+    "$MOBILE_DIR/lib/services" "$MOBILE_DIR/test"
 }
 
 print_baseline_header() {
