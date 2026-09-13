@@ -73,7 +73,7 @@ Future<void> runDeletion({
   Future<DivineUsernameLookup>? lookupFuture,
   String? confirmedPubkey,
   String screenName = 'AccountDeletion',
-  Future<void> Function(
+  Future<bool> Function(
     AccountDeletionAttempt attempt,
     String vanishEventId,
     bool contentDeletionUnverified,
@@ -618,7 +618,10 @@ void main() {
         deletionService: deletionService,
         authService: authService,
         deletionRecoveryRepository: recoveryRepository,
-        onDeletionSubmitted: (attempt, _, _) async => recorded.add(attempt),
+        onDeletionSubmitted: (attempt, _, _) async {
+          recorded.add(attempt);
+          return false;
+        },
       );
       await tester.pumpAndSettle();
 
@@ -678,6 +681,7 @@ void main() {
         deletionRecoveryRepository: recoveryRepository,
         onDeletionSubmitted: (_, _, contentDeletionUnverified) async {
           forwarded.add(contentDeletionUnverified);
+          return false;
         },
       );
       await tester.pumpAndSettle();
@@ -1250,7 +1254,10 @@ void main() {
           authService: authService,
           deletionRecoveryRepository: recoveryRepository,
           lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
-          onDeletionSubmitted: (attempt, _, _) async => accepted.add(attempt),
+          onDeletionSubmitted: (attempt, _, _) async {
+            accepted.add(attempt);
+            return false;
+          },
         );
         await tester.pumpAndSettle();
 

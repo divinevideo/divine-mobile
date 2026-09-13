@@ -159,9 +159,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
 
-        final receipt = container.read(
-          submittedAccountDeletionAttemptProvider,
-        );
+        final receipt = container.read(submittedAccountDeletionAttemptProvider);
         expect(receipt?.pubkeyHex, _pubkeyHex);
         expect(receipt?.attempt, same(_processing));
         expect(receipt?.vanishEventId, 'event-id');
@@ -198,10 +196,8 @@ void main() {
           ),
         ).thenAnswer((_) async => _completed);
         when(
-          () => authService.signOut(
-            deleteKeys: true,
-            deleteLocalUserData: true,
-          ),
+          () =>
+              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
         ).thenAnswer((_) async => activePubkey = null);
 
         SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -274,17 +270,14 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
 
-        final receipt = container.read(
-          submittedAccountDeletionAttemptProvider,
-        );
+        final receipt = container.read(submittedAccountDeletionAttemptProvider);
         expect(receipt?.pubkeyHex, _pubkeyHex);
         expect(receipt?.attempt, same(_completed));
         verify(
-          () => authService.signOut(
-            deleteKeys: true,
-            deleteLocalUserData: true,
-          ),
+          () =>
+              authService.signOut(deleteKeys: true, deleteLocalUserData: true),
         ).called(1);
+        verifyNever(() => authService.signOut());
         expect(find.text(l10n.accountDeletionRecoveryBody), findsNothing);
         expect(find.text(l10n.accountDeletionCancelAttemptBody), findsNothing);
         expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);

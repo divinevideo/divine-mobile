@@ -134,6 +134,7 @@ Future<void> startAccountDeletionFlow({
                   'Could not submit durable deletion attempt',
                 );
               }
+              return submittedStatus == AccountDeletionAttemptStatus.completed;
             },
       );
       ref.invalidate(currentAccountDeletionAttemptProvider);

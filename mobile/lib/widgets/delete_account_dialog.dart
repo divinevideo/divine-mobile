@@ -386,7 +386,8 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 ///   the content sweep could not confirm every existing post, then lets the
 ///   app-scoped recovery owner submit. A lost response is ambiguous, so the
 ///   caller must keep the user gated from the receipt rather than returning to
-///   normal account use (#8583). After this returns, this flow only signs out.
+///   normal account use (#8583). Returns true when the owner already completed
+///   the account's destructive sign-out.
 Future<void> executeAccountDeletion({
   required BuildContext context,
   required AccountDeletionService deletionService,
@@ -395,7 +396,7 @@ Future<void> executeAccountDeletion({
   required Future<DivineUsernameLookup> ownedUsernameLookup,
   String? confirmedPubkey,
   String screenName = 'AccountDeletion',
-  Future<void> Function(
+  Future<bool> Function(
     AccountDeletionAttempt attempt,
     String vanishEventId,
     bool contentDeletionUnverified,
@@ -793,12 +794,15 @@ Future<void> executeAccountDeletion({
         );
         return;
       }
+      var ownerCompletedSignOut = false;
       try {
-        await onDeletionSubmitted?.call(
-          attempt,
-          eventId,
-          result.contentQueryFailed || result.contentDeletionIncomplete,
-        );
+        ownerCompletedSignOut =
+            await onDeletionSubmitted?.call(
+              attempt,
+              eventId,
+              result.contentQueryFailed || result.contentDeletionIncomplete,
+            ) ??
+            false;
       } on AccountDeletionRecoveryException catch (error) {
         Log.error(
           'Could not submit durable deletion attempt',
@@ -826,7 +830,12 @@ Future<void> executeAccountDeletion({
       if (stopCleanupIfAccountChanged()) return;
       dismissProgressSheet();
       showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
-      await authService.signOut();
+      // An immediate completed response lets the app-scoped owner perform the
+      // destructive sign-out while resuming the receipt. Only sign out here
+      // when the submitted attempt left the owner's session active.
+      if (!ownerCompletedSignOut) {
+        await authService.signOut();
+      }
       return;
     } else {
       // Content deletion (NIP-62) failed.
