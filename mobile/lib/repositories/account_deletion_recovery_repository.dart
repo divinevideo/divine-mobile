@@ -23,6 +23,7 @@ class AccountDeletionRecoveryException implements Exception {
     this.statusCode,
     this.isTransportFailure = false,
     this.indicatesMissingCoordinatorRoute = false,
+    this.attempt,
   });
 
   final String message;
@@ -31,6 +32,7 @@ class AccountDeletionRecoveryException implements Exception {
   final int? statusCode;
   final bool isTransportFailure;
   final bool indicatesMissingCoordinatorRoute;
+  final AccountDeletionAttempt? attempt;
 
   /// Whether only the username release is unsupported by this deployment.
   ///
@@ -123,9 +125,10 @@ class AccountDeletionRecoveryRepository {
   ) async {
     final username = attempt.username;
     if (username == null) {
-      throw const AccountDeletionRecoveryException(
+      throw AccountDeletionRecoveryException(
         'Preparing username attempt did not include a username',
         stage: AccountDeletionRecoveryStage.usernamePreparation,
+        attempt: attempt,
       );
     }
     if (attempt.status == AccountDeletionAttemptStatus.recoverable) {
