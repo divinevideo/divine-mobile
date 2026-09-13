@@ -163,5 +163,143 @@ void main() {
         expect(sites, isEmpty);
       });
     });
+
+    group('empty group rule', () {
+      test('flags an empty group', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {});
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
+        expect(sites.single.description, "'Feature'");
+        expect(sites.single.line, 2);
+      });
+
+      test('reports only the outermost group in an empty nested tree', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    group('nested', () {});
+  });
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
+        expect(sites.single.description, "'Feature'");
+      });
+
+      test('accepts a test declared in a nested group', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    group('nested', () {
+      test('works', () { expect(subject.value, 1); });
+    });
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('flags a group containing only lifecycle declarations', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    setUpAll(() { registerFallbackValue(FakeValue()); });
+    setUp(() { subject = Subject(); });
+    tearDown(() { subject.dispose(); });
+    tearDownAll(cleanUpSuite);
+    addTearDown(cleanUpCase);
+  });
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
+      });
+
+      test('accepts a same-file test wrapper', () {
+        final sites = scan('''
+void testWidgetsWithSurfaceSize(String name, WidgetTesterCallback body) {
+  testWidgets(name, body);
+}
+
+void main() {
+  group('Feature', () {
+    testWidgetsWithSurfaceSize('works', (tester) async {});
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('accepts an imported test-declaring helper', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    defineFutureDelayedCeilingTests('production', 'lib');
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('does not inspect lifecycle callbacks for helper-shaped calls', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    setUp(() {
+      when(() => service.load()).thenReturn(value);
+    });
+  });
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
+      });
+
+      test('accepts a generic blocTest declaration', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    blocTest<FeatureBloc, FeatureState>('works', build: FeatureBloc.new);
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('accepts a group delegated to a suite callback', () {
+        final sites = scan('''
+void main() {
+  group('Feature', sharedSuite);
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('does not mistake a targeted product call for a test helper', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    subject.initialize();
+  });
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
+      });
+    });
   });
 }
