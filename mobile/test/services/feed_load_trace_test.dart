@@ -64,5 +64,33 @@ void main() {
       expect(trace.attributes['completion'], 'first_relay_event');
       expect(trace.stopCount, 1);
     });
+
+    test('cache completion excludes later relay work', () {
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 0)
+        ..startPhase('cache_ingest_ms')
+        ..complete('cache', eventTotal: 50);
+      final metricsAtCompletion = Map<String, int>.of(trace.metrics);
+      load
+        ..startPhase('relay_wait_ms')
+        ..complete('first_relay_event');
+
+      expect(trace.attributes['terminal_phase'], 'cache_ingest_ms');
+      expect(trace.metrics, contains('cache_read_ms'));
+      expect(trace.metrics, contains('cache_ingest_ms'));
+      expect(trace.metrics, metricsAtCompletion);
+      expect(trace.stopCount, 1);
+    });
+
+    test(
+      'cancellation records the interrupted phase and ignores late work',
+      () {
+        final load = FeedLoadTrace(trace: trace, eventCount: () => 0)
+          ..complete('cancelled');
+        load.startPhase('cache_ingest_ms');
+        expect(trace.attributes['terminal_phase'], 'cache_read_ms');
+        expect(trace.metrics, contains('cache_read_ms'));
+        expect(trace.metrics, isNot(contains('cache_ingest_ms')));
+      },
+    );
   });
 }

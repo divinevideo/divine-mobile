@@ -8,6 +8,8 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
+import 'package:openvine/observability/performance_phase_timer.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -88,10 +90,13 @@ class SeenVideosService {
     @visibleForTesting Duration? saveDebounceDuration,
     AppDatabase? database,
     @visibleForTesting SharedPreferences? prefsOverride,
+    PerformanceTraceMonitor performanceMonitor =
+        const NoOpPerformanceTraceMonitor(),
   }) : _saveDebounceDuration =
            saveDebounceDuration ?? const Duration(milliseconds: 100),
        _database = database,
-       _prefsOverride = prefsOverride;
+       _prefsOverride = prefsOverride,
+       _performanceMonitor = performanceMonitor;
 
   /// Legacy id-only list, read once and removed after migrating to metrics.
   ///
@@ -116,6 +121,7 @@ class SeenVideosService {
   final Duration _saveDebounceDuration;
   final AppDatabase? _database;
   final SharedPreferences? _prefsOverride;
+  final PerformanceTraceMonitor _performanceMonitor;
   SharedPreferences? _prefs;
   bool _isInitialized = false;
   Future<void>? _initializeFuture;
@@ -135,10 +141,41 @@ class SeenVideosService {
     return future;
   }
 
+  /// Measures only callers that must wait for history before ordering a feed.
+  Future<void> initializeForFeed() async {
+    if (_isInitialized) return;
+    final trace = _performanceMonitor.startOperationTrace(
+      'feed_wait_seen_history',
+    );
+    trace.putAttribute(
+      'initialization_state',
+      _initializeFuture == null ? 'not_started' : 'in_progress',
+    );
+    final phases = PerformancePhaseTimer(trace)..startPhase('wait_ms');
+    try {
+      await initialize();
+    } finally {
+      phases.finishPhase();
+      trace.putAttribute('completion', _isInitialized ? 'ready' : 'not_ready');
+      unawaited(trace.stop());
+    }
+  }
+
   Future<void> _initialize() async {
+    final trace = _performanceMonitor.startOperationTrace(
+      'seen_videos_initialize',
+    );
+    trace
+      ..putAttribute('completion', 'success')
+      ..putAttribute(
+        'storage',
+        _effectiveDb == null ? 'preferences' : 'database',
+      );
+    final phases = PerformancePhaseTimer(trace)..startPhase('preferences_ms');
     try {
       _prefs = _prefsOverride ?? await SharedPreferences.getInstance();
-      await _loadSeenVideos();
+      await _loadSeenVideos(trace, phases);
+      phases.finishPhase();
       if (_effectiveDb != null) {
         unawaited(
           _effectiveDb!.seenVideosDao.pruneExpired().then<void>(
@@ -154,21 +191,34 @@ class SeenVideosService {
         category: LogCategory.system,
       );
     } catch (e) {
+      trace
+        ..putAttribute('completion', 'error')
+        ..putAttribute('failed_phase', phases.currentPhase ?? 'finalize');
       Log.error(
         'Failed to initialize SeenVideosService: $e',
         name: 'SeenVideosService',
         category: LogCategory.system,
       );
     } finally {
+      phases.finishPhase();
+      trace
+        ..setMetric('seen_count', _seenLastSeen.length)
+        ..setMetric('metrics_count', _seenVideos.length);
+      unawaited(trace.stop());
       if (!_isInitialized) _initializeFuture = null;
     }
   }
 
-  Future<void> _loadSeenVideos() async {
+  Future<void> _loadSeenVideos(
+    PerformanceTrace trace,
+    PerformancePhaseTimer phases,
+  ) async {
     if (_prefs == null) return;
     try {
+      phases.startPhase('preferences_decode_ms');
       final metricsJson = _prefs!.getString(seenVideosMetricsStorageKey);
       if (metricsJson != null) {
+        trace.setMetric('preferences_json_chars', metricsJson.length);
         final metricsList = jsonDecode(metricsJson) as List<dynamic>;
         _seenVideos.clear();
         _seenLastSeen.clear();
@@ -203,13 +253,17 @@ class SeenVideosService {
             name: 'SeenVideosService',
             category: LogCategory.system,
           );
+          phases.startPhase('legacy_migration_ms');
           await _saveSeenVideosNow();
           await _prefs!.remove(legacySeenVideosStorageKey);
         }
       }
       if (_effectiveDb != null) {
         try {
+          phases.startPhase('database_read_ms');
           final dbRows = await _effectiveDb!.seenVideosDao.getAll();
+          phases.startPhase('database_merge_ms');
+          trace.setMetric('database_rows', dbRows.length);
           for (final row in dbRows) {
             final lastSeen = DateTime.fromMillisecondsSinceEpoch(
               row.lastSeenAt,
@@ -222,9 +276,11 @@ class SeenVideosService {
           final migrated =
               _prefs!.getBool(seenVideosMigratedStorageKey) ?? false;
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
-            await _migrateMetricsToDb();
+            phases.startPhase('database_migration_ms');
+            await _migrateMetricsToDb(trace);
             await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           } else if (dbRows.isNotEmpty && !migrated) {
+            phases.startPhase('migration_marker_ms');
             await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           }
           Log.debug(
@@ -233,6 +289,9 @@ class SeenVideosService {
             category: LogCategory.system,
           );
         } catch (e) {
+          trace
+            ..putAttribute('completion', 'partial')
+            ..putAttribute('failed_phase', phases.currentPhase!);
           Log.warning(
             'Seen DB hydrate failed, using prefs set: $e',
             name: 'SeenVideosService',
@@ -241,6 +300,9 @@ class SeenVideosService {
         }
       }
     } catch (e) {
+      trace
+        ..putAttribute('completion', 'partial')
+        ..putAttribute('failed_phase', phases.currentPhase!);
       Log.error(
         'Error loading seen videos: $e',
         name: 'SeenVideosService',
@@ -249,7 +311,7 @@ class SeenVideosService {
     }
   }
 
-  Future<void> _migrateMetricsToDb() async {
+  Future<void> _migrateMetricsToDb(PerformanceTrace trace) async {
     final db = _effectiveDb;
     if (db == null || _seenVideos.isEmpty) return;
     try {
@@ -269,6 +331,9 @@ class SeenVideosService {
         category: LogCategory.system,
       );
     } catch (e) {
+      trace
+        ..putAttribute('completion', 'partial')
+        ..putAttribute('failed_phase', 'database_migration_ms');
       Log.warning(
         'Seen DB migration failed: $e',
         name: 'SeenVideosService',

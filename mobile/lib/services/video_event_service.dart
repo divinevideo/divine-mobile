@@ -2332,6 +2332,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           limit: limit,
           sortBy: sortBy,
         );
+        pendingTrace.startPhase('cache_ingest_ms');
 
         // Disposed while the cache read was in flight, so dispose has already
         // closed this load's trace. Carrying on would notify a dead
@@ -2360,6 +2361,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           completeFeedLoadTrace('cache', eventTotal: cachedEvents.length);
         }
 
+        pendingTrace.startPhase('relay_wait_ms');
         final eventStream = _nostrService.subscribe(
           filters,
           onEose: () {

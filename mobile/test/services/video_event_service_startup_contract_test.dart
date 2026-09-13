@@ -224,6 +224,10 @@ void main() {
           completion: 'cache',
           eventCount: 1,
         );
+        expect(
+          performanceMonitor.metrics['feed_load_profile']!.keys,
+          unorderedEquals(['event_count', 'cache_read_ms', 'cache_ingest_ms']),
+        );
       });
 
       test('eose_empty: relay completes with no events', () async {
@@ -264,6 +268,19 @@ void main() {
           traceName: 'feed_load_profile',
           completion: 'first_relay_event',
           eventCount: 1,
+        );
+        expect(
+          performanceMonitor.attributes['feed_load_profile']!['terminal_phase'],
+          'relay_wait_ms',
+        );
+        expect(
+          performanceMonitor.metrics['feed_load_profile']!.keys,
+          unorderedEquals([
+            'event_count',
+            'cache_read_ms',
+            'cache_ingest_ms',
+            'relay_wait_ms',
+          ]),
         );
       });
 
