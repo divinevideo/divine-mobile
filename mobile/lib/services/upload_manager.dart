@@ -141,9 +141,6 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
     if (results.contains(ConnectivityResult.vpn)) {
       return UploadConnectivity.vpn;
     }
-    if (results.contains(ConnectivityResult.none)) {
-      return UploadConnectivity.none;
-    }
     return UploadConnectivity.none;
   }
 
