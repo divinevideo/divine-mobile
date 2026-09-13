@@ -9,7 +9,19 @@ import FlutterMacOS
 /// stitches multiple clips into a seamless timeline.
 ///
 /// Communicates with Dart via per-player MethodChannel/EventChannel.
-final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
+final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackDiagnosticResource {
+
+    private var diagnosticDisposed = false
+    private var diagnosticPendingLoads = 0
+    var playbackDiagnosticState: PlaybackDiagnosticState {
+        PlaybackDiagnosticState(
+            disposed: diagnosticDisposed,
+            hasPlayer: player != nil,
+            isPlaying: (player?.rate ?? 0) != 0,
+            hasTexture: textureOutput != nil,
+            pendingLoads: diagnosticPendingLoads
+        )
+    }
 
     private let playerId: Int
     /// Identifies this player in diagnostic logs.
@@ -245,6 +257,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         // Build the player item asynchronously.
         Task { @MainActor [weak self] in
             guard let self else { return }
+            self.diagnosticPendingLoads += 1
+            defer { self.diagnosticPendingLoads -= 1 }
             do {
                 let playerItem: AVPlayerItem
                 let offsets: [Double]
@@ -1541,6 +1555,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     // MARK: - Dispose
 
     func dispose() {
+        diagnosticDisposed = true
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
             timeObserver = nil
