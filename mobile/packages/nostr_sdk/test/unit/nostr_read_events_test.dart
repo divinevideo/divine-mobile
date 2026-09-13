@@ -495,10 +495,9 @@ void main() {
           expect(completionLines().single.message, contains('ended deadline'));
         });
 
-        test('returns the outcome the pool delivered while a deadline already '
-            'past was still pending, and lets that deadline go', () async {
-          final relay = await addRelay('wss://send-fails.example');
-          relay.sendSucceeds = false;
+        test('ends a read whose deadline had already passed before any REQ '
+            'is written (#7301)', () async {
+          final relay = await addRelay('wss://answers.example');
           final hold = _DeadlineHold();
 
           final result = await hold
@@ -509,35 +508,44 @@ void main() {
                   deadline: DateTime.now().subtract(const Duration(seconds: 1)),
                 ),
               )
-              .timeout(
-                _guard,
-                onTimeout: () => fail('the pool never completed the read'),
-              );
+              .timeout(_guard, onTimeout: () => fail('the read never ended'));
 
-          final deadline = hold.timer!;
           expect(
-            deadline.duration.isNegative,
-            isTrue,
+            relay.sentMessages,
+            isEmpty,
             reason:
-                'the timer held back is the deadline, already past when the '
-                'read began',
+                'a REQ the deadline would unsubscribe on the next event-loop '
+                'turn is never written; it only made every relay look like '
+                'it had swallowed the request',
           );
           expect(
-            result.endedBy,
-            QueryEnd.noRelay,
-            reason:
-                'the pool completed the read as its fan-out ended, while the '
-                'deadline was still pending',
+            hold.timer,
+            isNull,
+            reason: 'no deadline timer is armed for a read that never starts',
           );
+          expect(result.endedBy, QueryEnd.deadline);
+          expect(result.events, isEmpty);
+          final extra = await signedEvents(1);
           expect(
-            deadline.isActive,
-            isFalse,
+            () => result.events.addAll(extra),
+            returnsNormally,
             reason:
-                'once the pool has answered, the read cancels its deadline, '
-                'so a deadline already due can no longer end it',
+                'every other exit returns the growable list [EventMemBox.all] '
+                'builds, so a caller may sort or append to this one too',
           );
           expect(completionLines(), hasLength(1));
-          expect(completionLines().single.message, contains('ended noRelay'));
+          expect(completionLines().single.level, RelayDiagnosticLevel.warning);
+          expect(
+            completionLines().single.relayUrl,
+            RelayDiagnostic.clientScope,
+            reason:
+                'a read the pool never saw must not share the pool key, or '
+                'it spends the rate-limit budget real pool warnings need',
+          );
+          expect(
+            completionLines().single.message,
+            contains('ended deadline before any REQ was written'),
+          );
         });
       });
 
@@ -548,6 +556,23 @@ void main() {
             throwsArgumentError,
           );
         });
+
+        test(
+          'still rejects empty filters when the deadline has passed',
+          () async {
+            // The expired-deadline branch returns before [RelayPool.query] can
+            // raise this, so without its own guard the read answers an empty
+            // result for a call that was never valid (#7301).
+            await expectLater(
+              nostr.readEvents(
+                const [],
+                id: _readId,
+                deadline: DateTime.now().subtract(const Duration(seconds: 1)),
+              ),
+              throwsArgumentError,
+            );
+          },
+        );
       });
     });
 

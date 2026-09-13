@@ -478,7 +478,10 @@ void main() {
         ]);
 
         // Abandoning another query the zombie never answered starts the
-        // force-cycle, which stays in flight until the gate completes.
+        // force-cycle, which stays in flight until the gate completes. The
+        // release comes at once here, so the floor that keeps a hasty
+        // release from counting as evidence is lifted for this test.
+        nostr.relayPool.minQueryAgeBeforeRepair = Duration.zero;
         await nostr.relayPool.query(
           [
             {

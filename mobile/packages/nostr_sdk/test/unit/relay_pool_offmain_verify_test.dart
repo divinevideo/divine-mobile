@@ -1,11 +1,16 @@
 // ABOUTME: Tests RelayPool's off-main verify integration (#5863 P2).
-// ABOUTME: Worker verify, per-relay ordering, and inline fallback.
+// ABOUTME: Worker verify, per-subscription ordering, and inline fallback.
 
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+
+/// Ceiling for a delivery this test expects to complete. Without it a
+/// regression makes the awaited future hang to the framework's own timeout,
+/// which reports a bare timeout instead of naming what stalled.
+const _guard = Duration(seconds: 3);
 
 class _FakeRelay extends Relay {
   _FakeRelay(String url) : super(url, RelayStatus(url));
@@ -77,7 +82,7 @@ Nostr _nostr() => Nostr(
   (url) => RelayBase(url, RelayStatus(url)),
 );
 
-List<Event> _subscribe(Nostr nostr) {
+List<Event> _subscribe(Nostr nostr, {String id = 'sub'}) {
   final delivered = <Event>[];
   nostr.subscribe(
     [
@@ -86,7 +91,7 @@ List<Event> _subscribe(Nostr nostr) {
       },
     ],
     delivered.add,
-    id: 'sub',
+    id: id,
   );
   return delivered;
 }
@@ -144,7 +149,7 @@ void main() {
     });
 
     test(
-      'preserves per-relay delivery order despite out-of-order verify',
+      'preserves per-subscription delivery order despite out-of-order verify',
       () async {
         final nostr = _nostr();
         final gate = Completer<void>();
@@ -171,5 +176,66 @@ void main() {
         expect(delivered.map((e) => e.content), ['A', 'B']);
       },
     );
+
+    test('delivers one subscription while another on the same relay is still '
+        'verifying (#7301)', () async {
+      final nostr = _nostr();
+      final gate = Completer<void>();
+      // The stored replay of a one-shot query verifies slowly; the feed
+      // subscription's own event must not wait behind it. Before #7301 the
+      // chain was per relay, so a feed the relay answered in 300ms reached
+      // the app only after every other subscription's replay on that
+      // socket had been verified — 16s on a flagship, past the app's 30s
+      // feed-load fuse on slower hardware.
+      nostr.relayPool.eventVerifyWorker = _FakeVerifyWorker((json) async {
+        if (json['content'] == 'replay') await gate.future;
+        return true;
+      });
+      final relay = _FakeRelay('wss://relay.a');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final replayDelivered = _subscribe(nostr, id: 'query');
+      final feedDelivered = _subscribe(nostr, id: 'feed');
+
+      final replay = await _signedEvent('replay');
+      final feed = await _signedEvent('feed');
+      final dReplay = relay.deliver(['EVENT', 'query', replay.toJson()]);
+      final dFeed = relay.deliver(['EVENT', 'feed', feed.toJson()]);
+      await dFeed.timeout(
+        _guard,
+        onTimeout: () => fail(
+          'the feed subscription was not delivered while another '
+          'subscription on the same relay was still verifying',
+        ),
+      );
+
+      expect(feedDelivered.map((e) => e.content), ['feed']);
+      expect(replayDelivered, isEmpty, reason: 'still gated');
+      gate.complete();
+      await dReplay;
+      expect(replayDelivered.map((e) => e.content), ['replay']);
+    });
+
+    test('does not spend a verify on a frame no subscription is listening to '
+        '(#7301)', () async {
+      final nostr = _nostr();
+      final worker = _FakeVerifyWorker((_) => true);
+      nostr.relayPool.eventVerifyWorker = worker;
+      final relay = _FakeRelay('wss://relay.a');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final delivered = _subscribe(nostr);
+
+      // A relay keeps streaming a stored replay after the query it answers
+      // was released; every one of those frames used to be verified and
+      // then dropped, ahead of the live subscriptions queued behind them.
+      final orphan = await _signedEvent('orphan');
+      await relay.deliver(['EVENT', 'released-query', orphan.toJson()]);
+      expect(worker.calls, 0);
+      expect(delivered, isEmpty);
+
+      final live = await _signedEvent('live');
+      await relay.deliver(['EVENT', 'sub', live.toJson()]);
+      expect(worker.calls, 1);
+      expect(delivered.map((e) => e.content), ['live']);
+    });
   });
 }
