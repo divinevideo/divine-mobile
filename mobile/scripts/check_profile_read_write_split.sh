@@ -7,7 +7,7 @@
 # publish through the loose provider.
 #
 # The ProfileReader type already makes the DIRECT route impossible: it cannot
-# express saveProfileEvent / claimUsername / releaseUsername / drivePendingSave.
+# express saveProfileEvent / claimUsername / drivePendingSave.
 # This guard covers the INDIRECT route a type cannot see — a file that reads
 # the loose provider and separately calls a publish method on something else
 # (a repository it also holds, a service, a bloc field).
@@ -31,7 +31,7 @@ MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 LOOSE_PROVIDER='profileReadRepositoryProvider'
 # Publish methods on ProfileRepository — each signs a Nostr event.
-PUBLISH_METHODS='saveProfileEvent|claimUsername|releaseUsername|drivePendingSave'
+PUBLISH_METHODS='saveProfileEvent|claimUsername|drivePendingSave'
 
 violations=()
 
