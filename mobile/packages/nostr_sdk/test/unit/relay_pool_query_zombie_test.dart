@@ -96,7 +96,7 @@ void main() {
       expect(result.timedOut, isTrue);
 
       // Remediation runs asynchronously once the caller abandons the query.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       expect(
         factory.createdChannels,
         hasLength(2),
@@ -115,7 +115,7 @@ void main() {
       final result = await pending;
       expect(result.timedOut, isFalse);
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       expect(
         factory.createdChannels,
         hasLength(1),
@@ -154,7 +154,7 @@ void main() {
         final result = await pending;
         expect(result.timedOut, isFalse);
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
         expect(
           factory.createdChannels,
           hasLength(2),
@@ -180,7 +180,7 @@ void main() {
         hasLength(1),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       expect(
         factory.createdChannels,
         hasLength(1),
@@ -188,6 +188,19 @@ void main() {
             'a relay that went unanswered for 100ms has not been shown to '
             'be a zombie; cycling it would replay every subscription it '
             'carries',
+      );
+
+      // Positive control. The assertion above is a negative, which no amount
+      // of waiting can establish on its own: a repair that simply never runs
+      // looks identical to one the floor suppressed. Drop the floor and the
+      // same silent socket is cycled, so the green above is the floor's doing.
+      ignoreQueryAgeFloor();
+      await queryOnce();
+      await pumpEventQueue();
+      expect(
+        factory.createdChannels,
+        hasLength(2),
+        reason: 'only the floor was holding the repair back',
       );
     });
 
@@ -223,11 +236,22 @@ void main() {
         final result = await pending;
         expect(result.timedOut, isFalse);
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
         expect(
           factory.createdChannels,
           hasLength(1),
           reason: 'the slower relay keeps its socket and its subscriptions',
+        );
+
+        // Positive control, as above: prove the force-cycle is still
+        // observable here and only the floor suppressed it.
+        ignoreQueryAgeFloor();
+        await queryOnce();
+        await pumpEventQueue();
+        expect(
+          factory.createdChannels,
+          hasLength(2),
+          reason: 'only the floor was holding the repair back',
         );
       },
     );
@@ -246,7 +270,7 @@ void main() {
       final result = await pending;
       expect(result.timedOut, isTrue);
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       expect(
         factory.createdChannels,
         hasLength(1),
