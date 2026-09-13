@@ -914,7 +914,7 @@ class ContentReportingService implements ReportChannelDriver {
       try {
         return await _deliverReportChannel(report, channel);
       } finally {
-        _channelInFlight.remove(key);
+        unawaited(_channelInFlight.remove(key));
       }
     });
   }

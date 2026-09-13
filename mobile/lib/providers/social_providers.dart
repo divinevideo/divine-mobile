@@ -1031,8 +1031,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     authService: authService,
     prefs: prefs,
     moderationRelayUrl: env.relayUrl,
-    // Durable outbox for the relay + Zendesk channels; ReportRetryService
-    // sweeps it. #8053.
+    // One durable intent for all three destinations, driven by the retry worker.
     pendingReportsDao: ref.watch(databaseProvider).pendingReportsDao,
     moderationPubkey: ref
         .watch(moderationLabelServiceProvider)
@@ -1083,8 +1082,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
 
 /// Auto-sweep service for the durable `pending_reports` queue.
 ///
-/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
-/// the inline first attempt share one delivery path. #8053.
+/// Uses [ContentReportingService] for every delivery attempt after local save.
 @Riverpod(keepAlive: true)
 Future<ReportRetryService?> reportRetryService(Ref ref) async {
   final authService = ref.watch(authServiceProvider);

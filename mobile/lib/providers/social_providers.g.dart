@@ -712,16 +712,14 @@ String _$contentReportingServiceHash() =>
 
 /// Auto-sweep service for the durable `pending_reports` queue.
 ///
-/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
-/// the inline first attempt share one delivery path. #8053.
+/// Uses [ContentReportingService] for every delivery attempt after local save.
 
 @ProviderFor(reportRetryService)
 final reportRetryServiceProvider = ReportRetryServiceProvider._();
 
 /// Auto-sweep service for the durable `pending_reports` queue.
 ///
-/// Uses [ContentReportingService] as its channel driver, so the retry sweep and
-/// the inline first attempt share one delivery path. #8053.
+/// Uses [ContentReportingService] for every delivery attempt after local save.
 
 final class ReportRetryServiceProvider
     extends
@@ -735,8 +733,7 @@ final class ReportRetryServiceProvider
         $FutureProvider<ReportRetryService?> {
   /// Auto-sweep service for the durable `pending_reports` queue.
   ///
-  /// Uses [ContentReportingService] as its channel driver, so the retry sweep and
-  /// the inline first attempt share one delivery path. #8053.
+  /// Uses [ContentReportingService] for every delivery attempt after local save.
   ReportRetryServiceProvider._()
     : super(
         from: null,
