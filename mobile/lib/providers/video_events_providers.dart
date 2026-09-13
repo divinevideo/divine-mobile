@@ -4,12 +4,10 @@
 import 'dart:async';
 
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,22 +15,6 @@ import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'video_events_providers.g.dart';
-
-/// Provider for NostrClient instance (Video Events specific)
-@riverpod
-NostrClient videoEventsNostrService(Ref ref) {
-  throw UnimplementedError(
-    'VideoEventsNostrService must be overridden in ProviderScope',
-  );
-}
-
-/// Provider for SubscriptionManager instance (Video Events specific)
-@riverpod
-SubscriptionManager videoEventsSubscriptionManager(Ref ref) {
-  throw UnimplementedError(
-    'VideoEventsSubscriptionManager must be overridden in ProviderScope',
-  );
-}
 
 /// Stream provider for video events from Nostr
 @Riverpod(keepAlive: true) // Keep alive to prevent state loss on tab switches
