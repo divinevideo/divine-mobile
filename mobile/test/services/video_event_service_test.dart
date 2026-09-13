@@ -10,8 +10,11 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/age_verification_service.dart';
+import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -156,17 +159,41 @@ void main() {
       },
     );
 
-    test('filtering preserves accepted feed order', () {
-      final videos = [
-        _video('newest', createdAt: 300),
-        _video('middle', createdAt: 200),
-        _video('oldest', createdAt: 100),
-      ];
+    test(
+      'filtering removes hidden videos and preserves accepted feed order',
+      () async {
+        // Without a ContentFilterService, filterVideoList only exercises its
+        // null-passthrough branch. Wire up the real service so the
+        // hide/warn decision this test claims to lock actually runs.
+        SharedPreferences.setMockInitialValues({});
+        final contentFilterService = ContentFilterService(
+          ageVerificationService: AgeVerificationService(
+            preferences: await SharedPreferences.getInstance(),
+          ),
+        );
+        await contentFilterService.initialize();
+        service.setContentFilterService(contentFilterService);
 
-      final filtered = service.filterVideoList(videos);
+        final videos = [
+          _video('newest', createdAt: 300),
+          _video(
+            'hidden',
+            createdAt: 250,
+            contentWarningLabels: const ['violence'],
+          ),
+          _video('middle', createdAt: 200),
+          _video('oldest', createdAt: 100),
+        ];
 
-      expect(filtered.map((video) => video.id), ['newest', 'middle', 'oldest']);
-    });
+        final filtered = service.filterVideoList(videos);
+
+        expect(filtered.map((video) => video.id), [
+          'newest',
+          'middle',
+          'oldest',
+        ]);
+      },
+    );
 
     test('batches synchronous feed additions into one notification', () async {
       var notifications = 0;
@@ -182,11 +209,16 @@ void main() {
   });
 }
 
-VideoEvent _video(String id, {required int createdAt}) => VideoEvent(
+VideoEvent _video(
+  String id, {
+  required int createdAt,
+  List<String> contentWarningLabels = const [],
+}) => VideoEvent(
   id: id,
   pubkey: 'pubkey-$id',
   createdAt: createdAt,
   content: id,
   timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
   videoUrl: 'https://media.example.com/$id.mp4',
+  contentWarningLabels: contentWarningLabels,
 );
