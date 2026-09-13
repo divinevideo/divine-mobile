@@ -3263,6 +3263,7 @@
     "deleteAccountRemoveKeysTitle": "Alisin ang account na ito sa device na ito?",
     "deleteAccountServerDeletionFailed": "Naipadala na ang mga request na burahin ang iyong mga post, pero hindi namin natapos ang pagbura ng iyong account. Subukan ulit mamaya.",
     "deleteAccountSuccess": "Na-delete na ang Divine account mo. Naipadala na ang mga request na i-delete ang mga Nostr post mo, pero maaaring may mga relay, client, o cache na nagpapanatili ng mga kopya.",
+    "deleteAccountSuccessContentUnverified": "Na-request na ang pag-delete ng account. May ilang existing na post na hindi makumpirma nang isa-isa para sa pag-delete.",
     "deleteAccountWarningBody": "Nagpapadala ito ng mga deletion request para sa account at content mo, binubura ang Divine account mo kapag posible, at nila-log out ka sa device na ito. Ang ilang relay, client, at search index ay maaaring may kopya pa rin. Ang iba pang naka-log in na device ay mananatiling aktibo hanggang alisin mo ang mga key doon.",
     "findPeopleNoContacts": "Walang nakitang contact.\nSimulang sundan ang mga tao para makita sila dito.",
     "geoBlockedCityLabel": "Lungsod",

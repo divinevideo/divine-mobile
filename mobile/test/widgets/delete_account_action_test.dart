@@ -46,6 +46,11 @@ const _processing = AccountDeletionAttempt(
   status: AccountDeletionAttemptStatus.processing,
 );
 
+const _completed = AccountDeletionAttempt(
+  id: 'attempt-id',
+  status: AccountDeletionAttemptStatus.completed,
+);
+
 void main() {
   group('startAccountDeletionFlow', () {
     late _MockAccountDeletionService deletionService;
@@ -175,6 +180,114 @@ void main() {
         expect(current, same(_processing));
         verifyNever(repository.fetchCurrent);
         verify(authService.signOut).called(1);
+        await container.read(submittedAccountDeletionMonitorProvider)?.close();
+      },
+    );
+
+    testWidgets(
+      'a completed submit finishes cleanup without a recovery snackbar',
+      (tester) async {
+        String? activePubkey = _pubkeyHex;
+        when(
+          () => authService.currentPublicKeyHex,
+        ).thenAnswer((_) => activePubkey);
+        when(
+          () => repository.submit(
+            attemptId: any(named: 'attemptId'),
+            vanishEventId: any(named: 'vanishEventId'),
+          ),
+        ).thenAnswer((_) async => _completed);
+        when(
+          () => authService.signOut(
+            deleteKeys: true,
+            deleteLocalUserData: true,
+          ),
+        ).thenAnswer((_) async => activePubkey = null);
+
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final sharedPreferences = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionServiceProvider.overrideWithValue(deletionService),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+            ownedDivineUsernameProvider.overrideWith(
+              (ref) async => const DivineUsernameNotFound(),
+            ),
+            fetchUserProfileProvider(
+              _pubkeyHex,
+            ).overrideWith((ref) async => null),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => Scaffold(
+                body: Consumer(
+                  builder: (context, ref, _) => ElevatedButton(
+                    key: const Key('delete'),
+                    onPressed: () => startAccountDeletionFlow(
+                      context: context,
+                      ref: ref,
+                      screenName: 'Test',
+                    ),
+                    child: const Text('Delete'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('delete')));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'DELETE');
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.widgetWithText(
+            DivineButton,
+            l10n.deleteAccountDeleteAllContentButton,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        final receipt = container.read(
+          submittedAccountDeletionAttemptProvider,
+        );
+        expect(receipt?.pubkeyHex, _pubkeyHex);
+        expect(receipt?.attempt, same(_completed));
+        verify(
+          () => authService.signOut(
+            deleteKeys: true,
+            deleteLocalUserData: true,
+          ),
+        ).called(1);
+        expect(find.text(l10n.accountDeletionRecoveryBody), findsNothing);
+        expect(find.text(l10n.accountDeletionCancelAttemptBody), findsNothing);
+        expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
         await container.read(submittedAccountDeletionMonitorProvider)?.close();
       },
     );

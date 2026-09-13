@@ -3721,6 +3721,10 @@
   "@deleteAccountSuccess": {
     "description": "Snackbar after the account deletion flow publishes Nostr deletion requests, deletes the Divine account when applicable, and signs out locally. Do not imply guaranteed deletion from every relay, client, cache, search index, or other signed-in device."
   },
+  "deleteAccountSuccessContentUnverified": "اکاؤنٹ حذف کی درخواست بھیج دی گئی۔ کچھ موجودہ پوسٹس کی انفرادی حذف کی تصدیق نہیں ہو سکی۔",
+  "@deleteAccountSuccessContentUnverified": {
+    "description": "Snackbar when the account-wide vanish request was published but the relay query failed or at least one per-item deletion request was not confirmed. Must not imply every existing post was individually requested or confirmed for deletion."
+  },
   "deleteAccountWarningBody": "یہ آپ کے اکاؤنٹ اور مواد کے لیے حذف کی درخواستیں بھیجتا ہے، ممکن ہونے پر آپ کا Divine اکاؤنٹ حذف کرتا ہے، اور اس ڈیوائس پر آپ کو سائن آؤٹ کرتا ہے۔ کچھ ریلے، کلائنٹس اور سرچ انڈیکسز کے پاس کاپیاں رہ سکتی ہیں۔ دیگر سائن اِن ڈیوائسز اس وقت تک فعال رہتی ہیں جب تک آپ وہاں کلیدیں نہ ہٹا دیں۔",
   "@deleteAccountWarningBody": {
     "description": "Warning body in the delete-account confirmation dialog, shown above the type-to-confirm field. Be clear that Nostr deletion is request-based, not a guarantee that every relay, client, cache, search index, or other signed-in device will forget the account."

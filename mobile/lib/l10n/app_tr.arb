@@ -4293,6 +4293,7 @@
     "deleteAccountRemoveKeysTitle": "Bu hesap bu cihazdan kaldırılsın mı?",
     "deleteAccountServerDeletionFailed": "Gönderilerin için silme istekleri gönderildi ama hesabını silme işlemini tamamlayamadık. Birazdan tekrar dene.",
     "deleteAccountSuccess": "Divine hesabın silindi. Nostr gönderilerin için silme istekleri gönderildi ancak bazı röleler, istemciler veya önbellekler kopyaları saklayabilir.",
+    "deleteAccountSuccessContentUnverified": "Hesap silme isteği gönderildi. Mevcut bazı gönderilerin silinmesi tek tek doğrulanamadı.",
     "deleteAccountWarningBody": "Bu, hesabın ve içeriğin için silme istekleri gönderir, mümkün olduğunda Divine hesabını siler ve bu cihazda oturumunu kapatır. Bazı röleler, istemciler ve arama dizinleri kopyaları saklayabilir. Oturum açmış diğer cihazlar, oradaki anahtarları kaldırana kadar aktif kalır.",
     "findPeopleNoContacts": "Kişi bulunamadı.\nBurada görmek için insanları takip etmeye başla.",
     "geoBlockedCityLabel": "Şehir",

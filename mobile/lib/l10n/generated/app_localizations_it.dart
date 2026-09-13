@@ -7210,6 +7210,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il tuo account Divine è stato eliminato. Sono state inviate richieste di eliminazione per i tuoi post su Nostr, ma alcuni relay, client o cache potrebbero conservarne delle copie.';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'Eliminazione dell\'account richiesta. Per alcuni post esistenti non è stato possibile confermare l\'eliminazione singolarmente.';
+
+  @override
   String get deleteAccountWarningBody =>
       'Questo invia richieste di eliminazione per il tuo account e i tuoi contenuti, elimina il tuo account Divine quando possibile e ti disconnette su questo dispositivo. Alcuni relay, client e indici di ricerca potrebbero conservare copie. Gli altri dispositivi con l\'accesso effettuato restano attivi finché non rimuovi le chiavi lì.';
 

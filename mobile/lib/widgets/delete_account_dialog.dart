@@ -382,7 +382,8 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 /// [confirmedPubkey] - When set, aborts before any step if the signed-in
 ///   account no longer matches, binding deletion to the confirmed account
 /// [screenName] - Name of the calling screen for logging
-/// [onDeletionSubmitted] - Persists the attempt and vanish event, then lets the
+/// [onDeletionSubmitted] - Persists the attempt, the vanish event, and whether
+///   the content sweep could not confirm every existing post, then lets the
 ///   app-scoped recovery owner submit. A lost response is ambiguous, so the
 ///   caller must keep the user gated from the receipt rather than returning to
 ///   normal account use (#8583). After this returns, this flow only signs out.
@@ -394,7 +395,11 @@ Future<void> executeAccountDeletion({
   required Future<DivineUsernameLookup> ownedUsernameLookup,
   String? confirmedPubkey,
   String screenName = 'AccountDeletion',
-  Future<void> Function(AccountDeletionAttempt attempt, String vanishEventId)?
+  Future<void> Function(
+    AccountDeletionAttempt attempt,
+    String vanishEventId,
+    bool contentDeletionUnverified,
+  )?
   onDeletionSubmitted,
 }) async {
   if (!context.mounted) return;
@@ -592,8 +597,13 @@ Future<void> executeAccountDeletion({
   }
 
   bool stopCleanupIfAccountChanged() {
+    final currentPubkeyHex = authService.currentPublicKeyHex;
+    // A null pubkey is the deletion's own sign-out — the app-scoped owner has
+    // just ended the receipt account's session — or an already-ended session.
+    // Neither is an account switch; only a different signed-in account is.
     if (confirmedPubkey == null ||
-        authService.currentPublicKeyHex == confirmedPubkey) {
+        currentPubkeyHex == null ||
+        currentPubkeyHex == confirmedPubkey) {
       return false;
     }
     Log.warning(
@@ -784,7 +794,11 @@ Future<void> executeAccountDeletion({
         return;
       }
       try {
-        await onDeletionSubmitted?.call(attempt, eventId);
+        await onDeletionSubmitted?.call(
+          attempt,
+          eventId,
+          result.contentQueryFailed || result.contentDeletionIncomplete,
+        );
       } on AccountDeletionRecoveryException catch (error) {
         Log.error(
           'Could not submit durable deletion attempt',

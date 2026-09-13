@@ -4293,6 +4293,7 @@
     "deleteAccountRemoveKeysTitle": "Ta bort det här kontot från den här enheten?",
     "deleteAccountServerDeletionFailed": "Raderingsförfrågningar för dina inlägg har skickats, men vi kunde inte slutföra raderingen av ditt konto. Försök igen om en stund.",
     "deleteAccountSuccess": "Ditt Divine-konto har tagits bort. Begäranden om att radera dina Nostr-inlägg har skickats, men vissa reläer, klienter eller cacheminnen kan behålla kopior.",
+    "deleteAccountSuccessContentUnverified": "Radering av kontot har begärts. Raderingen av vissa befintliga inlägg kunde inte bekräftas individuellt.",
     "deleteAccountWarningBody": "Det här skickar raderingsförfrågningar för ditt konto och innehåll, tar bort ditt Divine-konto när det går och loggar ut dig på den här enheten. Vissa reläer, klienter och sökindex kan behålla kopior. Andra inloggade enheter förblir aktiva tills du tar bort nycklarna där.",
     "findPeopleNoContacts": "Inga kontakter hittades.\nBörja följa personer för att se dem här.",
     "geoBlockedCityLabel": "Stad",

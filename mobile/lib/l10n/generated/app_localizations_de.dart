@@ -7225,6 +7225,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Divine-Konto wurde gelöscht. Für deine Nostr-Beiträge wurden Löschanfragen gesendet, aber einige Relays, Clients oder Caches behalten möglicherweise Kopien.';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'Kontolöschung angefragt. Für einige vorhandene Beiträge konnte die Löschung nicht einzeln bestätigt werden.';
+
+  @override
   String get deleteAccountWarningBody =>
       'Das sendet Löschanfragen für dein Konto und deine Inhalte, löscht dein Divine-Konto wenn möglich und meldet dich auf diesem Gerät ab. Einige Relays, Clients und Suchindizes behalten möglicherweise Kopien. Andere angemeldete Geräte bleiben aktiv, bis du dort die Schlüssel entfernst.';
 

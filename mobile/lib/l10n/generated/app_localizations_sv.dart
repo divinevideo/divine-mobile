@@ -7130,6 +7130,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ditt Divine-konto har tagits bort. Begäranden om att radera dina Nostr-inlägg har skickats, men vissa reläer, klienter eller cacheminnen kan behålla kopior.';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'Radering av kontot har begärts. Raderingen av vissa befintliga inlägg kunde inte bekräftas individuellt.';
+
+  @override
   String get deleteAccountWarningBody =>
       'Det här skickar raderingsförfrågningar för ditt konto och innehåll, tar bort ditt Divine-konto när det går och loggar ut dig på den här enheten. Vissa reläer, klienter och sökindex kan behålla kopior. Andra inloggade enheter förblir aktiva tills du tar bort nycklarna där.';
 

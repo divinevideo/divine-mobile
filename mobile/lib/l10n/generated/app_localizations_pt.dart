@@ -7189,6 +7189,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Sua conta Divine foi excluída. Foram enviadas solicitações de exclusão para suas publicações no Nostr, mas alguns relays, clientes ou caches podem manter cópias.';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'Exclusão da conta solicitada. Não foi possível confirmar individualmente a exclusão de algumas publicações existentes.';
+
+  @override
   String get deleteAccountWarningBody =>
       'Isso envia solicitações de exclusão da sua conta e do seu conteúdo, exclui sua conta Divine quando possível e desconecta você neste dispositivo. Alguns relays, clientes e índices de busca podem manter cópias. Outros dispositivos conectados continuam ativos até você remover as chaves lá.';
 

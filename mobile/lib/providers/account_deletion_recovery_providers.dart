@@ -46,6 +46,7 @@ final class SubmittedAccountDeletionAttempt {
     required this.pubkeyHex,
     required this.attempt,
     required this.vanishEventId,
+    this.contentDeletionUnverified = false,
   });
 
   factory SubmittedAccountDeletionAttempt.fromJson(Map<String, dynamic> json) =>
@@ -55,16 +56,26 @@ final class SubmittedAccountDeletionAttempt {
         attempt: AccountDeletionAttempt.fromJson(
           json['attempt'] as Map<String, dynamic>,
         ),
+        // Absent on receipts written before the content-sweep disclosure was
+        // persisted; those keep the unqualified success copy.
+        contentDeletionUnverified:
+            json['content_deletion_unverified'] as bool? ?? false,
       );
 
   final String pubkeyHex;
   final AccountDeletionAttempt attempt;
   final String vanishEventId;
 
+  /// True when the NIP-62 sweep could not confirm every existing post was
+  /// individually requested for deletion. Persisted so the completed recovery
+  /// screen can avoid an unqualified success after a restart.
+  final bool contentDeletionUnverified;
+
   Map<String, dynamic> toJson() => {
     'pubkey_hex': pubkeyHex,
     'vanish_event_id': vanishEventId,
     'attempt': attempt.toJson(),
+    'content_deletion_unverified': contentDeletionUnverified,
   };
 
   SubmittedAccountDeletionAttempt copyWith({
@@ -73,6 +84,7 @@ final class SubmittedAccountDeletionAttempt {
     pubkeyHex: pubkeyHex,
     attempt: attempt ?? this.attempt,
     vanishEventId: vanishEventId,
+    contentDeletionUnverified: contentDeletionUnverified,
   );
 }
 
@@ -132,6 +144,7 @@ class SubmittedAccountDeletionAttemptNotifier
     required String pubkeyHex,
     required AccountDeletionAttempt attempt,
     required String vanishEventId,
+    bool contentDeletionUnverified = false,
   }) async {
     final existing = state;
     if (existing != null && existing.pubkeyHex != pubkeyHex) {
@@ -143,6 +156,7 @@ class SubmittedAccountDeletionAttemptNotifier
       pubkeyHex: pubkeyHex,
       attempt: attempt,
       vanishEventId: vanishEventId,
+      contentDeletionUnverified: contentDeletionUnverified,
     );
     await _persist(receipt);
   }
@@ -225,6 +239,7 @@ submittedAccountDeletionMonitorProvider =
         onAttemptUpdated: receiptNotifier.updateAttempt,
         receiptPubkeyHex: receipt.pubkeyHex,
         receiptVanishEventId: receipt.vanishEventId,
+        contentDeletionUnverified: receipt.contentDeletionUnverified,
       );
       ref.listen(currentAuthStateProvider, (_, next) {
         if (next != AuthState.authenticated) return;
@@ -244,31 +259,30 @@ submittedAccountDeletionMonitorProvider =
         disposed = true;
         unawaited(cubit.close());
       });
-      // Deferred fallback: resume an adopted receipt when nobody is driving
-      // this owner yet. Running a microtask later rather than here lets an
-      // immediate caller — the deletion dialog's resume, which owns the
-      // sign-out ordering — start first and win the single-flight resume.
-      scheduleMicrotask(() {
-        if (cubit.isClosed) return;
-        if (cubit.state.status != AccountDeletionRecoveryStatus.initial) return;
-        unawaited(cubit.resume(receipt.attempt));
-      });
+      // The owner never starts itself. Restored receipts are started only by
+      // accountDeletionRecoveryStartupProvider at app start; an in-process
+      // submission is started only by the deletion dialog, which owns the
+      // sign-out ordering. Two explicit starters mean neither can pre-empt the
+      // other, with no dependence on call ordering or microtask timing.
       return cubit;
     });
 
-/// App-scoped kick for a receipt that survived a restart.
+/// Starts the owner for a receipt that survived a restart.
 ///
 /// Read once during app startup. Every access is [Ref.read], so this provider
-/// has no dependencies and never recomputes: a receipt recorded later by the
-/// deletion dialog is started by that flow, which owns the sign-out ordering,
-/// and must not be pre-empted here. Without this, a receipt whose account is
-/// not the active one would never start polling, because the recovery gate
-/// deliberately keeps its screen away from the active account.
+/// has no dependencies and never recomputes: the receipt it sees is the one
+/// that was durable before this process started, and a receipt recorded later
+/// by the deletion dialog is started by that dialog instead. This is the only
+/// cold-start starter; without it a receipt whose account is not the active
+/// one would never poll, because the recovery gate keeps its screen away from
+/// the active account.
 final accountDeletionRecoveryStartupProvider = Provider<void>((ref) {
   final receipt = ref.read(submittedAccountDeletionAttemptProvider);
   if (receipt == null) return;
-  // Instantiates the owner; its deferred resume starts the polling.
-  ref.read(submittedAccountDeletionMonitorProvider);
+  final owner = ref.read(submittedAccountDeletionMonitorProvider);
+  if (owner == null) return;
+  if (owner.state.status != AccountDeletionRecoveryStatus.initial) return;
+  unawaited(owner.resume(receipt.attempt));
 });
 
 final currentAccountDeletionAttemptProvider =

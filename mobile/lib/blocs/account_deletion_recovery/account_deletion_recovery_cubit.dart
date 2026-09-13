@@ -50,6 +50,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     String? receiptVanishEventId,
     RecoveryTimerFactory timerFactory = Timer.new,
     DateTime Function() now = DateTime.now,
+    this.contentDeletionUnverified = false,
   }) : _repository = repository,
        _authService = authService,
        _onAttemptResolved = onAttemptResolved,
@@ -60,6 +61,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
        _timerFactory = timerFactory,
        _now = now,
        super(const AccountDeletionRecoveryState());
+
+  /// True when the content sweep could not confirm that every existing post
+  /// was individually requested for deletion. The completed UI must not report
+  /// an unqualified success in that case.
+  final bool contentDeletionUnverified;
 
   final AccountDeletionRecoveryRepository _repository;
   final AuthService _authService;

@@ -3721,6 +3721,10 @@
   "@deleteAccountSuccess": {
     "description": "Snackbar after the account deletion flow publishes Nostr deletion requests, deletes the Divine account when applicable, and signs out locally. Do not imply guaranteed deletion from every relay, client, cache, search index, or other signed-in device."
   },
+  "deleteAccountSuccessContentUnverified": "Pemadaman akaun diminta. Sesetengah siaran sedia ada tidak dapat disahkan secara individu untuk pemadaman.",
+  "@deleteAccountSuccessContentUnverified": {
+    "description": "Snackbar when the account-wide vanish request was published but the relay query failed or at least one per-item deletion request was not confirmed. Must not imply every existing post was individually requested or confirmed for deletion."
+  },
   "deleteAccountWarningBody": "Ini menghantar permintaan pemadaman untuk akaun dan kandungan anda, memadam akaun Divine anda apabila boleh, dan melog keluar anda pada peranti ini. Sesetengah relay, klien dan indeks carian mungkin menyimpan salinan. Peranti lain yang dilog masuk kekal aktif sehingga anda mengalih keluar kunci di situ.",
   "@deleteAccountWarningBody": {
     "description": "Warning body in the delete-account confirmation dialog, shown above the type-to-confirm field. Be clear that Nostr deletion is request-based, not a guarantee that every relay, client, cache, search index, or other signed-in device will forget the account."

@@ -110,29 +110,31 @@ Future<void> startAccountDeletionFlow({
         // deletes the Keycast user right after accepting, and a lookup signed
         // through that signer fails, which used to leave the user signed in on
         // the settings screen (#8583).
-        onDeletionSubmitted: (attempt, vanishEventId) async {
-          await ref
-              .read(submittedAccountDeletionAttemptProvider.notifier)
-              .record(
-                pubkeyHex: pubkey,
-                attempt: attempt,
-                vanishEventId: vanishEventId,
-              );
-          final owner = ref.read(submittedAccountDeletionMonitorProvider);
-          if (owner == null) {
-            throw const AccountDeletionRecoveryException(
-              'Could not start account deletion recovery',
-            );
-          }
-          await owner.resume(attempt, signOutWhenProcessing: false);
-          final submittedStatus = owner.state.attempt?.status;
-          if (submittedStatus != AccountDeletionAttemptStatus.processing &&
-              submittedStatus != AccountDeletionAttemptStatus.completed) {
-            throw const AccountDeletionRecoveryException(
-              'Could not submit durable deletion attempt',
-            );
-          }
-        },
+        onDeletionSubmitted:
+            (attempt, vanishEventId, contentDeletionUnverified) async {
+              await ref
+                  .read(submittedAccountDeletionAttemptProvider.notifier)
+                  .record(
+                    pubkeyHex: pubkey,
+                    attempt: attempt,
+                    vanishEventId: vanishEventId,
+                    contentDeletionUnverified: contentDeletionUnverified,
+                  );
+              final owner = ref.read(submittedAccountDeletionMonitorProvider);
+              if (owner == null) {
+                throw const AccountDeletionRecoveryException(
+                  'Could not start account deletion recovery',
+                );
+              }
+              await owner.resume(attempt, signOutWhenProcessing: false);
+              final submittedStatus = owner.state.attempt?.status;
+              if (submittedStatus != AccountDeletionAttemptStatus.processing &&
+                  submittedStatus != AccountDeletionAttemptStatus.completed) {
+                throw const AccountDeletionRecoveryException(
+                  'Could not submit durable deletion attempt',
+                );
+              }
+            },
       );
       ref.invalidate(currentAccountDeletionAttemptProvider);
     },

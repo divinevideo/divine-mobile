@@ -7060,6 +7060,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Divine hesabın silindi. Nostr gönderilerin için silme istekleri gönderildi ancak bazı röleler, istemciler veya önbellekler kopyaları saklayabilir.';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'Hesap silme isteği gönderildi. Mevcut bazı gönderilerin silinmesi tek tek doğrulanamadı.';
+
+  @override
   String get deleteAccountWarningBody =>
       'Bu, hesabın ve içeriğin için silme istekleri gönderir, mümkün olduğunda Divine hesabını siler ve bu cihazda oturumunu kapatır. Bazı röleler, istemciler ve arama dizinleri kopyaları saklayabilir. Oturum açmış diğer cihazlar, oradaki anahtarları kaldırana kadar aktif kalır.';
 

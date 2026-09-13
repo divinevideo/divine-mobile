@@ -193,7 +193,9 @@ class _RecoveryStateContent extends StatelessWidget {
                 onPressed: () => _switchAccount(context, cubit),
               ),
       AccountDeletionRecoveryStatus.completed => _RecoveryContent(
-        body: context.l10n.deleteAccountSuccess,
+        body: cubit.contentDeletionUnverified
+            ? context.l10n.deleteAccountSuccessContentUnverified
+            : context.l10n.deleteAccountSuccess,
         actionLabel: context.l10n.commonClose,
         onPressed: cubit.acknowledgeCompletion,
       ),

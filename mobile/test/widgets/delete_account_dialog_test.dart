@@ -73,7 +73,11 @@ Future<void> runDeletion({
   Future<DivineUsernameLookup>? lookupFuture,
   String? confirmedPubkey,
   String screenName = 'AccountDeletion',
-  Future<void> Function(AccountDeletionAttempt attempt, String vanishEventId)?
+  Future<void> Function(
+    AccountDeletionAttempt attempt,
+    String vanishEventId,
+    bool contentDeletionUnverified,
+  )?
   onDeletionSubmitted,
 }) => dialog_api.executeAccountDeletion(
   context: context,
@@ -614,7 +618,7 @@ void main() {
         deletionService: deletionService,
         authService: authService,
         deletionRecoveryRepository: recoveryRepository,
-        onDeletionSubmitted: (attempt, _) async => recorded.add(attempt),
+        onDeletionSubmitted: (attempt, _, _) async => recorded.add(attempt),
       );
       await tester.pumpAndSettle();
 
@@ -630,6 +634,55 @@ void main() {
         find.text(_englishL10n().accountDeletionFinishingBody),
         findsOneWidget,
       );
+    });
+
+    testWidgets('forwards an incomplete content sweep to the receipt', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(
+        () => deletionService.deleteAccount(
+          onProgress: any(named: 'onProgress'),
+          expectedPubkey: any(named: 'expectedPubkey'),
+        ),
+      ).thenAnswer(
+        (_) async => DeleteAccountResult.createSuccess(
+          'event-id',
+          contentDeletionIncomplete: true,
+        ),
+      );
+      when(authService.signOut).thenAnswer((_) async {});
+      final recoveryRepository = _successfulRecoveryRepository();
+      final forwarded = <bool>[];
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+        onDeletionSubmitted: (_, _, contentDeletionUnverified) async {
+          forwarded.add(contentDeletionUnverified);
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(forwarded, [isTrue]);
     });
 
     testWidgets(
@@ -1197,7 +1250,7 @@ void main() {
           authService: authService,
           deletionRecoveryRepository: recoveryRepository,
           lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
-          onDeletionSubmitted: (attempt, _) async => accepted.add(attempt),
+          onDeletionSubmitted: (attempt, _, _) async => accepted.add(attempt),
         );
         await tester.pumpAndSettle();
 
@@ -1266,7 +1319,7 @@ void main() {
         authService: authService,
         deletionRecoveryRepository: recoveryRepository,
         lookup: const DivineUsernameFound(name: 'alice', canonical: 'alice'),
-        onDeletionSubmitted: (_, _) async {
+        onDeletionSubmitted: (_, _, _) async {
           throw StateError('receipt write failed');
         },
       );

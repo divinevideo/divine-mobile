@@ -12196,6 +12196,12 @@ abstract class AppLocalizations {
   /// **'Your Divine account was deleted. Deletion requests were sent for your Nostr posts, but some relays, clients, or caches may keep copies.'**
   String get deleteAccountSuccess;
 
+  /// Snackbar when the account-wide vanish request was published but the relay query failed or at least one per-item deletion request was not confirmed. Must not imply every existing post was individually requested or confirmed for deletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion requested. Some existing posts could not be individually confirmed for deletion.'**
+  String get deleteAccountSuccessContentUnverified;
+
   /// Warning body in the delete-account confirmation dialog, shown above the type-to-confirm field. Be clear that Nostr deletion is request-based, not a guarantee that every relay, client, cache, search index, or other signed-in device will forget the account.
   ///
   /// In en, this message translates to:

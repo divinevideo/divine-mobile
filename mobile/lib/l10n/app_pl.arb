@@ -4293,6 +4293,7 @@
     "deleteAccountRemoveKeysTitle": "Usunąć to konto z tego urządzenia?",
     "deleteAccountServerDeletionFailed": "Prośby o usunięcie twoich postów zostały wysłane, ale nie udało się dokończyć usuwania twojego konta. Spróbuj ponownie za chwilę.",
     "deleteAccountSuccess": "Twoje konto Divine zostało usunięte. Wysłano żądania usunięcia twoich postów w Nostr, ale niektóre przekaźniki, klienty lub pamięci podręczne mogą zachować kopie.",
+    "deleteAccountSuccessContentUnverified": "Wysłano żądanie usunięcia konta. Usunięcia niektórych istniejących postów nie udało się potwierdzić osobno.",
     "deleteAccountWarningBody": "To wysyła żądania usunięcia twojego konta i treści, usuwa twoje konto Divine, gdy to możliwe, i wylogowuje cię na tym urządzeniu. Niektóre przekaźniki, klienty i indeksy wyszukiwania mogą zachować kopie. Inne zalogowane urządzenia pozostają aktywne, dopóki nie usuniesz na nich kluczy.",
     "findPeopleNoContacts": "Nie znaleziono kontaktów.\nZacznij obserwować ludzi, aby zobaczyć ich tutaj.",
     "geoBlockedCityLabel": "Miasto",

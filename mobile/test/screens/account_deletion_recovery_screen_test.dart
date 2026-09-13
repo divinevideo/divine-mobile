@@ -66,6 +66,7 @@ void main() {
     when(cubit.switchAccount).thenAnswer((_) async => true);
     when(cubit.completeLocalCleanup).thenAnswer((_) async {});
     when(cubit.acknowledgeCompletion).thenAnswer((_) async {});
+    when(() => cubit.contentDeletionUnverified).thenReturn(false);
   });
 
   group('renders and navigation', () {
@@ -437,6 +438,30 @@ void main() {
         find.widgetWithText(DivineButton, l10n.commonClose),
       );
       verify(cubit.acknowledgeCompletion).called(1);
+    });
+
+    testWidgets('an unverified content sweep never claims full deletion', (
+      tester,
+    ) async {
+      const processing = AccountDeletionAttempt(
+        id: 'attempt-id',
+        status: AccountDeletionAttemptStatus.processing,
+      );
+      when(() => cubit.contentDeletionUnverified).thenReturn(true);
+      when(() => cubit.state).thenReturn(
+        const AccountDeletionRecoveryState(
+          status: AccountDeletionRecoveryStatus.completed,
+          attempt: processing,
+        ),
+      );
+      await tester.pumpWidget(_app(cubit));
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.deleteAccountSuccessContentUnverified),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.deleteAccountSuccess), findsNothing);
     });
   });
 }

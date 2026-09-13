@@ -2,6 +2,7 @@
 // ABOUTME: Verifies lookup readiness remains fail-closed until signing works.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -817,5 +818,54 @@ void main() {
         isFalse,
       );
     });
+
+    test(
+      'a receipt persists the incomplete content-sweep disclosure',
+      () async {
+        await container
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: pubkey,
+              attempt: processing,
+              vanishEventId: _vanishEventId,
+              contentDeletionUnverified: true,
+            );
+
+        final restarted = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+          ],
+        );
+        addTearDown(restarted.dispose);
+
+        expect(
+          restarted
+              .read(submittedAccountDeletionAttemptProvider)
+              ?.contentDeletionUnverified,
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'a receipt written before the disclosure defaults to verified',
+      () async {
+        await preferences.setString(
+          'account_deletion_receipt_v1',
+          jsonEncode({
+            'pubkey_hex': pubkey,
+            'vanish_event_id': _vanishEventId,
+            'attempt': processing.toJson(),
+          }),
+        );
+
+        expect(
+          container
+              .read(submittedAccountDeletionAttemptProvider)
+              ?.contentDeletionUnverified,
+          isFalse,
+        );
+      },
+    );
   });
 }

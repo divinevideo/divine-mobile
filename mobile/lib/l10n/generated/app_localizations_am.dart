@@ -6970,6 +6970,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'የDivine መለያዎ ተሰርዟል። ለNostr ልጥፎችዎ የስረዛ ጥያቄዎች ተልከዋል፣ ነገር ግን አንዳንድ ሪሌዎች፣ ደንበኞች ወይም መሸጎጫዎች ቅጂዎችን ሊያቆዩ ይችላሉ።';
 
   @override
+  String get deleteAccountSuccessContentUnverified =>
+      'የመለያ ስረዛ ተጠይቋል። የአንዳንድ ነባር ልጥፎች ስረዛ በተናጠል ማረጋገጥ አልተቻለም።';
+
+  @override
   String get deleteAccountWarningBody =>
       'ይህ ለመለያዎ እና ለይዘትዎ የመሰረዝ ጥያቄዎችን ይልካል፣ የሚቻል ከሆነ የDivine መለያዎን ይሰርዛል እና ከዚህ መሣሪያ ያስወጣዎታል። አንዳንድ ቅብብሎሾች፣ ደንበኞች እና የፍለጋ ማውጫዎች ቅጂዎችን ሊይዙ ይችላሉ። ሌሎች የገቡ መሣሪያዎች እዚያ ቁልፎችን እስኪያስወግዱ ድረስ ንቁ ሆነው ይቆያሉ።';
 

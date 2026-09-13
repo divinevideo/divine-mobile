@@ -214,6 +214,12 @@ void main() {
               attempt: _recoverable,
               vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             );
+        // What the deletion dialog does once the receipt is durable: it
+        // resumes the app-scoped owner itself, with the dialog owning the
+        // sign-out. Nothing starts the owner implicitly.
+        await container
+            .read(submittedAccountDeletionMonitorProvider)!
+            .resume(_recoverable, signOutWhenProcessing: false);
         container.invalidate(currentAccountDeletionAttemptProvider);
         await container.read(currentAccountDeletionAttemptProvider.future);
 
@@ -366,6 +372,10 @@ void main() {
               attempt: _processing,
               vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             );
+        // The dialog starts the owner after recording; no implicit start.
+        await container
+            .read(submittedAccountDeletionMonitorProvider)!
+            .resume(_processing, signOutWhenProcessing: false);
         container.invalidate(currentAccountDeletionAttemptProvider);
         await tester.runAsync(
           () => container.read(currentAccountDeletionAttemptProvider.future),
