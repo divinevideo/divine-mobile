@@ -42,6 +42,36 @@ const _okResult = BlossomUploadResult(
   thumbnailUrl: 'https://media.divine.video/abc-thumb.jpg',
 );
 
+Future<void> _withIsolatedHiveHome(
+  String prefix,
+  Future<void> Function() body,
+) async {
+  await TestHelpers.cleanupHiveBox('pending_uploads');
+  SharedPreferences.setMockInitialValues({});
+
+  final tempDir = await Directory.systemTemp.createTemp(prefix);
+  final originalPathProvider = PathProviderPlatform.instance;
+  PathProviderPlatform.instance = MockPathProviderPlatform()
+    ..setTemporaryPath(tempDir.path)
+    ..setApplicationDocumentsPath('${tempDir.path}/documents')
+    ..setApplicationSupportPath('${tempDir.path}/support');
+  await TestHelpers.initHiveHome();
+
+  try {
+    await body();
+  } finally {
+    try {
+      await TestHelpers.cleanupHiveBox('pending_uploads');
+    } finally {
+      Hive.init(null);
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    }
+  }
+}
+
 void main() {
   setUpAll(() async {
     await initializeServiceTestEnvironment();
@@ -79,9 +109,8 @@ void main() {
         ..writeAsBytesSync(List<int>.generate(32, (index) => index));
 
       mockBlossomService = _MockBlossomUploadService();
-      when(
-        () => mockBlossomService.isBlossomEnabled(),
-      ).thenAnswer((_) async => false);
+      when(() => mockBlossomService.isBlossomEnabled())
+          .thenAnswer((_) async => false);
       _mockConnectivity('wifi');
 
       uploadManager = UploadManager(
@@ -399,54 +428,74 @@ void main() {
 
   group('UploadManager background-aware registration', () {
     test('initialize registers and dispose unregisters', () async {
-      await TestHelpers.cleanupHiveBox('pending_uploads');
-      SharedPreferences.setMockInitialValues({});
+      await _withIsolatedHiveHome('upload_recovery_reg_', () async {
+        final mockBlossom = _MockBlossomUploadService();
+        when(mockBlossom.isBlossomEnabled)
+            .thenAnswer((_) => Future.value(false));
+        _mockConnectivity('wifi');
 
-      final tempDir = await Directory.systemTemp.createTemp(
-        'upload_recovery_reg_',
-      );
-      final originalPathProvider = PathProviderPlatform.instance;
-      final mockPathProvider = MockPathProviderPlatform()
-        ..setTemporaryPath(tempDir.path)
-        ..setApplicationDocumentsPath('${tempDir.path}/documents')
-        ..setApplicationSupportPath('${tempDir.path}/support');
-      PathProviderPlatform.instance = mockPathProvider;
-      await TestHelpers.initHiveHome();
+        final mockBgManager = _MockBackgroundActivityManager();
+        final manager = UploadManager(
+          blossomService: mockBlossom,
+          backgroundActivityManager: mockBgManager,
+          retryConfig: const UploadRetryConfig(
+            initialDelay: Duration.zero,
+            maxDelay: Duration.zero,
+          ),
+        );
 
+        try {
+          await manager.initialize();
+          verify(() => mockBgManager.registerService(manager)).called(1);
+
+          manager.dispose();
+          verify(() => mockBgManager.unregisterService(manager)).called(1);
+        } finally {
+          manager.dispose();
+        }
+      });
+    });
+
+    test('dispose during initialize prevents late registration', () async {
+      await _withIsolatedHiveHome('upload_recovery_dispose_', () async {
+        final mockBlossom = _MockBlossomUploadService();
+        when(mockBlossom.isBlossomEnabled)
+            .thenAnswer((_) => Future.value(false));
+        _mockConnectivity('wifi');
+
+        final mockBgManager = _MockBackgroundActivityManager();
+        final manager = UploadManager(
+          blossomService: mockBlossom,
+          backgroundActivityManager: mockBgManager,
+        );
+
+        try {
+          final initialization = manager.initialize();
+          manager.dispose();
+          await initialization;
+
+          verifyNever(() => mockBgManager.registerService(manager));
+          expect(manager.isInitialized, isFalse);
+        } finally {
+          manager.dispose();
+        }
+      });
+    });
+
+    test('initialize after dispose stays inert', () async {
       final mockBlossom = _MockBlossomUploadService();
-      when(mockBlossom.isBlossomEnabled).thenAnswer((_) => Future.value(false));
-      _mockConnectivity('wifi');
-
       final mockBgManager = _MockBackgroundActivityManager();
       final manager = UploadManager(
         blossomService: mockBlossom,
         backgroundActivityManager: mockBgManager,
-        retryConfig: const UploadRetryConfig(
-          initialDelay: Duration.zero,
-          maxDelay: Duration.zero,
-        ),
       );
-
-      addTearDown(() async {
-        manager.dispose();
-        try {
-          await TestHelpers.cleanupHiveBox('pending_uploads');
-        } finally {
-          Hive.init(null);
-          PathProviderPlatform.instance = originalPathProvider;
-          if (tempDir.existsSync()) {
-            await tempDir.delete(recursive: true);
-          }
-        }
-      });
-
-      await manager.initialize();
-
-      verify(() => mockBgManager.registerService(manager)).called(1);
+      addTearDown(manager.dispose);
 
       manager.dispose();
+      await manager.initialize();
 
-      verify(() => mockBgManager.unregisterService(manager)).called(1);
+      verifyNever(() => mockBgManager.registerService(manager));
+      expect(manager.isInitialized, isFalse);
     });
 
     test('serviceName is UploadManager', () {

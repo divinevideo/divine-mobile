@@ -44,6 +44,7 @@ class PendingUploadStore {
   /// `save() -> ensureOpen()` path, so a storage recovery mid-drain can't
   /// silently revive a disposed store.
   bool _disposed = false;
+  int _lifecycleGeneration = 0;
 
   // ---------------------------------------------------------------------------
   // Status accessors
@@ -71,13 +72,16 @@ class PendingUploadStore {
     // A fresh lifecycle: clear the disposed latch so a reused store can queue
     // and retry again. open() is unreachable from the drain (which only calls
     // ensureOpen), so clearing here can't revive a store mid-drain.
+    final generation = ++_lifecycleGeneration;
     _disposed = false;
     try {
-      _box = await UploadInitializationHelper.initializeUploadsBox(
+      final box = await UploadInitializationHelper.initializeUploadsBox(
         forceReinit: true,
       );
+      if (_disposed || generation != _lifecycleGeneration) return;
+      _box = box;
     } catch (_) {
-      _box = null;
+      if (generation == _lifecycleGeneration) _box = null;
       rethrow;
     }
   }
@@ -88,10 +92,16 @@ class PendingUploadStore {
     // this via save()'s slow path; reviving _box here would leave a disposed
     // store with a live, open box (isReady → true while _disposed). open() — the
     // deliberate re-init entrypoint — clears the latch and is the only revival.
+    final generation = _lifecycleGeneration;
     if (_disposed) return;
-    _box = await UploadInitializationHelper.initializeUploadsBox(
+    final box = await UploadInitializationHelper.initializeUploadsBox(
       forceReinit: true,
     );
+    // disposeStore() can land while the open above is suspended. The entry check
+    // is before the await, so re-check before reviving _box, or a disposed store
+    // comes back alive (isReady → true while _disposed).
+    if (_disposed || generation != _lifecycleGeneration) return;
+    _box = box;
   }
 
   /// Cancel timers, drain the queue reference, and null the box pointer.
@@ -102,6 +112,7 @@ class PendingUploadStore {
     // Latch disposed first: a drain may be suspended on `await save()` right
     // now, and must see this the instant it resumes so it can't re-enqueue or
     // re-arm a timer past disposal.
+    _lifecycleGeneration++;
     _disposed = true;
     _saveQueueTimer?.cancel();
     _saveQueueTimer = null;
