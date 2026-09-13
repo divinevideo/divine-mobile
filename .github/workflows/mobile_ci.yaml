@@ -582,7 +582,7 @@ jobs:
       # Single copy of the pin: the install step activates this version and the
       # replay recipe prints it. A second hardcoded copy could drift from what
       # CI actually ran, which is the failure the recipe exists to prevent.
-      VERY_GOOD_CLI_VERSION: "1.3.0"
+      VERY_GOOD_CLI_VERSION: "1.5.0"
     strategy:
       # Every shard must report. Stopping the others on one failure hides
       # additional failures and forces a second full round-trip to find them.
@@ -625,8 +625,8 @@ jobs:
       - name: 🛠️ Install Very Good CLI
         # Pinned so the optimizer's bundle mechanics don't float under CI. The
         # version lives in VERY_GOOD_CLI_VERSION above so the replay recipe
-        # prints the same one; 1.1.1≡1.2.0≡1.3.0 for all test/optimizer
-        # mechanics (package workflows pin 1.1.1 via very_good_workflows). #5738.
+        # prints the same one. Package workflows remain independently pinned
+        # by very_good_workflows and are outside this app-suite upgrade. #9138.
         run: dart pub global activate very_good_cli "$VERY_GOOD_CLI_VERSION"
       - name: 🔪 Reduce test/ to this shard
         # --optimization bundles every untagged test file into ONE suite, so
