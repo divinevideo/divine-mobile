@@ -102,6 +102,41 @@ run_shell_bucket() {
   run_bucket "$name" bash -lc "$command"
 }
 
+# The vgv-optimized bucket below runs the bare `very_good` on PATH, which
+# silently measures whatever version is globally activated. Check it against
+# the same pin `mise run test` and CI use so a stale local install doesn't
+# produce a timing record for the wrong CLI mechanics.
+check_very_good_cli_version() {
+  local pinned
+  pinned="$(grep -m1 '^VERY_GOOD_CLI_VERSION=' "$PROJECT_ROOT/mise.toml" | cut -d= -f2)"
+  if [ -z "$pinned" ]; then
+    echo "Could not read the pinned Very Good CLI version from mise.toml." >&2
+    return 1
+  fi
+
+  local pub_cache_bin="${PUB_CACHE:-$HOME/.pub-cache}/bin"
+  local very_good_bin=""
+  if command -v very_good >/dev/null 2>&1; then
+    very_good_bin="$(command -v very_good)"
+  elif [ -x "$pub_cache_bin/very_good" ]; then
+    very_good_bin="$pub_cache_bin/very_good"
+  fi
+
+  if [ -z "$very_good_bin" ]; then
+    echo "very_good CLI not found on PATH or in $pub_cache_bin." >&2
+    echo "Install the pinned version with: dart pub global activate very_good_cli $pinned" >&2
+    return 1
+  fi
+
+  local current
+  current="$("$very_good_bin" --version | awk 'NR == 1 { print $1 }')"
+  if [ "$current" != "$pinned" ]; then
+    echo "very_good CLI at $very_good_bin is $current, but $pinned is pinned." >&2
+    echo "Install the pinned version with: dart pub global activate very_good_cli $pinned" >&2
+    return 1
+  fi
+}
+
 cd "$PROJECT_ROOT"
 : >"$OUTPUT"
 
@@ -122,8 +157,14 @@ if [ "$MODE" = "full" ]; then
   run_bucket app-widgets flutter test test/widgets --no-pub --reporter=compact
   run_bucket package-models flutter test packages/models/test --no-pub --reporter=compact
   run_bucket package-db-client flutter test packages/db_client/test --no-pub --reporter=compact
-  run_bucket vgv-optimized very_good test --optimization --concurrency=4 \
-    --exclude-tags integration --test-randomize-ordering-seed random
+  if check_very_good_cli_version; then
+    run_bucket vgv-optimized very_good test --optimization --concurrency=4 \
+      --exclude-tags integration --test-randomize-ordering-seed random
+  else
+    echo "==> vgv-optimized"
+    echo "    SKIP (see prerequisite error above)"
+    FAILED=1
+  fi
 fi
 
 echo "Done. Timing JSONL: $OUTPUT"
