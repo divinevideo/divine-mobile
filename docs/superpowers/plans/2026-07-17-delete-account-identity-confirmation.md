@@ -1,5 +1,10 @@
 # Delete-account identity + username confirmation — Implementation Plan
 
+> **Partly superseded (2026-09-13).** `ProfileRepository.releaseUsername()`,
+> referenced in a test snippet below, was removed from divine-mobile in #9144;
+> the live path is the two-phase `POST /api/username/release/prepare`
+> handshake. The identity-confirmation design in this plan is unaffected.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Re-derived 2026-07-17 against merged `origin/main`** (PR #6138, username-burn, landed). This plan **extends** the merged `_DeleteAllContentDialog` (which already opens immediately and async-reveals the burn `CheckboxListTile`), it does not rewrite it. Decision A (from review): resolve the **local profile** before opening so the identity + username gate are set up front; the name-server burn lookup stays async per #6138. Decision B: the confirmed-account guard sits at the **top of `executeAccountDeletion`** (before the burn-first step).

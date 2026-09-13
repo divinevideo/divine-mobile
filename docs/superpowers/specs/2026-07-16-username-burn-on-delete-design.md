@@ -1,5 +1,12 @@
 # Opt-in `@divine.video` username burn on account deletion — design
 
+> **Superseded (2026-09-13).** The direct `POST /api/username/release` burn
+> endpoint and `ProfileRepository.releaseUsername()` described below were
+> removed from divine-mobile in #9144. The live path is the two-phase
+> `POST /api/username/release/prepare` handshake in
+> `mobile/lib/repositories/account_deletion_recovery_repository.dart`. Kept for
+> design context; do not build against the API described here.
+
 **Issue:** divinevideo/divine-mobile#6126 (assigned to @mbradley).
 **Spans two repos / two PRs:** `divine-name-server` (new `POST /api/username/release` endpoint) + `divine-mobile` (client + opt-in toggle + orchestration). Both target `main`; neither stacks.
 **Status:** Design complete, approved to write plan. Origin: the Jeff/imrdavis support incident (deleting an account never released the `@divine.video` handle).
