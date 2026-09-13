@@ -151,10 +151,6 @@ class UploadProgressReporter {
     }
   }
 
-  /// Instance convenience for consumers that hold a reporter.
-  String getNetworkTypeString(UploadConnectivity connectivity) =>
-      networkTypeString(connectivity);
-
   // ---------------------------------------------------------------------------
   // Error categorisation (replaces categorizeError / getUserFriendlyErrorMessage)
   // ---------------------------------------------------------------------------
@@ -309,12 +305,6 @@ class UploadProgressReporter {
         return 'Upload failed. Please check your connection and try again.';
     }
   }
-
-  /// Instance convenience for consumers that hold a reporter.
-  String getUserFriendlyErrorMessage(
-    String category,
-    UploadConnectivity connectivity,
-  ) => userFriendlyErrorMessage(category, connectivity);
 
   // ---------------------------------------------------------------------------
   // Metrics computation (replaces _createSuccessMetrics / _logUploadSuccess)
