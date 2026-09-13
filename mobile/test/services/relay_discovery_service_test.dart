@@ -488,6 +488,22 @@ void _authenticityTests() {
       },
     );
 
+    test('uses an opaque subscription id for the indexer request', () async {
+      indexer = await _HostileIndexer.start(
+        signedRelayList(privateKey: victimKey),
+      );
+      addTearDown(indexer.stop);
+      service = RelayDiscoveryService(indexerRelays: [indexer.url]);
+
+      await service.queryIndexerDirect(indexer.url, victimPubkey);
+
+      expect(indexer.subscriptionIds, hasLength(1));
+      expect(
+        RegExp(r'^[0-9a-z]{16}$').hasMatch(indexer.subscriptionIds.single),
+        isTrue,
+      );
+    });
+
     test('rejects a frame with no signature', () async {
       final unsigned = signedRelayList(privateKey: victimKey)..['sig'] = '';
       expect(await query(unsigned), isEmpty);
@@ -543,6 +559,7 @@ class _HostileIndexer {
 
   final HttpServer _server;
   final Map<String, dynamic> _reply;
+  final List<String> subscriptionIds = [];
 
   String get url => 'ws://127.0.0.1:${_server.port}';
 
@@ -555,6 +572,7 @@ class _HostileIndexer {
         final frame = jsonDecode(raw as String) as List<dynamic>;
         if (frame.isEmpty || frame[0] != 'REQ') return;
         final subId = frame[1] as String;
+        indexer.subscriptionIds.add(subId);
         socket
           ..add(jsonEncode(<dynamic>['EVENT', subId, indexer._reply]))
           ..add(jsonEncode(<dynamic>['EOSE', subId]));
