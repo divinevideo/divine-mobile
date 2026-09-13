@@ -32,7 +32,8 @@ class KeyManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
-  bool _isProcessing = false;
+  bool _isImporting = false;
+  bool _isExporting = false;
   final _importController = TextEditingController();
 
   @override
@@ -118,7 +119,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
           labelText: 'nsec1...',
           minLines: 1,
           maxLines: 3,
-          enabled: !_isProcessing,
+          enabled: !_isImporting,
           autocorrect: false,
           textCapitalization: TextCapitalization.none,
           spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
@@ -130,7 +131,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             foregroundColor: context.vineColors.onSurfaceVariant,
             showShadow: false,
             tooltip: context.l10n.keyManagementPasteKey,
-            onPressed: _isProcessing ? null : _pasteKeyFromClipboard,
+            onPressed: _isImporting ? null : _pasteKeyFromClipboard,
           ),
         ),
         const SizedBox(height: 12),
@@ -144,8 +145,8 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         DivineButton(
           label: context.l10n.keyManagementImportButton,
           expanded: true,
-          isLoading: _isProcessing,
-          onPressed: _isProcessing
+          isLoading: _isImporting,
+          onPressed: _isImporting || _isExporting
               ? null
               : () => _importKey(context, nostrService),
         ),
@@ -190,7 +191,10 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             leadingIcon: DivineIconName.copy,
             expanded: true,
             semanticIdentifier: SemanticIds.keyManagementCopyNsecButton,
-            onPressed: _isProcessing ? null : () => _exportKey(context),
+            isLoading: _isExporting,
+            onPressed: _isImporting || _isExporting
+                ? null
+                : () => _exportKey(context),
           ),
         ] else if (showKeycastRemoteSigningInfo)
           const KeycastKeyExportCard(),
@@ -271,7 +275,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
 
     if (confirmed != true) return;
 
-    setState(() => _isProcessing = true);
+    setState(() => _isImporting = true);
 
     try {
       // Use AuthService for proper session setup and relay discovery
@@ -325,7 +329,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() => _isImporting = false);
       }
     }
   }
@@ -333,7 +337,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
   Future<void> _exportKey(BuildContext context) async {
     if (ref.read(isKeyManagementRestrictedProvider)) return;
 
-    setState(() => _isProcessing = true);
+    setState(() => _isExporting = true);
 
     try {
       final authentication = await ref
@@ -387,7 +391,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() => _isExporting = false);
       }
     }
   }

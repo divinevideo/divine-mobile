@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 enum DeviceAuthenticationResult { authenticated, denied, unavailable }
 
@@ -32,16 +33,40 @@ class LocalDeviceAuthentication implements DeviceAuthentication {
       return authenticated
           ? DeviceAuthenticationResult.authenticated
           : DeviceAuthenticationResult.denied;
-    } on LocalAuthException catch (error) {
-      return switch (error.code) {
+    } on LocalAuthException catch (error, stackTrace) {
+      final result = switch (error.code) {
         LocalAuthExceptionCode.noCredentialsSet ||
         LocalAuthExceptionCode.noBiometricsEnrolled ||
         LocalAuthExceptionCode.noBiometricHardware ||
-        LocalAuthExceptionCode.uiUnavailable =>
+        LocalAuthExceptionCode.biometricHardwareTemporarilyUnavailable ||
+        LocalAuthExceptionCode.temporaryLockout ||
+        LocalAuthExceptionCode.biometricLockout ||
+        LocalAuthExceptionCode.authInProgress ||
+        LocalAuthExceptionCode.uiUnavailable ||
+        LocalAuthExceptionCode.deviceError ||
+        LocalAuthExceptionCode.unknownError =>
           DeviceAuthenticationResult.unavailable,
         _ => DeviceAuthenticationResult.denied,
       };
-    } on Object {
+      if (error.code == LocalAuthExceptionCode.deviceError ||
+          error.code == LocalAuthExceptionCode.unknownError) {
+        Log.warning(
+          'Device authentication failed unexpectedly',
+          name: 'LocalDeviceAuthentication',
+          category: LogCategory.auth,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      return result;
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'Device authentication threw an unexpected error',
+        name: 'LocalDeviceAuthentication',
+        category: LogCategory.auth,
+        error: error,
+        stackTrace: stackTrace,
+      );
       return DeviceAuthenticationResult.unavailable;
     }
   }

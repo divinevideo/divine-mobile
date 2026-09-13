@@ -341,6 +341,40 @@ void main() {
           expect(copied, isEmpty);
         },
       );
+
+      testWidgets('shows loading on export without spinning import', (
+        tester,
+      ) async {
+        final authenticationResult = Completer<DeviceAuthenticationResult>();
+        deviceAuthentication.pendingResult = authenticationResult;
+        authService = _FakeKeyManagementAuthService(
+          currentNpub: testNpub,
+          authenticationSource: AuthenticationSource.importedKeys,
+          canExportLocalNsec: true,
+        )..nsecToExport = testNsec;
+
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpSubject(tester);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.keyManagementCopyNsec));
+        await tester.pump();
+
+        final importButton = tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, l10n.keyManagementImportButton),
+        );
+        final exportButton = tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, l10n.keyManagementCopyNsec),
+        );
+        expect(importButton.isLoading, isFalse);
+        expect(exportButton.isLoading, isTrue);
+
+        authenticationResult.complete(DeviceAuthenticationResult.denied);
+        await tester.pumpAndSettle();
+      });
     });
 
     testWidgets(
