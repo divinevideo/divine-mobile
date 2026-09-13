@@ -30,6 +30,14 @@ const Duration _profileResolveTimeout = Duration(seconds: 3);
 /// cannot drift between screens. [screenName] only labels the logs.
 ///
 /// Returns without doing anything when no account is signed in.
+///
+/// [context] must resolve to the app-root [ProviderContainer] — a route
+/// outside the shell's per-branch [ProviderScope] (`branchPage` in
+/// `router/routes/shell.dart`). The deletion callbacks capture that
+/// container once, before the confirmation sheet opens, and keep using it
+/// after [context]'s widget may be gone; a caller nested inside a shell
+/// branch would instead capture that branch's scoped container, which is
+/// disposed whenever the branch's subject changes.
 Future<void> startAccountDeletionFlow({
   required BuildContext context,
   required WidgetRef ref,
