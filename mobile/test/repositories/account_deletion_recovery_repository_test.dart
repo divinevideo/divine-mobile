@@ -425,6 +425,36 @@ void main() {
       );
     });
 
+    test('username-free stale attempt is retained for recovery', () {
+      expect(
+        () => repository(
+          MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'id': 'stale-attempt',
+                'status': 'preparing',
+                'operation': 'none',
+              }),
+              200,
+            ),
+          ),
+        ).prepare(username: 'alice'),
+        throwsA(
+          isA<AccountDeletionRecoveryException>()
+              .having(
+                (error) => error.stage,
+                'stage',
+                AccountDeletionRecoveryStage.usernamePreparation,
+              )
+              .having(
+                (error) => error.attempt?.id,
+                'recoverable attempt id',
+                'stale-attempt',
+              ),
+        ),
+      );
+    });
+
     test('coordinator confirmation failure has its own stage', () {
       expect(
         () => repository(

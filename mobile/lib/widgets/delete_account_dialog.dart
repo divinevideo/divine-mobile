@@ -728,6 +728,22 @@ Future<void> executeAccountDeletion({
           category: LogCategory.auth,
         );
       } on AccountDeletionRecoveryException catch (error) {
+        final staleAttempt = error.attempt;
+        if (staleAttempt != null) {
+          Log.warning(
+            'Account deletion preparation found an existing attempt that '
+            'must be cancelled before retrying',
+            name: screenName,
+            category: LogCategory.auth,
+          );
+          deletionAttempt = staleAttempt;
+          usernamePrepared = staleAttempt.username != null;
+          dismissProgressSheet();
+          if (context.mounted) {
+            showDurableDeletionOutcome(deletionIncompleteText);
+          }
+          return;
+        }
         // Release is mandatory, so a name-release failure fails the whole
         // deletion closed (nothing deleted). The unavailable 503 and the
         // missing-coordinator route both mean deletion is unavailable right now

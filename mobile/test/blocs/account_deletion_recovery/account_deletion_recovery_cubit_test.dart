@@ -67,6 +67,10 @@ const _preparing = AccountDeletionAttempt(
   status: AccountDeletionAttemptStatus.preparing,
   username: 'alice',
 );
+const _preparingWithoutUsername = AccountDeletionAttempt(
+  id: 'attempt-id',
+  status: AccountDeletionAttemptStatus.preparing,
+);
 const _recoverable = AccountDeletionAttempt(
   id: 'attempt-id',
   status: AccountDeletionAttemptStatus.recoverable,
@@ -449,6 +453,24 @@ void main() {
   });
 
   group('cancel', () {
+    test('username-free preparing attempt cancels without resuming', () async {
+      when(
+        repository.fetchCurrent,
+      ).thenAnswer((_) async => _preparingWithoutUsername);
+      when(
+        () => repository.cancel(attemptId: 'attempt-id'),
+      ).thenAnswer((_) async => _cancelled);
+      final cubit = buildCubit();
+      await cubit.load();
+
+      await cubit.cancel();
+
+      verifyNever(() => repository.resumePreparation(any()));
+      verify(() => repository.cancel(attemptId: 'attempt-id')).called(1);
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.resolved);
+      await cubit.close();
+    });
+
     test(
       'preparing username completes handshake before 200 cancellation',
       () async {
