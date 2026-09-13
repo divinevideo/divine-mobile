@@ -93,35 +93,26 @@ void main() {
         },
       );
 
-      test(
-        'keeps preserved legacy drafts for same-user re-login',
-        () async {
-          const pubkey = 'same_user_pubkey';
-          await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
-          await service.markOwnerScopedLegacyDataForUser(pubkey);
+      test('keeps preserved legacy drafts for same-user re-login', () async {
+        const pubkey = 'same_user_pubkey';
+        await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
+        await service.markOwnerScopedLegacyDataForUser(pubkey);
 
-          expect(service.shouldClearDataForUser(pubkey), isFalse);
-        },
-      );
+        expect(service.shouldClearDataForUser(pubkey), isFalse);
+      });
 
-      test(
-        'clears preserved legacy drafts for a different user',
-        () async {
-          await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
-          await service.markOwnerScopedLegacyDataForUser('old_user_pubkey');
+      test('clears preserved legacy drafts for a different user', () async {
+        await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
+        await service.markOwnerScopedLegacyDataForUser('old_user_pubkey');
 
-          expect(service.shouldClearDataForUser('new_user_pubkey'), isTrue);
-        },
-      );
+        expect(service.shouldClearDataForUser('new_user_pubkey'), isTrue);
+      });
 
-      test(
-        'clears unmarked legacy drafts as orphaned data',
-        () async {
-          await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
+      test('clears unmarked legacy drafts as orphaned data', () async {
+        await prefs.setString('vine_drafts', '[{"id":"draft1"}]');
 
-          expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
-        },
-      );
+        expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
+      });
     });
 
     group('clearUserSpecificData', () {
@@ -131,10 +122,7 @@ void main() {
       test('destructive delete purges only that account verification', () async {
         const otherPubkey =
             'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-        await prefs.setBool(
-          'adult_content_verified_$verificationPubkey',
-          true,
-        );
+        await prefs.setBool('adult_content_verified_$verificationPubkey', true);
         await prefs.setBool('adult_content_verified_$otherPubkey', true);
 
         await service.clearUserSpecificData(
@@ -149,31 +137,47 @@ void main() {
         expect(prefs.getBool('adult_content_verified_$otherPubkey'), isTrue);
       });
 
-      test('destructive delete purges the following prefetch marker', () async {
-        await prefs.setBool(
-          'following_prefetch_complete_$verificationPubkey',
-          true,
-        );
-
-        await service.deleteAccountData(
-          verificationPubkey,
-          userNpub: 'verification-npub',
-          preserveActiveSession: true,
-        );
-
-        expect(
-          prefs.containsKey(
+      test(
+        'destructive sign-out purges only that account following cache',
+        () async {
+          const otherPubkey =
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+          await prefs.setString(
+            'following_list_$verificationPubkey',
+            '["followed"]',
+          );
+          await prefs.setBool(
             'following_prefetch_complete_$verificationPubkey',
-          ),
-          isFalse,
-        );
-      });
+            true,
+          );
+          await prefs.setString('following_list_$otherPubkey', '["other"]');
+          await prefs.setBool('following_prefetch_complete_$otherPubkey', true);
+
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(
+            prefs.containsKey('following_list_$verificationPubkey'),
+            isFalse,
+          );
+          expect(
+            prefs.containsKey(
+              'following_prefetch_complete_$verificationPubkey',
+            ),
+            isFalse,
+          );
+          expect(prefs.getString('following_list_$otherPubkey'), '["other"]');
+          expect(
+            prefs.getBool('following_prefetch_complete_$otherPubkey'),
+            isTrue,
+          );
+        },
+      );
 
       test('account switch preserves scoped verification', () async {
-        await prefs.setBool(
-          'adult_content_verified_$verificationPubkey',
-          true,
-        );
+        await prefs.setBool('adult_content_verified_$verificationPubkey', true);
 
         await service.clearUserSpecificData(
           isIdentityChange: true,
@@ -374,100 +378,91 @@ void main() {
         expect(prefs.containsKey(bucketKey), isTrue);
       });
 
-      test(
-        'clears the creator-sync cursor alongside the saved-sounds bucket '
-        'on destructive account delete',
-        () async {
-          const pubkey =
-              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-          final cursorKey = PrefsSyncStateStore.appliedStorageKey(
-            SyncItemKind.sound,
-            pubkey,
-          );
-          await prefs.setString(
-            cursorKey,
-            '{"divine:sync:sound:s1":'
-            '{"createdAt":1000,"bodyHash":"h"}}',
-          );
+      test('clears the creator-sync cursor alongside the saved-sounds bucket '
+          'on destructive account delete', () async {
+        const pubkey =
+            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final cursorKey = PrefsSyncStateStore.appliedStorageKey(
+          SyncItemKind.sound,
+          pubkey,
+        );
+        await prefs.setString(
+          cursorKey,
+          '{"divine:sync:sound:s1":'
+          '{"createdAt":1000,"bodyHash":"h"}}',
+        );
 
-          await service.clearUserSpecificData(
-            deleteUserData: true,
-            userPubkey: pubkey,
-          );
+        await service.clearUserSpecificData(
+          deleteUserData: true,
+          userPubkey: pubkey,
+        );
 
-          expect(prefs.containsKey(cursorKey), isFalse);
-        },
-      );
+        expect(prefs.containsKey(cursorKey), isFalse);
+      });
 
-      test(
-        'keeps the creator-sync cursor on a plain account switch',
-        () async {
-          const pubkey =
-              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-          final cursorKey = PrefsSyncStateStore.appliedStorageKey(
-            SyncItemKind.sound,
-            pubkey,
-          );
-          await prefs.setString(
-            cursorKey,
-            '{"divine:sync:sound:s1":'
-            '{"createdAt":1000,"bodyHash":"h"}}',
-          );
+      test('keeps the creator-sync cursor on a plain account switch', () async {
+        const pubkey =
+            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final cursorKey = PrefsSyncStateStore.appliedStorageKey(
+          SyncItemKind.sound,
+          pubkey,
+        );
+        await prefs.setString(
+          cursorKey,
+          '{"divine:sync:sound:s1":'
+          '{"createdAt":1000,"bodyHash":"h"}}',
+        );
 
-          await service.clearUserSpecificData(
-            isIdentityChange: true,
-            userPubkey: pubkey,
-          );
+        await service.clearUserSpecificData(
+          isIdentityChange: true,
+          userPubkey: pubkey,
+        );
 
-          expect(prefs.containsKey(cursorKey), isTrue);
-        },
-      );
+        expect(prefs.containsKey(cursorKey), isTrue);
+      });
 
-      test(
-        'does not let a reconcile after destructive cleanup mistake a '
-        'wiped local cache for a mass delete',
-        () async {
-          const pubkey =
-              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-          // This device had already fully synced a 3-sound library before
-          // the destructive cleanup below wipes its saved-sounds bucket.
-          await PrefsSyncStateStore(
-            prefs,
-            pubkeyHex: pubkey,
-          ).writeApplied(SyncItemKind.sound, {
+      test('does not let a reconcile after destructive cleanup mistake a '
+          'wiped local cache for a mass delete', () async {
+        const pubkey =
+            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        // This device had already fully synced a 3-sound library before
+        // the destructive cleanup below wipes its saved-sounds bucket.
+        await PrefsSyncStateStore(prefs, pubkeyHex: pubkey).writeApplied(
+          SyncItemKind.sound,
+          {
             for (final id in ['s1', 's2', 's3'])
               'divine:sync:sound:$id': SyncItemState(
                 createdAt: 1000,
                 bodyHash: syncBodyHash({'label': id}),
               ),
-          });
+          },
+        );
 
-          await service.clearUserSpecificData(
-            deleteUserData: true,
-            userPubkey: pubkey,
-          );
+        await service.clearUserSpecificData(
+          deleteUserData: true,
+          userPubkey: pubkey,
+        );
 
-          final index = _MockSyncIndexClient();
-          when(
-            () => index.fetch(SyncItemKind.sound, since: any(named: 'since')),
-          ).thenAnswer((_) async => []);
-          final repository = SoundSyncRepository(
-            index: index,
-            state: PrefsSyncStateStore(prefs, pubkeyHex: pubkey),
-            local: _EmptyLocalSoundStore(),
-          );
+        final index = _MockSyncIndexClient();
+        when(
+          () => index.fetch(SyncItemKind.sound, since: any(named: 'since')),
+        ).thenAnswer((_) async => []);
+        final repository = SoundSyncRepository(
+          index: index,
+          state: PrefsSyncStateStore(prefs, pubkeyHex: pubkey),
+          local: _EmptyLocalSoundStore(),
+        );
 
-          await repository.reconcile();
+        await repository.reconcile();
 
-          verifyNever(
-            () => index.publish(
-              any(),
-              any(),
-              latestKnownRemote: any(named: 'latestKnownRemote'),
-            ),
-          );
-        },
-      );
+        verifyNever(
+          () => index.publish(
+            any(),
+            any(),
+            latestKnownRemote: any(named: 'latestKnownRemote'),
+          ),
+        );
+      });
 
       test('marks legacy draft owner only when legacy drafts exist', () async {
         await service.markOwnerScopedLegacyDataForUser('abc123');
@@ -544,35 +539,39 @@ void main() {
         },
       );
 
-      test(
-        'clears shared dynamic caches but preserves scoped DM cursors',
-        () async {
-          // Set up dynamic pubkey-keyed caches
+      test('preserves every account-scoped cache on identity change', () async {
+        for (final account in ['abc123', 'def456']) {
           await prefs.setString(
-            'following_list_abc123',
+            'following_list_$account',
             '["pubkey1","pubkey2"]',
           );
-          await prefs.setString('relay_discovery_npub1abc', 'relay_data');
-          // DM sync cursors are cleared by DmSyncState for the leaving pubkey,
-          // not by this global prefix sweep.
-          await prefs.setInt('dm.newestSyncedAt.abc123', 1700000000);
-          await prefs.setInt('dm.oldestSyncedAt.abc123', 1699000000);
+          await prefs.setBool('following_prefetch_complete_$account', true);
+          await prefs.setString('relay_discovery_npub1$account', 'relay_data');
+        }
+        // DM sync cursors are cleared by DmSyncState for the leaving pubkey,
+        // not by preference cleanup.
+        await prefs.setInt('dm.newestSyncedAt.abc123', 1700000000);
+        await prefs.setInt('dm.oldestSyncedAt.abc123', 1699000000);
 
-          await service.clearUserSpecificData(
-            reason: 'identity_change',
-            isIdentityChange: true,
+        await service.clearUserSpecificData(
+          reason: 'identity_change',
+          isIdentityChange: true,
+        );
+
+        for (final account in ['abc123', 'def456']) {
+          expect(prefs.containsKey('following_list_$account'), isTrue);
+          expect(
+            prefs.containsKey('following_prefetch_complete_$account'),
+            isTrue,
           );
-
-          // Dynamic prefix keys should be cleared on identity change
-          expect(prefs.containsKey('following_list_abc123'), isFalse);
-          expect(prefs.containsKey('relay_discovery_npub1abc'), isFalse);
-          expect(prefs.containsKey('dm.newestSyncedAt.abc123'), isTrue);
-          expect(prefs.containsKey('dm.oldestSyncedAt.abc123'), isTrue);
-        },
-      );
+          expect(prefs.containsKey('relay_discovery_npub1$account'), isTrue);
+        }
+        expect(prefs.containsKey('dm.newestSyncedAt.abc123'), isTrue);
+        expect(prefs.containsKey('dm.oldestSyncedAt.abc123'), isTrue);
+      });
 
       test(
-        'returns correct count including prefix keys on identity change',
+        'does not include scoped cache keys in identity-change count',
         () async {
           await prefs.setStringList('curated_lists', ['list1']);
           await prefs.setString('vine_drafts', '{"drafts": []}');
@@ -584,26 +583,28 @@ void main() {
             isIdentityChange: true,
           );
 
-          // 1 static + 1 owner-scoped legacy key + 2 prefix keys
-          expect(count, equals(4));
+          // 1 static + 1 owner-scoped legacy key.
+          expect(count, equals(2));
+          expect(prefs.containsKey('following_list_abc123'), isTrue);
+          expect(prefs.containsKey('relay_discovery_npub1abc'), isTrue);
         },
       );
 
-      test('preserves non-matching prefix keys on identity change', () async {
-        // Set up a key that starts with a non-matching prefix
-        await prefs.setString('some_other_cache_abc', 'data');
-        await prefs.setString('following_list_abc123', '["pubkey1"]');
+      test(
+        'preserves scoped and unrelated caches on identity change',
+        () async {
+          await prefs.setString('some_other_cache_abc', 'data');
+          await prefs.setString('following_list_abc123', '["pubkey1"]');
 
-        await service.clearUserSpecificData(
-          reason: 'identity_change',
-          isIdentityChange: true,
-        );
+          await service.clearUserSpecificData(
+            reason: 'identity_change',
+            isIdentityChange: true,
+          );
 
-        // Non-matching prefix should remain
-        expect(prefs.containsKey('some_other_cache_abc'), isTrue);
-        // Matching prefix should be cleared
-        expect(prefs.containsKey('following_list_abc123'), isFalse);
-      });
+          expect(prefs.containsKey('some_other_cache_abc'), isTrue);
+          expect(prefs.containsKey('following_list_abc123'), isTrue);
+        },
+      );
 
       test(
         'passes userPubkey and deleteUserData to onDatabaseCleanup',
@@ -734,7 +735,15 @@ void main() {
             '[{"id":"other-sound"}]',
           );
           await prefs.setString('following_list_$deletedPubkey', '[]');
+          await prefs.setBool(
+            'following_prefetch_complete_$deletedPubkey',
+            true,
+          );
           await prefs.setString('relay_discovery_$deletedNpub', '{}');
+          final otherNpub = NostrKeyUtils.encodePubKey(otherPubkey);
+          await prefs.setString('following_list_$otherPubkey', '["other"]');
+          await prefs.setBool('following_prefetch_complete_$otherPubkey', true);
+          await prefs.setString('relay_discovery_$otherNpub', '{"other":true}');
 
           await service.deleteAccountData(
             deletedPubkey,
@@ -757,7 +766,20 @@ void main() {
             isTrue,
           );
           expect(prefs.containsKey('following_list_$deletedPubkey'), isFalse);
+          expect(
+            prefs.containsKey('following_prefetch_complete_$deletedPubkey'),
+            isFalse,
+          );
           expect(prefs.containsKey('relay_discovery_$deletedNpub'), isFalse);
+          expect(prefs.getString('following_list_$otherPubkey'), '["other"]');
+          expect(
+            prefs.getBool('following_prefetch_complete_$otherPubkey'),
+            isTrue,
+          );
+          expect(
+            prefs.getString('relay_discovery_$otherNpub'),
+            '{"other":true}',
+          );
         },
       );
 
@@ -900,7 +922,7 @@ void main() {
     });
 
     group('identityChangePrefixes', () {
-      test('contains only globally safe prefix categories', () {
+      test('contains only account-scoped cache categories', () {
         const prefixes = UserDataCleanupService.identityChangePrefixes;
 
         expect(prefixes, contains('following_list_'));
