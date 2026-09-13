@@ -39,8 +39,9 @@ typedef UploadTelemetry =
 ///
 /// Lets the extracted upload concerns (e.g. `UploadProgressReporter`) record
 /// diagnostics without importing the Firebase-backed `CrashReportingService`,
-/// so they can move into a pure-Dart package. The app layer supplies an
-/// adapter that forwards to `CrashReportingService.instance`.
+/// so the pipeline can move into a package with no direct Flutter dependency.
+/// The app layer supplies an adapter that forwards to
+/// `CrashReportingService.instance`.
 abstract interface class UploadCrashReporter {
   /// Attach a custom key/value to subsequent crash reports.
   Future<void> setCustomKey(String key, Object value);
@@ -57,7 +58,8 @@ abstract interface class UploadCrashReporter {
 /// The upload pipeline knows *which* paths belong to *which* upload and when
 /// they are safe to reap; it does not know how a stop-motion render is
 /// recognised or deleted. The app layer supplies an adapter over
-/// `StopMotionRenderService` so the pipeline can move into a pure-Dart package.
+/// `StopMotionRenderService` so the pipeline can move into a package with no
+/// direct Flutter dependency.
 abstract interface class TransientRenderCleaner {
   /// Whether [filePath] is a materialized editor render safe to delete.
   bool isMaterializedOutputPath(String filePath);

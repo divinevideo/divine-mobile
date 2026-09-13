@@ -9,10 +9,10 @@
 /// app layer supplies the instance through `crashReportingServiceProvider`.
 ///
 /// This is the same shape the upload pipeline already carved out as
-/// `UploadCrashReporter` (`services/upload/upload_ports.dart`), promoted here
-/// so the rest of the services layer can share one port rather than growing a
-/// per-feature copy. See `.claude/rules/error_handling.md` → "Reporter port
-/// pattern".
+/// `UploadCrashReporter` (since #8301 in `package:upload_repository`), promoted
+/// here so the rest of the services layer can share one port rather than
+/// growing a per-feature copy. See `.claude/rules/error_handling.md` →
+/// "Reporter port pattern".
 abstract interface class CrashReporter {
   /// Attach a custom key/value to subsequent crash reports.
   Future<void> setCustomKey(String key, Object value);
