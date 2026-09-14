@@ -469,6 +469,17 @@ void main() {
       );
       await tester.pump();
       expect(fake.muteCalls, isEmpty);
+
+      // Positive control in the same test: a mutation that unmounts the
+      // listener would leave the list empty too, so the wiring has to show it
+      // mutes when the preview-driving sub-editor opens.
+      editorStates.add(
+        const VideoEditorMainState(
+          openSubEditor: SubEditorType.voiceOver,
+        ),
+      );
+      await tester.pump();
+      expect(fake.muteCalls, [true]);
     });
   });
 
