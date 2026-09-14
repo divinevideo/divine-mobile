@@ -183,5 +183,31 @@ void main() {
       expect(calls, 1);
       await cubit.close();
     });
+
+    test('does not compose email after the cubit closes mid-open', () async {
+      // Leaving the screen while the opener is still resolving must not throw
+      // a mail composer or share sheet over wherever the user went next.
+      final gate = Completer<bool>();
+      var composed = 0;
+      final cubit = SupportContactCubit(
+        openSupportMessages: () => gate.future,
+        composeEmail:
+            ({
+              required toEmail,
+              required subject,
+              required body,
+              sharePositionOrigin,
+            }) async {
+              composed++;
+            },
+      );
+
+      final opening = cubit.open(_emailRequest);
+      await cubit.close();
+      gate.complete(false);
+      await opening;
+
+      expect(composed, 0);
+    });
   });
 }
