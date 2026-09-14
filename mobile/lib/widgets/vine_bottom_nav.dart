@@ -6,6 +6,7 @@ import 'dart:math' show pi;
 import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,7 +26,6 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
-import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/utils/camera_permission_check.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -169,7 +169,11 @@ class VineBottomNav extends ConsumerWidget {
                         name: 'Navigation',
                         category: LogCategory.ui,
                       );
-                      unawaited(HapticService.cameraHoldFeedback());
+                      // The camera takes a moment to open, so this is the only
+                      // immediate confirmation that the hold, not a tap, was
+                      // recognised. Called directly: widgets may not import
+                      // the service layer (check_ui_service_boundary).
+                      unawaited(HapticFeedback.lightImpact());
                       context.pushToCameraWithPermission(
                         entryPoint: CreationEntryPoint.bottomNav,
                         autoRecord: true,

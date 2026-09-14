@@ -37,13 +37,6 @@ abstract class HapticService {
   /// is the only confirmation that the hold registered.
   static Future<void> immersiveModeFeedback() => lightImpact();
 
-  /// Haptic feedback when a press-and-hold on the bottom-nav camera button
-  /// registers.
-  ///
-  /// The camera takes a moment to open, so this is the only immediate
-  /// confirmation that the hold — not a tap — was recognised.
-  static Future<void> cameraHoldFeedback() => lightImpact();
-
   /// Haptic feedback when entering a destructive zone.
   ///
   /// Triggered when dragging a layer or clip over a delete/remove area
