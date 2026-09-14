@@ -160,6 +160,20 @@ void main() {
       expect(stubLog('pod').readAsStringSync(), contains('install'));
     });
 
+    test('runs pod install when Podfile is newer than Pods/Manifest.lock', () {
+      final now = DateTime.now();
+      writeFile(
+        'ios/Pods/Manifest.lock',
+        now.subtract(const Duration(hours: 1)),
+      );
+      writeFile('ios/Podfile.lock', now.subtract(const Duration(hours: 1)));
+      writeFile('ios/Podfile', now);
+
+      expectSuccess(runScript());
+
+      expect(stubLog('pod').readAsStringSync(), contains('install'));
+    });
+
     test('runs pod install when Pods has never been installed', () {
       writeFile('ios/Podfile.lock', DateTime.now());
 
