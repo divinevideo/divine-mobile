@@ -86,7 +86,7 @@ test/providers/feed_background_preservation_test.dart	8
 test/providers/feed_viewer_preference_hints_test.dart	1
 test/providers/follow_relationship_provider_test.dart	2
 test/providers/invite_status_auth_sessions_test.dart	2
-test/providers/list_providers_test.dart	17
+test/providers/list_providers_test.dart	5
 test/providers/moderation_label_provider_session_test.dart	3
 test/providers/moderation_providers_blocked_follow_reconciler_test.dart	19
 test/providers/provider_identity_stream_test.dart	10

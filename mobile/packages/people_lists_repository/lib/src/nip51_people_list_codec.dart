@@ -63,6 +63,24 @@ abstract final class Nip51PeopleListCodec {
   /// every bell the user has set.
   static const Set<String> reservedDTags = {blockedDTag, notifyDTag};
 
+  /// Kind 30000 identifiers other clients use for machinery, not curation.
+  ///
+  /// Each is a set nobody would browse, so public discovery and search skip
+  /// them; the owner's own collection is untouched. Seen on the production
+  /// relay on 2026-09-08 once reads widened past the newest few events:
+  ///
+  /// * `mute`: per-client mute sets.
+  /// * `dm-contacts`: DM address books.
+  /// * `dm-archive`: archived DM threads.
+  /// * `blindoracle-v1-health`: a service's health-check set, one member
+  ///   with no profile, seen in discovery on 2026-09-10.
+  static const Set<String> machineryDTags = {
+    'mute',
+    'dm-contacts',
+    'dm-archive',
+    'blindoracle-v1-health',
+  };
+
   /// Encodes [list] into a [PeopleListEventPayload].
   ///
   /// When [sourceTags] is supplied, the payload is a membership edit over the

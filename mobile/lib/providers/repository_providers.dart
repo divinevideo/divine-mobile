@@ -263,7 +263,14 @@ CuratedListRepository curatedListRepository(Ref ref) {
           service == null ? const [] : subscribedListsForHomeBridge(service),
         )
         ..setOwnLists(
-          service == null ? const [] : ownListsForSearchBridge(service),
+          service == null
+              ? const []
+              : ownListsForSearchBridge(
+                  service,
+                  viewerPubkey: ref
+                      .read(authServiceProvider)
+                      .currentPublicKeyHex,
+                ),
         );
     });
   });
@@ -278,9 +285,21 @@ List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
 
 /// The viewer's own lists, which the search matches alongside the subscribed
 /// ones; `subscribedLists` never holds them.
+///
+/// The repository keys lists by author, and a list created before the account
+/// had a pubkey carries none, so it would sit beside its own relay copy
+/// instead of replacing it. Every own list leaves here under [viewerPubkey].
 @visibleForTesting
-List<CuratedList> ownListsForSearchBridge(CuratedListService service) =>
-    service.myLists;
+List<CuratedList> ownListsForSearchBridge(
+  CuratedListService service, {
+  required String? viewerPubkey,
+}) => [
+  for (final list in service.myLists)
+    if (list.pubkey == null && viewerPubkey != null)
+      list.copyWith(pubkey: viewerPubkey)
+    else
+      list,
+];
 
 /// Provider for HashtagRepository instance.
 ///

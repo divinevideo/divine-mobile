@@ -10,20 +10,31 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
-
-class _MockAuthService extends Mock implements AuthService {}
+import 'package:videos_repository/videos_repository.dart';
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+/// A feed pool holding [videos], standing in for the live discovery stream.
+class _VideoEventsPool extends VideoEvents {
+  _VideoEventsPool(this.videos);
+
+  final List<VideoEvent> videos;
+
+  @override
+  Stream<List<VideoEvent>> build() async* {
+    yield videos;
+  }
+}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
 
@@ -48,11 +59,12 @@ VideoEvent _video({
   required String id,
   required String pubkey,
   String? dTag,
+  int? createdAt,
 }) {
   return VideoEvent(
     id: id,
     pubkey: pubkey,
-    createdAt: _frozenNow.millisecondsSinceEpoch ~/ 1000,
+    createdAt: createdAt ?? _frozenNow.millisecondsSinceEpoch ~/ 1000,
     content: '',
     timestamp: _frozenNow,
     title: id,
@@ -61,245 +73,147 @@ VideoEvent _video({
   );
 }
 
-UserList _buildList({
-  required String id,
-  required String name,
-  List<String> pubkeys = const [],
-}) {
-  return UserList(
-    id: id,
-    name: name,
-    pubkeys: pubkeys,
-    createdAt: _frozenNow,
-    updatedAt: _frozenNow,
-  );
-}
-
 void main() {
-  group(userListsProvider, () {
-    late _MockAuthService mockAuthService;
-    late _MockPeopleListsRepository mockRepository;
-    late StreamController<AuthState> authStateController;
-    late StreamController<List<UserList>> ownerAListsController;
-    late StreamController<List<UserList>> ownerBListsController;
+  group(userListMemberVideosProvider, () {
+    late _MockVideosRepository videosRepository;
 
     setUp(() {
-      mockAuthService = _MockAuthService();
-      mockRepository = _MockPeopleListsRepository();
-      authStateController = StreamController<AuthState>.broadcast();
-      ownerAListsController = StreamController<List<UserList>>.broadcast();
-      ownerBListsController = StreamController<List<UserList>>.broadcast();
-
-      when(
-        () => mockAuthService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
-      when(() => mockAuthService.authState).thenReturn(
-        AuthState.unauthenticated,
-      );
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
-
-      when(
-        () => mockRepository.watchLists(ownerPubkey: _ownerA),
-      ).thenAnswer((_) => ownerAListsController.stream);
-      when(
-        () => mockRepository.watchLists(ownerPubkey: _ownerB),
-      ).thenAnswer((_) => ownerBListsController.stream);
+      videosRepository = _MockVideosRepository();
     });
 
-    tearDown(() async {
-      await authStateController.close();
-      if (!ownerAListsController.isClosed) {
-        await ownerAListsController.close();
-      }
-      if (!ownerBListsController.isClosed) {
-        await ownerBListsController.close();
-      }
-    });
-
-    ProviderContainer buildContainer() {
-      return ProviderContainer(
+    ProviderContainer buildContainer({List<VideoEvent> pooled = const []}) {
+      final container = ProviderContainer(
         overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-          peopleListsRepositoryProvider.overrideWithValue(mockRepository),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWithValue(true),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          videoEventsProvider.overrideWith(() => _VideoEventsPool(pooled)),
         ],
       );
+      addTearDown(container.dispose);
+      return container;
     }
 
+    /// Lets the pool emit, then collects every state the provider emits for
+    /// [members] until the event queue drains.
+    Future<List<AsyncValue<List<VideoEvent>>>> collect(
+      ProviderContainer container,
+      List<String> members,
+    ) async {
+      final pool = container.listen(videoEventsProvider, (_, _) {});
+      addTearDown(pool.close);
+      await container.read(videoEventsProvider.future);
+
+      final states = <AsyncValue<List<VideoEvent>>>[];
+      final subscription = container.listen(
+        userListMemberVideosProvider(members),
+        (_, next) => states.add(next),
+      );
+      addTearDown(subscription.close);
+      await pumpEventQueue();
+      return states;
+    }
+
+    List<List<String>> idsOf(List<AsyncValue<List<VideoEvent>>> states) => [
+      for (final state in states)
+        if (state.hasValue) [for (final video in state.value!) video.id],
+    ];
+
+    test("fetches the members' videos through the repository", () async {
+      final fetched = _video(id: 'fetched', pubkey: _ownerA);
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => [fetched]);
+
+      final states = await collect(buildContainer(), [_ownerA, _ownerB]);
+
+      expect(
+        idsOf(states),
+        equals([
+          ['fetched'],
+        ]),
+      );
+      final asked =
+          verify(
+                () => videosRepository.getVideosByAuthors(
+                  authorPubkeys: captureAny(named: 'authorPubkeys'),
+                ),
+              ).captured.single
+              as List<String>;
+      expect(asked, equals([_ownerA, _ownerB]));
+    });
+
     test(
-      'emits empty list when auth state is unauthenticated',
+      'paints pooled member videos first, then merges the fetched set',
       () async {
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.unauthenticated);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
-
-        final container = buildContainer();
-        addTearDown(container.dispose);
-
-        // Trigger initial build by listening.
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
+        final pooledMember = _video(
+          id: 'pooled',
+          pubkey: _ownerA,
+          createdAt: 100,
         );
-        addTearDown(subscription.close);
-
-        // Flush the stream's first value.
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, isEmpty);
-        verifyNever(
-          () => mockRepository.watchLists(
-            ownerPubkey: any(named: 'ownerPubkey'),
+        final stranger = _video(
+          id: 'stranger',
+          pubkey: _blockedAuthor,
+          createdAt: 300,
+        );
+        final fetched = _video(id: 'fetched', pubkey: _ownerB, createdAt: 200);
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
           ),
+        ).thenAnswer((_) async => [fetched]);
+
+        final states = await collect(
+          buildContainer(pooled: [pooledMember, stranger]),
+          [_ownerA, _ownerB],
+        );
+
+        expect(
+          idsOf(states),
+          equals([
+            ['pooled'],
+            ['fetched', 'pooled'],
+          ]),
         );
       },
     );
 
     test(
-      'rebuilds and watches repository for new owner when auth '
-      'transitions from unauthenticated to authenticated',
+      'keeps the pooled videos when the fetch fails after the first paint',
       () async {
-        final container = buildContainer();
-        addTearDown(container.dispose);
-
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
-        await Future<void>.delayed(Duration.zero);
-
-        // Initially unauthenticated — repo should not have been watched.
-        verifyNever(
-          () => mockRepository.watchLists(
-            ownerPubkey: any(named: 'ownerPubkey'),
+        final pooledMember = _video(id: 'pooled', pubkey: _ownerA);
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        );
+        ).thenThrow(Exception('relay down'));
 
-        // Transition: user signs in. authService now reports ownerA.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerA);
-
-        // Invalidating currentAuthStateProvider simulates the
-        // authStateStream listener firing inside currentAuthStateProvider.
-        container.invalidate(currentAuthStateProvider);
-
-        await Future<void>.delayed(Duration.zero);
-
-        // Emit some lists from the repo stream.
-        ownerAListsController.add([
-          _buildList(id: 'list-a1', name: 'Friends'),
+        final states = await collect(buildContainer(pooled: [pooledMember]), [
+          _ownerA,
         ]);
 
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, hasLength(1));
-        expect(value.value!.first.id, equals('list-a1'));
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerA),
-        ).called(1);
+        expect(states.last.hasError, isFalse);
+        expect(
+          idsOf(states),
+          equals([
+            ['pooled'],
+          ]),
+        );
       },
     );
 
-    test(
-      'resubscribes to new owner repository after sign-out then sign-in '
-      'as a different account',
-      () async {
-        // Start authenticated as owner A.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerA);
+    test('surfaces the failure when nothing is pooled', () async {
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenThrow(Exception('relay down'));
 
-        final container = buildContainer();
-        addTearDown(container.dispose);
+      final states = await collect(buildContainer(), [_ownerA]);
 
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
-        await Future<void>.delayed(Duration.zero);
-
-        ownerAListsController.add([
-          _buildList(id: 'list-a1', name: 'Friends'),
-        ]);
-        await Future<void>.delayed(Duration.zero);
-
-        expect(
-          container.read(userListsProvider).value,
-          hasLength(1),
-        );
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerA),
-        ).called(1);
-
-        // Sign out — auth service emits `unauthenticated`. The stream
-        // event invalidates `currentAuthStateProvider`, which rebuilds
-        // with a genuinely different enum value and propagates.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.unauthenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(null);
-        authStateController.add(AuthState.unauthenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        expect(
-          container.read(userListsProvider).value,
-          isEmpty,
-        );
-
-        // Sign in as owner B.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerB);
-        authStateController.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        ownerBListsController.add([
-          _buildList(id: 'list-b1', name: 'Crew'),
-          _buildList(id: 'list-b2', name: 'Inner Circle'),
-        ]);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, hasLength(2));
-        expect(
-          value.value!.map((l) => l.id),
-          containsAll(<String>['list-b1', 'list-b2']),
-        );
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerB),
-        ).called(1);
-      },
-    );
+      expect(states.last.hasError, isTrue);
+      expect(idsOf(states), isEmpty);
+    });
   });
 
   group(videoEventsByIdsProvider, () {
@@ -694,6 +608,45 @@ void main() {
         verifyNever(() => videoEventService.getVideoById(any()));
       },
     );
+  });
+
+  group(publicPeopleListProvider, () {
+    test('resolves through the people repository', () async {
+      final repository = _MockPeopleListsRepository();
+      final crew = UserList(
+        id: 'crew',
+        name: 'Crew',
+        pubkeys: const [_ownerB],
+        createdAt: _frozenNow,
+        updatedAt: _frozenNow,
+        isEditable: false,
+      );
+      when(
+        () => repository.fetchPublicList(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          listId: any(named: 'listId'),
+        ),
+      ).thenAnswer((_) async => crew);
+
+      final container = ProviderContainer(
+        overrides: [
+          peopleListsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final list = await container.read(
+        publicPeopleListProvider(
+          ownerPubkey: _ownerA,
+          listId: 'crew',
+        ).future,
+      );
+
+      expect(list, same(crew));
+      verify(
+        () => repository.fetchPublicList(ownerPubkey: _ownerA, listId: 'crew'),
+      ).called(1);
+    });
   });
 
   group(publicCuratedListProvider, () {

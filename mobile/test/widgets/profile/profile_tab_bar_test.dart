@@ -46,7 +46,7 @@ void main() {
       (
         semanticId: SemanticIds.profileListsTab,
         label: l.profileListsLabel,
-        icon: DivineIconName.playlist,
+        icon: DivineIconName.squaresFour,
       ),
     ];
 

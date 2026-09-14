@@ -1261,36 +1261,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get exploreDiscoverLists => 'Listeleri Keşfet';
-
-  @override
-  String get exploreAboutLists => 'Listeler Hakkında';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:';
-
-  @override
-  String get explorePeopleLists => 'Kişi Listeleri';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'İçerik üretici gruplarını takip et ve en son videolarını gör';
-
-  @override
-  String get exploreVideoLists => 'Video Listeleri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Sonra izlemek için favori videolarından oynatma listeleri oluştur';
-
-  @override
-  String get exploreMyLists => 'Listelerim';
-
-  @override
-  String get exploreSubscribedLists => 'Abone Olunan Listeler';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Listeler yüklenirken hata. Lütfen tekrar dene.';
 
@@ -3803,9 +3773,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Liste üyelerinin videoları burada görünecek';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Kullanılabilir video yok';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Videolar yüklenemedi';
 
   @override
@@ -3835,6 +3802,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Ekle';
@@ -4757,12 +4727,12 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count kişi',
-      one: '1 kişi',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4879,6 +4849,44 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Listeyi paylaş';
@@ -5965,32 +5973,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonelik güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String get discoverListsTitle => 'Listeleri Keşfet';
-
-  @override
-  String get discoverListsFailedToLoad => 'Listeler yüklenemedi';
-
-  @override
-  String get discoverListsLoading => 'Herkese açık listeler keşfediliyor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay listeleri zamanında döndürmedi. Tekrar dene.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hizmet kullanılamıyor.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Herkese açık liste bulunamadı';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Yeni listeler için sonra tekrar bak';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'yazan';
 
   @override
   String get curatedListEmptyTitle => 'Bu listede video yok';

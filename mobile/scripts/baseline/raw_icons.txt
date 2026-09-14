@@ -8,7 +8,6 @@
 lib/screens/comments/comments_screen.dart	3
 lib/screens/comments/widgets/comments_empty_state.dart	1
 lib/screens/creator_analytics_screen.dart	3
-lib/screens/discover_lists_screen.dart	1
 lib/screens/hashtag_feed_screen.dart	1
 lib/screens/original_sound_detail_screen.dart	1
 lib/screens/relay_diagnostic_screen.dart	6
@@ -18,12 +17,11 @@ lib/screens/settings/general_settings_screen.dart	1
 lib/screens/settings/legal_screen.dart	4
 lib/screens/settings/nostr_settings_screen.dart	5
 lib/screens/settings/settings_screen.dart	5
-lib/screens/user_list_people_screen.dart	3
+lib/screens/user_list_people_screen.dart	2
 lib/widgets/classic_viners_slider.dart	1
 lib/widgets/classic_vines_tab.dart	2
 lib/widgets/for_you_tab.dart	2
 lib/widgets/library/sounds_tab.dart	2
-lib/widgets/list_card.dart	1
 lib/widgets/new_videos_tab.dart	1
 lib/widgets/popular_videos_tab.dart	1
 lib/widgets/profile_editor/username_status_indicator.dart	2

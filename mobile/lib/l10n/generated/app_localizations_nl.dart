@@ -1326,36 +1326,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Geen video\'s beschikbaar';
 
   @override
-  String get exploreDiscoverLists => 'Lijsten ontdekken';
-
-  @override
-  String get exploreAboutLists => 'Over lijsten';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:';
-
-  @override
-  String get explorePeopleLists => 'Personenlijsten';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Volg groepen makers en bekijk hun nieuwste video\'s';
-
-  @override
-  String get exploreVideoLists => 'Videolijsten';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Maak afspeellijsten van je favoriete video\'s om later te bekijken';
-
-  @override
-  String get exploreMyLists => 'Mijn lijsten';
-
-  @override
-  String get exploreSubscribedLists => 'Gevolgde lijsten';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fout bij laden van lijsten. Probeer het opnieuw.';
 
@@ -3879,9 +3849,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Video\'s van lijstleden verschijnen hier';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Geen video\'s beschikbaar';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Video\'s laden mislukt';
 
   @override
@@ -3911,6 +3878,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Opnieuw proberen';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Toevoegen';
@@ -4837,12 +4807,12 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count personen',
-      one: '1 persoon',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4959,6 +4929,44 @@ class AppLocalizationsNl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Lijst delen';
@@ -6061,32 +6069,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonnement bijwerken mislukt. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsTitle => 'Lijsten ontdekken';
-
-  @override
-  String get discoverListsFailedToLoad => 'Lijsten laden mislukt';
-
-  @override
-  String get discoverListsLoading => 'Publieke lijsten worden ontdekt...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'De relay leverde niet op tijd lijsten. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service niet beschikbaar.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Geen publieke lijsten gevonden';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Kom later terug voor nieuwe lijsten';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'door';
 
   @override
   String get curatedListEmptyTitle => 'Geen video\'s in deze lijst';

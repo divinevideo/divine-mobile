@@ -26,6 +26,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -223,7 +224,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             >(
               bloc: cubit,
               selector: (state) => state.selectedVideoIds,
-              builder: (context, selectedVideoIds) => _RoundedGridViewport(
+              builder: (context, selectedVideoIds) => RoundedGridViewport(
                 child: ComposableVideoGrid(
                   videos: videos,
                   useMasonryLayout: true,
@@ -244,7 +245,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             );
           }
 
-          return _RoundedGridViewport(
+          return RoundedGridViewport(
             child: ComposableVideoGrid(
               videos: videos,
               useMasonryLayout: true,
@@ -651,27 +652,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         });
       }
     }
-  }
-}
-
-/// Clips the scrolling grid region's top corners, so content sliding under
-/// the app bar keeps the same rounded seam the design's radius cap draws.
-///
-/// Complements [ComposableVideoGrid.topOuterRadius]: that rounds the grid
-/// block itself at rest, this rounds the viewport while scrolled.
-class _RoundedGridViewport extends StatelessWidget {
-  const _RoundedGridViewport({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(VineTheme.shellInnerCornerRadius),
-      ),
-      child: child,
-    );
   }
 }
 
