@@ -174,9 +174,11 @@ class VineBottomNav extends ConsumerWidget {
                       // recognised. Called directly: widgets may not import
                       // the service layer (check_ui_service_boundary).
                       unawaited(HapticFeedback.lightImpact());
-                      context.pushToCameraWithPermission(
-                        entryPoint: CreationEntryPoint.bottomNav,
-                        autoRecord: true,
+                      unawaited(
+                        context.pushToCameraWithPermission(
+                          entryPoint: CreationEntryPoint.bottomNav,
+                          autoRecord: true,
+                        ),
                       );
                     },
                   ),
