@@ -9696,31 +9696,35 @@ void main() {
         );
 
         expect(result, isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
       });
 
       test('reads one relay filter over the members, newest first', () async {
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            _createVideoEvent(
-              id: 'older',
-              pubkey: 'member-a',
-              videoUrl: 'https://example.com/a.mp4',
-              createdAt: 1704067200,
-            ),
-            _createVideoEvent(
-              id: 'newer',
-              pubkey: 'member-b',
-              videoUrl: 'https://example.com/b.mp4',
-              createdAt: 1704067300,
-            ),
-            _createVideoEvent(
-              id: 'newer',
-              pubkey: 'member-b',
-              videoUrl: 'https://example.com/b.mp4',
-              createdAt: 1704067300,
-            ),
-          ],
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (
+            events: [
+              _createVideoEvent(
+                id: 'older',
+                pubkey: 'member-a',
+                videoUrl: 'https://example.com/a.mp4',
+                createdAt: 1704067200,
+              ),
+              _createVideoEvent(
+                id: 'newer',
+                pubkey: 'member-b',
+                videoUrl: 'https://example.com/b.mp4',
+                createdAt: 1704067300,
+              ),
+              _createVideoEvent(
+                id: 'newer',
+                pubkey: 'member-b',
+                videoUrl: 'https://example.com/b.mp4',
+                createdAt: 1704067300,
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ),
         );
 
         final result = await repository.getVideosByAuthors(
@@ -9731,7 +9735,7 @@ void main() {
         expect(result.map((video) => video.id), equals(['newer', 'older']));
         final filters =
             verify(
-                  () => mockNostrClient.queryEvents(captureAny()),
+                  () => mockNostrClient.queryEventsDetailed(captureAny()),
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.authors, equals(['member-a', 'member-b']));
@@ -9741,15 +9745,17 @@ void main() {
 
       test('reads at most 100 members in the relay filter', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+          () => mockNostrClient.queryEventsDetailed(any()),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
         final members = [for (var i = 0; i < 150; i++) 'member-$i'];
 
         await repository.getVideosByAuthors(authorPubkeys: members);
 
         final filters =
             verify(
-                  () => mockNostrClient.queryEvents(captureAny()),
+                  () => mockNostrClient.queryEventsDetailed(captureAny()),
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.authors, equals(members.take(100).toList()));
@@ -9759,7 +9765,7 @@ void main() {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEventsDetailed(any()),
         ).thenThrow(Exception('relay down'));
         when(
           () => mockFunnelcakeClient.getVideosByAuthor(
@@ -9795,7 +9801,7 @@ void main() {
 
       test('rethrows the relay error without a Funnelcake client', () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEventsDetailed(any()),
         ).thenThrow(Exception('relay down'));
 
         await expectLater(
@@ -9808,7 +9814,7 @@ void main() {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEventsDetailed(any()),
         ).thenThrow(Exception('relay down'));
         final repo = VideosRepository(
           nostrClient: mockNostrClient,
@@ -9824,6 +9830,85 @@ void main() {
             pubkey: any(named: 'pubkey'),
             limit: any(named: 'limit'),
             before: any(named: 'before'),
+          ),
+        );
+      });
+
+      test('reports an empty answer every relay gave as empty', () async {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+
+        final result = await repository.getVideosByAuthors(
+          authorPubkeys: const ['member-a'],
+        );
+
+        expect(result, isEmpty);
+      });
+
+      test('pages Funnelcake when no relay took the read', () async {
+        final mockFunnelcakeClient = MockFunnelcakeApiClient();
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+        );
+        when(
+          () => mockFunnelcakeClient.getVideosByAuthor(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(pageFor);
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+
+        final result = await repo.getVideosByAuthors(
+          authorPubkeys: const ['member-1'],
+        );
+
+        expect(result.map((video) => video.id), equals(['video-1']));
+      });
+
+      test('pages Funnelcake when the read timed out', () async {
+        final mockFunnelcakeClient = MockFunnelcakeApiClient();
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+        when(
+          () => mockFunnelcakeClient.getVideosByAuthor(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(pageFor);
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+
+        final result = await repo.getVideosByAuthors(
+          authorPubkeys: const ['member-2'],
+        );
+
+        expect(result.map((video) => video.id), equals(['video-2']));
+      });
+
+      test('raises an unreachable read with no Funnelcake client', () async {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+        );
+
+        await expectLater(
+          repository.getVideosByAuthors(authorPubkeys: const ['member-a']),
+          throwsA(
+            isA<RelayReadUnavailableException>().having(
+              (error) => error.toString(),
+              'toString',
+              contains('no relay took the read'),
+            ),
           ),
         );
       });
