@@ -7,7 +7,7 @@ import 'dart:io'
     as io;
 
 import 'package:divine_video_player/divine_video_player.dart'
-    show DivineVideoPlayerController;
+    show DivineVideoPlayerController, NativePlaybackDiagnostics;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +17,7 @@ import 'package:openvine/features/app/startup/startup_coordinator.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/deep_link_provider.dart';
@@ -37,6 +38,7 @@ import 'package:openvine/services/memory_telemetry_service.dart';
 import 'package:openvine/services/notification_service.dart'
     show NotificationTapEvent;
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/services/playback_memory_telemetry_service.dart';
 import 'package:openvine/services/quick_actions_coordinator.dart';
 import 'package:openvine/startup/app_composition_root.dart';
 import 'package:openvine/startup/app_side_effects.dart';
@@ -104,7 +106,7 @@ MemoryTelemetryService createAppMemoryTelemetryService({
   required int Function() readPeakRssBytes,
   required int Function() nativeControllerCount,
   required int Function() queueDepth,
-  required void Function(MemorySnapshot) emit,
+  required void Function(MemorySnapshot snapshot, String trigger) emit,
 }) {
   return MemoryTelemetryService(
     readRssBytes: readRssBytes,
@@ -150,12 +152,27 @@ class _DivineAppState extends ConsumerState<DivineApp>
   late final StartupSplashReleaseController _splashReleaseController;
   late final MemoryPressureHandler _memoryPressureHandler;
   late final MemoryTelemetryService _memoryTelemetry;
+  late final PlaybackMemoryTelemetryService _playbackMemoryTelemetry;
+  final _memoryObserverClock = Stopwatch()..start();
   int _memoryPressureEvents = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _playbackMemoryTelemetry = PlaybackMemoryTelemetryService(
+      readNative: NativePlaybackDiagnostics.read,
+      reporter: ref.read(crashReportingServiceProvider),
+      log: (message) => Log.info(
+        message,
+        name: 'MemoryTelemetry',
+        category: LogCategory.system,
+      ),
+      isForeground: () => ref.read(appForegroundProvider),
+      elapsed: () => _memoryObserverClock.elapsed,
+      initialLifecycle:
+          WidgetsBinding.instance.lifecycleState?.name ?? 'unknown',
+    );
     // Transitions alone do not cover a process launched straight into the
     // background, so latch the suspension from the state we start in.
     if (shouldSuspendDownloadsAtLaunch(
@@ -171,7 +188,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
         // observers. Sampling here preserves the process high-water mark,
         // captures the still-live image count, and updates the event count
         // before our handler clears live images and sheds ingestion below.
-        _memoryTelemetry.sampleOnce();
+        _sampleMemory('memory_pressure');
       },
       clearImageCache: () {
         PaintingBinding.instance.imageCache
@@ -245,9 +262,8 @@ class _DivineAppState extends ConsumerState<DivineApp>
         _initializeDeepLinkServices();
         _initializeQuickActions();
         _initializeBackgroundServices();
-        _memoryTelemetry
-          ..sampleOnce()
-          ..start();
+        _sampleMemory('startup');
+        _memoryTelemetry.start();
       }
     });
   }
@@ -256,6 +272,8 @@ class _DivineAppState extends ConsumerState<DivineApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _memoryTelemetry.stop();
+    _playbackMemoryTelemetry.dispose();
+    _memoryObserverClock.stop();
     _splashReleaseController.dispose();
     _deletionAttemptSubscription?.close();
     _notificationTapSubscription?.cancel();
@@ -307,6 +325,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    _playbackMemoryTelemetry.onLifecycleChanged(state.name);
     // Tear down in-flight media downloads before the OS suspends the app.
     // On Apple platforms cupertino_http delivers NSURLSession callbacks
     // through a Dart FFI trampoline that aborts if the isolate is suspended
@@ -322,11 +341,23 @@ class _DivineAppState extends ConsumerState<DivineApp>
       openVineMediaCache.resumeDownloads();
       openVineImageCache.resumeDownloads();
     }
+    _sampleMemory('lifecycle');
+  }
+
+  void _sampleMemory(String trigger) {
+    _memoryTelemetry.sampleOnce(trigger: trigger);
   }
 
   /// Logs a memory snapshot at info and annotates Crashlytics custom keys so
-  /// OOM crash reports carry the last-seen memory footprint and gauges.
-  void _emitMemorySnapshot(MemorySnapshot snapshot) {
+  /// subsequent reports carry last-seen gauges. OS kills may have no report.
+  void _emitMemorySnapshot(MemorySnapshot snapshot, String trigger) {
+    unawaited(
+      _playbackMemoryTelemetry.sample(
+        snapshot,
+        pressureEvents: _memoryPressureEvents,
+        trigger: trigger,
+      ),
+    );
     final rssMb = _rssMb(snapshot.rssBytes);
     final peakMb = _rssMb(snapshot.peakRssBytes);
     final imageCacheMb = _memoryGaugeMb(snapshot.imageCacheBytes);
@@ -355,10 +386,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
       ),
     );
     unawaited(
-      crashReporting.setCustomKey(
-        'mem_pressure_events',
-        _memoryPressureEvents,
-      ),
+      crashReporting.setCustomKey('mem_pressure_events', _memoryPressureEvents),
     );
     unawaited(
       crashReporting.setCustomKey('vc_native', snapshot.nativeControllers),
@@ -443,11 +471,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
       reportError: (error, stackTrace, reason) {
         return ref
             .read(crashReportingServiceProvider)
-            .recordError(
-              error,
-              stackTrace,
-              reason: reason,
-            );
+            .recordError(error, stackTrace, reason: reason);
       },
       waitForAuthRedirectToSettle: () async {
         await WidgetsBinding.instance.endOfFrame;
