@@ -13,13 +13,10 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _FakeFilter extends Fake implements Filter {}
 
@@ -58,7 +55,6 @@ void main() {
 
     service = VideoEventService(
       nostrClient,
-      subscriptionManager: _MockSubscriptionManager(),
       crashReporter: const SilentCrashReporter(),
     );
   });
