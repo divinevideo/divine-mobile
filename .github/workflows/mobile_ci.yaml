@@ -257,7 +257,7 @@ jobs:
           bash scripts/check_future_delayed_production_ceiling.sh
       - name: ⏳ Verify async-safety findings do not increase (ratchet)
         run: |
-          # #3342: analyzer-backed per-rule, per-file ceilings for the remaining
+          # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
           # unawaited_futures and discarded_futures debt. Every count may only
           # shrink; new files and increased counts fail closed.
           bash scripts/check_async_safety_ceiling.sh
