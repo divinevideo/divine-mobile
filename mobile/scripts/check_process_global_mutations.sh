@@ -294,7 +294,11 @@ run_scan() {
 
   # --- Class 4: initializers whose cleanup must be owned by a helper ---
   local owned_initializer
-  owned_initializer='(^|[^[:alnum:]_.])Hive\.init[[:space:]]*\('
+  # Optional receiver prefix, matching the class 1/2 shape: an aliased import
+  # (`import 'package:hive_ce/hive_ce.dart' as hive;` then `hive.Hive.init(`)
+  # reaches the same process-global. `MyHive.init(` still does not match,
+  # because the literal `Hive.` segment must start the identifier.
+  owned_initializer='(^|[^[:alnum:]_.])([A-Za-z_][A-Za-z0-9_]*\.)?Hive\.init[[:space:]]*\('
   files=$(grep -rlE --include='*_test.dart' "$owned_initializer" "${SCAN_ROOTS[@]}" || true)
   for f in $files; do
     body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
@@ -635,6 +639,14 @@ void main() {
   final message = "Hive.init(path)";
   // Hive.init(path);
 }
+'
+  _case "aliased Hive import still owns its cleanup → FAIL" 1 \
+'import "package:hive_ce/hive_ce.dart" as hive;
+void main() { hive.Hive.init("/tmp/hive-test"); }
+'
+  _case "unrelated receiver ending in Hive → PASS" 0 \
+'import "x";
+void main() { MyHive.init("/tmp/hive-test"); }
 '
   tmp="$(mktemp -d)"
   printf '%s' 'void main() { loadAppFonts(); }' > "$tmp/flutter_test_config.dart"
