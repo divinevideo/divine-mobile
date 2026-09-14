@@ -12,6 +12,8 @@ class NativePlaybackDiagnostics {
 
   final Map<String, Object> _values;
   static const _channel = MethodChannel('divine_video_player');
+  static const _platforms = ['ios', 'ios_on_mac', 'macos'];
+  static const _appStates = ['active', 'inactive', 'background', 'unknown'];
   static const _gauges = [
     'registeredPlayers',
     'liveInstances',
@@ -25,22 +27,21 @@ class NativePlaybackDiagnostics {
 
   /// Parses the versioned channel response, or returns null when incompatible.
   static NativePlaybackDiagnostics? fromMap(Map<Object?, Object?> values) {
-    if (values['version'] != 1 ||
-        !const ['ios', 'ios_on_mac', 'macos'].contains(values['platform']) ||
-        !const [
-          'active',
-          'inactive',
-          'background',
-          'unknown',
-        ].contains(values['appState'])) {
-      return null;
-    }
+    if (values['version'] != 1) return null;
+
+    final platform = values['platform'];
+    if (platform is! String || !_platforms.contains(platform)) return null;
+
+    final appState = values['appState'];
+    if (appState is! String || !_appStates.contains(appState)) return null;
+
     final footprint = values['footprintBytes'];
     if (footprint is! int || footprint < -1) return null;
+
     final parsed = <String, Object>{
       'version': 1,
-      'platform': values['platform']! as String,
-      'appState': values['appState']! as String,
+      'platform': platform,
+      'appState': appState,
       'footprintBytes': footprint,
     };
     for (final key in _gauges) {
