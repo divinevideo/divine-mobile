@@ -3087,8 +3087,13 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     private func retimedToVideoClock(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer {
         guard isRecording,
               let audioClock = synchronizationClock(of: audioCaptureSession),
-              let videoClock = synchronizationClock(of: captureSession),
-              audioClock != videoClock else {
+              let videoClock = synchronizationClock(of: captureSession) else {
+            return sampleBuffer
+        }
+        if audioClock == videoClock {
+            if audioClockOffset == nil {
+                audioClockOffset = .zero
+            }
             return sampleBuffer
         }
 

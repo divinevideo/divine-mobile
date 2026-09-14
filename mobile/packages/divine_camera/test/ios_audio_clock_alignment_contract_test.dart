@@ -1,38 +1,9 @@
 // ABOUTME: Static guards for the iOS recorder's audio-to-video clock alignment.
 // ABOUTME: Audio buffers must be retimed onto the video session clock first.
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-String _readNativeSource(String fileName) {
-  final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-/// Returns the Swift declaration or block starting at [signature] up to its
-/// closing brace, so an assertion cannot match an identical line elsewhere in
-/// the file, nor a line that sits outside the scope being asserted on.
-String _declarationAt(String source, String signature) {
-  final start = source.indexOf(signature);
-  if (start < 0) {
-    throw StateError('No declaration starting with "$signature".');
-  }
-
-  var depth = 0;
-  for (var i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] == '{') depth++;
-    if (source[i] == '}') {
-      depth--;
-      if (depth == 0) return source.substring(start, i + 1);
-    }
-  }
-  throw StateError('Unbalanced braces after "$signature".');
-}
+import 'helpers/native_source.dart';
 
 void main() {
   group('iOS recording audio clock alignment', () {
@@ -41,9 +12,9 @@ void main() {
     late final String retime;
 
     setUpAll(() {
-      source = _readNativeSource('CameraController.swift');
-      audioBranch = _declarationAt(source, 'else if output == audioOutput {');
-      retime = _declarationAt(
+      source = readIosNativeSource('CameraController.swift');
+      audioBranch = declarationAt(source, 'else if output == audioOutput {');
+      retime = declarationAt(
         source,
         'private func retimedToVideoClock(',
       );
@@ -91,11 +62,15 @@ void main() {
       },
     );
 
-    test('is a no-op when both sessions already share a clock', () {
-      // Nothing to convert then, and skipping the copy keeps the append path
-      // as cheap as before on devices where the framework hands both
-      // sessions the same clock.
-      expect(retime, contains('audioClock != videoClock else'));
+    test('reports zero when both sessions already share a clock', () {
+      // Nothing needs converting, but recording the zero keeps diagnostics
+      // distinct from a buffer whose clocks or timing could not be read.
+      final sharedClock = declarationAt(
+        retime,
+        'if audioClock == videoClock {',
+      );
+      expect(sharedClock, contains('audioClockOffset = .zero'));
+      expect(sharedClock, contains('return sampleBuffer'));
     });
 
     test('keeps the per-sample timing shape of the original buffer', () {
@@ -132,13 +107,13 @@ void main() {
       // absorbed: that is how the next log export says how widespread the
       // condition is. Reset at every start so one recording's reading never
       // rides into the next.
-      final start = _declarationAt(
+      final start = declarationAt(
         source,
         'private func startRecordingAfterAudioReady(',
       );
       expect(start, contains('self.audioClockOffset = nil'));
       expect(retime, contains('audioClockOffset = convertedPTS - rawPTS'));
-      final diagnostics = _declarationAt(
+      final diagnostics = declarationAt(
         source,
         'private func logAudioAlignmentDiagnostics(',
       );

@@ -1,38 +1,9 @@
 // ABOUTME: Static guards for the iOS recorder-to-editor audio-session handoff.
 // ABOUTME: disposeCamera must not resolve before the capture sessions stop.
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-String _readNativeSource(String fileName) {
-  final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-/// Returns the Swift declaration or block starting at [signature] up to its
-/// closing brace, so an assertion cannot match an identical line elsewhere in
-/// the file, nor a line that sits outside the scope being asserted on.
-String _declarationAt(String source, String signature) {
-  final start = source.indexOf(signature);
-  if (start < 0) {
-    throw StateError('No declaration starting with "$signature".');
-  }
-
-  var depth = 0;
-  for (var i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] == '{') depth++;
-    if (source[i] == '}') {
-      depth--;
-      if (depth == 0) return source.substring(start, i + 1);
-    }
-  }
-  throw StateError('Unbalanced braces after "$signature".');
-}
+import 'helpers/native_source.dart';
 
 void main() {
   group('iOS camera dispose audio-session handoff', () {
@@ -40,12 +11,12 @@ void main() {
     late final String release;
 
     setUpAll(() {
-      disposeCamera = _declarationAt(
-        _readNativeSource('DivineCameraPlugin.swift'),
+      disposeCamera = declarationAt(
+        readIosNativeSource('DivineCameraPlugin.swift'),
         'private func disposeCamera(',
       );
-      release = _declarationAt(
-        _readNativeSource('CameraController.swift'),
+      release = declarationAt(
+        readIosNativeSource('CameraController.swift'),
         'func release(',
       );
     });
@@ -79,7 +50,7 @@ void main() {
       // passes when the dispatch is hoisted out of the block, or moved to its
       // top -- and either of those fires the completion before the capture
       // sessions are stopped, which is the bug this file guards.
-      final teardown = _declarationAt(release, 'sessionQueue.async {');
+      final teardown = declarationAt(release, 'sessionQueue.async {');
       expect(teardown, contains('self.audioCaptureSession?.stopRunning()'));
       expect(
         teardown,
