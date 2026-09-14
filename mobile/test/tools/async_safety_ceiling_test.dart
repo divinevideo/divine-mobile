@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yaml/yaml.dart';
 
 void main() {
   group('async safety ceiling', () {
@@ -139,12 +140,31 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
       for (final path in [
         'scripts/check_async_safety_ceiling.sh',
         'scripts/baseline/async_safety_counts.txt',
-        '../.github/workflows/mobile_ci.yaml',
       ]) {
         final contents = File(path).readAsStringSync();
         expect(contents, contains('#9118'), reason: path);
         expect(contents, isNot(contains('#3342')), reason: path);
       }
+
+      // Only the step that runs the guard, not the whole workflow: a
+      // whole-file `contains` is satisfied by any other step that happens to
+      // mention the number, and its negation fails on any other step that
+      // does. mobile_qa_workflow_contract_test.dart is the precedent.
+      final workflow = loadYaml(
+        File('../.github/workflows/mobile_ci.yaml').readAsStringSync(),
+      ) as Map<dynamic, dynamic>;
+      final steps =
+          ((workflow['jobs'] as Map<dynamic, dynamic>)['generated-files']
+                  as Map<dynamic, dynamic>)['steps']
+              as List<dynamic>;
+      final run = steps
+          .cast<Map<dynamic, dynamic>>()
+          .map((step) => step['run'] as String?)
+          .singleWhere(
+            (run) => run?.contains('check_async_safety_ceiling.sh') ?? false,
+          )!;
+      expect(run, contains('#9118'));
+      expect(run, isNot(contains('#3342')));
     });
   });
 
