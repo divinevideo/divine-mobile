@@ -106,7 +106,7 @@ MemoryTelemetryService createAppMemoryTelemetryService({
   required int Function() readPeakRssBytes,
   required int Function() nativeControllerCount,
   required int Function() queueDepth,
-  required void Function(MemorySnapshot) emit,
+  required void Function(MemorySnapshot snapshot, String trigger) emit,
 }) {
   return MemoryTelemetryService(
     readRssBytes: readRssBytes,
@@ -154,7 +154,6 @@ class _DivineAppState extends ConsumerState<DivineApp>
   late final MemoryTelemetryService _memoryTelemetry;
   late final PlaybackMemoryTelemetryService _playbackMemoryTelemetry;
   final _memoryObserverClock = Stopwatch()..start();
-  String _memorySampleTrigger = 'periodic';
   int _memoryPressureEvents = 0;
 
   @override
@@ -346,22 +345,17 @@ class _DivineAppState extends ConsumerState<DivineApp>
   }
 
   void _sampleMemory(String trigger) {
-    _memorySampleTrigger = trigger;
-    try {
-      _memoryTelemetry.sampleOnce();
-    } finally {
-      _memorySampleTrigger = 'periodic';
-    }
+    _memoryTelemetry.sampleOnce(trigger: trigger);
   }
 
   /// Logs a memory snapshot at info and annotates Crashlytics custom keys so
   /// subsequent reports carry last-seen gauges. OS kills may have no report.
-  void _emitMemorySnapshot(MemorySnapshot snapshot) {
+  void _emitMemorySnapshot(MemorySnapshot snapshot, String trigger) {
     unawaited(
       _playbackMemoryTelemetry.sample(
         snapshot,
         pressureEvents: _memoryPressureEvents,
-        trigger: _memorySampleTrigger,
+        trigger: trigger,
       ),
     );
     final rssMb = _rssMb(snapshot.rssBytes);
@@ -392,10 +386,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
       ),
     );
     unawaited(
-      crashReporting.setCustomKey(
-        'mem_pressure_events',
-        _memoryPressureEvents,
-      ),
+      crashReporting.setCustomKey('mem_pressure_events', _memoryPressureEvents),
     );
     unawaited(
       crashReporting.setCustomKey('vc_native', snapshot.nativeControllers),
@@ -480,11 +471,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
       reportError: (error, stackTrace, reason) {
         return ref
             .read(crashReportingServiceProvider)
-            .recordError(
-              error,
-              stackTrace,
-              reason: reason,
-            );
+            .recordError(error, stackTrace, reason: reason);
       },
       waitForAuthRedirectToSettle: () async {
         await WidgetsBinding.instance.endOfFrame;
