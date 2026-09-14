@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -129,6 +130,45 @@ void main() {
           );
 
           expect(find.byType(VideoEditorProcessingOverlay), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'shows the low-storage copy when the render failed out of storage '
+        '(#7125)',
+        (tester) async {
+          final state = VideoEditorProviderState(
+            renderFailed: true,
+            renderFailureReason: VideoRenderFailureReason.insufficientStorage,
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                clipManagerProvider.overrideWith(
+                  () => _MockClipManagerNotifier([testClip]),
+                ),
+                videoEditorProvider.overrideWith(
+                  () => _MockVideoEditorNotifier(state),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: VideoMetadataClassicPreviewThumbnail()),
+              ),
+            ),
+          );
+
+          expect(
+            find.text(
+              lookupAppLocalizations(const Locale('en')).publishErrorLowStorage,
+            ),
+            findsOneWidget,
+            reason:
+                'the preview must pass the reason through, or an '
+                'out-of-storage user reads the generic copy',
+          );
         },
       );
 
