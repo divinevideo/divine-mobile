@@ -119,7 +119,7 @@ class PlaybackMemoryTelemetryService {
       final lifecycleValues = <String, Object>{
         'flutter': _lifecycle,
         'foregroundGate': _isForeground(),
-        'stateAgeS': (now - _lifecycleSince).inSeconds,
+        'stateAgeS': math.max(0, (now - _lifecycleSince).inSeconds),
         'observerAgeS': now.inSeconds,
         'trigger': trigger,
         'pressureEvents': pressureEvents,
@@ -130,7 +130,10 @@ class PlaybackMemoryTelemetryService {
             0,
             native.framesDelivered - _lastFrames!,
           ),
-          'sampleIntervalMs': (now - _lastSampleTime!).inMilliseconds,
+          'sampleIntervalMs': math.max(
+            0,
+            (now - _lastSampleTime!).inMilliseconds,
+          ),
         },
       };
       _lastFrames = native?.framesDelivered;
