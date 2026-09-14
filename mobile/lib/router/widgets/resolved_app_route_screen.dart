@@ -1,6 +1,8 @@
 // ABOUTME: Resolves a NostrAppDirectoryEntry from the route's appId path
 // ABOUTME: parameter and hands it to a caller-supplied builder once available.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,11 +47,16 @@ class ResolvedAppRouteScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.read(nostrAppDirectoryServiceProvider);
     return BlocProvider(
-      create: (_) => SandboxRouteCubit(
-        appId: appId,
-        directoryService: service,
-        initialApp: initialApp,
-      )..load(),
+      create: (_) {
+        final cubit = SandboxRouteCubit(
+          appId: appId,
+          directoryService: service,
+          initialApp: initialApp,
+        );
+        // load converts fetch failures into Cubit errors and not-found state.
+        unawaited(cubit.load());
+        return cubit;
+      },
       child: _ResolvedAppRouteContent(onResolved: onResolved),
     );
   }
