@@ -42,6 +42,10 @@ void main() {
   // languagePreferenceVersionProvider. That watch discards its value, so it
   // reads as an unused statement; without these tests, deleting it would
   // silently restore the bug #9149 fixed and leave CI green.
+  //
+  // The first request's language list includes the host's ambient locales, so
+  // these tests pin the new language to the head of the second request rather
+  // than asserting it was absent from the first.
   group('content language change refetches the feeds', () {
     late SharedPreferences sharedPreferences;
     late _MockVideoEventService mockVideoEventService;
@@ -117,7 +121,6 @@ void main() {
 
       await container.read(popularVideosFeedProvider.future);
       expect(requestedLanguages, hasLength(1));
-      expect(requestedLanguages.single, isNot(contains('es')));
 
       await container
           .read(languagePreferenceServiceProvider)
@@ -130,7 +133,7 @@ void main() {
         hasLength(2),
         reason: 'the language change must trigger a second request',
       );
-      expect(requestedLanguages.last, contains('es'));
+      expect(requestedLanguages.last?.first, 'es');
     });
 
     test('for you refetches with the newly chosen language', () async {
@@ -175,7 +178,6 @@ void main() {
 
       await container.read(forYouFeedProvider.future);
       expect(requestedLanguages, hasLength(1));
-      expect(requestedLanguages.single, isNot(contains('es')));
 
       await container
           .read(languagePreferenceServiceProvider)
@@ -188,7 +190,7 @@ void main() {
         hasLength(2),
         reason: 'the language change must trigger a second request',
       );
-      expect(requestedLanguages.last, contains('es'));
+      expect(requestedLanguages.last?.first, 'es');
     });
   });
 }
