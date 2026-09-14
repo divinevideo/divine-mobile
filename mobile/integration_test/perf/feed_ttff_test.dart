@@ -7,40 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:media_cache/media_cache.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
 
+import 'feed_perf_fixtures.dart';
 import 'feed_ttff_budget.dart';
-
-const _baseUrl = String.fromEnvironment(
-  'FEED_TTFF_BASE_URL',
-  defaultValue: 'http://127.0.0.1:8765',
-);
-
-const _fixtureNames = <String>[
-  '0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4',
-  '606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.mp4',
-  '6c7bf42367895238e3bd20b12e95a171e9a37a41e2b9b18b89f228de38e9f827.mp4',
-];
-
-class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
-
-class _MockDownload extends Mock implements CancellableDownload {}
-
-List<VideoEvent> _videos() => List.generate(feedTtffSampleCount, (index) {
-  final id = index.toRadixString(16).padLeft(64, '0');
-  return VideoEvent(
-    id: id,
-    pubkey: '1'.padLeft(64, '1'),
-    createdAt: index,
-    content: '',
-    timestamp: DateTime.utc(2026),
-    videoUrl:
-        '$_baseUrl/${_fixtureNames[index % _fixtureNames.length]}'
-        '?sample=$index',
-  );
-});
 
 Future<FeedFirstFrameMetric> _waitForSample(
   StreamIterator<FeedFirstFrameMetric> samples,
@@ -65,20 +34,7 @@ void main() {
     testWidgets(
       'stays within the 5 Mbps p90 budget',
       (tester) async {
-        final cache = _MockMediaCacheManager();
-        final download = _MockDownload();
-        when(() => cache.getCachedFileSync(any())).thenReturn(null);
-        when(() => cache.removeCachedFile(any())).thenAnswer((_) async {});
-        when(() => download.file).thenAnswer((_) async => null);
-        when(
-          () => download.result,
-        ).thenAnswer((_) async => const CancellableDownloadResult(file: null));
-        when(() => download.isCancelled).thenReturn(false);
-        when(download.cancel).thenReturn(null);
-        final cancellable = CancellableCacheOperation.fromDownload(download);
-        when(
-          () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
-        ).thenReturn(cancellable);
+        final cache = installFeedPerfMediaCacheMock();
 
         final metrics = StreamIterator(FeedFirstFrameMetrics.events);
         addTearDown(metrics.cancel);
@@ -89,7 +45,7 @@ void main() {
             home: Scaffold(
               body: InfiniteVideoFeed(
                 key: feedKey,
-                videos: _videos(),
+                videos: feedPerfVideos(feedTtffSampleCount),
                 cache: cache,
                 prefetchCount: 0,
                 keepPreviousAlive: false,

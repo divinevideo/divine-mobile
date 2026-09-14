@@ -1489,6 +1489,8 @@ workflows:
   perf-feed-ttff:
     name: Feed Time to First Frame (Android)
     working_directory: mobile
+    # Pinned at 20 by test_codemagic_shorebird_config.py as part of this lane's
+    # bounded profile; raising it needs measured lane wall time, not a guess.
     max_build_duration: 20
     instance_type: linux_x2
     environment:
@@ -1574,6 +1576,106 @@ workflows:
       - test_reports/*.jsonl
       - test_reports/feed_ttff_fixture_server.log
       - test_reports/feed_ttff_emulator.txt
+
+  perf-feed-frame:
+    name: Feed Frame Timing (Android)
+    working_directory: mobile
+    # One benchmark per lane: a slow TTFF run must not take the frame report
+    # down with it. Pinned at 20 by test_codemagic_shorebird_config.py as part
+    # of this lane's bounded profile; raising it needs measured wall time, not
+    # a guess.
+    max_build_duration: 20
+    instance_type: linux_x2
+    environment:
+      flutter: 3.47.2
+      java: 17
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    triggering:
+      # #7504 tracks reconnecting the Codemagic webhook. Once connected, this
+      # non-blocking lane runs only for PRs that can affect feed playback.
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: false
+      cancel_previous_builds: true
+    when:
+      changeset:
+        includes:
+          - codemagic.yaml
+          - mobile/assets/seed_media/videos/
+          - mobile/integration_test/perf/
+          - mobile/lib/widgets/video_feed_item/
+          - mobile/packages/divine_video_player/
+          - mobile/packages/infinite_video_feed/
+          - mobile/packages/media_cache/
+          - mobile/scripts/ci/serve_ttff_fixtures.py
+    scripts:
+      - *flutter_pub_get
+      - *setup_local_properties
+      - *launch_android_emulator
+      - name: Run deterministic feed frame timing
+        script: |
+          set -euo pipefail
+          mkdir -p test_reports
+          cleanup() {
+            {
+              echo "## getprop"
+              timeout 10s adb shell getprop || true
+              echo "## cpuinfo"
+              timeout 10s adb shell cat /proc/cpuinfo || true
+              echo "## SurfaceFlinger"
+              timeout 10s adb shell dumpsys SurfaceFlinger || true
+              echo "## media.codec"
+              timeout 10s adb shell dumpsys media.codec || true
+              echo "## top"
+              timeout 10s adb shell top -b -n 1 || true
+              echo "## impeller"
+              timeout 10s adb logcat -d -s flutter Flutter 2>/dev/null \
+                | grep -i "impeller" | tail -5 || true
+            } > test_reports/feed_frame_emulator.txt 2>&1 || true
+            kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          python3 scripts/ci/serve_ttff_fixtures.py \
+            --directory assets/seed_media/videos \
+            --rate 625000 > test_reports/feed_frame_fixture_server.log 2>&1 &
+          FIXTURE_SERVER_PID=$!
+          FIXTURE_PROBE_ATTEMPTS=0
+          until curl --fail --silent --range 0-0 \
+            http://127.0.0.1:8765/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4 \
+            >/dev/null; do
+            kill -0 "$FIXTURE_SERVER_PID"
+            FIXTURE_PROBE_ATTEMPTS=$((FIXTURE_PROBE_ATTEMPTS + 1))
+            if [ "$FIXTURE_PROBE_ATTEMPTS" -ge 30 ]; then
+              echo "Fixture server did not serve the readiness fixture within 30 seconds" >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          adb reverse tcp:8765 tcp:8765
+          # A boot-complete emulator can still be behind keyguard. ExoPlayer
+          # will decode there, but no frame reaches the SurfaceTexture, so the
+          # harness never sees a first frame.
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
+          DEVICE_ID=$(adb get-serialno)
+          # Frame timing for #9045: UI/raster frame times while the pooled feed
+          # player plays and transitions between pages. Raster is reported, not
+          # gated, on an emulator; a budget-device run uses the same command
+          # against a real phone.
+          flutter test integration_test/perf/feed_frame_test.dart \
+            -d "$DEVICE_ID" \
+            --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
+            --machine | tee test_reports/feed_frame.jsonl
+    artifacts:
+      - test_reports/feed_frame.jsonl
+      - test_reports/feed_frame_fixture_server.log
+      - test_reports/feed_frame_emulator.txt
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)
