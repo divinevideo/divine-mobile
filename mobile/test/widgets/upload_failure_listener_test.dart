@@ -17,6 +17,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/l10n/publish_error_kind_l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
@@ -24,6 +26,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -45,6 +48,9 @@ class _FakeDraft extends Fake implements DivineVideoDraft {
 
   @override
   String get id => _id;
+
+  @override
+  List<DivineVideoClip> get clips => const [];
 }
 
 class _MockGoRouter extends Mock implements GoRouter {}
@@ -177,6 +183,12 @@ Widget _buildHarnessWithoutAppAncestors({
 BackgroundUpload _inProgress(String id) =>
     BackgroundUpload(draft: _FakeDraft(id), result: null, progress: 0.5);
 
+BackgroundUpload _failed(String id, PublishErrorKind kind) => BackgroundUpload(
+  draft: _FakeDraft(id),
+  result: PublishError(kind),
+  progress: 1,
+);
+
 /// A [BackgroundPublishState] that carries success signals, with no remaining
 /// uploads — mirrors what the bloc emits on [PublishSuccess].
 BackgroundPublishState _succeededState(
@@ -237,6 +249,59 @@ void main() {
     when(() => publishBloc.state).thenReturn(initial);
     whenListen(publishBloc, publishStream.stream, initialState: initial);
   }
+
+  group('UploadFailureListener failure tracking', () {
+    testWidgets('queues a later failure behind the visible sheet', (
+      tester,
+    ) async {
+      stubPublishBloc(const BackgroundPublishState());
+      when(() => authService.isAuthenticated).thenReturn(true);
+
+      await tester.pumpWidget(
+        _buildHarness(publishBloc: publishBloc, authService: authService),
+      );
+
+      publishStream.add(
+        BackgroundPublishState(
+          uploads: [_failed('draft-1', PublishErrorKind.generic)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.uploadFailureSheetTitle), findsOneWidget);
+      expect(
+        find.text(l10n.publishErrorMessage(PublishErrorKind.generic)),
+        findsOneWidget,
+      );
+
+      publishStream.add(
+        BackgroundPublishState(
+          uploads: [
+            _failed('draft-1', PublishErrorKind.generic),
+            _failed('draft-2', PublishErrorKind.serverUnreachable),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      // The second state must not stack another modal over the first.
+      expect(find.text(l10n.uploadFailureSheetTitle), findsOneWidget);
+      expect(
+        find.text(l10n.publishErrorMessage(PublishErrorKind.serverUnreachable)),
+        findsNothing,
+      );
+
+      await tester.tap(find.text(l10n.uploadFailureSheetSaveToDraftsButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.uploadFailureSheetTitle), findsOneWidget);
+      expect(
+        find.text(l10n.publishErrorMessage(PublishErrorKind.serverUnreachable)),
+        findsOneWidget,
+      );
+    });
+  });
 
   group('UploadFailureListener success tracking', () {
     testWidgets(
@@ -339,9 +404,8 @@ void main() {
       // `push`, not `go`: closing the video must pop back to the profile the
       // creator was standing on, not reset to the feed.
       verify(
-        () => router.push<void>(
-          RoutePaths.videoDetailForId(_publishedStableId),
-        ),
+        () =>
+            router.push<void>(RoutePaths.videoDetailForId(_publishedStableId)),
       ).called(1);
       verifyNever(() => router.go(any()));
     });

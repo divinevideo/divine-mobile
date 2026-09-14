@@ -21,6 +21,7 @@ import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Listens for background upload completions and shows the appropriate UI.
 ///
@@ -54,6 +55,7 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
   var _pendingSuccessCount = 0;
   PostPublishConfirmationOffer? _pendingConfirmationOffer;
   PublishedVideo? _pendingPublishedVideo;
+  Future<void> _failureSheetQueue = Future<void>.value();
 
   @override
   Widget build(BuildContext context) {
@@ -140,10 +142,38 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
             .where((u) => newFailedIds.contains(u.draft.id))
             .toList();
 
-        _showFailureSheetsSequentially(container, navContext, newFailures);
+        final queued = _showFailureSheetsAfter(
+          _failureSheetQueue,
+          container,
+          navContext,
+          newFailures,
+        );
+        _failureSheetQueue = queued;
+        unawaited(queued);
       },
       child: widget.child,
     );
+  }
+
+  Future<void> _showFailureSheetsAfter(
+    Future<void> previous,
+    ProviderContainer container,
+    BuildContext context,
+    List<BackgroundUpload> failedUploads,
+  ) async {
+    try {
+      await previous;
+      if (!context.mounted) return;
+      await _showFailureSheetsSequentially(container, context, failedUploads);
+    } on Object catch (error, stack) {
+      Log.error(
+        'Failed to show an upload failure sheet',
+        name: 'UploadFailureListener',
+        category: LogCategory.system,
+        error: error,
+        stackTrace: stack,
+      );
+    }
   }
 }
 

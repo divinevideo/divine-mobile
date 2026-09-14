@@ -141,10 +141,6 @@ discarded_futures|lib/services/video_editor/video_render_watchdog.dart	1
 discarded_futures|lib/services/video_event_service.dart	31
 discarded_futures|lib/services/video_moderation_status_service.dart	1
 discarded_futures|lib/services/web_auth_service.dart	1
-discarded_futures|lib/startup/app_composition_root.dart	1
-discarded_futures|lib/startup/app_side_effects.dart	1
-discarded_futures|lib/startup/database_corruption_gate.dart	1
-discarded_futures|lib/startup/upload_failure_listener.dart	1
 discarded_futures|lib/utils/deferred_login_options_navigator.dart	3
 discarded_futures|lib/widgets/add_to_list_dialog.dart	1
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1

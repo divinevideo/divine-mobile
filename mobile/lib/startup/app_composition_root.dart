@@ -93,8 +93,10 @@ class AppCompositionRoot extends ConsumerWidget {
     final inviteAvailabilityRepository = ref.watch(
       inviteAvailabilityRepositoryProvider,
     );
-    final inviteAvailabilityCubit = ref.watch(inviteAvailabilityCubitProvider)
-      ..load();
+    final inviteAvailabilityCubit = ref.watch(inviteAvailabilityCubitProvider);
+    // Session configuration is optional startup work. The repository catches
+    // fetch failures and resolves to the safe invites-off state.
+    unawaited(inviteAvailabilityCubit.load());
 
     // Wrap with geo-blocking check first, then lifecycle handler
     return MultiRepositoryProvider(
@@ -262,9 +264,7 @@ class AppCompositionRoot extends ConsumerWidget {
               child: UpdateDialogListener(
                 child: UploadFailureListener(
                   child: GeoBlockingGate(
-                    child: AppLifecycleHandler(
-                      child: child,
-                    ),
+                    child: AppLifecycleHandler(child: child),
                   ),
                 ),
               ),

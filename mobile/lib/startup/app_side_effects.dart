@@ -1,6 +1,8 @@
 // ABOUTME: The one place app-wide side-effect providers are activated.
 // ABOUTME: Two hosts, split by what activating each provider costs at startup.
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -62,7 +64,10 @@ class AppRootSideEffects extends ConsumerWidget {
     // available. It runs only for an authenticated account with the Worker
     // configured. Canonical state avoids repeated work after success; failures
     // retry when the app returns to the foreground.
-    ref.watch(supporterRecoveryProvider);
+    // Recovery is deliberately detached from rendering. The repository keeps
+    // overlapping calls together and absorbs failures so a later foreground
+    // transition can retry them.
+    unawaited(ref.watch(supporterRecoveryProvider));
 
     // Durable-queue drivers. Each owns a foreground (and, for profile saves,
     // connectivity) subscription that re-drives a Drift-backed queue, and none
