@@ -92,15 +92,11 @@ class LanguagePreferenceVersionNotifier
   @override
   int build() {
     final service = ref.watch(languagePreferenceServiceProvider);
-    var version = 0;
 
-    void listener() {
-      version++;
-      state = version;
-    }
+    void increment() => state++;
 
-    service.addListener(listener);
-    ref.onDispose(() => service.removeListener(listener));
-    return version;
+    service.addListener(increment);
+    ref.onDispose(() => service.removeListener(increment));
+    return 0;
   }
 }
