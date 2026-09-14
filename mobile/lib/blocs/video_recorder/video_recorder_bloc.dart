@@ -318,7 +318,15 @@ class VideoRecorderBloc
       prefs.getString(VideoRecorderMode.persistenceKey),
     );
     if (!event.fromEditor && savedMode != state.recorderMode) {
-      await _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
+      try {
+        await _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
+      } catch (e, stackTrace) {
+        addError(e, stackTrace);
+        emit(
+          state.copyWith(initializationError: CameraInitializationError.failed),
+        );
+        return;
+      }
     } else if (event.fromEditor &&
         state.recorderMode != VideoRecorderMode.stopMotion &&
         isStopMotionComposition(_readClipManager().clips)) {
