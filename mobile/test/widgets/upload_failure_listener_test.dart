@@ -21,11 +21,13 @@ import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
@@ -40,6 +42,9 @@ class _MockBackgroundPublishBloc
     implements BackgroundPublishBloc {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockCrashReportingService extends Mock
+    implements CrashReportingService {}
 
 class _FakeDraft extends Fake implements DivineVideoDraft {
   _FakeDraft(this._id);
@@ -159,9 +164,14 @@ Widget _buildHarness({
 Widget _buildHarnessWithoutAppAncestors({
   required _MockBackgroundPublishBloc publishBloc,
   required _MockAuthService authService,
+  CrashReportingService? crashReporting,
 }) {
   return ProviderScope(
-    overrides: [authServiceProvider.overrideWithValue(authService)],
+    overrides: [
+      authServiceProvider.overrideWithValue(authService),
+      if (crashReporting != null)
+        crashReportingServiceProvider.overrideWithValue(crashReporting),
+    ],
     child: BlocProvider<BackgroundPublishBloc>.value(
       value: publishBloc,
       child: app.UploadFailureListener(
@@ -301,6 +311,49 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'records a presentation failure as a non-fatal instead of dropping it',
+      (tester) async {
+        // Before the queue, a throw while showing the sheet rejected a
+        // discarded future and reached the zone handler, which records it.
+        // The queue catches it to stay alive, so it must record explicitly.
+        final crashReporting = _MockCrashReportingService();
+        when(
+          () => crashReporting.recordError(
+            any<Object>(),
+            any(),
+            reason: any(named: 'reason'),
+          ),
+        ).thenAnswer((_) async {});
+        stubPublishBloc(const BackgroundPublishState());
+        when(() => authService.isAuthenticated).thenReturn(true);
+
+        await tester.pumpWidget(
+          _buildHarnessWithoutAppAncestors(
+            publishBloc: publishBloc,
+            authService: authService,
+            crashReporting: crashReporting,
+          ),
+        );
+
+        publishStream.add(
+          BackgroundPublishState(
+            uploads: [_failed('draft-1', PublishErrorKind.generic)],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verify(
+          () => crashReporting.recordError(
+            any<Object>(),
+            any(),
+            reason: any(named: 'reason'),
+          ),
+        ).called(1);
+      },
+    );
   });
 
   group('UploadFailureListener success tracking', () {

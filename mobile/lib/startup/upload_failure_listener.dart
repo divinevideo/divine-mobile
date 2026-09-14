@@ -13,6 +13,7 @@ import 'package:openvine/features/post_publish/view/post_publish_confirmation_sh
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
@@ -166,6 +167,9 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
       if (!context.mounted) return;
       await _showFailureSheetsSequentially(container, context, failedUploads);
     } on Object catch (error, stack) {
+      // Before the queue this surfaced as an uncaught zone error, which is
+      // recorded as a non-fatal. Catching keeps the queue alive for the next
+      // failure; recording keeps the presentation bug visible.
       Log.error(
         'Failed to show an upload failure sheet',
         name: 'UploadFailureListener',
@@ -173,6 +177,13 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
         error: error,
         stackTrace: stack,
       );
+      await container
+          .read(crashReportingServiceProvider)
+          .recordError(
+            error,
+            stack,
+            reason: 'Upload failure sheet presentation failed',
+          );
     }
   }
 }
