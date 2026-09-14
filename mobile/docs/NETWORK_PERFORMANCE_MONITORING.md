@@ -94,6 +94,97 @@ Everything below routes through `instrumentedHttpClientFactoryProvider`.
 If any of these becomes worth measuring, the decision to add it belongs in this
 file next to the reason it was left out.
 
+## Google SDK traffic in the export
+
+On iOS, Firebase Performance also instruments `NSURLSession` in-process, so
+the export carries every request the Google SDKs make for themselves. Android
+shows none of it — the Android SDK instruments OkHttp and `HttpURLConnection`,
+which neither the Dart stack nor the Firebase SDKs use — so a host-by-host
+comparison across platforms is not a finding. Read these rows as the cost of
+the SDKs, sized here so nobody re-derives it (#7303). Baseline: 1.0.20 store
+build, 2026-09-01 → 2026-09-07, 17,367 `_app_start` events.
+
+| Host | Owner | Per app start | Bytes / week | What it is |
+|---|---|---|---|---|
+| `app-analytics-services.com/a`, `region1.app-analytics-services.com/a` | `GoogleAppMeasurement` | 3.5 | ~74 MB **up** | Analytics event upload — the data `screen_view`, `surface_load` and the creator funnel arrive through. |
+| `app-analytics-services.com/config/app/*`, `/sdk-exp` | `GoogleAppMeasurement` | 1.4 | ~7 MB down | Analytics remote config and SDK experiments. |
+| `firebase-settings.crashlytics.com`, `crashlyticsreports-pa.googleapis.com` | Crashlytics | 0.9 | ~11 MB down, ~55 MB up | Settings fetch per launch; reports (~66 KB each) only when there is something to send. |
+| `firebaseinstallations.googleapis.com`, `device-provisioning.googleapis.com`, `fcmtoken.googleapis.com`, `firebaseremoteconfig.googleapis.com` | Installations / FCM / Remote Config | 1.4 | ~15 MB down | Installation identity, push token registration, remote config. |
+| `muf.`, `odf.`, `odm.app-ads-services.com` | `GoogleAdsOnDeviceConversion` | 4.0 | **~223 MB down** | Google Ads on-device conversion measurement. Absent from builds after #7303 — see below. |
+
+Attribution is by URL-format strings in the framework binaries, not by
+inference: every `*.app-ads-services.com` template lives in
+`GoogleAdsOnDeviceConversion.framework`, every `app-analytics-services.com`
+template in `GoogleAppMeasurement.framework`.
+
+Two shapes in the ads-measurement rows look like defects and are not:
+
+- **`odf.app-ads-services.com/odf/config` answers `403` for ~16% of requests.**
+  The rate is ~100% for devices in the EEA and the UK and ~0% elsewhere; the
+  body is 20 bytes and the SDK does not retry into it (1.9 requests per app
+  start there against 1.2 elsewhere). That is Google's regional gate on the
+  feature, applied server-side after the device has already asked.
+- **`muf/psm/groupids` and `odm/psm` download 8–18 KB per request.** Those are
+  the private-set-membership tables the conversion match runs against on the
+  device. They are the bulk of the 223 MB.
+
+### Why the ads-measurement rows disappear after #7303
+
+FlutterFire's default iOS product, `FirebaseAnalytics`, links
+`GoogleAppMeasurementIdentitySupport` (IDFA) and `GoogleAdsOnDeviceConversion`
+alongside the analytics SDK. Divine has no Google Ads account linked to its
+analytics property, personalized advertising off and no ATT prompt
+([iOS privacy manifests](IOS_PRIVACY_MANIFESTS.md), decision D1), and the
+Android manifest already strips `AD_ID` and the AdServices permissions — so on
+iOS the conversion SDK was measuring for nobody at ~4 requests and ~13 KB per
+app start. The iOS build now links `FirebaseAnalyticsCore` instead, which
+carries neither library. Three things hold that in place:
+
+1. `firebase_analytics`'s `Package.swift` picks `FirebaseAnalyticsCore` when
+   `FIREBASE_ANALYTICS_WITHOUT_ADID` is present in the environment while Xcode
+   evaluates it. Presence is what counts, not the value. Every iOS workflow in
+   `codemagic.yaml` sets it; a local store-candidate build needs it too:
+
+   ```bash
+   FIREBASE_ANALYTICS_WITHOUT_ADID=true flutter build ios --release
+   ```
+
+   Xcode caches the evaluated manifest in `build/ios/SourcePackages`, so
+   flipping the variable on a machine that has already resolved packages
+   needs `flutter clean` first — clearing the workspace's
+   `xcshareddata/swiftpm` directory alone leaves the old product selection
+   in place. Codemagic starts from an empty `build/` and wipes DerivedData
+   and the workspace state before every build.
+2. `scripts/check_ios_analytics_product.sh --app <Runner.app>` reads the
+   built product and fails when any binary in it references
+   `app-ads-services.com`, or when none references
+   `app-analytics-services.com`. It runs after the Shorebird release archive
+   and after the simulator build, because nothing else notices a resolution
+   that silently fell back to the full product: the build is green either way
+   and the difference only shows up in this export weeks later.
+3. The switch is a native change. It ships with a store release, never as a
+   Shorebird patch — Shorebird refuses the native diff, which is the right
+   answer.
+
+`Package.resolved` still pins `google-ads-on-device-conversion-ios-sdk`: SPM
+resolves the `GoogleAppMeasurement` package's dependencies whichever product
+is selected. Whether the library is *linked* is what the check above answers.
+The macOS target keeps the full product — the plugin's macOS manifest has no
+switch — and the conversion SDK is iOS-only, so nothing changes there.
+
+**Verification on the next store release**: `app-ads-services.com` must not
+appear in `NETWORK_REQUEST` for that build's `app_build_version`, while
+`app-analytics-services.com/a` keeps its ~3.5 requests per app start.
+
+```sql
+SELECT REGEXP_EXTRACT(event_name, r'^(?:https?://)?([^/]+)') AS host, COUNT(*) AS n
+FROM `openvine-co.firebase_performance.co_openvine_app_IOS`
+WHERE event_type = 'NETWORK_REQUEST'
+  AND app_display_version = '<release>' AND app_build_version = '<store build>'
+  AND (event_name LIKE '%app-ads-services.com%' OR event_name LIKE '%app-analytics-services.com%')
+GROUP BY 1 ORDER BY 2 DESC
+```
+
 ## URL patterns
 
 Firebase aggregates by URL and drops high-cardinality patterns, so an

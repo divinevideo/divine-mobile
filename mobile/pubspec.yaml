@@ -352,10 +352,10 @@ dependencies:
 
   # Desktop window management for proper window sizing
   window_manager: ^0.5.1
-  firebase_core: ^4.4.0
-  firebase_crashlytics: ^5.0.7
-  firebase_messaging: ^16.1.1
-  firebase_performance: ^0.11.1+4
+  firebase_core: ^4.14.0
+  firebase_crashlytics: ^5.3.0
+  firebase_messaging: ^16.6.0
+  firebase_performance: ^0.11.5
   # 18.0.0 is the first go_router built on material_ui, and the floor is
   # load-bearing: earlier versions pick a page builder with
   # findAncestorWidgetOfExactType<MaterialApp>() against the framework class,
@@ -438,7 +438,7 @@ dev_dependencies:
 
   # Testing
   file: ^7.0.1
-  firebase_core_platform_interface: ^6.0.2
+  firebase_core_platform_interface: ^8.1.1
   fake_async: ^1.3.3
   mocktail: ^1.0.3
   bloc_test: ^10.0.0

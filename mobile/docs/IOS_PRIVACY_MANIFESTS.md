@@ -134,18 +134,26 @@ added to the App Store Connect answers by hand, from the vendor's guidance:
 
 - Shorebird (D7): the engine's privacy manifest is Flutter's stock one, which
   declares no collected data, and the updater ships no manifest.
-- Firebase Analytics (with GoogleAppMeasurement), Google's on-device
-  conversion measurement SDK (GoogleAdsOnDeviceConversion), Firebase
-  Performance and Firebase Sessions ship no privacy manifest. Google's
-  guidance is its
+- Firebase Analytics (with GoogleAppMeasurement), Firebase Performance and
+  Firebase Sessions ship no privacy manifest. Google's guidance is its
   [App Store data disclosure page](https://firebase.google.com/docs/ios/app-store-data-collection).
+  Google's on-device conversion measurement SDK
+  (GoogleAdsOnDeviceConversion) and the IDFA support library used to be in
+  this list; since #7303 the iOS build links `FirebaseAnalyticsCore`, which
+  carries neither, and `scripts/check_ios_analytics_product.sh` fails the
+  release archive if either comes back. See
+  [Google SDK traffic in the export](NETWORK_PERFORMANCE_MONITORING.md#google-sdk-traffic-in-the-export).
 
 The report does show one type that the Runner manifest does not repeat: Other
 Data Types, declared by Firebase Cloud Messaging (not linked, Analytics). It
 belongs on the label like any other SDK-declared type.
 
 Checked on 2026-09-11 against firebase-ios-sdk 12.12.0, GoogleAppMeasurement
-12.11.0 and Shorebird 1.6.120. Re-check whenever one of them changes.
+12.11.0 and Shorebird 1.6.120; the Firebase half re-checked on 2026-09-12
+against firebase-ios-sdk 12.18.0 and GoogleAppMeasurement 12.18.0 on a plain
+`flutter build ios --release` archive (same manifest set, minus the two
+libraries `FirebaseAnalyticsCore` drops). Re-check whenever one of them
+changes.
 
 ### Tracking posture before each candidate
 
