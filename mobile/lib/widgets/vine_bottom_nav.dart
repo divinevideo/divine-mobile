@@ -1,10 +1,12 @@
 // ABOUTME: Shared bottom navigation bar widget for app shell and profile screens
 // ABOUTME: Provides consistent bottom nav across screens with/without shell
 
+import 'dart:async';
 import 'dart:math' show pi;
 import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -160,6 +162,25 @@ class VineBottomNav extends ConsumerWidget {
                         entryPoint: CreationEntryPoint.bottomNav,
                       );
                     },
+                    onLongPress: () {
+                      Log.info(
+                        '👆 User held camera button — opening capture mode '
+                        'with auto-record',
+                        name: 'Navigation',
+                        category: LogCategory.ui,
+                      );
+                      // The camera takes a moment to open, so this is the only
+                      // immediate confirmation that the hold, not a tap, was
+                      // recognised. Called directly: widgets may not import
+                      // the service layer (check_ui_service_boundary).
+                      unawaited(HapticFeedback.lightImpact());
+                      unawaited(
+                        context.pushToCameraWithPermission(
+                          entryPoint: CreationEntryPoint.bottomNav,
+                          autoRecord: true,
+                        ),
+                      );
+                    },
                   ),
                   _IconTabButton(
                     semanticIdentifier: 'inbox_tab',
@@ -243,6 +264,7 @@ class _TabSlot extends StatelessWidget {
     required this.onTap,
     required this.tapTargetWidth,
     required this.child,
+    this.onLongPress,
     this.value,
     this.edgePadding = EdgeInsets.zero,
     this.iconAlignment = Alignment.center,
@@ -255,6 +277,10 @@ class _TabSlot extends StatelessWidget {
   /// tab. Null on tabs that carry no supplementary value.
   final String? value;
   final VoidCallback onTap;
+
+  /// Optional press-and-hold action. A quick tap still routes to [onTap];
+  /// only a hold past the long-press timeout fires this instead.
+  final VoidCallback? onLongPress;
 
   /// Full width the [GestureDetector] occupies inside the nav row — usually
   /// larger than the visible icon so taps in the surrounding gap and edge
@@ -276,6 +302,7 @@ class _TabSlot extends StatelessWidget {
       value: value,
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: tapTargetWidth,
@@ -730,10 +757,18 @@ class _ProfileAvatarBox extends StatelessWidget {
 }
 
 /// Camera button in the center of the bottom navigation bar.
+///
+/// A tap opens the recorder; a press-and-hold opens it in capture mode and
+/// starts recording right away.
 class _CameraButton extends StatelessWidget {
-  const _CameraButton({required this.onTap, required this.tapTargetWidth});
+  const _CameraButton({
+    required this.onTap,
+    required this.onLongPress,
+    required this.tapTargetWidth,
+  });
 
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final double tapTargetWidth;
 
   @override
@@ -745,6 +780,7 @@ class _CameraButton extends StatelessWidget {
       identifier: 'camera_button',
       label: context.l10n.navOpenCamera,
       onTap: onTap,
+      onLongPress: onLongPress,
       tapTargetWidth: tapTargetWidth,
       child: Container(
         width: _kCameraButtonWidth,
