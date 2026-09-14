@@ -14,9 +14,6 @@ discarded_futures|lib/main.dart	1
 discarded_futures|lib/mixins/grid_prefetch_mixin.dart	2
 discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
 discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
-discarded_futures|lib/notifications/notification_tap_router.dart	1
-discarded_futures|lib/notifications/view/inbox_notifications_page.dart	5
-discarded_futures|lib/notifications/view/notifications_view.dart	3
 discarded_futures|lib/providers/auth_providers.dart	1
 discarded_futures|lib/providers/curation_providers.dart	1
 discarded_futures|lib/providers/foreground_idle_warmup_provider.dart	1
@@ -359,8 +356,6 @@ discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|integration_test/e2e/dm_optimistic_survives_watch_race_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
-unawaited_futures|lib/notifications/notification_tap_router.dart	1
-unawaited_futures|lib/notifications/view/notifications_view.dart	1
 unawaited_futures|lib/providers/notifications_providers.dart	1
 unawaited_futures|lib/providers/video_editor_provider.dart	2
 unawaited_futures|lib/screens/auth/create_account_screen.dart	1
