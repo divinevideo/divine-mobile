@@ -1036,11 +1036,6 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     moderationPubkey: ref
         .watch(moderationLabelServiceProvider)
         .divineModerationPubkeyHex,
-    onReportQueued: () async {
-      if (!ref.mounted) return;
-      final retry = await ref.read(reportRetryServiceProvider.future);
-      await retry?.sweep();
-    },
     deliverModerationDm: (report) async {
       if (!ref.mounted ||
           authService.currentPublicKeyHex != report.userPubkey) {
@@ -1076,6 +1071,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
 
   // Initialize the service to enable reporting
   await service.initialize();
+  ref.onDispose(service.dispose);
 
   return service;
 }
@@ -1109,6 +1105,10 @@ Future<ReportRetryService?> reportRetryService(Ref ref) async {
     userPubkey: userPubkey,
     appForegroundStream: foregroundController.stream,
     retryTriggerStream: _dmRetryConnectivityTriggerStream(),
+    // The worker subscribes to the reporting service rather than the service
+    // reading this provider back: this provider watches the service, and
+    // Riverpod refuses a read that closes that loop.
+    reportQueuedStream: driver.reportQueued,
   );
 
   unawaited(

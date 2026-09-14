@@ -155,7 +155,6 @@ class ContentReportingService implements ReportChannelDriver {
     PendingReportsDao? pendingReportsDao,
     this.moderationPubkey,
     this.deliverModerationDm,
-    this.onReportQueued,
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
@@ -173,8 +172,15 @@ class ContentReportingService implements ReportChannelDriver {
   final PendingReportsDao? _pendingReportsDao;
   final String? moderationPubkey;
   final Future<bool> Function(PendingReport report)? deliverModerationDm;
-  final Future<void> Function()? onReportQueued;
+  final StreamController<void> _reportQueued = StreamController.broadcast();
   final Map<String, Future<bool>> _channelInFlight = {};
+
+  /// Emits once each time a report has been saved to the durable queue, so
+  /// the retry worker can attempt delivery right away instead of waiting for
+  /// its next timer, reconnect, or foreground transition. The worker owns
+  /// this subscription; reading the worker's provider from here would make
+  /// the two providers depend on each other.
+  Stream<void> get reportQueued => _reportQueued.stream;
 
   /// Coalesces concurrent ticket requests within this service instance.
   /// Keep the request until it settles, including after a sweep times out.
@@ -360,7 +366,7 @@ class ContentReportingService implements ReportChannelDriver {
         unawaited(_saveReportHistory());
         // No signing, policy lookup, HTTP request or relay work precedes this
         // acceptance. A failed local write stays an actionable submit error.
-        unawaited(_notifyReportQueued());
+        if (!_reportQueued.isClosed) _reportQueued.add(null);
         return ReportResult.createSuccess(
           reportId,
           delivery: ReportDelivery.queued,
@@ -892,18 +898,6 @@ class ContentReportingService implements ReportChannelDriver {
     return relayAccepted;
   }
 
-  Future<void> _notifyReportQueued() async {
-    try {
-      await onReportQueued?.call();
-    } catch (e) {
-      Log.warning(
-        'Report remains queued after delivery wake-up failed: $e',
-        name: 'ContentReportingService',
-        category: LogCategory.system,
-      );
-    }
-  }
-
   @override
   Future<bool> deliverReportChannel(
     PendingReport report,
@@ -1054,6 +1048,6 @@ class ContentReportingService implements ReportChannelDriver {
   }
 
   void dispose() {
-    // Clean up any active operations
+    unawaited(_reportQueued.close());
   }
 }

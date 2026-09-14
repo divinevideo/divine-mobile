@@ -708,7 +708,7 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'02eeddd5ebf7bbba0b6212d966133a4f5f98d4ac';
+    r'0030c3a41a37d211afaf14a8e90ff9983bd140b1';
 
 /// Auto-sweep service for the durable `pending_reports` queue.
 ///
@@ -761,7 +761,7 @@ final class ReportRetryServiceProvider
 }
 
 String _$reportRetryServiceHash() =>
-    r'b34d67deb6029e9a844c785c09cae5f1055b59db';
+    r'580e5f54ac229632f4b5712952c1a2126660befb';
 
 /// Content deletion service for NIP-09 delete events
 

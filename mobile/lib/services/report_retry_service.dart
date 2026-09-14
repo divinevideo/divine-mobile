@@ -52,6 +52,7 @@ class ReportRetryService {
     required String userPubkey,
     required Stream<bool> appForegroundStream,
     Stream<void>? retryTriggerStream,
+    Stream<void>? reportQueuedStream,
     ReportRetryConfig retryConfig = const ReportRetryConfig(),
     DateTime Function() now = DateTime.now,
   }) : _driver = driver,
@@ -59,6 +60,7 @@ class ReportRetryService {
        _userPubkey = userPubkey,
        _appForegroundStream = appForegroundStream,
        _retryTriggerStream = retryTriggerStream,
+       _reportQueuedStream = reportQueuedStream,
        _config = retryConfig,
        _now = now;
 
@@ -67,10 +69,15 @@ class ReportRetryService {
   final String _userPubkey;
   final Stream<bool> _appForegroundStream;
   final Stream<void>? _retryTriggerStream;
+
+  /// Fires when the driver has just saved a report, so its first attempt
+  /// happens now rather than on the next reconnect or foreground transition.
+  final Stream<void>? _reportQueuedStream;
   final ReportRetryConfig _config;
   final DateTime Function() _now;
   StreamSubscription<bool>? _foregroundSubscription;
   StreamSubscription<void>? _retrySubscription;
+  StreamSubscription<void>? _queuedSubscription;
   Timer? _timer;
   bool _isInitialized = false;
   bool _isSweeping = false;
@@ -98,6 +105,10 @@ class ReportRetryService {
     _retrySubscription = _retryTriggerStream?.listen((_) {
       if (_foreground) unawaited(sweep(force: true));
     });
+    // A new row is due immediately; rows already in backoff keep their delay.
+    _queuedSubscription = _reportQueuedStream?.listen(
+      (_) => unawaited(sweep()),
+    );
     unawaited(sweep());
   }
 
@@ -108,6 +119,7 @@ class ReportRetryService {
     _timer = null;
     await _foregroundSubscription?.cancel();
     await _retrySubscription?.cancel();
+    await _queuedSubscription?.cancel();
   }
 
   Future<void> sweep({bool force = false}) async {

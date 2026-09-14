@@ -335,6 +335,40 @@ void main() {
     });
 
     test(
+      'a newly saved report is driven at once, without forcing the rest',
+      () async {
+        final queued = StreamController<void>();
+        final service = ReportRetryService(
+          driver: driver,
+          pendingReportsDao: dao,
+          userPubkey: user,
+          appForegroundStream: foreground.stream,
+          reportQueuedStream: queued.stream,
+        );
+        addTearDown(service.dispose);
+        addTearDown(queued.close);
+        await service.initialize();
+        await pumpEventQueue();
+        await dao.enqueue(
+          makeReport(
+            reportId: 'waiting',
+            relayAttempts: 20,
+            zendeskAttempts: 20,
+            lastAttemptAt: DateTime.now(),
+          ),
+        );
+        await dao.enqueue(makeReport(reportId: 'fresh'));
+        driver
+          ..succeed('fresh', ReportChannel.relay)
+          ..succeed('fresh', ReportChannel.zendesk);
+        queued.add(null);
+        await pumpEventQueue();
+        expect(await dao.getById('fresh'), isNull);
+        expect(driver.calls, ['fresh:relay', 'fresh:zendesk']);
+      },
+    );
+
+    test(
       'one slow channel does not prevent another channel delivering',
       () async {
         final relay = Completer<bool>();
