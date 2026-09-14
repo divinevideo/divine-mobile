@@ -2,7 +2,7 @@
 // ABOUTME: app bar keeps the rounded seam the design's radius cap draws.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Rounds the viewport of a list page's grid while it scrolls.
 ///
