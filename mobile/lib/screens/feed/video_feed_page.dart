@@ -53,12 +53,21 @@ class VideoFeedPage extends ConsumerWidget {
 
   const VideoFeedPage({
     this.initialMode = FeedMode.forYou,
+    this.forceInitialMode = false,
     this.initialIndex = 0,
     super.key,
   });
 
   /// The feed mode to start with. Defaults to [FeedMode.forYou].
   final FeedMode initialMode;
+
+  /// Whether [initialMode] must win over the persisted account-scoped source.
+  ///
+  /// Set by the campaign landing route (`/following/new`), which has to
+  /// render the Following feed even when the account's saved home source is
+  /// something else. A forced start never writes [initialMode] back to the
+  /// stored preference.
+  final bool forceInitialMode;
 
   /// The video index restored from the Home route or last-tab position.
   final int initialIndex;
@@ -85,27 +94,33 @@ class VideoFeedPage extends ConsumerWidget {
       key: ValueKey('video-feed-$showDivineHostedOnly-$contentFilterVersion'),
       providers: [
         BlocProvider(
-          create: (_) => VideoFeedBloc(
-            videosRepository: videosRepository,
-            followRepository: followRepository,
-            curatedListRepository: curatedListRepository,
-            profileRepository: profileRepository,
-            contentBlocklistRepository: blocklistRepository,
-            userPubkey: authService.currentPublicKeyHex,
-            sharedPreferences: sharedPreferences,
-            // Cached-feed serving stays on (constructor default) regardless of
-            // the Divine-hosted-only filter: applyContentPreferences re-filters
-            // on read and the splice-on-refresh keeps the post-active tail
-            // fresh, so the cached serve is never stale to the viewer.
-            feedTracker: ref.read(feedPerformanceTrackerProvider),
-            feedTuningRepository: feedTuningRepository,
-            enrichVideos: (videos) => enrichVideosWithNostrTags(
-              videos,
-              nostrService: ref.read(nostrServiceProvider),
-              callerName: 'VideoFeedBloc',
-              attemptTracker: enrichmentAttemptTracker,
-            ),
-          )..add(VideoFeedStarted(mode: initialMode)),
+          create: (_) =>
+              VideoFeedBloc(
+                videosRepository: videosRepository,
+                followRepository: followRepository,
+                curatedListRepository: curatedListRepository,
+                profileRepository: profileRepository,
+                contentBlocklistRepository: blocklistRepository,
+                userPubkey: authService.currentPublicKeyHex,
+                sharedPreferences: sharedPreferences,
+                // Cached-feed serving stays on (constructor default) regardless of
+                // the Divine-hosted-only filter: applyContentPreferences re-filters
+                // on read and the splice-on-refresh keeps the post-active tail
+                // fresh, so the cached serve is never stale to the viewer.
+                feedTracker: ref.read(feedPerformanceTrackerProvider),
+                feedTuningRepository: feedTuningRepository,
+                enrichVideos: (videos) => enrichVideosWithNostrTags(
+                  videos,
+                  nostrService: ref.read(nostrServiceProvider),
+                  callerName: 'VideoFeedBloc',
+                  attemptTracker: enrichmentAttemptTracker,
+                ),
+              )..add(
+                VideoFeedStarted(
+                  mode: initialMode,
+                  forceMode: forceInitialMode,
+                ),
+              ),
         ),
         BlocProvider(
           create: (_) => VideoPlaybackStatusCubit(

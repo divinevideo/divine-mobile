@@ -22,7 +22,7 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show localNotificationTapPayload;
+    show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -154,14 +154,24 @@ pushNotificationTapTarget({
   required String? eventId,
   required String? notificationType,
   required String? senderPubkey,
-  String? tapTargetType,
-  String? tapTargetValue,
+  required String? tapTargetType,
+  required String? tapTargetValue,
 }) {
-  if (notificationType == 'campaign') {
+  if (notificationType == NotificationWireValues.campaign) {
     final location = campaignAppRoute(
       type: tapTargetType,
       value: tapTargetValue,
     );
+    if (location == null) {
+      // Neither value is identity-linked, so logging both is how a
+      // misconfigured campaign is told apart from an untapped notification.
+      Log.warning(
+        'Unsupported campaign tap target; opening inbox '
+        '(tapTargetType=$tapTargetType, tapTargetValue=$tapTargetValue)',
+        name: 'main',
+        category: LogCategory.system,
+      );
+    }
     return (
       target: location == null
           ? const OpenInboxTarget()
@@ -222,8 +232,8 @@ Future<void> routeNotificationTap({
   required String? notificationType,
   required String? senderPubkey,
   required ProviderContainer container,
-  String? tapTargetType,
-  String? tapTargetValue,
+  required String? tapTargetType,
+  required String? tapTargetValue,
 }) async {
   final (:target, :targetEventId, :videoCoordinate) = pushNotificationTapTarget(
     referencedAddress: referencedAddress,

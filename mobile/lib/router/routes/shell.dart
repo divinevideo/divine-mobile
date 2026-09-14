@@ -86,7 +86,13 @@ List<RouteBase> shellRoutes() {
               // an account identifier.
               pageBuilder: (ctx, st) => branchPage(
                 st,
-                const VideoFeedPage(initialMode: FeedMode.following),
+                const VideoFeedPage(
+                  initialMode: FeedMode.following,
+                  // A campaign tap must land on Following whatever the
+                  // account's saved home source is; the forced start is not
+                  // persisted back (see VideoFeedStarted.forceMode).
+                  forceInitialMode: true,
+                ),
               ),
             ),
             GoRoute(

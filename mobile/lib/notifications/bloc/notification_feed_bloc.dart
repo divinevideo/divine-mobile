@@ -269,6 +269,10 @@ class NotificationFeedBloc
       return false;
     } catch (e, s) {
       // Errors (StateError, TypeError) — matrix-YES invariant violation.
+      // A closed repository is an account switch, not an invariant break:
+      // report failure (and leave the OS badge alone) instead of clearing it
+      // for a mark-all that was never sent.
+      if (_notificationRepository.isClosed) return false;
       addError(
         Reportable(
           e,
@@ -448,7 +452,9 @@ class NotificationFeedBloc
       // .claude/rules/error_handling.md they are NOT Reportable.
       addError(e, s);
     } catch (e, s) {
-      // Errors (StateError, TypeError) — matrix-YES invariant.
+      // Errors (StateError, TypeError) — matrix-YES invariant. A closed
+      // repository marks an account switch, not an invariant break.
+      if (_notificationRepository.isClosed) return;
       addError(
         Reportable(
           e,

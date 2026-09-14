@@ -35,10 +35,23 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Shared bottom navigation bar used by AppShell and standalone profile screens.
 class VineBottomNav extends ConsumerWidget {
-  const VineBottomNav({required this.currentIndex, super.key});
+  const VineBottomNav({
+    required this.currentIndex,
+    this.isCampaignLanding = false,
+    super.key,
+  });
 
   /// Currently selected tab index (0-3), or -1 if no tab is selected.
   final int currentIndex;
+
+  /// Whether the active route is the campaign landing (`/following/new`).
+  ///
+  /// That route renders inside the home branch, so [currentIndex] is 0 and
+  /// Home reads as already-selected. A Home tap there must navigate to the
+  /// normal home feed instead of running the retap refresh, which would
+  /// leave the user stranded on the campaign screen. The shell supplies this
+  /// from the live route context; standalone mounts default to false.
+  final bool isCampaignLanding;
 
   /// Handles tab tap - navigates to last known position in that tab
   void _handleTabTap(BuildContext context, WidgetRef ref, int tabIndex) {
@@ -56,7 +69,10 @@ class VineBottomNav extends ConsumerWidget {
 
     // Re-tapping the active home tab refreshes the feed instead of
     // navigating. The cubit is provided above AppShell (see shell.dart).
-    if (tabIndex == 0 && currentIndex == 0) {
+    // Skipped on the campaign landing: it lives in the home branch but is not
+    // the home feed, so a refresh would have no visible effect and no way
+    // back — the fall-through below navigates to the normal home route.
+    if (tabIndex == 0 && currentIndex == 0 && !isCampaignLanding) {
       context.read<HomeFeedRetapCubit>().request();
       return;
     }

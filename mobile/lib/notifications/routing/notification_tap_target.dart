@@ -5,7 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' show NIP71VideoKinds, NotificationKind;
 import 'package:openvine/router/route_paths.dart' show RoutePaths;
 import 'package:openvine/services/notification_helpers.dart'
-    show parseAddressableId;
+    show NotificationWireValues, parseAddressableId;
 
 const int _curatedListKind = 30005;
 
@@ -143,7 +143,7 @@ NotificationKind? notificationKindFromPushType(String? type) {
 
 /// Returns a safe in-app route for a campaign target, or null when unsupported.
 String? campaignAppRoute({required String? type, required String? value}) {
-  if (type != 'app_route') return null;
+  if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;
 }
 

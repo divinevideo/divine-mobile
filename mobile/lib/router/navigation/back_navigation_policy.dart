@@ -34,6 +34,14 @@ BackAction resolveBackAction({
 }) {
   if (context == null) return const BackUnhandled();
 
+  if (context.isCampaignFollowing) {
+    // The campaign landing renders the home branch's Following feed and is a
+    // cold-start destination, not a push from another screen. Reporting the
+    // press unhandled would close the app on Android (#3337), so back goes to
+    // the normal home feed.
+    return canPop ? const BackPop() : BackGoTo(RoutePaths.videoFeedForIndex(0));
+  }
+
   if (_pushedEditorFlows.contains(context.type)) {
     // These are always pushed, so popping is the normal answer. Reaching one
     // with nothing beneath it takes a cold entry the deep-link parser cannot

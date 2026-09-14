@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show NotificationPayloadKeys;
+    show NotificationPayloadKeys, isRoutableNotificationPayload;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Types of notifications
@@ -552,13 +552,16 @@ class NotificationService {
       final senderPubkey = field(NotificationPayloadKeys.senderPubkey);
       final notificationType = field(NotificationPayloadKeys.notificationType);
       // A follow/mention carries no referencedEventId but is still routable
-      // via senderPubkey / eventId, and a referencedAddress alone is a valid
-      // video target, so route whenever any of these exist.
-      if (referencedEventId == null &&
-          referencedAddress == null &&
-          eventId == null &&
-          senderPubkey == null &&
-          notificationType != 'campaign') {
+      // via senderPubkey / eventId; a referencedAddress alone is a valid
+      // video target, and a campaign carries its own destination, so route
+      // whenever any of them exists.
+      if (!isRoutableNotificationPayload(
+        referencedEventId: referencedEventId,
+        referencedAddress: referencedAddress,
+        eventId: eventId,
+        senderPubkey: senderPubkey,
+        notificationType: notificationType,
+      )) {
         return null;
       }
       return NotificationTapEvent(

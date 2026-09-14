@@ -55,6 +55,40 @@ abstract class NotificationPayloadKeys {
   static const String tapTargetValue = 'tapTargetValue';
 }
 
+/// Wire values shared by the push service and this client.
+///
+/// These are contract strings, not display values: the service emits them and
+/// the tap parser compares against them, so the two sides must not drift by a
+/// stray literal at either site.
+abstract class NotificationWireValues {
+  /// `type` value for a campaign push, which carries an in-app destination
+  /// instead of a Nostr event.
+  static const String campaign = 'campaign';
+
+  /// Campaign `tapTargetType` value for an absolute in-app route.
+  static const String appRoute = 'app_route';
+}
+
+/// Whether a parsed payload carries any routable target.
+///
+/// Campaigns are routable through [NotificationPayloadKeys.tapTargetType] and
+/// [NotificationPayloadKeys.tapTargetValue] without a Nostr event. Every other
+/// type needs an event, an address, or an actor. Shared by [parseFcmPayload]
+/// and `NotificationService._parseTapPayload` so the two readers cannot
+/// diverge on which payloads are actionable.
+bool isRoutableNotificationPayload({
+  required String? referencedEventId,
+  required String? referencedAddress,
+  required String? eventId,
+  required String? senderPubkey,
+  required String? notificationType,
+}) =>
+    referencedEventId != null ||
+    referencedAddress != null ||
+    eventId != null ||
+    senderPubkey != null ||
+    notificationType == NotificationWireValues.campaign;
+
 /// Normalises a raw push-notification payload map into the fields the tap
 /// router needs.
 ///
@@ -98,11 +132,13 @@ parseFcmPayload(Map<String, dynamic> data) {
   final tapTargetType = nonEmpty(NotificationPayloadKeys.tapTargetType);
   final tapTargetValue = nonEmpty(NotificationPayloadKeys.tapTargetValue);
 
-  if (referencedEventId == null &&
-      referencedAddress == null &&
-      eventId == null &&
-      senderPubkey == null &&
-      notificationType != 'campaign') {
+  if (!isRoutableNotificationPayload(
+    referencedEventId: referencedEventId,
+    referencedAddress: referencedAddress,
+    eventId: eventId,
+    senderPubkey: senderPubkey,
+    notificationType: notificationType,
+  )) {
     return null;
   }
 

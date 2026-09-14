@@ -161,8 +161,26 @@ class _NotificationFeed {
   String? lastCursor;
   String? lastCursorId;
   int fetchGeneration = 0;
+
+  /// [fetchGeneration] of the most recent first-page fetch that actually
+  /// landed in [snapshot].
+  ///
+  /// Unlike [fetchGeneration], this does not advance when a refresh merely
+  /// starts: a read-mutation rollback uses it to tell a newer *applied* page
+  /// (which already replaced the optimistic flags) apart from a refresh that
+  /// failed and left them behind with no server write.
+  int lastAppliedGeneration = 0;
+
   int pagesLoaded = 0;
 }
+
+/// One feed's optimistic read flips, captured so a failed mutation can
+/// restore exactly the flags it set.
+typedef _ReadFlips = ({
+  _NotificationFeed feed,
+  Set<String> itemIds,
+  int appliedGeneration,
+});
 
 /// Number of notifications loaded per page.
 ///
@@ -202,17 +220,27 @@ class NotificationRepository {
     required String userPubkey,
     BlockedNotificationFilter? blockFilter,
     AuthHeadersProvider? authHeadersProvider,
+    Duration authHeadersTimeout = defaultAuthHeadersTimeout,
     bool hydrateOnStart = true,
   }) : _funnelcakeApiClient = funnelcakeApiClient,
        _profileRepository = profileRepository,
        _notificationsDao = notificationsDao,
        _userPubkey = userPubkey,
        _blockFilter = blockFilter,
-       _authHeadersProvider = authHeadersProvider {
+       _authHeadersProvider = authHeadersProvider,
+       _authHeadersTimeout = authHeadersTimeout {
     if (hydrateOnStart) {
       unawaited(_hydrateFromCache());
     }
   }
+
+  /// Default bound on the NIP-98 sign step of a read mutation.
+  ///
+  /// [FunnelcakeApiClient] bounds the HTTP request itself, but the signer
+  /// prompt ahead of it is unbounded. A remote-signer prompt nobody answers
+  /// would otherwise hold the read-mutation queue forever. Overridable so
+  /// tests do not have to wait out the production bound.
+  static const Duration defaultAuthHeadersTimeout = Duration(seconds: 30);
 
   final FunnelcakeApiClient _funnelcakeApiClient;
   final ProfileRepository _profileRepository;
@@ -220,15 +248,20 @@ class NotificationRepository {
   final String _userPubkey;
   final BlockedNotificationFilter? _blockFilter;
   final AuthHeadersProvider? _authHeadersProvider;
+  final Duration _authHeadersTimeout;
 
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
   Future<void> _readMutationTail = Future<void>.value();
 
-  _NotificationFeed _feedFor(NotificationKind? filter) {
+  void _throwIfClosed() {
     if (_closed) {
       throw StateError('NotificationRepository is closed');
     }
+  }
+
+  _NotificationFeed _feedFor(NotificationKind? filter) {
+    _throwIfClosed();
     final existing = _feeds[filter];
     if (existing != null) return existing;
     final feed = _NotificationFeed(filter: filter);
@@ -333,6 +366,10 @@ class NotificationRepository {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    // Drop the queue tail: every later read mutation short-circuits on
+    // [_closed], and a mutation hung in the signer must not keep this
+    // instance's chain alive.
+    _readMutationTail = Future<void>.value();
     for (final feed in _liveFeeds.toList()) {
       await feed.snapshot.close();
     }
@@ -471,6 +508,10 @@ class NotificationRepository {
       );
       feed.pagesLoaded = isFirstPage ? 1 : feed.pagesLoaded + 1;
       _emitSnapshotForPage(feed, page, isFirstPage: isFirstPage);
+      if (isFirstPage) {
+        // Only a first page that landed supersedes a read-mutation rollback.
+        feed.lastAppliedGeneration = generation;
+      }
 
       if (isFirstPage && filter == null) {
         unawaited(_persistSnapshot(items));
@@ -1078,26 +1119,57 @@ class NotificationRepository {
     return getNotifications(filter: filter);
   }
 
-  void _restoreSnapshots(
-    Map<_NotificationFeed, ({NotificationPage page, int fetchGeneration})>
-    values,
-  ) {
-    for (final entry in values.entries) {
-      final feed = entry.key;
+  /// One feed's optimistic read flips, captured so a failed mutation can
+  /// restore exactly the flags it set.
+  List<_ReadFlips> _flipUnread({Set<String>? ids}) {
+    final flips = <_ReadFlips>[];
+    for (final feed in _liveFeeds.toList()) {
+      final page = feed.snapshot.value;
+      final flipped = <String>{
+        for (final item in page.items)
+          if (!item.isRead && (ids == null || _matchesMarkReadId(item, ids)))
+            item.id,
+      };
+      if (flipped.isEmpty) continue;
+      flips.add((
+        feed: feed,
+        itemIds: flipped,
+        appliedGeneration: feed.lastAppliedGeneration,
+      ));
+      feed.snapshot.add(
+        page.copyWith(items: _withItemsRead(page.items, flipped)),
+      );
+    }
+    return flips;
+  }
+
+  /// Restores the read flags in [flips], unless a newer refresh has already
+  /// applied to that feed.
+  ///
+  /// The skip is keyed on `lastAppliedGeneration`, which only advances when a
+  /// first-page fetch actually lands. A refresh that bumped the fetch
+  /// generation and then failed did not supersede the flip, so skipping here
+  /// would leave the optimistic read flag with no server write behind it.
+  void _restoreReadFlags(List<_ReadFlips> flips) {
+    for (final flip in flips) {
+      final feed = flip.feed;
       if (feed.snapshot.isClosed ||
-          feed.fetchGeneration != entry.value.fetchGeneration) {
+          feed.lastAppliedGeneration != flip.appliedGeneration) {
         continue;
       }
-      final readBefore = <String, bool>{
-        for (final item in entry.value.page.items) item.id: item.isRead,
-      };
       final current = feed.snapshot.value;
-      // Restore only the optimistic read flags. Concurrent pagination remains
-      // authoritative for item membership and page metadata.
-      final restored = current.items.map((item) {
-        final wasRead = readBefore[item.id];
-        return wasRead == null ? item : _withRead(item, wasRead);
-      }).toList();
+      // Restore only the rows this mutation flipped — not every row that was
+      // on the captured page — so a concurrently un-read row survives.
+      final hasRestorable = current.items.any(
+        (item) => flip.itemIds.contains(item.id) && item.isRead,
+      );
+      if (!hasRestorable) continue;
+      final restored = current.items
+          .map(
+            (item) =>
+                flip.itemIds.contains(item.id) ? _withRead(item, false) : item,
+          )
+          .toList();
       feed.snapshot.add(current.copyWith(items: restored));
     }
   }
@@ -1108,40 +1180,60 @@ class NotificationRepository {
     return result;
   }
 
-  /// Marks specific notifications as read on the server and locally.
+  /// Signs a read request, bounding the wait on the signer.
   ///
-  /// Optimistically flips matching items in the snapshot to `isRead:
-  /// true`, then writes through to the API and the local DAO. On
-  /// failure, restores prior read flags without replacing fresher pages, and
-  /// rethrows so callers can surface the error.
+  /// [FunnelcakeApiClient] bounds the HTTP request itself, but the NIP-98
+  /// sign step ahead of it is unbounded: on a remote signer, one unanswered
+  /// prompt would otherwise hold [_readMutationTail] forever and wedge every
+  /// later mark-read for the life of this instance.
   ///
-  /// Rollback is scoped to the feeds the flip actually changed. A newer refresh
-  /// supersedes it, while pagination on the same generation keeps its new rows.
-  Future<void> markAsRead(List<String> ids) {
-    if (ids.isEmpty) return Future<void>.value();
-    return _enqueueReadMutation(() => _markAsRead(ids));
+  /// Callers await this only when [_authHeadersProvider] is non-null: an
+  /// unconditional `await` on the unsigned path would suspend one microtask
+  /// before the POST's listener attaches, and a POST future already completed
+  /// with an error would then be reported unhandled.
+  Future<Map<String, String>> _readAuthHeaders(
+    AuthHeadersProvider provider,
+    String url, {
+    String? body,
+  }) {
+    return provider(url, 'POST', body: body).timeout(_authHeadersTimeout);
   }
 
-  Future<void> _markAsRead(List<String> ids) async {
-    if (_closed) return;
+  /// Marks specific notifications as read on the server and locally.
+  ///
+  /// Matching items flip to `isRead: true` immediately, so the row and the
+  /// badge react on the tap rather than behind any queued mutation. The sign +
+  /// POST + DAO halves of every read mutation serialize behind
+  /// [_enqueueReadMutation] so server writes cannot interleave. On failure,
+  /// only the flags this call flipped are restored, and the error is rethrown
+  /// so callers can surface it.
+  ///
+  /// A refresh that applied supersedes the rollback; a refresh that failed
+  /// does not. Throws [StateError] when the repository is already closed
+  /// instead of reporting success for a write that never happened.
+  Future<void> markAsRead(List<String> ids) async {
+    if (ids.isEmpty) return;
+    _throwIfClosed();
+    final callTimeFlips = _flipUnread(ids: ids.toSet());
+    await _enqueueReadMutation(() => _writeMarkAsRead(ids, callTimeFlips));
+  }
+
+  Future<void> _writeMarkAsRead(
+    List<String> ids,
+    List<_ReadFlips> callTimeFlips,
+  ) async {
+    _throwIfClosed();
     final idSet = ids.toSet();
-    final itemsBefore = <NotificationItem>[];
-    final snapshotsBefore =
-        <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
+    // Re-assert any rows an earlier failed mutation rolled back: that
+    // rollback settled before this write, so the flip made at enqueue time
+    // may no longer be applied. Rows already read by an earlier successful
+    // write are deliberately not captured, so this failure cannot undo them.
+    final executionFlips = _flipUnread(ids: idSet);
+    final itemsBefore = <NotificationItem>[
+      for (final feed in _liveFeeds.toList()) ...feed.snapshot.value.items,
+    ];
 
     try {
-      for (final feed in _liveFeeds.toList()) {
-        final page = feed.snapshot.value;
-        itemsBefore.addAll(page.items);
-        if (!page.items.any((n) => !n.isRead && _matchesMarkReadId(n, idSet))) {
-          continue;
-        }
-        snapshotsBefore[feed] = (
-          page: page,
-          fetchGeneration: feed.fetchGeneration,
-        );
-        feed.snapshot.add(page.copyWith(items: _flipIsRead(page.items, idSet)));
-      }
       final notificationIds = _expandServerNotificationIds(itemsBefore, idSet);
       // Sign the exact URL + body the request will use, otherwise the
       // funnelcake server 401s with `URL mismatch` / `payload hash
@@ -1152,9 +1244,10 @@ class NotificationRepository {
       final body = FunnelcakeApiClient.buildMarkNotificationsReadBody(
         notificationIds: notificationIds,
       );
-      final authHeaders = _authHeadersProvider != null
-          ? await _authHeadersProvider(url, 'POST', body: body)
-          : <String, String>{};
+      final authProvider = _authHeadersProvider;
+      final authHeaders = authProvider == null
+          ? <String, String>{}
+          : await _readAuthHeaders(authProvider, url, body: body);
 
       await _funnelcakeApiClient.markNotificationsRead(
         pubkey: _userPubkey,
@@ -1166,7 +1259,7 @@ class NotificationRepository {
         await _notificationsDao.markAsRead(id, ownerPubkey: _userPubkey);
       }
     } catch (_) {
-      _restoreSnapshots(snapshotsBefore);
+      _restoreReadFlags([...callTimeFlips, ...executionFlips]);
       rethrow;
     }
   }
@@ -1174,37 +1267,30 @@ class NotificationRepository {
   /// Marks all notifications as read on the server and locally.
   ///
   /// Always sends the explicit server mark-all request, even when no live
-  /// snapshot has local unread rows. The optimistic local flip still only
-  /// touches feeds that contain unread rows. On failure, restores the
-  /// prior read flags for those feeds so every consumer (badge cubit, feed
-  /// bloc) recovers consistently without replacing concurrent fetch results.
-  ///
-  /// As in [markAsRead], only the feeds this call actually flipped are captured
-  /// for rollback, and a page that lands while the POST is pending is retained.
-  Future<void> markAllAsRead() => _enqueueReadMutation(_markAllAsRead);
+  /// snapshot has local unread rows. Unread rows flip immediately and the
+  /// sign + POST + DAO halves serialize behind other read mutations. On
+  /// failure, only the rows this call flipped are restored, under the same
+  /// applied-generation rule as [markAsRead]. Throws [StateError] when the
+  /// repository is already closed.
+  Future<void> markAllAsRead() async {
+    _throwIfClosed();
+    final callTimeFlips = _flipUnread();
+    await _enqueueReadMutation(() => _writeMarkAllAsRead(callTimeFlips));
+  }
 
-  Future<void> _markAllAsRead() async {
-    if (_closed) return;
-    final snapshotsBefore =
-        <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
+  Future<void> _writeMarkAllAsRead(List<_ReadFlips> callTimeFlips) async {
+    _throwIfClosed();
+    final executionFlips = _flipUnread();
 
     try {
-      for (final feed in _liveFeeds.toList()) {
-        final page = feed.snapshot.value;
-        if (page.items.every((n) => n.isRead)) continue;
-        snapshotsBefore[feed] = (
-          page: page,
-          fetchGeneration: feed.fetchGeneration,
-        );
-        feed.snapshot.add(page.copyWith(items: _flipAllRead(page.items)));
-      }
       final url = _funnelcakeApiClient
           .notificationsReadUri(pubkey: _userPubkey)
           .toString();
       final body = FunnelcakeApiClient.buildMarkNotificationsReadBody();
-      final authHeaders = _authHeadersProvider != null
-          ? await _authHeadersProvider(url, 'POST', body: body)
-          : <String, String>{};
+      final authProvider = _authHeadersProvider;
+      final authHeaders = authProvider == null
+          ? <String, String>{}
+          : await _readAuthHeaders(authProvider, url, body: body);
 
       await _funnelcakeApiClient.markNotificationsRead(
         pubkey: _userPubkey,
@@ -1213,7 +1299,7 @@ class NotificationRepository {
 
       await _notificationsDao.markAllAsRead(ownerPubkey: _userPubkey);
     } catch (_) {
-      _restoreSnapshots(snapshotsBefore);
+      _restoreReadFlags([...callTimeFlips, ...executionFlips]);
       rethrow;
     }
   }
@@ -1443,15 +1529,14 @@ class NotificationRepository {
     );
   }
 
-  /// Returns [items] with the matching ids flipped to `isRead: true`.
-  static List<NotificationItem> _flipIsRead(
+  /// Returns [items] with the given item ids flipped to `isRead: true`.
+  static List<NotificationItem> _withItemsRead(
     List<NotificationItem> items,
-    Set<String> ids,
+    Set<String> itemIds,
   ) {
-    return items.map((n) {
-      if (!_matchesMarkReadId(n, ids) || n.isRead) return n;
-      return _withRead(n, true);
-    }).toList();
+    return items
+        .map((n) => itemIds.contains(n.id) ? _withRead(n, true) : n)
+        .toList();
   }
 
   /// Expands display-row ids to all raw server notification ids represented by
@@ -1488,14 +1573,6 @@ class NotificationRepository {
 
   static bool _matchesMarkReadId(NotificationItem item, Set<String> ids) {
     return ids.contains(item.id) || item.notificationIds.any(ids.contains);
-  }
-
-  /// Returns [items] with every item flipped to `isRead: true`.
-  static List<NotificationItem> _flipAllRead(List<NotificationItem> items) {
-    return items.map((n) {
-      if (n.isRead) return n;
-      return _withRead(n, true);
-    }).toList();
   }
 
   static NotificationItem _withRead(NotificationItem item, bool isRead) {

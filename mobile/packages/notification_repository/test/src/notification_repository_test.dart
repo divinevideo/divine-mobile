@@ -35,6 +35,8 @@ void main() {
 
   NotificationRepository buildRepository({
     BlockedNotificationFilter? blockFilter,
+    AuthHeadersProvider? authHeadersProvider,
+    Duration? authHeadersTimeout,
   }) {
     return NotificationRepository(
       funnelcakeApiClient: funnelcakeApiClient,
@@ -42,6 +44,10 @@ void main() {
       notificationsDao: notificationsDao,
       userPubkey: userPubkey,
       blockFilter: blockFilter,
+      authHeadersProvider: authHeadersProvider,
+      authHeadersTimeout:
+          authHeadersTimeout ??
+          NotificationRepository.defaultAuthHeadersTimeout,
       hydrateOnStart: false,
     );
   }
@@ -6125,13 +6131,16 @@ void main() {
       });
 
       test(
-        'markAsRead ignores a closed repository without mutating feeds',
+        'markAsRead throws on a closed repository without mutating feeds',
         () async {
           stubNotifications([makeNotification()], unreadCount: 1);
           await repository.refresh();
           await repository.close();
 
-          await repository.markAsRead(['n1']);
+          await expectLater(
+            repository.markAsRead(['n1']),
+            throwsStateError,
+          );
 
           verifyNever(
             () => funnelcakeApiClient.markNotificationsRead(
@@ -6211,13 +6220,13 @@ void main() {
       });
 
       test(
-        'markAllAsRead ignores a closed repository without mutating feeds',
+        'markAllAsRead throws on a closed repository without mutating feeds',
         () async {
           stubNotifications([makeNotification()], unreadCount: 1);
           await repository.refresh();
           await repository.close();
 
-          await repository.markAllAsRead();
+          await expectLater(repository.markAllAsRead(), throwsStateError);
 
           verifyNever(
             () => funnelcakeApiClient.markNotificationsRead(
@@ -6307,6 +6316,207 @@ void main() {
 
         expect(attempt, equals(2));
         expect(await repository.watchUnreadCount().first, equals(0));
+      });
+
+      test('markAsRead flips a tapped row before an earlier queued write '
+          'settles', () async {
+        stubProfiles({});
+        stubNotifications([
+          makeNotification(
+            id: 'nA',
+            sourceEventId: 'evtA',
+            referencedEventId: 'video_a',
+          ),
+          makeNotification(
+            id: 'nB',
+            sourceEventId: 'evtB',
+            referencedEventId: 'video_b',
+          ),
+        ], unreadCount: 2);
+        await repository.refresh();
+        final items = (await repository.watchSnapshot().first).items;
+        final idA = items
+            .singleWhere((item) => item.sourceEventIds.contains('evtA'))
+            .id;
+        final idB = items
+            .singleWhere((item) => item.sourceEventIds.contains('evtB'))
+            .id;
+
+        final firstGate = Completer<MarkReadResponse>();
+        var attempt = 0;
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((_) {
+          attempt += 1;
+          return attempt == 1
+              ? firstGate.future
+              : Future.value(
+                  const MarkReadResponse(success: true, markedCount: 1),
+                );
+        });
+
+        final first = repository.markAsRead([idA]);
+        final second = repository.markAsRead([idB]);
+
+        // Both rows are already read even though A's POST is still pending:
+        // the tap must not wait behind the queue.
+        expect(await repository.watchUnreadCount().first, equals(0));
+
+        firstGate.complete(
+          const MarkReadResponse(success: true, markedCount: 1),
+        );
+        await first;
+        await second;
+        expect(await repository.watchUnreadCount().first, equals(0));
+      });
+
+      test(
+        'markAsRead rollback leaves a row another mutation read alone',
+        () async {
+          stubProfiles({});
+          stubNotifications([
+            makeNotification(
+              id: 'nA',
+              sourceEventId: 'evtA',
+              referencedEventId: 'video_a',
+            ),
+            makeNotification(
+              id: 'nB',
+              sourceEventId: 'evtB',
+              referencedEventId: 'video_b',
+            ),
+          ], unreadCount: 2);
+          await repository.refresh();
+          final items = (await repository.watchSnapshot().first).items;
+          final idA = items
+              .singleWhere((item) => item.sourceEventIds.contains('evtA'))
+              .id;
+          final idB = items
+              .singleWhere((item) => item.sourceEventIds.contains('evtB'))
+              .id;
+
+          final firstGate = Completer<MarkReadResponse>();
+          var attempt = 0;
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) {
+            attempt += 1;
+            return attempt == 1
+                ? firstGate.future
+                : Future.value(
+                    const MarkReadResponse(success: true, markedCount: 1),
+                  );
+          });
+
+          final first = repository.markAsRead([idA]);
+          final second = repository.markAsRead([idB]);
+          firstGate.completeError(const FunnelcakeException('boom'));
+          await expectLater(first, throwsA(isA<FunnelcakeException>()));
+
+          // Only A comes back unread; B's optimistic flip is not part of A's
+          // rollback scope.
+          expect(await repository.watchUnreadCount().first, equals(1));
+
+          await second;
+          expect(await repository.watchUnreadCount().first, equals(1));
+        },
+      );
+
+      test(
+        'markAsRead rollback survives a concurrent refresh that fails',
+        () async {
+          stubProfiles({});
+          stubNotifications([makeNotification()], unreadCount: 1);
+          await repository.refresh();
+          final loadedId =
+              (await repository.watchSnapshot().first).items.single.id;
+
+          final markGate = Completer<MarkReadResponse>();
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) => markGate.future);
+
+          final markFuture = repository.markAsRead([loadedId]);
+          expect(await repository.watchUnreadCount().first, equals(0));
+
+          // The refresh bumps the fetch generation and then fails. It must not
+          // supersede the rollback, or the optimistic read would be stranded
+          // with no server write behind it.
+          when(
+            () => funnelcakeApiClient.getNotifications(
+              pubkey: any(named: 'pubkey'),
+              cursor: any(named: 'cursor'),
+              cursorId: any(named: 'cursorId'),
+              types: any(named: 'types'),
+              requestUri: any(named: 'requestUri'),
+              authHeaders: any(named: 'authHeaders'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenThrow(const FunnelcakeException('refresh failed'));
+
+          await expectLater(
+            repository.refresh(),
+            throwsA(isA<FunnelcakeException>()),
+          );
+
+          markGate.completeError(const FunnelcakeException('boom'));
+          await expectLater(markFuture, throwsA(isA<FunnelcakeException>()));
+
+          expect(await repository.watchUnreadCount().first, equals(1));
+        },
+      );
+
+      test('a hung NIP-98 sign does not wedge later read mutations', () async {
+        final signGate = Completer<Map<String, String>>();
+        var signCalls = 0;
+        repository = buildRepository(
+          authHeadersProvider: (url, method, {body}) {
+            signCalls += 1;
+            // Call 1 signs the refresh GET; call 2 signs the first
+            // mark-read POST and must hang, call 3 the retry.
+            return signCalls == 2
+                ? signGate.future
+                : Future<Map<String, String>>.value({
+                    'Authorization': 'test',
+                  });
+          },
+          authHeadersTimeout: const Duration(milliseconds: 20),
+        );
+        stubProfiles({});
+        stubNotifications([makeNotification()], unreadCount: 1);
+        await repository.refresh();
+        final loadedId =
+            (await repository.watchSnapshot().first).items.single.id;
+
+        await expectLater(
+          repository.markAsRead([loadedId]),
+          throwsA(isA<TimeoutException>()),
+        );
+
+        // The timed-out sign settled its queue slot, so the next mutation
+        // still reaches the server. Call 1 signed the refresh GET, call 2
+        // the timed-out POST, call 3 the retried POST.
+        await repository.markAsRead([loadedId]);
+        expect(signCalls, equals(3));
+        verify(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).called(1);
       });
 
       test('markAllAsRead rolls back when API throws', () async {

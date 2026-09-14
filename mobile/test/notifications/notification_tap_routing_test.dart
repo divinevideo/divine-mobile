@@ -17,9 +17,34 @@ void main() {
   const sourceEvent = 'source_event_id';
   const videoCoordinate = '34236:owner_hex:my-vine-id';
 
+  /// Calls the production router with the campaign fields defaulted to null;
+  /// campaign cases below pass them explicitly.
+  ({
+    NotificationTapTarget target,
+    String? targetEventId,
+    String? videoCoordinate,
+  })
+  pushTarget({
+    required String? referencedAddress,
+    required String? referencedEventId,
+    required String? eventId,
+    required String? notificationType,
+    required String? senderPubkey,
+    String? tapTargetType,
+    String? tapTargetValue,
+  }) => app.pushNotificationTapTarget(
+    referencedAddress: referencedAddress,
+    referencedEventId: referencedEventId,
+    eventId: eventId,
+    notificationType: notificationType,
+    senderPubkey: senderPubkey,
+    tapTargetType: tapTargetType,
+    tapTargetValue: tapTargetValue,
+  );
+
   group('pushNotificationTapTarget', () {
     test('campaign app_route opens the supplied in-app location', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: null,
         eventId: null,
@@ -39,7 +64,7 @@ void main() {
         (type: 'app_route', value: '//example.com/path'),
         (type: 'app_route', value: 'settings'),
       ]) {
-        final result = app.pushNotificationTapTarget(
+        final result = pushTarget(
           referencedAddress: null,
           referencedEventId: null,
           eventId: null,
@@ -73,16 +98,16 @@ void main() {
         eventId: null,
         notificationType: 'campaign',
         senderPubkey: null,
+        container: container,
         tapTargetType: 'app_route',
         tapTargetValue: '/following/new',
-        container: container,
       );
 
       expect(router.routeInformationProvider.value.uri.path, '/following/new');
     });
 
     test('follow opens the actor profile (carries no referencedEventId)', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: null,
         eventId: 'contact_list_event',
@@ -94,7 +119,7 @@ void main() {
     });
 
     test('like opens the referenced video without comments', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: videoEvent,
         eventId: sourceEvent,
@@ -107,7 +132,7 @@ void main() {
     });
 
     test('comment opens the referenced video with comments', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: commentEvent,
         eventId: sourceEvent,
@@ -120,7 +145,7 @@ void main() {
     });
 
     test('repost opens the referenced video without comments', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: videoEvent,
         eventId: sourceEvent,
@@ -132,7 +157,7 @@ void main() {
     });
 
     test('video mention uses eventId as the video target without comments', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: null,
         eventId: sourceEvent,
@@ -145,7 +170,7 @@ void main() {
     });
 
     test('mention without a video target falls back to the actor profile', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: null,
         eventId: null,
@@ -158,7 +183,7 @@ void main() {
     });
 
     test('prefers referencedEventId over eventId as the video target', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: videoEvent,
         eventId: sourceEvent,
@@ -170,7 +195,7 @@ void main() {
     });
 
     test('nothing routable and no pubkey opens the inbox', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: null,
         eventId: null,
@@ -183,7 +208,7 @@ void main() {
 
     test('unknown type with a video target opens the video without '
         'comments', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: videoEvent,
         eventId: null,
@@ -197,7 +222,7 @@ void main() {
 
     test('prefers the authoritative addressable coordinate as the video '
         'target', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: videoCoordinate,
         referencedEventId: videoEvent,
         eventId: sourceEvent,
@@ -211,7 +236,7 @@ void main() {
     });
 
     test('a video coordinate alone is a video target (no event id)', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: videoCoordinate,
         referencedEventId: null,
         eventId: null,
@@ -232,7 +257,7 @@ void main() {
       // (targetEventId comes back null even though referencedEventId is set),
       // so the profile/inbox fallback never applies — an unfetchable video is
       // discovered at, and surfaced by, the video detail screen by design.
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: videoCoordinate,
         referencedEventId: commentEvent,
         eventId: null,
@@ -248,7 +273,7 @@ void main() {
     test('ignores a non-video addressable coordinate and falls back', () {
       // A coordinate whose kind is not a NIP-71 video kind cannot be resolved
       // as a raw video route, so it must not be treated as a video target.
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: '30023:owner_hex:blog-slug',
         referencedEventId: null,
         eventId: null,
@@ -261,7 +286,7 @@ void main() {
     });
 
     test('falls back to referencedEventId when no coordinate is present', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: null,
         referencedEventId: videoEvent,
         eventId: sourceEvent,
@@ -275,7 +300,7 @@ void main() {
     });
 
     test('ignores a malformed referencedAddress', () {
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: 'not-a-coordinate',
         referencedEventId: null,
         eventId: null,
@@ -291,7 +316,7 @@ void main() {
         'back', () {
       // '34236::' parses to empty pubkey/d-tag components — not a routable
       // video, so the tap must fall back instead of pushing a dead route.
-      final result = app.pushNotificationTapTarget(
+      final result = pushTarget(
         referencedAddress: '34236::',
         referencedEventId: null,
         eventId: null,
