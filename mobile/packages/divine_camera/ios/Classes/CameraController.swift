@@ -104,10 +104,22 @@ class CameraController: NSObject {
     /// tell that apart from the alternatives — a slow attach on the record
     /// tap, or a mic that delivered nothing at all.
     ///
+    /// Both audio PTS fields hold the timestamp *after*
+    /// `retimedToVideoClock(_:)`, so they are comparable with the anchor. The
+    /// raw audio-clock reading is preserved separately in `audioClockOffset`.
+    ///
     /// Written on `videoOutputQueue`, read once after the writer finished —
     /// same loose cross-queue convention as `lastVideoFrameEndPTS`.
     private var writerAnchorPTS: CMTime?
     private var firstAppendedAudioPTS: CMTime?
+    /// How far the audio capture session's clock sat from the video capture
+    /// session's clock when this recording's first audio buffer was retimed
+    /// (`converted - raw`). The two sessions stamp their buffers on different
+    /// clocks, and a field log from an iPhone on iOS 26.6 measured the audio
+    /// clock 0.9–1.8s *behind* the video clock. Appended unconverted, that
+    /// offset makes the writer edit out the first 0.9–1.8s of sound, play the
+    /// rest that far ahead of the picture, and leave the tail silent (#7888).
+    private var audioClockOffset: CMTime?
     /// PTS of the first audio buffer the delegate saw for this recording,
     /// recorded before every gate that can drop it — the writer session not
     /// being open yet, an interruption in progress, or no audio writer input
@@ -2440,6 +2452,7 @@ class CameraController: NSObject {
             self.writerSessionStartedAt = nil
             self.firstAppendedAudioPTS = nil
             self.firstSeenAudioPTS = nil
+            self.audioClockOffset = nil
             self.recordingStartTime = Date()
             self.appendedAudioBufferCount = 0
             self.maxAudioPeakDb = -160
@@ -2778,14 +2791,16 @@ class CameraController: NSObject {
 
     /// Emits the #7888 audio-alignment breadcrumb for a finished recording:
     /// how far the first encoded audio sample sits behind the writer anchor,
-    /// how much of that gap predates any mic buffer at all, and which audio
-    /// attach path this recording took.
+    /// how much of that gap predates any mic buffer at all, how far the audio
+    /// session's clock sat from the video session's, and which audio attach
+    /// path this recording took.
     private func logAudioAlignmentDiagnostics(asset: AVAsset) {
         func ms(_ later: CMTime?, _ earlier: CMTime?) -> String {
             guard let later, let earlier,
                   later.isNumeric, earlier.isNumeric else { return "n/a" }
             return String(format: "%.0f", (later - earlier).seconds * 1000)
         }
+        let clockOffsetMs = ms(self.audioClockOffset, .zero)
 
         var startDelayMs = "n/a"
         if let requested = self.recordRequestTime, let anchored = self.writerSessionStartedAt {
@@ -2803,6 +2818,7 @@ class CameraController: NSObject {
         DivineCameraLog.shared.info(
             "Audio alignment: appendLeadInMs=\(ms(self.firstAppendedAudioPTS, self.writerAnchorPTS)), "
                 + "micLeadInMs=\(ms(self.firstSeenAudioPTS, self.writerAnchorPTS)), "
+                + "clockOffsetMs=\(clockOffsetMs), "
                 + "audioTrackStartMs=\(trackStartMs), "
                 + "tapToCaptureMs=\(startDelayMs), "
                 + "attachMs=\(String(format: "%.0f", self.lastAudioAttachMs)), "
@@ -3010,6 +3026,10 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         // Handle audio output
         else if output == audioOutput {
+            // The audio session stamps its buffers on its own clock, not on
+            // the one the writer was anchored with. Move them over first so
+            // every comparison and append below shares the video timeline.
+            let sampleBuffer = retimedToVideoClock(sampleBuffer)
             // Note the mic's first buffer ahead of every gate below. Inside
             // them a recording that never got an audio writer input, one
             // dropped by an interruption, and one whose mic delivered nothing
@@ -3035,6 +3055,75 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 }
             }
         }
+    }
+
+    /// The clock a capture session stamps its output buffers on.
+    private func synchronizationClock(of session: AVCaptureSession?) -> CMClock? {
+        guard let session else { return nil }
+        if #available(iOS 15.4, *) {
+            return session.synchronizationClock
+        }
+        return session.masterClock
+    }
+
+    /// Re-stamps an audio buffer from the audio capture session's clock onto
+    /// the video capture session's clock.
+    ///
+    /// "All capture output sample buffer timestamps are on the
+    /// synchronizationClock timebase" (AVCaptureSession.h) — per session. A
+    /// video-only session runs on the host clock; an audio-only session runs
+    /// on an audio clock, which "may drift from CMClockGetHostTimeClock()"
+    /// (CMAudioClock.h). The writer session is opened with a video PTS, so an
+    /// audio PTS handed over unconverted lands wherever the audio clock
+    /// happens to sit: on an M4 iPad within ~60ms, on a field iPhone 0.9–1.8s
+    /// early, which the writer edits out at the head and repays as silence at
+    /// the tail (#7888). `CMSyncConvertTime` is the conversion AVFoundation
+    /// itself documents for exactly this.
+    ///
+    /// Returns the buffer unchanged while not recording (nothing downstream
+    /// reads it then, and the audio session runs between recordings), when
+    /// both sessions share a clock, or when the copy fails; the data buffer
+    /// is shared, only the timing is replaced. Runs on `videoOutputQueue`.
+    private func retimedToVideoClock(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer {
+        guard isRecording,
+              let audioClock = synchronizationClock(of: audioCaptureSession),
+              let videoClock = synchronizationClock(of: captureSession),
+              audioClock != videoClock else {
+            return sampleBuffer
+        }
+
+        var timing = CMSampleTimingInfo()
+        guard CMSampleBufferGetSampleTimingInfo(
+            sampleBuffer, at: 0, timingInfoOut: &timing) == noErr,
+            timing.presentationTimeStamp.isNumeric else {
+            return sampleBuffer
+        }
+
+        let rawPTS = timing.presentationTimeStamp
+        let convertedPTS = CMSyncConvertTime(rawPTS, from: audioClock, to: videoClock)
+        if audioClockOffset == nil {
+            audioClockOffset = convertedPTS - rawPTS
+        }
+        timing.presentationTimeStamp = convertedPTS
+        if timing.decodeTimeStamp.isNumeric {
+            timing.decodeTimeStamp = CMSyncConvertTime(
+                timing.decodeTimeStamp, from: audioClock, to: videoClock)
+        }
+
+        // One timing entry covers the whole buffer: `duration` is the
+        // per-sample duration and the PTS names the first sample.
+        var retimed: CMSampleBuffer?
+        let status = CMSampleBufferCreateCopyWithNewTiming(
+            allocator: kCFAllocatorDefault,
+            sampleBuffer: sampleBuffer,
+            sampleTimingEntryCount: 1,
+            sampleTimingArray: &timing,
+            sampleBufferOut: &retimed
+        )
+        guard status == noErr, let retimed else {
+            return sampleBuffer
+        }
+        return retimed
     }
 
     /// Publishes a freshly captured frame to the Flutter texture and handles
