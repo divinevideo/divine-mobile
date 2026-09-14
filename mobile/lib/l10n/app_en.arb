@@ -2928,6 +2928,7 @@
     "description": "SnackBar action label that opens the folder containing the just-saved log file. Desktop platforms only."
   },
   "supportCouldNotOpenMessages": "Could not open support messages",
+  "supportChatNotAvailable": "Support chat not available",
   "supportCouldNotOpenPage": "Could not open {pageName}",
   "@supportCouldNotOpenPage": {
     "placeholders": {
@@ -6625,6 +6626,8 @@
   "minorAccountReviewAppealUnder13Body": "Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
   "@minorAccountReviewAppealUnder13Body": {"description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."},
   "appealOpenSupportCenter": "Open Support Center",
+  "accountStatusMessageSupport": "Message support",
+  "@accountStatusMessageSupport": {"description": "Button opening private support messaging to request reconsideration of an account restriction."},
   "minorAccountReviewOpenModerationMessage": "Open Moderation Message",
   "minorAccountReviewOpenReviewPage": "Open review page",
   "minorAccountReviewCheckAgain": "Check Again",

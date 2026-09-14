@@ -4795,6 +4795,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'N-am putut deschide mesajele de asistență';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'N-am putut deschide $pageName';
   }
@@ -10435,6 +10438,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Deschide centrul de asistență';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

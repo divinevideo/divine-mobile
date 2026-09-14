@@ -4548,6 +4548,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supportCouldNotOpenMessages => 'የድጋፍ መልዕክቶችን መክፈት አልተቻለም';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '$pageName መክፈት አልተቻለም';
   }
@@ -9957,6 +9960,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'የድጋፍ ማዕከልን ክፈት';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'የቁጥጥር መልእክቱን ክፈት';
