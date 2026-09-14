@@ -13,6 +13,7 @@ import 'package:openvine/features/post_publish/view/post_publish_confirmation_sh
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Listens for background upload completions and shows the appropriate UI.
 ///
@@ -54,6 +56,7 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
   var _pendingSuccessCount = 0;
   PostPublishConfirmationOffer? _pendingConfirmationOffer;
   PublishedVideo? _pendingPublishedVideo;
+  Future<void> _failureSheetQueue = Future<void>.value();
 
   @override
   Widget build(BuildContext context) {
@@ -140,10 +143,48 @@ class _UploadFailureListenerState extends State<UploadFailureListener> {
             .where((u) => newFailedIds.contains(u.draft.id))
             .toList();
 
-        _showFailureSheetsSequentially(container, navContext, newFailures);
+        final queued = _showFailureSheetsAfter(
+          _failureSheetQueue,
+          container,
+          navContext,
+          newFailures,
+        );
+        _failureSheetQueue = queued;
+        unawaited(queued);
       },
       child: widget.child,
     );
+  }
+
+  Future<void> _showFailureSheetsAfter(
+    Future<void> previous,
+    ProviderContainer container,
+    BuildContext context,
+    List<BackgroundUpload> failedUploads,
+  ) async {
+    try {
+      await previous;
+      if (!context.mounted) return;
+      await _showFailureSheetsSequentially(container, context, failedUploads);
+    } on Object catch (error, stack) {
+      // Before the queue this surfaced as an uncaught zone error, which is
+      // recorded as a non-fatal. Catching keeps the queue alive for the next
+      // failure; recording keeps the presentation bug visible.
+      Log.error(
+        'Failed to show an upload failure sheet',
+        name: 'UploadFailureListener',
+        category: LogCategory.system,
+        error: error,
+        stackTrace: stack,
+      );
+      await container
+          .read(crashReportingServiceProvider)
+          .recordError(
+            error,
+            stack,
+            reason: 'Upload failure sheet presentation failed',
+          );
+    }
   }
 }
 
