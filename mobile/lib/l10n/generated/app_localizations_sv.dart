@@ -4780,11 +4780,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportFailed => 'Kunde inte rapportera innehåll. Försök igen.';
 
   @override
-  String get reportNotSent =>
-      'Kunde inte skicka din anmälan. Kontrollera din anslutning och försök igen.';
-
-  @override
-  String get reportReceivedTitle => 'Rapport mottagen';
+  String get reportReceivedTitle => 'Anmälan sparad';
 
   @override
   String get reportReceivedThankYou =>
@@ -4792,11 +4788,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Vi kunde inte nå modereringsteamet direkt just nu, men din anmälan togs emot och kommer att granskas.';
+      'Vi skickar den automatiskt när du är ansluten. Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.';
 
   @override
   String get reportContactModeration => 'Meddela modereringsteamet';

@@ -4666,6 +4666,218 @@ class DmRepository {
     );
   }
 
+  /// The guards, rumor build, and durable enqueue shared by [sendMessage] and
+  /// [enqueueSend] — everything up to and including parking the `outgoing_dms`
+  /// row, but NOT the publish. Returns a terminal [NIP17SendResult] in
+  /// `refusal` (self-send / policy block / oversized) or the built rumor and
+  /// its derived send context. #8053.
+  Future<
+    ({
+      NIP17SendResult? refusal,
+      Event? rumor,
+      String? conversationId,
+      String? sendBatchId,
+      List<List<String>>? rumorTags,
+      List<String>? participants,
+    })
+  >
+  _prepareAndEnqueueSend({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
+    List<List<String>> additionalTags = const [],
+  }) async {
+    _assertInitialized();
+    validatePubkey(recipientPubkey);
+    if (content.trim().isEmpty) {
+      throw ArgumentError.value(content, 'content', 'must not be empty');
+    }
+
+    // Divine does not support a self-addressed conversation (#8351, decided
+    // on #8261). Refused here rather than in the UI so every caller is
+    // covered — share-to-DM, collaborator invites, and whatever is added
+    // next. Returned rather than thrown because callers
+    // already branch on `success` and one of them,
+    // `CollaboratorInviteService.sendInvites`, loops without a catch: a
+    // throw would abort the remaining invites.
+    //
+    // A published self-send is not merely useless, it is permanent. The
+    // receive path drops a wrap whose participants collapse to a single
+    // pubkey (#2824), so the app cannot read its own message back; and a
+    // NIP-59 gift wrap is signed by a throwaway ephemeral key, which is the
+    // author funnelcake matches a kind-5 against, so the real sender is never
+    // authorized to delete it.
+    if (_isSelf(recipientPubkey)) {
+      return (
+        refusal: const NIP17SendResult.failure(
+          'refused: a message cannot be addressed to its own sender',
+        ),
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
+      );
+    }
+
+    // Send gate (#176): block before building or enqueuing a doomed intent.
+    // NIP17MessageService.sendRumor is the authoritative choke point (it also
+    // covers the drain replay); this earlier check avoids storing a queue row
+    // that would only ever re-fail the gate.
+    if (!await _messageService!.canSendTo(recipientPubkey)) {
+      return (
+        refusal: const NIP17SendResult.blocked(
+          'blocked: recipient not permitted by send policy',
+        ),
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
+      );
+    }
+
+    final rumorTags = <List<String>>[
+      ...additionalTags,
+      if (replyToId != null) ['e', replyToId],
+    ];
+    final participants = [_userPubkey, recipientPubkey]..sort();
+    final conversationId = computeConversationId(participants);
+
+    // Durable, collision-proof identity for this send, minted BEFORE the
+    // rumor is built — the 1:1 counterpart of the token [sendGroupMessage]
+    // mints, for the same reason. A rumor's event id is
+    // sha256([0, pubkey, created_at(seconds), kind, tags, content]) with no
+    // nonce, so two sends of byte-identical text to the same recipient in the
+    // SAME Unix second would otherwise build byte-identical rumors, and every
+    // layer below keys on that id: the queue row PK (`OutgoingDm.id`, enqueued
+    // with insertOrIgnore), the local message PK (likewise insertOrIgnore),
+    // and — beyond this device — the RECIPIENT's own rumor-id dedup. The
+    // second send would report success while vanishing from the queue, from
+    // local history, and from the recipient, leaving no failure status and
+    // nothing for the retry sweep to re-drive.
+    //
+    // The token is injected into the rumor as the same client-internal `batch`
+    // tag the group path uses, so both paths stay symmetric and the ingest
+    // side needs no new case. It rides inside the encrypted gift-wrapped rumor
+    // (only the recipient and the sender's own self-wrap ever decrypt it) and
+    // is independent secure random, so it discloses nothing. See #7326.
+    final sendBatchId = idempotencyKey ?? _newSendBatchId();
+
+    // Build the rumor up front so the queue row PK matches the rumor id
+    // the relay will see — receiver-side gift-wrap dedup keys on this id
+    // and a re-mint between enqueue and publish would defeat it.
+    //
+    // The batch tag is deliberately NOT part of [rumorTags]: that list is what
+    // the happy path persists as the local row's `tagsJson`, and the group path
+    // likewise keeps its wire-only token out of the happy-path persisted tags.
+    // Recovery reconstructs `tagsJson` from the full stored rumor instead.
+    final rumor = _messageService!.buildRumor(
+      recipientPubkey: recipientPubkey,
+      content: content,
+      createdAt: createdAt,
+      additionalTags: [
+        ...rumorTags,
+        [_sendBatchTagKey, sendBatchId],
+      ],
+    );
+
+    final oversized = _refuseIfOversized(rumor);
+    if (oversized != null) {
+      return (
+        refusal: oversized,
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
+      );
+    }
+
+    // Enqueue before publish so an app crash mid-send leaves a
+    // recoverable trace. No-op when the queue dao isn't wired in
+    // (older test fixtures, NIP-04-only callers).
+    final outgoingDao = _outgoingDmsDao;
+    if (outgoingDao != null) {
+      await outgoingDao.enqueue(
+        OutgoingDm(
+          id: rumor.id,
+          conversationId: conversationId,
+          recipientPubkey: recipientPubkey,
+          content: content,
+          createdAt: rumor.createdAt,
+          rumorEventJson: jsonEncode(rumor.toJson()),
+          messageKind: rumor.kind,
+          replyToId: replyToId,
+          recipientWrapStatus: OutgoingWrapStatus.pending,
+          selfWrapStatus: OutgoingWrapStatus.pending,
+          queuedAt: DateTime.now(),
+          ownerPubkey: _userPubkey,
+          // Stamped verbatim, as the group path stamps its siblings: a 1:1
+          // row has no siblings, but carrying the token makes a deleted
+          // bubble's cancellation match by exact value instead of falling
+          // back to the collision-prone `(createdAt, content)` tuple.
+          sendBatchId: sendBatchId,
+        ),
+      );
+    }
+
+    return (
+      refusal: null,
+      rumor: rumor,
+      conversationId: conversationId,
+      sendBatchId: sendBatchId,
+      rumorTags: rumorTags,
+      participants: participants,
+    );
+  }
+
+  /// Enqueues a NIP-17 DM durably WITHOUT publishing it, returning the parked
+  /// rumor id so a caller can await only the fast local write and drive
+  /// delivery afterward (via [recoverFullSend] or the retry sweep). The
+  /// optimistic counterpart of [sendMessage]. #8053.
+  ///
+  /// Retry a returned rumor with [recoverFullSend]. For replayable durable
+  /// intents, pass both [idempotencyKey] and [createdAt] (Unix seconds) with
+  /// identical content, recipient, and tags on every call. This reproduces the
+  /// same rumor across restarts. Omitting them creates a new message each time.
+  @useResult
+  Future<EnqueueSendResult> enqueueSend({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
+    List<List<String>> additionalTags = const [],
+  }) async {
+    if (_outgoingDmsDao == null) {
+      throw StateError('enqueueSend requires a durable outgoing queue');
+    }
+    if ((idempotencyKey == null) != (createdAt == null)) {
+      throw ArgumentError(
+        'An idempotent send needs both its key and timestamp',
+      );
+    }
+    final prep = await _prepareAndEnqueueSend(
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+      idempotencyKey: idempotencyKey,
+      createdAt: createdAt,
+      additionalTags: additionalTags,
+    );
+    final refusal = prep.refusal;
+    if (refusal != null) {
+      final message = refusal.error ?? 'send refused';
+      if (refusal.blocked) return EnqueueSendResult.blocked(message);
+      if (refusal.tooLong) return EnqueueSendResult.tooLong(message);
+      return EnqueueSendResult.refused(message);
+    }
+    return EnqueueSendResult.enqueued(prep.rumor!.id);
+  }
+
   /// Send a text message to a 1:1 conversation.
   ///
   /// Throws [StateError] if the repository has not been initialized.
@@ -4698,116 +4910,20 @@ class DmRepository {
     List<List<String>> additionalTags = const [],
     bool skipNip04Fallback = false,
   }) async {
-    _assertInitialized();
-    validatePubkey(recipientPubkey);
-    if (content.trim().isEmpty) {
-      throw ArgumentError.value(content, 'content', 'must not be empty');
-    }
-
-    // Divine does not support a self-addressed conversation (#8351, decided
-    // on #8261). Refused here rather than in the UI so every caller is
-    // covered — share-to-DM, collaborator invites, and whatever is added
-    // next. Returned rather than thrown because callers
-    // already branch on `success` and one of them,
-    // `CollaboratorInviteService.sendInvites`, loops without a catch: a
-    // throw would abort the remaining invites.
-    //
-    // A published self-send is not merely useless, it is permanent. The
-    // receive path drops a wrap whose participants collapse to a single
-    // pubkey (#2824), so the app cannot read its own message back; and a
-    // NIP-59 gift wrap is signed by a throwaway ephemeral key, which is the
-    // author funnelcake matches a kind-5 against, so the real sender is never
-    // authorized to delete it.
-    if (_isSelf(recipientPubkey)) {
-      return const NIP17SendResult.failure(
-        'refused: a message cannot be addressed to its own sender',
-      );
-    }
-
-    // Send gate (#176): block before building or enqueuing a doomed intent.
-    // NIP17MessageService.sendRumor is the authoritative choke point (it also
-    // covers the drain replay); this earlier check avoids storing a queue row
-    // that would only ever re-fail the gate.
-    if (!await _messageService!.canSendTo(recipientPubkey)) {
-      return const NIP17SendResult.blocked(
-        'blocked: recipient not permitted by send policy',
-      );
-    }
-
-    final rumorTags = <List<String>>[
-      ...additionalTags,
-      if (replyToId != null) ['e', replyToId],
-    ];
-    final participants = [_userPubkey, recipientPubkey]..sort();
-    final conversationId = computeConversationId(participants);
-
-    // Durable, collision-proof identity for this send, minted BEFORE the
-    // rumor is built — the 1:1 counterpart of the token [sendGroupMessage]
-    // mints, for the same reason. A rumor's event id is
-    // sha256([0, pubkey, created_at(seconds), kind, tags, content]) with no
-    // nonce, so two sends of byte-identical text to the same recipient in the
-    // SAME Unix second would otherwise build byte-identical rumors, and every
-    // layer below keys on that id: the queue row PK (`OutgoingDm.id`, enqueued
-    // with insertOrIgnore), the local message PK (likewise insertOrIgnore),
-    // and — beyond this device — the RECIPIENT's own rumor-id dedup. The
-    // second send would report success while vanishing from the queue, from
-    // local history, and from the recipient, leaving no failure status and
-    // nothing for the retry sweep to re-drive.
-    //
-    // The token is injected into the rumor as the same client-internal `batch`
-    // tag the group path uses, so both paths stay symmetric and the ingest
-    // side needs no new case. It rides inside the encrypted gift-wrapped rumor
-    // (only the recipient and the sender's own self-wrap ever decrypt it) and
-    // is independent secure random, so it discloses nothing. See #7326.
-    final sendBatchId = _newSendBatchId();
-
-    // Build the rumor up front so the queue row PK matches the rumor id
-    // the relay will see — receiver-side gift-wrap dedup keys on this id
-    // and a re-mint between enqueue and publish would defeat it.
-    //
-    // The batch tag is deliberately NOT part of [rumorTags]: that list is what
-    // the happy path persists as the local row's `tagsJson`, and the group path
-    // likewise keeps its wire-only token out of the happy-path persisted tags.
-    // Recovery reconstructs `tagsJson` from the full stored rumor instead.
-    final rumor = _messageService!.buildRumor(
+    final prep = await _prepareAndEnqueueSend(
       recipientPubkey: recipientPubkey,
       content: content,
-      additionalTags: [
-        ...rumorTags,
-        [_sendBatchTagKey, sendBatchId],
-      ],
+      replyToId: replyToId,
+      additionalTags: additionalTags,
     );
-
-    final oversized = _refuseIfOversized(rumor);
-    if (oversized != null) return oversized;
-
-    // Enqueue before publish so an app crash mid-send leaves a
-    // recoverable trace. No-op when the queue dao isn't wired in
-    // (older test fixtures, NIP-04-only callers).
+    final refusal = prep.refusal;
+    if (refusal != null) return refusal;
+    final rumor = prep.rumor!;
+    final conversationId = prep.conversationId!;
+    final sendBatchId = prep.sendBatchId!;
+    final rumorTags = prep.rumorTags!;
+    final participants = prep.participants!;
     final outgoingDao = _outgoingDmsDao;
-    if (outgoingDao != null) {
-      await outgoingDao.enqueue(
-        OutgoingDm(
-          id: rumor.id,
-          conversationId: conversationId,
-          recipientPubkey: recipientPubkey,
-          content: content,
-          createdAt: rumor.createdAt,
-          rumorEventJson: jsonEncode(rumor.toJson()),
-          messageKind: rumor.kind,
-          replyToId: replyToId,
-          recipientWrapStatus: OutgoingWrapStatus.pending,
-          selfWrapStatus: OutgoingWrapStatus.pending,
-          queuedAt: DateTime.now(),
-          ownerPubkey: _userPubkey,
-          // Stamped verbatim, as the group path stamps its siblings: a 1:1
-          // row has no siblings, but carrying the token makes a deleted
-          // bubble's cancellation match by exact value instead of falling
-          // back to the collision-prone `(createdAt, content)` tuple.
-          sendBatchId: sendBatchId,
-        ),
-      );
-    }
 
     // Route the gift wrap to the recipient's NIP-17 DM inbox relays
     // (kind 10050) when they advertise one; null falls back to the

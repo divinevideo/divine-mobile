@@ -54,6 +54,42 @@ void main() {
   });
 
   group('AppDatabase', () {
+    group('pending report schema recovery', () {
+      test(
+        'restores moderation columns without losing an accepted report',
+        () async {
+          await database.pendingReportsDao.enqueue(
+            PendingReport(
+              reportId: 'repair-report',
+              userPubkey: testPubkey,
+              eventJson: '{}',
+              zendeskPayload: '{}',
+              createdAt: DateTime(2026),
+            ),
+          );
+          for (final column in [
+            'moderation_payload',
+            'moderation_status',
+            'moderation_attempts',
+          ]) {
+            await database.customStatement(
+              'ALTER TABLE pending_reports DROP COLUMN $column',
+            );
+          }
+          await database.close();
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          final report = await database.pendingReportsDao.getById(
+            'repair-report',
+          );
+          expect(report, isNotNull);
+          expect(report!.relayStatus, PendingReportChannelStatus.pending);
+          expect(report.moderationPayload, isNull);
+          expect(report.moderationStatus, PendingReportChannelStatus.done);
+          expect(report.moderationAttempts, 0);
+        },
+      );
+    });
+
     group('runStartupCleanup', () {
       test('deletes expired nostr events', () async {
         final dao = database.nostrEventsDao;
@@ -2026,6 +2062,7 @@ const _v1NormalizationTables = <String>[
   'pending_profile_saves',
   'dm_message_reactions',
   'pending_view_events',
+  'pending_reports',
   'pending_product_events',
   'pending_gift_wraps',
   'processed_gift_wraps',

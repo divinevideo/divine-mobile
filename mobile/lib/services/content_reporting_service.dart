@@ -1,27 +1,33 @@
 // ABOUTME: Content reporting service for user-generated content violations
 // ABOUTME: Implements NIP-56 reporting events (kind 1984) for Apple compliance and community-driven moderation
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:uuid/uuid.dart';
 
-/// Whether a submitted report reached anything outside this device.
-///
-/// A report is built and signed locally, then pushed to two independent
-/// channels. Neither is required to succeed for the report to be recorded,
-/// so [ReportResult.success] alone says nothing about delivery.
+/// Whether a report is durably queued, delivered, or deliberately refused.
+/// Production callers receive [queued] after all delivery intents are saved.
+/// Legacy callers without an outbox retain explicit delivery outcomes.
 enum ReportDelivery {
+  /// Every requested delivery intent is saved locally for background retry.
+  queued,
+
   /// At least one off-device channel accepted the report: the relay took
   /// the kind-1984 (NIP-56) event, or the Zendesk ticket was created.
   reached,
@@ -68,7 +74,8 @@ class ReportResult {
   /// outcome as a delivered report even though nothing left the device.
   bool get isSilentSuccess =>
       success &&
-      (delivery == ReportDelivery.reached ||
+      (delivery == ReportDelivery.queued ||
+          delivery == ReportDelivery.reached ||
           delivery == ReportDelivery.refused);
 
   factory ReportResult.createSuccess(
@@ -139,22 +146,47 @@ class ContentReport {
 
 /// Service for reporting inappropriate content
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-class ContentReportingService {
+class ContentReportingService implements ReportChannelDriver {
   ContentReportingService({
     required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
     required String moderationRelayUrl,
+    PendingReportsDao? pendingReportsDao,
+    this.moderationPubkey,
+    this.deliverModerationDm,
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
-       _moderationRelayUrl = moderationRelayUrl {
+       _moderationRelayUrl = moderationRelayUrl,
+       _pendingReportsDao = pendingReportsDao {
     _loadReportHistory();
   }
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
   final String _moderationRelayUrl;
+
+  /// Durable intent for relay, support ticket, and private moderation delivery.
+  /// Production injects this DAO; legacy callers without it await delivery.
+  final PendingReportsDao? _pendingReportsDao;
+  final String? moderationPubkey;
+  final Future<bool> Function(PendingReport report)? deliverModerationDm;
+  final StreamController<void> _reportQueued = StreamController.broadcast();
+  final Map<String, Future<bool>> _channelInFlight = {};
+
+  /// Emits once each time a report has been saved to the durable queue, so
+  /// the retry worker can attempt delivery right away instead of waiting for
+  /// its next timer, reconnect, or foreground transition. The worker owns
+  /// this subscription; reading the worker's provider from here would make
+  /// the two providers depend on each other.
+  Stream<void> get reportQueued => _reportQueued.stream;
+
+  /// Coalesces concurrent ticket requests within this service instance.
+  /// Keep the request until it settles, including after a sweep times out.
+  /// Zendesk external_id does not deduplicate a later lost-response retry.
+  final Map<String, Future<bool>> _zendeskInFlight = {};
+
   static const String reportsStorageKey = 'content_reports_history';
 
   final List<ContentReport> _reportHistory = [];
@@ -168,7 +200,7 @@ class ContentReportingService {
   Future<void> initialize() async {
     try {
       // Ensure Nostr service is initialized
-      if (!_nostrService.isInitialized) {
+      if (_pendingReportsDao == null && !_nostrService.isInitialized) {
         Log.warning(
           'Nostr service not initialized, cannot setup reporting',
           name: 'ContentReportingService',
@@ -209,6 +241,8 @@ class ContentReportingService {
     String? additionalContext,
     List<String> hashtags = const [],
     List<String>? nip56EventIds,
+    String? moderationContent,
+    List<List<String>> moderationTags = const [],
   }) async {
     try {
       if (!_isInitialized) {
@@ -223,7 +257,7 @@ class ContentReportingService {
       }
 
       // Generate report ID
-      final reportId = 'report_${DateTime.now().millisecondsSinceEpoch}';
+      final reportId = const Uuid().v4();
 
       // Self-report guard (#8352). A bare user report carries only a `p` tag,
       // so when reporter and target are the same pubkey the published kind-1984
@@ -259,6 +293,86 @@ class ContentReportingService {
           ? null
           : sanitizeDiagnosticText(additionalContext);
 
+      final dao = _pendingReportsDao;
+      if (dao != null) {
+        final reporter = reporterPubkey;
+        if (reporter == null) {
+          return ReportResult.failure('No reporting account');
+        }
+        final event = await _createReportingEvent(
+          reportId: reportId,
+          eventId: eventId,
+          authorPubkey: authorPubkey,
+          reason: reason,
+          details: safeDetails,
+          additionalContext: safeAdditionalContext,
+          hashtags: hashtags,
+          nip56EventIds: nip56EventIds,
+          sign: false,
+        );
+        if (event == null ||
+            event.pubkey != reporter ||
+            _authService.currentPublicKeyHex != reporter) {
+          return ReportResult.failure('Reporting account changed');
+        }
+        final recipient = moderationPubkey;
+        final dm = recipient == null
+            ? null
+            : jsonEncode({
+                'recipientPubkey': recipient,
+                'content': sanitizeDiagnosticText(
+                  moderationContent ??
+                      'Content Report\nReason: ${reason.name}\nEvent: $eventId\nDetails: $safeDetails',
+                ),
+                'tags': moderationTags.isEmpty
+                    ? moderationDmTags(reason: reason)
+                    : moderationTags,
+              });
+        await dao.enqueue(
+          PendingReport(
+            reportId: reportId,
+            userPubkey: reporter,
+            eventJson: jsonEncode(event.toJson()),
+            targetRelays: jsonEncode(_targetRelaysForReport(sourceRelay)),
+            zendeskPayload: jsonEncode(
+              _buildZendeskPayload(
+                reportId: reportId,
+                eventId: eventId,
+                authorPubkey: authorPubkey,
+                reason: reason,
+                details: safeDetails,
+                additionalContext: safeAdditionalContext,
+              ),
+            ),
+            moderationPayload: dm,
+            moderationStatus: dm == null
+                ? PendingReportChannelStatus.done
+                : PendingReportChannelStatus.pending,
+            createdAt: DateTime.now(),
+          ),
+        );
+        _reportHistory.add(
+          ContentReport(
+            reportId: reportId,
+            eventId: eventId,
+            authorPubkey: authorPubkey,
+            reason: reason,
+            details: safeDetails,
+            createdAt: DateTime.now(),
+            additionalContext: safeAdditionalContext,
+            tags: hashtags,
+          ),
+        );
+        unawaited(_saveReportHistory());
+        // No signing, policy lookup, HTTP request or relay work precedes this
+        // acceptance. A failed local write stays an actionable submit error.
+        if (!_reportQueued.isClosed) _reportQueued.add(null);
+        return ReportResult.createSuccess(
+          reportId,
+          delivery: ReportDelivery.queued,
+        );
+      }
+
       // Create and broadcast NIP-56 reporting event (kind 1984)
       final reportEvent = await _createReportingEvent(
         reportId: reportId,
@@ -275,29 +389,10 @@ class ContentReportingService {
         return ReportResult.failure('Failed to create report event');
       }
 
-      final sentEvent = await _nostrService.publishEvent(
-        reportEvent,
-        targetRelays: _targetRelaysForReport(sourceRelay),
-      );
-      // Always continue to local save regardless of publish outcome.
-      final failureReason = sentEvent.failureReason;
-      final relayAccepted = failureReason == null;
-      if (!relayAccepted) {
-        Log.error(
-          'Failed to publish NIP-56 report: $failureReason',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      } else {
-        Log.info(
-          'Report published to relays',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      }
-
-      // Create Zendesk ticket silently for moderation tracking
-      final zendeskFiled = await _createZendeskTicket(
+      // Build the redacted Zendesk payload once for delivery and any
+      // retry send an identical ticket.
+      final targetRelays = _targetRelaysForReport(sourceRelay);
+      final zendeskPayload = _buildZendeskPayload(
         reportId: reportId,
         eventId: eventId,
         authorPubkey: authorPubkey,
@@ -305,6 +400,18 @@ class ContentReportingService {
         details: safeDetails,
         additionalContext: safeAdditionalContext,
       );
+
+      final relayAccepted = await _publishReportEvent(
+        reportEvent,
+        targetRelays,
+      );
+      final zendeskFiled = await _fileZendeskTicket(
+        zendeskPayload,
+        externalId: reportId,
+      );
+      final delivery = (relayAccepted || zendeskFiled)
+          ? ReportDelivery.reached
+          : ReportDelivery.localOnly;
 
       // Save report to local history
       final report = ContentReport(
@@ -323,23 +430,6 @@ class ContentReportingService {
 
       _reportHistory.add(report);
       await _saveReportHistory();
-
-      // The report is recorded either way, but only an off-device channel
-      // makes it visible to moderation. Treat the two as a disjunction: a
-      // filed Zendesk ticket means a human has the report even when every
-      // relay refused it, and vice versa.
-      final delivery = (relayAccepted || zendeskFiled)
-          ? ReportDelivery.reached
-          : ReportDelivery.localOnly;
-      if (delivery == ReportDelivery.localOnly) {
-        Log.error(
-          'Report $reportId reached no channel: relay and Zendesk both '
-          'failed. Local history is never replayed, so it is lost unless '
-          'the user submits again.',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      }
 
       Log.debug(
         'Content report submitted: $reportId',
@@ -382,6 +472,8 @@ class ContentReportingService {
     required ContentFilterReason reason,
     required String details,
     List<String>? relatedEventIds,
+    String? moderationContent,
+    List<List<String>> moderationTags = const [],
   }) async {
     final validRelatedEventIds = relatedEventIds
         ?.where(_isValidEventId)
@@ -402,6 +494,8 @@ class ContentReportingService {
           : null,
       hashtags: ['user-report'],
       nip56EventIds: validRelatedEventIds ?? const [],
+      moderationContent: moderationContent,
+      moderationTags: moderationTags,
     );
   }
 
@@ -555,6 +649,7 @@ class ContentReportingService {
     String? additionalContext,
     List<String> hashtags = const [],
     List<String>? nip56EventIds,
+    bool sign = true,
   }) async {
     try {
       if (!_authService.isAuthenticated) {
@@ -595,6 +690,12 @@ class ContentReportingService {
         details,
         additionalContext,
       );
+
+      if (!sign) {
+        final owner = _authService.currentPublicKeyHex;
+        if (owner == null) return null;
+        return Event(owner, EventKind.report, tags, reportContent);
+      }
 
       // Create and sign event via AuthService
       final signedEvent = await _authService.createAndSignEvent(
@@ -667,57 +768,92 @@ class ContentReportingService {
   ///
   /// Returns whether the ticket was actually created. A failure here never
   /// fails the report, but it does count against [ReportDelivery].
-  Future<bool> _createZendeskTicket({
+  /// Builds the redacted Zendesk ticket fields for a report. Stored in the
+  /// durable queue and rebuilt into a ticket on each delivery attempt.
+  Map<String, dynamic> _buildZendeskPayload({
     required String reportId,
     required String eventId,
     required String authorPubkey,
     required ContentFilterReason reason,
     required String details,
     String? additionalContext,
+  }) {
+    // Format ticket description with NIP-56 report details.
+    final description = StringBuffer();
+    description.writeln('Content Report - NIP-56');
+    description.writeln();
+    description.writeln('Report ID: $reportId');
+    description.writeln('Event ID: $eventId');
+    description.writeln('Author Pubkey: $authorPubkey');
+    description.writeln();
+    description.writeln('Violation Type: ${reason.name}');
+    description.writeln();
+    description.writeln('Reporter Details:');
+    // Per-field, before assembly: redaction spans lines, so sanitizing the
+    // finished blob lets one reporter field erase the ones after it.
+    description.writeln(sanitizeDiagnosticText(details));
+
+    if (additionalContext != null) {
+      description.writeln();
+      description.writeln('Additional Context:');
+      description.writeln(sanitizeDiagnosticText(additionalContext));
+    }
+
+    description.writeln();
+    description.writeln('---');
+    description.writeln('Reported via Divine mobile app');
+    description.writeln('NIP-56 Nostr event created: $eventId');
+
+    return {
+      'subject': 'Content Report: ${reason.name}',
+      'description': description.toString(),
+      'tags': ['mobile', 'content-report', 'nip-56', reason.name.toLowerCase()],
+    };
+  }
+
+  /// Files a Zendesk ticket from a stored payload, coalescing concurrent calls
+  /// for the same [externalId] onto one POST so concurrent delivery attempts
+  /// cannot double-file. [externalId] also tags the ticket for best-effort
+  /// dedup of a lost-ACK retry (#8053). Never throws; a failure returns false.
+  Future<bool> _fileZendeskTicket(
+    Map<String, dynamic> payload, {
+    required String externalId,
+    String? expectedNpub,
+  }) {
+    final existing = _zendeskInFlight[externalId];
+    if (existing != null) return existing;
+    final future = _fileZendeskTicketInner(
+      payload,
+      externalId: externalId,
+      expectedNpub: expectedNpub,
+    );
+    _zendeskInFlight[externalId] = future;
+    return future.whenComplete(() => _zendeskInFlight.remove(externalId));
+  }
+
+  Future<bool> _fileZendeskTicketInner(
+    Map<String, dynamic> payload, {
+    required String externalId,
+    String? expectedNpub,
   }) async {
     try {
-      // Format ticket description with NIP-56 report details
-      final description = StringBuffer();
-      description.writeln('Content Report - NIP-56');
-      description.writeln();
-      description.writeln('Report ID: $reportId');
-      description.writeln('Event ID: $eventId');
-      description.writeln('Author Pubkey: $authorPubkey');
-      description.writeln();
-      description.writeln('Violation Type: ${reason.name}');
-      description.writeln();
-      description.writeln('Reporter Details:');
-      // Per-field, before assembly: redaction spans lines, so sanitizing the
-      // finished blob lets one reporter field erase the ones after it.
-      description.writeln(sanitizeDiagnosticText(details));
-
-      if (additionalContext != null) {
-        description.writeln();
-        description.writeln('Additional Context:');
-        description.writeln(sanitizeDiagnosticText(additionalContext));
-      }
-
-      description.writeln();
-      description.writeln('---');
-      description.writeln('Reported via Divine mobile app');
-      description.writeln('NIP-56 Nostr event created: $eventId');
-
-      // Create Zendesk ticket silently
       final success = await ZendeskSupportService.createTicket(
-        subject: 'Content Report: ${reason.name}',
-        description: description.toString(),
-        tags: ['mobile', 'content-report', 'nip-56', reason.name.toLowerCase()],
+        subject: payload['subject'] as String,
+        description: payload['description'] as String,
+        tags: (payload['tags'] as List).cast<String>(),
+        externalId: externalId,
+        expectedNpub: expectedNpub,
       );
 
       if (success) {
         Log.info(
-          'Zendesk ticket created for report: $reportId',
+          'Zendesk ticket created for report: $externalId',
           name: 'ContentReportingService',
           category: LogCategory.system,
         );
       } else {
         Log.warning(
-          'Failed to create Zendesk ticket for report: $reportId',
+          'Failed to create Zendesk ticket for report: $externalId',
           name: 'ContentReportingService',
           category: LogCategory.system,
         );
@@ -731,6 +867,114 @@ class ContentReportingService {
       );
       // Don't fail the report if Zendesk ticket creation fails
       return false;
+    }
+  }
+
+  /// Publishes the signed kind-1984 report event. Returns whether the relay
+  /// accepted it. Republishing the same stored event is idempotent by id.
+  Future<bool> _publishReportEvent(
+    Event event,
+    List<String> targetRelays,
+  ) async {
+    final sentEvent = await _nostrService.publishEvent(
+      event,
+      targetRelays: targetRelays,
+    );
+    final failureReason = sentEvent.failureReason;
+    final relayAccepted = failureReason == null;
+    if (!relayAccepted) {
+      Log.error(
+        'Failed to publish NIP-56 report: $failureReason',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+    } else {
+      Log.info(
+        'Report published to relays',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+    }
+    return relayAccepted;
+  }
+
+  @override
+  Future<bool> deliverReportChannel(
+    PendingReport report,
+    ReportChannel channel,
+  ) {
+    final key = '${report.reportId}:${channel.name}';
+    return _channelInFlight.putIfAbsent(key, () async {
+      try {
+        return await _deliverReportChannel(report, channel);
+      } finally {
+        unawaited(_channelInFlight.remove(key));
+      }
+    });
+  }
+
+  Future<bool> _deliverReportChannel(
+    PendingReport pendingReport,
+    ReportChannel channel,
+  ) async {
+    // Only the durable queue is driven: without a DAO there is no row to
+    // re-read, no place to freeze a signature, and nothing to retire.
+    final dao = _pendingReportsDao;
+    if (dao == null) return false;
+    // Re-read so work retired by a late acknowledgement or an account wipe is
+    // skipped rather than resent.
+    final report = await dao.getById(pendingReport.reportId);
+    if (report == null) return false;
+    bool ownsReport() =>
+        _authService.isAuthenticated &&
+        _authService.currentPublicKeyHex == report.userPubkey;
+    if (!ownsReport()) return false;
+    if (report.statusOf(channel) == PendingReportChannelStatus.done) {
+      return true;
+    }
+    if (report.statusOf(channel) != PendingReportChannelStatus.pending) {
+      return false;
+    }
+    switch (channel) {
+      case ReportChannel.relay:
+        var event = Event.fromJson(
+          jsonDecode(report.eventJson) as Map<String, dynamic>,
+        );
+        if (event.pubkey != report.userPubkey) return false;
+        if (event.sig.isEmpty) {
+          final signed = await _authService.createAndSignEvent(
+            kind: event.kind,
+            content: event.content,
+            tags: event.tags,
+            createdAt: event.createdAt,
+          );
+          if (signed == null ||
+              signed.pubkey != report.userPubkey ||
+              !ownsReport()) {
+            return false;
+          }
+          // Freeze even signer-added tags before publish; retries reuse this
+          // exact event instead of minting a second report after a lost ACK.
+          final saved = await dao.saveSignedEvent(
+            report.reportId,
+            jsonEncode(signed.toJson()),
+          );
+          if (!saved) return false;
+          event = signed;
+        }
+        if (!ownsReport()) return false;
+        final relays = report.targetRelays == null
+            ? _targetRelaysForReport(null)
+            : (jsonDecode(report.targetRelays!) as List).cast<String>();
+        return _publishReportEvent(event, relays);
+      case ReportChannel.zendesk:
+        return _fileZendeskTicket(
+          jsonDecode(report.zendeskPayload) as Map<String, dynamic>,
+          externalId: report.reportId,
+          expectedNpub: Nip19.encodePubKey(report.userPubkey),
+        );
+      case ReportChannel.moderation:
+        return await deliverModerationDm?.call(report) ?? false;
     }
   }
 
@@ -806,6 +1050,6 @@ class ContentReportingService {
   }
 
   void dispose() {
-    // Clean up any active operations
+    unawaited(_reportQueued.close());
   }
 }

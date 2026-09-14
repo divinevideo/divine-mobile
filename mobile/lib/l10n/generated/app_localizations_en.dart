@@ -4869,11 +4869,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportFailed => 'Failed to report content. Please try again.';
 
   @override
-  String get reportNotSent =>
-      'Couldn\'t send your report. Check your connection and try again.';
-
-  @override
-  String get reportReceivedTitle => 'Report Received';
+  String get reportReceivedTitle => 'Report saved';
 
   @override
   String get reportReceivedThankYou =>
@@ -4881,11 +4877,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Our team will review your report and take appropriate action. You may receive updates via direct message.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'We couldn\'t reach the moderation team directly just now, but your report was received and will be reviewed.';
+      'We’ll send it automatically when you’re connected. Our team will review your report and take appropriate action. You may receive updates via direct message.';
 
   @override
   String get reportContactModeration => 'Message the moderation team';

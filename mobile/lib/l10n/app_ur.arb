@@ -2394,14 +2394,9 @@
   "reportReasonOther": "پالیسی کی دیگر خلاف ورزی",
   "reportReasonOtherSubtitle": "اوپر درج نہیں کی گئی خلاف ورزیاں",
   "reportFailed": "مواد کی رپورٹ ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
-  "reportNotSent": "آپ کی رپورٹ نہیں بھیجی جا سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
-  "reportReceivedTitle": "رپورٹ موصول ہو گئی",
+  "reportReceivedTitle": "رپورٹ محفوظ ہو گئی",
   "reportReceivedThankYou": "Divine کو محفوظ رکھنے میں مدد کے لیے شکریہ۔",
-  "reportReceivedReviewNotice": "ہماری ٹیم آپ کی رپورٹ کا جائزہ لے گی اور مناسب کارروائی کرے گی۔ آپ کو براہ راست پیغام کے ذریعے اپڈیٹس مل سکتی ہیں۔",
-  "reportModerationDmDelayed": "ہم ابھی موڈریشن ٹیم تک براہ راست نہیں پہنچ سکے، لیکن آپ کی رپورٹ موصول ہو گئی ہے اور اس کا جائزہ لیا جائے گا۔",
-  "@reportModerationDmDelayed": {
-    "description": "Calm, non-blocking notice shown on the report confirmation screen when the secondary NIP-17 direct message to the moderation team failed to send. The report itself still succeeded via other channels."
-  },
+  "reportReceivedReviewNotice": "جب تم انٹرنیٹ سے جڑو گے تو ہم اسے خود بخود بھیج دیں گے۔ ہماری ٹیم آپ کی رپورٹ کا جائزہ لے گی اور مناسب کارروائی کرے گی۔ آپ کو براہ راست پیغام کے ذریعے اپڈیٹس مل سکتی ہیں۔",
   "reportContactModeration": "موڈریشن ٹیم کو پیغام بھیجیں",
   "@reportContactModeration": {
     "description": "Button on the report confirmation screen that opens a direct-message conversation with the Divine moderation team so the user can follow up about their report."

@@ -4723,11 +4723,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportFailed => 'İçerik bildirilemedi. Lütfen tekrar dene.';
 
   @override
-  String get reportNotSent =>
-      'Bildirimin gönderilemedi. Bağlantını kontrol et ve tekrar dene.';
-
-  @override
-  String get reportReceivedTitle => 'Bildirim Alındı';
+  String get reportReceivedTitle => 'Bildirim kaydedildi';
 
   @override
   String get reportReceivedThankYou =>
@@ -4735,11 +4731,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Moderasyon ekibine şu an doğrudan ulaşamadık ama bildirimin alındı ve incelenecek.';
+      'İnternete bağlandığında otomatik olarak göndereceğiz. Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.';
 
   @override
   String get reportContactModeration => 'Moderasyon ekibine mesaj gönder';

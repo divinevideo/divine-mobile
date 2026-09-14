@@ -4817,11 +4817,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportFailed => 'Hindi na-report ang content. Subukan ulit.';
 
   @override
-  String get reportNotSent =>
-      'Hindi naipadala ang report mo. Tingnan ang koneksyon mo at subukan ulit.';
-
-  @override
-  String get reportReceivedTitle => 'Natanggap ang Report';
+  String get reportReceivedTitle => 'Na-save ang report';
 
   @override
   String get reportReceivedThankYou =>
@@ -4829,11 +4825,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Susuriin ng team namin ang report mo at gagawa ng naaangkop na aksyon. Maaari kang makatanggap ng updates via direct message.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Hindi namin naabot nang direkta ang moderation team ngayon, pero natanggap ang iyong report at ire-review ito.';
+      'Awtomatiko namin itong ipapadala kapag may koneksyon ka na. Susuriin ng team namin ang report mo at gagawa ng naaangkop na aksyon. Maaari kang makatanggap ng updates via direct message.';
 
   @override
   String get reportContactModeration => 'I-message ang moderation team';

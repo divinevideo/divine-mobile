@@ -3,6 +3,7 @@
 // ABOUTME: userDataCleanup, contentReporting, contentDeletion, collaborator-3
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -45,6 +46,7 @@ import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/profile_save_retry_service.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -967,6 +969,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'pendingProductEvents',
             () => db.pendingProductEventsDao.deleteForOwner(userPubkey),
           );
+          // Mirror outgoingDms: a destructive wipe drops the leaving account's
+          // undelivered report queue too, so its identity-bearing rows are not
+          // orphaned (they only ever sweep under this same pubkey). A plain
+          // switch (deleteUserData=false) preserves them, like the DM outbox.
+          // #8053.
+          await requiredDelete(
+            'pendingReports',
+            () => db.pendingReportsDao.deleteAllForUser(userPubkey),
+          );
         }
       };
 
@@ -1020,11 +1031,103 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     authService: authService,
     prefs: prefs,
     moderationRelayUrl: env.relayUrl,
+    // One durable intent for all three destinations, driven by the retry worker.
+    pendingReportsDao: ref.watch(databaseProvider).pendingReportsDao,
+    moderationPubkey: ref
+        .watch(moderationLabelServiceProvider)
+        .divineModerationPubkeyHex,
+    deliverModerationDm: (report) async {
+      if (!ref.mounted ||
+          authService.currentPublicKeyHex != report.userPubkey) {
+        return false;
+      }
+      final payload =
+          jsonDecode(report.moderationPayload!) as Map<String, dynamic>;
+      final repository = ref.read(dmRepositoryProvider);
+      if (repository.userPubkey != report.userPubkey) return false;
+      final queued = await repository.enqueueSend(
+        recipientPubkey: payload['recipientPubkey'] as String,
+        content: payload['content'] as String,
+        additionalTags: (payload['tags'] as List)
+            .map((tag) => (tag as List).cast<String>())
+            .toList(),
+        idempotencyKey: report.reportId,
+        createdAt: report.createdAt.millisecondsSinceEpoch ~/ 1000,
+      );
+      if (!queued.accepted ||
+          !ref.mounted ||
+          authService.currentPublicKeyHex != report.userPubkey) {
+        return false;
+      }
+      // Recovery publishes only NIP-17. The persisted report identity makes a
+      // crash between DM enqueue and report bookkeeping safe to replay.
+      final result = await repository.recoverFullSend(
+        rumorId: queued.queuedRumorId!,
+        resetRetryBudget: true,
+      );
+      return result.success;
+    },
   );
 
   // Initialize the service to enable reporting
   await service.initialize();
+  ref.onDispose(service.dispose);
 
+  return service;
+}
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] for every delivery attempt after local save.
+@Riverpod(keepAlive: true)
+Future<ReportRetryService?> reportRetryService(Ref ref) async {
+  final authService = ref.watch(authServiceProvider);
+
+  ref.watch(currentAuthStateProvider);
+
+  final userPubkey = authService.currentPublicKeyHex;
+  if (userPubkey == null) return null;
+
+  final readiness = ref.watch(nostrSessionProvider);
+  if (!readiness.isReadyForActiveClient || readiness.pubkey != userPubkey) {
+    return null;
+  }
+
+  final db = ref.watch(databaseProvider);
+  final driver = await ref.watch(contentReportingServiceProvider.future);
+  if (!ref.mounted) return null;
+  final foregroundController = StreamController<bool>();
+  ref.onDispose(foregroundController.close);
+
+  final service = ReportRetryService(
+    driver: driver,
+    pendingReportsDao: db.pendingReportsDao,
+    userPubkey: userPubkey,
+    appForegroundStream: foregroundController.stream,
+    retryTriggerStream: _dmRetryConnectivityTriggerStream(),
+    // The worker subscribes to the reporting service rather than the service
+    // reading this provider back: this provider watches the service, and
+    // Riverpod refuses a read that closes that loop.
+    reportQueuedStream: driver.reportQueued,
+  );
+
+  unawaited(
+    service.initialize().catchError((Object e) {
+      Log.error(
+        'Failed to initialize ReportRetryService',
+        name: 'AppProviders',
+        error: e,
+      );
+    }),
+  );
+
+  ref.listen<bool>(appForegroundProvider, (_, next) {
+    if (!foregroundController.isClosed) {
+      foregroundController.add(next);
+    }
+  }, fireImmediately: true);
+
+  ref.onDispose(service.dispose);
   return service;
 }
 

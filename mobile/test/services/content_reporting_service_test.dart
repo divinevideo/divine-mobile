@@ -1,6 +1,10 @@
 // ABOUTME: Unit tests for ContentReportingService
 // ABOUTME: Tests NIP-56 content reporting including AI-generated content reports
 
+import 'dart:io';
+
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -11,6 +15,7 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,13 +23,35 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
+class _MockPendingReportsDao extends Mock implements PendingReportsDao {}
+
 class _FakeEvent extends Fake implements Event {}
 
 String _validEventId(String hexDigit) => List.filled(64, hexDigit).join();
 
 void main() {
+  setUp(() async {
+    ZendeskSupportService.resetForTesting();
+    await ZendeskSupportService.initialize(
+      appId: '',
+      clientId: '',
+      zendeskUrl: '',
+    );
+  });
+  tearDown(ZendeskSupportService.resetForTesting);
+
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
+    registerFallbackValue(ReportChannel.relay);
+    registerFallbackValue(
+      PendingReport(
+        reportId: 'fallback',
+        userPubkey: 'fallback',
+        eventJson: '{}',
+        zendeskPayload: '{}',
+        createdAt: DateTime.utc(2026),
+      ),
+    );
   });
 
   // Outside the ContentReportingService group on purpose: these tags are a
@@ -1759,5 +1786,295 @@ void main() {
 
       expect(result.success, true);
     });
+  });
+
+  group('ContentReportingService durable queue (#8053)', () {
+    late _MockNostrClient mockNostrService;
+    late _MockAuthService mockAuthService;
+    late SharedPreferences prefs;
+    late AppDatabase database;
+    late PendingReportsDao dao;
+    late String tempDbPath;
+    late ContentReportingService service;
+    late String testPublicKey;
+
+    Event signedEvent(String id) {
+      final event = Event(
+        testPublicKey,
+        1984,
+        [
+          ['e', _validEventId('a')],
+          ['p', _validEventId('b')],
+        ],
+        'report content',
+        createdAt: 1700000000,
+      )..sig = 'sig';
+      event.id = id;
+      return event;
+    }
+
+    setUp(() async {
+      testPublicKey = getPublicKey(generatePrivateKey());
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+
+      final tempDir = Directory.systemTemp.createTempSync('crs_queue_test_');
+      tempDbPath = '${tempDir.path}/test.db';
+      database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+      dao = database.pendingReportsDao;
+
+      mockNostrService = _MockNostrClient();
+      mockAuthService = _MockAuthService();
+      when(() => mockAuthService.isAuthenticated).thenReturn(true);
+      when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
+      when(() => mockNostrService.isInitialized).thenReturn(true);
+
+      service = ContentReportingService(
+        nostrService: mockNostrService,
+        authService: mockAuthService,
+        prefs: prefs,
+        moderationRelayUrl: 'wss://relay.divine.video',
+        pendingReportsDao: dao,
+      );
+      await service.initialize();
+    });
+
+    tearDown(() async {
+      await database.close();
+      final file = File(tempDbPath);
+      if (file.existsSync()) file.deleteSync();
+      final dir = Directory(tempDbPath).parent;
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
+    });
+
+    test('accepts an offline report before asking a remote signer', () async {
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => null);
+      final result = await service.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('b'),
+        reason: ContentFilterReason.spam,
+        details: 'Report saved offline',
+      );
+      expect(result.isSilentSuccess, isTrue);
+      expect(await dao.getById(result.reportId!), isNotNull);
+      verifyNever(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      );
+    });
+
+    test('enqueues a row and, on a relay success with Zendesk unavailable, '
+        'keeps it with relay done and zendesk queued', () async {
+      final reportEvent = signedEvent('a' * 64);
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((_) async => reportEvent);
+      when(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => PublishSuccess(event: reportEvent));
+
+      final result = await service.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('c'),
+        reason: ContentFilterReason.spam,
+        details: 'spam',
+      );
+
+      // Optimistic: the report is reported reached as soon as it is durably
+      // queued, before the channels are driven.
+      expect(result.delivery, ReportDelivery.queued);
+
+      // The channels are driven unawaited in the background; let that run.
+      await ReportRetryService(
+        driver: service,
+        pendingReportsDao: dao,
+        userPubkey: testPublicKey,
+        appForegroundStream: const Stream.empty(),
+      ).sweep();
+
+      // Zendesk is not configured under test, so its leg stays queued for the
+      // background sweep while the relay leg is retired.
+      final row = await dao.getById(result.reportId!);
+      expect(row, isNotNull);
+      expect(row!.relayStatus, PendingReportChannelStatus.done);
+      expect(row.zendeskStatus, PendingReportChannelStatus.pending);
+      expect(row.zendeskAttempts, 1);
+      expect(row.eventJson, contains('"id":"${'a' * 64}"'));
+    });
+
+    test('a relay failure leaves the relay channel queued for retry', () async {
+      final reportEvent = signedEvent('d' * 64);
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((_) async => reportEvent);
+      when(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => const PublishNoRelays());
+
+      final result = await service.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('c'),
+        reason: ContentFilterReason.spam,
+        details: 'spam',
+      );
+
+      // The background drive runs unawaited; let it attempt and fail.
+      await ReportRetryService(
+        driver: service,
+        pendingReportsDao: dao,
+        userPubkey: testPublicKey,
+        appForegroundStream: const Stream.empty(),
+      ).sweep();
+
+      final row = await dao.getById(result.reportId!);
+      expect(row!.relayStatus, PendingReportChannelStatus.pending);
+      expect(row.relayAttempts, 1);
+    });
+
+    test('deliverReportChannel republishes the stored relay event', () async {
+      final reportEvent = signedEvent('e' * 64);
+      when(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => PublishSuccess(event: reportEvent));
+
+      final row = PendingReport(
+        reportId: 'report_x',
+        userPubkey: testPublicKey,
+        eventJson:
+            '{"id":"${'e' * 64}","pubkey":"$testPublicKey",'
+            '"created_at":1700000000,"kind":1984,"tags":[],'
+            '"content":"c","sig":"s"}',
+        targetRelays: '["wss://relay.divine.video"]',
+        zendeskPayload: '{}',
+        createdAt: DateTime.utc(2026),
+      );
+
+      await dao.enqueue(row);
+      final ok = await service.deliverReportChannel(row, ReportChannel.relay);
+
+      expect(ok, isTrue);
+      final captured = verify(
+        () => mockNostrService.publishEvent(
+          captureAny(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).captured;
+      expect((captured.single as Event).id, 'e' * 64);
+    });
+
+    test(
+      'a failed disk write never claims acceptance or starts a send',
+      () async {
+        final throwingDao = _MockPendingReportsDao();
+        when(() => throwingDao.enqueue(any()))
+            .thenThrow(StateError('disk full'));
+        final crs = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: throwingDao,
+        );
+        final result = await crs.reportContent(
+          eventId: _validEventId('a'),
+          authorPubkey: _validEventId('c'),
+          reason: ContentFilterReason.spam,
+          details: 'spam',
+        );
+        expect(result.success, isFalse);
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
+
+    test('stores all delivery intents while the signer and relay are unavailable', () async {
+      when(() => mockNostrService.isInitialized).thenReturn(false);
+      final crs = ContentReportingService(
+        nostrService: mockNostrService,
+        authService: mockAuthService,
+        prefs: prefs,
+        moderationRelayUrl: 'wss://relay.divine.video',
+        pendingReportsDao: dao,
+        moderationPubkey: _validEventId('f'),
+      );
+      final result = await crs.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('c'),
+        reason: ContentFilterReason.aiGenerated,
+        details: 'api_key=secret-value',
+        moderationContent: 'Private report: api_key=secret-value',
+      );
+      expect(result.delivery, ReportDelivery.queued);
+      final row = (await dao.getById(result.reportId!))!;
+      expect(row.moderationStatus, PendingReportChannelStatus.pending);
+      expect(row.moderationPayload, contains('NS-aiGenerated'));
+      expect(row.moderationPayload, isNot(contains('secret-value')));
+      expect(row.eventJson, isNot(contains('secret-value')));
+      expect(row.zendeskPayload, isNot(contains('secret-value')));
+      expect(row.userPubkey, testPublicKey);
+      // A newly opened connection sees the accepted report after process loss.
+      final reopened = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+      expect(
+        await reopened.pendingReportsDao.getById(result.reportId!),
+        isNotNull,
+      );
+      await reopened.close();
+    });
+
+    test(
+      'does not deliver a queued report under a different account',
+      () async {
+        final result = await service.reportContent(
+          eventId: _validEventId('a'),
+          authorPubkey: _validEventId('c'),
+          reason: ContentFilterReason.spam,
+          details: 'spam',
+        );
+        final row = (await dao.getById(result.reportId!))!;
+        when(() => mockAuthService.currentPublicKeyHex)
+            .thenReturn(_validEventId('e'));
+        for (final channel in ReportChannel.values) {
+          expect(await service.deliverReportChannel(row, channel), isFalse);
+        }
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
   });
 }

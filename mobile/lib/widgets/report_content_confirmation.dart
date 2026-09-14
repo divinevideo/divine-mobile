@@ -14,12 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// Scrollable content shown after a report is accepted.
 class ReportConfirmationBody extends StatelessWidget {
   /// Creates a [ReportConfirmationBody].
-  const ReportConfirmationBody({required this.moderationDmFailed, super.key});
-
-  /// Whether the secondary NIP-17 DM to the moderation team failed to
-  /// send. The report itself still succeeded; this only drives a calm
-  /// informational notice so the user isn't misled.
-  final bool moderationDmFailed;
+  const ReportConfirmationBody({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -58,15 +53,6 @@ class ReportConfirmationBody extends StatelessWidget {
             color: context.vineColors.onSurfaceMuted,
           ),
         ),
-        if (moderationDmFailed) ...[
-          const SizedBox(height: 12),
-          Text(
-            l10n.reportModerationDmDelayed,
-            style: VineTheme.bodySmallFont(
-              color: context.vineColors.onSurfaceMuted,
-            ),
-          ),
-        ],
         const SizedBox(height: 8),
         const _SafetyPolicyLink(),
       ],

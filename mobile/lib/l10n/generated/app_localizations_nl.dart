@@ -4803,11 +4803,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportFailed => 'Inhoud melden mislukt. Probeer het opnieuw.';
 
   @override
-  String get reportNotSent =>
-      'Kan je melding niet versturen. Controleer je verbinding en probeer het opnieuw.';
-
-  @override
-  String get reportReceivedTitle => 'Melding ontvangen';
+  String get reportReceivedTitle => 'Melding opgeslagen';
 
   @override
   String get reportReceivedThankYou =>
@@ -4815,11 +4811,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'We konden het moderatieteam zojuist niet rechtstreeks bereiken, maar je melding is ontvangen en wordt bekeken.';
+      'We versturen die automatisch zodra je verbinding hebt. Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.';
 
   @override
   String get reportContactModeration => 'Stuur het moderatieteam een bericht';

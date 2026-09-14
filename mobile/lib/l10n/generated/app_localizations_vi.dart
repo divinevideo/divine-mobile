@@ -4751,22 +4751,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportFailed => 'Không báo cáo được nội dung. Vui lòng thử lại.';
 
   @override
-  String get reportNotSent =>
-      'Không gửi được báo cáo của bạn. Kiểm tra kết nối của bạn rồi thử lại nhé.';
-
-  @override
-  String get reportReceivedTitle => 'Đã nhận báo cáo';
+  String get reportReceivedTitle => 'Đã lưu báo cáo';
 
   @override
   String get reportReceivedThankYou => 'Cảm ơn bạn đã giúp giữ Divine an toàn.';
 
   @override
   String get reportReceivedReviewNotice =>
-      'Đội ngũ của bọn mình sẽ xem xét báo cáo của bạn và có hành động phù hợp. Bạn có thể nhận được cập nhật qua tin nhắn trực tiếp.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Bọn mình chưa liên hệ trực tiếp được với đội kiểm duyệt lúc này, nhưng báo cáo của bạn đã được nhận và sẽ được xem xét.';
+      'Chúng tôi sẽ tự động gửi khi bạn có kết nối mạng. Đội ngũ của bọn mình sẽ xem xét báo cáo của bạn và có hành động phù hợp. Bạn có thể nhận được cập nhật qua tin nhắn trực tiếp.';
 
   @override
   String get reportContactModeration => 'Nhắn tin cho đội kiểm duyệt';

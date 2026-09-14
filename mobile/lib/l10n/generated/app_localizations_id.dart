@@ -4716,11 +4716,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get reportFailed => 'Gagal melaporkan konten. Silakan coba lagi.';
 
   @override
-  String get reportNotSent =>
-      'Laporanmu tidak terkirim. Periksa koneksimu dan coba lagi.';
-
-  @override
-  String get reportReceivedTitle => 'Laporan Diterima';
+  String get reportReceivedTitle => 'Laporan disimpan';
 
   @override
   String get reportReceivedThankYou =>
@@ -4728,11 +4724,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Kami tidak bisa menjangkau tim moderasi secara langsung saat ini, tapi laporanmu sudah kami terima dan akan ditinjau.';
+      'Kami akan mengirimkannya otomatis saat kamu terhubung ke internet. Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.';
 
   @override
   String get reportContactModeration => 'Kirim pesan ke tim moderasi';

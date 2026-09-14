@@ -4816,11 +4816,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Falha ao denunciar conteúdo. Por favor, tente novamente.';
 
   @override
-  String get reportNotSent =>
-      'Não foi possível enviar sua denúncia. Verifique sua conexão e tente novamente.';
-
-  @override
-  String get reportReceivedTitle => 'Denúncia recebida';
+  String get reportReceivedTitle => 'Denúncia salva';
 
   @override
   String get reportReceivedThankYou =>
@@ -4828,11 +4824,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Não conseguimos falar com a equipe de moderação diretamente agora, mas sua denúncia foi recebida e será revisada.';
+      'Vamos enviar automaticamente quando você tiver conexão. Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.';
 
   @override
   String get reportContactModeration =>

@@ -4955,11 +4955,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'కంటెంట్‌ని నివేదించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get reportNotSent =>
-      'మీ నివేదికను పంపడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get reportReceivedTitle => 'నివేదిక స్వీకరించబడింది';
+  String get reportReceivedTitle => 'రిపోర్ట్ సేవ్ అయింది';
 
   @override
   String get reportReceivedThankYou =>
@@ -4967,11 +4963,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'మేము ఇప్పుడే మోడరేషన్ బృందాన్ని నేరుగా చేరుకోలేకపోయాము, కానీ మీ నివేదిక స్వీకరించబడింది మరియు సమీక్షించబడుతుంది.';
+      'నువ్వు ఇంటర్నెట్‌కు కనెక్ట్ అయినప్పుడు మేము దాన్ని ఆటోమేటిక్‌గా పంపుతాం. మా బృందం మీ నివేదికను సమీక్షించి తగిన చర్య తీసుకుంటుంది. మీరు ప్రత్యక్ష సందేశం ద్వారా నవీకరణలను స్వీకరించవచ్చు.';
 
   @override
   String get reportContactModeration => 'మోడరేషన్ బృందానికి సందేశం పంపండి';

@@ -4787,11 +4787,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportFailed => 'مواد کی رپورٹ ناکام۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
-  String get reportNotSent =>
-      'آپ کی رپورٹ نہیں بھیجی جا سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
-
-  @override
-  String get reportReceivedTitle => 'رپورٹ موصول ہو گئی';
+  String get reportReceivedTitle => 'رپورٹ محفوظ ہو گئی';
 
   @override
   String get reportReceivedThankYou =>
@@ -4799,11 +4795,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'ہماری ٹیم آپ کی رپورٹ کا جائزہ لے گی اور مناسب کارروائی کرے گی۔ آپ کو براہ راست پیغام کے ذریعے اپڈیٹس مل سکتی ہیں۔';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'ہم ابھی موڈریشن ٹیم تک براہ راست نہیں پہنچ سکے، لیکن آپ کی رپورٹ موصول ہو گئی ہے اور اس کا جائزہ لیا جائے گا۔';
+      'جب تم انٹرنیٹ سے جڑو گے تو ہم اسے خود بخود بھیج دیں گے۔ ہماری ٹیم آپ کی رپورٹ کا جائزہ لے گی اور مناسب کارروائی کرے گی۔ آپ کو براہ راست پیغام کے ذریعے اپڈیٹس مل سکتی ہیں۔';
 
   @override
   String get reportContactModeration => 'موڈریشن ٹیم کو پیغام بھیجیں';

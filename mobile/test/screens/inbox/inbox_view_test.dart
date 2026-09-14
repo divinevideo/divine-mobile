@@ -3009,7 +3009,7 @@ void main() {
         await longPressAndReport(tester);
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.reportNotSent), findsOneWidget);
+        expect(find.text(l10n.reportFailed), findsOneWidget);
         // Silence is the regression, so the confirmation must not render.
         expect(
           find.text(

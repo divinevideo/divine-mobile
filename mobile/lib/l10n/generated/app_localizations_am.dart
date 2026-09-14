@@ -4664,21 +4664,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportFailed => 'ይዘትን ሪፖርት ማድረግ አልተሳካም። እባክህ እንደገና ሞክር።';
 
   @override
-  String get reportNotSent => 'ሪፖርትዎን መላክ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።';
-
-  @override
-  String get reportReceivedTitle => 'ሪፖርት ደርሷል';
+  String get reportReceivedTitle => 'ሪፖርቱ ተቀምጧል';
 
   @override
   String get reportReceivedThankYou => 'Divine ደህንነትን ለመጠበቅ ስለረዱዎት እናመሰግናለን።';
 
   @override
   String get reportReceivedReviewNotice =>
-      'ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'አሁን የልከኝነት ቡድኑን በቀጥታ ማግኘት አልቻልንም፣ ነገር ግን ሪፖርትዎ ተቀብሏል እና ይገመገማል።';
+      'ከበይነመረብ ጋር ስትገናኝ በራስ-ሰር እንልከዋለን። ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።';
 
   @override
   String get reportContactModeration => 'የልከኝነት ቡድኑን መልእክት ላክ';

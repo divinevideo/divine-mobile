@@ -4509,21 +4509,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportFailed => '콘텐츠 신고에 실패했어요. 다시 시도해보세요.';
 
   @override
-  String get reportNotSent => '신고를 보내지 못했어요. 연결 상태를 확인하고 다시 시도해보세요.';
-
-  @override
-  String get reportReceivedTitle => '신고 접수 완료';
+  String get reportReceivedTitle => '신고가 저장됐어요';
 
   @override
   String get reportReceivedThankYou => 'Divine을 안전하게 지키는 데 도움을 주셔서 감사해요.';
 
   @override
   String get reportReceivedReviewNotice =>
-      '저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      '지금은 조절 팀에 바로 연결하지 못했지만, 신고는 접수됐고 검토될 거예요.';
+      '인터넷에 연결되면 자동으로 보낼게요. 저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.';
 
   @override
   String get reportContactModeration => '조절 팀에 메시지 보내기';

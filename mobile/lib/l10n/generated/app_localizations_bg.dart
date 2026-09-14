@@ -4835,11 +4835,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reportFailed => 'Неуспешно докладване на съдържание. Опитай пак.';
 
   @override
-  String get reportNotSent =>
-      'Не успяхме да изпратим сигнала ти. Провери връзката си и опитай пак.';
-
-  @override
-  String get reportReceivedTitle => 'Докладът е получен';
+  String get reportReceivedTitle => 'Сигналът е запазен';
 
   @override
   String get reportReceivedThankYou =>
@@ -4847,11 +4843,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Екипът ни ще прегледа сигнала ти и ще предприеме нужните действия. Може да получаваш новини чрез директно съобщение.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Точно сега не успяхме да се свържем директно с екипа по модерация, но докладът ти е получен и ще бъде прегледан.';
+      'Ще го изпратим автоматично, когато се свържеш с интернет. Екипът ни ще прегледа сигнала ти и ще предприеме нужните действия. Може да получаваш новини чрез директно съобщение.';
 
   @override
   String get reportContactModeration => 'Пиши на екипа по модерация';

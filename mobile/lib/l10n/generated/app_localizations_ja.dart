@@ -4494,21 +4494,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportFailed => 'コンテンツの報告がうまくいかなかった。もう一回試してみて。';
 
   @override
-  String get reportNotSent => '報告を送信できなかった。接続を確認してもう一回試してみて。';
-
-  @override
-  String get reportReceivedTitle => '報告を受け付けたよ';
+  String get reportReceivedTitle => '報告を保存したよ';
 
   @override
   String get reportReceivedThankYou => 'Divine を安全に保つために協力してくれてありがとう。';
 
   @override
   String get reportReceivedReviewNotice =>
-      'チームが報告を確認して、適切に対応するね。ダイレクトメッセージでアップデートが届くかも。';
-
-  @override
-  String get reportModerationDmDelayed =>
-      '今はモデレーションチームに直接連絡できなかったけど、あなたの報告は受け取ったから、あとで確認するね。';
+      'ネットにつながったら自動で送信するよ。 チームが報告を確認して、適切に対応するね。ダイレクトメッセージでアップデートが届くかも。';
 
   @override
   String get reportContactModeration => 'モデレーションチームにメッセージを送る';

@@ -4851,11 +4851,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportFailed => 'Échec du signalement du contenu. Réessaie.';
 
   @override
-  String get reportNotSent =>
-      'Impossible d\'envoyer ton signalement. Vérifie ta connexion et réessaie.';
-
-  @override
-  String get reportReceivedTitle => 'Signalement reçu';
+  String get reportReceivedTitle => 'Signalement enregistré';
 
   @override
   String get reportReceivedThankYou =>
@@ -4863,11 +4859,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Notre équipe va examiner ton signalement et prendre les mesures appropriées. Tu pourras recevoir des mises à jour par message direct.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'On n\'a pas pu joindre l\'équipe de modération directement à l\'instant, mais ton signalement a bien été reçu et sera examiné.';
+      'Nous l’enverrons automatiquement quand tu seras connecté. Notre équipe va examiner ton signalement et prendre les mesures appropriées. Tu pourras recevoir des mises à jour par message direct.';
 
   @override
   String get reportContactModeration => 'Contacter l\'équipe de modération';
