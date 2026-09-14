@@ -801,6 +801,7 @@ class VideosRepository {
             ? await _mergeRecentApiVideosWithRelayRefresh(
                 page.videos,
                 limit: limit,
+                trimToLimit: page.nextCursor == null,
               )
             : page.videos;
         // Hydrate views/loops — list endpoint omits them for some rows.
@@ -914,11 +915,17 @@ class VideosRepository {
       }
     }
 
+    // A cursor-backed page returns every visible row, including an
+    // over-fetched tail: the opaque cursor resumes after the last fetched
+    // page, so trimming the tail here would place it behind the cursor and
+    // skip it for good. Legacy bare-list pages have no cursor, and the
+    // caller's `until` pagination re-reads whatever is trimmed here.
+    final cursorBacked = nextPageCursor != null;
     return (
-      // Overshooting the limit means the trimmed remainder is more content,
-      // whatever the last page claimed.
-      videos: visible.take(limit).toList(),
-      serverHasMore: visible.length > limit ? true : serverHasMore,
+      videos: cursorBacked ? visible : visible.take(limit).toList(),
+      serverHasMore: !cursorBacked && visible.length > limit
+          ? true
+          : serverHasMore,
       nextCursor: nextPageCursor,
     );
   }
@@ -926,6 +933,7 @@ class VideosRepository {
   Future<List<VideoEvent>> _mergeRecentApiVideosWithRelayRefresh(
     List<VideoEvent> apiVideos, {
     required int limit,
+    bool trimToLimit = true,
   }) async {
     try {
       final relayVideos = await _fetchVisibleRecentVideosFromRelays(
@@ -950,7 +958,10 @@ class VideosRepository {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final merged = <VideoEvent>[];
       _appendUniqueVideos(merged, candidates, seenVideoKeys: <String>{});
-      return merged.take(limit).toList();
+      // Do not trim a cursor-backed page to `limit`: its opaque cursor resumes
+      // after the last merged API row, so dropping a merged tail would skip
+      // it. A legacy bare-list page pages on `until` and re-reads the tail.
+      return trimToLimit ? merged.take(limit).toList() : merged;
     } on Object catch (e) {
       Log.warning(
         'Recent relay refresh enrichment failed: $e',

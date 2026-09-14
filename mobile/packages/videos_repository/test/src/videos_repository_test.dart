@@ -433,6 +433,125 @@ void main() {
           },
         );
 
+        test(
+          'returns the over-fetched tail so the opaque cursor cannot skip it',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            // Page one carries two reply-only rows, so only one visible video
+            // survives and the repository tops up from page two. Trimming the
+            // result back to `limit` would drop part of page two behind the
+            // returned cursor, and those videos would never be reachable.
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'reply-only-a',
+                    pubkey: 'test-pubkey',
+                    dTag: 'reply-only-a',
+                    videoUrl: 'https://example.com/reply-a.mp4',
+                    createdAt: 2200,
+                    publishedAt: 2200,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'reply-only-b',
+                    pubkey: 'test-pubkey',
+                    dTag: 'reply-only-b',
+                    videoUrl: 'https://example.com/reply-b.mp4',
+                    createdAt: 2100,
+                    publishedAt: 2100,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'first-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'first-visible',
+                    videoUrl: 'https://example.com/first.mp4',
+                    createdAt: 2000,
+                    publishedAt: 2000,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-two',
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                cursor: 'p:page-two',
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'second-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'second-visible',
+                    videoUrl: 'https://example.com/second.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1900,
+                  ),
+                  _createVideoStats(
+                    id: 'third-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'third-visible',
+                    videoUrl: 'https://example.com/third.mp4',
+                    createdAt: 1800,
+                    publishedAt: 1800,
+                  ),
+                  _createVideoStats(
+                    id: 'fourth-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'fourth-visible',
+                    videoUrl: 'https://example.com/fourth.mp4',
+                    createdAt: 1700,
+                    publishedAt: 1700,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-three',
+              ),
+            );
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(limit: 3);
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals([
+                'first-visible',
+                'second-visible',
+                'third-visible',
+                'fourth-visible',
+              ]),
+            );
+            expect(result.paginationCursor, equals('p:page-three'));
+            expect(result.hasMore, isTrue);
+          },
+        );
+
         test('falls back to Nostr when Funnelcake throws', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
