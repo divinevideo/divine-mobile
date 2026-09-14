@@ -2,7 +2,7 @@
 // ABOUTME: the hero preview pile and in the roster rows.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Edge of a roster avatar, per the design's member rows and preview pile.
