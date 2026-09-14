@@ -54,10 +54,12 @@ class FeedLoadTrace {
   }
 }
 
-/// Starts [phase] on [trace] once this future completes.
+/// Starts [phase] on [trace] once this future completes successfully.
 extension FeedLoadFuturePhase<T> on Future<T> {
-  Future<T> startPhaseAfter(FeedLoadTrace trace, String phase) =>
-      whenComplete(() => trace.startPhase(phase));
+  Future<T> startPhaseAfter(FeedLoadTrace trace, String phase) => then((value) {
+    trace.startPhase(phase);
+    return value;
+  });
 }
 
 /// Pending feed-load bookkeeping for the owning service.

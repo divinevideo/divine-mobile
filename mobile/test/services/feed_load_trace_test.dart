@@ -101,6 +101,25 @@ void main() {
       expect(trace.attributes['terminal_phase'], 'cache_ingest_ms');
     });
 
+    test(
+      'startPhaseAfter preserves the active phase when work fails',
+      () async {
+        final load = FeedLoadTrace(trace: trace, eventCount: () => 0);
+
+        await expectLater(
+          Future<void>.error(
+            StateError('cache read failed'),
+          ).startPhaseAfter(load, 'cache_ingest_ms'),
+          throwsStateError,
+        );
+        load.complete('setup_error');
+
+        expect(trace.attributes['terminal_phase'], 'cache_read_ms');
+        expect(trace.metrics, contains('cache_read_ms'));
+        expect(trace.metrics, isNot(contains('cache_ingest_ms')));
+      },
+    );
+
     test('track registers a trace and releases it on completion', () async {
       final pending = <String, FeedLoadTrace>{};
       final load = FeedLoadTrace(trace: trace, eventCount: () => 2);
