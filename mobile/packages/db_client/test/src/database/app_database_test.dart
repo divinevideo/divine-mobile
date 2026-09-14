@@ -1254,6 +1254,46 @@ void main() {
 
     group('schema repair', () {
       test(
+        'restores the queued view-event recording version on a damaged '
+        'current-version database',
+        () async {
+          await database.customSelect('SELECT 1').get();
+          await database.close();
+          final raw = sqlite3.open(tempDbPath);
+          try {
+            // A current-version database that lost the column: the upgrade
+            // step cannot help, so recovery depends on the repair probe
+            // listing app_version and the beforeOpen chain repairing it.
+            raw.execute(
+              'ALTER TABLE pending_view_events DROP COLUMN app_version;',
+            );
+            final damaged = raw
+                .select('PRAGMA table_info(pending_view_events);')
+                .map((row) => row['name'] as String);
+            expect(
+              damaged,
+              isNot(contains('app_version')),
+              reason: 'precondition: the column must be missing',
+            );
+          } finally {
+            raw.close();
+          }
+
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          await database.customSelect('SELECT 1').get();
+
+          final repaired = await database
+              .customSelect('PRAGMA table_info(pending_view_events);')
+              .get();
+          expect(
+            repaired.map((row) => row.data['name'] as String),
+            contains('app_version'),
+            reason: 'reopening a damaged database must restore the column',
+          );
+        },
+      );
+
+      test(
         'repairs the v4 clip organization schema on a damaged current-version '
         'database',
         () async {
