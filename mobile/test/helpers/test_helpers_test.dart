@@ -41,11 +41,11 @@ void main() {
       try {
         await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
       } finally {
-        // initHiveHome pointed Hive's process-global home path inside tempDir,
-        // and HiveStorageService.resetForTesting only clears that service's own
-        // latch -- it never touches HiveImpl.homePath. Left set, the next suite
-        // to open a box without re-pointing Hive has BackendManagerVm silently
-        // recreate the directory deleted below and write there.
+        // initHiveHome now resets the home path in its own addTearDown, which
+        // runs before this block. This call is the belt-and-braces pair for
+        // the directory delete below: left set, the next suite to open a box
+        // without re-pointing Hive has BackendManagerVm silently recreate that
+        // directory and write there. Hive.init(null) is idempotent.
         TestHelpers.resetHiveHomeForTesting();
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
