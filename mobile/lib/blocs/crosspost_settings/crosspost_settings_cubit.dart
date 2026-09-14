@@ -26,7 +26,7 @@ class CrosspostSettingsCubit extends Cubit<CrosspostSettingsState> {
        _provisioningPollInterval = provisioningPollInterval,
        _maxProvisioningPollAttempts = maxProvisioningPollAttempts,
        super(const CrosspostSettingsState()) {
-    loadStatus();
+    unawaited(loadStatus());
   }
 
   static const _defaultProvisioningPollInterval = Duration(seconds: 5);

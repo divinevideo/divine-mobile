@@ -2367,6 +2367,47 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'reports initialization failure when persisted-mode restoration fails',
+        setUp: () {
+          when(
+            () => prefs.getString(VideoRecorderMode.persistenceKey),
+          ).thenReturn(VideoRecorderMode.classic.name);
+          when(
+            () => prefs.setString(
+              VideoRecorderMode.persistenceKey,
+              VideoRecorderMode.classic.name,
+            ),
+          ).thenThrow(Exception('preference write failed'));
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+        expect: () => const [
+          VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.classic,
+            aspectRatio: model.AspectRatio.square,
+            showGridLines: true,
+          ),
+          VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.classic,
+            aspectRatio: model.AspectRatio.square,
+            showGridLines: true,
+            initializationError: CameraInitializationError.failed,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+            ),
+          );
+        },
+        errors: () => [isA<Exception>()],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'does NOT restore persisted mode when opened from the editor '
         '(keeps editor state intact)',
         setUp: () {
