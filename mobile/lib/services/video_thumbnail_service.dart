@@ -797,7 +797,9 @@ class _StripExtraction {
 
   void _stop() {
     _generation++;
-    _native?.cancel();
+    // Nothing to wait for: cancelling only tells native to stop, and no
+    // event can arrive after this call returns.
+    unawaited(_native?.cancel());
     _native = null;
     _releaseQueue?.call();
     _releaseQueue = null;
@@ -856,7 +858,7 @@ class _StripExtraction {
           onDone: () {
             _releaseQueue?.call();
             _releaseQueue = null;
-            if (generation == _generation) _controller.close();
+            if (generation == _generation) unawaited(_controller.close());
           },
         );
   }
@@ -896,9 +898,8 @@ class _StripExtraction {
       category: LogCategory.video,
     );
     if (_controller.isClosed) return;
-    _controller
-      ..addError(error, stackTrace)
-      ..close();
+    _controller.addError(error, stackTrace);
+    unawaited(_controller.close());
   }
 }
 
