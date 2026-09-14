@@ -517,6 +517,12 @@ void main() {
               .where((c) => c.method == 'startThumbnailStream')
               .toList();
           expect(starts, hasLength(2));
+          expect(
+            calls.indexWhere((c) => c.method == 'cancelTask'),
+            lessThan(
+              calls.lastIndexWhere((c) => c.method == 'startThumbnailStream'),
+            ),
+          );
           final first = ((starts[0].arguments as Map)['timestamps'] as List)
               .cast<int>();
           final second = ((starts[1].arguments as Map)['timestamps'] as List)
@@ -530,6 +536,50 @@ void main() {
           expect(emissions.last, hasLength(6));
           final timestamps = emissions.last.map((t) => t.timestamp).toSet();
           expect(timestamps, hasLength(6));
+
+          for (final thumbnail in emissions.last) {
+            File(thumbnail.path).deleteSync();
+          }
+        },
+      );
+
+      test(
+        'await-for forwarding keeps one uninterrupted native pass',
+        () async {
+          VideoThumbnailService.resetStripQueueForTesting();
+
+          var passes = 0;
+          final calls = mockThumbnailStream(
+            onStart: (sink, id) async {
+              passes++;
+              final remainingCount = 7 - passes;
+              for (var i = 0; i < remainingCount; i++) {
+                sink.success(frameEvent(id, i, (i + 1) / remainingCount));
+                await Future<void>(() {});
+              }
+              sink.success({'id': id, 'done': true});
+            },
+          );
+
+          Stream<List<StripThumbnail>> forwardWithAwaitFor() async* {
+            await for (final thumbnails
+                in VideoThumbnailService.generateStripThumbnails(
+                  videoPath: testVideoPath,
+                  clipId: 'clip-forwarded',
+                  duration: const Duration(seconds: 3),
+                  outputSize: const Size(48, 64),
+                  thumbsPerSecond: 2,
+                )) {
+              yield thumbnails;
+            }
+          }
+
+          final emissions = await forwardWithAwaitFor().toList();
+
+          final starts = calls.where((c) => c.method == 'startThumbnailStream');
+          expect(starts, hasLength(1));
+          expect(emissions, hasLength(6));
+          expect(emissions.last, hasLength(6));
 
           for (final thumbnail in emissions.last) {
             File(thumbnail.path).deleteSync();

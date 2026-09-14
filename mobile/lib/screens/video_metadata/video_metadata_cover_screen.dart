@@ -59,7 +59,7 @@ class _VideoMetadataCoverScreenState
 
   List<StripThumbnail> _stripThumbnails = const [];
   // Tracks every strip thumbnail path the service has ever emitted, so
-  // dispose can clean them up even if a later batch superseded the list
+  // dispose can clean them up even if a later emission superseded the list
   // currently held in [_stripThumbnails].
   final Set<String> _allStripThumbnailPaths = <String>{};
   // Cancelled in _disposeStripResources through a local alias, so the field is
@@ -172,8 +172,8 @@ class _VideoMetadataCoverScreenState
     final durationMs = _videoDuration.inMilliseconds;
 
     // One timestamp per slot, evenly distributed across the video duration.
-    // These are passed as priorityTimestamps so the first batch already
-    // covers every slot — no remapping as later batches arrive.
+    // These are passed as priorityTimestamps so every visible slot gets an
+    // exact requested frame without remapping as later frames arrive.
     final slotTimestamps = List<Duration>.generate(
       slotCount,
       // (i + 0.5) targets the slot's midpoint so the priority frame is
@@ -214,7 +214,7 @@ class _VideoMetadataCoverScreenState
             }
           },
           // A mid-stream extraction failure is already logged by the
-          // service; keep the batches that arrived so the strip stays
+          // service; keep the frames that arrived so the strip stays
           // usable for cover selection.
           onError: (Object _, StackTrace _) {},
         );
@@ -337,7 +337,7 @@ class _VideoMetadataCoverScreenState
 
   /// Cancels the strip generation stream and deletes every thumbnail file
   /// the service ever produced for this screen instance. Awaiting the
-  /// cancel before deleting ensures any in-flight batch has been flushed
+  /// cancel before deleting ensures any in-flight frame has been flushed
   /// into [_allStripThumbnailPaths] first.
   Future<void> _disposeStripResources() async {
     final subscription = _stripSubscription;
@@ -969,7 +969,7 @@ class _SlotImage extends StatelessWidget {
 /// Fades an extracted strip frame in over [fallback] instead of swapping it
 /// in the moment it decodes.
 ///
-/// The priority timestamps cover every slot, so the first batch fills the
+/// The priority timestamps cover every slot, so the first frames fill the
 /// whole strip at once — a hard swap flips all tiles from the stretched
 /// cover thumbnail to their real frames on a single frame boundary, which
 /// reads as a jolt.
@@ -989,7 +989,7 @@ class _FadingSlotImage extends StatefulWidget {
 class _FadingSlotImageState extends State<_FadingSlotImage> {
   static const _fadeDuration = Duration(milliseconds: 220);
 
-  /// Sticky once a frame has been painted: a later batch reassigning this
+  /// Sticky once a frame has been painted: a later emission reassigning this
   /// slot keeps the previous frame up (via `gaplessPlayback`) rather than
   /// dipping back to the fallback while the new file decodes.
   bool _hasFrame = false;

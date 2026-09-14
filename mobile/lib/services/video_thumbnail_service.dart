@@ -31,9 +31,9 @@ class VideoThumbnailService {
 
   /// Serial queue for strip thumbnail extraction.
   ///
-  /// One clip's native decode pass runs at a time, in the order the clips
-  /// were requested, so a timeline of several clips never holds more than
-  /// one hardware decoder session.
+  /// One clip's requested decode pass runs at a time, in request order.
+  /// Cancellation is dispatched before the next pass starts, although native
+  /// decoder teardown may overlap briefly after the plugin returns.
   static Future<void> _stripQueue = Future<void>.value();
 
   /// Resets the strip serial queue between tests.
@@ -639,7 +639,7 @@ class VideoThumbnailService {
   /// `[startMs, startMs + durationMs]`.
   ///
   /// Example progression for ~10s: 5.0s, 2.5s, 7.5s, 1.25s, 3.75s...
-  /// This improves perceived loading because early batches cover the full
+  /// This improves perceived loading because early frames cover the full
   /// requested window instead of only the beginning. The refinement runs in
   /// window-local time and every result is shifted by [startMs], so the
   /// returned timestamps are absolute positions in the source file.
@@ -762,8 +762,8 @@ class _StripExtraction {
        _fileStem = '${clipId}_${DateTime.now().millisecondsSinceEpoch}' {
     _controller = StreamController<List<StripThumbnail>>(
       onListen: _start,
-      onPause: _stop,
-      onResume: _start,
+      onPause: _pause,
+      onResume: _resume,
       onCancel: _stop,
     );
   }
@@ -785,6 +785,8 @@ class _StripExtraction {
   int _fileCounter = 0;
 
   /// The running native pass, if any.
+  // Owned by the controller lifecycle and cancelled by _stop.
+  // ignore: cancel_subscriptions
   StreamSubscription<void>? _native;
 
   /// Hands the strip queue on once the running pass is over.
@@ -794,15 +796,38 @@ class _StripExtraction {
   /// still waiting for the queue or the cache directory sees it is stale and
   /// steps aside instead of starting the decoder.
   int _generation = 0;
+  bool _stoppedForPause = false;
 
-  void _stop() {
+  /// Defers stopping until the current microtask queue drains. Dart's
+  /// `await for` implementation briefly pauses and resumes its source between
+  /// events; waiting one microtask distinguishes that internal hand-off from
+  /// sustained backpressure such as a route covering the editor.
+  void _pause() {
+    scheduleMicrotask(() {
+      if (!_controller.isPaused || _controller.isClosed) return;
+      _stoppedForPause = true;
+      unawaited(_stop());
+    });
+  }
+
+  void _resume() {
+    if (!_stoppedForPause) return;
+    _stoppedForPause = false;
+    unawaited(_start());
+  }
+
+  Future<void> _stop() async {
     _generation++;
-    // Nothing to wait for: cancelling only tells native to stop, and no
-    // event can arrive after this call returns.
-    unawaited(_native?.cancel());
+    final native = _native;
+    final releaseQueue = _releaseQueue;
     _native = null;
-    _releaseQueue?.call();
     _releaseQueue = null;
+    await native?.cancel();
+    // The plugin stops forwarding events before this future completes and has
+    // dispatched native cancellation. Native decoder teardown may finish
+    // shortly afterwards, so the queue bounds requested passes rather than
+    // claiming there can be no teardown overlap.
+    releaseQueue?.call();
   }
 
   Future<void> _start() async {
@@ -827,6 +852,7 @@ class _StripExtraction {
     try {
       cacheDir = await getTemporaryDirectory();
     } catch (error, stackTrace) {
+      if (generation != _generation) return;
       _fail(error, stackTrace);
       return;
     }
@@ -854,7 +880,10 @@ class _StripExtraction {
               ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
             _controller.add(List.unmodifiable(sorted));
           },
-          onError: _fail,
+          onError: (Object error, StackTrace stackTrace) {
+            if (generation != _generation) return;
+            _fail(error, stackTrace);
+          },
           onDone: () {
             _releaseQueue?.call();
             _releaseQueue = null;
