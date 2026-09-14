@@ -225,9 +225,9 @@ void main() {
           (span) => span.text!.startsWith('#'),
         );
 
-        expect(hashtagSpan.style?.color, VineTheme.info);
-        expect(hashtagSpan.style?.fontSize, 14);
-        expect(hashtagSpan.style?.fontWeight, FontWeight.w500);
+        expect(hashtagSpan.style?.color, equals(VineTheme.info));
+        expect(hashtagSpan.style?.fontSize, equals(14));
+        expect(hashtagSpan.style?.fontWeight, equals(FontWeight.w500));
       });
 
       testWidgets('respects maxLines property', (tester) async {
@@ -266,7 +266,7 @@ void main() {
         _hashtagRecognizer(tester, 'vine').onTap!();
         await tester.pumpAndSettle();
 
-        expect(callbackCount, 1);
+        expect(callbackCount, equals(1));
         expect(find.text('hashtag:vine'), findsOneWidget);
       });
 
@@ -306,7 +306,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('hashtag:second'), findsOneWidget);
-        expect(callbackCount, 2);
+        expect(callbackCount, equals(2));
       });
     });
 
