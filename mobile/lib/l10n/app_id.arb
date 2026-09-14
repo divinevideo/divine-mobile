@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "Ikuti",
     "audioAttributionOriginalSound": "Suara asli",
     "audioAttributionUnavailableSound": "Suara tidak tersedia",
-    "videoInspiredByAttributionMultiple": "Terinspirasi oleh @{creatorName} +{additionalCreatorCount}",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "Terinspirasi oleh @{creatorName}",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "dengan @{name}",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4258,10 +4248,6 @@
     "videoClipSaveTo": "Simpan ke {destination}",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "Hapus klip",
-    "inspiredByAttributionMultipleSemanticLabel": "Terinspirasi oleh {creatorName} +{additionalCreatorCount}. Ketuk untuk melihat profil mereka.",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "Terinspirasi oleh {creatorName}. Ketuk untuk melihat profil mereka.",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "Urutkan hasil video",
     "searchVideosSortTrending": "Hot",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

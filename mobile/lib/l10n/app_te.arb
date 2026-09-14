@@ -1009,25 +1009,6 @@
   "@audioAttributionUnavailableSound": {
     "description": "Neutral label shown when a video references a shared sound event that cannot currently be fetched. Must not imply the video author's original sound."
   },
-  "videoInspiredByAttributionMultiple": "@ ద్వారా ప్రేరణ పొందింది{creatorName} +{additionalCreatorCount}",
-  "@videoInspiredByAttributionMultiple": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      },
-      "additionalCreatorCount": {
-        "type": "int"
-      }
-    }
-  },
-  "videoInspiredByAttribution": "@ ద్వారా ప్రేరణ పొందింది\n@ తో {creatorName}",
-  "@videoInspiredByAttribution": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "videoCollaboratorWithOne": "\n@ తో {name}",
   "@videoCollaboratorWithOne": {
     "placeholders": {
@@ -4619,25 +4600,6 @@
     }
   },
   "videoClipDelete": "క్లిప్‌ను తొలగించండి",
-  "inspiredByAttributionMultipleSemanticLabel": "ప్రేరణ {creatorName} +{additionalCreatorCount}. వారి ప్రొఫైల్‌ను వీక్షించడానికి నొక్కండి.",
-  "@inspiredByAttributionMultipleSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      },
-      "additionalCreatorCount": {
-        "type": "int"
-      }
-    }
-  },
-  "inspiredByAttributionSemanticLabel": "ప్రేరణ {creatorName}. వారి ప్రొఫైల్‌ను వీక్షించడానికి నొక్కండి.",
-  "@inspiredByAttributionSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "bugReportSendReport": "నివేదిక పంపండి",
   "supportSubjectRequiredLabel": "విషయం *",
   "supportPublicSubmissionTitle": "పబ్లిక్ గిట్‌హబ్ పోస్ట్",

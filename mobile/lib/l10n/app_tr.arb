@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "Takip et",
     "audioAttributionOriginalSound": "Orijinal ses",
     "audioAttributionUnavailableSound": "Ses kullanılamıyor",
-    "videoInspiredByAttributionMultiple": "@{creatorName} +{additionalCreatorCount} tarafından ilham alındı",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "@{creatorName} tarafından ilham alındı",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "@{name} ile",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4258,10 +4248,6 @@
     "videoClipSaveTo": "{destination} konumuna kaydet",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "Klibi sil",
-    "inspiredByAttributionMultipleSemanticLabel": "{creatorName} +{additionalCreatorCount} tarafından ilham alındı. Profilini görüntülemek için dokun.",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "{creatorName} tarafından ilham alındı. Profilini görüntülemek için dokun.",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "Video sonuçlarını sırala",
     "searchVideosSortTrending": "Popüler",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

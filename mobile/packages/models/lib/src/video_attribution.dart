@@ -4,6 +4,19 @@
 
 import 'package:meta/meta.dart';
 
+/// Matches the trailing NIP-27 line used to preserve inspired-by attribution.
+///
+/// The line must be separated from a caption by a blank line, or be the whole
+/// content for a publish without a caption. Anchoring prevents prose mentions
+/// from being mistaken for attribution.
+final inspiredByAttributionPattern = RegExp(
+  r'(?:^|\n\n)Inspired by nostr:(npub1[a-z0-9]+)\s*$',
+);
+
+/// Removes a trailing inspired-by attribution line from displayable content.
+String stripInspiredByAttribution(String content) =>
+    content.replaceFirst(inspiredByAttributionPattern, '');
+
 /// Information about a video that inspired the current video.
 ///
 /// Captures a NIP-33/NIP-10 `a` tag reference to an addressable event:

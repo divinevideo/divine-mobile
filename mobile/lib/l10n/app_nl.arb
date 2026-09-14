@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "Volgen",
     "audioAttributionOriginalSound": "Origineel geluid",
     "audioAttributionUnavailableSound": "Geluid niet beschikbaar",
-    "videoInspiredByAttributionMultiple": "Geïnspireerd door @{creatorName} +{additionalCreatorCount}",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "Geïnspireerd door @{creatorName}",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "met @{name}",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4258,10 +4248,6 @@
     "videoClipSaveTo": "Opslaan bij {destination}",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "Clip verwijderen",
-    "inspiredByAttributionMultipleSemanticLabel": "Geïnspireerd door {creatorName} +{additionalCreatorCount}. Tik om hun profiel te bekijken.",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "Geïnspireerd door {creatorName}. Tik om hun profiel te bekijken.",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "Videoresultaten sorteren",
     "searchVideosSortTrending": "Hot",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

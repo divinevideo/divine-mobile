@@ -932,6 +932,8 @@ void main() {
 
       expect(videoEvent.inspiredByNpub, equals('npub1abc123def456ghi789'));
       expect(videoEvent.hasInspiredBy, isTrue);
+      expect(videoEvent.content, equals(nostrEvent.content));
+      expect(videoEvent.displayContent, equals('Great idea!'));
     });
 
     test('should not set inspiredByNpub when no nostr:npub in content', () {

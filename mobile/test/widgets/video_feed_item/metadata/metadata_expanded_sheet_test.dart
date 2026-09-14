@@ -2061,7 +2061,9 @@ void main() {
       (tester) async {
         final video = _makeVideo(
           title: 'Who knew?',
-          content: 'What really happens behind the scenes',
+          content:
+              'What really happens behind the scenes\n\n'
+              'Inspired by nostr:npub1syntheticcreator000000000000000',
           hashtags: ['grease', 'take503'],
           collaboratorPubkeys: [_collaborator1],
           inspiredByVideo: const InspiredByInfo(
@@ -2110,6 +2112,7 @@ void main() {
           find.text('What really happens behind the scenes'),
           findsOneWidget,
         );
+        expect(find.textContaining('Inspired by nostr:'), findsNothing);
 
         // Stats
         final l10n = _l10n(tester);

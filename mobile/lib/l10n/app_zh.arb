@@ -738,16 +738,6 @@
   "@audioAttributionUnavailableSound": {
     "description": "Neutral label shown when a video references a shared sound event that cannot currently be fetched. Must not imply the video author's original sound."
   },
-  "videoInspiredByAttributionMultiple": "灵感来自 @{creatorName} +{additionalCreatorCount}",
-  "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "videoInspiredByAttribution": "灵感来自 @{creatorName}",
-  "@videoInspiredByAttribution": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "videoCollaboratorWithOne": "与 @{name} 合作",
   "@videoCollaboratorWithOne": {
     "placeholders": {
@@ -3839,16 +3829,6 @@
     }
   },
   "videoClipDelete": "删除片段",
-  "inspiredByAttributionMultipleSemanticLabel": "灵感来自 {creatorName} +{additionalCreatorCount}。点按查看 TA 的主页。",
-  "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "inspiredByAttributionSemanticLabel": "灵感来自 {creatorName}。点按查看 TA 的主页。",
-  "@inspiredByAttributionSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "bugReportSendReport": "发送报告",
   "supportSubjectRequiredLabel": "主题 *",
   "supportPublicSubmissionTitle": "公开的 GitHub 帖子",

@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "Seguir",
     "audioAttributionOriginalSound": "Sonido original",
     "audioAttributionUnavailableSound": "Sonido no disponible",
-    "videoInspiredByAttributionMultiple": "Inspirado en @{creatorName} +{additionalCreatorCount}",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "Inspirado en @{creatorName}",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "con @{name}",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4258,10 +4248,6 @@
     "videoClipSaveTo": "Guardar en {destination}",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "Eliminar clip",
-    "inspiredByAttributionMultipleSemanticLabel": "Inspirado en {creatorName} +{additionalCreatorCount}. Tocá para ver su perfil.",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "Inspirado en {creatorName}. Tocá para ver su perfil.",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "Ordenar los resultados de video",
     "searchVideosSortTrending": "Popular",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

@@ -64,6 +64,33 @@ void main() {
       expect(build(content: 'caption').displayContent, equals('caption'));
     });
 
+    test('strips a trailing inspired-by attribution line', () {
+      const content =
+          'caption\n\nInspired by nostr:npub1syntheticcreator000000000000000';
+
+      expect(build(content: content).displayContent, equals('caption'));
+    });
+
+    test('returns empty content when attribution is the whole content', () {
+      const content = 'Inspired by nostr:npub1syntheticcreator000000000000000';
+
+      expect(build(content: content).displayContent, isEmpty);
+    });
+
+    test('preserves an inline inspired-by mention', () {
+      const content =
+          'A remix Inspired by nostr:npub1syntheticcreator000000000000000';
+
+      expect(build(content: content).displayContent, equals(content));
+    });
+
+    test('preserves an attribution line after only one newline', () {
+      const content =
+          'caption\nInspired by nostr:npub1syntheticcreator000000000000000';
+
+      expect(build(content: content).displayContent, equals(content));
+    });
+
     test('strips excessive combining marks from content', () {
       expect(
         build(content: 'a\u0300\u0301\u0302\u0303').displayContent,

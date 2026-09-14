@@ -112,6 +112,48 @@ void main() {
   });
 
   group('renders', () {
+    testWidgets('hides inspired-by attribution from the player overlay', (
+      tester,
+    ) async {
+      testVideo = testVideo.copyWith(
+        content:
+            'Visible caption\n\n'
+            'Inspired by nostr:npub1syntheticcreator000000000000000',
+        inspiredByNpub: 'npub1syntheticcreator000000000000000',
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider<VideoInteractionsBloc>.value(
+                value: mockInteractionsBloc,
+                child: VideoOverlayActions(
+                  video: testVideo,
+                  isVisible: true,
+                  isActive: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Visible caption'), findsOneWidget);
+      expect(find.textContaining('Inspired by nostr:'), findsNothing);
+      expect(
+        find.bySemanticsIdentifier('inspired_by_attribution_row'),
+        findsNothing,
+      );
+    });
+
     testWidgets('paints a brand-green heart in the author name', (
       tester,
     ) async {

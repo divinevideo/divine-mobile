@@ -713,16 +713,9 @@ class VideoEvent {
     }
 
     // Resolve the Inspired By person from the trailing NIP-27 attribution
-    // line the publisher appends ("Inspired by nostr:npub1..."). Anchored to
-    // the end of content and to a preceding blank line (or start of content,
-    // for empty-caption publishes) so a prose nostr:npub mention is never
-    // mistaken for attribution. Keep in sync with the strip regex in
-    // video_editor_provider.dart.
+    // line the publisher appends ("Inspired by nostr:npub1...").
     String? inspiredByNpub;
-    final npubPattern = RegExp(
-      r'(?:^|\n\n)Inspired by nostr:(npub1[a-z0-9]+)\s*$',
-    );
-    final npubMatch = npubPattern.firstMatch(event.content);
+    final npubMatch = inspiredByAttributionPattern.firstMatch(event.content);
     if (npubMatch != null) {
       inspiredByNpub = npubMatch.group(1);
     }
@@ -1135,8 +1128,9 @@ class VideoEvent {
       shareKind == NIP71VideoKinds.addressableShortVideo ||
       shareKind == NIP71VideoKinds.addressableNormalVideo;
 
-  /// Display-sanitized video content (zalgo caps, well-formed UTF-16).
-  String get displayContent => sanitizeForDisplay(content);
+  /// Display-sanitized video content without wire-format attribution metadata.
+  String get displayContent =>
+      sanitizeForDisplay(stripInspiredByAttribution(content));
 
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;

@@ -1724,19 +1724,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get audioAttributionUnavailableSound => 'సౌండ్ అందుబాటులో లేదు';
 
   @override
-  String videoInspiredByAttributionMultiple(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return '@ ద్వారా ప్రేరణ పొందింది$creatorName +$additionalCreatorCount';
-  }
-
-  @override
-  String videoInspiredByAttribution(String creatorName) {
-    return '@ ద్వారా ప్రేరణ పొందింది\n@ తో $creatorName';
-  }
-
-  @override
   String videoCollaboratorWithOne(String name) {
     return '\n@ తో $name';
   }
@@ -7531,19 +7518,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoClipDelete => 'క్లిప్‌ను తొలగించండి';
-
-  @override
-  String inspiredByAttributionMultipleSemanticLabel(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return 'ప్రేరణ $creatorName +$additionalCreatorCount. వారి ప్రొఫైల్‌ను వీక్షించడానికి నొక్కండి.';
-  }
-
-  @override
-  String inspiredByAttributionSemanticLabel(String creatorName) {
-    return 'ప్రేరణ $creatorName. వారి ప్రొఫైల్‌ను వీక్షించడానికి నొక్కండి.';
-  }
 
   @override
   String get bugReportSendReport => 'నివేదిక పంపండి';
