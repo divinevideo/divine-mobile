@@ -371,13 +371,6 @@ class _PlaceholderVisitor extends RecursiveAstVisitor<void> {
     super.visitMethodInvocation(node);
   }
 
-  FunctionExpression? _callbackOf(MethodInvocation node) {
-    for (final argument in node.argumentList.arguments) {
-      if (argument is FunctionExpression) return argument;
-    }
-    return null;
-  }
-
   String _describe(Expression first) {
     final text = first.toSource().replaceAll(RegExp(r'\s+'), ' ');
     return text.length <= 70 ? text : '${text.substring(0, 67)}...';
