@@ -48,7 +48,7 @@ assertion, since a provider mutated during `initState`/`dispose` surfaces as a
 framework exception. There is deliberately no inline ignore: a genuine
 exception earns a reviewed baseline entry.
 
-Two boundaries worth knowing, because they are the reason the guard is
+Three boundaries worth knowing, because they are the reason the guard is
 trustworthy:
 
 - **A tautology beside a real assertion is not flagged.** The test as a whole
@@ -70,7 +70,7 @@ cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integratio
 
 ### An unchanged-assertion needs a pinned baseline
 
-The third frozen shape is not literal, which is why the placeholder guard cannot
+The fourth frozen shape is not literal, which is why the placeholder guard cannot
 see it. Read a value into a local, act, and assert the same read still equals
 the local:
 

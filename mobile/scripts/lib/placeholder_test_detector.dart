@@ -1,5 +1,6 @@
 // ABOUTME: Detector behind check_placeholder_tests.sh — finds tests that pass
-// ABOUTME: detects empty test files and groups too (#3340, #9146).
+// ABOUTME: no matter what the product does, and files and groups declaring
+// ABOUTME: none (#3340, #9146).
 //
 // Usage (from mobile/):
 //   dart run scripts/lib/placeholder_test_detector.dart <scan-dir>... [options]
