@@ -289,12 +289,13 @@ void main() {
 
     group('deleteIfSettled', () {
       test('retires a row once nothing is still waiting', () async {
+        // Relay delivered, support ticket given up on, moderation delivered
+        // (the fixture default): nothing is waiting.
         await dao.enqueue(
           makeReport(
             reportId: 'r1',
             relayStatus: PendingReportChannelStatus.done,
             zendeskStatus: PendingReportChannelStatus.deadLetter,
-            moderationStatus: PendingReportChannelStatus.done,
           ),
         );
 
@@ -303,12 +304,12 @@ void main() {
       });
 
       test('keeps a row while any destination is still pending', () async {
+        // Relay delivered, moderation delivered (the fixture default), support
+        // ticket still pending (also the default): the row must survive.
         await dao.enqueue(
           makeReport(
             reportId: 'r1',
             relayStatus: PendingReportChannelStatus.done,
-            zendeskStatus: PendingReportChannelStatus.pending,
-            moderationStatus: PendingReportChannelStatus.done,
           ),
         );
 
