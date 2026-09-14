@@ -1022,7 +1022,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   /// The volume a timeline sound plays at in the preview: its own, or silence
   /// while the voice-over recorder is open.
-  double _previewVolume(double volume) => _isVoiceOverPreview ? 0 : volume;
+  ///
+  /// Takes [isVoiceOverPreview] rather than reading it from the bloc, so a
+  /// caller that awaits mid-loop cannot read a disposed context.
+  double _previewVolume(double volume, {required bool isVoiceOverPreview}) =>
+      isVoiceOverPreview ? 0 : volume;
 
   /// Silences the preview while the voice-over recorder is open and restores
   /// it afterwards.
@@ -1672,6 +1676,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// plus the window length.
   Future<void> _syncStopMotionAudio() async {
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
 
     final tracks = <StopMotionAudioPreviewTrack>[];
@@ -1709,7 +1714,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         StopMotionAudioPreviewTrack(
           id: item.id,
           source: source,
-          volume: _previewVolume(sound.volume),
+          volume: _previewVolume(
+            sound.volume,
+            isVoiceOverPreview: isVoiceOverPreview,
+          ),
           windowStart: item.startTime,
           windowEnd: item.endTime,
         ),
@@ -1735,6 +1743,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!_isPlayerInitialized) return;
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    // Captured before the loop can await: the track builders below await the
+    // native side, and reading the bloc from a disposed context afterwards
+    // would throw.
+    final isVoiceOverPreview = _isVoiceOverPreview;
     final audioEvents = overlayState.audioTracks;
 
     final soundItems = overlayState.items
@@ -1764,7 +1776,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         if (sound.isBundled && sound.assetPath != null) {
           track = await AudioTrack.asset(
             sound.assetPath!,
-            volume: _previewVolume(sound.volume),
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
@@ -1772,7 +1787,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
             sound.localFilePath!,
-            volume: _previewVolume(sound.volume),
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
@@ -1780,7 +1798,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         } else {
           track = AudioTrack.network(
             sound.url!,
-            volume: _previewVolume(sound.volume),
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
