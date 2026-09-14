@@ -159,10 +159,32 @@ void main() {
       final data = ProfileStatsData.fromJson(const {
         'video_count': 5,
         'reaction_count': 20,
+        'vertical_videos': 3,
       });
 
       expect(data.videoCount, equals(5));
       expect(data.reactionCount, equals(20));
+      expect(data.verticalVideos, equals(3));
+    });
+
+    test('fromJson reads vertical videos as zero when absent', () {
+      final data = ProfileStatsData.fromJson(const {'video_count': 5});
+
+      expect(data.videoCount, equals(5));
+      expect(data.verticalVideos, isZero);
+    });
+
+    test('distinguishes stats that differ only by vertical videos', () {
+      const horizontalOnly = ProfileStatsData(videoCount: 5, reactionCount: 0);
+      const allVertical = ProfileStatsData(
+        videoCount: 5,
+        reactionCount: 0,
+        verticalVideos: 5,
+      );
+
+      expect(horizontalOnly, isNot(equals(allVertical)));
+      expect(horizontalOnly.hashCode, isNot(equals(allVertical.hashCode)));
+      expect(allVertical.toString(), contains('verticalVideos: 5'));
     });
   });
 

@@ -178,33 +178,45 @@ class ProfileStatsData {
   const ProfileStatsData({
     required this.videoCount,
     required this.reactionCount,
+    this.verticalVideos = 0,
   });
 
   factory ProfileStatsData.fromJson(Map<String, dynamic> json) {
     return ProfileStatsData(
       videoCount: parseIntSafe(json['video_count']),
       reactionCount: parseIntSafe(json['reaction_count']),
+      verticalVideos: parseIntSafe(json['vertical_videos']),
     );
   }
 
+  /// Every video the author has posted, whatever its orientation.
+  ///
+  /// Divine only ever renders the vertical ones, so prefer
+  /// [verticalVideos] for anything a viewer can count on screen.
   final int videoCount;
+
   final int reactionCount;
+
+  /// The subset of [videoCount] that Divine can show.
+  final int verticalVideos;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ProfileStatsData &&
         other.videoCount == videoCount &&
-        other.reactionCount == reactionCount;
+        other.reactionCount == reactionCount &&
+        other.verticalVideos == verticalVideos;
   }
 
   @override
-  int get hashCode => Object.hash(videoCount, reactionCount);
+  int get hashCode => Object.hash(videoCount, reactionCount, verticalVideos);
 
   @override
   String toString() =>
       'ProfileStatsData(videoCount: $videoCount, '
-      'reactionCount: $reactionCount)';
+      'reactionCount: $reactionCount, '
+      'verticalVideos: $verticalVideos)';
 }
 
 /// Engagement totals from the `engagement` sub-object.
