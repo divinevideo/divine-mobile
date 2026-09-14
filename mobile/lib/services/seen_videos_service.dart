@@ -291,7 +291,7 @@ class SeenVideosService {
         } catch (e) {
           trace
             ..putAttribute('completion', 'partial')
-            ..putAttribute('failed_phase', phases.currentPhase!);
+            ..putAttribute('failed_phase', phases.currentPhase ?? 'finalize');
           Log.warning(
             'Seen DB hydrate failed, using prefs set: $e',
             name: 'SeenVideosService',
@@ -302,7 +302,7 @@ class SeenVideosService {
     } catch (e) {
       trace
         ..putAttribute('completion', 'partial')
-        ..putAttribute('failed_phase', phases.currentPhase!);
+        ..putAttribute('failed_phase', phases.currentPhase ?? 'finalize');
       Log.error(
         'Error loading seen videos: $e',
         name: 'SeenVideosService',

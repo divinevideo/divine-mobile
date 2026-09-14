@@ -42,11 +42,14 @@ class FeedLoadTrace {
   void complete(String completion, {int? eventTotal}) {
     if (_completed) return;
     _completed = true;
-    _trace.putAttribute('terminal_phase', _phases.currentPhase!);
-    _phases.finishPhase();
-    _trace
-      ..setMetric('event_count', eventTotal ?? _eventCount())
-      ..putAttribute('completion', completion);
-    unawaited(_trace.stop());
+    try {
+      _trace.putAttribute('terminal_phase', _phases.currentPhase ?? 'unknown');
+      _phases.finishPhase();
+      _trace
+        ..setMetric('event_count', eventTotal ?? _eventCount())
+        ..putAttribute('completion', completion);
+    } finally {
+      unawaited(_trace.stop());
+    }
   }
 }
