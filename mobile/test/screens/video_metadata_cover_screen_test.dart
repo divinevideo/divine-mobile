@@ -83,6 +83,13 @@ void _clearHandler(MethodChannel channel) {
       .setMockMethodCallHandler(channel, null);
 }
 
+/// The strip's frames arrive on this event channel. Nothing here needs a
+/// frame; the handler only has to exist, or subscribing reports a
+/// [MissingPluginException] through [FlutterError].
+const _thumbnailStreamChannel = EventChannel(
+  'pro_video_editor_thumbnail_stream',
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -98,8 +105,12 @@ void main() {
       return null;
     });
 
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockStreamHandler(
+          _thumbnailStreamChannel,
+          MockStreamHandler.inline(onListen: (_, _) {}),
+        );
     _setHandler(const MethodChannel('pro_video_editor'), (call) async {
-      if (call.method == 'getThumbnails') return <Object?>[];
       if (call.method == 'getMetadata') {
         return <String, Object?>{
           'duration': 3000000,
@@ -119,6 +130,8 @@ void main() {
     ProVideoEditor.instance = originalProVideoEditor;
     _clearHandler(const MethodChannel('divine_video_player'));
     _clearHandler(const MethodChannel('pro_video_editor'));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockStreamHandler(_thumbnailStreamChannel, null);
   });
 
   group(VideoMetadataCoverScreen, () {
@@ -688,9 +701,9 @@ void main() {
 
         var stripRequested = false;
         _setHandler(const MethodChannel('pro_video_editor'), (call) async {
-          if (call.method == 'getThumbnails') {
+          if (call.method == 'startThumbnailStream') {
             stripRequested = true;
-            return <Object?>[];
+            return null;
           }
           if (call.method == 'getMetadata') {
             return <String, Object?>{
@@ -710,8 +723,8 @@ void main() {
         // A previous test tearing down mid-generation strands the static
         // strip queue on a future from its dead FakeAsync zone; reset it
         // here — inside this test's zone, so the replacement future's
-        // completion is flushed by pumps — or the batch loop never runs.
-        VideoThumbnailService.resetStripBatchQueueForTesting();
+        // completion is flushed by pumps — or the extraction never starts.
+        VideoThumbnailService.resetStripQueueForTesting();
 
         await tester.pumpWidget(buildWidget());
         await tester.pump(const Duration(milliseconds: 400));
