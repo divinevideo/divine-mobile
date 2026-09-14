@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
+import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -27,6 +29,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// keepAlive Riverpod singleton that most of the service graph holds live
 /// subscriptions on, so swapping the file underneath it would mean tearing that
 /// graph down and rebuilding it. A restart does the same thing safely.
+///
+/// The incident is reported to Crashlytics exactly once, as a
+/// [DatabaseCorruptionEvent]. Every later database failure in the session is
+/// an echo of it — the same dead file, seen from whichever query happened to
+/// run next — and [echoesReportedCorruption] lets the crash reporter drop
+/// those instead of filing one group per call site (#7507).
 class DatabaseCorruptionService {
   /// Creates a service persisting to [preferences].
   ///
@@ -94,7 +102,8 @@ class DatabaseCorruptionService {
 
     Log.error(
       'Local database reported on-disk corruption at runtime. Recovery is '
-      'scheduled for the next launch.',
+      'scheduled for the next launch. Later database failures in this session '
+      'are echoes of this one and are not forwarded to Crashlytics.',
       name: _logName,
       error: error,
       stackTrace: stackTrace,
@@ -103,7 +112,35 @@ class DatabaseCorruptionService {
     // not also wait on a telemetry round-trip it does not depend on.
     _persisted = _writePendingRecovery();
     unawaited(_persisted);
-    unawaited(_recordNonFatal(error, stackTrace));
+    // Filed from here rather than with the caught trace: the statement that
+    // tripped is in the message, and a Drift failure forwarded from the
+    // database isolate carries no frames Crashlytics can render, so the group
+    // would otherwise key on the statement text. This frame keeps every
+    // runtime detection in one group, the way `_reportRecovery` does for the
+    // startup recovery.
+    unawaited(
+      _recordNonFatal(DatabaseCorruptionEvent(error), StackTrace.current),
+    );
+  }
+
+  /// Whether [error] is another view of the corruption this session has
+  /// already reported through [report].
+  ///
+  /// Wired into the crash reporter, which asks before forwarding any non-fatal.
+  /// Both halves are required: the session flag alone would drop unrelated
+  /// defects that happen to fire after it flips, and the classification alone
+  /// would drop the very first corrupt statement, which is the report worth
+  /// keeping. The [DatabaseCorruptionEvent] that [report] files is that first
+  /// report, so it passes regardless of what its message mentions. Ordered
+  /// flag-first because it is a field read that is `false` for every healthy
+  /// session; classification only runs on a database already known to be
+  /// broken.
+  bool echoesReportedCorruption(Object error) {
+    if (!_isCorrupted.value) return false;
+    if (error is DatabaseCorruptionEvent) return false;
+    return mentionsDatabaseCorruption(
+      error is Reportable<Object> ? error.unwrap() : error,
+    );
   }
 
   /// Reports the corruption as a non-fatal. Best-effort: the database is
@@ -153,4 +190,30 @@ class DatabaseCorruptionService {
   /// Releases the notifier. The service is an app-lifetime singleton, so this
   /// exists for tests and provider disposal.
   void dispose() => _isCorrupted.dispose();
+}
+
+/// Non-fatal marker recorded to Crashlytics the first time a session's
+/// database fails with `SQLITE_CORRUPT` / `SQLITE_NOTADB`, so the runtime
+/// detection rate is readable as one group. The startup counterpart is
+/// `DatabaseRecoveryEvent`; the two together describe an incident end to end.
+///
+/// Carries the failing statement's result code and SQL, never its bound
+/// parameters: those are user content (event JSON, pubkeys, signatures) and
+/// belong in neither a crash report nor a grouping key.
+class DatabaseCorruptionEvent implements Exception {
+  DatabaseCorruptionEvent(this.cause);
+
+  /// The failure as the interceptor caught it — a `DriftRemoteException` in
+  /// production, which forwards the isolate's `SqliteException` text verbatim.
+  final Object cause;
+
+  static const _boundParameters = ', parameters: ';
+
+  @override
+  String toString() {
+    final text = cause.toString();
+    final parameters = text.indexOf(_boundParameters);
+    final described = parameters == -1 ? text : text.substring(0, parameters);
+    return 'DatabaseCorruptionEvent: $described';
+  }
 }

@@ -2,34 +2,16 @@
 // ABOUTME: ReportableError, sanitizes the reason annotation, and preserves
 // ABOUTME: Log.error coverage for every Bloc onError trigger.
 
-import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/observability/divine_bloc_observer.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:sqlite3/common.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockCrashReportingService extends Mock
     implements CrashReportingService {}
-
-/// The corrupt statement behind #7507, as the real `sqlite3` type.
-///
-/// The database runs on a background isolate, so blocs actually see a
-/// `DriftRemoteException` — but its `toString()` is exactly
-/// `remoteCause.toString()` and its constructor is private, so the cause
-/// itself is the faithful stand-in. The bound parameter matters: it is what
-/// puts content below the header line.
-final _realCorruptionException = SqliteException(
-  extendedResultCode: 26,
-  message: 'file is not a database',
-  explanation: 'file is not a database (code 26)',
-  operation: 'preparing a statement',
-  causingStatement: 'PRAGMA user_version',
-  parametersToStatement: <Object?>['abc123'],
-);
 
 class _CountCubit extends Cubit<int> {
   _CountCubit() : super(0);
@@ -50,6 +32,7 @@ class _NoteCubit extends Cubit<String> {
 void main() {
   setUpAll(() {
     registerFallbackValue(StackTrace.current);
+    registerFallbackValue(<String, Object>{});
   });
 
   group(DivineBlocObserver, () {
@@ -60,14 +43,12 @@ void main() {
       await LogCaptureService().clearAllLogs();
       mockCrash = _MockCrashReportingService();
       when(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockCrash.setCustomKey(any(), any<dynamic>()),
       ).thenAnswer((_) async {});
       observer = DivineBlocObserver(crashReporting: mockCrash);
     });
@@ -82,10 +63,11 @@ void main() {
       observer.onError(cubit, error, stack);
 
       verify(
-        () => mockCrash.recordError(
+        () => mockCrash.recordErrorWithCustomKeys(
           error,
           stack,
           reason: 'Bloc.addError _CountCubit',
+          customKeys: any(named: 'customKeys'),
         ),
       ).called(1);
     });
@@ -97,10 +79,11 @@ void main() {
       observer.onError(cubit, Reportable(StateError('x')), StackTrace.current);
 
       verify(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason', that: contains('_CountCubit')),
+          customKeys: any(named: 'customKeys'),
         ),
       ).called(1);
     });
@@ -112,10 +95,11 @@ void main() {
       observer.onError(cubit, Exception('domain failure'), StackTrace.current);
 
       verifyNever(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
       );
     });
@@ -138,10 +122,11 @@ void main() {
           await Future<void>.delayed(Duration.zero);
 
           final captured = verify(
-            () => mockCrash.recordError(
-              captureAny<dynamic>(),
+            () => mockCrash.recordErrorWithCustomKeys(
+              captureAny<Object>(),
               stack,
               reason: 'Bloc.addError _CountCubit',
+              customKeys: any(named: 'customKeys'),
             ),
           ).captured;
           expect(captured.single, isA<ReportableError>());
@@ -195,10 +180,11 @@ void main() {
       observer.onError(cubit, error, StackTrace.current);
 
       final captured = verify(
-        () => mockCrash.recordError(
-          captureAny<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          captureAny<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
       ).captured;
       expect(captured, hasLength(1));
@@ -226,18 +212,19 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         verify(
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
+          () => mockCrash.recordErrorWithCustomKeys(
+            any<Object>(that: isA<ReportableError>()),
             any<StackTrace?>(),
             reason: 'Bloc.addError _CountCubit',
+            customKeys: any(named: 'customKeys'),
           ),
         ).called(1);
       },
     );
 
     test(
-      'attaches last event and state as custom keys before recordError',
-      () async {
+      'hands last event and state to the report suppression boundary',
+      () {
         final bloc = _CounterBloc();
         addTearDown(bloc.close);
 
@@ -248,27 +235,26 @@ void main() {
         final error = Reportable(StateError('boom'), context: 'test');
         observer.onError(bloc, error, StackTrace.current);
 
-        // _attachDiagnosticKeys runs unawaited; drain the microtask before
-        // verifying.
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(kBlocLastEventKey, 'IncrementPressed'),
-          () => mockCrash.setCustomKey(kBlocLastStateKey, '1'),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            any<dynamic>(
-              that: predicate<dynamic>(
-                (v) => v is String && DateTime.tryParse(v) != null,
-              ),
-            ),
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    error,
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(keys[kBlocLastEventKey], 'IncrementPressed');
+        expect(keys[kBlocLastStateKey], '1');
+        expect(
+          keys[kBlocLastTransitionAtKey],
+          isA<String>().having(
+            DateTime.tryParse,
+            'parsed timestamp',
+            isNotNull,
           ),
-          () => mockCrash.recordError(
-            error,
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        );
       },
     );
 
@@ -283,27 +269,20 @@ void main() {
           Reportable(StateError('x')),
           StackTrace.current,
         );
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(
-            kBlocLastEventKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastStateKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    any<Object>(),
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(
+          keys.values,
+          everyElement(kBlocDiagnosticNotObserved),
+        );
       },
     );
 
@@ -325,42 +304,20 @@ void main() {
             StackTrace.current,
           );
 
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(kBlocLastEventKey, 'IncrementPressed'),
-          () => mockCrash.setCustomKey(kBlocLastStateKey, '1'),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            any<dynamic>(
-              that: predicate<dynamic>(
-                (v) => v is String && DateTime.tryParse(v) != null,
-              ),
-            ),
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
+        final captured = verify(
+          () => mockCrash.recordErrorWithCustomKeys(
+            any<Object>(that: isA<ReportableError>()),
             any<StackTrace?>(),
             reason: any(named: 'reason'),
+            customKeys: captureAny(named: 'customKeys'),
           ),
-          () => mockCrash.setCustomKey(
-            kBlocLastEventKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastStateKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        ).captured.cast<Map<String, Object>>();
+        expect(captured, hasLength(2));
+        expect(captured.first[kBlocLastEventKey], 'IncrementPressed');
+        expect(
+          captured.last.values,
+          everyElement(kBlocDiagnosticNotObserved),
+        );
       },
     );
 
@@ -381,224 +338,19 @@ void main() {
             ),
           )
           ..onError(cubit, Reportable(StateError('x')), StackTrace.current);
-        await Future<void>.delayed(Duration.zero);
-
-        final captured = verify(
-          () =>
-              mockCrash.setCustomKey(kBlocLastStateKey, captureAny<dynamic>()),
-        ).captured;
-        expect(captured, hasLength(1));
-        expect(captured.single, contains('npub1<redacted>'));
-        expect(captured.single, isNot(contains(npub)));
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    any<Object>(),
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(keys[kBlocLastStateKey], contains('npub1<redacted>'));
+        expect(keys[kBlocLastStateKey], isNot(contains(npub)));
       },
     );
-
-    group('once the local database has reported corruption (#7507)', () {
-      late bool isCorrupted;
-
-      /// The error every downstream bloc sees while the database is broken:
-      /// a Drift failure forwarded from the background isolate, wrapped at the
-      /// `addError` call site. `_publishLike` is the real reporting site behind
-      /// one of the duplicate Crashlytics groups.
-      Reportable<Object> driftCorruptionFailure() =>
-          Reportable(_realCorruptionException, context: '_publishLike');
-
-      setUp(() {
-        isCorrupted = false;
-        observer = DivineBlocObserver(
-          crashReporting: mockCrash,
-          isDatabaseCorrupted: () => isCorrupted,
-        );
-      });
-
-      void reportedBy(BlocBase<dynamic> bloc, Object error) =>
-          observer.onError(bloc, error, StackTrace.current);
-
-      test('forwards a database failure while the database looks healthy', () {
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-
-        reportedBy(cubit, driftCorruptionFailure());
-
-        verify(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ).called(1);
-      });
-
-      test('stops forwarding the same failure once corruption is known', () {
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-
-        reportedBy(cubit, driftCorruptionFailure());
-
-        verifyNever(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        );
-      });
-
-      test('suppresses the real ParallelWaitError signature', () async {
-        // Signature 5 of #7507, raised from
-        // `NotificationFeedBloc._onRefreshed`: the corrupt statement is one
-        // leg of a record `.wait`, and `ParallelWaitError` extends `Error`, so
-        // it lands in that handler's generic catch and is wrapped there.
-        //
-        // Built by actually failing a `.wait` rather than by hand-writing what
-        // it prints — the gate's whole job is reading a string the SDK
-        // produces, so a fabricated one would prove nothing about the fix.
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-
-        Object? raised;
-        try {
-          await (
-            Future<int>.error(_realCorruptionException),
-            Future<String>.value('ok'),
-          ).wait;
-        } on Object catch (error) {
-          raised = error;
-        }
-
-        reportedBy(cubit, Reportable(raised!, context: '_onRefreshed'));
-
-        verifyNever(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        );
-      });
-
-      test('suppresses a corruption a wrapper pushed off the header line', () {
-        // `CouldNotRollBackException` prints the ROLLBACK's own failure first
-        // and the error that triggered the rollback below it, so the SQLite
-        // header is not on line 1. This is the shape that requires
-        // `mentionsDatabaseCorruption` rather than the header-only classifier;
-        // every other wrapper in play keeps the header on line 1.
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-
-        reportedBy(
-          cubit,
-          Reportable(
-            CouldNotRollBackException(
-              _realCorruptionException,
-              StackTrace.empty,
-              StateError('connection closed'),
-            ),
-            context: '_onVoteCountsFetchRequested',
-          ),
-        );
-
-        verifyNever(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        );
-      });
-
-      test('still forwards an unrelated defect while corruption is known', () {
-        // The gate must narrow to the handled failure. A programming-invariant
-        // error that happens to fire after the flag flips is still a defect.
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-
-        reportedBy(cubit, Reportable(StateError('boom'), context: 'unrelated'));
-
-        verify(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ).called(1);
-      });
-
-      test('still forwards quoted corruption text in bound user data', () {
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-        final ordinaryFailure = SqliteException(
-          extendedResultCode: 19,
-          message: 'UNIQUE constraint failed: event.id',
-          explanation: 'UNIQUE constraint failed: event.id (code 19)',
-          operation: 'inserting a row',
-          causingStatement: 'INSERT INTO event (content) VALUES (?)',
-          parametersToStatement: const <Object?>[
-            'SqliteException(11): database disk image is malformed',
-          ],
-        );
-
-        reportedBy(
-          cubit,
-          Reportable(ordinaryFailure, context: '_publishLike'),
-        );
-
-        verify(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ).called(1);
-      });
-
-      test('keeps the suppressed failure in the unified log', () async {
-        // Suppression is a Crashlytics decision only: the bug-report capture
-        // flow still has to show what went wrong on the device.
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-        isCorrupted = true;
-
-        reportedBy(cubit, driftCorruptionFailure());
-        await Future<void>.delayed(Duration.zero);
-
-        // Matched anywhere in the shared ring buffer, for the reason spelled
-        // out on the sibling log assertion above.
-        final logs = LogCaptureService().getRecentLogs();
-        expect(
-          logs.map((entry) => entry.message),
-          contains(
-            allOf(
-              contains('Bloc error: _CountCubit'),
-              contains('SqliteException(26)'),
-            ),
-          ),
-        );
-      });
-
-      test('defaults to forwarding when no corruption gate is wired', () {
-        // Containers built without the corruption service (tests, web) must
-        // keep the pre-#7507 behaviour rather than silently drop reports.
-        final cubit = _CountCubit();
-        addTearDown(cubit.close);
-
-        DivineBlocObserver(
-          crashReporting: mockCrash,
-        ).onError(cubit, driftCorruptionFailure(), StackTrace.current);
-
-        verify(
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ).called(1);
-      });
-    });
   });
 }
