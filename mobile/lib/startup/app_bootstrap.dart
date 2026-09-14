@@ -319,9 +319,9 @@ Future<void> startOpenVineApp({
   }
 
   // Forward pro_video_editor native diagnostics (renderer, thumbnail, audio)
-  // into the unified log so video-editor/render problems land in bug reports
-  // (#4801). Gated per call by the nativeLogLevel passed to each operation.
-  ProVideoEditorLogForwarder.start();
+  // into bug-report logs and sanitized warning/error crash breadcrumbs.
+  // Gated per call by the nativeLogLevel passed to each operation.
+  ProVideoEditorLogForwarder.start(crashReporter: crashReporting);
 
   // Store original debugPrint to avoid recursion
   final originalDebugPrint = debugPrint;
