@@ -54,9 +54,9 @@ still count in the rate through the bootstrap-failure row:
 The Crashlytics BigQuery export (`openvine-co.firebase_crashlytics`) is the
 authoritative source: the console groups by issue, and the issue ids of the
 echo groups change with every release because they key on the statement
-text, while the export lets one query classify by message. Run it as
-`alex@divine.video`; the tables are partitioned by `event_timestamp`, so
-always bound the interval.
+text, while the export lets one query classify by message. Run it with an
+account authorized for the Crashlytics export; the tables are partitioned by
+`event_timestamp`, so always bound the interval.
 
 ```sql
 -- Weekly corruption signals per install, one row per week and signal.
@@ -105,7 +105,7 @@ active installs**. The analytics export gives the denominator:
 SELECT platform,
   DATE_TRUNC(PARSE_DATE('%Y%m%d', event_date), WEEK(MONDAY)) AS week,
   COUNT(DISTINCT user_pseudo_id) AS weekly_active
-FROM `openvine-co.analytics_505815521.events_*`
+FROM `openvine-co.analytics_<property_id>.events_*`
 WHERE _TABLE_SUFFIX BETWEEN '20260817' AND '20260913'
   AND platform IN ('IOS', 'ANDROID')
 GROUP BY platform, week ORDER BY platform, week;
