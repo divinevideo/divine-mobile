@@ -3,7 +3,6 @@
 
 import 'dart:async';
 
-import 'package:db_client/db_client.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
@@ -43,47 +42,22 @@ const String kBlocDiagnosticNotObserved = '<not observed>';
 /// is the one that made the #3503 auth-timing investigation expensive. See
 /// #3758.
 ///
-/// A second gate suppresses Crashlytics forwarding for database failures once
-/// the local database has already reported corruption — see the
-/// `isDatabaseCorrupted` constructor argument.
+/// Echoes of an incident the app has already reported — every bloc's Drift
+/// failure once the local database has reported corruption, say — are not
+/// filtered here. [CrashReportingService.recordError] applies the incident
+/// owner's suppression for every sink at once (#7507).
 ///
 /// Wire once at app start, before `runApp`:
 ///
 /// ```dart
-/// Bloc.observer = DivineBlocObserver(
-///   isDatabaseCorrupted: () => corruptionService.isCorrupted.value,
-/// );
+/// Bloc.observer = DivineBlocObserver(crashReporting: crashReporting);
 /// runApp(...);
 /// ```
 class DivineBlocObserver extends BlocObserver {
-  DivineBlocObserver({
-    required CrashReportingService crashReporting,
-    bool Function()? isDatabaseCorrupted,
-  }) : _crashReporting = crashReporting,
-       _isDatabaseCorrupted = isDatabaseCorrupted ?? _databaseIsHealthy;
-
-  static bool _databaseIsHealthy() => false;
+  DivineBlocObserver({required CrashReportingService crashReporting})
+    : _crashReporting = crashReporting;
 
   final CrashReportingService _crashReporting;
-
-  /// Whether this session has already classified the local database as
-  /// corrupt. Wired to `DatabaseCorruptionService.isCorrupted`, which flips in
-  /// exactly one place — the first statement that fails with `SQLITE_CORRUPT` /
-  /// `SQLITE_NOTADB` — and never resets.
-  ///
-  /// While it reads `true`, recovery is already scheduled for the next launch
-  /// and the corruption gate has already replaced the UI with the restart
-  /// prompt, so every further database failure is a duplicate of a handled
-  /// event rather than a defect: matrix-NO per
-  /// `.claude/rules/error_handling.md`. Without this, one corrupt database
-  /// raised five distinct Crashlytics groups for the same incident, because
-  /// each downstream bloc wrapped and reported it independently (#7507).
-  ///
-  /// The flip itself is still reported once, by the service that sets it, so
-  /// suppression here cannot hide the incident — only its echoes. Defaults to
-  /// "healthy" so tests and any container built without the corruption service
-  /// keep the previous behaviour.
-  final bool Function() _isDatabaseCorrupted;
 
   /// Per-bloc diagnostics. An [Expando] holds its keys weakly, so a bloc's
   /// entry becomes collectible the moment the bloc itself is — observing every
@@ -121,7 +95,6 @@ class DivineBlocObserver extends BlocObserver {
     );
     final reportableError = _asReportable(error);
     if (reportableError == null) return;
-    if (_echoesHandledCorruption(error)) return;
     // Dispatch the diagnostic keys before recordError so they attach to the
     // report it emits. Both are fire-and-forget, but invoked synchronously and
     // in order, so the platform-channel messages stay ordered without blocking
@@ -134,21 +107,6 @@ class DivineBlocObserver extends BlocObserver {
       _crashReporting.recordError(reportableError, stackTrace, reason: reason),
     );
   }
-
-  /// Whether [error] is another view of the corruption this session has
-  /// already reported and scheduled recovery for.
-  ///
-  /// Both halves are required. The session flag alone would drop unrelated
-  /// defects that happen to fire after the flag flips; classification alone
-  /// would drop the very first corrupt statement, which is the report worth
-  /// keeping. Ordered flag-first because it is a field read, and it is false
-  /// for every healthy session — classification only runs on a database that
-  /// is already known to be broken.
-  bool _echoesHandledCorruption(Object error) =>
-      _isDatabaseCorrupted() &&
-      mentionsDatabaseCorruption(
-        error is Reportable<Object> ? error.unwrap() : error,
-      );
 
   ReportableError? _asReportable(Object error) {
     if (error is ReportableError) return error;

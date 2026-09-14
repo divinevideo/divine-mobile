@@ -16,6 +16,13 @@ typedef _CrashlyticsCall = Future<void> Function(
   FirebaseCrashlytics crashlytics,
 );
 
+/// Decides whether a non-fatal error handed to [CrashReportingService] is
+/// another view of an incident the app has already reported and handled, and
+/// therefore must not become a Crashlytics group of its own.
+///
+/// Returns `true` to drop the error. See [CrashReportingService.suppressWhen].
+typedef CrashReportSuppression = bool Function(Object error);
+
 /// Whether Crashlytics can take a call right now.
 enum _Readiness {
   /// [CrashReportingService.initialize] has not resolved; calls are held.
@@ -42,6 +49,10 @@ enum _Readiness {
 /// held calls are dropped with a count; from then on non-fatal errors go to
 /// the unified log, while breadcrumbs and keys — which only mean anything
 /// attached to a Crashlytics report — are dropped.
+///
+/// The one deliberate exception is a non-fatal error that echoes an incident
+/// the app has already reported once and handled, which [suppressWhen] lets
+/// the incident's owner claim (#7507).
 class CrashReportingService implements CrashReporter {
   /// [initializeFirebase] and [crashlytics] default to the real Firebase; tests
   /// inject stand-ins so the replay can be observed without a Firebase app.
@@ -66,6 +77,28 @@ class CrashReportingService implements CrashReporter {
   _Readiness _readiness = _Readiness.pending;
   final List<_CrashlyticsCall> _pending = [];
   int _overflowed = 0;
+  final List<CrashReportSuppression> _suppressions = [];
+
+  /// Stops forwarding non-fatal errors that [isSuppressed] claims.
+  ///
+  /// This is the one funnel every sink drains into — the uncaught-zone
+  /// handler, `DivineBlocObserver`, and every service that holds the
+  /// `CrashReporter` port — so a suppression registered here covers all of
+  /// them at once, and no future call site can reintroduce the duplicate by
+  /// forgetting a check. It is a registration rather than a constructor
+  /// argument because the incident owner is built later than this service:
+  /// the zone guard needs the reporter before `SharedPreferences` exists,
+  /// while the database corruption service needs `SharedPreferences`.
+  ///
+  /// The owner must have reported the incident itself, once, before its
+  /// suppression starts claiming echoes — otherwise the dashboard loses the
+  /// incident along with the noise. `DatabaseCorruptionService` is the
+  /// reference implementation (#7507). Breadcrumbs and custom keys are never
+  /// suppressed; they only mean anything attached to a report that is
+  /// forwarded.
+  void suppressWhen(CrashReportSuppression isSuppressed) {
+    _suppressions.add(isSuppressed);
+  }
 
   /// Initialize crash reporting (Firebase Crashlytics)
   Future<void> initialize() async {
@@ -231,12 +264,26 @@ class CrashReportingService implements CrashReporter {
   /// Written to the unified log as well whenever Crashlytics cannot take it
   /// right now, so a bug report carries it even if the process never gets to
   /// [initialize].
+  ///
+  /// An error a registered [suppressWhen] filter claims is not forwarded at
+  /// all. That is the one deliberate drop in this service: the incident it
+  /// echoes was reported once by the filter's owner, which is also where the
+  /// unified log says the echoes are being dropped.
   @override
   Future<void> recordError(
     dynamic exception,
     StackTrace? stack, {
     String? reason,
   }) {
+    final Object? error = exception;
+    if (error != null && _suppressions.any((claims) => claims(error))) {
+      Log.debug(
+        'Non-fatal error not forwarded: it echoes an incident already '
+        'reported${reason == null ? '' : ' ($reason)'}',
+        name: 'CrashReporting',
+      );
+      return Future<void>.value();
+    }
     if (_readiness != _Readiness.ready) {
       final fate = _readiness == _Readiness.pending
           ? 'held until Crashlytics initializes'

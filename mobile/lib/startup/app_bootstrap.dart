@@ -508,6 +508,14 @@ Future<void> startOpenVineApp({
       reason: 'Runtime database corruption',
     ),
   );
+  // Once that service has reported a session's corruption, every later Drift
+  // failure — from the uncaught-zone handler, a bloc's addError, or a service
+  // catching its own query — is an echo of the same dead file. Filtering at
+  // the reporter, before the database can open, is what keeps one incident
+  // from becoming one Crashlytics group per call site (#7507).
+  crashReporting.suppressWhen(
+    databaseCorruptionService.echoesReportedCorruption,
+  );
   final databaseRecoveryStore = DatabaseRecoveryStore(
     preferences: sharedPreferences,
   );
@@ -693,14 +701,7 @@ Future<void> startOpenVineApp({
   // Forward Bloc/Cubit errors (addError, uncaught handler throws, emit
   // failures) to Crashlytics + UnifiedLogger. Surfaced during the #3503
   // investigation as a missing observability hook. See #3526.
-  Bloc.observer = DivineBlocObserver(
-    crashReporting: crashReporting,
-    // Once the database has reported corruption, the service above has already
-    // recorded the incident and scheduled the next-launch salvage, so the
-    // Drift failures every downstream bloc then hits are echoes of a handled
-    // event rather than five separate defects. See #7507.
-    isDatabaseCorrupted: () => databaseCorruptionService.isCorrupted.value,
-  );
+  Bloc.observer = DivineBlocObserver(crashReporting: crashReporting);
 
   // Tag every crash report with the running build so per-error triage doesn't
   // have to cross-reference the release dashboard. Set once, not per-error.
