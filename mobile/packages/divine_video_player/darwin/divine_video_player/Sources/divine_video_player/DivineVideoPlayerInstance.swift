@@ -242,6 +242,23 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     // MARK: - Clip composition
 
+    /// Answers a `setClips` caller whose load was cancelled because the
+    /// instance was disposed while it was suspended in an await.
+    ///
+    /// `DivineVideoPlayerController` swallows `CANCELLED`, so an awaiting
+    /// caller is unblocked without surfacing an error — the same contract the
+    /// Android instance uses. Never drop the result: `await setClips()` would
+    /// stay pending for the life of the process.
+    private func answerCancelledSetClips(_ result: @escaping FlutterResult) {
+        result(
+            FlutterError(
+                code: "CANCELLED",
+                message: "Disposed during setClips",
+                details: nil
+            )
+        )
+    }
+
     private func handleSetClips(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
             let clipsRaw = args["clips"] as? [[String: Any]]
@@ -272,7 +289,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 }
                 // dispose() can run while the above await is suspended; a
                 // disposed instance must never resurrect a player/observers.
-                guard !self.diagnosticDisposed else { return }
+                guard !self.diagnosticDisposed else {
+                    self.answerCancelledSetClips(result)
+                    return
+                }
                 self.clipOffsets = offsets
                 self.clipDurations = durations
                 self.clipCount = offsets.count
@@ -321,7 +341,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 if let existing = self.player {
                     self.configureQueue(with: playerItem)
                     await existing.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                    guard !self.diagnosticDisposed else { return }
+                    guard !self.diagnosticDisposed else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
                     self.textureOutput?.forceRefresh(for: startTime)
                 } else {
                     let newPlayer = AVQueuePlayer()
@@ -331,7 +354,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.observeCurrentItem()
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                    guard !self.diagnosticDisposed else { return }
+                    guard !self.diagnosticDisposed else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
                     self.textureOutput?.forceRefresh(for: startTime)
                 }
 
