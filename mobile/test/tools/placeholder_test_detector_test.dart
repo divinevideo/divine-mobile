@@ -300,6 +300,32 @@ void main() {
         expect(sites, hasLength(1));
         expect(sites.single.kind, PlaceholderKind.emptyGroup);
       });
+
+      test('accepts a test declared through an import prefix', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    ft.test('real', () {
+      expect(subject.value, 1);
+    });
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('accepts a blocTest reached through a receiver', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    ft.blocTest<MyBloc, MyState>('real', build: buildBloc);
+  });
+}
+''');
+
+        expect(sites, isEmpty);
+      });
     });
   });
 }

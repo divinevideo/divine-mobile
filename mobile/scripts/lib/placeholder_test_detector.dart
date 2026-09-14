@@ -389,14 +389,17 @@ class _GroupScan extends RecursiveAstVisitor<void> {
   void visitMethodInvocation(MethodInvocation node) {
     if (declaresTest) return;
 
-    if (node.realTarget != null) {
-      super.visitMethodInvocation(node);
+    final name = node.methodName.name;
+    // A prefixed import (`ft.test(...)`) or a declaration reached through any
+    // other receiver still declares a test. Counting it costs only detection
+    // power, which is the recoverable direction.
+    if (_testDeclarations.contains(name) || name == 'blocTest') {
+      declaresTest = true;
       return;
     }
 
-    final name = node.methodName.name;
-    if (_testDeclarations.contains(name) || name == 'blocTest') {
-      declaresTest = true;
+    if (node.realTarget != null) {
+      super.visitMethodInvocation(node);
       return;
     }
 
