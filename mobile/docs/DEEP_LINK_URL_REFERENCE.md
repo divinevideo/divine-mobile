@@ -345,7 +345,7 @@ Three shapes satisfy the contract, all of them already in the codebase:
 | Shape | Example |
 |---|---|
 | Resolve by id, `extra` skips the fetch | `/apps/:appId/sandbox` → `SandboxRouteCubit`; `/inbox/conversation/:id` → `ConversationParticipantsCubit` |
-| Scalar in a query parameter | `/video-recorder?entry_point=`, `/video-metadata?mode=`, `/video-editor?from=library` |
+| Scalar in a query parameter | `/video-recorder?entry_point=`, `/video-recorder?auto_record=true`, `/video-metadata?mode=`, `/video-editor?from=library` |
 | `extra` is a display hint the screen already defaults | `/profile/:npub` display-name and avatar hints |
 
 ### What each `extra`-bearing route loses without it

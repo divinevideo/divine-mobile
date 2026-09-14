@@ -36,6 +36,9 @@ List<RouteBase> videoRoutes() {
           entryPoint: CreationEntryPoint.fromName(
             state.uri.queryParameters['entry_point'],
           ),
+          autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
+            state.uri.queryParameters,
+          ),
         ),
       ),
     ),

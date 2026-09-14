@@ -1,13 +1,16 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
+import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 
 import '../helpers/go_router.dart';
@@ -19,18 +22,37 @@ class _MockDmUnreadCountCubit extends MockCubit<int>
 class _MockNotificationBadgeCubit extends MockCubit<int>
     implements NotificationBadgeCubit {}
 
+/// Reports camera permission as already granted, so a camera-button gesture
+/// goes straight to navigation.
+class _FakeCameraPermissionBloc extends Fake implements CameraPermissionBloc {
+  @override
+  CameraPermissionState get state =>
+      const CameraPermissionLoaded(CameraPermissionStatus.authorized);
+
+  @override
+  Stream<CameraPermissionState> get stream => const Stream.empty();
+
+  @override
+  bool get isClosed => false;
+
+  @override
+  Future<void> close() async {}
+}
+
 void main() {
   group('VineBottomNav interaction targets', () {
     late MockAuthService mockAuth;
     late _MockDmUnreadCountCubit dmUnreadCubit;
     late _MockNotificationBadgeCubit notifBadgeCubit;
     late HomeFeedRetapCubit retapCubit;
+    late _FakeCameraPermissionBloc cameraPermissionBloc;
 
     setUp(() {
       mockAuth = createMockAuthService();
       dmUnreadCubit = _MockDmUnreadCountCubit();
       notifBadgeCubit = _MockNotificationBadgeCubit();
       retapCubit = HomeFeedRetapCubit();
+      cameraPermissionBloc = _FakeCameraPermissionBloc();
       whenListen(dmUnreadCubit, const Stream<int>.empty(), initialState: 0);
       whenListen(notifBadgeCubit, const Stream<int>.empty(), initialState: 0);
     });
@@ -43,6 +65,7 @@ void main() {
           BlocProvider<DmUnreadCountCubit>.value(value: dmUnreadCubit),
           BlocProvider<NotificationBadgeCubit>.value(value: notifBadgeCubit),
           BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
+          BlocProvider<CameraPermissionBloc>.value(value: cameraPermissionBloc),
         ],
         child: child,
       );
@@ -314,6 +337,92 @@ void main() {
 
       expect(retapCubit.state.isRefreshing, isTrue);
       verifyNever(() => router.go(any()));
+    });
+
+    group('camera button', () {
+      late MockGoRouter router;
+
+      setUp(() {
+        router = MockGoRouter();
+        when(
+          () => router.push<Object?>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async => null);
+      });
+
+      testWidgets('a tap opens the recorder without auto-record', (
+        tester,
+      ) async {
+        await pumpSubjectWithRouter(tester, router);
+
+        await tester.tap(find.bySemanticsIdentifier('camera_button'));
+        await tester.pump();
+
+        verify(
+          () => router.push<Object?>(
+            VideoRecorderScreen.pathForEntryPoint(CreationEntryPoint.bottomNav),
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+      });
+
+      testWidgets(
+        'a press-and-hold opens the recorder in capture mode with auto-record',
+        (tester) async {
+          await pumpSubjectWithRouter(tester, router);
+
+          await tester.longPress(find.bySemanticsIdentifier('camera_button'));
+          await tester.pump();
+
+          verify(
+            () => router.push<Object?>(
+              VideoRecorderScreen.pathForEntryPoint(
+                CreationEntryPoint.bottomNav,
+                autoRecord: true,
+              ),
+              extra: any(named: 'extra'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => router.push<Object?>(
+              VideoRecorderScreen.pathForEntryPoint(
+                CreationEntryPoint.bottomNav,
+              ),
+              extra: any(named: 'extra'),
+            ),
+          );
+        },
+      );
+
+      testWidgets(
+        'exposes the hold as a long-press semantics action, so assistive '
+        'technology can reach the shortcut too',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpSubjectWithRouter(tester, router);
+
+          final node = tester.getSemantics(
+            find.bySemanticsIdentifier('camera_button'),
+          );
+          expect(
+            node.getSemanticsData().hasAction(SemanticsAction.longPress),
+            isTrue,
+          );
+
+          node.owner!.performAction(node.id, SemanticsAction.longPress);
+          await tester.pump();
+
+          verify(
+            () => router.push<Object?>(
+              VideoRecorderScreen.pathForEntryPoint(
+                CreationEntryPoint.bottomNav,
+                autoRecord: true,
+              ),
+              extra: any(named: 'extra'),
+            ),
+          ).called(1);
+          handle.dispose();
+        },
+      );
     });
   });
 }

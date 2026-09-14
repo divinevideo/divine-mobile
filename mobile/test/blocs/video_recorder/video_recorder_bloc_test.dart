@@ -234,9 +234,7 @@ void main() {
   });
 
   /// Builds a bloc with all dependencies wired to the mocks.
-  VideoRecorderBloc buildBloc({
-    RecordingStartedCallback? onRecordingStarted,
-  }) {
+  VideoRecorderBloc buildBloc({RecordingStartedCallback? onRecordingStarted}) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
       readVideoEditor: () => videoEditor,
@@ -2545,6 +2543,176 @@ void main() {
           );
         },
       );
+
+      group('recorderMode', () {
+        // Stateful stand-in for the persisted last-used mode, so a re-init
+        // reads back what an earlier init persisted.
+        String? persistedMode;
+
+        setUp(() {
+          persistedMode = VideoRecorderMode.classic.name;
+          when(
+            () => prefs.getString(VideoRecorderMode.persistenceKey),
+          ).thenAnswer((_) => persistedMode);
+          when(
+            () => prefs.setString(VideoRecorderMode.persistenceKey, any()),
+          ).thenAnswer((invocation) async {
+            persistedMode = invocation.positionalArguments[1] as String;
+            return true;
+          });
+        });
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'opens in the requested mode instead of the persisted one',
+          build: buildBloc,
+          act: (bloc) => bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.capture,
+            ),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+            // The bloc already starts in capture mode, so there is no mode
+            // switch to clear clips for.
+            verifyNever(
+              () => clipManager.clearAll(
+                keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'becomes the last-used mode, so a later plain re-init (returning '
+          'from the editor) keeps it instead of restoring the previous '
+          "session's mode and clearing the clips recorded since",
+          build: buildBloc,
+          act: (bloc) async {
+            bloc.add(
+              const VideoRecorderInitializeRequested(
+                recorderMode: VideoRecorderMode.capture,
+              ),
+            );
+            await bloc.stream.firstWhere((state) => state.isCameraInitialized);
+            bloc.add(const VideoRecorderInitializeRequested());
+          },
+          verify: (bloc) {
+            expect(persistedMode, VideoRecorderMode.capture.name);
+            expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+            verifyNever(
+              () => clipManager.clearAll(
+                keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'switches a bloc sitting in another mode to the requested one',
+          build: () => buildBloc()
+            ..emit(
+              const VideoRecorderBlocState(
+                recorderMode: VideoRecorderMode.classic,
+              ),
+            ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.capture,
+            ),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+            verify(
+              () => clipManager.clearAll(keepAutosavedDraft: true),
+            ).called(1);
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'is ignored when opened from the editor',
+          build: () => buildBloc()
+            ..emit(
+              const VideoRecorderBlocState(
+                recorderMode: VideoRecorderMode.classic,
+              ),
+            ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderInitializeRequested(
+              fromEditor: true,
+              recorderMode: VideoRecorderMode.capture,
+            ),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.recorderMode, VideoRecorderMode.classic);
+            expect(persistedMode, VideoRecorderMode.classic.name);
+          },
+        );
+      });
+
+      group('autoStartRecording', () {
+        setUp(() {
+          when(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        test('starts recording once the camera is initialized', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderInitializeRequested(autoStartRecording: true),
+          );
+          await bloc.stream.firstWhere(
+            (state) => state.isRecording && !state.isStartingRecording,
+          );
+
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'does not start recording by default',
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (bloc) {
+            expect(bloc.state.isRecording, isFalse);
+            verifyNever(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'does not start recording when the camera failed to initialize',
+          setUp: () {
+            when(() => cameraService.isInitialized).thenReturn(false);
+            when(
+              () => cameraService.initializationError,
+            ).thenReturn(CameraInitializationError.failed);
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(
+            const VideoRecorderInitializeRequested(autoStartRecording: true),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.initializationError, isNotNull);
+            expect(bloc.state.isRecording, isFalse);
+            verifyNever(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            );
+          },
+        );
+      });
     });
 
     group('close()', () {

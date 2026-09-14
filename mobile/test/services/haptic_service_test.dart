@@ -67,5 +67,11 @@ void main() {
 
       expect(hapticCalls, equals(['HapticFeedbackType.lightImpact']));
     });
+
+    test('cameraHoldFeedback delegates to lightImpact', () async {
+      await HapticService.cameraHoldFeedback();
+
+      expect(hapticCalls, equals(['HapticFeedbackType.lightImpact']));
+    });
   });
 }

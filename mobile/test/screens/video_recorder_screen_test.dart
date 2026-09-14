@@ -182,6 +182,30 @@ Widget buildNavigatorTestWidget({
   );
 }
 
+/// A restorable autosave draft, for opens that must offer the previous
+/// session back before reaching the preview.
+DivineVideoDraft _autosavedDraft() => DivineVideoDraft(
+  id: 'autosave',
+  clips: [
+    DivineVideoClip(
+      id: 'clip_1',
+      video: EditorVideo.file('/tmp/test.mp4'),
+      duration: const Duration(seconds: 6),
+      recordedAt: DateTime(2025),
+      originalAspectRatio: 9 / 16,
+      targetAspectRatio: .vertical,
+    ),
+  ],
+  title: '',
+  description: '',
+  hashtags: const {},
+  selectedApproach: 'camera',
+  createdAt: DateTime(2025),
+  lastModified: DateTime(2025),
+  publishStatus: PublishStatus.draft,
+  publishAttempts: 0,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -189,6 +213,41 @@ void main() {
     registerFallbackValue(
       const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
     );
+  });
+
+  group('VideoRecorderScreen route helpers', () {
+    test('pathForEntryPoint carries only the entry point by default', () {
+      expect(
+        VideoRecorderScreen.pathForEntryPoint(CreationEntryPoint.bottomNav),
+        '/video-recorder?entry_point=bottom_nav',
+      );
+    });
+
+    test('pathForEntryPoint adds the auto-record flag on request', () {
+      expect(
+        VideoRecorderScreen.pathForEntryPoint(
+          CreationEntryPoint.bottomNav,
+          autoRecord: true,
+        ),
+        '/video-recorder?entry_point=bottom_nav&auto_record=true',
+      );
+    });
+
+    test('autoRecordFromQueryParameters honours only an explicit true', () {
+      expect(
+        VideoRecorderScreen.autoRecordFromQueryParameters({
+          'auto_record': 'true',
+        }),
+        isTrue,
+      );
+      expect(
+        VideoRecorderScreen.autoRecordFromQueryParameters({
+          'auto_record': 'false',
+        }),
+        isFalse,
+      );
+      expect(VideoRecorderScreen.autoRecordFromQueryParameters({}), isFalse);
+    });
   });
 
   group('VideoRecorderView Tests', () {
@@ -362,13 +421,13 @@ void main() {
           'dispose', (tester) async {
         final pageOpenChanges = <bool>[];
         final notificationPhases = <SchedulerPhase>[];
-        final subscription = container.listen(
-          overlayVisibilityProvider,
-          (_, next) {
-            pageOpenChanges.add(next.isPageOpen);
-            notificationPhases.add(SchedulerBinding.instance.schedulerPhase);
-          },
-        );
+        final subscription = container.listen(overlayVisibilityProvider, (
+          _,
+          next,
+        ) {
+          pageOpenChanges.add(next.isPageOpen);
+          notificationPhases.add(SchedulerBinding.instance.schedulerPhase);
+        });
         addTearDown(subscription.close);
 
         await tester.pumpWidget(buildTestWidget(container: container));
@@ -800,6 +859,140 @@ void main() {
           debugDefaultTargetPlatformOverride = null;
         }
       });
+    });
+
+    group('Hold-to-record open (autoRecord)', () {
+      // The init event the hold shortcut dispatches when nothing interrupts
+      // the open…
+      const autoStartInit = VideoRecorderInitializeRequested(
+        recorderMode: VideoRecorderMode.capture,
+        autoStartRecording: true,
+      );
+      // …and the one it falls back to when a prompt will show first.
+      const captureOnlyInit = VideoRecorderInitializeRequested(
+        recorderMode: VideoRecorderMode.capture,
+      );
+
+      Future<void> pumpOpen(
+        WidgetTester tester, {
+        required bool autoRecord,
+        required VideoEditorNotifier Function() videoEditor,
+        DivineVideoDraft? autosavedDraft,
+      }) async {
+        final mockDraftStorage = _MockDraftStorageService();
+        when(
+          mockDraftStorage.getAutosaveDraft,
+        ).thenAnswer((_) async => autosavedDraft);
+        final mockClipLibrary = _MockClipLibraryService();
+        when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(testPrefs),
+              draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
+              clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+              videoEditorProvider.overrideWith(videoEditor),
+            ],
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoRecorderBloc>.value(value: recorderBloc),
+                BlocProvider<CameraPermissionBloc>(
+                  create: (_) => MockCameraPermissionBloc(),
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: VideoRecorderView(autoRecord: autoRecord),
+              ),
+            ),
+          ),
+        );
+        // Post-frame callback, then the async autosave lookup the open awaits
+        // before choosing its init event.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+      }
+
+      testWidgets(
+        'opens in capture mode and starts recording when the camera opens '
+        'straight to the preview',
+        (tester) async {
+          await testPrefs.setBool('why_six_seconds_shown', true);
+
+          await pumpOpen(
+            tester,
+            autoRecord: true,
+            videoEditor: _NonAutosaveVideoEditorNotifier.new,
+          );
+
+          verify(() => recorderBloc.add(autoStartInit)).called(1);
+        },
+      );
+
+      testWidgets(
+        'opens in capture mode without starting recording on first run, '
+        'when the "why six seconds" prompt shows first',
+        (tester) async {
+          await pumpOpen(
+            tester,
+            autoRecord: true,
+            videoEditor: _NonAutosaveVideoEditorNotifier.new,
+          );
+
+          verify(() => recorderBloc.add(captureOnlyInit)).called(1);
+          verifyNever(() => recorderBloc.add(autoStartInit));
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoRecorderWhySixSecondsTitle),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'opens in capture mode without starting recording when an autosaved '
+        'session is offered back first',
+        (tester) async {
+          await testPrefs.setBool('why_six_seconds_shown', true);
+
+          await pumpOpen(
+            tester,
+            autoRecord: true,
+            videoEditor: _AutosaveVideoEditorNotifier.new,
+            autosavedDraft: _autosavedDraft(),
+          );
+
+          verify(() => recorderBloc.add(captureOnlyInit)).called(1);
+          verifyNever(() => recorderBloc.add(autoStartInit));
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoRecorderAutosaveFoundTitle),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'a plain open restores the last-used mode and never starts recording',
+        (tester) async {
+          await testPrefs.setBool('why_six_seconds_shown', true);
+
+          await pumpOpen(
+            tester,
+            autoRecord: false,
+            videoEditor: _NonAutosaveVideoEditorNotifier.new,
+          );
+
+          verify(
+            () => recorderBloc.add(const VideoRecorderInitializeRequested()),
+          ).called(1);
+          verifyNever(() => recorderBloc.add(captureOnlyInit));
+          verifyNever(() => recorderBloc.add(autoStartInit));
+        },
+      );
     });
 
     group('Autosave Restore Flow', () {

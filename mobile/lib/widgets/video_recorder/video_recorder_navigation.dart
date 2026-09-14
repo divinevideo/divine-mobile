@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -209,19 +210,8 @@ Future<void> offerAutosavedSession(
   WidgetRef ref, {
   required bool openEditorOnRestore,
 }) async {
-  if (!ref.read(videoEditorProvider).isAutosavedDraft) return;
-  if (ref.read(clipManagerProvider).hasClips) return;
-
-  final draft = await ref.read(draftStorageServiceProvider).getAutosaveDraft();
-  if (!context.mounted) return;
-  if (draft == null) {
-    Log.debug(
-      '📹 No valid autosaved draft found',
-      name: 'VideoRecorderNavigation',
-      category: LogCategory.video,
-    );
-    return;
-  }
+  final draft = await findOfferableAutosavedDraft(ref);
+  if (draft == null || !context.mounted) return;
 
   Log.info(
     '📹 Found valid autosaved draft',
@@ -272,6 +262,27 @@ Future<void> offerAutosavedSession(
       context.pop();
     },
   );
+}
+
+/// The autosaved draft [offerAutosavedSession] would offer back, or `null`
+/// when there is nothing to offer: the session is not the autosave one, the
+/// recorder already holds clips, or no valid draft is stored.
+///
+/// Split out so the recorder can tell before initializing whether the open
+/// will stop at the offer sheet (see `VideoRecorderView.autoRecord`).
+Future<DivineVideoDraft?> findOfferableAutosavedDraft(WidgetRef ref) async {
+  if (!ref.read(videoEditorProvider).isAutosavedDraft) return null;
+  if (ref.read(clipManagerProvider).hasClips) return null;
+
+  final draft = await ref.read(draftStorageServiceProvider).getAutosaveDraft();
+  if (draft == null) {
+    Log.debug(
+      '📹 No valid autosaved draft found',
+      name: 'VideoRecorderNavigation',
+      category: LogCategory.video,
+    );
+  }
+  return draft;
 }
 
 Future<void> _pauseCameraForNavigation(VideoRecorderBloc bloc) {

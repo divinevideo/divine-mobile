@@ -34,7 +34,6 @@ import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_uplo
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 const _kWhySixSecondsShownKey = 'why_six_seconds_shown';
@@ -70,15 +69,22 @@ class VideoRecorderRoute extends ConsumerWidget {
   const VideoRecorderRoute({
     super.key,
     this.entryPoint = CreationEntryPoint.direct,
+    this.autoRecord = false,
   });
 
   final String entryPoint;
+
+  /// See [VideoRecorderView.autoRecord].
+  final bool autoRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _VideoRecorderBlocScope(
       child: CameraPermissionGate(
-        child: VideoRecorderView(entryPoint: entryPoint),
+        child: VideoRecorderView(
+          entryPoint: entryPoint,
+          autoRecord: autoRecord,
+        ),
       ),
     );
   }
@@ -113,8 +119,26 @@ class VideoRecorderScreen extends ConsumerWidget {
   /// Path for this route.
   static const String path = RoutePaths.videoRecorder;
 
-  static String pathForEntryPoint(String entryPoint) =>
-      Uri(path: path, queryParameters: {'entry_point': entryPoint}).toString();
+  /// Query parameter that opens the recorder in capture mode and starts
+  /// recording as soon as the camera is ready — the bottom-nav hold shortcut.
+  /// See [VideoRecorderView.autoRecord].
+  static const autoRecordQueryParameter = 'auto_record';
+
+  static String pathForEntryPoint(
+    String entryPoint, {
+    bool autoRecord = false,
+  }) => Uri(
+    path: path,
+    queryParameters: {
+      'entry_point': entryPoint,
+      if (autoRecord) autoRecordQueryParameter: 'true',
+    },
+  ).toString();
+
+  /// Whether a recorder location asks for [autoRecordQueryParameter].
+  static bool autoRecordFromQueryParameters(
+    Map<String, String> queryParameters,
+  ) => queryParameters[autoRecordQueryParameter] == 'true';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -151,9 +175,8 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         readVideoEditorState: () => ref.read(videoEditorProvider),
         readSharedPreferences: () => ref.read(sharedPreferencesProvider),
         performanceMonitor: ref.read(performanceMonitoringServiceProvider),
-        onRecordingStarted: (mode) => unawaited(
-          creationAnalyticsTracker.recordingStarted(mode),
-        ),
+        onRecordingStarted: (mode) =>
+            unawaited(creationAnalyticsTracker.recordingStarted(mode)),
       ),
       child: child,
     );
@@ -168,12 +191,23 @@ class VideoRecorderView extends ConsumerStatefulWidget {
     super.key,
     this.fromEditor = false,
     this.entryPoint = CreationEntryPoint.direct,
+    this.autoRecord = false,
   });
 
   /// Whether the screen is opened from the video editor.
   final bool fromEditor;
 
   final String entryPoint;
+
+  /// Opens in capture mode and starts recording as soon as the camera is
+  /// ready — the bottom-nav hold-to-record shortcut.
+  ///
+  /// The auto-start is skipped when the open would first show a prompt (the
+  /// first-run "why six seconds?" sheet or an autosaved-session offer): the
+  /// user is answering a sheet, not holding a shutter, and a recording that
+  /// starts underneath it would be a surprise. The camera still opens in
+  /// capture mode.
+  final bool autoRecord;
 
   @override
   ConsumerState<VideoRecorderView> createState() => _VideoRecorderViewState();
@@ -203,23 +237,22 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         tracker.activeMode ??
         (widget.fromEditor
             ? initialBlocMode
-            : VideoRecorderMode.fromName(
-                ref
-                    .read(sharedPreferencesProvider)
-                    .getString(VideoRecorderMode.persistenceKey),
-              ));
+            : _requestedRecorderMode ?? _lastUsedRecorderMode);
     unawaited(
-      tracker.cameraOpened(
-        mode: openingMode,
-        entryPoint: widget.entryPoint,
-      ),
+      tracker.cameraOpened(mode: openingMode, entryPoint: widget.entryPoint),
     );
 
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _pauseBackgroundPlayback();
-      _initializeCamera();
+      final autoStartRecording =
+          widget.autoRecord && await _opensStraightToPreview();
+      if (!mounted) return;
+      _initializeCamera(
+        recorderMode: _requestedRecorderMode,
+        autoStartRecording: autoStartRecording,
+      );
       await _maybeShowWhySixSeconds();
       if (!mounted) return;
       _checkAutosavedChanges();
@@ -227,14 +260,40 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     Log.info('📹 Initialized', name: 'VideoRecorderScreen', category: .video);
   }
 
-  /// Shows the "Why six seconds?" prompt only once per user.
-  Future<void> _maybeShowWhySixSeconds() async {
+  /// The mode the open asks the bloc for, or `null` to restore the
+  /// last-used one. The hold-to-record shortcut always opens in capture mode.
+  VideoRecorderMode? get _requestedRecorderMode =>
+      widget.autoRecord ? VideoRecorderMode.capture : null;
+
+  /// The persisted last-used mode, which a plain open restores.
+  VideoRecorderMode get _lastUsedRecorderMode => VideoRecorderMode.fromName(
+    ref
+        .read(sharedPreferencesProvider)
+        .getString(VideoRecorderMode.persistenceKey),
+  );
+
+  /// Whether the open reaches the live preview with no prompt in between —
+  /// see [VideoRecorderView.autoRecord].
+  Future<bool> _opensStraightToPreview() async {
+    if (_isWhySixSecondsPending) return false;
+    return await findOfferableAutosavedDraft(ref) == null;
+  }
+
+  /// Whether the one-time "Why six seconds?" prompt is still due.
+  bool get _isWhySixSecondsPending {
     // Screenshot capture must show a clean recorder, not the first-run
     // education sheet.
-    if (ScreenshotMode.enabled) return;
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_kWhySixSecondsShownKey) ?? false) return;
-    await prefs.setBool(_kWhySixSecondsShownKey, true);
+    if (ScreenshotMode.enabled) return false;
+    final prefs = ref.read(sharedPreferencesProvider);
+    return !(prefs.getBool(_kWhySixSecondsShownKey) ?? false);
+  }
+
+  /// Shows the "Why six seconds?" prompt only once per user.
+  Future<void> _maybeShowWhySixSeconds() async {
+    if (!_isWhySixSecondsPending) return;
+    await ref
+        .read(sharedPreferencesProvider)
+        .setBool(_kWhySixSecondsShownKey, true);
     if (!mounted) return;
 
     await VineBottomSheetPrompt.show(
@@ -248,15 +307,26 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   }
 
   /// Initialize camera and free background video resources.
-  void _initializeCamera() {
+  ///
+  /// [recorderMode] and [autoStartRecording] belong to the open only; a
+  /// re-initialization (leaving the Upload tab, returning from the editor)
+  /// restores the last-used mode and never starts recording on its own.
+  void _initializeCamera({
+    VideoRecorderMode? recorderMode,
+    bool autoStartRecording = false,
+  }) {
     Log.info(
-      '📹 _initializeCamera called',
+      '📹 _initializeCamera called (autoStartRecording: $autoStartRecording)',
       name: 'VideoRecorderScreen',
       category: LogCategory.video,
     );
 
     context.read<VideoRecorderBloc>().add(
-      VideoRecorderInitializeRequested(fromEditor: widget.fromEditor),
+      VideoRecorderInitializeRequested(
+        fromEditor: widget.fromEditor,
+        recorderMode: recorderMode,
+        autoStartRecording: autoStartRecording,
+      ),
     );
   }
 

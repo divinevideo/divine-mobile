@@ -314,9 +314,21 @@ class VideoRecorderBloc
 
     final prefs = _readSharedPreferences();
 
-    final savedMode = VideoRecorderMode.fromName(
-      prefs.getString(VideoRecorderMode.persistenceKey),
-    );
+    final requestedMode = event.fromEditor ? null : event.recorderMode;
+    if (requestedMode != null) {
+      // Persist before restoring so every later re-init in this session
+      // (returning from the editor or the library) lands on this mode rather
+      // than the previous session's — that switch would clear the session's
+      // clips (see _applyRecorderMode).
+      unawaited(
+        prefs.setString(VideoRecorderMode.persistenceKey, requestedMode.name),
+      );
+    }
+    final savedMode =
+        requestedMode ??
+        VideoRecorderMode.fromName(
+          prefs.getString(VideoRecorderMode.persistenceKey),
+        );
     if (!event.fromEditor && savedMode != state.recorderMode) {
       _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
     } else if (event.fromEditor &&
@@ -432,6 +444,15 @@ class VideoRecorderBloc
       name: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
+
+    if (event.autoStartRecording) {
+      Log.info(
+        '🎥 Auto-starting recording after init',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      addIfOpen(const VideoRecorderRecordingStartRequested());
+    }
   }
 
   Future<void> _onAppLifecycleChanged(
@@ -760,6 +781,17 @@ class VideoRecorderBloc
         state.isStoppingRecording ||
         (remainingDuration < const Duration(milliseconds: 30) &&
             state.recorderMode.hasRecordingLimit)) {
+      Log.debug(
+        '🎥 Recording start ignored - '
+        'locked: ${state.recordingLockedForNavigation}, '
+        'canRecord: ${_cameraService.canRecord}, '
+        'recording: ${state.isRecording}, '
+        'starting: ${state.isStartingRecording}, '
+        'stopping: ${state.isStoppingRecording}, '
+        'remaining: ${remainingDuration.inMilliseconds}ms',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
       return;
     }
 
