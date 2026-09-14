@@ -526,6 +526,30 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotRegex(self.contents, r"(?m)^\s+flutter build appbundle ")
         self.assertNotRegex(self.contents, r"(?m)^\s+flutter build ipa ")
 
+    def test_android_release_leaves_libapp_stripping_to_agp(self) -> None:
+        # Shorebird's Flutter fork still runs gen_snapshot with --strip on
+        # Android, so AGP finds libapp.so pre-stripped and never emits the
+        # libapp.so.sym that Play Console needs to symbolicate Dart frames in
+        # native crashes (#7990). Forwarding --no-strip past `--` moves the
+        # stripping to AGP. The libapp.so that ships is byte-identical either
+        # way, which is why only the release command carries the flag: a
+        # patch's libapp.so comes out the same, and Play never symbolicates
+        # patched code.
+        android_release = [
+            command
+            for command in self._shorebird_release_commands()
+            if command.lstrip().startswith("shorebird release android ")
+        ]
+        self.assertEqual(1, len(android_release))
+        # Last, after every Shorebird flag: `--` ends Shorebird's own option
+        # parsing, so anything placed after it would silently stop applying.
+        self.assertRegex(
+            android_release[0],
+            r"\\\n\s+-- --extra-gen-snapshot-options=--no-strip$",
+        )
+        for command in self._shorebird_patch_commands():
+            self.assertNotIn("--extra-gen-snapshot-options", command)
+
     def test_ios_release_uploads_without_automatic_review_submission(self) -> None:
         workflow = self._workflow_block("ios-build")
 

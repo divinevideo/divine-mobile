@@ -476,9 +476,20 @@ definitions:
         # Shorebird wraps `flutter build appbundle` with its own engine so the
         # release carries the updater. A plain `flutter build` here would ship
         # a permanently unpatchable version to Play.
+        #
+        # Everything after `--` goes to `flutter build appbundle`. Shorebird's
+        # Flutter fork still runs gen_snapshot with --strip on Android, so AGP
+        # finds libapp.so already stripped and emits no libapp.so.sym; Play
+        # Console then cannot symbolicate Dart frames in native crashes.
+        # --no-strip hands the stripping to AGP, which also writes the .sym
+        # into BUNDLE-METADATA. The libapp.so that reaches devices is
+        # byte-identical either way, so patching is unaffected (#7990). The
+        # patch command below deliberately does not carry the flag: its
+        # libapp.so comes out the same, and Play never sees patched code.
         shorebird release android --flutter-version=$FLUTTER_VERSION --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER \
           --dart-define-from-file=build/shorebird/dart_defines.json \
-          --public-key-path=build/shorebird/patch_public_key.pem
+          --public-key-path=build/shorebird/patch_public_key.pem \
+          -- --extra-gen-snapshot-options=--no-strip
     - &confirm_patch
       name: Confirm patch to production
       script: |
