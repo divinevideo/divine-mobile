@@ -908,7 +908,10 @@ class VideosRepository {
         // top-up behavior available for that response shape, but never expose
         // the lossy timestamp fallback to feed pagination: current v2 builds
         // supply the composite `(published_at, id)` cursor above.
-        final nextBefore = _cursorBeforeOldestStats(page.videos);
+        final nextBefore = _cursorBeforeOldestStats(
+          page.videos,
+          usePublicationClock: true,
+        );
         if (nextBefore == null || nextBefore == legacyBefore) break;
         legacyBefore = nextBefore;
         pageCursor = null;
@@ -1877,12 +1880,23 @@ class VideosRepository {
     }
   }
 
-  int? _cursorBeforeOldestStats(List<VideoStats> stats) {
+  /// Returns the timestamp immediately before the oldest row's cursor clock.
+  ///
+  /// New Videos pages on original publication time, so its fallback walks
+  /// [VideoStats.publishedAt] when the server supplied one. Following and
+  /// Popular stay on the revision clock (`createdAt`) their server routes walk,
+  /// so a publication-time cursor cannot skip rows between the two times.
+  int? _cursorBeforeOldestStats(
+    List<VideoStats> stats, {
+    bool usePublicationClock = false,
+  }) {
     if (stats.isEmpty) return null;
     final oldest = stats
         .map(
-          (stat) =>
-              stat.publishedAt ?? stat.createdAt.millisecondsSinceEpoch ~/ 1000,
+          (stat) => usePublicationClock
+              ? stat.publishedAt ??
+                    stat.createdAt.millisecondsSinceEpoch ~/ 1000
+              : stat.createdAt.millisecondsSinceEpoch ~/ 1000,
         )
         .reduce((a, b) => a < b ? a : b);
     return oldest - 1;

@@ -274,6 +274,82 @@ void main() {
         );
 
         test(
+          'refresh keeps the merged tail a cursor-backed page can still reach',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'api-newer',
+                    pubkey: 'api-pubkey',
+                    dTag: 'api-newer',
+                    videoUrl: 'https://example.com/api-newer.mp4',
+                    createdAt: 2000,
+                    publishedAt: 2000,
+                  ),
+                  _createVideoStats(
+                    id: 'api-older',
+                    pubkey: 'api-pubkey',
+                    dTag: 'api-older',
+                    videoUrl: 'https://example.com/api-older.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1900,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-two',
+              ),
+            );
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                _createVideoEvent(
+                  id: 'relay-newer',
+                  pubkey: 'relay-pubkey',
+                  videoUrl: 'https://example.com/relay-newer.mp4',
+                  createdAt: 2500,
+                ),
+                _createVideoEvent(
+                  id: 'relay-older',
+                  pubkey: 'relay-pubkey',
+                  videoUrl: 'https://example.com/relay-older.mp4',
+                  createdAt: 2400,
+                ),
+              ],
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(
+              skipCache: true,
+              limit: 2,
+            );
+
+            // Trimming the merged list to `limit` would drop `api-newer` and
+            // `api-older` behind the returned cursor, which already resumes
+            // past them.
+            expect(
+              result.videos.map((video) => video.id),
+              equals([
+                'relay-newer',
+                'relay-older',
+                'api-newer',
+                'api-older',
+              ]),
+            );
+            expect(result.paginationCursor, equals('p:page-two'));
+          },
+        );
+
+        test(
           'refresh does not reintroduce an edit older than the API page',
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
@@ -1925,6 +2001,72 @@ void main() {
               result.videos.map((video) => video.id),
               equals(['revised-recently', 'published-later']),
             );
+          },
+        );
+
+        test(
+          'falls back to the revision-time cursor when the feed omits one',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final requestedBefore = <int?>[];
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              final before = invocation.namedArguments[#before] as int?;
+              requestedBefore.add(before);
+              if (before != null) {
+                return const HomeFeedResponse(videos: []);
+              }
+              return HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'reply-only',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-reply',
+                    videoUrl: 'https://example.com/reply.mp4',
+                    createdAt: 2000,
+                    publishedAt: 1000,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'visible',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-visible',
+                    videoUrl: 'https://example.com/visible.mp4',
+                    createdAt: 1900,
+                    publishedAt: 500,
+                  ),
+                ],
+                hasMore: true,
+              );
+            });
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+
+            // The Following route pages on revision time, so the fallback
+            // cursor must step before the oldest `createdAt` (1900), not the
+            // oldest `publishedAt` (500).
+            expect(requestedBefore, equals([null, 1899]));
           },
         );
 
