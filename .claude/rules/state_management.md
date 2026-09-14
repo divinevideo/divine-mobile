@@ -225,7 +225,7 @@ blocTest<MyBloc, MyState>(
 ```
 
 Tests must not use `Future.delayed` for synchronization. The
-`scripts/check_future_delayed_ceiling.sh` ratchet enforces this while the
+`mobile/scripts/check_future_delayed_ceiling.sh` ratchet enforces this while the
 remaining test debt tracked by #4837 is paid down.
 
 ---
