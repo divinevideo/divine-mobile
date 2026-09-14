@@ -1,6 +1,6 @@
 // ABOUTME: Complete end-to-end integration test for video creation flow
 // ABOUTME: Tests app start -> welcome screen -> auth -> camera navigation
-// ABOUTME: Requires the local stack (mise run local_up).
+// ABOUTME: Runs headlessly on Linux; external relay failures are non-critical.
 
 @Tags(['service'])
 library;
