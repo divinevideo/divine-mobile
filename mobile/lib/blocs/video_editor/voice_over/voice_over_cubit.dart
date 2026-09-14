@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
@@ -214,10 +215,15 @@ class VoiceOverCubit extends Cubit<VoiceOverState>
 
   /// Stops the in-progress take and appends it to [VoiceOverState.takes].
   ///
-  /// A take with zero duration is discarded.
+  /// Flips to [VoiceOverStatus.stopping] before the recorder is asked to
+  /// stop, which takes a moment to close the file: anything following the
+  /// take — the preview playing behind the recorder — can hold right away
+  /// instead of running on until the take lands. A take with zero duration
+  /// is discarded.
   Future<void> stop() async {
     if (!state.isRecording || _isTransitioning) return;
     _isTransitioning = true;
+    emit(state.copyWith(status: VoiceOverStatus.stopping));
     // Confirm the recording stopped with a tactile pulse.
     unawaited(HapticService.recordingFeedback());
     await _stopMetering();

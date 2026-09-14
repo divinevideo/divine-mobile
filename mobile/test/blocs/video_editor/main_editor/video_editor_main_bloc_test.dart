@@ -595,6 +595,29 @@ void main() {
       expect(state.isSubEditorOpen, isFalse);
     });
 
+    test('isVoiceOverPreview is true only for the voice-over sub-editor', () {
+      const recorder = VideoEditorMainState(
+        openSubEditor: SubEditorType.voiceOver,
+      );
+      const text = VideoEditorMainState(openSubEditor: SubEditorType.text);
+      expect(recorder.isVoiceOverPreview, isTrue);
+      expect(text.isVoiceOverPreview, isFalse);
+      expect(const VideoEditorMainState().isVoiceOverPreview, isFalse);
+    });
+
+    test('isCanvasFullscreen while placing a slide point or recording a '
+        'voice-over', () {
+      const slidePoint = VideoEditorMainState(isPlacingSlidePoint: true);
+      const recorder = VideoEditorMainState(
+        openSubEditor: SubEditorType.voiceOver,
+      );
+      const draw = VideoEditorMainState(openSubEditor: SubEditorType.draw);
+      expect(slidePoint.isCanvasFullscreen, isTrue);
+      expect(recorder.isCanvasFullscreen, isTrue);
+      expect(draw.isCanvasFullscreen, isFalse);
+      expect(const VideoEditorMainState().isCanvasFullscreen, isFalse);
+    });
+
     test('copyWith preserves all fields by default', () {
       const original = VideoEditorMainState(
         canUndo: true,
@@ -839,8 +862,8 @@ void main() {
   });
 
   group(SubEditorType, () {
-    test('has 8 values', () {
-      expect(SubEditorType.values, hasLength(8));
+    test('has 9 values', () {
+      expect(SubEditorType.values, hasLength(9));
     });
 
     test('contains expected types', () {
@@ -855,6 +878,7 @@ void main() {
           SubEditorType.music,
           SubEditorType.clips,
           SubEditorType.captions,
+          SubEditorType.voiceOver,
         ]),
       );
     });
