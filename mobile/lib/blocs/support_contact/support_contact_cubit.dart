@@ -18,6 +18,7 @@ typedef ComposeSupportEmail = Future<void> Function({
   required String body,
   Rect? sharePositionOrigin,
 });
+typedef SupportMessagesAvailable = bool Function();
 
 class SupportContactEmailRequest {
   const SupportContactEmailRequest({
@@ -42,18 +43,21 @@ class SupportContactCubit extends Cubit<SupportContactState>
   SupportContactCubit({
     OpenSupportMessages? openSupportMessages,
     ComposeSupportEmail? composeEmail,
-    bool? supportMessagesAvailable,
+    SupportMessagesAvailable? supportMessagesAvailable,
   }) : _openSupportMessages =
            openSupportMessages ?? ZendeskSupportService.showTicketListScreen,
        _composeEmail = composeEmail ?? SupportEmailComposer().compose,
        _supportMessagesAvailable =
            supportMessagesAvailable ??
-           (openSupportMessages != null || ZendeskSupportService.isAvailable),
+           (openSupportMessages != null ? _alwaysAvailable : _zendeskAvailable),
        super(const SupportContactState());
 
   final OpenSupportMessages _openSupportMessages;
   final ComposeSupportEmail _composeEmail;
-  final bool _supportMessagesAvailable;
+  final SupportMessagesAvailable _supportMessagesAvailable;
+
+  static bool _alwaysAvailable() => true;
+  static bool _zendeskAvailable() => ZendeskSupportService.isAvailable;
 
   Future<void> open(SupportContactEmailRequest emailRequest) async {
     if (state.status == SupportContactStatus.opening) return;
@@ -61,23 +65,27 @@ class SupportContactCubit extends Cubit<SupportContactState>
       const SupportContactState(status: SupportContactStatus.opening),
     );
 
-    var fallbackNote = emailRequest.messagingUnavailableNote;
-    if (_supportMessagesAvailable) {
-      try {
-        if (await _openSupportMessages()) {
-          emitIfOpen(
-            const SupportContactState(
-              status: SupportContactStatus.messagingOpened,
-            ),
-          );
-          return;
-        }
-      } catch (error, stackTrace) {
-        addError(error, stackTrace);
+    try {
+      if (await _openSupportMessages()) {
+        emitIfOpen(
+          const SupportContactState(
+            status: SupportContactStatus.messagingOpened,
+          ),
+        );
+        return;
       }
-      if (isClosed) return;
-      fallbackNote = emailRequest.messagingFailedNote;
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
     }
+    if (isClosed) return;
+
+    // Zendesk initializes in the deferred startup phase, and the opener
+    // waits for that to settle before answering. Reading availability only
+    // now, rather than at construction, keeps a screen built during that
+    // window from skipping messaging that is about to become available.
+    final fallbackNote = _supportMessagesAvailable()
+        ? emailRequest.messagingFailedNote
+        : emailRequest.messagingUnavailableNote;
 
     try {
       await _composeEmail(

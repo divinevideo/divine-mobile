@@ -70,7 +70,8 @@ void main() {
     blocTest<SupportContactCubit, SupportContactState>(
       'uses the unavailable note when native support is unavailable',
       build: () => SupportContactCubit(
-        supportMessagesAvailable: false,
+        openSupportMessages: () async => false,
+        supportMessagesAvailable: () => false,
         composeEmail:
             ({
               required toEmail,
@@ -86,6 +87,62 @@ void main() {
         SupportContactState(status: SupportContactStatus.opening),
         SupportContactState(status: SupportContactStatus.emailOpened),
       ],
+    );
+
+    // Zendesk initializes in the deferred startup phase, so a cubit built
+    // while a screen renders can see it as unavailable moments before it is.
+    // The opener waits for initialization itself, so it must always be tried;
+    // availability only decides which fallback note the email carries.
+    blocTest<SupportContactCubit, SupportContactState>(
+      'still opens messaging that was unavailable when the cubit was built',
+      build: () => SupportContactCubit(
+        openSupportMessages: () async => true,
+        supportMessagesAvailable: () => false,
+        composeEmail:
+            ({
+              required toEmail,
+              required subject,
+              required body,
+              sharePositionOrigin,
+            }) async {
+              fail('email fallback must not run when messaging opened');
+            },
+      ),
+      act: (cubit) => cubit.open(_emailRequest),
+      expect: () => const [
+        SupportContactState(status: SupportContactStatus.opening),
+        SupportContactState(status: SupportContactStatus.messagingOpened),
+      ],
+    );
+
+    test(
+      'reads availability after the open attempt, not at construction',
+      () async {
+        var available = false;
+        String? emailBody;
+        final cubit = SupportContactCubit(
+          openSupportMessages: () async {
+            available = true;
+            return false;
+          },
+          supportMessagesAvailable: () => available,
+          composeEmail:
+              ({
+                required toEmail,
+                required subject,
+                required body,
+                sharePositionOrigin,
+              }) async {
+                emailBody = body;
+              },
+        );
+        addTearDown(cubit.close);
+
+        await cubit.open(_emailRequest);
+
+        expect(cubit.state.status, SupportContactStatus.emailOpened);
+        expect(emailBody, 'Messages failed.\n\nTell us what happened.');
+      },
     );
 
     blocTest<SupportContactCubit, SupportContactState>(
