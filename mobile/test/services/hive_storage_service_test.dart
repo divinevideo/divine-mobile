@@ -11,6 +11,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../helpers/test_helpers.dart';
+
 class _FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
@@ -83,7 +85,7 @@ void main() {
       } finally {
         // close() leaves the home path pointing at the directory deleted below,
         // and resetForTesting() only clears this service's own latch.
-        Hive.init(null);
+        TestHelpers.resetHiveHomeForTesting();
         if (root.existsSync()) root.deleteSync(recursive: true);
       }
     });

@@ -17,7 +17,7 @@ void main() {
 
     setUp(() async {
       tempDirectory = Directory.systemTemp.createTempSync('hashtag-cache-');
-      Hive.init(tempDirectory.path);
+      TestHelpers.setHiveHomeForTesting(tempDirectory.path);
       await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
       service = HashtagCacheService();
     });

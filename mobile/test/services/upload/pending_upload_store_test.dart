@@ -74,7 +74,7 @@ Future<Directory> _forceStorageFailure() async {
     }
   });
 
-  Hive.init(blocker.path);
+  TestHelpers.setHiveHomeForTesting(blocker.path);
   return isolatedDir;
 }
 
@@ -95,9 +95,7 @@ void main() {
       await TestHelpers.cleanupHiveBox('pending_uploads');
       SharedPreferences.setMockInitialValues({});
 
-      tempDir = await Directory.systemTemp.createTemp(
-        'pending_upload_store_',
-      );
+      tempDir = await Directory.systemTemp.createTemp('pending_upload_store_');
       originalPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = MockPathProviderPlatform()
         ..setTemporaryPath(tempDir.path)
@@ -374,10 +372,7 @@ void main() {
           localVideoPath: '${isolatedDir.path}/video.mp4',
           nostrPubkey: _pubkeyA,
         );
-        await expectLater(
-          () => store.save(upload),
-          throwsA(isA<Exception>()),
-        );
+        await expectLater(() => store.save(upload), throwsA(isA<Exception>()));
 
         // Start a drain but don't await it — it suspends on the failing save().
         final inFlight = store.drainPendingSaves();
@@ -392,55 +387,49 @@ void main() {
         expect(store.isDraining, isFalse);
       });
 
-      test(
-        'a drain that resumes after disposeStore() leaves no timer and an '
-        'empty queue',
-        () async {
-          final isolatedDir = await _forceStorageFailure();
+      test('a drain that resumes after disposeStore() leaves no timer and an '
+          'empty queue', () async {
+        final isolatedDir = await _forceStorageFailure();
 
-          final store = PendingUploadStore(
-            scopeUploadsToCurrentUser: false,
-            currentNostrPubkey: null,
-          );
+        final store = PendingUploadStore(
+          scopeUploadsToCurrentUser: false,
+          currentNostrPubkey: null,
+        );
 
-          final upload = PendingUpload.create(
-            localVideoPath: '${isolatedDir.path}/video.mp4',
-            nostrPubkey: _pubkeyA,
-          );
-          await expectLater(
-            () => store.save(upload),
-            throwsA(isA<Exception>()),
-          );
-          expect(store.queuedCount, equals(1));
+        final upload = PendingUpload.create(
+          localVideoPath: '${isolatedDir.path}/video.mp4',
+          nostrPubkey: _pubkeyA,
+        );
+        await expectLater(() => store.save(upload), throwsA(isA<Exception>()));
+        expect(store.queuedCount, equals(1));
 
-          // Start a drain; it suspends on the still-failing save().
-          final inFlight = store.drainPendingSaves();
-          expect(store.isDraining, isTrue);
+        // Start a drain; it suspends on the still-failing save().
+        final inFlight = store.drainPendingSaves();
+        expect(store.isDraining, isTrue);
 
-          // Tear the store down mid-drain. disposeStore() cancels the timer and
-          // clears the queue, but the drain is still parked on `await save()`.
-          store.disposeStore();
-          expect(store.isDisposed, isTrue);
+        // Tear the store down mid-drain. disposeStore() cancels the timer and
+        // clears the queue, but the drain is still parked on `await save()`.
+        store.disposeStore();
+        expect(store.isDisposed, isTrue);
 
-          // The drain resumes and re-fails. Pre-fix it would re-queue the upload
-          // (via save()'s _queueUploadForLater and the loop catch) and arm a
-          // fresh 30 s timer that disposeStore() can no longer cancel — a
-          // self-perpetuating retry surviving disposal. The disposed latch makes
-          // the resumed drain inert.
-          await inFlight;
+        // The drain resumes and re-fails. Pre-fix it would re-queue the upload
+        // (via save()'s _queueUploadForLater and the loop catch) and arm a
+        // fresh 30 s timer that disposeStore() can no longer cancel — a
+        // self-perpetuating retry surviving disposal. The disposed latch makes
+        // the resumed drain inert.
+        await inFlight;
 
-          expect(
-            store.queuedCount,
-            equals(0),
-            reason: 'a disposed store must not repopulate its queue',
-          );
-          expect(
-            store.hasScheduledRetry,
-            isFalse,
-            reason: 'no retry timer may survive disposal',
-          );
-        },
-      );
+        expect(
+          store.queuedCount,
+          equals(0),
+          reason: 'a disposed store must not repopulate its queue',
+        );
+        expect(
+          store.hasScheduledRetry,
+          isFalse,
+          reason: 'no retry timer may survive disposal',
+        );
+      });
 
       test(
         'open() clears the disposed latch so a reused store can queue again',
@@ -538,16 +527,13 @@ void main() {
         return {'a': aUpload, 'b': bUpload};
       }
 
-      test(
-        'unscoped store returns all uploads regardless of pubkey',
-        () async {
-          final store = await _openStore();
-          addTearDown(store.disposeStore);
-          await seedTwoAccounts(store);
+      test('unscoped store returns all uploads regardless of pubkey', () async {
+        final store = await _openStore();
+        addTearDown(store.disposeStore);
+        await seedTwoAccounts(store);
 
-          expect(store.pendingUploads, hasLength(2));
-        },
-      );
+        expect(store.pendingUploads, hasLength(2));
+      });
 
       test(
         'scoped store returns only uploads belonging to currentNostrPubkey',
@@ -569,18 +555,13 @@ void main() {
         },
       );
 
-      test(
-        'scoped store with no current pubkey hides all uploads',
-        () async {
-          final store = await _openStore(
-            scopeUploadsToCurrentUser: true,
-          );
-          addTearDown(store.disposeStore);
-          await seedTwoAccounts(store);
+      test('scoped store with no current pubkey hides all uploads', () async {
+        final store = await _openStore(scopeUploadsToCurrentUser: true);
+        addTearDown(store.disposeStore);
+        await seedTwoAccounts(store);
 
-          expect(store.pendingUploads, isEmpty);
-        },
-      );
+        expect(store.pendingUploads, isEmpty);
+      });
 
       test('getUploadByFilePath obeys scope', () async {
         final store = await _openStore(
@@ -590,14 +571,8 @@ void main() {
         addTearDown(store.disposeStore);
         await seedTwoAccounts(store);
 
-        expect(
-          store.getUploadByFilePath('${tempDir.path}/a.mp4'),
-          isNotNull,
-        );
-        expect(
-          store.getUploadByFilePath('${tempDir.path}/b.mp4'),
-          isNull,
-        );
+        expect(store.getUploadByFilePath('${tempDir.path}/a.mp4'), isNotNull);
+        expect(store.getUploadByFilePath('${tempDir.path}/b.mp4'), isNull);
       });
 
       test('uploadStats reflects only scoped uploads', () async {
@@ -829,14 +804,10 @@ void main() {
         final store = await _openStore();
         addTearDown(store.disposeStore);
 
-        final upload =
-            PendingUpload.create(
-              localVideoPath: '${tempDir.path}/pub.mp4',
-              nostrPubkey: _pubkeyA,
-            ).copyWith(
-              status: UploadStatus.published,
-              completedAt: DateTime.now(),
-            );
+        final upload = PendingUpload.create(
+          localVideoPath: '${tempDir.path}/pub.mp4',
+          nostrPubkey: _pubkeyA,
+        ).copyWith(status: UploadStatus.published, completedAt: DateTime.now());
         await store.save(upload);
         expect(store.length, equals(1));
 
@@ -844,24 +815,21 @@ void main() {
         expect(store.length, equals(0));
       });
 
-      test(
-        'removes failed upload whose video file no longer exists',
-        () async {
-          final store = await _openStore();
-          addTearDown(store.disposeStore);
+      test('removes failed upload whose video file no longer exists', () async {
+        final store = await _openStore();
+        addTearDown(store.disposeStore);
 
-          // Path points to a non-existent file.
-          final upload = PendingUpload.create(
-            localVideoPath: '${tempDir.path}/gone.mp4',
-            nostrPubkey: _pubkeyA,
-          ).copyWith(status: UploadStatus.failed);
-          await store.save(upload);
-          expect(store.length, equals(1));
+        // Path points to a non-existent file.
+        final upload = PendingUpload.create(
+          localVideoPath: '${tempDir.path}/gone.mp4',
+          nostrPubkey: _pubkeyA,
+        ).copyWith(status: UploadStatus.failed);
+        await store.save(upload);
+        expect(store.length, equals(1));
 
-          await store.cleanupCompletedUploads();
-          expect(store.length, equals(0));
-        },
-      );
+        await store.cleanupCompletedUploads();
+        expect(store.length, equals(0));
+      });
 
       test('keeps failed upload whose file still exists', () async {
         final store = await _openStore();
@@ -887,14 +855,10 @@ void main() {
         addTearDown(store.disposeStore);
 
         // Record belonging to pubkeyB – outside owner scope.
-        final otherPublished =
-            PendingUpload.create(
-              localVideoPath: '${tempDir.path}/other_pub.mp4',
-              nostrPubkey: _pubkeyB,
-            ).copyWith(
-              status: UploadStatus.published,
-              completedAt: DateTime.now(),
-            );
+        final otherPublished = PendingUpload.create(
+          localVideoPath: '${tempDir.path}/other_pub.mp4',
+          nostrPubkey: _pubkeyB,
+        ).copyWith(status: UploadStatus.published, completedAt: DateTime.now());
         final box = Hive.box<PendingUpload>('pending_uploads');
         await box.put(otherPublished.id, otherPublished);
 

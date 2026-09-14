@@ -14,6 +14,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
+import '../helpers/test_helpers.dart';
 import '../mocks/mock_path_provider_platform.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
@@ -40,7 +41,7 @@ void main() {
       'upload_manager_error_test_',
     );
 
-    Hive.init(testDir.path);
+    TestHelpers.setHiveHomeForTesting(testDir.path);
 
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(UploadStatusAdapter());

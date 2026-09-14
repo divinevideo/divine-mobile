@@ -809,8 +809,9 @@ it can leak between files in the same package. Packages do not have a
 process-global isolation is enforced by two static guards:
 `check_package_channel_isolation.sh` for channel handlers (baseline
 `mobile/scripts/baseline/package_channel_raw_installs.txt`, shrink-only) and
-`check_process_global_mutations.sh` for singletons and irreversible
-initializers. Both run in CI in the `Generated Files` job. A package test that
+`check_process_global_mutations.sh` for singletons, irreversible
+initializers and owned initializers. Both run in CI in the `Generated Files`
+job. A package test that
 trips the channel ratchet should null its handler in `tearDown`; regenerate the
 baseline only when an entry is genuinely removed.
 
@@ -832,6 +833,7 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
+| Hive's process-global home path (`Hive.init(path)`) | Go through a helper that owns the reset: `TestHelpers.setHiveHomeForTesting(path)` in the app tree, `setHiveTestHome(path)` in `people_lists_repository`. A bare `Hive.init` in a `*_test.dart` is banned even when paired with an inline `Hive.init(null)`, because a throw before that reset strands the override (`check_process_global_mutations.sh` enforces, hard zero). |
 | Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` heals any box left **open** and blames under `DIVINE_STRICT_HIVE_BOXES`; the rest of the row is convention, not a check. |
 | A service you registered with `BackgroundActivityManager` (`AuthService`, `UploadManager`, `AnalyticsService`) | Dispose the service. All three unregister in `dispose()`. If a test drives a manager directly, keep that exact instance and call `addTearDown(manager.resetForTesting)`. Each provider container owns a separate manager, so constructing a new manager cannot reset the instance under test. |
 
