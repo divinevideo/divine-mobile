@@ -206,7 +206,6 @@ discarded_futures|lib/widgets/video_feed_item/collaborator_avatar_row.dart	3
 discarded_futures|lib/widgets/video_feed_item/feed_playback_toggles_pill.dart	2
 discarded_futures|lib/widgets/video_feed_item/feed_videos.dart	3
 discarded_futures|lib/widgets/video_feed_item/inline_comment_composer_bar.dart	1
-discarded_futures|lib/widgets/video_feed_item/inspired_by_attribution_row.dart	1
 discarded_futures|lib/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart	1
 discarded_futures|lib/widgets/video_feed_item/metadata/metadata_sounds_section.dart	4
 discarded_futures|lib/widgets/video_feed_item/metadata/metadata_tags_section.dart	1
