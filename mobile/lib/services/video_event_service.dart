@@ -2235,11 +2235,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           ),
           eventCount: () => eventCount,
         );
-        _pendingFeedLoadTraces[subscriptionId] = pendingTrace;
-        void completeFeedLoadTrace(String completion, {int? eventTotal}) {
-          _pendingFeedLoadTraces.remove(subscriptionId);
-          pendingTrace.complete(completion, eventTotal: eventTotal);
-        }
+        final completeFeedLoadTrace = _pendingFeedLoadTraces.track(
+          subscriptionId,
+          pendingTrace,
+        );
 
         Log.info(
           '📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
@@ -2331,8 +2330,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           until: effectiveUntil,
           limit: limit,
           sortBy: sortBy,
-        );
-        pendingTrace.startPhase('cache_ingest_ms');
+        ).startPhaseAfter(pendingTrace, 'cache_ingest_ms');
 
         // Disposed while the cache read was in flight, so dispose has already
         // closed this load's trace. Carrying on would notify a dead

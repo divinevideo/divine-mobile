@@ -92,5 +92,29 @@ void main() {
         expect(trace.metrics, isNot(contains('cache_ingest_ms')));
       },
     );
+
+    test('startPhaseAfter advances once the awaited work returns', () async {
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 0);
+      await Future<void>.value().startPhaseAfter(load, 'cache_ingest_ms');
+      load.complete('cache');
+
+      expect(trace.attributes['terminal_phase'], 'cache_ingest_ms');
+    });
+
+    test('track registers a trace and releases it on completion', () async {
+      final pending = <String, FeedLoadTrace>{};
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 2);
+      final complete = pending.track('sub_1', load);
+
+      expect(pending['sub_1'], same(load));
+      complete('cache', eventTotal: 4);
+      complete('disposed');
+      await pumpEventQueue();
+
+      expect(pending, isEmpty);
+      expect(trace.metrics['event_count'], 4);
+      expect(trace.attributes['completion'], 'cache');
+      expect(trace.stopCount, 1);
+    });
   });
 }

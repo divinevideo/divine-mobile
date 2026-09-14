@@ -53,3 +53,25 @@ class FeedLoadTrace {
     }
   }
 }
+
+/// Starts [phase] on [trace] once this future completes.
+extension FeedLoadFuturePhase<T> on Future<T> {
+  Future<T> startPhaseAfter(FeedLoadTrace trace, String phase) =>
+      whenComplete(() => trace.startPhase(phase));
+}
+
+/// Pending feed-load bookkeeping for the owning service.
+extension PendingFeedLoadTraces on Map<String, FeedLoadTrace> {
+  /// Registers [trace] under [subscriptionId] and returns the function that
+  /// releases its entry and reports the trace once.
+  void Function(String completion, {int? eventTotal}) track(
+    String subscriptionId,
+    FeedLoadTrace trace,
+  ) {
+    this[subscriptionId] = trace;
+    return (String completion, {int? eventTotal}) {
+      remove(subscriptionId);
+      trace.complete(completion, eventTotal: eventTotal);
+    };
+  }
+}
