@@ -4359,6 +4359,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportCouldNotOpenMessages => '无法打开客服消息';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '无法打开$pageName';
   }
@@ -9609,6 +9612,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => '打开帮助中心';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '打开管理消息';

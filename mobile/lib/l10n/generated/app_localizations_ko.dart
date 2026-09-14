@@ -4394,6 +4394,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supportCouldNotOpenMessages => '지원 메시지를 열 수 없어요';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '$pageName을(를) 열 수 없어요';
   }
@@ -9723,6 +9726,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => '지원 센터 열기';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '검수 메시지 열기';

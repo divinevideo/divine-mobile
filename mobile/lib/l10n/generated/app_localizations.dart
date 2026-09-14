@@ -7981,6 +7981,12 @@ abstract class AppLocalizations {
   /// **'Could not open support messages'**
   String get supportCouldNotOpenMessages;
 
+  /// No description provided for @supportChatNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Support chat not available'**
+  String get supportChatNotAvailable;
+
   /// No description provided for @supportCouldNotOpenPage.
   ///
   /// In en, this message translates to:
@@ -17297,6 +17303,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Support Center'**
   String get appealOpenSupportCenter;
+
+  /// Button opening private support messaging to request reconsideration of an account restriction.
+  ///
+  /// In en, this message translates to:
+  /// **'Message support'**
+  String get accountStatusMessageSupport;
 
   /// No description provided for @minorAccountReviewOpenModerationMessage.
   ///

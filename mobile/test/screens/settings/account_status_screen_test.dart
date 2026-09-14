@@ -3,17 +3,18 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
-import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../helpers/go_router.dart';
@@ -24,6 +25,8 @@ Future<void> _pumpWith(
   AccountEnforcementKind kind, {
   MockGoRouter? goRouter,
   bool publishRestrictionConfirmed = false,
+  OpenSupportMessages? openSupportMessages,
+  ComposeSupportEmail? composeEmail,
 }) async {
   // Tall surface: the body is a ListView, which only builds what fits, and the
   // longer enforcement copy would otherwise push the appeal and exit buttons
@@ -37,6 +40,8 @@ Future<void> _pumpWith(
     supportedLocales: AppLocalizations.supportedLocales,
     home: AccountStatusScreen(
       publishRestrictionConfirmed: publishRestrictionConfirmed,
+      openSupportMessages: openSupportMessages,
+      composeEmail: composeEmail,
     ),
   );
 
@@ -65,7 +70,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.suspended);
 
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
-      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
       expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       expect(
         find.text(l10n.accountStatusKeysUnaffectedHeading),
@@ -79,7 +84,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.banned);
 
       expect(find.text(l10n.accountStatusBannedHeading), findsOneWidget);
-      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (
@@ -87,7 +92,7 @@ void main() {
     ) async {
       await _pumpWith(tester, AccountEnforcementKind.unknownRestriction);
 
-      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
     });
 
     testWidgets('an unrestricted account is greeted, not reported to', (
@@ -96,7 +101,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.noRestrictionReported);
 
       expect(find.text(l10n.accountStatusAllClearHeading), findsOneWidget);
-      expect(find.text(l10n.appealOpenSupportCenter), findsNothing);
+      expect(find.text(l10n.accountStatusMessageSupport), findsNothing);
       expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
     });
 
@@ -110,7 +115,7 @@ void main() {
         );
 
         expect(find.text(l10n.accountStatusRestrictedHeading), findsOneWidget);
-        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+        expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
         expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       },
     );
@@ -124,20 +129,129 @@ void main() {
       expect(find.text(l10n.accountStatusRetry), findsNothing);
     });
 
-    testWidgets('contact support opens the support centre', (tester) async {
+    testWidgets('appeal opens support messages without navigating', (
+      tester,
+    ) async {
       final goRouter = MockGoRouter();
       when(() => goRouter.push(any())).thenAnswer((_) async => null);
+      var openCalls = 0;
 
       await _pumpWith(
         tester,
         AccountEnforcementKind.suspended,
         goRouter: goRouter,
+        openSupportMessages: () async {
+          openCalls++;
+          return true;
+        },
       );
 
-      await tester.tap(find.text(l10n.appealOpenSupportCenter));
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
       await tester.pumpAndSettle();
 
-      verify(() => goRouter.push(SupportCenterScreen.path)).called(1);
+      expect(openCalls, 1);
+      verifyNever(() => goRouter.push(any()));
+    });
+
+    testWidgets('appeal falls back to email when messages cannot open', (
+      tester,
+    ) async {
+      String? emailBody;
+      await _pumpWith(
+        tester,
+        AccountEnforcementKind.suspended,
+        openSupportMessages: () async => false,
+        composeEmail:
+            ({
+              required toEmail,
+              required subject,
+              required body,
+              sharePositionOrigin,
+            }) async {
+              emailBody = body;
+            },
+      );
+
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.pumpAndSettle();
+
+      expect(emailBody, contains(l10n.supportCouldNotOpenMessages));
+      expect(emailBody, contains(l10n.supportContactSupportSubtitle));
+    });
+
+    testWidgets('appeal falls back to email when opening messages throws', (
+      tester,
+    ) async {
+      var composed = false;
+      await _pumpWith(
+        tester,
+        AccountEnforcementKind.suspended,
+        openSupportMessages: () async => throw Exception('native failure'),
+        composeEmail:
+            ({
+              required toEmail,
+              required subject,
+              required body,
+              sharePositionOrigin,
+            }) async {
+              composed = true;
+            },
+      );
+
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.pumpAndSettle();
+
+      expect(composed, isTrue);
+    });
+
+    testWidgets('appeal reports when its email fallback cannot open', (
+      tester,
+    ) async {
+      await _pumpWith(
+        tester,
+        AccountEnforcementKind.suspended,
+        openSupportMessages: () async => false,
+        composeEmail: ({
+          required toEmail,
+          required subject,
+          required body,
+          sharePositionOrigin,
+        }) async => throw Exception('email failure'),
+      );
+
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.authCouldNotOpenEmail(AppConstants.supportEmail)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('appeal shows progress and ignores a repeated tap', (
+      tester,
+    ) async {
+      final opening = Completer<bool>();
+      var openCalls = 0;
+      await _pumpWith(
+        tester,
+        AccountEnforcementKind.suspended,
+        openSupportMessages: () {
+          openCalls++;
+          return opening.future;
+        },
+      );
+
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.pump();
+      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+
+      expect(openCalls, 1);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+      opening.complete(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
     });
 
     testWidgets('move your account leaves for the portability page', (
@@ -353,7 +467,7 @@ void main() {
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
       expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
       expect(find.text(l10n.accountStatusRetry), findsOneWidget);
-      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
     });
 
     testWidgets('an active account is offered no futile retry', (tester) async {

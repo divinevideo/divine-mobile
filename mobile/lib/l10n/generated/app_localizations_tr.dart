@@ -4597,6 +4597,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get supportCouldNotOpenMessages => 'Destek mesajları açılamadı';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '$pageName açılamadı';
   }
@@ -10125,6 +10128,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Destek merkezini aç';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

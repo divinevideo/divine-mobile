@@ -4624,6 +4624,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supportCouldNotOpenMessages => 'Không mở được tin nhắn hỗ trợ';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'Không mở được $pageName';
   }
@@ -10172,6 +10175,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Mở Trung tâm hỗ trợ';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

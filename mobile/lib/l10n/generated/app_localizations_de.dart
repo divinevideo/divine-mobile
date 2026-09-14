@@ -4716,6 +4716,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Support-Nachrichten konnten nicht geöffnet werden';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '$pageName konnte nicht geöffnet werden';
   }
@@ -10335,6 +10338,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Support-Center öffnen';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

@@ -4380,6 +4380,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supportCouldNotOpenMessages => 'サポートメッセージが開けなかった';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return '$pageNameが開けなかった';
   }
@@ -9709,6 +9712,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'サポートセンターを開く';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'モデレーションメッセージを開く';

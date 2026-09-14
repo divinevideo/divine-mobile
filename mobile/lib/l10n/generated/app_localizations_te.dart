@@ -4828,6 +4828,9 @@ class AppLocalizationsTe extends AppLocalizations {
       'మద్దతు సందేశాలను తెరవడం సాధ్యపడలేదు';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'తెరవడం సాధ్యపడలేదు $pageName';
   }
@@ -10507,6 +10510,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'మద్దతు కేంద్రాన్ని తెరవండి';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

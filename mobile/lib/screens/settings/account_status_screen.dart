@@ -4,8 +4,8 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/account_enforcement_l10n.dart';
@@ -14,9 +14,9 @@ import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
-import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/widgets/support_contact_action.dart';
 
 /// Account status surface for s-t-s#200.
 ///
@@ -31,6 +31,8 @@ class AccountStatusScreen extends ConsumerStatefulWidget {
 
   const AccountStatusScreen({
     this.publishRestrictionConfirmed = false,
+    this.openSupportMessages,
+    this.composeEmail,
     super.key,
   });
 
@@ -39,6 +41,8 @@ class AccountStatusScreen extends ConsumerStatefulWidget {
   /// The publish result cannot distinguish suspended from banned, so it uses
   /// generic restriction copy while the status refresh resolves.
   final bool publishRestrictionConfirmed;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   ConsumerState<AccountStatusScreen> createState() =>
@@ -107,7 +111,11 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             skipLoadingOnRefresh: false,
             loading: () => publishRestriction == null
                 ? const Center(child: DivineCircularProgressIndicator())
-                : _StatusBody(kind: publishRestriction),
+                : _StatusBody(
+                    kind: publishRestriction,
+                    openSupportMessages: widget.openSupportMessages,
+                    composeEmail: widget.composeEmail,
+                  ),
             // Keep a confirmed restriction through a failed read so its appeal
             // and exit paths survive a bad connection. Without a confirmed
             // result, report that the lookup is indeterminate rather than
@@ -127,9 +135,15 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
                 kind: retainedKind,
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
+                openSupportMessages: widget.openSupportMessages,
+                composeEmail: widget.composeEmail,
               );
             },
-            data: (status) => _StatusBody(kind: effectiveKind(status.kind)),
+            data: (status) => _StatusBody(
+              kind: effectiveKind(status.kind),
+              openSupportMessages: widget.openSupportMessages,
+              composeEmail: widget.composeEmail,
+            ),
           ),
         ),
       ),
@@ -175,11 +189,19 @@ class _UnavailableBody extends StatelessWidget {
 }
 
 class _StatusBody extends StatelessWidget {
-  const _StatusBody({this.kind, this.isLastKnown = false, this.onRetry});
+  const _StatusBody({
+    this.kind,
+    this.isLastKnown = false,
+    this.onRetry,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
 
   final AccountEnforcementKind? kind;
   final bool isLastKnown;
   final VoidCallback? onRetry;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   /// Whether relay enforcement has anything to say about this account.
   ///
@@ -250,10 +272,15 @@ class _StatusBody extends StatelessWidget {
             style: VineTheme.bodyMediumFont(color: colors.primaryText),
           ),
           const SizedBox(height: 16),
-          DivineButton(
-            label: l10n.appealOpenSupportCenter,
-            expanded: true,
-            onPressed: () => context.push(SupportCenterScreen.path),
+          SupportContactAction(
+            openSupportMessages: openSupportMessages,
+            composeEmail: composeEmail,
+            builder: (context, isOpening, openSupport) => DivineButton(
+              label: l10n.accountStatusMessageSupport,
+              expanded: true,
+              isLoading: isOpening,
+              onPressed: openSupport,
+            ),
           ),
           const SizedBox(height: 8),
           DivineButton(

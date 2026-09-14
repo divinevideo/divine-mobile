@@ -4690,6 +4690,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi nabuksan ang support messages';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'Hindi nabuksan ang $pageName';
   }
@@ -10295,6 +10298,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Buksan ang support center';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

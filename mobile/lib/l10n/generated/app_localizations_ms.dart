@@ -4657,6 +4657,9 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat membuka mesej sokongan';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'Tidak dapat membuka $pageName';
   }
@@ -10225,6 +10228,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get appealOpenSupportCenter => 'Buka Pusat Sokongan';
+
+  @override
+  String get accountStatusMessageSupport => 'Message support';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>

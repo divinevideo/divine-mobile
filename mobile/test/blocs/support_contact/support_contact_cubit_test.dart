@@ -7,25 +7,41 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 
+const _emailRequest = SupportContactEmailRequest(
+  toEmail: 'support@example.com',
+  subject: 'Support',
+  body: 'Tell us what happened.',
+  messagingUnavailableNote: 'Chat unavailable.',
+  messagingFailedNote: 'Messages failed.',
+);
+
 void main() {
   group(SupportContactCubit, () {
     blocTest<SupportContactCubit, SupportContactState>(
       'reports opened when native support opens',
       build: () => SupportContactCubit(openSupportMessages: () async => true),
-      act: (cubit) => cubit.open(),
+      act: (cubit) => cubit.open(_emailRequest),
       expect: () => const [
         SupportContactState(status: SupportContactStatus.opening),
-        SupportContactState(status: SupportContactStatus.opened),
+        SupportContactState(status: SupportContactStatus.messagingOpened),
       ],
     );
 
     blocTest<SupportContactCubit, SupportContactState>(
       'requests fallback when native support is unavailable',
-      build: () => SupportContactCubit(openSupportMessages: () async => false),
-      act: (cubit) => cubit.open(),
+      build: () => SupportContactCubit(
+        openSupportMessages: () async => false,
+        composeEmail: ({
+          required toEmail,
+          required subject,
+          required body,
+          sharePositionOrigin,
+        }) async {},
+      ),
+      act: (cubit) => cubit.open(_emailRequest),
       expect: () => const [
         SupportContactState(status: SupportContactStatus.opening),
-        SupportContactState(status: SupportContactStatus.unavailable),
+        SupportContactState(status: SupportContactStatus.emailOpened),
       ],
     );
 
@@ -36,12 +52,59 @@ void main() {
       // exists to prevent.
       build: () => SupportContactCubit(
         openSupportMessages: () async => throw Exception('native crash'),
+        composeEmail: ({
+          required toEmail,
+          required subject,
+          required body,
+          sharePositionOrigin,
+        }) async {},
       ),
-      act: (cubit) => cubit.open(),
+      act: (cubit) => cubit.open(_emailRequest),
       expect: () => const [
         SupportContactState(status: SupportContactStatus.opening),
-        SupportContactState(status: SupportContactStatus.unavailable),
+        SupportContactState(status: SupportContactStatus.emailOpened),
       ],
+      errors: () => [isA<Exception>()],
+    );
+
+    blocTest<SupportContactCubit, SupportContactState>(
+      'uses the unavailable note when native support is unavailable',
+      build: () => SupportContactCubit(
+        supportMessagesAvailable: false,
+        composeEmail:
+            ({
+              required toEmail,
+              required subject,
+              required body,
+              sharePositionOrigin,
+            }) async {
+              expect(body, 'Chat unavailable.\n\nTell us what happened.');
+            },
+      ),
+      act: (cubit) => cubit.open(_emailRequest),
+      expect: () => const [
+        SupportContactState(status: SupportContactStatus.opening),
+        SupportContactState(status: SupportContactStatus.emailOpened),
+      ],
+    );
+
+    blocTest<SupportContactCubit, SupportContactState>(
+      'reports email failure when the fallback cannot open',
+      build: () => SupportContactCubit(
+        openSupportMessages: () async => false,
+        composeEmail: ({
+          required toEmail,
+          required subject,
+          required body,
+          sharePositionOrigin,
+        }) async => throw Exception('email failed'),
+      ),
+      act: (cubit) => cubit.open(_emailRequest),
+      expect: () => const [
+        SupportContactState(status: SupportContactStatus.opening),
+        SupportContactState(status: SupportContactStatus.emailFailed),
+      ],
+      errors: () => [isA<Exception>()],
     );
 
     test('ignores a second open while the first is in flight', () async {
@@ -54,8 +117,8 @@ void main() {
         },
       );
 
-      final first = cubit.open();
-      final second = cubit.open();
+      final first = cubit.open(_emailRequest);
+      final second = cubit.open(_emailRequest);
       expect(calls, 1);
 
       gate.complete(true);
