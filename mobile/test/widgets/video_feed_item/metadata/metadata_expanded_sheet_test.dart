@@ -100,6 +100,7 @@ VideoEvent _makeVideo({
   List<String> categories = const [],
   List<String> collaboratorPubkeys = const [],
   InspiredByInfo? inspiredByVideo,
+  List<ClipSourceCredit> clipSourceCredits = const [],
   List<String>? reposterPubkeys,
   int? nostrRepostCount,
   String? audioEventId,
@@ -122,6 +123,7 @@ VideoEvent _makeVideo({
   categories: categories,
   collaboratorPubkeys: collaboratorPubkeys,
   inspiredByVideo: inspiredByVideo,
+  clipSourceCredits: clipSourceCredits,
   reposterPubkeys: reposterPubkeys,
   nostrRepostCount: nostrRepostCount,
   audioEventId: audioEventId,
@@ -1238,6 +1240,47 @@ void main() {
 
       expect(find.text('Inspired by'), findsNothing);
     });
+
+    testWidgetsWithSurfaceSize(
+      'keeps every credited creator from clip sources',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:some-dtag',
+          ),
+          clipSourceCredits: const [
+            ClipSourceCredit(
+              authorPubkey: _inspiredByPubkey,
+              addressableId: '34236:$_inspiredByPubkey:some-dtag',
+            ),
+            ClipSourceCredit(
+              authorPubkey: _collaborator1,
+              addressableId: '34236:$_collaborator1:reused-clip',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+              fetchUserProfileProvider(_collaborator1).overrideWith(
+                (ref) async =>
+                    _makeProfile(_collaborator1, 'Clip Source Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

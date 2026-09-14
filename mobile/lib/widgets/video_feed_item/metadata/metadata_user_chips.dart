@@ -248,7 +248,10 @@ class MetadataInspiredBySection extends StatelessWidget {
 
   /// Credited creators, primary first, deduplicated across the sources that
   /// can each name one: the inspiring video's author, the NIP-27 content
-  /// reference, and the `inspired-by` p-tags carrying the rest.
+  /// reference, the `inspired-by` p-tags carrying the rest, and every factual
+  /// clip-source credit. The feed overlay's inspired-by row rendered the
+  /// clip-source credits before it was removed, so the About chips have to
+  /// carry them or a reused clip's creator loses its only display surface.
   List<String> _creditedPubkeys() {
     final pubkeys = <String>[];
     final seen = <String>{};
@@ -261,6 +264,9 @@ class MetadataInspiredBySection extends StatelessWidget {
 
     add(video.inspiredByCreatorPubkey);
     video.inspiredByPubkeys.forEach(add);
+    for (final credit in video.clipSourceCredits) {
+      add(credit.authorPubkey);
+    }
     return pubkeys;
   }
 
