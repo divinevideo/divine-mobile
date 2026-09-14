@@ -19,6 +19,9 @@ enum SignInFailureReason {
   /// The submitted email was malformed.
   invalidEmail,
 
+  /// Too many sign-in attempts have been made for now.
+  rateLimited,
+
   /// A network/transport problem prevented a verdict.
   network,
 

@@ -563,6 +563,8 @@ String _signInErrorMessage(BuildContext context, SignInFailureReason reason) {
       return l10n.authSignInErrorEmailNotVerified;
     case SignInFailureReason.invalidEmail:
       return l10n.authSignInErrorInvalidEmail;
+    case SignInFailureReason.rateLimited:
+      return l10n.accountCredentialsRateLimited;
     case SignInFailureReason.network:
       return l10n.authSignInErrorNetwork;
     case SignInFailureReason.unknown:
