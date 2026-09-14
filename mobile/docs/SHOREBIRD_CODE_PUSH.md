@@ -590,6 +590,46 @@ matching `Debug-DivineUITests` configuration solely to include screenshot asset
 fixtures. It is not a shipping flavor. If a re-init ever writes a `flavors:`
 block into `shorebird.yaml`, delete it.
 
+**Android release builds warn about `libapp.so.sym`, and the suggested fix does
+not apply.** Shorebird's Flutter fork still runs `gen_snapshot` with `--strip`
+on Android; upstream stopped doing that in 3.44 (flutter/flutter#181275) and
+leaves the stripping to AGP. AGP's `extractReleaseNativeSymbolTables` skips a
+library it finds already stripped, so the AAB carried no
+`BUNDLE-METADATA/com.android.tools.build.debugsymbols/<abi>/libapp.so.sym` and
+the fork printed this on every `shorebird release android`:
+
+```
+libapp.so.sym or libapp.so.dbg not present when checking final appbundle for debug symbols.
+Play Console will not receive Dart crash symbols for this build. To enable, remove
+`packaging.jniLibs.keepDebugSymbols.add("**/libapp.so")` from android/app/build.gradle.kts.
+```
+
+The remediation it names is the *other* way to land here — a legacy
+`keepDebugSymbols` exclusion — and this repo never had one. The release step
+instead forwards `--extra-gen-snapshot-options=--no-strip` to `flutter build`,
+so AGP strips `libapp.so` and writes the `.sym`. Verified on Shorebird 1.6.120
+/ Flutter 3.47.2: the `libapp.so` inside the AAB is byte-identical with and
+without the flag, so patching is unaffected. The AAB grows by the `.sym`,
+roughly 45 MB per ABI, which Play keeps server-side and never ships to a
+device. To confirm a release carries it:
+
+```bash
+apkanalyzer files list build/app/outputs/bundle/release/app-release.aab | grep libapp.so.sym
+```
+
+What the sidecar buys is narrow: Play Console can name the Dart function in a
+**native** crash (a signal, not a Dart exception) whose stack passes through
+`libapp.so`. Dart exceptions already reach Crashlytics with function, file and
+line, because release builds use neither `--split-debug-info` nor
+`--obfuscate`. Crashlytics does not see native crashes on Android at all —
+`firebase_crashlytics` ships without `firebase-crashlytics-ndk` — so Play
+Console is the only place they appear, which is why the sidecar is worth
+emitting (#7990).
+
+**Patch builds still print that warning, and that is expected.** `shorebird
+patch android` does not carry the flag: its `libapp.so` comes out the same
+bytes either way, and Play never symbolicates patched code.
+
 ## Reference
 
 - [Shorebird docs](https://docs.shorebird.dev)
