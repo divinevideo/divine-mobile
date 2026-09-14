@@ -23,6 +23,8 @@ void main() {
     PendingReportChannelStatus relayStatus = PendingReportChannelStatus.pending,
     PendingReportChannelStatus zendeskStatus =
         PendingReportChannelStatus.pending,
+    PendingReportChannelStatus moderationStatus =
+        PendingReportChannelStatus.done,
     int relayAttempts = 0,
     int zendeskAttempts = 0,
     String? targetRelays,
@@ -36,6 +38,7 @@ void main() {
       zendeskPayload: '{"subject":"$reportId"}',
       relayStatus: relayStatus,
       zendeskStatus: zendeskStatus,
+      moderationStatus: moderationStatus,
       relayAttempts: relayAttempts,
       zendeskAttempts: zendeskAttempts,
       createdAt: createdAt ?? DateTime.utc(2026, 5),
@@ -254,6 +257,64 @@ void main() {
           );
         },
       );
+    });
+    group('markChannelDone', () {
+      test("does not push back the other destinations' retry clock", () async {
+        await dao.enqueue(makeReport(reportId: 'r1'));
+        await dao.recordChannelFailure(
+          reportId: 'r1',
+          channel: ReportChannel.zendesk,
+          error: 'offline',
+        );
+        // Age the stamp so a re-stamp is measurable; two writes in the same
+        // second are stored identically and would hide the regression.
+        final aged = DateTime.now().subtract(const Duration(hours: 1)).toUtc();
+        await database.customStatement(
+          'UPDATE pending_reports SET last_attempt_at = ? WHERE report_id = ?',
+          [aged.millisecondsSinceEpoch ~/ 1000, 'r1'],
+        );
+        final afterFailure = (await dao.getById('r1'))!.lastAttemptAt;
+        expect(afterFailure, isNotNull);
+
+        // Retiring the relay leg is not an attempt on the others, so it must
+        // not re-arm the backoff clock all three share.
+        await dao.markChannelDone(
+          reportId: 'r1',
+          channel: ReportChannel.relay,
+        );
+
+        expect((await dao.getById('r1'))!.lastAttemptAt, afterFailure);
+      });
+    });
+
+    group('deleteIfSettled', () {
+      test('retires a row once nothing is still waiting', () async {
+        await dao.enqueue(
+          makeReport(
+            reportId: 'r1',
+            relayStatus: PendingReportChannelStatus.done,
+            zendeskStatus: PendingReportChannelStatus.deadLetter,
+            moderationStatus: PendingReportChannelStatus.done,
+          ),
+        );
+
+        expect(await dao.deleteIfSettled('r1'), 1);
+        expect(await dao.getById('r1'), isNull);
+      });
+
+      test('keeps a row while any destination is still pending', () async {
+        await dao.enqueue(
+          makeReport(
+            reportId: 'r1',
+            relayStatus: PendingReportChannelStatus.done,
+            zendeskStatus: PendingReportChannelStatus.pending,
+            moderationStatus: PendingReportChannelStatus.done,
+          ),
+        );
+
+        expect(await dao.deleteIfSettled('r1'), 0);
+        expect(await dao.getById('r1'), isNotNull);
+      });
     });
   });
 }

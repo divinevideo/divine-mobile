@@ -266,7 +266,12 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
             ? Value(nextAttempts)
             : const Value.absent(),
         lastError: error != null ? Value(error) : const Value.absent(),
-        lastAttemptAt: Value(DateTime.now()),
+        // Only an actual attempt moves the clock. All three destinations share
+        // it, so stamping it when one is retired would push the others a full
+        // backoff interval further out for a delivery they had no part in.
+        lastAttemptAt: incrementAttempt
+            ? Value(DateTime.now())
+            : const Value.absent(),
       );
 
       final rows = await (update(
@@ -277,6 +282,28 @@ class PendingReportsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Retire only after every requested destination has acknowledged the report.
+  /// Retire a row once no destination is still waiting — delivered or given
+  /// up on. [deleteIfDelivered] only retires a fully-delivered report, so a
+  /// destination that can never succeed (no support-ticket credentials on this
+  /// build, a message the policy gate refuses) would otherwise keep the row,
+  /// and its signed event and payloads, on the device for the life of the
+  /// install.
+  Future<int> deleteIfSettled(String reportId) =>
+      (delete(pendingReports)..where(
+            (row) =>
+                row.reportId.equals(reportId) &
+                row.relayStatus
+                    .equals(PendingReportChannelStatus.pending.name)
+                    .not() &
+                row.zendeskStatus
+                    .equals(PendingReportChannelStatus.pending.name)
+                    .not() &
+                row.moderationStatus
+                    .equals(PendingReportChannelStatus.pending.name)
+                    .not(),
+          ))
+          .go();
+
   Future<int> deleteIfDelivered(String reportId) =>
       (delete(pendingReports)..where(
             (row) =>

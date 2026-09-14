@@ -22,6 +22,7 @@ class ReportRetryConfig {
     this.maxDelay = const Duration(minutes: 5),
     this.backoffMultiplier = 2.0,
     this.attemptTimeout = const Duration(seconds: 30),
+    this.maxAttemptsPerChannel = 12,
   });
 
   final int maxReportsPerSweep;
@@ -31,6 +32,14 @@ class ReportRetryConfig {
 
   /// Bound an attempt so a silent native SDK cannot stop the whole outbox.
   final Duration attemptTimeout;
+
+  /// After this many failed attempts a destination is given up on rather than
+  /// retried forever. Sweeps fire on foreground and reconnect, so this spans
+  /// many sessions before it trips. Without it, a destination that can never
+  /// succeed — a build with no support-ticket credentials, a message the
+  /// policy gate refuses — keeps its report row, and the identifying payloads
+  /// inside it, on the device for the life of the install.
+  final int maxAttemptsPerChannel;
 
   Duration backoffFor(int attempts) {
     if (attempts <= 0) return Duration.zero;
@@ -228,12 +237,31 @@ class ReportRetryService {
       delivered = false;
     }
     if (_disposed) return;
-    if (!delivered) {
+    if (delivered) return;
+
+    // `row` is this sweep's snapshot, so count from it rather than re-reading.
+    final attempts = row.attemptsOf(channel) + 1;
+    if (attempts >= _config.maxAttemptsPerChannel) {
+      await _dao.markChannelDeadLetter(
+        reportId: row.reportId,
+        channel: channel,
+        error: '${channel.name} delivery gave up after $attempts attempts',
+      );
+      Log.warning(
+        'Gave up delivering ${channel.name} for report ${row.reportId} '
+        'after $attempts attempts',
+        name: 'ReportRetryService',
+        category: LogCategory.system,
+      );
+    } else {
       await _dao.recordChannelFailure(
         reportId: row.reportId,
         channel: channel,
         error: '${channel.name} delivery failed',
       );
     }
+    // Retire the row once nothing is still waiting, whether every destination
+    // succeeded or the rest were given up on.
+    await _dao.deleteIfSettled(row.reportId);
   }
 }

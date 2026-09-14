@@ -428,6 +428,47 @@ void main() {
       expect(await dao.getById('r1'), isNull);
       await service.dispose();
     });
+    group('giving up', () {
+      test('gives up on a destination that has failed too many times', () async {
+        // Without a cap this row is retried on every foreground for the life of
+        // the install, holding its signed event and payloads on the device.
+        await dao.enqueue(
+          makeReport(
+            reportId: 'r1',
+            relayStatus: PendingReportChannelStatus.done,
+            zendeskAttempts: 2,
+          ),
+        );
+        driver.fail('r1', ReportChannel.zendesk);
+        driver.succeed('r1', ReportChannel.moderation);
+
+        await buildService(
+          config: const ReportRetryConfig(maxAttemptsPerChannel: 3),
+        ).sweep();
+
+        // Settled everywhere — delivered or given up on — so the row retires.
+        expect(await dao.getById('r1'), isNull);
+      });
+
+      test('keeps retrying below the attempt cap', () async {
+        await dao.enqueue(
+          makeReport(
+            reportId: 'r1',
+            relayStatus: PendingReportChannelStatus.done,
+          ),
+        );
+        driver.fail('r1', ReportChannel.zendesk);
+        driver.succeed('r1', ReportChannel.moderation);
+
+        await buildService(
+          config: const ReportRetryConfig(maxAttemptsPerChannel: 3),
+        ).sweep();
+
+        final row = await dao.getById('r1');
+        expect(row, isNotNull);
+        expect(row!.zendeskStatus, PendingReportChannelStatus.pending);
+      });
+    });
   });
 }
 
