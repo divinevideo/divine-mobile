@@ -59,7 +59,10 @@ class ViewEventPublisher {
   final String _defaultRelayHint;
   final ViewEventDropReporter? _onDrop;
 
-  /// Shipped app version written into the `version` tag of every view event.
+  /// Shipped app version of this build, and the default for the `version`
+  /// tag. A replayed row overrides it with the version stored when the view
+  /// was recorded (#9077), so this is the tag on a live publish rather than
+  /// on every view event.
   ///
   /// `view_interactions.client` only says "Divine": it cannot tell a 1.0.19
   /// view from a 1.0.20 one, so a reporting regression could not be pinned to
