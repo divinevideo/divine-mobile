@@ -11,8 +11,10 @@
 # uses type resolution rather than a source-text approximation.
 #
 # Regenerate only after fixing findings, under the pinned toolchain (the two
-# rules are type-resolving, so the counts move with the Dart SDK):
-#   UPDATE_BASELINE=1 mise exec -- bash mobile/scripts/check_async_safety_ceiling.sh
+# rules are type-resolving, so the counts move with the Dart SDK). From
+# mobile/, not the repo root: mise.toml lives there, and `mise exec` from the
+# root finds no pin and falls through to whatever dart is on PATH:
+#   cd mobile && UPDATE_BASELINE=1 mise exec -- bash scripts/check_async_safety_ceiling.sh
 
 set -euo pipefail
 
