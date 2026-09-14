@@ -168,7 +168,7 @@ void main() {
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
-          currentAuthStateProvider.overrideWith((ref) => authState),
+          currentAuthStateProvider.overrideWithValue(authState),
           knownAccountsProvider.overrideWith((ref) async => knownAccounts),
           isAccountEnforcedProvider.overrideWithValue(
             enforcement?.isEnforced ?? false,
@@ -260,9 +260,7 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(
               mockDraftStorageService,
             ),
-            currentAuthStateProvider.overrideWith(
-              (ref) => AuthState.authenticated,
-            ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             knownAccountsProvider.overrideWith((ref) async => const []),
             // No NIP-05, but a follower count from the REST profile. Social
             // proof must not stand in for the signed-in account's identifier.
@@ -463,8 +461,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               knownAccountsProvider.overrideWith((ref) async => accounts),
               userProfileReactiveProvider.overrideWith(
@@ -581,9 +579,7 @@ void main() {
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
-          currentAuthStateProvider.overrideWith(
-            (ref) => AuthState.authenticated,
-          ),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           userProfileReactiveProvider.overrideWith(
             (ref, pubkey) => Stream.value(null),
           ),
@@ -777,8 +773,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               userProfileReactiveProvider.overrideWith(
                 (ref, pubkey) => Stream.value(null),
@@ -1049,8 +1045,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               userProfileReactiveProvider.overrideWith(
                 (ref, pubkey) => Stream.value(null),

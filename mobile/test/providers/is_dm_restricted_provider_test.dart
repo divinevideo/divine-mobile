@@ -200,8 +200,8 @@ void main() {
         // extracted provider keeps a stale value into the next account's
         // session — and a stale `false` unrestricts a Keycast-backed account.
         //
-        // Uses the REAL currentAuthStateProvider (stream + invalidateSelf) over
-        // a mock AuthService so an auth transition propagates exactly as in
+        // Uses the real currentAuthStateProvider stream over a mock AuthService
+        // so an auth transition propagates exactly as in
         // production; overriding currentAuthStateProvider with a value would
         // hide the defect.
         const pubkeyA =

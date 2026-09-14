@@ -71,7 +71,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWith((ref) => authState),
+            currentAuthStateProvider.overrideWithValue(authState),
             bugReportServiceProvider.overrideWithValue(bugReportService),
             accountDeletionServiceProvider.overrideWithValue(
               accountDeletionService,

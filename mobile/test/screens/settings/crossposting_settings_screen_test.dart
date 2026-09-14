@@ -33,6 +33,11 @@ final _testAuthStateProvider = StateProvider<AuthState>(
   (_) => AuthState.authenticated,
 );
 
+class _TestCurrentAuthState extends CurrentAuthState {
+  @override
+  AuthState build() => ref.watch(_testAuthStateProvider);
+}
+
 void main() {
   group(CrosspostingSettingsScreen, () {
     late _MockAuthService authService;
@@ -77,9 +82,7 @@ void main() {
       return ProviderScope(
         overrides: [
           authServiceProvider.overrideWithValue(authService),
-          currentAuthStateProvider.overrideWith(
-            (ref) => ref.watch(_testAuthStateProvider),
-          ),
+          currentAuthStateProvider.overrideWith(_TestCurrentAuthState.new),
           crosspostingRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp.router(
