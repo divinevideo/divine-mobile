@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
 import 'package:openvine/features/people_lists/view/people_list_member_avatar.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -23,7 +23,7 @@ Future<void> _pumpHeader(
   await tester.pumpWidget(
     testProviderScope(
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
