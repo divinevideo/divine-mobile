@@ -31,7 +31,10 @@ class PeopleListMember extends Equatable {
   });
 
   final String pubkey;
+
+  /// Vertical videos only, matching what the grid can render.
   final int? videoCount;
+
   final double? totalLoops;
 
   bool get hasStats => videoCount != null;

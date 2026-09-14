@@ -47,7 +47,11 @@ UserList _list({
 UserProfileFound _found(String pubkey, {required int videos}) =>
     UserProfileFound(
       profile: UserProfileData(pubkey: pubkey),
-      stats: ProfileStatsData(videoCount: videos, reactionCount: 0),
+      stats: ProfileStatsData(
+        videoCount: videos + 10,
+        reactionCount: 0,
+        verticalVideos: videos,
+      ),
     );
 
 void main() {

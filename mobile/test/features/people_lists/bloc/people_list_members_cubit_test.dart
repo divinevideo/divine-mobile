@@ -20,7 +20,13 @@ UserProfileFound _found(
 }) {
   return UserProfileFound(
     profile: UserProfileData(pubkey: pubkey),
-    stats: ProfileStatsData(videoCount: videos, reactionCount: 0),
+    // videoCount deliberately exceeds the vertical count: the extra are
+    // horizontal videos the grid cannot render, so nothing should count them.
+    stats: ProfileStatsData(
+      videoCount: videos + 10,
+      reactionCount: 0,
+      verticalVideos: videos,
+    ),
     engagement: ProfileEngagementData(
       totalReactions: 0,
       totalLoops: loops,
@@ -167,6 +173,35 @@ void main() {
         ).called(1);
         expect(cubit.state.status, equals(PeopleListMembersStatus.success));
         expect(cubit.state.totalVideos, isNull);
+      });
+
+      test('counts vertical videos and ignores horizontal ones', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              _busy: UserProfileFound(
+                profile: UserProfileData(pubkey: _busy),
+                stats: const ProfileStatsData(
+                  videoCount: 9,
+                  reactionCount: 0,
+                  verticalVideos: 2,
+                ),
+              ),
+            },
+          ),
+        );
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [_busy],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.totalVideos, equals(2));
+        expect(cubit.state.members.single.videoCount, equals(2));
       });
 
       test('keeps the ranking it has when a page fails', () async {

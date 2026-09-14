@@ -72,7 +72,10 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
         // Null means Funnelcake is not configured; no page will answer.
         if (response == null) break;
         for (final entry in response.profiles.entries) {
-          final videoCount = entry.value.stats?.videoCount;
+          // Vertical videos only: the grid under this line renders nothing
+          // else, so counting an author's horizontal videos here would
+          // promise videos the screen can never show.
+          final videoCount = entry.value.stats?.verticalVideos;
           if (videoCount == null) continue;
           stats[entry.key.toLowerCase()] = (
             videoCount: videoCount,
