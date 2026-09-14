@@ -277,7 +277,7 @@ class SeenVideosService {
               _prefs!.getBool(seenVideosMigratedStorageKey) ?? false;
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
             phases.startPhase('database_migration_ms');
-            await _migrateMetricsToDb(trace);
+            await _migrateMetricsToDb(trace, phases);
             await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           } else if (dbRows.isNotEmpty && !migrated) {
             phases.startPhase('migration_marker_ms');
@@ -311,7 +311,10 @@ class SeenVideosService {
     }
   }
 
-  Future<void> _migrateMetricsToDb(PerformanceTrace trace) async {
+  Future<void> _migrateMetricsToDb(
+    PerformanceTrace trace,
+    PerformancePhaseTimer phases,
+  ) async {
     final db = _effectiveDb;
     if (db == null || _seenVideos.isEmpty) return;
     try {
@@ -333,7 +336,10 @@ class SeenVideosService {
     } catch (e) {
       trace
         ..putAttribute('completion', 'partial')
-        ..putAttribute('failed_phase', 'database_migration_ms');
+        ..putAttribute(
+          'failed_phase',
+          phases.currentPhase ?? 'database_migration_ms',
+        );
       Log.warning(
         'Seen DB migration failed: $e',
         name: 'SeenVideosService',
