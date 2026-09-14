@@ -6478,6 +6478,50 @@ void main() {
         },
       );
 
+      test(
+        'markAllAsRead rollback survives a concurrent refresh that fails',
+        () async {
+          stubProfiles({});
+          stubNotifications([makeNotification()], unreadCount: 1);
+          await repository.refresh();
+
+          final markGate = Completer<MarkReadResponse>();
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) => markGate.future);
+
+          final markFuture = repository.markAllAsRead();
+          expect(await repository.watchUnreadCount().first, equals(0));
+
+          // The refresh bumps the fetch generation and then fails; the mark-all
+          // rollback must still restore the unread flags it flipped.
+          when(
+            () => funnelcakeApiClient.getNotifications(
+              pubkey: any(named: 'pubkey'),
+              cursor: any(named: 'cursor'),
+              cursorId: any(named: 'cursorId'),
+              types: any(named: 'types'),
+              requestUri: any(named: 'requestUri'),
+              authHeaders: any(named: 'authHeaders'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenThrow(const FunnelcakeException('refresh failed'));
+
+          await expectLater(
+            repository.refresh(),
+            throwsA(isA<FunnelcakeException>()),
+          );
+
+          markGate.completeError(const FunnelcakeException('boom'));
+          await expectLater(markFuture, throwsA(isA<FunnelcakeException>()));
+
+          expect(await repository.watchUnreadCount().first, equals(1));
+        },
+      );
+
       test('a hung NIP-98 sign does not wedge later read mutations', () async {
         final signGate = Completer<Map<String, String>>();
         var signCalls = 0;

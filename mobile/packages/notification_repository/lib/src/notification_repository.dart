@@ -366,9 +366,9 @@ class NotificationRepository {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
-    // Drop the queue tail: every later read mutation short-circuits on
-    // [_closed], and a mutation hung in the signer must not keep this
-    // instance's chain alive.
+    // Drop the queue tail. Every later mutation throws on [_closed] before it
+    // can enqueue, so this releases the old chain rather than gating new work
+    // — it keeps a mutation hung in the signer from retaining this instance.
     _readMutationTail = Future<void>.value();
     for (final feed in _liveFeeds.toList()) {
       await feed.snapshot.close();
