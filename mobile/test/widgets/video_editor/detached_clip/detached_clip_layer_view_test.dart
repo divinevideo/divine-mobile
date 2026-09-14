@@ -1,10 +1,16 @@
 // ABOUTME: Tests the detached clip's playhead mapping and its still poster,
 // ABOUTME: the two halves that work without a native decoder.
 
+import 'dart:async';
 import 'dart:io';
 
+import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -14,6 +20,7 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -28,6 +35,54 @@ class _FakePathProvider extends Fake
 
   @override
   Future<String?> getApplicationDocumentsPath() async => documentsPath;
+}
+
+class _MockDivineVideoPlayerController extends Mock
+    implements DivineVideoPlayerController {}
+
+class _MockVideoEditorMainBloc
+    extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
+    implements VideoEditorMainBloc {}
+
+/// A pooled companion that records the mute calls the layer wires to it,
+/// instead of opening a decoder the widget test cannot run.
+class _FakeDetachedClipPlayer implements DetachedClipPlayer {
+  _FakeDetachedClipPlayer(this._controller, this._clip);
+
+  final DivineVideoPlayerController _controller;
+  final DivineVideoClip _clip;
+
+  /// Every `muted` value handed to [setMuted], in call order.
+  final List<bool> muteCalls = [];
+
+  @override
+  DivineVideoPlayerController get controller => _controller;
+
+  @override
+  DivineVideoClip get clip => _clip;
+
+  @override
+  bool isWithinWindow(Duration playTime) => true;
+
+  @override
+  void follow({
+    required ValueNotifier<Duration>? playhead,
+    ValueNotifier<bool>? advancing,
+    Duration windowStart = Duration.zero,
+    Duration? windowEnd,
+    Duration sourceOffset = Duration.zero,
+  }) {}
+
+  @override
+  Future<void> setMuted({required bool muted}) async {
+    muteCalls.add(muted);
+  }
+
+  @override
+  void detach() {}
+
+  @override
+  Future<void> dispose() async {}
 }
 
 DivineVideoClip _clip({
@@ -272,6 +327,148 @@ void main() {
       expect(preview.chromaKey?.key, const ChromaKey.blueScreen());
       expect(preview.previewTransparency, isFalse);
       await disposeLayerView(tester);
+    });
+  });
+
+  group('VoiceOverPreview mute wiring', () {
+    late Directory tempDir;
+    late PathProviderPlatform originalPathProvider;
+    late StreamController<VideoEditorMainState> editorStates;
+
+    setUp(() async {
+      tempDir = Directory.systemTemp.createTempSync('detached_mute');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+      detachedClipPlayers.resetForTesting();
+      addTearDown(detachedClipPlayers.resetForTesting);
+      resetCachedDocumentsPath();
+      await getDocumentsPath();
+      editorStates = StreamController<VideoEditorMainState>.broadcast();
+      addTearDown(editorStates.close);
+    });
+
+    tearDown(() {
+      resetCachedDocumentsPath();
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    /// Mounts the layer over a fake companion parked in the registry slot it
+    /// asks for, so the mute wiring can be asserted without a decoder.
+    Future<_FakeDetachedClipPlayer> pumpLayer(
+      WidgetTester tester, {
+      required Map<String, dynamic> meta,
+      required _MockVideoEditorMainBloc editor,
+    }) async {
+      final controller = _MockDivineVideoPlayerController();
+      when(() => controller.usesWebBackend).thenReturn(false);
+      when(() => controller.usesLinuxBackend).thenReturn(false);
+      when(() => controller.useTexture).thenReturn(true);
+      when(() => controller.textureId).thenReturn(1);
+      when(() => controller.state).thenReturn(const DivineVideoPlayerState());
+      when(
+        () => controller.stateStream,
+      ).thenAnswer((_) => const Stream<DivineVideoPlayerState>.empty());
+      when(
+        () => controller.firstFrameRendered,
+      ).thenAnswer((_) => Completer<bool>().future);
+
+      final fake = _FakeDetachedClipPlayer(controller, _clip());
+      final key = detachedClipPlayerKey(meta)!;
+      await detachedClipPlayers.acquire(key, () async => fake);
+
+      final bodySize = ValueNotifier<Size>(Size.zero);
+      addTearDown(bodySize.dispose);
+      final zoom = ValueNotifier<Matrix4>(Matrix4.identity());
+      addTearDown(zoom.dispose);
+      final playTime = ValueNotifier<Duration>(Duration.zero);
+      addTearDown(playTime.dispose);
+      final advancing = ValueNotifier<bool>(false);
+      addTearDown(advancing.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BlocProvider<VideoEditorMainBloc>.value(
+            value: editor,
+            child: VideoEditorScope(
+              editorKey: GlobalKey(),
+              removeAreaKey: GlobalKey(),
+              onAddStickers: () {},
+              onOpenCamera: () {},
+              onOpenClipsEditor: () {},
+              onOpenMusicLibrary: () {},
+              onOpenVoiceOver: () {},
+              onOpenCaptions: () {},
+              onAddEditTextLayer: ([_]) async => null,
+              originalClipAspectRatio: 9 / 16,
+              bodySizeNotifier: bodySize,
+              zoomMatrixNotifier: zoom,
+              playTimeNotifier: playTime,
+              playheadAdvancingNotifier: advancing,
+              fromLibrary: false,
+              child: _layerHost(DetachedClipLayerView(meta: meta)),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return fake;
+    }
+
+    testWidgets('mutes the companion while the voice-over recorder is open', (
+      tester,
+    ) async {
+      final editor = _MockVideoEditorMainBloc();
+      whenListen(
+        editor,
+        editorStates.stream,
+        initialState: const VideoEditorMainState(),
+      );
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+      final fake = await pumpLayer(tester, meta: meta, editor: editor);
+
+      // The first follow unmutes: a pooled player left silent by an earlier
+      // recorder session must not come back muted.
+      expect(fake.muteCalls, [false]);
+
+      editorStates.add(
+        const VideoEditorMainState(
+          openSubEditor: SubEditorType.voiceOver,
+        ),
+      );
+      await tester.pump();
+      expect(fake.muteCalls, [false, true]);
+
+      editorStates.add(const VideoEditorMainState());
+      await tester.pump();
+      expect(fake.muteCalls, [false, true, false]);
+    });
+
+    testWidgets('leaves the companion audible for a sub-editor that keeps the '
+        'preview to itself', (tester) async {
+      final editor = _MockVideoEditorMainBloc();
+      whenListen(
+        editor,
+        editorStates.stream,
+        initialState: const VideoEditorMainState(),
+      );
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+      final fake = await pumpLayer(tester, meta: meta, editor: editor);
+      fake.muteCalls.clear();
+
+      editorStates.add(
+        const VideoEditorMainState(openSubEditor: SubEditorType.text),
+      );
+      await tester.pump();
+      expect(fake.muteCalls, isEmpty);
     });
   });
 
