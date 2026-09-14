@@ -161,11 +161,20 @@ class _RenderFailedOverlayState extends State<_RenderFailedOverlay> {
                       color: VineTheme.error,
                     ),
                   ),
-                  Text(
-                    widget.message(context.l10n),
-                    textAlign: TextAlign.center,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.primaryText,
+                  // The default 9:16 capture card is only ~112px wide, so the
+                  // translated storage copy wraps past the card's height. Let
+                  // the message take the space that is left and scroll inside
+                  // it rather than pushing the retry button out of the box
+                  // (#7125).
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Text(
+                        widget.message(context.l10n),
+                        textAlign: TextAlign.center,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
+                      ),
                     ),
                   ),
                   if (widget.onRetry != null)

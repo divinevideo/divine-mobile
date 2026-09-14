@@ -169,6 +169,7 @@ void main() {
                 'the preview must pass the reason through, or an '
                 'out-of-storage user reads the generic copy',
           );
+          expect(tester.takeException(), isNull);
         },
       );
 
