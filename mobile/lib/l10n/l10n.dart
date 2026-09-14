@@ -20,8 +20,9 @@ extension AppLocalizationsX on BuildContext {
 /// `MaterialLocalizations.backButtonTooltip` unconditionally, so those
 /// locales would throw when rendering navigation semantics.
 ///
-/// The generated entries stay: third-party widgets still built on
-/// `package:flutter/material.dart` resolve the framework types through them.
+/// The generated framework entries stay untouched so regeneration remains
+/// deterministic. The appended delegates provide the corresponding
+/// `material_ui` types used by the app.
 const List<LocalizationsDelegate<dynamic>> appLocalizationsDelegates =
     <LocalizationsDelegate<dynamic>>[
       ...AppLocalizations.localizationsDelegates,
