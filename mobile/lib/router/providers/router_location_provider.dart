@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Provider that exposes the raw router location stream
 ///
@@ -34,7 +35,16 @@ final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
 
   ref.onDispose(() {
     delegate.removeListener(emit);
-    ctrl.close();
+    unawaited(
+      ctrl.close().catchError((Object error, StackTrace stack) {
+        Log.error(
+          'Failed to close router location stream: $error',
+          name: 'RouterLocationProvider',
+          category: LogCategory.system,
+          stackTrace: stack,
+        );
+      }),
+    );
   });
 
   return ctrl.stream;

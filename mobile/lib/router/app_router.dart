@@ -152,7 +152,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     (_, _) {},
     fireImmediately: true,
   );
-  ref.onDispose(refreshListenable.dispose);
+  ref.onDispose(() {
+    unawaited(
+      refreshListenable.dispose().catchError((Object error, StackTrace stack) {
+        Log.error(
+          'Failed to dispose router refresh subscription: $error',
+          name: 'AppRouter',
+          category: LogCategory.system,
+          stackTrace: stack,
+        );
+      }),
+    );
+  });
 
   final router = GoRouter(
     navigatorKey: NavigatorKeys.root,
