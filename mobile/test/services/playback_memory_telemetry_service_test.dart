@@ -47,9 +47,12 @@ class _Reporter implements CrashReporter {
   final errors = <Object>[];
   Map<String, Object>? keysAtError;
   bool fail = false;
+  bool failRecordError = false;
+  void Function(String key)? onSetCustomKey;
 
   @override
   Future<void> setCustomKey(String key, Object value) async {
+    onSetCustomKey?.call(key);
     if (fail) throw StateError('reporter unavailable');
     keys[key] = value;
   }
@@ -63,6 +66,7 @@ class _Reporter implements CrashReporter {
     StackTrace? stack, {
     String? reason,
   }) async {
+    if (failRecordError) throw StateError('recordError unavailable');
     keysAtError = Map.of(keys);
     errors.add(error);
   }
@@ -317,5 +321,70 @@ void main() {
         expect(logs.last, contains('reporting unavailable'));
       },
     );
+
+    test('a mid-window reporter failure does not reset the disposed-player '
+        'grace period', () async {
+      var time = Duration.zero;
+      final reporter = _Reporter();
+      final service = PlaybackMemoryTelemetryService(
+        readNative: () async => _native(disposed: 1),
+        reporter: reporter,
+        log: (_) {},
+        isForeground: () => true,
+        elapsed: () => time,
+      );
+      await service.sample(_memory);
+      time = const Duration(seconds: 15);
+      reporter.fail = true;
+      await service.sample(_memory);
+      reporter.fail = false;
+      time = const Duration(seconds: 30);
+      await service.sample(_memory);
+      expect(reporter.errors.single, isA<PlaybackResourceInvariantException>());
+    });
+
+    test('a recordError failure does not consume the one-shot disposed-player '
+        'report', () async {
+      var time = Duration.zero;
+      final reporter = _Reporter()..failRecordError = true;
+      final service = PlaybackMemoryTelemetryService(
+        readNative: () async => _native(disposed: 1),
+        reporter: reporter,
+        log: (_) {},
+        isForeground: () => true,
+        elapsed: () => time,
+      );
+      await service.sample(_memory);
+      time = const Duration(seconds: 30);
+      await service.sample(_memory);
+      expect(reporter.errors, isEmpty);
+      reporter.failRecordError = false;
+      time = const Duration(seconds: 31);
+      await service.sample(_memory);
+      expect(reporter.errors.single, isA<PlaybackResourceInvariantException>());
+    });
+
+    test('a lifecycle change between reporter writes stops further writes for '
+        'that sample', () async {
+      final reporter = _Reporter();
+      late PlaybackMemoryTelemetryService service;
+      reporter.onSetCustomKey = (key) {
+        if (key == 'mem_lifecycle') {
+          service.onLifecycleChanged('resumed');
+        }
+      };
+      service = PlaybackMemoryTelemetryService(
+        readNative: () async => _native(),
+        reporter: reporter,
+        log: (_) {},
+        isForeground: () => true,
+        elapsed: () => Duration.zero,
+        initialLifecycle: 'hidden',
+      );
+      await service.sample(_memory);
+      expect(reporter.keys, contains('mem_native'));
+      expect(reporter.keys, contains('mem_lifecycle'));
+      expect(reporter.keys, isNot(contains('mem_footprint_mb')));
+    });
   });
 }

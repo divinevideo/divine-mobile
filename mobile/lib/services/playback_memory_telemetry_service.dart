@@ -48,7 +48,7 @@ class PlaybackMemoryTelemetryService {
   String _lifecycle;
   Duration _lifecycleSince;
   int _generation = 0;
-  int _peakFootprint = -1;
+  int _peakFootprint = MemorySnapshot.unavailableGauge;
   int? _lastFrames;
   Duration? _lastSampleTime;
   Duration? _disposedPlayersSince;
@@ -109,7 +109,8 @@ class PlaybackMemoryTelemetryService {
       if (_disposed || generation != _generation) return;
 
       final now = _elapsed();
-      final footprint = native?.footprintBytes ?? -1;
+      final footprint =
+          native?.footprintBytes ?? MemorySnapshot.unavailableGauge;
       _peakFootprint = math.max(_peakFootprint, footprint);
       final nativeValues = <String, Object>{
         'status': status,
@@ -138,58 +139,66 @@ class PlaybackMemoryTelemetryService {
       final lifecycleJson = jsonEncode(lifecycleValues);
       _log(
         'Memory native: $nativeJson, lifecycle: $lifecycleJson, '
-        'dart: ${jsonEncode({
-          'rssBytes': memory.rssBytes,
-          'peakRssBytes': memory.peakRssBytes,
-          'controllers': memory.nativeControllers,
-          'imageCacheBytes': memory.imageCacheBytes,
-          'ingestQueue': memory.queueDepth,
-        })}',
+        'dart: ${jsonEncode({'rssBytes': memory.rssBytes, 'peakRssBytes': memory.peakRssBytes, 'controllers': memory.nativeControllers, 'imageCacheBytes': memory.imageCacheBytes, 'ingestQueue': memory.queueDepth})}',
       );
 
-      // Four fixed keys, not a key per gauge: Crashlytics has a 64-key budget.
-      // Both JSON values stay below 1 KB and contain only allow-listed scalars.
-      await _reporter.setCustomKey('mem_native', nativeJson);
-      if (_disposed || generation != _generation) return;
-      await _reporter.setCustomKey('mem_lifecycle', lifecycleJson);
-      await _reporter.setCustomKey('mem_footprint_mb', _mb(footprint));
-      await _reporter.setCustomKey(
-        'mem_footprint_sampled_peak_mb',
-        _mb(_peakFootprint),
-      );
-      if (_disposed || generation != _generation) return;
-      if (trigger != 'periodic') {
-        _reporter.log('Memory $trigger: $nativeJson $lifecycleJson');
-      }
-
+      // The disposed-player grace period tracks native diagnostics only; a
+      // reporter failure below must never reset it.
       if (native == null ||
           native.disposedPlayers == 0 ||
           native.pendingLoads > 0) {
         _disposedPlayersSince = null;
       } else {
         _disposedPlayersSince ??= now;
-        if (!_reportedDisposedPlayers &&
+      }
+
+      try {
+        // Four fixed keys, not a key per gauge: Crashlytics has a 64-key
+        // budget. Both JSON values stay below 1 KB and contain only
+        // allow-listed scalars.
+        await _reporter.setCustomKey('mem_native', nativeJson);
+        if (_disposed || generation != _generation) return;
+        await _reporter.setCustomKey('mem_lifecycle', lifecycleJson);
+        if (_disposed || generation != _generation) return;
+        await _reporter.setCustomKey('mem_footprint_mb', _mb(footprint));
+        if (_disposed || generation != _generation) return;
+        await _reporter.setCustomKey(
+          'mem_footprint_sampled_peak_mb',
+          _mb(_peakFootprint),
+        );
+        if (_disposed || generation != _generation) return;
+        if (trigger != 'periodic') {
+          _reporter.log('Memory $trigger: $nativeJson $lifecycleJson');
+        }
+
+        if (_disposedPlayersSince != null &&
+            !_reportedDisposedPlayers &&
             now - _disposedPlayersSince! >= const Duration(seconds: 30)) {
-          // One non-fatal per observer lifetime. Never per player or per tick.
-          _reportedDisposedPlayers = true;
+          // One non-fatal per observer lifetime. Never per player or tick.
           await _reporter.recordError(
             PlaybackResourceInvariantException(),
             StackTrace.current,
             reason: 'native_player_resources_after_dispose',
           );
+          _reportedDisposedPlayers = true;
         }
+      } on Object catch (_) {
+        // Reporter transport failures stay local and must not mask the
+        // native-diagnostics-derived leak signal above.
+        _log('Memory native: reporting unavailable');
       }
     } on Object catch (_) {
+      // Reached only if native diagnostics could not even be processed.
       _disposedPlayersSince = null;
-      // Do not send telemetry transport failures back into the crash reporter.
       _log('Memory native: reporting unavailable');
     } finally {
       _sampling = false;
     }
   }
 
-  static String _mb(int bytes) =>
-      bytes < 0 ? 'unavailable' : (bytes / (1024 * 1024)).toStringAsFixed(1);
+  static String _mb(int bytes) => bytes == MemorySnapshot.unavailableGauge
+      ? 'unavailable'
+      : (bytes / (1024 * 1024)).toStringAsFixed(1);
 
   /// Prevents late asynchronous completions from touching the disposed caller.
   void dispose() => _disposed = true;
