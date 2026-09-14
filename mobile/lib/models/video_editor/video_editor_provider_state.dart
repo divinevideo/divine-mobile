@@ -8,8 +8,8 @@ import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
-import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Immutable state model for the video editor.

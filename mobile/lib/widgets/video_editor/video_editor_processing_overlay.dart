@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
-import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
 class VideoEditorProcessingOverlay extends StatelessWidget {

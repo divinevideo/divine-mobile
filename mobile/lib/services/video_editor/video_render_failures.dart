@@ -2,30 +2,10 @@
 // ABOUTME: Keeps render error telemetry stable across service refactors
 
 import 'package:flutter/services.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
-/// Why a render produced no output.
-enum VideoRenderFailureReason {
-  emptyClips('empty_clips'),
-  stopMotionAssembly('stop_motion_assembly'),
-  nativeRender('native_render'),
-
-  /// The device has no room left for the export (#7125).
-  ///
-  /// Split from [nativeRender] because the recovery differs: a retry walks
-  /// into the same wall, so the UI asks the user to free up space instead.
-  insufficientStorage('insufficient_storage'),
-  canceled('canceled'),
-
-  /// The export ran past the render watchdog without settling — a native
-  /// call stopped responding (#8488).
-  timedOut('timed_out');
-
-  const VideoRenderFailureReason(this.traceValue);
-
-  /// Stable telemetry value, independent of enum names.
-  final String traceValue;
-}
+export 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 
 /// Thrown when a render finished without producing a video.
 class VideoRenderFailedException implements Exception {
