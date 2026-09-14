@@ -334,8 +334,11 @@ class DeepLinkService {
         );
       }
 
+      // Redacted: a legacy /invite/<code> link no longer matches a branch
+      // above, so it lands here. The raw path would carry the code into
+      // diagnostics for as long as iOS keeps claiming those links.
       Log.warning(
-        'Unknown deep link path: ${uri.path}',
+        'Unknown deep link: ${redactUriStringForLogs(uri.toString())}',
         name: 'DeepLinkService',
         category: LogCategory.ui,
       );

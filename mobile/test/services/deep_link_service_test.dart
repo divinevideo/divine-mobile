@@ -5,8 +5,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
+  group('legacy invite links', () {
+    test('parse without writing the code to diagnostics', () async {
+      // The /invite branch is gone, so these land on the unknown-path log.
+      // iOS still claims /invite/* through the served AASA, so the code
+      // reaches that log site on a real device until the claim is withdrawn.
+      await LogCaptureService().clearAllLogs();
+
+      final link = DeepLinkService.parseDeepLink(
+        'https://divine.video/invite/ABCD-EFGH-SECRET',
+      );
+
+      expect(link.type, DeepLinkType.unknown);
+      final logged = [
+        for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+      ].join('\n');
+      expect(
+        logged,
+        isNot(contains('ABCD-EFGH-SECRET')),
+        reason: 'a retired invite code must not reach diagnostics',
+      );
+    });
+  });
+
   group('DeepLinkService URL Parsing', () {
     group('Video URL Parsing', () {
       test('parses valid video URL correctly', () {
