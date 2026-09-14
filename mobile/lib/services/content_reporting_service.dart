@@ -917,11 +917,13 @@ class ContentReportingService implements ReportChannelDriver {
     PendingReport pendingReport,
     ReportChannel channel,
   ) async {
+    // Only the durable queue is driven: without a DAO there is no row to
+    // re-read, no place to freeze a signature, and nothing to retire.
     final dao = _pendingReportsDao;
-    final report = dao == null
-        ? pendingReport
-        : await dao.getById(pendingReport.reportId);
-    // Skip stale work retired by a late acknowledgement or account wipe.
+    if (dao == null) return false;
+    // Re-read so work retired by a late acknowledgement or an account wipe is
+    // skipped rather than resent.
+    final report = await dao.getById(pendingReport.reportId);
     if (report == null) return false;
     bool ownsReport() =>
         _authService.isAuthenticated &&
@@ -953,7 +955,7 @@ class ContentReportingService implements ReportChannelDriver {
           }
           // Freeze even signer-added tags before publish; retries reuse this
           // exact event instead of minting a second report after a lost ACK.
-          final saved = await _pendingReportsDao!.saveSignedEvent(
+          final saved = await dao.saveSignedEvent(
             report.reportId,
             jsonEncode(signed.toJson()),
           );
