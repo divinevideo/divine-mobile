@@ -32,7 +32,8 @@ they are enforced: `check_placeholder_tests.sh` (#3340) freezes at **zero**
    literal `x`; and
 2. a `*_test.dart` that declares no `test` / `testWidgets` / `blocTest` /
    `patrolTest` / `group` at all; and
-3. a `group` whose callback tree declares no test. Lifecycle calls do not
+3. a `group` whose callback tree declares no test. Lifecycle calls and bare
+   assertions do not
    count, and unknown bare calls are conservatively treated as possible local
    or imported test-declaring helpers.
 
@@ -62,7 +63,8 @@ trustworthy:
 - **A custom test wrapper keeps a group populated.** A bare call such as
   `testWidgetsWithSurfaceSize(...)` or `defineFutureDelayedCeilingTests(...)`
   may declare tests in another function or file, so the detector exempts it.
-  Calls inside `setUp` and other lifecycle callbacks do not count.
+  Calls inside `setUp` and other lifecycle callbacks do not count, and neither
+  does a bare `expect(...)` or `verify(...)` sitting in the group body.
 
 ```bash
 cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integration_test packages --path-prefix . --detail

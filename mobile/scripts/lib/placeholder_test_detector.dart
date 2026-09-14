@@ -21,7 +21,8 @@
 //    end state a gutted suite decays into, and the runner reports the file as
 //    a passing suite.
 // 3. EMPTY GROUP — a `group` whose callback tree declares no `test` /
-//    `testWidgets` / `blocTest` / `patrolTest`. Lifecycle calls do not count,
+//    `testWidgets` / `blocTest` / `patrolTest`. Lifecycle calls and bare
+//    assertions do not count,
 //    and their callbacks are not searched: a `when(...)` inside `setUp` does
 //    not turn an empty suite into a populated one. An unknown bare invocation
 //    is conservatively treated as a possible test-declaring helper. Both
@@ -85,18 +86,21 @@ const _anyDeclaration = {
   'group',
 };
 
-/// Calls that configure a suite without declaring a test case.
+/// Calls that appear in a suite without declaring a test case.
 ///
-/// Their callbacks are setup/cleanup code, so calls inside them cannot prove
-/// that the surrounding group contains a test.
-const _lifecycleDeclarations = {
+/// Lifecycle callbacks are setup/cleanup code, so calls inside them cannot
+/// prove that the surrounding group contains a test. Registration and bare
+/// assertions declare nothing either: a `verify(...)` sitting directly in a
+/// group body is not a test case. Assertions come from [_assertions] so the
+/// two lists cannot drift apart.
+const Set<String> _nonDeclaringCalls = {
   'setUp',
   'setUpAll',
   'tearDown',
   'tearDownAll',
   'addTearDown',
   'registerFallbackValue',
-  'expect',
+  ..._assertions,
 };
 
 /// Calls that assert. A body whose assertions are all tautologies is rule 1.
@@ -404,7 +408,7 @@ class _GroupScan extends RecursiveAstVisitor<void> {
       return;
     }
 
-    if (_lifecycleDeclarations.contains(name)) {
+    if (_nonDeclaringCalls.contains(name)) {
       return;
     }
 

@@ -22,8 +22,9 @@
 #                       that is the conditional-import dispatcher shape, whose
 #                       declarations live in the platform library it selects.
 #   3. EMPTY GROUP     — a group whose callback tree declares no test. Lifecycle
-#                       calls do not count. Unknown bare calls are conservatively
-#                       treated as possible test-declaring helpers.
+#                       calls and bare assertions do not count. Unknown bare
+#                       calls are conservatively treated as possible
+#                       test-declaring helpers.
 #
 # A test with NO assertion is deliberately NOT counted. Assertions arrive
 # through drift's `verifier.migrateAndValidate`, through imported helpers like

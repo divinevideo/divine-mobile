@@ -278,14 +278,31 @@ void main() {
         expect(sites, isEmpty);
       });
 
-      test('accepts a group delegated to a suite callback', () {
+      test('accepts a nested group delegated to a suite callback', () {
+        // The top-level form is already covered by the no-declarations rule.
+        // Only the nested one reaches _GroupScan's no-callback branch.
         final sites = scan('''
 void main() {
-  group('Feature', sharedSuite);
+  group('Feature', () {
+    group('nested', sharedSuite);
+  });
 }
 ''');
 
         expect(sites, isEmpty);
+      });
+
+      test('flags a group whose only body is an assertion', () {
+        final sites = scan('''
+void main() {
+  group('Feature', () {
+    verify(() => mock.thing()).called(1);
+  });
+}
+''');
+
+        expect(sites, hasLength(1));
+        expect(sites.single.kind, PlaceholderKind.emptyGroup);
       });
 
       test('does not mistake a targeted product call for a test helper', () {
