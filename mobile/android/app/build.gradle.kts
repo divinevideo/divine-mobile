@@ -82,6 +82,8 @@ android {
             )
             configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
                 mappingFileUploadEnabled = true
+                // This has no effect without firebase-crashlytics-ndk; the app
+                // currently relies on Play Console for native crash symbols.
                 nativeSymbolUploadEnabled = true
             }
         }
