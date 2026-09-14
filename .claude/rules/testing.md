@@ -22,16 +22,20 @@ Before keeping a test, it must satisfy all of these:
 
 > **LLM-generated tests skew hard toward coverage theatre** — asserting constructor parameters, mock-then-verify-the-mock, one trivial test per line. Reject these on the "can it fail?" bar even when the coverage number looks fine.
 
-### The two most literal shapes are frozen at zero
+### The three most literal shapes are frozen at zero
 
-Judgement is needed for most of the bar above, but two shapes need none, so
+Judgement is needed for most of the bar above, but three shapes need none, so
 they are enforced: `check_placeholder_tests.sh` (#3340) freezes at **zero**
 
 1. a test whose every assertion is trivially satisfied —
    `expect(true, isTrue)`, `expect(1, 1)`, `expect(x, equals(x))` for a
    literal `x`; and
 2. a `*_test.dart` that declares no `test` / `testWidgets` / `blocTest` /
-   `patrolTest` / `group` at all.
+   `patrolTest` / `group` at all; and
+3. a `group` whose callback tree declares no test. Lifecycle calls and bare
+   assertions do not
+   count, and unknown bare calls are conservatively treated as possible local
+   or imported test-declaring helpers.
 
 #3340 removed all 93 sites — 38 of them one 602-line accessibility suite in
 which every single test was `expect(true, isTrue)`, and 24 in seven ProofMode
@@ -45,7 +49,7 @@ assertion, since a provider mutated during `initState`/`dispose` surfaces as a
 framework exception. There is deliberately no inline ignore: a genuine
 exception earns a reviewed baseline entry.
 
-Two boundaries worth knowing, because they are the reason the guard is
+Three boundaries worth knowing, because they are the reason the guard is
 trustworthy:
 
 - **A tautology beside a real assertion is not flagged.** The test as a whole
@@ -56,6 +60,11 @@ trustworthy:
   an imported helper. 91 such tests exist; most are good. That population needs
   helper-aware triage, not a gate, so the bar above still applies to it by
   judgement.
+- **A custom test wrapper keeps a group populated.** A bare call such as
+  `testWidgetsWithSurfaceSize(...)` or `defineFutureDelayedCeilingTests(...)`
+  may declare tests in another function or file, so the detector exempts it.
+  Calls inside `setUp` and other lifecycle callbacks do not count, and neither
+  does a bare `expect(...)` or `verify(...)` sitting in the group body.
 
 ```bash
 cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integration_test packages --path-prefix . --detail
@@ -63,7 +72,7 @@ cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integratio
 
 ### An unchanged-assertion needs a pinned baseline
 
-The third frozen shape is not literal, which is why the placeholder guard cannot
+The fourth frozen shape is not literal, which is why the placeholder guard cannot
 see it. Read a value into a local, act, and assert the same read still equals
 the local:
 
