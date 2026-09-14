@@ -270,6 +270,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     (playerItem, offsets, durations) =
                         try await self.makeCompositionPlayerItem(from: clipsRaw)
                 }
+                // dispose() can run while the above await is suspended; a
+                // disposed instance must never resurrect a player/observers.
+                guard !self.diagnosticDisposed else { return }
                 self.clipOffsets = offsets
                 self.clipDurations = durations
                 self.clipCount = offsets.count
@@ -318,6 +321,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 if let existing = self.player {
                     self.configureQueue(with: playerItem)
                     await existing.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    guard !self.diagnosticDisposed else { return }
                     self.textureOutput?.forceRefresh(for: startTime)
                 } else {
                     let newPlayer = AVQueuePlayer()
@@ -327,6 +331,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.observeCurrentItem()
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    guard !self.diagnosticDisposed else { return }
                     self.textureOutput?.forceRefresh(for: startTime)
                 }
 
