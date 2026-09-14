@@ -468,7 +468,14 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// first paint is not blocked by relay backfill. Routes incoming comments
   /// through [NewCommentReceived].
   Future<void> _startWatchingComments() async {
-    await _commentStreamSubscription?.cancel();
+    // Detached on purpose: the replacement subscription does not depend on the
+    // old one finishing teardown, and awaiting here suspends between reading
+    // _commentStreamSubscription and assigning it. _onLoadRequested emits
+    // success before calling this, so its `status == loading` guard is open
+    // during that window and a second load can enter, leaving the first
+    // subscription assigned over and never cancelled. Pinned by
+    // comments_list_reload_race_test.dart.
+    unawaited(_commentStreamSubscription?.cancel());
 
     try {
       final stream = _commentsRepository.watchComments(
