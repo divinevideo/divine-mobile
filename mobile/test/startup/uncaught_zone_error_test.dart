@@ -178,7 +178,10 @@ void main() {
         );
         addTearDown(corruption.dispose);
         // The same registration app_bootstrap makes.
-        crashReporting.suppressWhen(corruption.echoesReportedCorruption);
+        crashReporting.suppressWhen(
+          name: 'reported database corruption echo',
+          isSuppressed: corruption.echoesReportedCorruption,
+        );
       });
 
       test('files the first corrupt statement, drops the echoes', () async {

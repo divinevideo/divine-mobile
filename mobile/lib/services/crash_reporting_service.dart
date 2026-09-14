@@ -23,6 +23,13 @@ typedef _CrashlyticsCall = Future<void> Function(
 /// Returns `true` to drop the error. See [CrashReportingService.suppressWhen].
 typedef CrashReportSuppression = bool Function(Object error);
 
+class _NamedCrashReportSuppression {
+  const _NamedCrashReportSuppression(this.name, this.claims);
+
+  final String name;
+  final CrashReportSuppression claims;
+}
+
 /// Whether Crashlytics can take a call right now.
 enum _Readiness {
   /// [CrashReportingService.initialize] has not resolved; calls are held.
@@ -77,7 +84,7 @@ class CrashReportingService implements CrashReporter {
   _Readiness _readiness = _Readiness.pending;
   final List<_CrashlyticsCall> _pending = [];
   int _overflowed = 0;
-  final List<CrashReportSuppression> _suppressions = [];
+  final List<_NamedCrashReportSuppression> _suppressions = [];
 
   /// Stops forwarding non-fatal errors that [isSuppressed] claims.
   ///
@@ -93,11 +100,14 @@ class CrashReportingService implements CrashReporter {
   /// The owner must have reported the incident itself, once, before its
   /// suppression starts claiming echoes — otherwise the dashboard loses the
   /// incident along with the noise. `DatabaseCorruptionService` is the
-  /// reference implementation (#7507). Breadcrumbs and custom keys are never
-  /// suppressed; they only mean anything attached to a report that is
-  /// forwarded.
-  void suppressWhen(CrashReportSuppression isSuppressed) {
-    _suppressions.add(isSuppressed);
+  /// reference implementation (#7507). Global breadcrumbs and custom keys are
+  /// never suppressed. Report-specific keys passed to
+  /// [recordErrorWithCustomKeys] follow their report's suppression decision.
+  void suppressWhen({
+    required String name,
+    required CrashReportSuppression isSuppressed,
+  }) {
+    _suppressions.add(_NamedCrashReportSuppression(name, isSuppressed));
   }
 
   /// Initialize crash reporting (Firebase Crashlytics)
@@ -274,12 +284,39 @@ class CrashReportingService implements CrashReporter {
     dynamic exception,
     StackTrace? stack, {
     String? reason,
+  }) => _recordError(exception, stack, reason: reason);
+
+  /// Records a non-fatal after attaching the report-specific [customKeys].
+  ///
+  /// Suppression is evaluated before the keys are dispatched, so an incident
+  /// echo cannot overwrite session-wide Crashlytics keys for reports that are
+  /// actually forwarded.
+  Future<void> recordErrorWithCustomKeys(
+    Object exception,
+    StackTrace? stack, {
+    required Map<String, Object> customKeys,
+    String? reason,
+  }) => _recordError(
+    exception,
+    stack,
+    reason: reason,
+    customKeys: customKeys,
+  );
+
+  Future<void> _recordError(
+    Object? exception,
+    StackTrace? stack, {
+    String? reason,
+    Map<String, Object> customKeys = const {},
   }) {
-    final Object? error = exception;
-    if (error != null && _suppressions.any((claims) => claims(error))) {
+    final suppression = exception == null
+        ? null
+        : _suppressionClaiming(exception);
+    if (suppression != null) {
       Log.debug(
-        'Non-fatal error not forwarded: it echoes an incident already '
-        'reported${reason == null ? '' : ' ($reason)'}',
+        'Non-fatal error not forwarded by suppression "$suppression": it '
+        'echoes an incident already reported'
+        '${reason == null ? '' : ' ($reason)'}',
         name: 'CrashReporting',
       );
       return Future<void>.value();
@@ -295,11 +332,31 @@ class CrashReportingService implements CrashReporter {
         stackTrace: stack,
       );
     }
+    for (final entry in customKeys.entries) {
+      unawaited(setCustomKey(entry.key, entry.value));
+    }
     return _dispatch(
       (crashlytics) =>
           crashlytics.recordError(exception, stack, reason: reason),
       what: 'record error',
     );
+  }
+
+  String? _suppressionClaiming(Object error) {
+    for (final suppression in _suppressions) {
+      try {
+        if (suppression.claims(error)) return suppression.name;
+      } on Object catch (failure, stackTrace) {
+        Log.error(
+          'Suppression "${suppression.name}" failed; forwarding the original '
+          'non-fatal error.',
+          name: 'CrashReporting',
+          error: failure,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    return null;
   }
 
   /// Log a custom message to Crashlytics

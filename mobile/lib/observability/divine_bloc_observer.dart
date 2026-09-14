@@ -95,16 +95,14 @@ class DivineBlocObserver extends BlocObserver {
     );
     final reportableError = _asReportable(error);
     if (reportableError == null) return;
-    // Dispatch the diagnostic keys before recordError so they attach to the
-    // report it emits. Both are fire-and-forget, but invoked synchronously and
-    // in order, so the platform-channel messages stay ordered without blocking
-    // the bloc error path. recordError and setCustomKey each swallow their own
-    // failures, and while Crashlytics is still initializing they are held in
-    // that same order for replay (see crash_reporting_service.dart).
-    _attachDiagnosticKeys(_diagnostics[bloc]);
     final reason = sanitizeForCrashReport('Bloc.addError $runtimeType');
     unawaited(
-      _crashReporting.recordError(reportableError, stackTrace, reason: reason),
+      _crashReporting.recordErrorWithCustomKeys(
+        reportableError,
+        stackTrace,
+        reason: reason,
+        customKeys: _diagnosticKeys(_diagnostics[bloc]),
+      ),
     );
   }
 
@@ -116,27 +114,13 @@ class DivineBlocObserver extends BlocObserver {
     return null;
   }
 
-  void _attachDiagnosticKeys(_BlocDiagnostics? diagnostics) {
-    unawaited(
-      _crashReporting.setCustomKey(
-        kBlocLastEventKey,
-        _stringValueOrSentinel(diagnostics?.lastEvent),
-      ),
-    );
-    unawaited(
-      _crashReporting.setCustomKey(
-        kBlocLastStateKey,
-        _stringValueOrSentinel(diagnostics?.lastState),
-      ),
-    );
-    unawaited(
-      _crashReporting.setCustomKey(
-        kBlocLastTransitionAtKey,
+  Map<String, Object> _diagnosticKeys(_BlocDiagnostics? diagnostics) => {
+    kBlocLastEventKey: _stringValueOrSentinel(diagnostics?.lastEvent),
+    kBlocLastStateKey: _stringValueOrSentinel(diagnostics?.lastState),
+    kBlocLastTransitionAtKey:
         diagnostics?.lastTransitionAt?.toUtc().toIso8601String() ??
-            kBlocDiagnosticNotObserved,
-      ),
-    );
-  }
+        kBlocDiagnosticNotObserved,
+  };
 
   String _stringValueOrSentinel(Object? value) {
     if (value == null) return kBlocDiagnosticNotObserved;

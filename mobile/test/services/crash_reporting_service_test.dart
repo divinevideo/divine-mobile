@@ -218,9 +218,7 @@ void main() {
       );
 
       test('a completion-log failure does not revoke readiness', () async {
-        when(
-          () => crashlytics.isCrashlyticsCollectionEnabled,
-        ).thenReturn(true);
+        when(() => crashlytics.isCrashlyticsCollectionEnabled).thenReturn(true);
         when(
           () => crashlytics.log(any()),
         ).thenThrow(StateError('completion log failed'));
@@ -356,7 +354,10 @@ void main() {
       }
 
       test('drops a report the registered suppression claims', () async {
-        service.suppressWhen((error) => error is StateError);
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
 
         await recordAfterInitialize(StateError('echo'));
 
@@ -370,7 +371,10 @@ void main() {
       });
 
       test('forwards a report the suppression does not claim', () async {
-        service.suppressWhen((error) => error is StateError);
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
 
         await recordAfterInitialize(ArgumentError('a defect'));
 
@@ -389,7 +393,10 @@ void main() {
         // after it are echoes. A filter evaluated once at registration would
         // get the whole session wrong.
         var incidentReported = false;
-        service.suppressWhen((error) => incidentReported);
+        service.suppressWhen(
+          name: 'reported incident',
+          isSuppressed: (error) => incidentReported,
+        );
         await service.initialize();
 
         await service.recordError(StateError('first'), null, reason: 'sink');
@@ -407,8 +414,14 @@ void main() {
 
       test('any registered suppression can claim a report', () async {
         service
-          ..suppressWhen((error) => error is ArgumentError)
-          ..suppressWhen((error) => error is StateError);
+          ..suppressWhen(
+            name: 'argument echo',
+            isSuppressed: (error) => error is ArgumentError,
+          )
+          ..suppressWhen(
+            name: 'state echo',
+            isSuppressed: (error) => error is StateError,
+          );
 
         await recordAfterInitialize(StateError('echo'));
 
@@ -425,7 +438,10 @@ void main() {
         // Registered before initialize, like the corruption filter is: the
         // decision is made when the report arrives, so a suppressed one must
         // not sit in the pending list and surface once Crashlytics is up.
-        service.suppressWhen((error) => error is StateError);
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
         await service.recordError(StateError('echo'), null, reason: 'sink');
 
         await service.initialize();
@@ -444,7 +460,10 @@ void main() {
         // the unified log; repeating each echo there at error level would
         // bury exactly that entry in a bug report.
         final marker = _uniqueMarker('suppressed');
-        service.suppressWhen((error) => error is StateError);
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
 
         await service.recordError(StateError(marker), null, reason: 'sink');
 
@@ -452,7 +471,7 @@ void main() {
       });
 
       test('never suppresses breadcrumbs or custom keys', () async {
-        service.suppressWhen((error) => true);
+        service.suppressWhen(name: 'everything', isSuppressed: (error) => true);
         await service.initialize();
 
         service.log('breadcrumb');
@@ -460,6 +479,56 @@ void main() {
 
         verify(() => crashlytics.log('breadcrumb')).called(1);
         verify(() => crashlytics.setCustomKey('phase', 'ready')).called(1);
+      });
+
+      test(
+        'does not attach report-specific keys to a suppressed error',
+        () async {
+          service.suppressWhen(
+            name: 'state echo',
+            isSuppressed: (error) => error is StateError,
+          );
+          await service.initialize();
+
+          await service.recordErrorWithCustomKeys(
+            StateError('echo'),
+            StackTrace.current,
+            reason: 'sink',
+            customKeys: const {'bloc_last_state': 'stale echo'},
+          );
+
+          verifyNever(
+            () => crashlytics.setCustomKey('bloc_last_state', 'stale echo'),
+          );
+          verifyNever(
+            () => crashlytics.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        },
+      );
+
+      test('forwards the report when a named suppression throws', () async {
+        service.suppressWhen(
+          name: 'broken filter',
+          isSuppressed: (_) => throw StateError('predicate failed'),
+        );
+
+        await recordAfterInitialize(ArgumentError('original report'));
+
+        verify(
+          () => crashlytics.recordError(
+            any<dynamic>(that: isA<ArgumentError>()),
+            any<StackTrace?>(),
+            reason: 'sink',
+          ),
+        ).called(1);
+        expect(
+          LogCaptureService().getRecentLogs().map((entry) => entry.message),
+          contains(contains('Suppression "broken filter" failed')),
+        );
       });
     });
   });

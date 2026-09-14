@@ -514,7 +514,8 @@ Future<void> startOpenVineApp({
   // the reporter, before the database can open, is what keeps one incident
   // from becoming one Crashlytics group per call site (#7507).
   crashReporting.suppressWhen(
-    databaseCorruptionService.echoesReportedCorruption,
+    name: 'reported database corruption echo',
+    isSuppressed: databaseCorruptionService.echoesReportedCorruption,
   );
   final databaseRecoveryStore = DatabaseRecoveryStore(
     preferences: sharedPreferences,

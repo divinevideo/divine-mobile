@@ -32,6 +32,7 @@ class _NoteCubit extends Cubit<String> {
 void main() {
   setUpAll(() {
     registerFallbackValue(StackTrace.current);
+    registerFallbackValue(<String, Object>{});
   });
 
   group(DivineBlocObserver, () {
@@ -42,14 +43,12 @@ void main() {
       await LogCaptureService().clearAllLogs();
       mockCrash = _MockCrashReportingService();
       when(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockCrash.setCustomKey(any(), any<dynamic>()),
       ).thenAnswer((_) async {});
       observer = DivineBlocObserver(crashReporting: mockCrash);
     });
@@ -64,10 +63,11 @@ void main() {
       observer.onError(cubit, error, stack);
 
       verify(
-        () => mockCrash.recordError(
+        () => mockCrash.recordErrorWithCustomKeys(
           error,
           stack,
           reason: 'Bloc.addError _CountCubit',
+          customKeys: any(named: 'customKeys'),
         ),
       ).called(1);
     });
@@ -79,10 +79,11 @@ void main() {
       observer.onError(cubit, Reportable(StateError('x')), StackTrace.current);
 
       verify(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason', that: contains('_CountCubit')),
+          customKeys: any(named: 'customKeys'),
         ),
       ).called(1);
     });
@@ -94,10 +95,11 @@ void main() {
       observer.onError(cubit, Exception('domain failure'), StackTrace.current);
 
       verifyNever(
-        () => mockCrash.recordError(
-          any<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          any<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
       );
     });
@@ -120,10 +122,11 @@ void main() {
           await Future<void>.delayed(Duration.zero);
 
           final captured = verify(
-            () => mockCrash.recordError(
-              captureAny<dynamic>(),
+            () => mockCrash.recordErrorWithCustomKeys(
+              captureAny<Object>(),
               stack,
               reason: 'Bloc.addError _CountCubit',
+              customKeys: any(named: 'customKeys'),
             ),
           ).captured;
           expect(captured.single, isA<ReportableError>());
@@ -177,10 +180,11 @@ void main() {
       observer.onError(cubit, error, StackTrace.current);
 
       final captured = verify(
-        () => mockCrash.recordError(
-          captureAny<dynamic>(),
+        () => mockCrash.recordErrorWithCustomKeys(
+          captureAny<Object>(),
           any<StackTrace?>(),
           reason: any(named: 'reason'),
+          customKeys: any(named: 'customKeys'),
         ),
       ).captured;
       expect(captured, hasLength(1));
@@ -208,18 +212,19 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         verify(
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
+          () => mockCrash.recordErrorWithCustomKeys(
+            any<Object>(that: isA<ReportableError>()),
             any<StackTrace?>(),
             reason: 'Bloc.addError _CountCubit',
+            customKeys: any(named: 'customKeys'),
           ),
         ).called(1);
       },
     );
 
     test(
-      'attaches last event and state as custom keys before recordError',
-      () async {
+      'hands last event and state to the report suppression boundary',
+      () {
         final bloc = _CounterBloc();
         addTearDown(bloc.close);
 
@@ -230,27 +235,26 @@ void main() {
         final error = Reportable(StateError('boom'), context: 'test');
         observer.onError(bloc, error, StackTrace.current);
 
-        // _attachDiagnosticKeys runs unawaited; drain the microtask before
-        // verifying.
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(kBlocLastEventKey, 'IncrementPressed'),
-          () => mockCrash.setCustomKey(kBlocLastStateKey, '1'),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            any<dynamic>(
-              that: predicate<dynamic>(
-                (v) => v is String && DateTime.tryParse(v) != null,
-              ),
-            ),
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    error,
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(keys[kBlocLastEventKey], 'IncrementPressed');
+        expect(keys[kBlocLastStateKey], '1');
+        expect(
+          keys[kBlocLastTransitionAtKey],
+          isA<String>().having(
+            DateTime.tryParse,
+            'parsed timestamp',
+            isNotNull,
           ),
-          () => mockCrash.recordError(
-            error,
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        );
       },
     );
 
@@ -265,27 +269,20 @@ void main() {
           Reportable(StateError('x')),
           StackTrace.current,
         );
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(
-            kBlocLastEventKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastStateKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    any<Object>(),
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(
+          keys.values,
+          everyElement(kBlocDiagnosticNotObserved),
+        );
       },
     );
 
@@ -307,42 +304,20 @@ void main() {
             StackTrace.current,
           );
 
-        await Future<void>.delayed(Duration.zero);
-
-        verifyInOrder([
-          () => mockCrash.setCustomKey(kBlocLastEventKey, 'IncrementPressed'),
-          () => mockCrash.setCustomKey(kBlocLastStateKey, '1'),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            any<dynamic>(
-              that: predicate<dynamic>(
-                (v) => v is String && DateTime.tryParse(v) != null,
-              ),
-            ),
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
+        final captured = verify(
+          () => mockCrash.recordErrorWithCustomKeys(
+            any<Object>(that: isA<ReportableError>()),
             any<StackTrace?>(),
             reason: any(named: 'reason'),
+            customKeys: captureAny(named: 'customKeys'),
           ),
-          () => mockCrash.setCustomKey(
-            kBlocLastEventKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastStateKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.setCustomKey(
-            kBlocLastTransitionAtKey,
-            kBlocDiagnosticNotObserved,
-          ),
-          () => mockCrash.recordError(
-            any<dynamic>(that: isA<ReportableError>()),
-            any<StackTrace?>(),
-            reason: any(named: 'reason'),
-          ),
-        ]);
+        ).captured.cast<Map<String, Object>>();
+        expect(captured, hasLength(2));
+        expect(captured.first[kBlocLastEventKey], 'IncrementPressed');
+        expect(
+          captured.last.values,
+          everyElement(kBlocDiagnosticNotObserved),
+        );
       },
     );
 
@@ -363,15 +338,18 @@ void main() {
             ),
           )
           ..onError(cubit, Reportable(StateError('x')), StackTrace.current);
-        await Future<void>.delayed(Duration.zero);
-
-        final captured = verify(
-          () =>
-              mockCrash.setCustomKey(kBlocLastStateKey, captureAny<dynamic>()),
-        ).captured;
-        expect(captured, hasLength(1));
-        expect(captured.single, contains('npub1<redacted>'));
-        expect(captured.single, isNot(contains(npub)));
+        final keys =
+            verify(
+                  () => mockCrash.recordErrorWithCustomKeys(
+                    any<Object>(),
+                    any<StackTrace?>(),
+                    reason: any(named: 'reason'),
+                    customKeys: captureAny(named: 'customKeys'),
+                  ),
+                ).captured.single
+                as Map<String, Object>;
+        expect(keys[kBlocLastStateKey], contains('npub1<redacted>'));
+        expect(keys[kBlocLastStateKey], isNot(contains(npub)));
       },
     );
   });
