@@ -279,7 +279,8 @@ internal class ClipAudioLoopTrack private constructor(
 
                 DivineVideoPlayerLog.debug(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
-                        "at ${sampleRate}Hz, ${fadeFrames} frame " +
+                        "at ${sampleRate}Hz for ${loopMs} ms presented, " +
+                        "${samples.size / channels} decoded, ${fadeFrames} frame " +
                         "${if (fromPast) "crossfade" else "ramp"}",
                     name = "DivineVideoPlayer.AudioLoop",
                 )

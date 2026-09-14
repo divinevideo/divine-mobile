@@ -46,9 +46,34 @@ class LoopPcmTest {
     }
 
     @Test
-    fun `never cuts past what was decoded`() {
-        // The feed asks for its playback cap, far past any clip. Reading that
-        // as the loop length would run the track off the end of its own buffer.
+    fun `pads a short decode with silence instead of shortening the loop`() {
+        // The picture loops at the presented duration whatever the sound does,
+        // and the track repeats in the HAL on its own clock. A loop cut to the
+        // decode would have the shorter period of the two and separate from the
+        // picture by that difference on every lap.
+        val decoded = sampleRate * 2 // two seconds
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = decoded),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopMs = 2020,
+        )!!
+
+        assertEquals(2020 * sampleRate / 1000, prepared.loopFrames)
+        assertTrue(prepared.loopFrames > decoded)
+        // The pad is silence, which is what the clip sounds like unlooped.
+        for (frame in decoded until prepared.loopFrames) {
+            assertEquals(0, prepared.samples[frame].toInt())
+        }
+    }
+
+    @Test
+    fun `pads however far the decode falls short`() {
+        // A feed clip whose audio track ends 1.7 s before its video track. The
+        // presented duration is the player's own, clipped to the source's
+        // length, so it is never a cap past the clip and can be padded to
+        // outright: the sound stops where the file's sound stops, and restarts
+        // with the picture rather than 1.7 s ahead of it.
         val decoded = sampleRate // one second
         val prepared = LoopPcm.prepare(
             samples = tone(frames = decoded),
@@ -57,7 +82,31 @@ class LoopPcmTest {
             loopMs = 7000,
         )!!
 
-        assertEquals(decoded, prepared.loopFrames)
+        assertEquals(7 * sampleRate, prepared.loopFrames)
+        assertEquals(0, prepared.samples[decoded + 1].toInt())
+        assertEquals(0, prepared.samples[prepared.loopFrames - 1].toInt())
+    }
+
+    @Test
+    fun `ramps the real tail into the pad rather than the pad itself`() {
+        // A ramp over the padded silence would fade nothing while the sound
+        // stopped mid-waveform with a click at the decode's end.
+        val decoded = sampleRate
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = decoded),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopMs = 1500,
+        )!!
+
+        assertTrue(prepared.loopFrames > decoded)
+        assertEquals(false, prepared.blendedFromPastTheLoop)
+        assertTrue(prepared.fadeFrames > 0)
+        assertEquals(0, prepared.samples[decoded - 1].toInt())
+        assertEquals(0, prepared.samples[0].toInt())
+        // Material ahead of the ramp is left alone.
+        val untouched = decoded - prepared.fadeFrames - 1
+        assertEquals(tone(frames = decoded)[untouched], prepared.samples[untouched])
     }
 
     @Test

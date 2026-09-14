@@ -57,6 +57,16 @@ internal object LoopPcm {
      * is worse than either — the tail has to fade or it is heard twice, so the
      * seam becomes a dip to near-silence followed by material that jumps back.
      *
+     * A decode that falls short of [loopMs] is padded with silence to reach it,
+     * however far short. The picture loops at the presented duration whatever
+     * the sound does, and the track repeats in the HAL on its own clock, so a
+     * loop cut to the decode has a shorter period than the picture and
+     * separates from it by the difference on every lap — a 1.7 s shortfall on a
+     * feed clip had the sound restart mid-picture. Silence is also what the clip
+     * sounds like unlooped: its audio track simply ends before its video track
+     * does. The presented duration can be trusted for this because the player
+     * clips it to the source's own length; it is never a cap past the clip.
+     *
      * Returns null when there is no loop to build.
      */
     fun prepare(
@@ -67,13 +77,18 @@ internal object LoopPcm {
     ): Prepared? {
         if (channels <= 0 || sampleRate <= 0 || loopMs <= 0) return null
         val decodedFrames = samples.size / channels
-        val loopFrames = minOf((loopMs * sampleRate / 1000L).toInt(), decodedFrames)
-        if (loopFrames <= 0) return null
+        val loopFrames = (loopMs * sampleRate / 1000L)
+            .coerceAtMost(Int.MAX_VALUE / channels.toLong())
+            .toInt()
+        if (loopFrames <= 0 || decodedFrames <= 0) return null
 
-        val spare = decodedFrames - loopFrames
+        val spare = (decodedFrames - loopFrames).coerceAtLeast(0)
         val wanted = (CROSSFADE_MS * sampleRate / 1000L).toInt()
         val fadeFrames = minOf(wanted, spare)
-        val out = samples.copyOf()
+        // Grows, zero-filled, when the loop was padded out to the picture's
+        // period; the decode is left whole otherwise, since the blend below
+        // reads the material past the loop point out of it.
+        val out = samples.copyOf(maxOf(samples.size, loopFrames * channels))
 
         if (fadeFrames > 0) {
             for (i in 0 until fadeFrames) {
@@ -89,12 +104,16 @@ internal object LoopPcm {
             return Prepared(out, loopFrames, fadeFrames, blendedFromPastTheLoop = true)
         }
 
-        val rampFrames = minOf((RAMP_MS * sampleRate / 1000L).toInt(), loopFrames / 8)
+        // The tail is the last decoded sample, not the last of the loop: past
+        // the decode the loop is silence, and a ramp there would fade nothing
+        // while the real sound stopped with a click.
+        val tailEnd = minOf(loopFrames, decodedFrames)
+        val rampFrames = minOf((RAMP_MS * sampleRate / 1000L).toInt(), tailEnd / 8)
         for (i in 0 until rampFrames) {
             val gain = i.toFloat() / rampFrames
             for (channel in 0 until channels) {
                 val head = i * channels + channel
-                val tail = (loopFrames - 1 - i) * channels + channel
+                val tail = (tailEnd - 1 - i) * channels + channel
                 out[head] = (out[head] * gain).toInt().toShort()
                 out[tail] = (out[tail] * gain).toInt().toShort()
             }
