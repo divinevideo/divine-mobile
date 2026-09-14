@@ -40,6 +40,18 @@ final class PlaybackDiagnostics {
                 ($0 as? PlaybackDiagnosticResource)?.playbackDiagnosticState
             }
         }
+        var players = 0
+        var playingPlayers = 0
+        var textures = 0
+        var pendingLoads = 0
+        var disposedPlayers = 0
+        for state in states {
+            if state.hasPlayer { players += 1 }
+            if state.isPlaying { playingPlayers += 1 }
+            if state.hasTexture { textures += 1 }
+            pendingLoads += state.pendingLoads
+            if state.disposed && state.hasPlayer { disposedPlayers += 1 }
+        }
         return [
             "version": 1,
             "platform": Self.platform,
@@ -47,11 +59,11 @@ final class PlaybackDiagnostics {
             "footprintBytes": Self.physicalFootprint(),
             "registeredPlayers": registeredPlayers,
             "liveInstances": states.count,
-            "players": states.filter { $0.hasPlayer }.count,
-            "playingPlayers": states.filter { $0.isPlaying }.count,
-            "textures": states.filter { $0.hasTexture }.count,
-            "pendingLoads": states.reduce(0) { $0 + $1.pendingLoads },
-            "disposedPlayers": states.filter { $0.disposed && $0.hasPlayer }.count,
+            "players": players,
+            "playingPlayers": playingPlayers,
+            "textures": textures,
+            "pendingLoads": pendingLoads,
+            "disposedPlayers": disposedPlayers,
             "framesDelivered": framesDelivered,
         ]
     }

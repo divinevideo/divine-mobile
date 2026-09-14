@@ -13,10 +13,12 @@ enum PlaybackDiagnosticsTests {
         diagnostics.track(resource!)
         resource!.playbackDiagnosticState.hasPlayer = true
         resource!.playbackDiagnosticState.isPlaying = true
+        resource!.playbackDiagnosticState.hasTexture = true
         resource!.playbackDiagnosticState.pendingLoads = 1
         let loading = diagnostics.snapshot(registeredPlayers: 1)
         precondition(loading["players"] as? Int == 1)
         precondition(loading["playingPlayers"] as? Int == 1)
+        precondition(loading["textures"] as? Int == 1)
         precondition(loading["pendingLoads"] as? Int == 1)
 
         // Removing a player from the registry must not hide an async load
