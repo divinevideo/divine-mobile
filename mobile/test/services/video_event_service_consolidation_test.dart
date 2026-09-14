@@ -6,23 +6,18 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import '../builders/test_video_event_builder.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
-
 void main() {
   late VideoEventService service;
   late _MockNostrClient mockNostrService;
-  late _MockSubscriptionManager mockSubscriptionManager;
 
   setUp(() {
     mockNostrService = _MockNostrClient();
-    mockSubscriptionManager = _MockSubscriptionManager();
 
     // Setup default mock behaviors
     when(() => mockNostrService.isInitialized).thenReturn(true);
@@ -34,7 +29,6 @@ void main() {
 
     service = VideoEventService(
       mockNostrService,
-      subscriptionManager: mockSubscriptionManager,
       crashReporter: const SilentCrashReporter(),
     );
   });

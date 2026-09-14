@@ -12,14 +12,11 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/relay_capability_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -102,7 +99,6 @@ void main() {
 
   group('VideoEventService startup contract', () {
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockProfileRepository mockProfileRepository;
     late _MockAppDatabase mockDatabase;
     late _MockNostrEventsDao mockNostrEventsDao;
@@ -115,7 +111,6 @@ void main() {
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockProfileRepository = _MockProfileRepository();
       mockDatabase = _MockAppDatabase();
       mockNostrEventsDao = _MockNostrEventsDao();
@@ -165,7 +160,6 @@ void main() {
 
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
         profileRepository: mockProfileRepository,
         eventRouter: EventRouter(mockDatabase),

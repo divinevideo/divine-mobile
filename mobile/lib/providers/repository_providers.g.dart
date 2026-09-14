@@ -416,7 +416,7 @@ final class ProfileRepositoryProvider
   }
 }
 
-String _$profileRepositoryHash() => r'92a8519f8d195b5c33727803820aa82e94a8b0b2';
+String _$profileRepositoryHash() => r'89273d8f2507effaf89d0daf942fa8994ed5057f';
 
 /// Read-only profile access gated on **identity-known** (a pubkey is
 /// available) rather than the full `nostrReady` relay-connect settle.
@@ -526,7 +526,7 @@ final class ProfileReadRepositoryProvider
 }
 
 String _$profileReadRepositoryHash() =>
-    r'6a1e6da7d10b16ef607eaf7c1b771201ebb753a4';
+    r'2ca21e064d13b26a175f71d17f152295b242c275';
 
 /// Curation Service - manages NIP-51 video curation sets
 

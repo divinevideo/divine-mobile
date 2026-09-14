@@ -9,36 +9,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements NostrClient {}
-
-class TestSubscriptionManager extends Mock implements SubscriptionManager {
-  TestSubscriptionManager(this.eventStreamController);
-  final StreamController<Event> eventStreamController;
-
-  @override
-  Future<String> createSubscription({
-    required String name,
-    required List<Filter> filters,
-    required Function(Event) onEvent,
-    Function(dynamic)? onError,
-    Function()? onComplete,
-    Duration? timeout,
-    int priority = 5,
-  }) async {
-    // Set up a stream listener that calls onEvent for each event
-    eventStreamController.stream.listen(onEvent);
-    return 'mock_sub_$name';
-  }
-
-  @override
-  Future<void> cancelSubscription(String subscriptionId) async {
-    // No-op for tests
-  }
-}
 
 // Fake classes for setUpAll
 class FakeFilter extends Fake implements Filter {}
@@ -75,7 +49,6 @@ void main() {
     late VideoEventService videoEventService;
     late MockNostrService mockNostrService;
     late StreamController<Event> eventStreamController;
-    late TestSubscriptionManager testSubscriptionManager;
 
     setUp(() {
       mockNostrService = MockNostrService();
@@ -96,11 +69,8 @@ void main() {
         return eventStreamController.stream;
       });
 
-      testSubscriptionManager = TestSubscriptionManager(eventStreamController);
-
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: testSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

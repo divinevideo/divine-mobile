@@ -14,13 +14,10 @@ import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
@@ -28,7 +25,6 @@ class _MockContentBlocklistRepository extends Mock
 void main() {
   group('VideoEventsProvider - Buffering', () {
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockContentBlocklistRepository mockBlocklistRepository;
     late VideoEventService videoEventService;
     late ProviderContainer container;
@@ -40,7 +36,6 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockBlocklistRepository = _MockContentBlocklistRepository();
       relayStatusController = StreamController.broadcast();
 
@@ -56,7 +51,6 @@ void main() {
 
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
 

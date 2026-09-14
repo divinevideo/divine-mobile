@@ -163,7 +163,6 @@ SubscriptionManager subscriptionManager(Ref ref) {
 @Riverpod(keepAlive: true)
 VideoEventService videoEventService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
-  final subscriptionManager = ref.watch(subscriptionManagerProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);
   final videoFilterBuilder = ref.watch(videoFilterBuilderProvider);
@@ -191,7 +190,6 @@ VideoEventService videoEventService(Ref ref) {
 
   final service = VideoEventService(
     nostrService,
-    subscriptionManager: subscriptionManager,
     crashReporter: ref.read(crashReportingServiceProvider),
     profileRepository: profileRepository,
     eventRouter: eventRouter,

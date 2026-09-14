@@ -353,7 +353,7 @@ ProfileRepository? profileRepository(Ref ref) {
     return null;
   }
 
-  return _buildProfileRepository(ref, warmCache: true);
+  return _buildProfileRepository(ref);
 }
 
 /// Read-only profile access gated on **identity-known** (a pubkey is
@@ -393,13 +393,11 @@ ProfileReader? profileReadRepository(Ref ref) {
     return null;
   }
 
-  return _buildProfileRepository(ref, warmCache: false);
+  return _buildProfileRepository(ref);
 }
 
 /// Shared construction for [profileRepository] and [profileReadRepository].
-/// When [warmCache] is true, pre-loads known cached pubkeys into the
-/// SubscriptionManager so Kind-0 relay requests skip already-cached authors.
-ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
+ProfileRepository _buildProfileRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
   final userProfilesDao = ref.watch(databaseProvider).userProfilesDao;
   final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
@@ -445,10 +443,9 @@ ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
     blockFilter: blockFilter,
   );
 
-  // Unconditional, not gated on warmCache: the write-path guards in
-  // cacheProfile depend on this set, and every construction of the repository
-  // needs them — a relay Kind 0 can resurrect an evicted account regardless of
-  // whether this instance warms the cache.
+  // Every construction of the repository needs this: the write-path guards in
+  // cacheProfile depend on this set, and a relay Kind 0 can resurrect an
+  // evicted account on any instance.
   unawaited(repo.loadVanishedPubkeys());
   // Prime the vanish source before DM surfaces mount, so the synchronous
   // derived value does not sample it during its initial AsyncLoading state.
@@ -456,18 +453,6 @@ ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
   // profileIdentityResolvingProvider; nothing in the graph couples them.
   // Pinned by test/providers/repository_providers_test.dart.
   ref.listen(vanishedProfilePubkeysProvider, (_, _) {});
-
-  if (warmCache) {
-    // Pre-load known cached pubkeys and wire into SubscriptionManager
-    // so Kind 0 relay requests skip already-cached authors.
-    unawaited(
-      repo.loadKnownCachedPubkeys().then((_) {
-        ref
-            .read(subscriptionManagerProvider)
-            .setCacheLookup(hasProfileCached: repo.hasProfile);
-      }),
-    );
-  }
 
   return repo;
 }
