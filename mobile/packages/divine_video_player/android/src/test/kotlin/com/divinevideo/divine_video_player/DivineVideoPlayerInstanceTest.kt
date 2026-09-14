@@ -1052,6 +1052,56 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `a clamp that shortens the loop cuts its audio again against the clipped timeline`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { mockPlayer.mediaItemCount } returns 1
+            every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+            every { mockPlayer.playWhenReady } returns true
+            // The container outlives its audio track: the player presents the
+            // container's length until the clamp lands, and the common track
+            // end after it.
+            var presentedMs = 6_300L
+            every { mockPlayer.duration } answers { presentedMs }
+            captureAudioTrackDisables()
+            val listenerSlot = slot<Player.Listener>()
+            every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+            val feed = feedInstance()
+            withTrackDurations(videoUs = 6_300_000L, audioUs = 6_000_000L) {
+                feed.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+                feed.onMethodCall(
+                    trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                    mockk(relaxed = true),
+                )
+                capturePostedRunnables().forEach { it.run() }
+            }
+            listenerSlot.captured.onPlaybackStateChanged(Player.STATE_READY)
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_300L) }
+
+            // The parked clamp lands at the loop restart and moves only the
+            // picture to 6.0 s. Left alone, the sound keeps looping at 6.3 s
+            // and separates from it by 300 ms every lap.
+            presentedMs = 6_000L
+            listenerSlot.captured.onPositionDiscontinuity(
+                positionInfo(mediaItemIndex = 0),
+                positionInfo(mediaItemIndex = 0),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+            )
+            verify { mockPlayer.replaceMediaItem(0, any()) }
+            // Not before the clipped timeline is reported: the replaced item's
+            // duration is whatever the player holds at that instant.
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), 6_000L) }
+
+            listenerSlot.captured.onPlaybackStateChanged(Player.STATE_READY)
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_000L) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
     fun `an off-speed player keeps its own audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {

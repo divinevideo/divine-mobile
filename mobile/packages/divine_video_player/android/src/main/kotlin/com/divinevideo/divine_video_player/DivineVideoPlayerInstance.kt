@@ -687,6 +687,11 @@ internal class DivineVideoPlayerInstance(
         }
         if (changed) {
             refreshClipOffsets(exoPlayer)
+            // The loop audio was cut to the duration the player presented
+            // before the clamp, and the clamp moves only the picture. Cut it
+            // again against the clipped timeline once the player reports it,
+            // or the two loop at different lengths from here on.
+            startClipAudioLoop(clipsRaw, clipsRaw.size, awaitTimeline = true)
             DivineVideoPlayerLog.info(
                 "$logTarget applied resolved track-end clamp",
                 name = "DivineVideoPlayer.Load",
