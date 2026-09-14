@@ -69,6 +69,12 @@ class ViewEventPublisher {
   /// placeholder.
   final String _appVersion;
 
+  /// The version a live [publishViewEvent] writes into the `version` tag.
+  ///
+  /// The durable outbox stores this on every queued row, so a replay after an
+  /// app update can name the build that recorded the view (#9077).
+  String get appVersion => _appVersion;
+
   /// Records a dropped view event and returns `false` for the caller.
   ///
   /// Every early return in this class routes through here, so a new skip
@@ -100,6 +106,11 @@ class ViewEventPublisher {
   /// [startSeconds] - Elapsed playback seconds at the start of the session
   /// [endSeconds] - Elapsed playback seconds at the end of the session
   /// [source] - Where the video was discovered/viewed from
+  /// [appVersion] - Version written into the `version` tag. Null uses the
+  ///   shipped version of this build; a blank value omits the tag. The retry
+  ///   sweep passes the version stored on the queued row, so a replay after an
+  ///   app update names the build that recorded the view rather than the one
+  ///   replaying it (#9077).
   ///
   /// Returns true if the event was published successfully.
   Future<bool> publishViewEvent({
@@ -110,8 +121,10 @@ class ViewEventPublisher {
     String? sourceDetail,
     double? loopCount,
     ViewEventPhase? phase,
+    String? appVersion,
   }) async {
     const method = 'publishViewEvent';
+    final version = (appVersion ?? _appVersion).trim();
     // View = playback start per 2026-08-13 view/loop spec: any playback
     // start counts, even if the session ends before completing a loop
     // (a fractional loop is valid). Only reject inverted ranges. A
@@ -175,7 +188,7 @@ class ViewEventPublisher {
         if (phase != ViewEventPhase.start && loopCount != null && loopCount > 0)
           ['loops', loopCount.toString()],
         // App version, so reporting regressions attribute to a release.
-        if (_appVersion.isNotEmpty) ['version', _appVersion],
+        if (version.isNotEmpty) ['version', version],
       ];
 
       Log.debug(
@@ -206,7 +219,7 @@ class ViewEventPublisher {
       if (sentEvent is PublishSuccess) {
         Log.info(
           'View event published: video=${video.id}, '
-          'watched=${endSeconds - startSeconds}s, version=$_appVersion',
+          'watched=${endSeconds - startSeconds}s, version=$version',
           name: 'ViewEventPublisher',
           category: LogCategory.video,
         );

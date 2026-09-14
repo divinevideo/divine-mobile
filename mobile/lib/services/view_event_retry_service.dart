@@ -160,6 +160,12 @@ class ViewEventRetryService {
             sourceDetail: row.sourceDetail,
             loopCount: fractionalLoops,
             phase: phase,
+            // The build that recorded the view, not the one replaying it: a
+            // failed row can outlive an app update (#9077). A pre-v14 row has
+            // no stored version and is by construction replayed by a later
+            // build, so it goes out with no version tag (Funnelcake groups
+            // that with pre-version clients) rather than a wrong one.
+            appVersion: row.appVersion ?? '',
           );
           if (success) {
             await _dao.deleteById(row.id);

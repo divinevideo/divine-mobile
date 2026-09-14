@@ -50,6 +50,7 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     const videoPubkey =
         'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+    const recordingVersion = '1.0.22';
 
     PendingViewEvent makeEvent({
       required String id,
@@ -63,8 +64,8 @@ void main() {
       int? videoEventKind = NIP71VideoKinds.addressableShortVideo,
       String? eventVideoId,
       String? videoVineId,
-
       String? phase,
+      String? appVersion = recordingVersion,
     }) {
       return PendingViewEvent(
         id: id,
@@ -84,6 +85,7 @@ void main() {
         lastAttemptAt: lastAttemptAt,
         createdAt: createdAt ?? DateTime.utc(2026, 5),
         phase: phase,
+        appVersion: appVersion,
       );
     }
 
@@ -122,6 +124,7 @@ void main() {
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
           phase: any(named: 'phase'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).thenAnswer((_) async => true);
     });
@@ -158,6 +161,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
         expect(await dao.getById('view-a'), isNotNull);
@@ -205,6 +209,7 @@ void main() {
               sourceDetail: any(named: 'sourceDetail'),
               loopCount: any(named: 'loopCount'),
               phase: any(named: 'phase'),
+              appVersion: any(named: 'appVersion'),
             ),
           );
           expect(await dao.getById('view-a'), isNotNull);
@@ -233,6 +238,7 @@ void main() {
               sourceDetail: any(named: 'sourceDetail'),
               loopCount: any(named: 'loopCount'),
               phase: any(named: 'phase'),
+              appVersion: any(named: 'appVersion'),
             ),
           );
         },
@@ -255,6 +261,7 @@ void main() {
           sourceDetail: captureAny(named: 'sourceDetail'),
           loopCount: captureAny(named: 'loopCount'),
           phase: captureAny(named: 'phase'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).captured;
       final video = captured[0] as VideoEvent;
@@ -285,6 +292,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer((_) async => false);
         await dao.enqueue(
@@ -309,6 +317,7 @@ void main() {
             source: any(named: 'source'),
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).captured;
         expect((captured.single as VideoEvent).addressableDTag, isNull);
@@ -327,6 +336,7 @@ void main() {
             source: any(named: 'source'),
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer((_) async => false);
         await dao.enqueue(makeEvent(id: 'empty-d', addressableDTag: ''));
@@ -350,6 +360,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).thenAnswer((_) async => false);
         await dao.enqueue(makeEvent(id: 'view-a'));
@@ -388,6 +399,7 @@ void main() {
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
           phase: any(named: 'phase'),
+          appVersion: any(named: 'appVersion'),
         ),
       );
       final skipped = await dao.getById('view-a');
@@ -420,6 +432,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).called(1);
       },
@@ -453,6 +466,7 @@ void main() {
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
           phase: any(named: 'phase'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).called(2);
     });
@@ -481,6 +495,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         );
         final skipped = await dao.getById('view-a');
@@ -508,6 +523,7 @@ void main() {
           sourceDetail: captureAny(named: 'sourceDetail'),
           loopCount: captureAny(named: 'loopCount'),
           phase: captureAny(named: 'phase'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).captured;
       // Two publishes: self-view + short partial-loop view.
@@ -552,6 +568,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
           ),
         ).called(1);
       },
@@ -575,6 +592,7 @@ void main() {
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
           phase: ViewEventPhase.start,
+          appVersion: any(named: 'appVersion'),
         ),
       ).called(1);
     });
@@ -595,9 +613,59 @@ void main() {
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
           phase: ViewEventPhase.end,
+          appVersion: any(named: 'appVersion'),
         ),
       ).called(1);
     });
+
+    test('replays a queued row with the version that recorded it', () async {
+      // The publisher would otherwise tag the replay with its own runtime
+      // version, crediting the build that restored publishing with a view
+      // a previous build recorded (#9077).
+      await dao.enqueue(makeEvent(id: 'view-a'));
+      final service = makeService();
+
+      await service.sweep();
+
+      verify(
+        () => publisher.publishViewEvent(
+          video: any(named: 'video'),
+          startSeconds: any(named: 'startSeconds'),
+          endSeconds: any(named: 'endSeconds'),
+          source: any(named: 'source'),
+          sourceDetail: any(named: 'sourceDetail'),
+          loopCount: any(named: 'loopCount'),
+          phase: any(named: 'phase'),
+          appVersion: recordingVersion,
+        ),
+      ).called(1);
+    });
+
+    test(
+      'replays a row queued before the version column with no version',
+      () async {
+        // Nothing on a pre-v14 row says which build recorded it, and the
+        // build replaying it is never that build, so the sweep asks for no
+        // tag at all instead of a guaranteed-wrong one.
+        await dao.enqueue(makeEvent(id: 'view-legacy', appVersion: null));
+        final service = makeService();
+
+        await service.sweep();
+
+        verify(
+          () => publisher.publishViewEvent(
+            video: any(named: 'video'),
+            startSeconds: any(named: 'startSeconds'),
+            endSeconds: any(named: 'endSeconds'),
+            source: any(named: 'source'),
+            sourceDetail: any(named: 'sourceDetail'),
+            loopCount: any(named: 'loopCount'),
+            phase: any(named: 'phase'),
+            appVersion: '',
+          ),
+        ).called(1);
+      },
+    );
 
     test(
       'legacy queued row (null phase) replays without a phase tag',
@@ -619,6 +687,7 @@ void main() {
             sourceDetail: any(named: 'sourceDetail'),
             loopCount: any(named: 'loopCount'),
             phase: any(named: 'phase', that: isNull),
+            appVersion: any(named: 'appVersion'),
           ),
         ).called(1);
       },

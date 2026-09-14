@@ -352,7 +352,7 @@ The `.content` field is optional and could contain a free-form note.
 | `loops` | `["loops", "<playthrough-fraction>"]` | Exact finite, non-negative playthrough count emitted by mobile, including partial loops. Funnelcake does not read this tag — it derives loops from `viewed` — so it is informational for other consumers | Optional |
 | `source` | `["source", "<source-type>"]` | Traffic source: `home`, `discovery`, `profile`, `share`, `search` | Optional |
 | `client` | `["client", "<name>", "31990:<app-pubkey>:<d-identifier>", "<relay-url>"]` | NIP-89 client attribution for Divine | Optional |
-| `version` | `["version", "<app-version>"]` | Shipped app version (`PackageInfo.version`, e.g. `1.0.23`), so a view-reporting regression attributes to a release. Kept separate from `client`, whose exact value keys Funnelcake's view-volume detector | Optional |
+| `version` | `["version", "<app-version>"]` | Version of the build that recorded the view (`PackageInfo.version`, e.g. `1.0.23`), so a view-reporting regression attributes to a release. A queued row replayed after an app update keeps the version stored when it was recorded; a row queued before that column existed replays without the tag. Kept separate from `client`, whose exact value keys Funnelcake's view-volume detector | Optional |
 
 ### Two-phase sessions
 
