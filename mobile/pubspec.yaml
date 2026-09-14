@@ -221,7 +221,7 @@ dependencies:
   # Pre-flights remote SVG avatars through the same tokenizer flutter_svg uses
   # before handing bytes to SvgPicture (see AvatarSvgRepository, #7296).
   xml: ^6.5.0
-  skeletonizer: ^2.1.2 # Skeleton loading animations with shimmer effect
+  skeletonizer: ^3.0.0 # Skeleton loading animations with shimmer effect
 
   # Blurhash Service - Blurhash generation and decoding for image placeholders
   blurhash_service:
@@ -391,7 +391,6 @@ dependencies:
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   pro_image_editor: ^14.1.1
-  flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
