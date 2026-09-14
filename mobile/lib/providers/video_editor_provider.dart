@@ -1452,7 +1452,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         name: 'VideoEditorNotifier',
         category: .video,
       );
-      state = state.copyWith(isProcessing: false, renderFailed: true);
+      state = state.copyWith(
+        isProcessing: false,
+        renderFailed: true,
+        renderFailureReason: error.reason,
+      );
     } catch (error, stackTrace) {
       // A newer render owns the processing flag now — leave it alone.
       if (generation != _renderGeneration) {

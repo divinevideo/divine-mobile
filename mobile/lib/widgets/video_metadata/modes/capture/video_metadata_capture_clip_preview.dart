@@ -55,6 +55,7 @@ class VideoMetadataCaptureClipPreview extends ConsumerWidget {
         (s) => (
           isProcessing: s.isProcessing,
           renderFailed: s.renderFailed,
+          renderFailureReason: s.renderFailureReason,
           finalRenderedClip: s.finalRenderedClip,
         ),
       ),
@@ -120,6 +121,7 @@ class VideoMetadataCaptureClipPreview extends ConsumerWidget {
                             state.finalRenderedClip == null ||
                             state.isProcessing,
                         hasFailed: state.renderFailed,
+                        failureReason: state.renderFailureReason,
                         onRetry: () => ref
                             .read(videoEditorProvider.notifier)
                             .startRenderVideo(),

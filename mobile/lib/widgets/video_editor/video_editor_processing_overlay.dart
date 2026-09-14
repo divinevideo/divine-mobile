@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
 class VideoEditorProcessingOverlay extends StatelessWidget {
@@ -18,6 +19,7 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
     this.isCurrentClip = false,
     this.isProcessing = false,
     this.hasFailed = false,
+    this.failureReason,
     this.onRetry,
   });
 
@@ -30,6 +32,13 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
   /// (#6058).
   final bool hasFailed;
 
+  /// Why the render failed, when known.
+  ///
+  /// Only [VideoRenderFailureReason.insufficientStorage] changes the copy: it
+  /// is the one failure a retry cannot fix, so the overlay says what will
+  /// (#7125). Ignored unless [hasFailed].
+  final VideoRenderFailureReason? failureReason;
+
   /// Invoked when the user taps retry on the failure overlay.
   final VoidCallback? onRetry;
   final bool isCurrentClip;
@@ -41,6 +50,7 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
     if (hasFailed) {
       child = _RenderFailedOverlay(
         key: ValueKey('Failed-Clip-Overlay-${clip.id}-$isCurrentClip'),
+        reason: failureReason,
         onRetry: onRetry,
       );
     } else if (isProcessing || clip.isProcessing) {
@@ -91,9 +101,20 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
 }
 
 class _RenderFailedOverlay extends StatefulWidget {
-  const _RenderFailedOverlay({required this.onRetry, super.key});
+  const _RenderFailedOverlay({
+    required this.reason,
+    required this.onRetry,
+    super.key,
+  });
 
+  final VideoRenderFailureReason? reason;
   final VoidCallback? onRetry;
+
+  /// The user-facing explanation for [reason].
+  String message(AppLocalizations l10n) => switch (reason) {
+    VideoRenderFailureReason.insufficientStorage => l10n.publishErrorLowStorage,
+    _ => l10n.videoMetadataGenerationFailed,
+  };
 
   @override
   State<_RenderFailedOverlay> createState() => _RenderFailedOverlayState();
@@ -109,7 +130,7 @@ class _RenderFailedOverlayState extends State<_RenderFailedOverlay> {
       if (!mounted) return;
       SemanticsService.sendAnnouncement(
         View.of(context),
-        context.l10n.videoMetadataGenerationFailed,
+        widget.message(context.l10n),
         Directionality.of(context),
       );
     });
@@ -134,7 +155,7 @@ class _RenderFailedOverlayState extends State<_RenderFailedOverlay> {
                 ),
               ),
               Text(
-                context.l10n.videoMetadataGenerationFailed,
+                widget.message(context.l10n),
                 textAlign: TextAlign.center,
                 style: VineTheme.bodyMediumFont(
                   color: context.vineColors.primaryText,

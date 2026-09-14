@@ -132,9 +132,19 @@ class _VideoMetadataClassicPreviewThumbnailState
     if (clips.isEmpty) return const SizedBox.shrink();
     final clip = clips.first;
 
-    final (finalRenderedClip, isProcessing, renderFailed) = ref.watch(
+    final (
+      finalRenderedClip,
+      isProcessing,
+      renderFailed,
+      renderFailureReason,
+    ) = ref.watch(
       videoEditorProvider.select(
-        (s) => (s.finalRenderedClip, s.isProcessing, s.renderFailed),
+        (s) => (
+          s.finalRenderedClip,
+          s.isProcessing,
+          s.renderFailed,
+          s.renderFailureReason,
+        ),
       ),
     );
 
@@ -172,6 +182,7 @@ class _VideoMetadataClassicPreviewThumbnailState
                               isProcessing:
                                   finalRenderedClip == null && isProcessing,
                               hasFailed: renderFailed,
+                              failureReason: renderFailureReason,
                               onRetry: () => ref
                                   .read(videoEditorProvider.notifier)
                                   .startRenderVideo(),

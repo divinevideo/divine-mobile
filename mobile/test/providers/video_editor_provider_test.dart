@@ -759,6 +759,60 @@ void main() {
           isTrue,
           reason: 'a failed render surfaces the retry affordance',
         );
+        expect(
+          state.renderFailureReason,
+          VideoRenderFailureReason.nativeRender,
+        );
+      });
+
+      test('keeps the reason of a render that hit a full disk, and drops it '
+          'once a retry starts (#7125)', () async {
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        container
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/docs/clip.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              duration: const Duration(seconds: 2),
+            );
+
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async => throw const VideoRenderFailedException(
+              VideoRenderFailureReason.insufficientStorage,
+            );
+
+        await notifier.startRenderVideo();
+
+        final failed = container.read(videoEditorProvider);
+        expect(failed.renderFailed, isTrue);
+        expect(
+          failed.renderFailureReason,
+          VideoRenderFailureReason.insufficientStorage,
+          reason: 'the overlay needs the reason to ask for space, not a retry',
+        );
+
+        // The retry throws something unclassified; the stale storage reason
+        // must not survive into the new failure.
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => throw Exception('proof step hung');
+
+        await notifier.startRenderVideo();
+
+        final retried = container.read(videoEditorProvider);
+        expect(retried.renderFailed, isTrue);
+        expect(retried.renderFailureReason, isNull);
       });
 
       test('flags renderFailed and clears isProcessing when render throws, '
@@ -1644,11 +1698,36 @@ void main() {
         await notifier.startRenderVideo();
         final reason =
             performanceMonitor.traces.single.attributes['failure_reason'];
-        expect(reason, 'native_render:PlatformException');
+        expect(reason, 'native_render:RENDER_ERROR');
         expect(
           reason,
           isNot(contains('/var/mobile')),
           reason: 'device paths must not ride into a trace attribute',
+        );
+      });
+
+      test('tags a full disk as failed under its own reason (#7125)', () async {
+        final notifier = container.read(videoEditorProvider.notifier);
+        addOneClip();
+        failRenderWith(
+          VideoRenderFailedException.native(
+            PlatformException(
+              code: 'RENDER_ERROR',
+              message: 'Disk Full',
+              details: <Object?, Object?>{
+                'domain': 'AVFoundationErrorDomain',
+                'code': NativeFailureDetails.avErrorDiskFull,
+              },
+            ),
+          ),
+        );
+
+        await notifier.startRenderVideo();
+        final trace = performanceMonitor.traces.single;
+        expect(trace.attributes['outcome'], 'failed');
+        expect(
+          trace.attributes['failure_reason'],
+          'insufficient_storage:disk_full',
         );
       });
 

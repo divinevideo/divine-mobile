@@ -28,6 +28,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ClipTransition,
         ClipTransitionType,
         EditorVideo,
+        NativeFailureDetails,
         ProVideoEditor,
         ProgressModel,
         RenderCanceledException,
@@ -831,6 +832,36 @@ void main() {
 
       await exportClip();
 
+      expect(reported, [same(failure)]);
+    });
+
+    test('the export classifies a full disk as insufficientStorage and still '
+        'reports it (#7125)', () async {
+      final failure = PlatformException(
+        code: 'RENDER_ERROR',
+        message: 'Disk Full',
+        details: <Object?, Object?>{
+          'domain': 'AVFoundationErrorDomain',
+          'code': NativeFailureDetails.avErrorDiskFull,
+        },
+      );
+      failRenderWith(failure);
+
+      await expectLater(
+        VideoEditorRenderService.renderVideoToClip(
+          clips: [clip('a', const Duration(seconds: 1))],
+          editorStateHistory: const {},
+        ),
+        throwsA(
+          isA<VideoRenderFailedException>()
+              .having(
+                (e) => e.reason,
+                'reason',
+                VideoRenderFailureReason.insufficientStorage,
+              )
+              .having((e) => e.cause, 'cause', same(failure)),
+        ),
+      );
       expect(reported, [same(failure)]);
     });
 
