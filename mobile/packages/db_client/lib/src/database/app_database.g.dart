@@ -14158,6 +14158,17 @@ class $PendingViewEventsTable extends PendingViewEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _appVersionMeta = const VerificationMeta(
+    'appVersion',
+  );
+  @override
+  late final GeneratedColumn<String> appVersion = GeneratedColumn<String>(
+    'app_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _trafficSourceMeta = const VerificationMeta(
     'trafficSource',
   );
@@ -14248,6 +14259,7 @@ class $PendingViewEventsTable extends PendingViewEvents
     totalDurationMs,
     loopCount,
     phase,
+    appVersion,
     trafficSource,
     sourceDetail,
     status,
@@ -14357,6 +14369,12 @@ class $PendingViewEventsTable extends PendingViewEvents
       context.handle(
         _phaseMeta,
         phase.isAcceptableOrUnknown(data['phase']!, _phaseMeta),
+      );
+    }
+    if (data.containsKey('app_version')) {
+      context.handle(
+        _appVersionMeta,
+        appVersion.isAcceptableOrUnknown(data['app_version']!, _appVersionMeta),
       );
     }
     if (data.containsKey('traffic_source')) {
@@ -14469,6 +14487,10 @@ class $PendingViewEventsTable extends PendingViewEvents
         DriftSqlType.string,
         data['${effectivePrefix}phase'],
       ),
+      appVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}app_version'],
+      ),
       trafficSource: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}traffic_source'],
@@ -14535,6 +14557,17 @@ class PendingViewEventRow extends DataClass
   /// A `start` row carries no watch time; an `end` row contributes loops
   /// only — the relay counts the view on the matching `start` row.
   final String? phase;
+
+  /// Version of the build that recorded the view (#9077).
+  ///
+  /// The healthy path flushes a row immediately, so the published `version`
+  /// tag normally matches the recording build. A failed row can outlive an
+  /// app update, and replaying it with the successor's runtime version would
+  /// understate the release that dropped the view and inflate the one that
+  /// restored publishing. NULL marks a row queued before this column existed;
+  /// such a row replays without a `version` tag, because the build replaying
+  /// it is never the build that recorded it.
+  final String? appVersion;
   final String trafficSource;
   final String? sourceDetail;
   final String status;
@@ -14554,6 +14587,7 @@ class PendingViewEventRow extends DataClass
     this.totalDurationMs,
     this.loopCount,
     this.phase,
+    this.appVersion,
     required this.trafficSource,
     this.sourceDetail,
     required this.status,
@@ -14587,6 +14621,9 @@ class PendingViewEventRow extends DataClass
     }
     if (!nullToAbsent || phase != null) {
       map['phase'] = Variable<String>(phase);
+    }
+    if (!nullToAbsent || appVersion != null) {
+      map['app_version'] = Variable<String>(appVersion);
     }
     map['traffic_source'] = Variable<String>(trafficSource);
     if (!nullToAbsent || sourceDetail != null) {
@@ -14629,6 +14666,9 @@ class PendingViewEventRow extends DataClass
       phase: phase == null && nullToAbsent
           ? const Value.absent()
           : Value(phase),
+      appVersion: appVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(appVersion),
       trafficSource: Value(trafficSource),
       sourceDetail: sourceDetail == null && nullToAbsent
           ? const Value.absent()
@@ -14664,6 +14704,7 @@ class PendingViewEventRow extends DataClass
       totalDurationMs: serializer.fromJson<int?>(json['totalDurationMs']),
       loopCount: serializer.fromJson<int?>(json['loopCount']),
       phase: serializer.fromJson<String?>(json['phase']),
+      appVersion: serializer.fromJson<String?>(json['appVersion']),
       trafficSource: serializer.fromJson<String>(json['trafficSource']),
       sourceDetail: serializer.fromJson<String?>(json['sourceDetail']),
       status: serializer.fromJson<String>(json['status']),
@@ -14688,6 +14729,7 @@ class PendingViewEventRow extends DataClass
       'totalDurationMs': serializer.toJson<int?>(totalDurationMs),
       'loopCount': serializer.toJson<int?>(loopCount),
       'phase': serializer.toJson<String?>(phase),
+      'appVersion': serializer.toJson<String?>(appVersion),
       'trafficSource': serializer.toJson<String>(trafficSource),
       'sourceDetail': serializer.toJson<String?>(sourceDetail),
       'status': serializer.toJson<String>(status),
@@ -14710,6 +14752,7 @@ class PendingViewEventRow extends DataClass
     Value<int?> totalDurationMs = const Value.absent(),
     Value<int?> loopCount = const Value.absent(),
     Value<String?> phase = const Value.absent(),
+    Value<String?> appVersion = const Value.absent(),
     String? trafficSource,
     Value<String?> sourceDetail = const Value.absent(),
     String? status,
@@ -14735,6 +14778,7 @@ class PendingViewEventRow extends DataClass
         : this.totalDurationMs,
     loopCount: loopCount.present ? loopCount.value : this.loopCount,
     phase: phase.present ? phase.value : this.phase,
+    appVersion: appVersion.present ? appVersion.value : this.appVersion,
     trafficSource: trafficSource ?? this.trafficSource,
     sourceDetail: sourceDetail.present ? sourceDetail.value : this.sourceDetail,
     status: status ?? this.status,
@@ -14772,6 +14816,9 @@ class PendingViewEventRow extends DataClass
           : this.totalDurationMs,
       loopCount: data.loopCount.present ? data.loopCount.value : this.loopCount,
       phase: data.phase.present ? data.phase.value : this.phase,
+      appVersion: data.appVersion.present
+          ? data.appVersion.value
+          : this.appVersion,
       trafficSource: data.trafficSource.present
           ? data.trafficSource.value
           : this.trafficSource,
@@ -14804,6 +14851,7 @@ class PendingViewEventRow extends DataClass
           ..write('totalDurationMs: $totalDurationMs, ')
           ..write('loopCount: $loopCount, ')
           ..write('phase: $phase, ')
+          ..write('appVersion: $appVersion, ')
           ..write('trafficSource: $trafficSource, ')
           ..write('sourceDetail: $sourceDetail, ')
           ..write('status: $status, ')
@@ -14828,6 +14876,7 @@ class PendingViewEventRow extends DataClass
     totalDurationMs,
     loopCount,
     phase,
+    appVersion,
     trafficSource,
     sourceDetail,
     status,
@@ -14851,6 +14900,7 @@ class PendingViewEventRow extends DataClass
           other.totalDurationMs == this.totalDurationMs &&
           other.loopCount == this.loopCount &&
           other.phase == this.phase &&
+          other.appVersion == this.appVersion &&
           other.trafficSource == this.trafficSource &&
           other.sourceDetail == this.sourceDetail &&
           other.status == this.status &&
@@ -14872,6 +14922,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
   final Value<int?> totalDurationMs;
   final Value<int?> loopCount;
   final Value<String?> phase;
+  final Value<String?> appVersion;
   final Value<String> trafficSource;
   final Value<String?> sourceDetail;
   final Value<String> status;
@@ -14892,6 +14943,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
     this.totalDurationMs = const Value.absent(),
     this.loopCount = const Value.absent(),
     this.phase = const Value.absent(),
+    this.appVersion = const Value.absent(),
     this.trafficSource = const Value.absent(),
     this.sourceDetail = const Value.absent(),
     this.status = const Value.absent(),
@@ -14913,6 +14965,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
     this.totalDurationMs = const Value.absent(),
     this.loopCount = const Value.absent(),
     this.phase = const Value.absent(),
+    this.appVersion = const Value.absent(),
     required String trafficSource,
     this.sourceDetail = const Value.absent(),
     required String status,
@@ -14941,6 +14994,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
     Expression<int>? totalDurationMs,
     Expression<int>? loopCount,
     Expression<String>? phase,
+    Expression<String>? appVersion,
     Expression<String>? trafficSource,
     Expression<String>? sourceDetail,
     Expression<String>? status,
@@ -14963,6 +15017,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
       if (totalDurationMs != null) 'total_duration_ms': totalDurationMs,
       if (loopCount != null) 'loop_count': loopCount,
       if (phase != null) 'phase': phase,
+      if (appVersion != null) 'app_version': appVersion,
       if (trafficSource != null) 'traffic_source': trafficSource,
       if (sourceDetail != null) 'source_detail': sourceDetail,
       if (status != null) 'status': status,
@@ -14986,6 +15041,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
     Value<int?>? totalDurationMs,
     Value<int?>? loopCount,
     Value<String?>? phase,
+    Value<String?>? appVersion,
     Value<String>? trafficSource,
     Value<String?>? sourceDetail,
     Value<String>? status,
@@ -15007,6 +15063,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
       totalDurationMs: totalDurationMs ?? this.totalDurationMs,
       loopCount: loopCount ?? this.loopCount,
       phase: phase ?? this.phase,
+      appVersion: appVersion ?? this.appVersion,
       trafficSource: trafficSource ?? this.trafficSource,
       sourceDetail: sourceDetail ?? this.sourceDetail,
       status: status ?? this.status,
@@ -15056,6 +15113,9 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
     if (phase.present) {
       map['phase'] = Variable<String>(phase.value);
     }
+    if (appVersion.present) {
+      map['app_version'] = Variable<String>(appVersion.value);
+    }
     if (trafficSource.present) {
       map['traffic_source'] = Variable<String>(trafficSource.value);
     }
@@ -15097,6 +15157,7 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
           ..write('totalDurationMs: $totalDurationMs, ')
           ..write('loopCount: $loopCount, ')
           ..write('phase: $phase, ')
+          ..write('appVersion: $appVersion, ')
           ..write('trafficSource: $trafficSource, ')
           ..write('sourceDetail: $sourceDetail, ')
           ..write('status: $status, ')
@@ -25252,6 +25313,7 @@ typedef $$PendingViewEventsTableCreateCompanionBuilder =
       Value<int?> totalDurationMs,
       Value<int?> loopCount,
       Value<String?> phase,
+      Value<String?> appVersion,
       required String trafficSource,
       Value<String?> sourceDetail,
       required String status,
@@ -25274,6 +25336,7 @@ typedef $$PendingViewEventsTableUpdateCompanionBuilder =
       Value<int?> totalDurationMs,
       Value<int?> loopCount,
       Value<String?> phase,
+      Value<String?> appVersion,
       Value<String> trafficSource,
       Value<String?> sourceDetail,
       Value<String> status,
@@ -25345,6 +25408,11 @@ class $$PendingViewEventsTableFilterComposer
 
   ColumnFilters<String> get phase => $composableBuilder(
     column: $table.phase,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -25448,6 +25516,11 @@ class $$PendingViewEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get trafficSource => $composableBuilder(
     column: $table.trafficSource,
     builder: (column) => ColumnOrderings(column),
@@ -25540,6 +25613,11 @@ class $$PendingViewEventsTableAnnotationComposer
   GeneratedColumn<String> get phase =>
       $composableBuilder(column: $table.phase, builder: (column) => column);
 
+  GeneratedColumn<String> get appVersion => $composableBuilder(
+    column: $table.appVersion,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get trafficSource => $composableBuilder(
     column: $table.trafficSource,
     builder: (column) => column,
@@ -25621,6 +25699,7 @@ class $$PendingViewEventsTableTableManager
                 Value<int?> totalDurationMs = const Value.absent(),
                 Value<int?> loopCount = const Value.absent(),
                 Value<String?> phase = const Value.absent(),
+                Value<String?> appVersion = const Value.absent(),
                 Value<String> trafficSource = const Value.absent(),
                 Value<String?> sourceDetail = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -25641,6 +25720,7 @@ class $$PendingViewEventsTableTableManager
                 totalDurationMs: totalDurationMs,
                 loopCount: loopCount,
                 phase: phase,
+                appVersion: appVersion,
                 trafficSource: trafficSource,
                 sourceDetail: sourceDetail,
                 status: status,
@@ -25663,6 +25743,7 @@ class $$PendingViewEventsTableTableManager
                 Value<int?> totalDurationMs = const Value.absent(),
                 Value<int?> loopCount = const Value.absent(),
                 Value<String?> phase = const Value.absent(),
+                Value<String?> appVersion = const Value.absent(),
                 required String trafficSource,
                 Value<String?> sourceDetail = const Value.absent(),
                 required String status,
@@ -25683,6 +25764,7 @@ class $$PendingViewEventsTableTableManager
                 totalDurationMs: totalDurationMs,
                 loopCount: loopCount,
                 phase: phase,
+                appVersion: appVersion,
                 trafficSource: trafficSource,
                 sourceDetail: sourceDetail,
                 status: status,

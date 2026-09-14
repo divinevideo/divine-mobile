@@ -1507,6 +1507,17 @@ class PendingViewEvents extends Table {
   /// only — the relay counts the view on the matching `start` row.
   TextColumn get phase => text().nullable().named('phase')();
 
+  /// Version of the build that recorded the view (#9077).
+  ///
+  /// The healthy path flushes a row immediately, so the published `version`
+  /// tag normally matches the recording build. A failed row can outlive an
+  /// app update, and replaying it with the successor's runtime version would
+  /// understate the release that dropped the view and inflate the one that
+  /// restored publishing. NULL marks a row queued before this column existed;
+  /// such a row replays without a `version` tag, because the build replaying
+  /// it is never the build that recorded it.
+  TextColumn get appVersion => text().nullable().named('app_version')();
+
   TextColumn get trafficSource => text().named('traffic_source')();
 
   TextColumn get sourceDetail => text().nullable().named('source_detail')();

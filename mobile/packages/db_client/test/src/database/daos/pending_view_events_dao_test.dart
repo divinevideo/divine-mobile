@@ -31,6 +31,7 @@ void main() {
     DateTime? lastAttemptAt,
     String? lastError,
     String? videoAddressableDTag,
+    String? appVersion = '1.0.24',
   }) {
     return PendingViewEvent(
       id: id,
@@ -44,6 +45,7 @@ void main() {
       loopCount: 1,
       trafficSource: 'home',
       sourceDetail: 'following',
+      appVersion: appVersion,
       status: status,
       retryCount: retryCount,
       lastError: lastError,
@@ -93,9 +95,20 @@ void main() {
         expect(fetched.loopCount, 1);
         expect(fetched.trafficSource, 'home');
         expect(fetched.sourceDetail, 'following');
+        expect(fetched.appVersion, '1.0.24');
         expect(fetched.retryCount, 0);
         expect(fetched.lastError, isNull);
         expect(fetched.lastAttemptAt, isNull);
+      });
+
+      test('stores a row without a recording version as NULL', () async {
+        // The replay path reads NULL as "unknown build" and omits the
+        // version tag, so the column must not coerce it to a placeholder.
+        await dao.enqueue(makeEvent(id: 'view-a', appVersion: null));
+
+        final fetched = await dao.getById('view-a');
+
+        expect(fetched!.appVersion, isNull);
       });
 
       test('re-enqueueing the same id preserves delivery state', () async {

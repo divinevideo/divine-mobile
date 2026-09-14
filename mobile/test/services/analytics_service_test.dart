@@ -870,6 +870,66 @@ void main() {
       expect(rows.single.videoAddressableDTag, 'the-d-tag');
     });
 
+    test("queued view rows record the publisher's app version", () async {
+      // The row must carry what a live publish would have tagged the event
+      // with, so a replay after an app update still names this build. That
+      // is the publisher's version, not the product-analytics release, which
+      // a staging smoke build swaps for its marker (#9068, #9077).
+      final tempDir = Directory.systemTemp.createTempSync(
+        'analytics_pending_version_test_',
+      );
+      tempDbPath = '${tempDir.path}/test.db';
+      database = AppDatabase.test(NativeDatabase(File(tempDbPath!)));
+      final publisher = _MockViewEventPublisher();
+      when(() => publisher.appVersion).thenReturn('1.0.22');
+      analyticsService.dispose();
+      analyticsService = AnalyticsService(
+        backgroundActivityManager: BackgroundActivityManager(),
+        viewEventPublisher: publisher,
+        pendingViewEventsDao: database!.pendingViewEventsDao,
+        flushPendingViewEvents: () async {},
+        appVersion: () => 'staging-smoke-0123456789abcdef0123456789abcdef',
+      );
+      await analyticsService.initialize();
+      final video = VideoEvent(
+        id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+        pubkey:
+            'ae73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        content: 'Test video',
+        timestamp: DateTime.now(),
+        vineId: 'vine-id',
+        addressableDTag: 'the-d-tag',
+        eventKind: NIP71VideoKinds.addressableShortVideo,
+      );
+      const user =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+      await analyticsService.trackDetailedVideoViewWithUser(
+        video,
+        userId: user,
+        source: 'mobile',
+        eventType: 'view_start',
+        sessionToken: 'mount-1',
+        trafficSource: ViewTrafficSource.home,
+      );
+      await analyticsService.trackDetailedVideoViewWithUser(
+        video,
+        userId: user,
+        source: 'mobile',
+        eventType: 'view_end',
+        watchDuration: const Duration(seconds: 2),
+        totalDuration: const Duration(seconds: 6),
+        trafficSource: ViewTrafficSource.home,
+      );
+
+      final rows = await database!.pendingViewEventsDao.getRetryableForUser(
+        userPubkey: user,
+      );
+      expect(rows.map((row) => row.phase), ['start', 'end']);
+      expect(rows.map((row) => row.appVersion), everyElement('1.0.22'));
+    });
+
     test(
       'view_start dedupes within a session token but a new token re-publishes',
       () async {
@@ -968,6 +1028,7 @@ void main() {
 
     test('falls back to direct publish when pending enqueue fails', () async {
       final publisher = _MockViewEventPublisher();
+      when(() => publisher.appVersion).thenReturn('1.0.24');
       final dao = _MockPendingViewEventsDao();
       when(() => dao.enqueue(any())).thenThrow(StateError('enqueue failed'));
       when(
@@ -1025,6 +1086,7 @@ void main() {
       tempDbPath = '${tempDir.path}/test.db';
       database = AppDatabase.test(NativeDatabase(File(tempDbPath!)));
       final publisher = _MockViewEventPublisher();
+      when(() => publisher.appVersion).thenReturn('1.0.24');
       analyticsService.dispose();
       analyticsService = AnalyticsService(
         backgroundActivityManager: BackgroundActivityManager(),

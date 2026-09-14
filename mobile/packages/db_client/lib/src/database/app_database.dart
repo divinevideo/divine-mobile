@@ -131,7 +131,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -214,6 +214,9 @@ class AppDatabase extends _$AppDatabase {
         // index set — the same divergence #7040 had to backfill at v7.
         await _createPersonalEventIndexes();
       }
+      if (from < 14) {
+        await _repairSchemaV14();
+      }
     },
     beforeOpen: (details) async {
       // v1 databases are normalized by onUpgrade. This guarded path remains
@@ -230,6 +233,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV10();
         await _repairSchemaV11();
         await _migrateToV12OwnerScopedDmKeys();
+        await _repairSchemaV14();
       }
 
       // Run cleanup of expired data on every app startup
@@ -351,6 +355,20 @@ class AppDatabase extends _$AppDatabase {
   /// Adds the two-phase reporting column to the queued view-event outbox.
   Future<void> _repairSchemaV8() async {
     await _addColumnIfMissing('pending_view_events', 'phase', 'TEXT NULL');
+  }
+
+  /// Adds the recording-build version to the queued view-event outbox
+  /// (#9077).
+  ///
+  /// Existing rows stay NULL: nothing on a pre-v14 row says which build
+  /// recorded it, and the replay path omits the `version` tag for those
+  /// rather than attributing the view to the build that happens to replay it.
+  Future<void> _repairSchemaV14() async {
+    await _addColumnIfMissing(
+      'pending_view_events',
+      'app_version',
+      'TEXT NULL',
+    );
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1113,6 +1131,7 @@ class AppDatabase extends _$AppDatabase {
           total_duration_ms INTEGER,
           loop_count INTEGER,
           phase TEXT,
+          app_version TEXT,
           traffic_source TEXT NOT NULL,
           source_detail TEXT,
           status TEXT NOT NULL,
@@ -1444,6 +1463,7 @@ class AppDatabase extends _$AppDatabase {
         'video_addressable_d_tag',
         'video_event_kind',
         'phase',
+        'app_version',
       ],
     };
 

@@ -340,6 +340,59 @@ void main() {
         ]);
       });
 
+      test('exposes the version it tags live events with', () {
+        expect(publisher.appVersion, appVersion);
+      });
+
+      test('tags a replay with the recording version, not its own', () async {
+        // The retry sweep passes the version stored on the queued row; a
+        // build replaying a row it did not record must not claim the view
+        // for its own release (#9077).
+        await publisher.publishViewEvent(
+          video: createTestVideoEvent(pubkey: creatorPubkey),
+          startSeconds: 0,
+          endSeconds: 5,
+          phase: ViewEventPhase.start,
+          appVersion: '1.0.22',
+        );
+
+        final captured = verify(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: captureAny(named: 'tags'),
+          ),
+        ).captured;
+
+        final tags = captured[0] as List<List<String>>;
+        expect(tags.where((t) => t[0] == 'version'), [
+          ['version', '1.0.22'],
+        ]);
+      });
+
+      test(
+        'omits the version tag when a replay has no recorded version',
+        () async {
+          await publisher.publishViewEvent(
+            video: createTestVideoEvent(pubkey: creatorPubkey),
+            startSeconds: 0,
+            endSeconds: 5,
+            appVersion: '',
+          );
+
+          final captured = verify(
+            () => mockAuth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: captureAny(named: 'tags'),
+            ),
+          ).captured;
+
+          final tags = captured[0] as List<List<String>>;
+          expect(tags.where((t) => t[0] == 'version'), isEmpty);
+        },
+      );
+
       test('omits the version tag when the app version is blank', () async {
         publisher = ViewEventPublisher(
           nostrService: mockNostr,
