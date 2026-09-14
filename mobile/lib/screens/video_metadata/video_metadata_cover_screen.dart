@@ -204,7 +204,6 @@ class _VideoMetadataCoverScreenState
           ),
           thumbsPerSecond: thumbsPerSecond,
           priorityTimestamps: slotTimestamps,
-          batchSize: 10,
         ).listen(
           (thumbnails) {
             for (final t in thumbnails) {
