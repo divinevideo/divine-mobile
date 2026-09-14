@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:upload_repository/upload_repository.dart';
 
+import 'helpers/hive_test_home.dart';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -79,7 +81,7 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'pending_upload_store_',
       );
-      Hive.init(tempDir.path);
+      setHiveTestHome(tempDir.path);
     });
 
     tearDown(() async {
