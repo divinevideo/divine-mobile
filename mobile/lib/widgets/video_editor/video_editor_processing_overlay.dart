@@ -141,35 +141,44 @@ class _RenderFailedOverlayState extends State<_RenderFailedOverlay> {
     return ColoredBox(
       color: const Color.fromARGB(180, 0, 0, 0),
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: .min,
-            spacing: 12,
-            children: [
-              const ExcludeSemantics(
-                child: DivineIcon(
-                  icon: .warning,
-                  size: 36,
-                  color: VineTheme.error,
-                ),
+        // The capture-mode preview is only 200px tall and the storage copy
+        // wraps to three or more lines once translated, which overflowed the
+        // full-size spacing (#7125). Tighten the chrome when the box is small
+        // instead of clipping the message or the retry button.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 220;
+            return Padding(
+              padding: EdgeInsets.all(compact ? 8 : 12),
+              child: Column(
+                mainAxisSize: .min,
+                spacing: compact ? 8 : 12,
+                children: [
+                  ExcludeSemantics(
+                    child: DivineIcon(
+                      icon: .warning,
+                      size: compact ? 24 : 36,
+                      color: VineTheme.error,
+                    ),
+                  ),
+                  Text(
+                    widget.message(context.l10n),
+                    textAlign: TextAlign.center,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  if (widget.onRetry != null)
+                    DivineIconButton(
+                      icon: .arrowsClockwise,
+                      type: .secondary,
+                      onPressed: widget.onRetry,
+                      semanticLabel: context.l10n.videoErrorRetry,
+                    ),
+                ],
               ),
-              Text(
-                widget.message(context.l10n),
-                textAlign: TextAlign.center,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.primaryText,
-                ),
-              ),
-              if (widget.onRetry != null)
-                DivineIconButton(
-                  icon: .arrowsClockwise,
-                  type: .secondary,
-                  onPressed: widget.onRetry,
-                  semanticLabel: context.l10n.videoErrorRetry,
-                ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
