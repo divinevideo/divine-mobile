@@ -173,17 +173,25 @@ instead of only commenting "fixed"; do not dismiss another reviewer's decision.
 
 Before pushing, enumerate the review items and decide each one. Fetch
 inline threads too — a PR can carry substantive findings with zero
-inline threads, or findings only in outdated threads. The query below shows
-only the first page: inspect `pageInfo` and paginate the reviews, threads, and
+inline threads, or findings only in outdated threads. The queries below show
+only their first page: inspect `pageInfo` and paginate the reviews, threads, and
 each thread's comments until all are read before claiming complete coverage:
 
 ```bash
 gh pr view <number> --json reviews --jq '.reviews[] | "\(.author.login) \(.state)\n\(.body)"'
+gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
+  --jq '.[] | "\(.user.login) \(.state)\n\(.body)"'
 gh api graphql -f query='
 { repository(owner:"divinevideo",name:"divine-mobile"){ pullRequest(number:NNN){
-  reviewThreads(first:100){ nodes { isResolved isOutdated path line
-    comments(first:10){ nodes { author{login} body } } } } } } }'
+  reviewThreads(first:100){ pageInfo{ hasNextPage endCursor }
+    nodes { isResolved isOutdated path line
+    comments(first:10){ pageInfo{ hasNextPage endCursor }
+      nodes { author{login} body } } } } } } }'
 ```
+
+The `gh pr view` line does not paginate; the REST call returns the full review
+list. Pass a connection's `endCursor` to its `after:` argument while
+`hasNextPage` is true.
 
 Every item lands in exactly one bucket: **fixed**, **escalated**
 (needs product/architecture judgment — name the decision), or
