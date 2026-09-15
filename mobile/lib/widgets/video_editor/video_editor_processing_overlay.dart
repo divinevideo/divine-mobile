@@ -2,7 +2,6 @@
 // ABOUTME: Displays circular progress indicator while clip is being processed/rendered
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -27,7 +26,9 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
 
   /// Whether the render failed. Takes precedence over [isProcessing] so a
   /// failed generation shows a retry affordance instead of an endless spinner
-  /// (#6058).
+  /// (#6058). The overlay does not say why: the preview card is too small for
+  /// a sentence, so the metadata screen explains the failure in a banner
+  /// below it (#7125).
   final bool hasFailed;
 
   /// Invoked when the user taps retry on the failure overlay.
@@ -90,65 +91,35 @@ class VideoEditorProcessingOverlay extends StatelessWidget {
   }
 }
 
-class _RenderFailedOverlay extends StatefulWidget {
+class _RenderFailedOverlay extends StatelessWidget {
   const _RenderFailedOverlay({required this.onRetry, super.key});
 
   final VoidCallback? onRetry;
-
-  @override
-  State<_RenderFailedOverlay> createState() => _RenderFailedOverlayState();
-}
-
-class _RenderFailedOverlayState extends State<_RenderFailedOverlay> {
-  @override
-  void initState() {
-    super.initState();
-    // The failure surface swaps in via AnimatedSwitcher (no route push), so
-    // screen readers get no automatic signal — announce it explicitly (#6058).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        context.l10n.videoMetadataGenerationFailed,
-        Directionality.of(context),
-      );
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
       color: const Color.fromARGB(180, 0, 0, 0),
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: .min,
-            spacing: 12,
-            children: [
-              const ExcludeSemantics(
-                child: DivineIcon(
-                  icon: .warning,
-                  size: 36,
-                  color: VineTheme.error,
-                ),
+        child: Column(
+          mainAxisSize: .min,
+          spacing: 12,
+          children: [
+            const ExcludeSemantics(
+              child: DivineIcon(
+                icon: .warning,
+                size: 36,
+                color: VineTheme.error,
               ),
-              Text(
-                context.l10n.videoMetadataGenerationFailed,
-                textAlign: TextAlign.center,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.primaryText,
-                ),
+            ),
+            if (onRetry != null)
+              DivineIconButton(
+                icon: .arrowsClockwise,
+                type: .secondary,
+                onPressed: onRetry,
+                semanticLabel: context.l10n.videoErrorRetry,
               ),
-              if (widget.onRetry != null)
-                DivineIconButton(
-                  icon: .arrowsClockwise,
-                  type: .secondary,
-                  onPressed: widget.onRetry,
-                  semanticLabel: context.l10n.videoErrorRetry,
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );

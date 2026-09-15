@@ -265,7 +265,8 @@ class VideoEditorRenderService {
   ///
   /// * [VideoRenderFailedException] if the render produced no video — the
   ///   reason distinguishes an empty clip list, a failed stop-motion assembly,
-  ///   a native render failure, a cancellation, and a timed-out export.
+  ///   a native render failure, a device out of storage, a cancellation, and a
+  ///   timed-out export.
   static Future<(DivineVideoClip, String? proofManifestJson)>
   renderVideoToClip({
     required List<DivineVideoClip> clips,
@@ -747,10 +748,7 @@ class VideoEditorRenderService {
         stack,
         reportEveryFailure: reportEveryFailure,
       );
-      throw VideoRenderFailedException(
-        VideoRenderFailureReason.nativeRender,
-        cause: e,
-      );
+      throw VideoRenderFailedException.native(e);
     }
   }
 

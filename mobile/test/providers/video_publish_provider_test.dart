@@ -676,6 +676,39 @@ void main() {
         await tester.pump();
       });
 
+      testWidgets('tells the user to free up space when the render hit a '
+          'full disk (#7125)', (tester) async {
+        final container = await pumpHarness(tester);
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async => throw const VideoRenderFailedException(
+              VideoRenderFailureReason.insufficientStorage,
+            );
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(context, draft());
+        await tester.pump();
+
+        expect(
+          find.widgetWithText(
+            SnackBar,
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).publishErrorMessage(PublishErrorKind.lowStorage),
+          ),
+          findsOneWidget,
+          reason:
+              'a retry walks into the same full disk; the copy has to say '
+              'what actually helps',
+        );
+      });
+
       testWidgets('reports a failed stop-motion assembly in its own words', (
         tester,
       ) async {

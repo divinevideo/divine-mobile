@@ -7,6 +7,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_app_bar.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_cap
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_clip_preview.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_stack.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_render_failure_banner.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
@@ -35,6 +37,7 @@ void main() {
     Widget buildWidget({
       TextScaler textScaler = TextScaler.noScaling,
       EdgeInsets viewInsets = EdgeInsets.zero,
+      VideoEditorProviderState? state,
     }) {
       return ProviderScope(
         overrides: [
@@ -42,7 +45,9 @@ void main() {
             () => _MockClipManagerNotifier([testClip]),
           ),
           videoEditorProvider.overrideWith(
-            () => _MockVideoEditorNotifier(VideoEditorProviderState()),
+            () => _MockVideoEditorNotifier(
+              state ?? VideoEditorProviderState(),
+            ),
           ),
         ],
         child: MaterialApp(
@@ -87,6 +92,39 @@ void main() {
 
       expect(find.byType(VideoMetadataFormFields), findsOneWidget);
     });
+
+    testWidgets(
+      'explains a render that failed out of storage below the preview '
+      '(#7125)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: VideoEditorProviderState(
+              renderFailed: true,
+              renderFailureReason: VideoRenderFailureReason.insufficientStorage,
+            ),
+          ),
+        );
+
+        expect(find.byType(VideoMetadataRenderFailureBanner), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).publishErrorLowStorage,
+          ),
+          findsOneWidget,
+          reason:
+              'the stack must mount the banner, or an out-of-storage user '
+              'only reads "Generation failed"',
+        );
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'the copy lives outside the 112px card, so nothing wraps '
+              'past it',
+        );
+      },
+    );
 
     testWidgets('renders $VideoMetadataCaptureBottomBar', (tester) async {
       await tester.pumpWidget(buildWidget());

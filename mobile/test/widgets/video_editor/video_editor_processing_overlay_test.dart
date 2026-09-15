@@ -1,10 +1,12 @@
-// ABOUTME: Widget tests for VideoEditorProcessingOverlay's progress reading.
-// ABOUTME: Pins that "no reading yet" is not rendered as a genuine 0%.
+// ABOUTME: Widget tests for VideoEditorProcessingOverlay's progress reading
+// ABOUTME: and failure state. Pins that "no reading yet" is not a genuine 0%.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -14,6 +16,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import '../../helpers/test_provider_overrides.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   final clip = DivineVideoClip(
     id: 'clip-1',
     video: EditorVideo.file('/tmp/clip.mp4'),
@@ -69,6 +72,34 @@ void main() {
         );
         expect(spinner.progress, closeTo(0.4, 1e-9));
       });
+    });
+
+    group('failure', () {
+      testWidgets(
+        'offers a retry and leaves the explanation to the banner below the '
+        'preview (#7125)',
+        (tester) async {
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: VideoEditorProcessingOverlay(
+                clip: clip,
+                hasFailed: true,
+                onRetry: () {},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.bySemanticsLabel(l10n.videoErrorRetry), findsOneWidget);
+          expect(
+            find.text(l10n.videoMetadataGenerationFailed),
+            findsNothing,
+            reason:
+                'the words live in VideoMetadataRenderFailureBanner; inside '
+                'the 112px capture card they wrapped past the retry button',
+          );
+        },
+      );
     });
   });
 }

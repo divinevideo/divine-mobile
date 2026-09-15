@@ -152,7 +152,13 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.videoMetadataGenerationFailed), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.warning,
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel(l10n.videoErrorRetry), findsOneWidget);
         expect(
           find.byType(PartialCircleSpinner),
           findsNothing,

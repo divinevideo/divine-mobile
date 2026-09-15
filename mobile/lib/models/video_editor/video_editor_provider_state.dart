@@ -8,6 +8,7 @@ import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -23,6 +24,7 @@ class VideoEditorProviderState {
   VideoEditorProviderState({
     this.isProcessing = false,
     this.renderFailed = false,
+    this.renderFailureReason,
     this.c2paSigningFailed = false,
     this.isSavingDraft = false,
     this.isAutosavedDraft = true,
@@ -61,6 +63,16 @@ class VideoEditorProviderState {
   /// Cleared when a new render starts and whenever [finalRenderedClip] is set or
   /// invalidated.
   final bool renderFailed;
+
+  /// Why the last render failed, when the failure was classified.
+  ///
+  /// Null while no render has failed and when the failure was an unexpected
+  /// exception rather than a [VideoRenderFailedException]. The metadata screen
+  /// singles out [VideoRenderFailureReason.insufficientStorage]: "Generation
+  /// failed, retry" walks the user into the same wall, so a banner below the
+  /// preview asks them to free up space instead (#7125). Follows
+  /// [renderFailed]'s lifecycle.
+  final VideoRenderFailureReason? renderFailureReason;
 
   /// Whether the render produced a clip but no usable content credential /
   /// provenance manifest was attached.
@@ -242,6 +254,7 @@ class VideoEditorProviderState {
   VideoEditorProviderState copyWith({
     bool? isProcessing,
     bool? renderFailed,
+    VideoRenderFailureReason? renderFailureReason,
     bool? c2paSigningFailed,
     bool? isSavingDraft,
     bool? isAutosavedDraft,
@@ -286,11 +299,16 @@ class VideoEditorProviderState {
       'clearFinalRenderedClip resets renderFailed and c2paSigningFailed to '
       'false; do not also pass either as true in the same copyWith call.',
     );
+    // A produced or invalidated clip always ends the failed state.
+    final nextRenderFailed =
+        !clearFinalRenderedClip && (renderFailed ?? this.renderFailed);
     return VideoEditorProviderState(
       isProcessing: isProcessing ?? this.isProcessing,
-      // A produced or invalidated clip always ends the failed state.
-      renderFailed:
-          !clearFinalRenderedClip && (renderFailed ?? this.renderFailed),
+      renderFailed: nextRenderFailed,
+      // The reason cannot outlive the failure it explains.
+      renderFailureReason: nextRenderFailed
+          ? renderFailureReason ?? this.renderFailureReason
+          : null,
       // Invalidating the rendered clip also drops any pending C2PA prompt.
       c2paSigningFailed:
           !clearFinalRenderedClip &&

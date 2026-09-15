@@ -498,21 +498,29 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         } on VideoRenderFailedException catch (error) {
           // `setError` alone is invisible here: nothing on screen reads the
           // error state, so the `.preparing` scrim would just vanish (#6058).
-          // A draft whose stop-motion assembly failed has its own copy; every
-          // other failure gets the generic one.
+          // A draft whose stop-motion assembly failed has its own copy, a
+          // device out of storage gets the same message an upload would
+          // (#7125); every other failure gets the generic one.
           final assemblyFailed =
               error.reason == VideoRenderFailureReason.stopMotionAssembly;
+          final outOfStorage =
+              error.reason == VideoRenderFailureReason.insufficientStorage;
+          final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
           final message =
               (assemblyFailed ? stopMotionFailedMessage : null) ??
-              currentAppL10n(
-                ref.read(sharedPreferencesProvider),
-              ).publishErrorMessage(PublishErrorKind.generic);
+              l10n.publishErrorMessage(
+                outOfStorage
+                    ? PublishErrorKind.lowStorage
+                    : PublishErrorKind.generic,
+              );
           setError(message);
           _showPublishError(message);
           await creationTracker.publishFailed(
             mode: recorderMode,
             reason: assemblyFailed
                 ? 'stop_motion_render_failed'
+                : outOfStorage
+                ? 'render_low_storage'
                 : 'render_failed',
           );
           return;
