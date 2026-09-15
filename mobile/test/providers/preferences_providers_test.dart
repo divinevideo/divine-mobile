@@ -41,6 +41,7 @@ void main() {
           languagePreferenceServiceProvider.overrideWithValue(service),
         ],
       );
+      addTearDown(container.dispose);
 
       final versions = <int>[];
       container.listen(
