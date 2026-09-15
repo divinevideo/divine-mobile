@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:clock/clock.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
@@ -1029,7 +1030,7 @@ class NostrClient {
     required Duration timeout,
     required bool requireAllRelaysSettled,
   }) async {
-    final startedAt = DateTime.now();
+    final startedAt = clock.now();
     // A disposed client's query pool is closed; querying it is a no-op
     // rather than an error. This is the common case (checked upfront to
     // skip pointless cache/reconnect work below) — the narrower re-check
@@ -1062,12 +1063,12 @@ class NostrClient {
         : RelayPool.querySettleWindow;
     final preparationDeadline = deadline.subtract(networkReservation);
     Duration remainingTimeout() {
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
     Duration remainingPreparationTime() {
-      final remaining = preparationDeadline.difference(DateTime.now());
+      final remaining = preparationDeadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
@@ -1285,7 +1286,7 @@ class NostrClient {
                     // had a relay still holding the REQ when the deadline
                     // fired.
                     (network.endedBy == QueryEnd.noRelay &&
-                        !DateTime.now().isBefore(deadline))),
+                        !clock.now().isBefore(deadline))),
     );
   }
 
@@ -1357,13 +1358,13 @@ class NostrClient {
     Duration pageTimeout = const Duration(seconds: 10),
     Duration? timeout = const Duration(minutes: 2),
   }) async {
-    final startedAt = DateTime.now();
+    final startedAt = clock.now();
     final deadline = timeout == null ? null : startedAt.add(timeout);
     // With no overall deadline, one page's budget bounds each step that has
     // to settle before the walk can start.
     Duration budget() {
       if (deadline == null) return pageTimeout;
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
@@ -1473,7 +1474,7 @@ class NostrClient {
   }) {
     final sink = _relayManager.diagnosticsSink;
     if (sink == null) return;
-    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    final elapsedMs = clock.now().difference(startedAt).inMilliseconds;
     emitRelayDiagnostic(
       sink,
       RelayDiagnostic(
@@ -1530,9 +1531,9 @@ class NostrClient {
     List<int> relayTypes = RelayType.all,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    final deadline = DateTime.now().add(timeout);
+    final deadline = clock.now().add(timeout);
     Duration remainingTimeout() {
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 

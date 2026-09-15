@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +16,7 @@ class _MockNostr extends Mock implements Nostr {
   /// What is left of [deadline], never negative — the budget a real read
   /// spends when it is handed one instead of a duration.
   static Duration _remainingUntil(DateTime deadline) {
-    final left = deadline.difference(DateTime.now());
+    final left = deadline.difference(clock.now());
     return left.isNegative ? Duration.zero : left;
   }
 
@@ -5854,193 +5855,221 @@ void main() {
     group('end-to-end query timeout (#7091)', () {
       test(
         'a pool waiter cannot consume the reserved network window',
-        () async {
-          final originalMax = NostrClient.maxConcurrentQueries;
-          NostrClient.maxConcurrentQueries = 1;
-          addTearDown(() => NostrClient.maxConcurrentQueries = originalMax);
+        () {
+          fakeAsync((async) {
+            withClock(async.getClock(DateTime(2026)), () {
+              final originalMax = NostrClient.maxConcurrentQueries;
+              NostrClient.maxConcurrentQueries = 1;
+              addTearDown(
+                () => NostrClient.maxConcurrentQueries = originalMax,
+              );
 
-          final firstQueryStarted = Completer<void>();
-          final releaseFirstQuery = Completer<void>();
-          var queryCount = 0;
-          when(
-            () => mockNostr.queryEvents(
-              any(),
-              id: any(named: 'id'),
-              tempRelays: any(named: 'tempRelays'),
-              relayTypes: any(named: 'relayTypes'),
-              sendAfterAuth: any(named: 'sendAfterAuth'),
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((_) async {
-            queryCount++;
-            if (queryCount == 1) {
-              firstQueryStarted.complete();
-              await releaseFirstQuery.future;
-            }
-            return const [];
+              final releaseFirstQuery = Completer<void>();
+              var queryCount = 0;
+              when(
+                () => mockNostr.queryEvents(
+                  any(),
+                  id: any(named: 'id'),
+                  tempRelays: any(named: 'tempRelays'),
+                  relayTypes: any(named: 'relayTypes'),
+                  sendAfterAuth: any(named: 'sendAfterAuth'),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).thenAnswer((_) async {
+                queryCount++;
+                if (queryCount == 1) await releaseFirstQuery.future;
+                return const [];
+              });
+
+              final pooledClient = NostrClient.forTesting(
+                nostr: mockNostr,
+                relayManager: mockRelayManager,
+              );
+              addTearDown(pooledClient.dispose);
+              unawaited(
+                pooledClient.queryEventsDetailed(
+                  [
+                    Filter(kinds: const [EventKind.textNote]),
+                  ],
+                  useCache: false,
+                ),
+              );
+              async.flushMicrotasks();
+              expect(queryCount, 1);
+
+              QueryResult? expired;
+              unawaited(
+                pooledClient
+                    .readEvents(
+                      [
+                        Filter(kinds: const [EventKind.reaction]),
+                      ],
+                      useCache: false,
+                      timeout: const Duration(milliseconds: 800),
+                    )
+                    .then((result) => expired = result),
+              );
+              async.elapse(Duration.zero);
+
+              expect(expired?.endedBy, QueryEnd.deadline);
+              expect(async.elapsed, Duration.zero);
+
+              releaseFirstQuery.complete();
+              async.flushMicrotasks();
+              expect(
+                queryCount,
+                1,
+                reason:
+                    'an expired pool waiter must release its eventual slot '
+                    'without dispatching abandoned network work',
+              );
+            });
           });
-
-          final pooledClient = NostrClient.forTesting(
-            nostr: mockNostr,
-            relayManager: mockRelayManager,
-          );
-          addTearDown(pooledClient.dispose);
-          final firstQuery = pooledClient.queryEventsDetailed(
-            [
-              Filter(kinds: const [EventKind.textNote]),
-            ],
-            useCache: false,
-          );
-          await firstQueryStarted.future;
-
-          final waiterStarted = DateTime.now();
-          final expired = await pooledClient.readEvents(
-            [
-              Filter(kinds: const [EventKind.reaction]),
-            ],
-            useCache: false,
-            timeout: const Duration(milliseconds: 800),
-          );
-          expect(expired.endedBy, QueryEnd.deadline);
-          expect(
-            DateTime.now().difference(waiterStarted),
-            lessThan(const Duration(milliseconds: 400)),
-            reason:
-                'the waiter gives up before the reserved network window, so '
-                'it cannot spend the caller deadline on the slot it never got',
-          );
-
-          releaseFirstQuery.complete();
-          await firstQuery;
-          await Future<void>.delayed(Duration.zero);
-
-          expect(
-            queryCount,
-            1,
-            reason:
-                'an expired pool waiter must release its eventual slot '
-                'without dispatching abandoned network work',
-          );
         },
       );
 
       test(
         'cache and reconnect cannot starve a short network read',
-        () async {
-          final mockDbClient = _MockAppDbClient();
-          final mockDatabase = _MockAppDatabase();
-          final dao = _MockNostrEventsDao();
-          when(() => mockDbClient.database).thenReturn(mockDatabase);
-          when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
-          when(
-            () => dao.getEventsByFilter(any()),
-          ).thenAnswer((_) => Completer<List<Event>>().future);
-          when(() => mockRelayManager.connectedRelays).thenReturn(const []);
-          when(
-            mockRelayManager.retryDisconnectedRelays,
-          ).thenAnswer((_) => Completer<void>().future);
+        () {
+          fakeAsync((async) {
+            withClock(async.getClock(DateTime(2026)), () {
+              final mockDbClient = _MockAppDbClient();
+              final mockDatabase = _MockAppDatabase();
+              final dao = _MockNostrEventsDao();
+              when(() => mockDbClient.database).thenReturn(mockDatabase);
+              when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
+              when(
+                () => dao.getEventsByFilter(any()),
+              ).thenAnswer((_) => Completer<List<Event>>().future);
+              when(() => mockRelayManager.connectedRelays).thenReturn(const []);
+              when(
+                mockRelayManager.retryDisconnectedRelays,
+              ).thenAnswer((_) => Completer<void>().future);
 
-          Duration? handedBudget;
-          when(
-            () => mockNostr.queryEvents(
-              any(),
-              id: any(named: 'id'),
-              tempRelays: any(named: 'tempRelays'),
-              relayTypes: any(named: 'relayTypes'),
-              sendAfterAuth: any(named: 'sendAfterAuth'),
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((invocation) async {
-            handedBudget = invocation.namedArguments[#timeout] as Duration;
-            return const [];
+              Duration? handedBudget;
+              when(
+                () => mockNostr.queryEvents(
+                  any(),
+                  id: any(named: 'id'),
+                  tempRelays: any(named: 'tempRelays'),
+                  relayTypes: any(named: 'relayTypes'),
+                  sendAfterAuth: any(named: 'sendAfterAuth'),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).thenAnswer((invocation) async {
+                handedBudget = invocation.namedArguments[#timeout] as Duration;
+                return const [];
+              });
+
+              final clientWithCache = NostrClient.forTesting(
+                nostr: mockNostr,
+                relayManager: mockRelayManager,
+                dbClient: mockDbClient,
+              );
+              addTearDown(clientWithCache.dispose);
+
+              const requestedTimeout = Duration(milliseconds: 200);
+              QueryResult? result;
+              unawaited(
+                clientWithCache
+                    .readEvents(
+                      [
+                        Filter(kinds: const [EventKind.textNote]),
+                      ],
+                      timeout: requestedTimeout,
+                    )
+                    .then((value) => result = value),
+              );
+              async.elapse(Duration.zero);
+
+              expect(result?.endedBy, QueryEnd.complete);
+              verify(() => dao.getEventsByFilter(any())).called(1);
+              verify(mockRelayManager.retryDisconnectedRelays).called(1);
+              expect(
+                handedBudget,
+                requestedTimeout,
+                reason:
+                    'preparatory work must leave a useful share of the '
+                    "caller's "
+                    'short deadline for the relay read',
+              );
+            });
           });
-
-          final clientWithCache = NostrClient.forTesting(
-            nostr: mockNostr,
-            relayManager: mockRelayManager,
-            dbClient: mockDbClient,
-          );
-          addTearDown(clientWithCache.dispose);
-
-          const requestedTimeout = Duration(milliseconds: 200);
-          final result = await clientWithCache.readEvents(
-            [
-              Filter(kinds: const [EventKind.textNote]),
-            ],
-            timeout: requestedTimeout,
-          );
-
-          expect(result.endedBy, QueryEnd.complete);
-          verify(() => dao.getEventsByFilter(any())).called(1);
-          verify(mockRelayManager.retryDisconnectedRelays).called(1);
-          expect(
-            handedBudget,
-            greaterThan(requestedTimeout ~/ 2),
-            reason:
-                "preparatory work must leave a useful share of the caller's "
-                'short deadline for the relay read',
-          );
         },
       );
 
       test(
         'a hung cache cannot spend the reserved network window',
-        () async {
-          final mockDbClient = _MockAppDbClient();
-          final mockDatabase = _MockAppDatabase();
-          final dao = _MockNostrEventsDao();
-          when(() => mockDbClient.database).thenReturn(mockDatabase);
-          when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
-          // A cache read that never returns: it may spend the whole
-          // preparation budget, and the relay leg must still be handed the
-          // window that budget was held back for.
-          when(
-            () => dao.getEventsByFilter(any()),
-          ).thenAnswer((_) => Completer<List<Event>>().future);
+        () {
+          fakeAsync((async) {
+            withClock(async.getClock(DateTime(2026)), () {
+              final mockDbClient = _MockAppDbClient();
+              final mockDatabase = _MockAppDatabase();
+              final dao = _MockNostrEventsDao();
+              when(() => mockDbClient.database).thenReturn(mockDatabase);
+              when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
+              // A cache read that never returns: it may spend the whole
+              // preparation budget, and the relay leg must still be handed the
+              // window that budget was held back for.
+              when(
+                () => dao.getEventsByFilter(any()),
+              ).thenAnswer((_) => Completer<List<Event>>().future);
 
-          Duration? handedBudget;
-          when(
-            () => mockNostr.queryEvents(
-              any(),
-              id: any(named: 'id'),
-              tempRelays: any(named: 'tempRelays'),
-              relayTypes: any(named: 'relayTypes'),
-              sendAfterAuth: any(named: 'sendAfterAuth'),
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((invocation) async {
-            handedBudget = invocation.namedArguments[#timeout] as Duration;
-            return const [];
+              Duration? handedBudget;
+              when(
+                () => mockNostr.queryEvents(
+                  any(),
+                  id: any(named: 'id'),
+                  tempRelays: any(named: 'tempRelays'),
+                  relayTypes: any(named: 'relayTypes'),
+                  sendAfterAuth: any(named: 'sendAfterAuth'),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).thenAnswer((invocation) async {
+                handedBudget = invocation.namedArguments[#timeout] as Duration;
+                return const [];
+              });
+
+              final clientWithCache = NostrClient.forTesting(
+                nostr: mockNostr,
+                relayManager: mockRelayManager,
+                dbClient: mockDbClient,
+              );
+              addTearDown(clientWithCache.dispose);
+
+              // Just above the reserved window, so preparation is cut at the
+              // reservation rather than at the caller's deadline.
+              const requestedTimeout = Duration(milliseconds: 1200);
+              QueryResult? result;
+              unawaited(
+                clientWithCache
+                    .readEvents(
+                      [
+                        Filter(kinds: const [EventKind.textNote]),
+                      ],
+                      timeout: requestedTimeout,
+                    )
+                    .then((value) => result = value),
+              );
+              async.flushMicrotasks();
+              expect(result, isNull);
+
+              async.elapse(const Duration(milliseconds: 199));
+              expect(result, isNull);
+
+              async.elapse(const Duration(milliseconds: 1));
+              expect(result?.endedBy, QueryEnd.complete);
+              verify(() => dao.getEventsByFilter(any())).called(1);
+              expect(
+                handedBudget,
+                RelayPool.querySettleWindow,
+                reason:
+                    'a cache read that spends the whole preparation budget '
+                    'must '
+                    'not eat into the window reserved for the relay leg',
+              );
+            });
           });
-
-          final clientWithCache = NostrClient.forTesting(
-            nostr: mockNostr,
-            relayManager: mockRelayManager,
-            dbClient: mockDbClient,
-          );
-          addTearDown(clientWithCache.dispose);
-
-          // Just above the reserved window, so preparation is cut at the
-          // reservation rather than at the caller's deadline.
-          const requestedTimeout = Duration(milliseconds: 1200);
-          final result = await clientWithCache.readEvents(
-            [
-              Filter(kinds: const [EventKind.textNote]),
-            ],
-            timeout: requestedTimeout,
-          );
-
-          expect(result.endedBy, QueryEnd.complete);
-          verify(() => dao.getEventsByFilter(any())).called(1);
-          expect(
-            handedBudget,
-            greaterThanOrEqualTo(
-              RelayPool.querySettleWindow - const Duration(milliseconds: 50),
-            ),
-            reason:
-                'a cache read that spends the whole preparation budget must '
-                'not eat into the window reserved for the relay leg',
-          );
         },
       );
 
