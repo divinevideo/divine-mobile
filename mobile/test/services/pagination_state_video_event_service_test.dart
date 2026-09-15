@@ -1,5 +1,5 @@
-// ABOUTME: Tests for VideoEventService pagination behavior and hasMore flag
-// ABOUTME: Validates proper TDD implementation of pagination state management
+// ABOUTME: Tests pagination state behavior and its VideoEventService integration.
+// ABOUTME: Covers result counts, cursors, resets, and load-more decisions.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -7,7 +7,9 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/pagination_state.dart';
+import 'package:openvine/services/video_event_service.dart'
+    hide PaginationState;
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
