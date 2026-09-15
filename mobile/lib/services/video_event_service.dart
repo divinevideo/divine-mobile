@@ -42,6 +42,7 @@ import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/feed_load_trace.dart';
 import 'package:openvine/services/feed_retry_scheduler.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/pagination_state.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/repost_resolver.dart';
 import 'package:openvine/services/video_block_policy.dart';
@@ -54,79 +55,7 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_event_cache/video_event_cache.dart';
 
-/// Pagination state for tracking cursor position and loading status per subscription
-class PaginationState {
-  int? oldestTimestamp;
-  bool isLoading;
-  bool hasMore;
-  Set<String> seenEventIds;
-  int eventsReceivedInCurrentQuery;
-
-  PaginationState({
-    this.oldestTimestamp,
-    this.isLoading = false,
-    this.hasMore = true,
-    Set<String>? seenEventIds,
-    this.eventsReceivedInCurrentQuery = 0,
-  }) : seenEventIds = seenEventIds ?? <String>{};
-
-  void updateOldestTimestamp(int timestamp) {
-    if (oldestTimestamp == null || timestamp < oldestTimestamp!) {
-      oldestTimestamp = timestamp;
-    }
-  }
-
-  void markEventSeen(String eventId) {
-    // Normalize ID to lowercase for case-insensitive deduplication
-    seenEventIds.add(eventId.toLowerCase());
-  }
-
-  void startQuery() {
-    eventsReceivedInCurrentQuery = 0;
-    hasMore = true;
-    isLoading = true;
-  }
-
-  void incrementEventCount() {
-    eventsReceivedInCurrentQuery++;
-  }
-
-  /// Records a per-query tally the caller counted for itself.
-  ///
-  /// [incrementEventCount] only fires for events flagged `isHistorical`, which
-  /// is set on the load-more path alone. An initial subscription delivers its
-  /// stored backlog through the real-time handler, so its tally stays at zero
-  /// and [completeQuery] would call the feed exhausted however much arrived.
-  ///
-  /// Takes the larger of the two counts so an externally observed tally seeds
-  /// missing events without erasing events already counted on this query.
-  void recordReceivedCount(int count) {
-    if (count > eventsReceivedInCurrentQuery) {
-      eventsReceivedInCurrentQuery = count;
-    }
-  }
-
-  void completeQuery(int requestedLimit) {
-    isLoading = false;
-    // If we received fewer events than requested, assume no more content
-    if (eventsReceivedInCurrentQuery < requestedLimit) {
-      hasMore = false;
-      Log.info(
-        'PaginationState: No more content available - received $eventsReceivedInCurrentQuery < $requestedLimit requested',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-    }
-  }
-
-  void reset() {
-    oldestTimestamp = null;
-    isLoading = false;
-    hasMore = true;
-    seenEventIds.clear();
-    eventsReceivedInCurrentQuery = 0;
-  }
-}
+export 'package:openvine/services/pagination_state.dart';
 
 /// Subscription types for different video feed categories
 enum SubscriptionType {
