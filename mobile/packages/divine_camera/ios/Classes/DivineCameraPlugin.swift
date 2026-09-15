@@ -246,6 +246,12 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             
         case "resumePreview":
             resumePreview(result: result)
+
+        case "suspendAudioCapture":
+            suspendAudioCapture(result: result)
+
+        case "resumeAudioCapture":
+            resumeAudioCapture(result: result)
             
         case "getCameraState":
             getCameraState(result: result)
@@ -509,6 +515,26 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    private func suspendAudioCapture(result: @escaping FlutterResult) {
+        guard let controller = cameraController else {
+            result(nil)
+            return
+        }
+        controller.suspendAudioCapture {
+            result(nil)
+        }
+    }
+
+    private func resumeAudioCapture(result: @escaping FlutterResult) {
+        guard let controller = cameraController else {
+            result(nil)
+            return
+        }
+        controller.resumeAudioCapture {
+            result(nil)
+        }
+    }
+
     private func getCameraState(result: @escaping FlutterResult) {
         guard let controller = cameraController else {
             result(Self.cameraError("NOT_INITIALIZED", "Camera not initialized"))

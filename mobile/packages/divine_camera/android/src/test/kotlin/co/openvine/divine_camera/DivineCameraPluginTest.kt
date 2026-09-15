@@ -52,6 +52,24 @@ internal class DivineCameraPluginTest {
     }
 
     @Test
+    fun onMethodCall_audioCaptureSuspension_answersWithoutACamera() {
+        // CameraX opens the mic per recording, so both calls are no-ops on
+        // Android — but they must still answer, or Dart would surface a
+        // MissingPluginException in the middle of every countdown.
+        val plugin = DivineCameraPlugin()
+
+        for (method in listOf("suspendAudioCapture", "resumeAudioCapture")) {
+            val result = RecordingResult()
+            plugin.onMethodCall(MethodCall(method, null), result)
+
+            assertEquals(1, result.successCount, method)
+            assertNull(result.lastSuccessValue, method)
+            assertEquals(0, result.errorCount, method)
+            assertEquals(0, result.notImplementedCount, method)
+        }
+    }
+
+    @Test
     fun oneShotResult_initializeStyleFlow_answersFlutterOnlyOnce() {
         val result = RecordingResult()
         val oneShot = OneShotMethodResult(result)

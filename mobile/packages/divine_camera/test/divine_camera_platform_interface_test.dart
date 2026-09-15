@@ -62,6 +62,12 @@ class TestDivineCameraPlatform extends DivineCameraPlatform
   Future<void> resumePreview() async {}
 
   @override
+  Future<void> suspendAudioCapture() async {}
+
+  @override
+  Future<void> resumeAudioCapture() async {}
+
+  @override
   Future<CameraState> getCameraState() async =>
       const CameraState(isInitialized: true);
 
@@ -208,6 +214,20 @@ void main() {
       test('resumePreview throws', () {
         expect(
           () => basePlatform.resumePreview(),
+          throwsA(isA<UnimplementedError>()),
+        );
+      });
+
+      test('suspendAudioCapture throws', () {
+        expect(
+          () => basePlatform.suspendAudioCapture(),
+          throwsA(isA<UnimplementedError>()),
+        );
+      });
+
+      test('resumeAudioCapture throws', () {
+        expect(
+          () => basePlatform.resumeAudioCapture(),
           throwsA(isA<UnimplementedError>()),
         );
       });

@@ -186,6 +186,16 @@ class DivineCameraPlugin :
                 resumePreview(oneShotResult)
             }
 
+            // Nothing to suspend: CameraX's Recorder starts its AudioSource
+            // when a recording starts and stops it when the recording
+            // finalizes, so the mic is already closed between recordings
+            // and the countdown beeps never reach an open input path. The
+            // iOS controller keeps the mic open for an instant record tap
+            // and needs both calls; see CameraController.swift.
+            "suspendAudioCapture", "resumeAudioCapture" -> {
+                oneShotResult.success(null)
+            }
+
             "getCameraState" -> {
                 getCameraState(oneShotResult)
             }

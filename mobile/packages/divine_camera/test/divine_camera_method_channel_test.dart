@@ -458,6 +458,36 @@ void main() {
       await expectLater(platform.resumePreview(), completes);
     });
 
+    test('suspendAudioCapture invokes the method with no arguments', () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            calls.add(methodCall);
+            return null;
+          });
+
+      await platform.suspendAudioCapture();
+
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'suspendAudioCapture');
+      expect(calls.single.arguments, isNull);
+    });
+
+    test('resumeAudioCapture invokes the method with no arguments', () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            calls.add(methodCall);
+            return null;
+          });
+
+      await platform.resumeAudioCapture();
+
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'resumeAudioCapture');
+      expect(calls.single.arguments, isNull);
+    });
+
     test('getCameraState returns CameraState', () async {
       final state = await platform.getCameraState();
 

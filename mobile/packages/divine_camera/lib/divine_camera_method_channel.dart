@@ -310,6 +310,16 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   }
 
   @override
+  Future<void> suspendAudioCapture() async {
+    await methodChannel.invokeMethod<void>('suspendAudioCapture');
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    await methodChannel.invokeMethod<void>('resumeAudioCapture');
+  }
+
+  @override
   Future<CameraState> getCameraState() async {
     final result = await methodChannel.invokeMapMethod<dynamic, dynamic>(
       'getCameraState',

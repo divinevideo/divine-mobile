@@ -129,6 +129,12 @@ class MockDivineCameraPlatform
   Future<void> resumePreview() async {}
 
   @override
+  Future<void> suspendAudioCapture() async {}
+
+  @override
+  Future<void> resumeAudioCapture() async {}
+
+  @override
   Future<CameraState> getCameraState() async => _state;
 
   @override

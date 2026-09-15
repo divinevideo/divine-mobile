@@ -164,6 +164,25 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     throw UnimplementedError('resumePreview() has not been implemented.');
   }
 
+  /// Releases the microphone until [resumeAudioCapture] or the next
+  /// recording.
+  ///
+  /// Platforms that keep the mic open between recordings so the record tap
+  /// is instant (iOS) close it here; platforms that open the mic per
+  /// recording anyway treat this as a no-op. The preview keeps running.
+  Future<void> suspendAudioCapture() {
+    throw UnimplementedError('suspendAudioCapture() has not been implemented.');
+  }
+
+  /// Reopens the microphone released by [suspendAudioCapture].
+  ///
+  /// Starting a recording reopens it as well, so a resume that never comes
+  /// is harmless; calling this ahead of the recording keeps the reopen off
+  /// the record tap.
+  Future<void> resumeAudioCapture() {
+    throw UnimplementedError('resumeAudioCapture() has not been implemented.');
+  }
+
   /// Gets the current camera state.
   Future<CameraState> getCameraState() {
     throw UnimplementedError('getCameraState() has not been implemented.');

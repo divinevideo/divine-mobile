@@ -120,6 +120,16 @@ class MockCameraService extends CameraService {
   }
 
   @override
+  Future<void> suspendAudioCapture() async {
+    // Mock implementation - no microphone to release
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    // Mock implementation - no microphone to reopen
+  }
+
+  @override
   double get cameraAspectRatio => 16 / 9;
 
   @override
