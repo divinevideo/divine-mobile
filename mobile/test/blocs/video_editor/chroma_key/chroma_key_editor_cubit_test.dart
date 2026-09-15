@@ -508,6 +508,81 @@ void main() {
           expect(cubit.state.chromaKey.key.similarity, 0.4);
         },
       );
+
+      test(
+        'a re-run after the edit adopts the re-run, not the spent one',
+        () async {
+          final spent = Completer<ChromaKeyDetection>();
+          final rerun = Completer<ChromaKeyDetection>();
+          var calls = 0;
+          final cubit = build(
+            detect: (_) => calls++ == 0 ? spent.future : rerun.future,
+          );
+          addTearDown(cubit.close);
+
+          final measuring = cubit.detectFromFootage();
+          cubit.setKeyColor(const Color(0xFF0000FF));
+          final remeasuring = cubit.detectFromFootage();
+
+          // The measurement the edit wrote off lands while the user's fresh one
+          // is still decoding. Adopting it would put the measured colour back
+          // over the edit and take the panel out of `detecting` — so the fresh
+          // decode is dropped when it lands and the button can start a third.
+          spent.complete(
+            const ChromaKeyDetection(
+              color: Color(0xFF111111),
+              similarity: 0.9,
+              coverage: 0.5,
+              spread: 0.1,
+            ),
+          );
+          await measuring;
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF0000FF));
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.detecting,
+          );
+
+          rerun.complete(measured);
+          await remeasuring;
+          expect(cubit.state.chromaKey.key.color, measured.color);
+          expect(cubit.state.chromaKey.key.similarity, measured.similarity);
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        },
+      );
+
+      test(
+        'a failure from a measurement the user has replaced stays quiet',
+        () async {
+          final spent = Completer<ChromaKeyDetection>();
+          final rerun = Completer<ChromaKeyDetection>();
+          var calls = 0;
+          final cubit = build(
+            detect: (_) => calls++ == 0 ? spent.future : rerun.future,
+          );
+          addTearDown(cubit.close);
+
+          final measuring = cubit.detectFromFootage();
+          cubit.setSimilarity(0.4);
+          final remeasuring = cubit.detectFromFootage();
+
+          // The superseded decode fails. The edit wrote its result off and the
+          // user has asked for a fresh measurement since, so the failure is
+          // stale news: reporting it would flash the failure state over the
+          // fresh decode and drop that result with it.
+          spent.completeError(const ChromaKeyDetectionException('no screen'));
+          await measuring;
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.detecting,
+          );
+
+          rerun.complete(measured);
+          await remeasuring;
+          expect(cubit.state.chromaKey.key.similarity, measured.similarity);
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        },
+      );
     });
 
     group('background', () {

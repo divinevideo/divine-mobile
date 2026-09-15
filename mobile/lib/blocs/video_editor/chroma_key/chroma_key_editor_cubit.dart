@@ -76,12 +76,21 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   final EditorVideo _video;
   final ChromaKeyDetectFn _detect;
 
+  /// Identifies the measurement whose result is still wanted.
+  ///
+  /// Every start takes the next id. An edit while one runs writes it off
+  /// through `isDetecting` and leaves the id alone; a re-run takes a new id,
+  /// so a superseded measurement loses even though it lands on the re-run's
+  /// `detecting` status, and its failure cannot report over the re-run either.
+  int _latestDetectionId = 0;
+
   /// Measures the screen off the footage and adopts colour and similarity.
   ///
   /// Smoothness, spill and the chosen background are the user's, so a
   /// measurement never overwrites them. Neither does it overwrite a colour or
   /// amount set by hand while it ran: that edit writes the measurement off
-  /// (see [_statusAfterManualKeyEdit]) and the result is dropped.
+  /// (see [_statusAfterManualKeyEdit]) and the result is dropped. A later
+  /// measurement supersedes an earlier one the same way.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
     // Both callers discard this future — the constructor with `unawaited`, the
@@ -93,6 +102,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     )) {
       return;
     }
+    final detectionId = ++_latestDetectionId;
 
     // Only the measurement is wrapped. A wider `try` would catch the emits
     // below as well and file a post-close `emit` throw as a detection failure,
@@ -108,13 +118,13 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
         name: _logName,
         category: LogCategory.video,
       );
-      _reportDetectionFailure(error, stackTrace);
+      _reportDetectionFailure(detectionId, error, stackTrace);
       return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
       // not.
-      _reportDetectionFailure(switch (error) {
+      _reportDetectionFailure(detectionId, switch (error) {
         StateError() ||
         TypeError() ||
         RangeError() => Reportable(error, context: 'detectFromFootage'),
@@ -124,8 +134,10 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     }
 
     // A colour or amount set by hand while this ran already took the status
-    // back to idle. That edit was deliberate and this is a guess, so it loses.
-    if (!state.isDetecting) return;
+    // back to idle, and a re-run since has taken the latest id. Either way
+    // this result is spent: the edit was deliberate and this is a guess, and
+    // a later guess beats an earlier one.
+    if (!state.isDetecting || detectionId != _latestDetectionId) return;
 
     emitIfOpen(
       state.copyWith(
@@ -141,14 +153,19 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     );
   }
 
-  /// Reports a failed measurement, unless the screen already closed.
+  /// Reports a failed measurement, unless the screen already closed or a later
+  /// measurement has replaced this one.
   ///
   /// `BlocBase.addError` documents that it must not be called on a closed
   /// sink, and it has no `isClosed` check of its own: it forwards straight to
   /// the observer, which logs and — for an invariant violation — files a crash
   /// report against a cubit the user already backed out of.
-  void _reportDetectionFailure(Object error, StackTrace stackTrace) {
-    if (isClosed) return;
+  void _reportDetectionFailure(
+    int detectionId,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    if (isClosed || detectionId != _latestDetectionId) return;
     addError(error, stackTrace);
     emitIfOpen(
       state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
