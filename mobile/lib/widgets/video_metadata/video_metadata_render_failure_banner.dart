@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
@@ -63,12 +65,15 @@ class _RenderFailureNoticeState extends State<_RenderFailureNotice> {
     super.initState();
     // The banner swaps in on a state change, not a route push, so screen
     // readers get no automatic signal — announce it explicitly (#7125).
+    // Fire-and-forget: the platform reports nothing worth reacting to.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        widget.message,
-        Directionality.of(context),
+      unawaited(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          widget.message,
+          Directionality.of(context),
+        ),
       );
     });
   }
