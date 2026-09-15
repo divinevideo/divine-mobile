@@ -262,9 +262,12 @@ class _VideoAudioEditorTimingScreenState
                             context.l10n.videoEditorAudioLabel,
                           ),
                       onClose: widget.enableDeleteButton
-                          ? _deleteAudio
+                          ? () => _runDetached(_deleteAudio(), 'delete audio')
                           : context.pop,
-                      onDone: _confirmSelection,
+                      onDone: () => _runDetached(
+                        _confirmSelection(),
+                        'confirm audio timing',
+                      ),
                       center: Flexible(
                         child: IgnorePointer(
                           child: VideoEditorAudioChip(
