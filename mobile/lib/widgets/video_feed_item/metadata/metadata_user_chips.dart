@@ -247,15 +247,19 @@ class MetadataInspiredBySection extends StatelessWidget {
 
   final VideoEvent video;
 
-  /// Credited creators, deduplicated across every source the removed feed
-  /// row rendered: the inspiring video's author, the NIP-27 content
-  /// reference, the `inspired-by` p-tags, and every factual clip-source
-  /// credit. Each source is added on its own — the primary getter is
-  /// first-wins over them, so relying on it alone drops a creator the row
-  /// showed. [VideoEvent.hasInspiredBy] gates the whole section, which keeps
-  /// replies on their parent context instead of the Inspired By treatment.
+  /// Credited creators, deduplicated across every source: the primary
+  /// attribution the getter resolves, the NIP-27 content reference, the
+  /// `inspired-by` p-tags, and every factual clip-source credit. The primary
+  /// getter is first-wins over its sources, so the rest are added on their
+  /// own or a creator the removed feed row showed would lose its only
+  /// surface.
+  ///
+  /// The content reference and clip-source credits stay off replies: the
+  /// model gives replies their parent context instead of the Inspired By
+  /// treatment (`VideoEvent.hasInspiredBy`), and the deleted row followed
+  /// that. The p-tags are added regardless because the About panel already
+  /// rendered them for legacy replies before this change.
   List<String> _creditedPubkeys() {
-    if (!video.hasInspiredBy) return const [];
     final pubkeys = <String>[];
     final seen = <String>{};
 
@@ -266,11 +270,13 @@ class MetadataInspiredBySection extends StatelessWidget {
     }
 
     add(video.inspiredByCreatorPubkey);
-    add(npubToHexOrNull(video.inspiredByNpub));
-    video.inspiredByPubkeys.forEach(add);
-    for (final credit in video.clipSourceCredits) {
-      add(credit.authorPubkey);
+    if (!video.isVideoReply) {
+      add(npubToHexOrNull(video.inspiredByNpub));
+      for (final credit in video.clipSourceCredits) {
+        add(credit.authorPubkey);
+      }
     }
+    video.inspiredByPubkeys.forEach(add);
     return pubkeys;
   }
 

@@ -1319,14 +1319,45 @@ void main() {
       },
     );
 
-    testWidgetsWithSurfaceSize('hides when the video is a reply', (
+    testWidgetsWithSurfaceSize(
+      'keeps a legacy inspired-by p-tag credit on a reply',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByPubkeys: const [_inspiredByPubkey],
+          nostrEventTags: const [
+            ['E', _parentEventId],
+            ['K', '34236'],
+          ],
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize('adds no new credits to a reply', (
       tester,
     ) async {
       final video = _makeVideo(
-        inspiredByVideo: const InspiredByInfo(
-          addressableId: '34236:$_inspiredByPubkey:some-dtag',
-        ),
-        inspiredByPubkeys: const [_inspiredByPubkey],
+        inspiredByNpub: normalizeToNpub(_collaborator1),
+        clipSourceCredits: const [
+          ClipSourceCredit(
+            authorPubkey: _collaborator2,
+            addressableId: '34236:$_collaborator2:reused-clip',
+          ),
+        ],
         nostrEventTags: const [
           ['E', _parentEventId],
           ['K', '34236'],
