@@ -5,7 +5,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -110,7 +109,7 @@ void main() {
       });
       final blocker = File('${blockerDir.path}/storage_blocker');
       await blocker.writeAsString('not a directory');
-      Hive.init(blocker.path);
+      TestHelpers.setHiveHomeForTesting(blocker.path);
 
       final store = _store();
       addTearDown(store.disposeStore);
