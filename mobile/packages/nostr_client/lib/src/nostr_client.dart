@@ -887,7 +887,11 @@ class NostrClient {
   /// [timeout] is an end-to-end deadline for the cache read, reconnect sweep,
   /// query-pool acquisition, and WebSocket query together. Exhausting it
   /// returns `timedOut: true` alongside whatever the relays that did answer
-  /// had delivered by then. A WebSocket query that does not honor its own
+  /// had delivered by then. The relay SDK's one-second settle window is
+  /// reserved for the WebSocket leg; preparatory work that cannot finish
+  /// before that reservation begins is abandoned. For a shorter timeout, the
+  /// whole timeout is reserved for a relay read that can start immediately.
+  /// A WebSocket query that does not honor its own
   /// budget may run for up to 250 ms beyond that deadline before its partial
   /// events are abandoned. A pool waiter that expires remains in the package's
   /// FIFO only until a resource reaches it; it releases that resource without
@@ -1048,8 +1052,19 @@ class NostrClient {
     // that asked for 5s could wait 48s (#7091). This mirrors the same
     // discipline `Nostr.queryEventsDetailed` already applies one layer down.
     final deadline = startedAt.add(timeout);
+    // Preserve one relay settle window for the network leg without extending
+    // the caller's end-to-end deadline.
+    final networkReservation = timeout < RelayPool.querySettleWindow
+        ? timeout
+        : RelayPool.querySettleWindow;
+    final preparationDeadline = deadline.subtract(networkReservation);
     Duration remainingTimeout() {
       final remaining = deadline.difference(DateTime.now());
+      return remaining.isNegative ? Duration.zero : remaining;
+    }
+
+    Duration remainingPreparationTime() {
+      final remaining = preparationDeadline.difference(DateTime.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
@@ -1074,7 +1089,7 @@ class NostrClient {
             await dao
                 .getEventsByFilter(filters.first)
                 .timeout(
-                  remainingTimeout(),
+                  remainingPreparationTime(),
                 ),
             filters,
           ),
@@ -1106,7 +1121,7 @@ class NostrClient {
         _hasRelayOutsidePool(effectiveTempRelays);
     if (_relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool) {
       try {
-        await retryDisconnectedRelays().timeout(remainingTimeout());
+        await retryDisconnectedRelays().timeout(remainingPreparationTime());
       } on TimeoutException {
         // Reconnecting is best-effort: query whatever came up in the budget
         // rather than spending the caller's whole timeout dialling hosts that
@@ -1144,7 +1159,7 @@ class NostrClient {
       final acquisition = _queryPool.request();
       PoolResource resource;
       try {
-        resource = await acquisition.timeout(remainingTimeout());
+        resource = await acquisition.timeout(remainingPreparationTime());
       } on TimeoutException {
         // package:pool cannot remove a waiter from its FIFO. Drain it when a
         // slot eventually reaches it, but never run the abandoned callback.
@@ -1202,8 +1217,8 @@ class NostrClient {
         // an inactivity timer reset on every acquire and release, so a busy
         // pool resets it forever while one waiter starves.
         skippedReason =
-            'no query-pool slot arrived inside the budget, so '
-            'the read was skipped';
+            'no query-pool slot arrived before the reserved network window, '
+            'so the read was skipped';
       } on TimeoutException {
         // The read outlived its own deadline by the whole grace period. The
         // relay pool saw it and files its own line when it concludes, so the

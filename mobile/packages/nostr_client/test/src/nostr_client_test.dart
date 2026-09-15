@@ -5853,7 +5853,7 @@ void main() {
 
     group('end-to-end query timeout (#7091)', () {
       test(
-        'a pool waiter that exhausts its budget never starts a query',
+        'a pool waiter cannot consume the reserved network window',
         () async {
           final originalMax = NostrClient.maxConcurrentQueries;
           NostrClient.maxConcurrentQueries = 1;
@@ -5893,14 +5893,14 @@ void main() {
           );
           await firstQueryStarted.future;
 
-          final expired = await pooledClient.queryEventsDetailed(
+          final expired = await pooledClient.readEvents(
             [
               Filter(kinds: const [EventKind.reaction]),
             ],
             useCache: false,
-            timeout: Duration.zero,
+            timeout: const Duration(milliseconds: 800),
           );
-          expect(expired.timedOut, isTrue);
+          expect(expired.endedBy, QueryEnd.deadline);
 
           releaseFirstQuery.complete();
           await firstQuery;
@@ -5912,6 +5912,65 @@ void main() {
             reason:
                 'an expired pool waiter must release its eventual slot '
                 'without dispatching abandoned network work',
+          );
+        },
+      );
+
+      test(
+        'cache and reconnect cannot starve a short network read',
+        () async {
+          final mockDbClient = _MockAppDbClient();
+          final mockDatabase = _MockAppDatabase();
+          final dao = _MockNostrEventsDao();
+          when(() => mockDbClient.database).thenReturn(mockDatabase);
+          when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
+          when(
+            () => dao.getEventsByFilter(any()),
+          ).thenAnswer((_) => Completer<List<Event>>().future);
+          when(() => mockRelayManager.connectedRelays).thenReturn(const []);
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => Completer<void>().future);
+
+          Duration? handedBudget;
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            handedBudget = invocation.namedArguments[#timeout] as Duration;
+            return const [];
+          });
+
+          final clientWithCache = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+            dbClient: mockDbClient,
+          );
+          addTearDown(clientWithCache.dispose);
+
+          const requestedTimeout = Duration(milliseconds: 200);
+          final result = await clientWithCache.readEvents(
+            [
+              Filter(kinds: const [EventKind.textNote]),
+            ],
+            timeout: requestedTimeout,
+          );
+
+          expect(result.endedBy, QueryEnd.complete);
+          verify(() => dao.getEventsByFilter(any())).called(1);
+          verify(mockRelayManager.retryDisconnectedRelays).called(1);
+          expect(
+            handedBudget,
+            greaterThan(requestedTimeout ~/ 2),
+            reason:
+                "preparatory work must leave a useful share of the caller's "
+                'short deadline for the relay read',
           );
         },
       );
@@ -6073,7 +6132,7 @@ void main() {
 
           final result = await read(
             pooledClient,
-            timeout: const Duration(milliseconds: 800),
+            timeout: const Duration(milliseconds: 1800),
           );
           await occupant;
 
@@ -6082,7 +6141,7 @@ void main() {
           expect(handedBudgets, hasLength(2));
           expect(
             handedBudgets.last,
-            lessThan(const Duration(milliseconds: 800)),
+            lessThan(const Duration(milliseconds: 1800)),
           );
         });
       });
