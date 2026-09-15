@@ -1,6 +1,8 @@
 // ABOUTME: Tests the editor font lookup that draft restore relies on: name
 // ABOUTME: resolution, family-identifier matching and history scanning.
 
+import 'dart:async';
+
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -95,6 +97,25 @@ void main() {
 
     test('returns -1 for a missing identifier', () {
       expect(editorTextFontIndexFor(null), -1);
+    });
+
+    test('round-trips every editor font through the identifier it emits', () {
+      // Calling a tear-off is the only way to read the identifier google_fonts
+      // assigns, and it also schedules a load that fails in tests for every
+      // font that is not bundled. Those expected failures go to a nested zone
+      // so the assertion below is about the identifiers, not the loads.
+      final mismatches = <String>[];
+      runZonedGuarded(() {
+        for (final font in VideoEditorConstants.textFonts) {
+          final identifier = font().fontFamily;
+          final index = editorTextFontIndexFor(identifier);
+          final expected = VideoEditorConstants.textFonts.indexOf(font);
+          if (index != expected) {
+            mismatches.add('$identifier -> $index, expected $expected');
+          }
+        }
+      }, (error, stackTrace) {});
+      expect(mismatches, isEmpty);
     });
   });
 
