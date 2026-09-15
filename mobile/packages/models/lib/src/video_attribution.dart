@@ -36,10 +36,13 @@ String? inspiredByNpubFromContent(String content) =>
 /// Removes a trailing inspired-by attribution line from displayable content.
 ///
 /// Only a line whose npub decodes is removed; see [inspiredByNpubFromContent].
+/// Whitespace the caption carried before the blank-line separator goes with
+/// it, so a caption typed with a trailing newline does not keep a dangling
+/// one.
 String stripInspiredByAttribution(String content) {
   final match = _decodableAttributionMatch(content);
   if (match == null) return content;
-  return content.substring(0, match.start);
+  return content.substring(0, match.start).trimRight();
 }
 
 RegExpMatch? _decodableAttributionMatch(String content) {

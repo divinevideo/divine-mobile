@@ -91,6 +91,12 @@ void main() {
       expect(build(content: content).displayContent, equals(content));
     });
 
+    test('drops whitespace left behind by a stripped attribution line', () {
+      final content = 'caption\n\n\nInspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, equals('caption'));
+    });
+
     test('preserves an attribution line whose npub does not decode', () {
       const content =
           'caption\n\nInspired by nostr:npub1syntheticcreator000000000000000';
