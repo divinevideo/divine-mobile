@@ -98,9 +98,72 @@ or qualifying it.
 
 Check `mergedAt` before choosing a GitHub review state. Never submit
 `CHANGES_REQUESTED` after a pull request has merged: it cannot block the merge
-and reads as an outstanding author action. Use a plain `COMMENT` for useful
+and reads as an outstanding author action. Use an authorized ordinary `gh pr comment` for useful
 retrospective feedback, or file a separately authorized issue when verified
 follow-up work is required.
+
+### Submit an explicit review verdict
+
+Once posting is authorized, completing a review means submitting a GitHub
+review with a verdict that matches the findings. A body saying "No actionable
+findings" with state `COMMENTED` is not an approval. An issue comment, inline
+comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
+
+| Review outcome on an open pull request | Submit |
+| --- | --- |
+| Review complete, sufficient evidence, no unresolved merge-blocking findings | `APPROVE` (`gh pr review --approve`), including when there are optional suggestions |
+| Verified unresolved finding that must be fixed before merge | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
+| Partial review, missing evidence needed to decide, draft feedback, or explicitly advisory feedback | `COMMENT` (`gh pr review --comment`), stating why no approval/change-request verdict is possible and what remains |
+
+Do not choose `COMMENT` merely because you are an agent, did not rerun tests
+locally, have nonblocking suggestions, or are not the person who will merge.
+Assess whether the available evidence is sufficient and disclose validation
+limits. Missing essential validation means the review is incomplete, not clean.
+Approval records the reviewer's conclusion; it does not waive required CI,
+independent review, owner approval, or the author's merge decision.
+
+Posting authority does not grant branch-modification authority. When a blocker
+is verified and you are not authorized to fix the branch, request changes.
+When remediation is authorized, fix and validate it, then review the resulting
+head. Never approve merely because you wrote the fix; satisfy the governing
+independent-review requirements.
+
+Before submitting, read the authenticated login and the pull request's author,
+`state`, `isDraft`, `mergedAt`, and `headRefOid`. If the acting account is the
+PR author, GitHub cannot accept its approval or change request: report that
+limitation and identify the eligible reviewer needed. Request their review only
+when the task or governing workflow authorizes it. Do not switch accounts to
+evade the restriction or describe a comment as approval. If the PR is merged or closed,
+use an authorized ordinary comment for useful retrospective feedback instead
+of an approval or change request.
+
+Pin the submission to the full commit SHA you actually reviewed. If the head
+moved, review the new changes before giving a current-head verdict. The REST
+API supports an explicit `commit_id`; write a JSON file containing that SHA,
+`event` (`APPROVE`, `REQUEST_CHANGES`, or `COMMENT`), and the review `body`, then
+submit it with:
+
+```bash
+gh api --method POST repos/OWNER/REPO/pulls/NUMBER/reviews --input review.json
+```
+
+With `gh pr review`, use `--repo OWNER/REPO`, the appropriate verdict flag and
+`--body-file`; recheck the head immediately before submitting. With either
+method, fetch the resulting review and the live PR head afterward. Verify its
+`state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as intended, its
+`commit_id` equals the reviewed SHA, and `submitted_at` is present. If the head
+changed during submission, report that the verdict covers the older commit
+and re-review before claiming the current head is approved.
+
+Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
+or an overall `reviewDecision` alone is insufficient: other reviewers and
+branch rules affect the aggregate. If submission fails, report the actual
+error and remaining action; do not silently fall back to a comment and call
+the review delivered. If retrying after an uncertain response, inspect existing
+reviews first to avoid duplicate submissions. On an authorized re-review, if
+previous blockers are resolved, submit a new approval for the reviewed head
+instead of only commenting "fixed"; do not dismiss another reviewer's decision.
+
 
 ---
 
