@@ -28,10 +28,12 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
     });
@@ -209,8 +211,9 @@ void main() {
     testWidgets('should show override indicators', (tester) async {
       // Set up one flag as having user override
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-      when(() => mockPrefs.containsKey('ff_enhancedAnalytics'))
-          .thenReturn(true);
+      when(
+        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+      ).thenReturn(true);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -289,8 +292,9 @@ void main() {
     testWidgets('should handle individual flag reset', (tester) async {
       // Set up a flag with user override
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-      when(() => mockPrefs.containsKey('ff_enhancedAnalytics'))
-          .thenReturn(true);
+      when(
+        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+      ).thenReturn(true);
 
       await tester.pumpWidget(
         ProviderScope(

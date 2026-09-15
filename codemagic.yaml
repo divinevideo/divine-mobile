@@ -66,10 +66,10 @@ definitions:
     - &check_supporters_config
       name: Check supporter subscription config
       script: |
-        # Both variables below are interpolated unconditionally by every build
-        # step, so an unset one ships an empty --dart-define that overrides the
-        # in-app default. Empty fails safe here but fails silently; this rejects
-        # the combination that ships broken (flag on, no server).
+        # No build step passes a supporter --dart-define any more: the app
+        # carries a compiled default. This guards the two ways that can still
+        # break — a malformed compiled default, and an override that would be
+        # interpolated empty and silently disable the client.
         ./scripts/check_supporters_config.sh
     - &check_signing_endpoint
       name: Check C2PA signing endpoint

@@ -72,10 +72,12 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWith((ref) {
               final authService = _MockAuthService();
-              when(() => authService.authStateStream)
-                  .thenAnswer((_) => authStateController.stream);
-              when(() => authService.authState)
-                  .thenAnswer((_) => authStateBus.state);
+              when(
+                () => authService.authStateStream,
+              ).thenAnswer((_) => authStateController.stream);
+              when(
+                () => authService.authState,
+              ).thenAnswer((_) => authStateBus.state);
               when(() => authService.hasExpiredOAuthSession).thenReturn(false);
               return authService;
             }),
@@ -277,8 +279,9 @@ void main() {
   // that originally caused the crash.
   group('Builder regression guard (#3413)', () {
     test('hashtag and search builders do not call Uri.decodeComponent', () {
-      final source = File('lib/router/routes/search_routes.dart')
-          .readAsStringSync();
+      final source = File(
+        'lib/router/routes/search_routes.dart',
+      ).readAsStringSync();
 
       final hashtagPathOffset = source.indexOf(
         'path: HashtagScreenRouter.path',
@@ -380,10 +383,12 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWith((ref) {
               final authService = _MockAuthService();
-              when(() => authService.authStateStream)
-                  .thenAnswer((_) => authStateController.stream);
-              when(() => authService.authState)
-                  .thenReturn(AuthState.unauthenticated);
+              when(
+                () => authService.authStateStream,
+              ).thenAnswer((_) => authStateController.stream);
+              when(
+                () => authService.authState,
+              ).thenReturn(AuthState.unauthenticated);
               when(() => authService.hasExpiredOAuthSession).thenReturn(false);
               return authService;
             }),
@@ -405,7 +410,7 @@ void main() {
   });
 
   group('feature-flagged settings routes', () {
-    test('supporter route redirects when verification is unavailable', () {
+    test('supporter route redirects when the Worker is not configured', () {
       final redirectProvider = Provider<String?>(
         supporterRedirectIfUnavailable,
       );
@@ -415,6 +420,20 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(redirectProvider), SettingsScreen.path);
+    });
+
+    test('supporter route is admitted by the compiled default', () {
+      // No override: this is what a shipping build sees. The supporter flow is
+      // no longer flag-gated, so the route has to resolve with no build
+      // configuration at all.
+      final redirectProvider = Provider<String?>(
+        supporterRedirectIfUnavailable,
+      );
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(supporterApiConfiguredProvider), isTrue);
+      expect(container.read(redirectProvider), isNull);
     });
 
     test('monetization settings route redirects when flag is off', () {
@@ -650,35 +669,46 @@ void main() {
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn(currentPubkey);
-      when(() => mockAuthService.authStateStream)
-          .thenAnswer((_) => const Stream<AuthState>.empty());
+      when(
+        () => mockAuthService.currentPublicKeyHex,
+      ).thenReturn(currentPubkey);
+      when(
+        () => mockAuthService.authStateStream,
+      ).thenAnswer((_) => const Stream<AuthState>.empty());
 
       // Credentialed: the conversation bloc holds its loading state while the
       // repository owner is unknown (#8187), so the route under test would
       // never reach its loaded content.
       when(() => mockDmRepository.userPubkey).thenReturn(currentPubkey);
       when(mockDmRepository.backfillHistoryIfNeeded).thenAnswer((_) async {});
-      when(() => mockDmRepository.markConversationAsRead(any()))
-          .thenAnswer((_) async {});
-      when(() => mockDmRepository.watchMessages(any()))
-          .thenAnswer((_) => Stream.value(const <DmMessage>[]));
-      when(() => mockDmRepository.watchOutgoing(any()))
-          .thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-      when(() => mockDmRepository.countMessagesInConversation(any()))
-          .thenAnswer((_) async => 0);
-      when(() => mockDmRepository.getConversation(any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockDmRepository.markConversationAsRead(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockDmRepository.watchMessages(any()),
+      ).thenAnswer((_) => Stream.value(const <DmMessage>[]));
+      when(
+        () => mockDmRepository.watchOutgoing(any()),
+      ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+      when(
+        () => mockDmRepository.countMessagesInConversation(any()),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => mockDmRepository.getConversation(any()),
+      ).thenAnswer((_) async => null);
       // Consumed by DmRestoreStatusCubit, which qualifies the empty state.
       when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
       when(() => mockDmRepository.hasAttemptedHistoryRecovery).thenReturn(true);
-      when(() => mockDmRepository.hasCompletedHistoryRecoveryBefore)
-          .thenReturn(true);
-      when(() => mockDmRepository.historyRecoveryStream)
-          .thenAnswer((_) => const Stream<bool>.empty());
+      when(
+        () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
+      ).thenReturn(true);
+      when(
+        () => mockDmRepository.historyRecoveryStream,
+      ).thenAnswer((_) => const Stream<bool>.empty());
 
-      when(() => mockDmReactionsRepository.watchForConversation(any()))
-          .thenAnswer((_) => Stream.value(const <DmReaction>[]));
+      when(
+        () => mockDmReactionsRepository.watchForConversation(any()),
+      ).thenAnswer((_) => Stream.value(const <DmReaction>[]));
     });
 
     testWidgets('conversation accepts list-like dynamic extras on web', (

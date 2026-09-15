@@ -125,5 +125,8 @@ final supporterRecoveryProvider = Provider<Future<void>?>((ref) {
 
   final repository = ref.watch(supporterRepositoryProvider);
   if (!repository.hasServerClient) return null;
+  // Nothing to recover until this device has seen a purchase. See
+  // [SupporterRepository.hasRecoverableEvidence].
+  if (!repository.hasRecoverableEvidence) return null;
   return repository.recoverPurchases();
 });

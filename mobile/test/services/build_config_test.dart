@@ -104,7 +104,9 @@ void main() {
         ),
       );
       expect(
-        config.getEnvironmentKey(FeatureFlag.postPublishConfirmationExperiment),
+        config.getEnvironmentKey(
+          FeatureFlag.postPublishConfirmationExperiment,
+        ),
         'FF_POST_PUBLISH_CONFIRMATION_EXPERIMENT',
       );
       expect(
@@ -115,7 +117,9 @@ void main() {
         ),
       );
       expect(
-        config.getEnvironmentKey(FeatureFlag.postPublishConfirmationTreatment),
+        config.getEnvironmentKey(
+          FeatureFlag.postPublishConfirmationTreatment,
+        ),
         'FF_POST_PUBLISH_CONFIRMATION_TREATMENT',
       );
     });

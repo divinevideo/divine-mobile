@@ -31,7 +31,32 @@ void main() {
 
       when(() => authService.canPublishNostrWritesNow).thenReturn(false);
       when(() => repository.hasServerClient).thenReturn(true);
+      when(() => repository.hasRecoverableEvidence).thenReturn(true);
       when(() => repository.recoverPurchases()).thenAnswer((_) async {});
+    });
+
+    test('does not restore when nothing local suggests a purchase', () {
+      // The compiled default means every signed-in user reaches this provider.
+      // Recovery must stay off for accounts that have never bought anything,
+      // or it spends a signing round trip (a bunker call on NIP-46) and a
+      // store restore to find nothing.
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      when(() => repository.hasRecoverableEvidence).thenReturn(false);
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          currentAuthRpcCapabilityProvider.overrideWithValue(
+            AuthRpcCapability.rpcReady,
+          ),
+          appForegroundProvider.overrideWith(AppForeground.new),
+          supporterRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(supporterRecoveryProvider), isNull);
+      verifyNever(() => repository.recoverPurchases());
     });
 
     test('waits for signer capability before restoring purchases', () async {
@@ -118,20 +143,33 @@ void main() {
   });
 
   group('supporterApiBaseUrl', () {
-    // The supporter feature is no longer flag-gated, so this constant is the
-    // only thing standing between a build and a working supporter flow. When
-    // it is empty, supporterApiClientProvider returns null, the settings tile
-    // is hidden and the route redirects — indistinguishable from the feature
-    // never having shipped. Worth pinning.
+    // The supporter flow is no longer flag-gated, so this constant is the only
+    // thing standing between a build and a working supporter flow. An empty
+    // value makes supporterApiClientProvider null, which hides the settings
+    // tile and redirects the route — indistinguishable from the feature never
+    // having shipped.
     test('defaults to the deployed production Worker', () {
       expect(supporterApiBaseUrl, 'https://supporters.divine.video');
     });
 
-    test('is an absolute https URL that can be parsed', () {
+    test('is an absolute https URL with no query or fragment', () {
       final uri = Uri.parse(supporterApiBaseUrl);
       expect(uri.isAbsolute, isTrue);
       expect(uri.scheme, 'https');
       expect(uri.host, isNotEmpty);
+      // SupporterApiClient builds paths by string concatenation, so a query or
+      // fragment on the base would corrupt every request it makes.
+      expect(uri.hasQuery, isFalse);
+      expect(uri.hasFragment, isFalse);
+    });
+
+    test('supporterApiConfigured follows the base URL', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(
+        container.read(supporterApiConfiguredProvider),
+        supporterApiBaseUrl.isNotEmpty,
+      );
     });
   });
 }
