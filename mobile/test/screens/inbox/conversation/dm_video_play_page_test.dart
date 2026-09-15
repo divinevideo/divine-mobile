@@ -15,12 +15,15 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../mocks/mock_path_provider_platform.dart';
 
 class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+
+class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
 DmFileMetadata _videoMetadata() => DmFileMetadata(
   fileType: 'video/mp4',
@@ -172,5 +175,32 @@ void main() {
       );
       expect(File(expectedClipPath()).existsSync(), isFalse);
     });
+
+    test(
+      'saveEncryptedVideoDm removes a partial plaintext write when '
+      'materialize throws mid-write',
+      () async {
+        stubMaterialize(() async {
+          // Simulate VideoClip.memory writing bytes and then failing before it
+          // can return a clip (e.g. disk full).
+          File(expectedClipPath())
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(const [1, 2, 3]);
+          throw Exception('write failed');
+        });
+        final gallerySaveService = _MockGallerySaveService();
+
+        await expectLater(
+          saveEncryptedVideoDm(
+            message: _videoMessage(),
+            gallerySaveService: gallerySaveService,
+            decryptor: decryptor,
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        expect(File(expectedClipPath()).existsSync(), isFalse);
+      },
+    );
   });
 }

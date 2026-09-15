@@ -250,11 +250,15 @@ class _ActionList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final tiles = <Widget>[
-      _ActionTile(
-        icon: DivineIconName.copy,
-        label: l10n.dmMessageActionCopyText,
-        onTap: () => onSelected(MessageAction.copy),
-      ),
+      // An encrypted video's content is its ciphertext URL, which the card
+      // deliberately never renders; copying it would put that URL on the
+      // clipboard, so the tile is withheld.
+      if (!isEncryptedVideo)
+        _ActionTile(
+          icon: DivineIconName.copy,
+          label: l10n.dmMessageActionCopyText,
+          onTap: () => onSelected(MessageAction.copy),
+        ),
       if (isVideoShare)
         _ActionTile(
           icon: DivineIconName.linkSimple,

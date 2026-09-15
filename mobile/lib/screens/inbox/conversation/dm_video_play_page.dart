@@ -23,6 +23,32 @@ import 'package:unified_logger/unified_logger.dart';
 /// up a partial write even when no [VideoClip] was returned.
 const _memoryDirName = 'divine_player_memory';
 
+/// Path `VideoClip.memory` writes [fileName] to.
+///
+/// Resolved before decrypting so a partial plaintext write can be deleted even
+/// when `VideoClip.memory` throws before returning a clip. Matches the
+/// package's own concatenation exactly on every platform.
+Future<String> _resolveTempPath(String fileName) async {
+  final dir = await getTemporaryDirectory();
+  return '${dir.path}/$_memoryDirName/$fileName';
+}
+
+/// Best-effort synchronous delete of a decrypted plaintext temp file.
+void _deleteTempFile(String path) {
+  try {
+    final file = File(path);
+    if (file.existsSync()) file.deleteSync();
+  } catch (error, stackTrace) {
+    Log.warning(
+      'Could not delete decrypted video temp file',
+      name: 'DmVideoPlayPage',
+      category: LogCategory.video,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+}
+
 /// Decrypt-to-play progress of [DmVideoPlayPage].
 enum _LoadStatus { loading, ready, error }
 
@@ -113,7 +139,7 @@ class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
         fileName: fileName,
       );
       if (!mounted) {
-        _deleteFile(clip.uri);
+        _deleteTempFile(clip.uri);
         return;
       }
 
@@ -132,7 +158,7 @@ class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
 
       if (!mounted) {
         await controller.dispose();
-        _deleteFile(clip.uri);
+        _deleteTempFile(clip.uri);
         return;
       }
 
@@ -153,13 +179,6 @@ class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
       _cleanupTempFiles();
       if (mounted) setState(() => _status = _LoadStatus.error);
     }
-  }
-
-  Future<String> _resolveTempPath(String fileName) async {
-    final dir = await getTemporaryDirectory();
-    // Match `VideoClip.memory`'s own path concatenation exactly so the cleanup
-    // target is the file the player actually wrote, on every platform.
-    return '${dir.path}/$_memoryDirName/$fileName';
   }
 
   Future<void> _saveToGallery() async {
@@ -195,24 +214,9 @@ class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
   /// Deletes every temp path this page could have written.
   void _cleanupTempFiles() {
     final clipUri = _clip?.uri;
-    if (clipUri != null) _deleteFile(clipUri);
+    if (clipUri != null) _deleteTempFile(clipUri);
     final tempPath = _tempPath;
-    if (tempPath != null) _deleteFile(tempPath);
-  }
-
-  void _deleteFile(String path) {
-    try {
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    } catch (error, stackTrace) {
-      Log.warning(
-        'Could not delete decrypted video temp file',
-        name: 'DmVideoPlayPage',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
+    if (tempPath != null) _deleteTempFile(tempPath);
   }
 
   @override
@@ -295,31 +299,23 @@ Future<GallerySaveResult> saveEncryptedVideoDm({
   }
 
   VideoClip? clip;
+  String? tempPath;
   try {
+    final fileName = DmVideoPlayPage.clipFileNameFor(message);
+    // Resolve the target before decrypting so a partial plaintext write is
+    // deleted even if `VideoClip.memory` throws before returning a clip.
+    tempPath = await _resolveTempPath(fileName);
     clip = await (decryptor ?? DmVideoDecryptor()).materialize(
       url: message.content,
       key: fileMetadata.decryptionKey,
       nonce: fileMetadata.decryptionNonce,
-      fileName: DmVideoPlayPage.clipFileNameFor(message),
+      fileName: fileName,
     );
     return await gallerySaveService.saveVideoToGallery(
       EditorVideo.file(clip.uri),
     );
   } finally {
-    final uri = clip?.uri;
-    if (uri != null) {
-      try {
-        final file = File(uri);
-        if (file.existsSync()) file.deleteSync();
-      } catch (error, stackTrace) {
-        Log.warning(
-          'Could not delete decrypted video temp file after save',
-          name: 'DmVideoPlayPage',
-          category: LogCategory.video,
-          error: error,
-          stackTrace: stackTrace,
-        );
-      }
-    }
+    final path = clip?.uri ?? tempPath;
+    if (path != null) _deleteTempFile(path);
   }
 }

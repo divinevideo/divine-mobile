@@ -87,6 +87,14 @@ void main() {
       expect(find.text(l10n.dmMessageActionCopyVideoUrl), findsNothing);
     });
 
+    testWidgets('offers no copy action for an encrypted video', (tester) async {
+      await openOverlay(tester, isEncryptedVideo: true);
+
+      // Copy text would place the ciphertext URL on the clipboard, which the
+      // encrypted card deliberately never renders.
+      expect(find.text(l10n.dmMessageActionCopyText), findsNothing);
+    });
+
     testWidgets('returns saveVideo after selecting Save video', (tester) async {
       ReactionPickerResult? result;
       await tester.pumpWidget(

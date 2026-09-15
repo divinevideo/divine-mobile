@@ -1193,6 +1193,10 @@ class _MessageList extends StatelessWidget {
     if (action == null) return;
     switch (action) {
       case MessageAction.copy:
+        // An encrypted video's content is its ciphertext URL, which is never
+        // user-visible; the action sheet withholds the tile, and this guard
+        // keeps it off the clipboard if the action is ever returned.
+        if (message.fileMetadata?.isVideo == true) return;
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
