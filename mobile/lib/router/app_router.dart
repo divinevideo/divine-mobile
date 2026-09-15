@@ -1,6 +1,8 @@
 // ABOUTME: GoRouter configuration with ShellRoute for per-tab state preservation
 // ABOUTME: URL is source of truth, bottom nav bound to routes; routes split by feature
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
