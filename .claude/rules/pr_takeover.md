@@ -98,9 +98,10 @@ or qualifying it.
 
 Check `mergedAt` before choosing a GitHub review state. Never submit
 `CHANGES_REQUESTED` after a pull request has merged: it cannot block the merge
-and reads as an outstanding author action. Use an authorized ordinary `gh pr comment` for useful
-retrospective feedback, or file a separately authorized issue when verified
-follow-up work is required.
+and reads as an outstanding author action. On a merged pull request, use an
+authorized plain `COMMENT` review (`gh pr review <n> --comment --body-file
+<file>`) for useful retrospective feedback, or file a separately authorized
+issue when verified follow-up work is required.
 
 ### Submit an explicit review verdict
 
@@ -134,8 +135,9 @@ PR author, GitHub cannot accept its approval or change request: report that
 limitation and identify the eligible reviewer needed. Request their review only
 when the task or governing workflow authorizes it. Do not switch accounts to
 evade the restriction or describe a comment as approval. If the PR is merged or closed,
-use an authorized ordinary comment for useful retrospective feedback instead
-of an approval or change request.
+use an authorized plain `COMMENT` review for useful retrospective feedback, or an
+authorized ordinary comment when a review cannot be submitted, instead of an
+approval or change request.
 
 Pin the submission to the full commit SHA you actually reviewed. If the head
 moved, review the new changes before giving a current-head verdict. The REST
