@@ -2705,7 +2705,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               // them — during playback that is every frame. With hundreds of
               // strokes that is the whole frame budget (#8032). Static paint
               // layers are drawn from a cached composite instead; a layer
-              // being dragged, scaled or retimed renders live.
+              // selected, dragged or scaled on the canvas renders live.
+              // Retiming a layer on the timeline keeps it cached: its time
+              // window is not part of the cache key.
               enablePaintLayerRasterCache: true,
               widgets: MainEditorWidgets(
                 appBar: (_, _) => null,
