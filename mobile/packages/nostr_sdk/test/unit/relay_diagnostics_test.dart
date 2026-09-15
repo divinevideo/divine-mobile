@@ -215,29 +215,53 @@ void main() {
       );
     });
 
-    test(
-      'does not copy raw NOTICE or CLOSED bodies into diagnostics',
-      () async {
-        const rawSentinel = 'raw-frame-must-not-enter-support-export';
-        final relay = _DiagnosticRelay('wss://relay.example');
-        expect(await nostr.relayPool.add(relay), isTrue);
+    test('includes a sanitized NOTICE body but excludes CLOSED body', () async {
+      const noticeReason = 'rate-limited: too many concurrent requests';
+      const closedReason = 'raw-closed-frame-must-not-enter-support-export';
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
 
-        await relay.deliver(['NOTICE', rawSentinel]);
-        await relay.deliver(['CLOSED', 'full-subscription-id', rawSentinel]);
+      await relay.deliver(['NOTICE', noticeReason]);
+      await relay.deliver(['CLOSED', 'full-subscription-id', closedReason]);
 
-        final exportedMessages = diagnostics
-            .map((entry) => entry.message)
-            .join('\n');
-        expect(exportedMessages, isNot(contains(rawSentinel)));
-        expect(
-          diagnostics.map((entry) => entry.site),
-          containsAll([
-            RelayDiagnosticSite.notice,
-            RelayDiagnosticSite.requestSettlement,
-          ]),
-        );
-      },
-    );
+      final exportedMessages = diagnostics
+          .map((entry) => entry.message)
+          .join('\n');
+      expect(exportedMessages, contains(noticeReason));
+      expect(exportedMessages, isNot(contains(closedReason)));
+      expect(
+        diagnostics.map((entry) => entry.site),
+        containsAll([
+          RelayDiagnosticSite.notice,
+          RelayDiagnosticSite.requestSettlement,
+        ]),
+      );
+    });
+
+    test('sanitizes and bounds NOTICE diagnostics', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final publicEventId = 'a' * 64;
+
+      await relay.deliver([
+        'NOTICE',
+        'denied\npassword=hunter2 authorization: Bearer token-value '
+            'nsec1${'q' * 58} event=$publicEventId',
+      ]);
+      await relay.deliver(['NOTICE', 'word ${'x' * 300}']);
+
+      final notices = diagnostics
+          .where((entry) => entry.site == RelayDiagnosticSite.notice)
+          .map((entry) => entry.message)
+          .toList();
+      expect(notices.first, isNot(contains('hunter2')));
+      expect(notices.first, isNot(contains('token-value')));
+      expect(notices.first, isNot(contains('nsec1')));
+      expect(notices.first, isNot(contains('\n')));
+      expect(notices.first, contains(publicEventId));
+      expect(notices.last, contains('[truncated]'));
+      expect(notices.last, isNot(contains('x')));
+    });
 
     test('categorizes a CLOSED reason by its NIP-01 prefix', () async {
       final relay = _DiagnosticRelay('wss://relay.example');
@@ -381,6 +405,51 @@ void main() {
           reason: '"$message" is not a failure',
         );
       }
+    });
+  });
+
+  group('relayNoticeForDiagnostics', () {
+    test('strips Unicode controls and format characters, not just ASCII', () {
+      // NEL is a C1 line break; the bidi override and zero-width joiner are
+      // format characters that leave no visible trace but change how the
+      // rest of the log line is read or copied.
+      const notice = 'rate\u0085limited\u202e for\u200d now';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, 'rate limited for now');
+    });
+
+    test('omits an identifier the length limit lands inside, whole', () {
+      // 230 characters of prose put the 256-character limit 26 characters
+      // into the event id, which is where a plain substring cut would leave
+      // a partial id that looks usable and is not.
+      final eventId = 'e' * 64;
+      final notice = '${'w ' * 115}$eventId';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, '${'w ' * 114}w … [truncated]');
+    });
+
+    test('keeps a message at exactly the length limit untouched', () {
+      final notice = 'y' * 256;
+
+      expect(relayNoticeForDiagnostics(notice), notice);
+    });
+
+    test('replaces an overlong message that has no token boundary', () {
+      final sanitized = relayNoticeForDiagnostics('x' * 300);
+
+      expect(sanitized, '[NOTICE omitted: message exceeds 256 characters]');
+    });
+
+    test('redacts encrypted signing material', () {
+      final sanitized = relayNoticeForDiagnostics(
+        'rejected ncryptsec1${'q' * 40} for this key',
+      );
+
+      expect(sanitized, 'rejected [REDACTED] for this key');
     });
   });
 }

@@ -2056,10 +2056,9 @@ class RelayPool {
         RelayDiagnosticSite.notice,
         RelayDiagnosticLevel.warning,
         relay.url,
-        'Relay sent a NOTICE frame',
+        'Relay NOTICE: ${relayNoticeForDiagnostics(message)}',
       );
 
-      // notice save, TODO maybe should change code
       if (onNotice != null) {
         onNotice!(relay.url, message);
       }
