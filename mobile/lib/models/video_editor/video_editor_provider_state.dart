@@ -67,10 +67,11 @@ class VideoEditorProviderState {
   /// Why the last render failed, when the failure was classified.
   ///
   /// Null while no render has failed and when the failure was an unexpected
-  /// exception rather than a [VideoRenderFailedException]. The overlay singles
-  /// out [VideoRenderFailureReason.insufficientStorage]: "Generation failed,
-  /// retry" walks the user into the same wall, so it asks them to free up space
-  /// instead (#7125). Follows [renderFailed]'s lifecycle.
+  /// exception rather than a [VideoRenderFailedException]. The metadata screen
+  /// singles out [VideoRenderFailureReason.insufficientStorage]: "Generation
+  /// failed, retry" walks the user into the same wall, so a banner below the
+  /// preview asks them to free up space instead (#7125). Follows
+  /// [renderFailed]'s lifecycle.
   final VideoRenderFailureReason? renderFailureReason;
 
   /// Whether the render produced a clip but no usable content credential /

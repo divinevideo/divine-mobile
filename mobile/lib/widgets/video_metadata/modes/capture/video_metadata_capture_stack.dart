@@ -4,6 +4,7 @@ import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_cap
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_bottom_bar.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_clip_preview.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_render_failure_banner.dart';
 
 class VideoMetadataCaptureStack extends StatelessWidget {
   const VideoMetadataCaptureStack({super.key});
@@ -27,6 +28,11 @@ class VideoMetadataCaptureStack extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.only(top: 8, bottom: 16),
                     child: VideoMetadataCaptureClipPreview(),
+                  ),
+
+                  // Why the render failed, when the card is too small to say
+                  VideoMetadataRenderFailureBanner(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                   ),
 
                   // Form fields

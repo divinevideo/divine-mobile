@@ -9,7 +9,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
-import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -125,96 +124,6 @@ void main() {
       // Processing overlay should be present
       expect(find.byType(VideoEditorProcessingOverlay), findsOneWidget);
     });
-
-    // A square clip makes the 200px card 200 wide; the default 9:16 vertical
-    // clip makes it 112.5 wide, so the translated storage copy wraps into
-    // more lines. Both geometries must keep the copy and the retry button
-    // inside the box. Each geometry gets its own test: re-pumping a
-    // ProviderScope with new notifier overrides in one test does not apply
-    // them, so a loop would silently re-test the first geometry.
-    Future<void> pumpStorageFailure(
-      WidgetTester tester,
-      models.AspectRatio aspectRatio,
-    ) async {
-      final clip = DivineVideoClip(
-        id: 'test-clip',
-        video: EditorVideo.file('test.mp4'),
-        duration: const Duration(seconds: 10),
-        recordedAt: DateTime.now(),
-        thumbnailPath: 'test_thumbnail.jpg',
-        targetAspectRatio: aspectRatio,
-        originalAspectRatio: 9 / 16,
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            clipManagerProvider.overrideWith(
-              () => _MockClipManagerNotifier([clip]),
-            ),
-            videoEditorProvider.overrideWith(
-              () => _MockVideoEditorNotifier(
-                VideoEditorProviderState(
-                  renderFailed: true,
-                  renderFailureReason:
-                      VideoRenderFailureReason.insufficientStorage,
-                ),
-              ),
-            ),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: VideoMetadataCaptureClipPreview()),
-          ),
-        ),
-      );
-      await tester.pump();
-    }
-
-    testWidgets(
-      'shows the low-storage copy without overflowing a square preview '
-      '(#7125)',
-      (tester) async {
-        await pumpStorageFailure(tester, models.AspectRatio.square);
-
-        expect(
-          find.text(
-            lookupAppLocalizations(const Locale('en')).publishErrorLowStorage,
-          ),
-          findsOneWidget,
-          reason:
-              'the preview must pass the reason through, or an '
-              'out-of-storage user reads the generic copy',
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
-
-    testWidgets(
-      'shows the low-storage copy without overflowing the default 9:16 '
-      'preview (#7125)',
-      (tester) async {
-        await pumpStorageFailure(tester, models.AspectRatio.vertical);
-
-        expect(
-          find.text(
-            lookupAppLocalizations(const Locale('en')).publishErrorLowStorage,
-          ),
-          findsOneWidget,
-          reason:
-              'the preview must pass the reason through, or an '
-              'out-of-storage user reads the generic copy',
-        );
-        expect(
-          tester.takeException(),
-          isNull,
-          reason:
-              'the failure overlay must fit the narrow default card, or the '
-              'retry button is clipped',
-        );
-      },
-    );
 
     testWidgets('play button is disabled when no final rendered clip', (
       tester,

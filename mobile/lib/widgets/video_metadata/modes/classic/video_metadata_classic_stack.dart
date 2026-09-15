@@ -4,6 +4,7 @@ import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_cla
 import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_classic_bottom_bar.dart';
 import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_classic_preview_thumbnail.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_render_failure_banner.dart';
 
 class VideoMetadataClassicStack extends StatelessWidget {
   const VideoMetadataClassicStack({super.key});
@@ -23,10 +24,16 @@ class VideoMetadataClassicStack extends StatelessWidget {
               child: Column(
                 mainAxisSize: .min,
                 crossAxisAlignment: .stretch,
-                spacing: 16,
                 children: [
                   VideoMetadataClassicPreviewThumbnail(),
-                  VideoMetadataFormFields(),
+                  // Why the render failed, when the card is too small to say
+                  VideoMetadataRenderFailureBanner(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: VideoMetadataFormFields(),
+                  ),
                 ],
               ),
             ),
