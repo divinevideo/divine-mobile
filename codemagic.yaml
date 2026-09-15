@@ -66,10 +66,10 @@ definitions:
     - &check_supporters_config
       name: Check supporter subscription config
       script: |
-        # Both variables below are interpolated unconditionally by every build
-        # step, so an unset one ships an empty --dart-define that overrides the
-        # in-app default. Empty fails safe here but fails silently; this rejects
-        # the combination that ships broken (flag on, no server).
+        # No build step passes a supporter --dart-define any more: the app
+        # carries a compiled default. This guards the two ways that can still
+        # break — a malformed compiled default, and an override that would be
+        # interpolated empty and silently disable the client.
         ./scripts/check_supporters_config.sh
     - &check_signing_endpoint
       name: Check C2PA signing endpoint
@@ -222,20 +222,12 @@ definitions:
           PROOFMODE_SIGNING_SERVER_TOKEN
         ]
 
-        optional_names = %w[
-          SUPPORTERS_API_BASE_URL
-          FF_DIVINE_SUPPORTERS
-        ]
-
         missing = required_names.reject { |name| ENV.key?(name) && !ENV.fetch(name).empty? }
         unless missing.empty?
           abort("missing Shorebird dart-define environment variables: #{missing.join(', ')}")
         end
 
         defines = required_names.to_h { |name| [name, ENV.fetch(name)] }
-        optional_names.each do |name|
-          defines[name] = ENV.fetch(name, '')
-        end
         defines['DEFAULT_ENV'] = ENV.fetch('DEFAULT_ENV')
 
         File.write(
@@ -544,9 +536,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &package_macos_dmg
       name: Package macOS DMG
       script: |
@@ -708,9 +698,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
         bash scripts/check_ios_analytics_product.sh \
           --app build/ios/iphonesimulator/Runner.app
     - &build_ios_e2e
@@ -722,9 +710,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &build_android_e2e
       name: Build Android debug APK
       script: |
@@ -734,9 +720,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &install_maestro
       name: Install Maestro CLI
       script: |

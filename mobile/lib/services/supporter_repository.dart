@@ -76,6 +76,22 @@ class SupporterRepository {
   /// Whether the user is currently an active supporter.
   bool get isSupporter => _current.isSupporter;
 
+  /// Whether this device has any evidence that a purchase exists to recover.
+  ///
+  /// Background recovery costs an authenticated `/v1/me` — a signing round
+  /// trip, and a remote-signer network call for NIP-46 identities — plus a
+  /// store restore. For an account that has never bought anything there is
+  /// nothing for that work to find, so recovery waits until either a cached
+  /// entitlement or an interrupted claim says otherwise. Both are written by
+  /// the purchase path, so this turns itself on the moment a purchase happens.
+  bool get hasRecoverableEvidence =>
+      _prefs.getString(_cacheKey) != null ||
+      _prefs.getKeys().any(
+        (key) =>
+            key.startsWith(_pendingOwnerPrefix) &&
+            _prefs.getString(key) == _pubkey,
+      );
+
   /// A stream of entitlement updates. Emits the current value to new
   /// listeners.
   Stream<SupporterEntitlement> get changes => _controller.stream;

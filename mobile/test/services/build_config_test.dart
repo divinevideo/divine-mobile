@@ -25,7 +25,6 @@ void main() {
       // When the env vars are not set, these flags default to false
       expect(config.getDefault(FeatureFlag.accountSwitching), isFalse);
       expect(config.getDefault(FeatureFlag.enhancedAnalytics), isFalse);
-      expect(config.getDefault(FeatureFlag.divineSupporters), isFalse);
     });
 
     test('should have debug tools enabled by default in debug builds', () {
@@ -79,10 +78,6 @@ void main() {
       expect(
         config.getEnvironmentKey(FeatureFlag.videoReplies),
         equals('FF_VIDEO_REPLIES'),
-      );
-      expect(
-        config.getEnvironmentKey(FeatureFlag.divineSupporters),
-        equals('FF_DIVINE_SUPPORTERS'),
       );
     });
 

@@ -75,7 +75,7 @@ Everything below routes through `instrumentedHttpClientFactoryProvider`.
 | NIP-39 identity verification | `verifier.divine.video` | `auth_providers.dart` |
 | CAWG identity verification | `verifyer.divine.video` | `auth_providers.dart` |
 | Crossposting (settings, manual crossposts) | `crossposter.divine.video` | `upload_media_providers.dart`, `crossposting_providers.dart` |
-| Supporter worker (build-gated) | build-supplied | `supporter_providers.dart` |
+| Supporter worker | `supporters.divine.video` (compiled default, `--dart-define` override) | `supporter_providers.dart` |
 | Subtitle / VTT fetch | `media.divine.video` | `subtitle_providers.dart` |
 | Moderation check-result (playback UX) | `moderation-api.divine.video` | `video_moderation_status_service.dart` |
 | NIP-11 relay capability probe | relay HTTP origin | `relay_providers.dart` |
