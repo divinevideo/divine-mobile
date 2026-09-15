@@ -50,6 +50,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     String? receiptVanishEventId,
     RecoveryTimerFactory timerFactory = Timer.new,
     DateTime Function() now = DateTime.now,
+    this.contentDeletionUnverified = false,
   }) : _repository = repository,
        _authService = authService,
        _onAttemptResolved = onAttemptResolved,
@@ -60,6 +61,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
        _timerFactory = timerFactory,
        _now = now,
        super(const AccountDeletionRecoveryState());
+
+  /// True when the content sweep could not confirm that every existing post
+  /// was individually requested for deletion. The completed UI must not report
+  /// an unqualified success in that case.
+  final bool contentDeletionUnverified;
 
   final AccountDeletionRecoveryRepository _repository;
   final AuthService _authService;
@@ -77,6 +83,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   var _overdueRefreshUsed = false;
   String? _pollBudgetAttemptId;
   DateTime? _pollBudgetStartedAt;
+  Future<void>? _resumeInFlight;
 
   Future<void> load() async {
     final generation = _beginOperation();
@@ -131,11 +138,42 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   /// user, so the lookup [load] starts with cannot be signed. Polling still
   /// runs from here; a failed poll keeps the known state rather than
   /// replacing it with a lookup failure.
-  Future<void> resume(AccountDeletionAttempt attempt) async {
+  ///
+  /// [signOutWhenProcessing] is true for cold-start recovery. The deletion
+  /// dialog records the receipt, awaits this resume, then signs out itself.
+  ///
+  /// The value is a parameter rather than Cubit state: the owner is
+  /// app-scoped, so a flag stored on the instance would outlive the one-shot
+  /// dialog resume and suppress the sign-out [#8583] requires on every later
+  /// processing transition. Polling confirms submission with the default.
+  Future<void> resume(
+    AccountDeletionAttempt attempt, {
+    bool signOutWhenProcessing = true,
+  }) {
+    final inFlight = _resumeInFlight;
+    if (inFlight != null) return inFlight;
+    final started = _resume(
+      attempt,
+      signOutWhenProcessing: signOutWhenProcessing,
+    );
+    _resumeInFlight = started;
+    return started.whenComplete(() {
+      if (identical(_resumeInFlight, started)) _resumeInFlight = null;
+    });
+  }
+
+  Future<void> _resume(
+    AccountDeletionAttempt attempt, {
+    required bool signOutWhenProcessing,
+  }) async {
     final generation = _beginOperation();
     if (attempt.status == AccountDeletionAttemptStatus.recoverable &&
         _receiptVanishEventId != null) {
-      await _confirmSubmission(attempt, generation: generation);
+      await _confirmSubmission(
+        attempt,
+        generation: generation,
+        signOutWhenProcessing: signOutWhenProcessing,
+      );
       return;
     }
     await _handleAttempt(attempt, generation: generation);
@@ -374,6 +412,22 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   }
 
   Future<void> _signOutForProcessing(AccountDeletionAttempt attempt) async {
+    final receiptPubkeyHex = _receiptPubkeyHex;
+    final activePubkeyHex = _authService.currentPublicKeyHex;
+    if (receiptPubkeyHex != null && activePubkeyHex != receiptPubkeyHex) {
+      // Another account is signed in, or the receipt's session is already
+      // gone. The coordinator accepted the receipt's deletion, but ending
+      // the active session is not this owner's job; keep polling so the
+      // completed path deletes the receipt account's local data, the same
+      // split `completeLocalCleanup` makes.
+      final generation = _beginOperation();
+      await _emitPollingState(
+        AccountDeletionRecoveryStatus.processing,
+        attempt,
+        generation,
+      );
+      return;
+    }
     final generation = _beginOperation();
     emitIfOpen(
       AccountDeletionRecoveryState(
@@ -405,6 +459,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   Future<void> _confirmSubmission(
     AccountDeletionAttempt attempt, {
     required int generation,
+    bool signOutWhenProcessing = true,
   }) async {
     final vanishEventId = _receiptVanishEventId;
     if (vanishEventId == null) return;
@@ -424,7 +479,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       await _onAttemptUpdated?.call(submitted);
       if (!_isCurrent(generation)) return;
       if (submitted.status == AccountDeletionAttemptStatus.processing) {
-        await _signOutForProcessing(submitted);
+        if (signOutWhenProcessing) {
+          await _signOutForProcessing(submitted);
+        } else {
+          await _handleAttempt(submitted, generation: generation);
+        }
         return;
       }
       await _handleAttempt(submitted, generation: generation);

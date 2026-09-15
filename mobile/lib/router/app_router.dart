@@ -115,11 +115,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     final after = deletionGateActiveForCurrentAccount(next);
     if (before != after) refreshListenable.refresh();
   });
-  ref.listen(
-    submittedAccountDeletionMonitorProvider,
-    (_, _) {},
-    fireImmediately: true,
-  );
   ref.onDispose(() {
     unawaited(
       refreshListenable.dispose().catchError((Object error, StackTrace stack) {
