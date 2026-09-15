@@ -111,6 +111,23 @@ void main() {
       expect(guardLine, greaterThan(convert));
     });
 
+    test(
+      'only records the offset once the retimed buffer reaches the writer',
+      () {
+        // Latching the offset before the copy is known to succeed makes the
+        // breadcrumb claim every buffer converted, when a persistent copy
+        // failure means none after the first one did.
+        final copyGuard = retime.indexOf(
+          'guard status == noErr, let retimed else {',
+        );
+        final offsetAssignment = retime.indexOf(
+          'audioClockOffset = convertedPTS - rawPTS',
+        );
+        expect(copyGuard, greaterThan(-1));
+        expect(offsetAssignment, greaterThan(copyGuard));
+      },
+    );
+
     test('reports the measured clock offset per recording', () {
       // Whether a device is affected at all is a property of its clocks, not
       // of the code, so the breadcrumb has to carry the offset the fix
