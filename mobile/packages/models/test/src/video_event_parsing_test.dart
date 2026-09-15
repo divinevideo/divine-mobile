@@ -717,6 +717,7 @@ void main() {
         'aaaa567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
     const creatorPubkey =
         'dddd567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+    final inspiringNpub = Nip19.encodePubKey(creatorPubkey);
 
     test('collects every inspired-by p-tag, not just the first', () {
       // The NIP-27 content line can only name one creator, so the p-tags are
@@ -924,13 +925,13 @@ void main() {
         [
           ['url', 'https://example.com/video.mp4'],
         ],
-        'Great idea!\n\nInspired by nostr:npub1abc123def456ghi789',
+        'Great idea!\n\nInspired by nostr:$inspiringNpub',
         createdAt: 1757385263,
       );
 
       final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
-      expect(videoEvent.inspiredByNpub, equals('npub1abc123def456ghi789'));
+      expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
       expect(videoEvent.hasInspiredBy, isTrue);
       expect(videoEvent.content, equals(nostrEvent.content));
       expect(videoEvent.displayContent, equals('Great idea!'));
@@ -982,7 +983,7 @@ void main() {
           [
             ['url', 'https://example.com/video.mp4'],
           ],
-          'my remix. Inspired by nostr:npub1prosecreator',
+          'my remix. Inspired by nostr:$inspiringNpub',
           createdAt: 1757385263,
         );
 
@@ -1000,7 +1001,7 @@ void main() {
         [
           ['url', 'https://example.com/video.mp4'],
         ],
-        'my caption\nInspired by nostr:npub1singlenewline',
+        'my caption\nInspired by nostr:$inspiringNpub',
         createdAt: 1757385263,
       );
 
@@ -1018,13 +1019,13 @@ void main() {
           ['url', 'https://example.com/video.mp4'],
         ],
         'Shoutout to nostr:npub1notattribution for the tip!'
-        '\n\nInspired by nostr:npub1realattribution',
+        '\n\nInspired by nostr:$inspiringNpub',
         createdAt: 1757385263,
       );
 
       final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
-      expect(videoEvent.inspiredByNpub, equals('npub1realattribution'));
+      expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
     });
 
     test(
@@ -1038,13 +1039,13 @@ void main() {
           [
             ['url', 'https://example.com/video.mp4'],
           ],
-          'Inspired by nostr:npub1onlyattribution',
+          'Inspired by nostr:$inspiringNpub',
           createdAt: 1757385263,
         );
 
         final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
-        expect(videoEvent.inspiredByNpub, equals('npub1onlyattribution'));
+        expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
       },
     );
 
@@ -1056,14 +1057,14 @@ void main() {
           ['url', 'https://example.com/video.mp4'],
           ['a', '34236:$creatorPubkey:test-d-tag', 'wss://relay.divine.video'],
         ],
-        'Inspired by nostr:npub1xyz789abc',
+        'Inspired by nostr:$inspiringNpub',
         createdAt: 1757385263,
       );
 
       final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
       expect(videoEvent.inspiredByVideo, isNotNull);
-      expect(videoEvent.inspiredByNpub, equals('npub1xyz789abc'));
+      expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
       expect(videoEvent.hasInspiredBy, isTrue);
     });
 
@@ -1094,6 +1095,27 @@ void main() {
         expect(videoEvent.inspiredByCreatorPubkey, creatorPubkey);
       },
     );
+
+    test('leaves an attribution line whose npub does not decode alone', () {
+      // A line that credits nobody is not attribution metadata. Stripping it
+      // would hide the author's own text with nothing to show in About.
+      const content =
+          'caption\n\nInspired by nostr:npub1syntheticcreator000000000000000';
+      final nostrEvent = Event(
+        authorPubkey,
+        34236,
+        [
+          ['url', 'https://example.com/video.mp4'],
+        ],
+        content,
+        createdAt: 1757385263,
+      );
+
+      final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
+
+      expect(videoEvent.inspiredByNpub, isNull);
+      expect(videoEvent.displayContent, equals(content));
+    });
 
     test('should not have inspiredBy when no a-tag or npub', () {
       final nostrEvent = Event(

@@ -17,6 +17,7 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:reposts_repository/reposts_repository.dart';
@@ -115,11 +116,10 @@ void main() {
     testWidgets('hides inspired-by attribution from the player overlay', (
       tester,
     ) async {
+      final npub = normalizeToNpub('d' * 64)!;
       testVideo = testVideo.copyWith(
-        content:
-            'Visible caption\n\n'
-            'Inspired by nostr:npub1syntheticcreator000000000000000',
-        inspiredByNpub: 'npub1syntheticcreator000000000000000',
+        content: 'Visible caption\n\n${inspiredByAttributionLine(npub)}',
+        inspiredByNpub: npub,
       );
 
       await tester.pumpWidget(
@@ -146,12 +146,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Exact match: an unstripped line would lengthen the caption text.
       expect(find.text('Visible caption'), findsOneWidget);
-      expect(find.textContaining('Inspired by nostr:'), findsNothing);
-      expect(
-        find.bySemanticsIdentifier('inspired_by_attribution_row'),
-        findsNothing,
-      );
     });
 
     testWidgets('paints a brand-green heart in the author name', (

@@ -714,11 +714,7 @@ class VideoEvent {
 
     // Resolve the Inspired By person from the trailing NIP-27 attribution
     // line the publisher appends ("Inspired by nostr:npub1...").
-    String? inspiredByNpub;
-    final npubMatch = inspiredByAttributionPattern.firstMatch(event.content);
-    if (npubMatch != null) {
-      inspiredByNpub = npubMatch.group(1);
-    }
+    final inspiredByNpub = inspiredByNpubFromContent(event.content);
 
     final createdAtTimestamp = event.createdAt is DateTime
         ? (event.createdAt as DateTime).millisecondsSinceEpoch ~/ 1000

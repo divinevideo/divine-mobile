@@ -2195,7 +2195,7 @@ void main() {
           title: 'Who knew?',
           content:
               'What really happens behind the scenes\n\n'
-              'Inspired by nostr:npub1syntheticcreator000000000000000',
+              '${inspiredByAttributionLine(normalizeToNpub(_inspiredByPubkey)!)}',
           hashtags: ['grease', 'take503'],
           collaboratorPubkeys: [_collaborator1],
           inspiredByVideo: const InspiredByInfo(
@@ -2240,11 +2240,11 @@ void main() {
 
         // Title + description
         expect(find.text('Who knew?'), findsOneWidget);
+        // Exact match: an unstripped line would lengthen the caption text.
         expect(
           find.text('What really happens behind the scenes'),
           findsOneWidget,
         );
-        expect(find.textContaining('Inspired by nostr:'), findsNothing);
 
         // Stats
         final l10n = _l10n(tester);

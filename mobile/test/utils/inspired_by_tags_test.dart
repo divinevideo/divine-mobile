@@ -139,13 +139,10 @@ void main() {
     });
 
     test('writes the line the shared parser reads back', () {
-      final content = withInspiredByContentReference('a caption', const [
-        'npub1first',
-      ]);
+      final npub = NostrKeyUtils.encodePubKey('d' * 64);
+      final content = withInspiredByContentReference('a caption', [npub]);
 
-      final match = inspiredByAttributionPattern.firstMatch(content);
-      expect(match, isNotNull);
-      expect(match!.group(1), equals('npub1first'));
+      expect(inspiredByNpubFromContent(content), equals(npub));
       expect(stripInspiredByAttribution(content), equals('a caption'));
     });
 

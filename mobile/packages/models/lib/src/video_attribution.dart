@@ -3,6 +3,8 @@
 // ABOUTME: video events (Kind 34236)
 
 import 'package:meta/meta.dart';
+import 'package:models/src/nostr_hex_utils.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// Prefix of the trailing NIP-27 line that preserves inspired-by attribution
 /// in published content, shared by the publish-side writer and the parser.
@@ -22,9 +24,30 @@ final inspiredByAttributionPattern = RegExp(
   r'(npub1[a-z0-9]+)\s*$',
 );
 
+/// The npub credited by a trailing attribution line in [content], or `null`
+/// when there is no such line or its npub does not decode to a pubkey.
+///
+/// An undecodable npub credits nobody, so the line is left alone: it stays
+/// visible in the caption rather than being stripped with nothing to show
+/// for it.
+String? inspiredByNpubFromContent(String content) =>
+    _decodableAttributionMatch(content)?.group(1);
+
 /// Removes a trailing inspired-by attribution line from displayable content.
-String stripInspiredByAttribution(String content) =>
-    content.replaceFirst(inspiredByAttributionPattern, '');
+///
+/// Only a line whose npub decodes is removed; see [inspiredByNpubFromContent].
+String stripInspiredByAttribution(String content) {
+  final match = _decodableAttributionMatch(content);
+  if (match == null) return content;
+  return content.substring(0, match.start);
+}
+
+RegExpMatch? _decodableAttributionMatch(String content) {
+  final match = inspiredByAttributionPattern.firstMatch(content);
+  if (match == null) return null;
+  final hex = Nip19.decode(match.group(1)!);
+  return NostrHexUtils.isValidPubkey(hex) ? match : null;
+}
 
 /// Information about a video that inspired the current video.
 ///
