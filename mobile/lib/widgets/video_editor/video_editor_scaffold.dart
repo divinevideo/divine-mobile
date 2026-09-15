@@ -695,8 +695,9 @@ class _TimelineSectionState extends State<_TimelineSection>
   late final AnimationController _controller;
   late final CurvedAnimation _animation;
 
-  /// Collapses the whole section — timeline and bottom actions alike — while a
-  /// slide point is being placed, so the canvas has the full screen.
+  /// Collapses the whole section — timeline and bottom actions alike — while
+  /// the canvas has the full screen (a slide point being placed, the voice-over
+  /// recorder playing the preview behind its controls).
   late final AnimationController _collapseController;
   late final CurvedAnimation _collapseAnimation;
 
@@ -745,9 +746,9 @@ class _TimelineSectionState extends State<_TimelineSection>
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (prev, curr) =>
-              prev.isPlacingSlidePoint != curr.isPlacingSlidePoint,
+              prev.isCanvasFullscreen != curr.isCanvasFullscreen,
           listener: (context, state) {
-            if (state.isPlacingSlidePoint) {
+            if (state.isCanvasFullscreen) {
               _collapseController.forward();
             } else {
               _collapseController.reverse();
@@ -804,6 +805,9 @@ class _OverlayControls extends StatelessWidget {
         _ when state.isLayerInteractionActive => const SizedBox(),
         // Text-Editor
         VideoEditorMainState(openSubEditor: .text) => const SizedBox.shrink(),
+        // The voice-over recorder brings its own toolbar over the preview.
+        VideoEditorMainState(openSubEditor: .voiceOver) =>
+          const SizedBox.shrink(),
         // Draw-Editor
         VideoEditorMainState(openSubEditor: .draw) => const Padding(
           key: ValueKey('Draw-Overlay-Controls'),

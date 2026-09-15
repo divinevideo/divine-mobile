@@ -4,7 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent;
-import 'package:openvine/screens/video_editor/voice_over_take_placement.dart';
+import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 
 void main() {
   AudioEvent take(String id) => AudioEvent.fromLocalImport(

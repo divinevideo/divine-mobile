@@ -1,5 +1,6 @@
 // ABOUTME: Widget tests for VoiceOverRecorderView.
-// ABOUTME: Covers rendering, record toggle, permission UI, and done/close.
+// ABOUTME: Covers rendering, record toggle, permission UI, done/close, and
+// ABOUTME: how the recorder drives the editor preview behind it.
 
 import 'dart:async';
 
@@ -12,12 +13,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
+import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:openvine/widgets/video_editor/voice_over/voice_over_video_timeline.dart';
 
 class _MockVoiceOverCubit extends MockCubit<VoiceOverState>
     implements VoiceOverCubit {}
+
+class _MockVideoEditorMainBloc
+    extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
+    implements VideoEditorMainBloc {}
 
 // The toolbar also renders DivineIcons (close/done), so match the warning icon
 // specifically rather than by widget type.
@@ -25,17 +33,24 @@ final Finder _warningIcon = find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == DivineIconName.warning,
 );
 
-AudioEvent _take(String id) => AudioEvent.fromLocalImport(
-  id: 'local_import_voice_over_$id',
-  filePath: '/tmp/$id.m4a',
-  createdAt: 0,
-  title: 'Recorded audio',
-  mimeType: 'audio/mp4',
-  duration: 1,
-);
+AudioEvent _take(String id, {double duration = 1}) =>
+    AudioEvent.fromLocalImport(
+      id: 'local_import_voice_over_$id',
+      filePath: '/tmp/$id.m4a',
+      createdAt: 0,
+      title: 'Recorded audio',
+      mimeType: 'audio/mp4',
+      duration: duration,
+    );
+
+const _pause = VideoEditorExternalPauseRequested(isPaused: true);
+const _resume = VideoEditorExternalPauseRequested(isPaused: false);
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
+  setUpAll(() {
+    registerFallbackValue(const VideoEditorSeekRequested(Duration.zero));
+  });
 
   group(VoiceOverRecorderView, () {
     late _MockVoiceOverCubit cubit;
@@ -91,6 +106,34 @@ void main() {
           find.bySemanticsLabel(l10n.videoEditorVoiceOverStopSemanticLabel),
           findsOneWidget,
         );
+      });
+
+      testWidgets('keeps the stop control while a stopped take lands', (
+        tester,
+      ) async {
+        stub(
+          VoiceOverState(
+            status: VoiceOverStatus.stopping,
+            takes: [_take('a')],
+            currentDuration: const Duration(seconds: 1),
+            availableDuration: const Duration(seconds: 6),
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorVoiceOverStopSemanticLabel),
+          findsOneWidget,
+        );
+        // Done and delete wait for the take too.
+        final toolbar = tester.widget<VideoEditorToolbar>(
+          find.byType(VideoEditorToolbar),
+        );
+        expect(toolbar.onDone, isNull);
+        expect(find.text(l10n.videoEditorVoiceOverDeleteLast), findsNothing);
+        // The in-flight take still counts toward the readout.
+        expect(find.text('0:02 / 0:06'), findsOneWidget);
       });
 
       testWidgets('recording count for captured takes', (tester) async {
@@ -189,7 +232,99 @@ void main() {
           find.text(l10n.videoEditorVoiceOverRecordingsCount(0)),
           findsOneWidget,
         );
-        expect(find.textContaining(' / '), findsNothing);
+        expect(find.text('0:00 / 0:06'), findsOneWidget);
+      });
+
+      testWidgets('keeps the panel the same height once recording starts', (
+        tester,
+      ) async {
+        final states = StreamController<VoiceOverState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: const VoiceOverState(
+            availableDuration: Duration(seconds: 6),
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        final idleStrip = tester.getRect(find.byType(VoiceOverVideoTimeline));
+        expect(find.text(l10n.videoEditorVoiceOverHint), findsOneWidget);
+
+        states.add(
+          const VoiceOverState(
+            status: VoiceOverStatus.recording,
+            availableDuration: Duration(seconds: 6),
+          ),
+        );
+        await tester.pump();
+
+        // The hint goes but keeps its space, and the readout was there all
+        // along, so nothing above the strip shifts.
+        final hint = tester.widget<Visibility>(
+          find.ancestor(
+            of: find.text(l10n.videoEditorVoiceOverHint),
+            matching: find.byType(Visibility),
+          ),
+        );
+        expect(hint.visible, isFalse);
+        expect(hint.maintainSize, isTrue);
+        expect(tester.getRect(find.byType(VoiceOverVideoTimeline)), idleStrip);
+      });
+
+      testWidgets('the video timeline strip over a translucent scrim', (
+        tester,
+      ) async {
+        stub(const VoiceOverState(availableDuration: Duration(seconds: 6)));
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.byType(VoiceOverVideoTimeline), findsOneWidget);
+        // The editor's preview plays on beneath the route, so the surface
+        // must not cover it.
+        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(
+          scaffold.backgroundColor?.a,
+          closeTo(VoiceOverRecorderView.previewScrimAlpha, 0.01),
+        );
+      });
+
+      testWidgets('keeps the dark palette over the preview in the light '
+          'appearance', (tester) async {
+        stub(const VoiceOverState(availableDuration: Duration(seconds: 6)));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.lightTheme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<VoiceOverCubit>.value(
+              value: cubit,
+              child: const VoiceOverRecorderView(),
+            ),
+          ),
+        );
+
+        // The ground is the footage, so the chrome stays dark with light
+        // text — a light scrim over a video reads as haze.
+        final hint = tester.widget<Text>(
+          find.text(l10n.videoEditorVoiceOverHint),
+        );
+        expect(hint.style?.color, VineTheme.darkColors.mutedText);
+        expect(
+          VineTheme.lightColors.mutedText,
+          isNot(VineTheme.darkColors.mutedText),
+        );
+      });
+
+      testWidgets('no video timeline strip without a video length', (
+        tester,
+      ) async {
+        stub(const VoiceOverState());
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.byType(VoiceOverVideoTimeline), findsNothing);
       });
 
       testWidgets('permission prompt when denied', (tester) async {
@@ -460,6 +595,305 @@ void main() {
           find.byType(AnimatedContainer),
         );
         expect(animated.duration, greaterThan(Duration.zero));
+      });
+    });
+
+    group('editor preview', () {
+      const available = Duration(seconds: 6);
+      late _MockVideoEditorMainBloc editor;
+      late ValueNotifier<Duration> playTime;
+
+      setUp(() {
+        editor = _MockVideoEditorMainBloc();
+        whenListen(
+          editor,
+          const Stream<VideoEditorMainState>.empty(),
+          initialState: const VideoEditorMainState(),
+        );
+        playTime = ValueNotifier(Duration.zero);
+        addTearDown(playTime.dispose);
+      });
+
+      // Stubs the cubit with [initialState] and feeds it [states] once the
+      // view listens, so a recording can be started and stopped from here.
+      StreamController<VoiceOverState> stubStates(VoiceOverState initialState) {
+        final states = StreamController<VoiceOverState>();
+        addTearDown(states.close);
+        whenListen(cubit, states.stream, initialState: initialState);
+        return states;
+      }
+
+      Widget buildPreviewSubject() {
+        return MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VoiceOverCubit>.value(value: cubit),
+              BlocProvider<VideoEditorMainBloc>.value(value: editor),
+            ],
+            child: VoiceOverRecorderView(playTime: playTime),
+          ),
+        );
+      }
+
+      testWidgets('shows the frame the first take will open on', (
+        tester,
+      ) async {
+        stub(
+          VoiceOverState(
+            takes: [_take('a', duration: 2)],
+            availableDuration: available,
+          ),
+        );
+
+        await tester.pumpWidget(buildPreviewSubject());
+
+        verify(
+          () =>
+              editor.add(const VideoEditorSeekRequested(Duration(seconds: 2))),
+        ).called(1);
+        verifyNever(() => editor.add(_resume));
+      });
+
+      testWidgets("plays the preview from the take's start when recording "
+          'begins', (tester) async {
+        final states = stubStates(
+          VoiceOverState(
+            takes: [_take('a', duration: 2)],
+            availableDuration: available,
+          ),
+        );
+        await tester.pumpWidget(buildPreviewSubject());
+        clearInteractions(editor);
+
+        states.add(
+          VoiceOverState(
+            status: VoiceOverStatus.recording,
+            takes: [_take('a', duration: 2)],
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+
+        // The pause is re-asserted first so the resume is a real state
+        // change even after a request the canvas dropped.
+        verifyInOrder([
+          () => editor.add(_pause),
+          () => editor.add(
+            const VideoEditorSeekRequested(Duration(seconds: 2)),
+          ),
+          () => editor.add(_resume),
+        ]);
+      });
+
+      testWidgets("catches the preview up when the editor's player comes back "
+          'mid-take', (tester) async {
+        final editorStates = StreamController<VideoEditorMainState>();
+        addTearDown(editorStates.close);
+        whenListen(
+          editor,
+          editorStates.stream,
+          initialState: const VideoEditorMainState(),
+        );
+        final states = stubStates(
+          const VoiceOverState(availableDuration: available),
+        );
+        await tester.pumpWidget(buildPreviewSubject());
+        states.add(
+          const VoiceOverState(
+            status: VoiceOverStatus.recording,
+            currentDuration: Duration(milliseconds: 1500),
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+        clearInteractions(editor);
+
+        editorStates.add(const VideoEditorMainState(isPlayerReady: true));
+        await tester.pump();
+
+        // Seeks to where the take already is, not to its start.
+        verifyInOrder([
+          () => editor.add(_pause),
+          () => editor.add(
+            const VideoEditorSeekRequested(Duration(milliseconds: 1500)),
+          ),
+          () => editor.add(_resume),
+        ]);
+      });
+
+      testWidgets("parks the preview when the editor's player comes back "
+          'between takes', (tester) async {
+        final editorStates = StreamController<VideoEditorMainState>();
+        addTearDown(editorStates.close);
+        whenListen(
+          editor,
+          editorStates.stream,
+          initialState: const VideoEditorMainState(),
+        );
+        stub(
+          VoiceOverState(
+            takes: [_take('a', duration: 2)],
+            availableDuration: available,
+          ),
+        );
+        await tester.pumpWidget(buildPreviewSubject());
+        clearInteractions(editor);
+
+        editorStates.add(const VideoEditorMainState(isPlayerReady: true));
+        await tester.pump();
+
+        verify(
+          () =>
+              editor.add(const VideoEditorSeekRequested(Duration(seconds: 2))),
+        ).called(1);
+        verifyNever(() => editor.add(_resume));
+      });
+
+      testWidgets('holds the preview the moment a take is stopped, without '
+          'seeking', (tester) async {
+        final states = stubStates(
+          const VoiceOverState(
+            status: VoiceOverStatus.recording,
+            currentDuration: Duration(seconds: 2),
+            availableDuration: available,
+          ),
+        );
+        await tester.pumpWidget(buildPreviewSubject());
+        clearInteractions(editor);
+
+        // Stopping comes first, while the recorder is still closing its file.
+        states.add(
+          const VoiceOverState(
+            status: VoiceOverStatus.stopping,
+            currentDuration: Duration(seconds: 2),
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+
+        verify(() => editor.add(_pause)).called(1);
+
+        // The take landing moves the next start, but the preview stays on the
+        // frame it stopped on: a corrective seek read as the video jumping
+        // back, and the next take seeks to its own start anyway.
+        states.add(
+          VoiceOverState(
+            takes: [_take('a', duration: 2)],
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+
+        verifyNever(
+          () => editor.add(any(that: isA<VideoEditorSeekRequested>())),
+        );
+        verifyNever(() => editor.add(_resume));
+      });
+
+      testWidgets('pauses the preview just before the video runs out', (
+        tester,
+      ) async {
+        final states = stubStates(
+          const VoiceOverState(availableDuration: available),
+        );
+        await tester.pumpWidget(buildPreviewSubject());
+        states.add(
+          const VoiceOverState(
+            status: VoiceOverStatus.recording,
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+        clearInteractions(editor);
+
+        playTime.value = const Duration(seconds: 3);
+        await tester.pump();
+        verifyNever(() => editor.add(_pause));
+
+        playTime.value = const Duration(milliseconds: 5900);
+        await tester.pump();
+        verify(() => editor.add(_pause)).called(1);
+
+        // The pause is one-shot: the frames after it are not re-paused.
+        playTime.value = const Duration(milliseconds: 5950);
+        await tester.pump();
+        verifyNever(() => editor.add(_pause));
+      });
+
+      testWidgets('leaves the preview alone at the end while not recording', (
+        tester,
+      ) async {
+        stub(const VoiceOverState(availableDuration: available));
+        await tester.pumpWidget(buildPreviewSubject());
+        clearInteractions(editor);
+
+        playTime.value = const Duration(milliseconds: 5950);
+        await tester.pump();
+
+        verifyNever(() => editor.add(_pause));
+      });
+
+      testWidgets(
+        'parks the preview at the new start after a take is deleted',
+        (
+          tester,
+        ) async {
+          final states = stubStates(
+            VoiceOverState(
+              takes: [_take('a', duration: 2), _take('b')],
+              availableDuration: available,
+            ),
+          );
+          await tester.pumpWidget(buildPreviewSubject());
+          clearInteractions(editor);
+
+          states.add(
+            VoiceOverState(
+              takes: [_take('a', duration: 2)],
+              availableDuration: available,
+            ),
+          );
+          await tester.pump();
+
+          verify(
+            () => editor.add(
+              const VideoEditorSeekRequested(Duration(seconds: 2)),
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets('is inert without an editor behind the route', (
+        tester,
+      ) async {
+        final states = stubStates(
+          const VoiceOverState(availableDuration: available),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<VoiceOverCubit>.value(
+              value: cubit,
+              child: VoiceOverRecorderView(playTime: playTime),
+            ),
+          ),
+        );
+
+        states.add(
+          const VoiceOverState(
+            status: VoiceOverStatus.recording,
+            availableDuration: available,
+          ),
+        );
+        await tester.pump();
+        playTime.value = const Duration(milliseconds: 5950);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(VoiceOverVideoTimeline), findsOneWidget);
       });
     });
 
