@@ -2,6 +2,7 @@
 // ABOUTME: used by the direct-upload and edit-video publish paths.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
@@ -135,6 +136,17 @@ void main() {
         withInspiredByContentReference('a caption', const []),
         equals('a caption'),
       );
+    });
+
+    test('writes the line the shared parser reads back', () {
+      final content = withInspiredByContentReference('a caption', const [
+        'npub1first',
+      ]);
+
+      final match = inspiredByAttributionPattern.firstMatch(content);
+      expect(match, isNotNull);
+      expect(match!.group(1), equals('npub1first'));
+      expect(stripInspiredByAttribution(content), equals('a caption'));
     });
 
     test('skips blank entries rather than crediting an empty reference', () {

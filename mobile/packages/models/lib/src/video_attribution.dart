@@ -4,13 +4,22 @@
 
 import 'package:meta/meta.dart';
 
+/// Prefix of the trailing NIP-27 line that preserves inspired-by attribution
+/// in published content, shared by the publish-side writer and the parser.
+const inspiredByAttributionPrefix = 'Inspired by nostr:';
+
+/// The attribution line naming [npub], exactly as the publisher appends it.
+String inspiredByAttributionLine(String npub) =>
+    '$inspiredByAttributionPrefix$npub';
+
 /// Matches the trailing NIP-27 line used to preserve inspired-by attribution.
 ///
 /// The line must be separated from a caption by a blank line, or be the whole
 /// content for a publish without a caption. Anchoring prevents prose mentions
 /// from being mistaken for attribution.
 final inspiredByAttributionPattern = RegExp(
-  r'(?:^|\n\n)Inspired by nostr:(npub1[a-z0-9]+)\s*$',
+  '(?:^|\\n\\n)${RegExp.escape(inspiredByAttributionPrefix)}'
+  r'(npub1[a-z0-9]+)\s*$',
 );
 
 /// Removes a trailing inspired-by attribution line from displayable content.

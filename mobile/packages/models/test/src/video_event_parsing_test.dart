@@ -971,11 +971,11 @@ void main() {
     test(
       'should not treat a trailing mid-sentence mention as inspiredByNpub',
       () {
-        // The strip regex in the edit form requires a blank line (or start of
-        // content) before the attribution phrase. Parsing must be equally
-        // strict, or prose like this would set inspiredByNpub without ever
-        // being strippable — duplicating the line and p-tagging the mentioned
-        // person on the next edit-save.
+        // inspiredByAttributionPattern anchors the phrase to a blank line (or
+        // the start of content), and both parsing and stripping share it. A
+        // looser parse would set inspiredByNpub for prose like this without
+        // it ever being strippable — duplicating the line and p-tagging the
+        // mentioned person on the next edit-save.
         final nostrEvent = Event(
           authorPubkey,
           34236,
