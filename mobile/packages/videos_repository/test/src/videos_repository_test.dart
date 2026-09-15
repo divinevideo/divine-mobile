@@ -660,28 +660,157 @@ void main() {
         });
 
         test(
-          'does not replay relay page one when a cursor page fails',
+          'preserves a failed cursor page for retry without replaying relays',
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            var requests = 0;
             when(
               () => mockFunnelcakeClient.getRecentVideosPage(
                 limit: any(named: 'limit'),
                 cursor: 'p:next-page',
               ),
-            ).thenThrow(const FunnelcakeException('Network error'));
+            ).thenAnswer((_) async {
+              if (requests++ == 0) {
+                throw const FunnelcakeException('Network error');
+              }
+              return _recentPage([
+                _createVideoStats(
+                  id: 'recovered-video',
+                  pubkey: 'test-pubkey',
+                  dTag: 'recovered-video',
+                  videoUrl: 'https://example.com/recovered.mp4',
+                ),
+              ], hasMore: false);
+            });
 
             final repositoryWithApi = VideosRepository(
               nostrClient: mockNostrClient,
               funnelcakeApiClient: mockFunnelcakeClient,
             );
 
+            await expectLater(
+              repositoryWithApi.getNewVideos(cursor: 'p:next-page'),
+              throwsA(isA<FunnelcakeException>()),
+            );
             final result = await repositoryWithApi.getNewVideos(
               cursor: 'p:next-page',
             );
-
-            expect(result.videos, isEmpty);
+            expect(result.videos.single.id, 'recovered-video');
             expect(result.hasMore, isFalse);
             verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test(
+          'does not switch a publication cursor to an unavailable source',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => []);
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await expectLater(
+              repositoryWithApi.getNewVideos(cursor: 'p:next-page'),
+              throwsA(isA<FunnelcakeException>()),
+            );
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test(
+          'retains the terminal cursor-page tail after deduplication',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final rows = List.generate(
+              3,
+              (index) => _createVideoStats(
+                id: index.toRadixString(16).padLeft(64, '0'),
+                pubkey: ''.padLeft(64, 'f'),
+                dTag: 'clip-$index',
+                videoUrl: 'https://example.com/$index.mp4',
+                createdAt: 2000,
+                publishedAt: 1000,
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: 2,
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [rows.first, rows.first],
+                hasMore: true,
+                nextCursor: 'p:terminal',
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: 2,
+                cursor: 'p:terminal',
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(rows.sublist(1), hasMore: false),
+            );
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(limit: 2);
+
+            expect(
+              result.videos.map((video) => video.id),
+              rows.map((row) => row.id),
+            );
+            expect(result.hasMore, isFalse);
+            expect(result.paginationCursor, isNull);
+          },
+        );
+
+        test(
+          'refresh retains a terminal envelope tail with no next cursor',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final rows = List.generate(
+              2,
+              (index) => _createVideoStats(
+                id: index.toRadixString(16).padLeft(64, '0'),
+                pubkey: ''.padLeft(64, 'f'),
+                dTag: 'clip-$index',
+                videoUrl: 'https://example.com/$index.mp4',
+                createdAt: 2000 - index,
+                publishedAt: 2000 - index,
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(limit: 2),
+            ).thenAnswer((_) async => _recentPage(rows, hasMore: false));
+            final newest = _createVideoEvent(
+              id: ''.padLeft(64, 'a'),
+              pubkey: ''.padLeft(64, 'f'),
+              videoUrl: 'https://example.com/newest.mp4',
+              createdAt: 2100,
+            );
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [newest]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repo.getNewVideos(limit: 2, skipCache: true);
+
+            expect(result.videos.map((v) => v.id), [
+              newest.id,
+              ...rows.map((v) => v.id),
+            ]);
+            expect(result.hasMore, isFalse);
+            expect(result.paginationCursor, isNull);
           },
         );
 
@@ -1061,6 +1190,129 @@ void main() {
 
         expect(filters.first.until, equals(until));
       });
+
+      test(
+        'relay pagination uses revision time and stays on its source '
+        'after recovery',
+        () async {
+          final api = MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(false);
+          final edited = _createVideoEvent(
+            id: ''.padLeft(64, 'a'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/edited.mp4',
+            createdAt: 2000,
+            extraTags: const [
+              ['published_at', '100'],
+            ],
+          );
+          final recent = _createVideoEvent(
+            id: ''.padLeft(64, 'b'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/recent.mp4',
+            createdAt: 1900,
+          );
+          final next = _createVideoEvent(
+            id: ''.padLeft(64, 'c'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/next.mp4',
+            createdAt: 1800,
+          );
+          final boundaries = <int?>[];
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+            call,
+          ) async {
+            final boundary =
+                (call.positionalArguments.first as List<Filter>).single.until;
+            boundaries.add(boundary);
+            return boundary == null
+                ? [edited, recent]
+                : boundary == 1899
+                ? [next]
+                : [];
+          });
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final first = await repo.getNewVideos(limit: 2);
+          expect(first.videos.map((video) => video.createdAt), contains(100));
+          expect(first.paginationCursor, 'relay:1899');
+          when(() => api.isAvailable).thenReturn(true);
+          final second = await repo.getNewVideos(
+            limit: 2,
+            cursor: first.paginationCursor,
+          );
+
+          expect(second.videos.single.id, next.id);
+          expect(second.hasMore, isFalse);
+          expect(second.paginationCursor, isNull);
+          expect(boundaries, [null, 1899]);
+          verifyNever(
+            () => api.getRecentVideosPage(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+        },
+      );
+
+      test('relay top-up retains every row consumed by its cursor', () async {
+        final events = List.generate(
+          3,
+          (index) => _createVideoEvent(
+            id: index.toRadixString(16).padLeft(64, '0'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/$index.mp4',
+            createdAt: 2000 - index * 100,
+          ),
+        );
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer((call) async {
+          final boundary =
+              (call.positionalArguments.first as List<Filter>).single.until;
+          return boundary == null
+              ? [events.first, events.first]
+              : events.sublist(1);
+        });
+
+        final result = await repository.getNewVideos(limit: 2);
+
+        expect(result.videos.map((video) => video.id), events.map((e) => e.id));
+        expect(result.paginationCursor, 'relay:1799');
+        expect(result.hasMore, isTrue);
+      });
+
+      test('relay top-up stops after an exhausted raw page', () async {
+        final event = _createVideoEvent(
+          id: ''.padLeft(64, 'a'),
+          pubkey: ''.padLeft(64, 'f'),
+          videoUrl: 'https://example.com/video.mp4',
+          createdAt: 2000,
+        );
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer((call) async {
+          final boundary =
+              (call.positionalArguments.first as List<Filter>).single.until;
+          return boundary == null ? [event, event] : [];
+        });
+
+        final result = await repository.getNewVideos(limit: 2);
+
+        expect(result.videos.single.id, event.id);
+        expect(result.hasMore, isFalse);
+        expect(result.paginationCursor, isNull);
+      });
+
+      test(
+        'rejects a malformed relay cursor without replaying page one',
+        () async {
+          await expectLater(
+            repository.getNewVideos(cursor: 'relay:invalid'),
+            throwsFormatException,
+          );
+          verifyNever(() => mockNostrClient.queryEvents(any()));
+        },
+      );
 
       test('transforms valid events to VideoEvents', () async {
         final event = _createVideoEvent(

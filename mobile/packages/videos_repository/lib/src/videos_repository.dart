@@ -33,6 +33,7 @@ const int _videoKind = EventKind.videoVertical;
 
 /// Default number of videos to fetch per page.
 const int _defaultLimit = 25;
+const _recentRelayCursorPrefix = 'relay:';
 
 class _FollowingFetchResult {
   const _FollowingFetchResult({required this.videos, this.pageCount = 0});
@@ -769,7 +770,8 @@ class VideosRepository {
   /// legitimately be shorter than the limit that asked for it and still have
   /// more behind it.
   ///
-  /// Returns an empty result if no videos are found or on error.
+  /// Returns an empty result if no videos are found. Cursor-page failures
+  /// propagate so callers can retry without losing their position.
   Future<HomeFeedResult> getNewVideos({
     int limit = _defaultLimit,
     int? until,
@@ -789,8 +791,17 @@ class VideosRepository {
       }
     }
 
+    // A relay continuation uses raw revision time, not publication time.
+    // Keep the source pinned until refresh, even if the API has recovered.
+    final isRelayCursor = cursor?.startsWith(_recentRelayCursorPrefix) ?? false;
+    final relayUntil = isRelayCursor
+        ? int.parse(cursor!.substring(_recentRelayCursorPrefix.length))
+        : until;
+
     // 1. Try Funnelcake API first
-    if (_funnelcakeApiClient != null && _funnelcakeApiClient.isAvailable) {
+    if (!isRelayCursor &&
+        _funnelcakeApiClient != null &&
+        _funnelcakeApiClient.isAvailable) {
       try {
         final page = await _fetchVisibleRecentVideosFromStatsApi(
           limit: limit,
@@ -801,7 +812,8 @@ class VideosRepository {
             ? await _mergeRecentApiVideosWithRelayRefresh(
                 page.videos,
                 limit: limit,
-                trimToLimit: page.nextCursor == null,
+                trimToLimit:
+                    page.serverHasMore == null && page.nextCursor == null,
               )
             : page.videos;
         // Hydrate views/loops — list endpoint omits them for some rows.
@@ -819,22 +831,30 @@ class VideosRepository {
         // boundary. Replaying the relay's first page here would duplicate the
         // opening feed and falsely keep pagination alive.
         if (cursor != null) {
-          return const HomeFeedResult(videos: [], hasMore: false);
+          rethrow;
         }
         // Fall through to Nostr
       }
     }
 
+    if (cursor != null && !isRelayCursor) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
     // 2. Nostr fallback
-    final videos = await _fetchVisibleRecentVideosFromRelays(
+    final page = await _fetchVisibleRecentVideosFromRelays(
       limit: limit,
-      until: until,
+      until: relayUntil,
     );
-    final hydrated = await _hydrateVideosWithBulkStats(videos);
+    final hydrated = await _hydrateVideosWithBulkStats(page.videos);
     return _recentVideosResult(
       hydrated,
       limit: limit,
       until: until,
+      serverHasMore: page.nextBefore != null,
+      paginationCursor: page.nextBefore == null
+          ? null
+          : '$_recentRelayCursorPrefix${page.nextBefore}',
       cacheResult: until == null && cursor == null,
     );
   }
@@ -897,7 +917,7 @@ class VideosRepository {
       // Compare the server's row count, not the surviving videos: dropping one
       // malformed row would otherwise read as the source running out and pin a
       // premature `hasMore: false` into the feed cache.
-      if (page.serverItemCount < limit) break;
+      if (page.hasMore == false || page.serverItemCount < limit) break;
 
       if (nextPageCursor != null) {
         if (nextPageCursor == pageCursor) break;
@@ -923,7 +943,7 @@ class VideosRepository {
     // page, so trimming the tail here would place it behind the cursor and
     // skip it for good. Legacy bare-list pages have no cursor, and the
     // caller's `until` pagination re-reads whatever is trimmed here.
-    final cursorBacked = nextPageCursor != null;
+    final cursorBacked = serverHasMore != null || nextPageCursor != null;
     return (
       videos: cursorBacked ? visible : visible.take(limit).toList(),
       serverHasMore: !cursorBacked && visible.length > limit
@@ -939,9 +959,10 @@ class VideosRepository {
     bool trimToLimit = true,
   }) async {
     try {
-      final relayVideos = await _fetchVisibleRecentVideosFromRelays(
+      final relayPage = await _fetchVisibleRecentVideosFromRelays(
         limit: limit,
       ).timeout(_recentRelayRefreshTimeout);
+      final relayVideos = relayPage.videos;
       if (relayVideos.isEmpty) return apiVideos;
 
       final oldestApiPublication = apiVideos.isEmpty
@@ -975,15 +996,18 @@ class VideosRepository {
     }
   }
 
-  Future<List<VideoEvent>> _fetchVisibleRecentVideosFromRelays({
+  Future<({List<VideoEvent> videos, int? nextBefore})>
+  _fetchVisibleRecentVideosFromRelays({
     required int limit,
     int? until,
   }) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
+    int? nextBefore;
 
     while (visible.length < limit) {
+      nextBefore = null;
       final filter = Filter(kinds: [_videoKind], limit: limit, until: cursor);
       final events = await _nostrClient.queryEvents([filter]);
       if (events.isEmpty) break;
@@ -995,9 +1019,13 @@ class VideosRepository {
       final nextCursor = _cursorBeforeOldestEvent(events);
       if (nextCursor == null || nextCursor == cursor) break;
       cursor = nextCursor;
+      nextBefore = nextCursor;
     }
 
-    return visible.take(limit).toList();
+    // The boundary advances past every raw event consumed, including filtered
+    // revisions. Never derive it from VideoEvent.createdAt (publication time),
+    // or discard a visible top-up tail now sitting behind that boundary.
+    return (videos: visible, nextBefore: nextBefore);
   }
 
   /// Fetches classic Vine archive videos for the home feed's Classics mode.
