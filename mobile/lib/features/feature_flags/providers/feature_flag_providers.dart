@@ -42,22 +42,23 @@ FeatureFlagService featureFlagService(Ref ref) {
   return service;
 }
 
-/// Feature flag state provider (reactive to service changes)
+/// Feature flag state provider that publishes service changes to its state.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new flags to this notifier's state instead of rebuilding it.
 @riverpod
-Map<FeatureFlag, bool> featureFlagState(Ref ref) {
-  final service = ref.watch(featureFlagServiceProvider);
+class FeatureFlagStateNotifier extends _$FeatureFlagStateNotifier {
+  @override
+  Map<FeatureFlag, bool> build() {
+    final service = ref.watch(featureFlagServiceProvider);
 
-  // Set up listener to invalidate provider when service changes
-  void listener() {
-    ref.invalidateSelf();
+    void listener() => state = service.currentState.allFlags;
+
+    service.addListener(listener);
+    ref.onDispose(() => service.removeListener(listener));
+
+    return service.currentState.allFlags;
   }
-
-  service.addListener(listener);
-  ref.onDispose(() {
-    service.removeListener(listener);
-  });
-
-  return service.currentState.allFlags;
 }
 
 /// Individual feature flag check provider family

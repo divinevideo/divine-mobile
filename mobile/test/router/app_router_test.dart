@@ -442,8 +442,8 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
-          featureFlagStateProvider.overrideWith(
-            (_) => const {FeatureFlag.profileMonetizationLinks: false},
+          featureFlagStateProvider.overrideWithValue(
+            const {FeatureFlag.profileMonetizationLinks: false},
           ),
         ],
       );
@@ -458,8 +458,8 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
-          featureFlagStateProvider.overrideWith(
-            (_) => const {FeatureFlag.profileMonetizationLinks: true},
+          featureFlagStateProvider.overrideWithValue(
+            const {FeatureFlag.profileMonetizationLinks: true},
           ),
         ],
       );

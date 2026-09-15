@@ -20,7 +20,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
@@ -41,7 +41,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => pocConfig),
+            currentEnvironmentProvider.overrideWithValue(pocConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
@@ -62,8 +62,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith(
-              (ref) => EnvironmentConfig.production,
+            currentEnvironmentProvider.overrideWithValue(
+              EnvironmentConfig.production,
             ),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
@@ -86,7 +86,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => false),
           ],
           child: const MaterialApp(
@@ -107,7 +107,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
@@ -136,7 +136,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => pocConfig),
+            currentEnvironmentProvider.overrideWithValue(pocConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: const MaterialApp(
@@ -166,7 +166,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
@@ -192,7 +192,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => pocConfig),
+            currentEnvironmentProvider.overrideWithValue(pocConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
@@ -214,8 +214,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith(
-              (ref) => EnvironmentConfig.production,
+            currentEnvironmentProvider.overrideWithValue(
+              EnvironmentConfig.production,
             ),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
@@ -241,7 +241,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => false),
           ],
           child: MaterialApp(
@@ -266,7 +266,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
@@ -299,7 +299,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => stagingConfig),
+            currentEnvironmentProvider.overrideWithValue(stagingConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(
@@ -328,7 +328,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentEnvironmentProvider.overrideWith((ref) => pocConfig),
+            currentEnvironmentProvider.overrideWithValue(pocConfig),
             showEnvironmentIndicatorProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp(

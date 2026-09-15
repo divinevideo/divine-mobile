@@ -81,16 +81,22 @@ LanguagePreferenceService languagePreferenceService(Ref ref) {
 
 /// Rebuild trigger for consumers that need the latest content-language
 /// preference in request parameters.
-final languagePreferenceVersionProvider = Provider<int>((ref) {
-  final service = ref.watch(languagePreferenceServiceProvider);
-  var version = 0;
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// publishes the next version to this notifier's state instead of rebuilding
+/// the provider. Kept alive so the subscription survives while no consumer
+/// is mounted.
+@Riverpod(keepAlive: true)
+class LanguagePreferenceVersionNotifier
+    extends _$LanguagePreferenceVersionNotifier {
+  @override
+  int build() {
+    final service = ref.watch(languagePreferenceServiceProvider);
 
-  void listener() {
-    version++;
-    ref.invalidateSelf();
+    void increment() => state++;
+
+    service.addListener(increment);
+    ref.onDispose(() => service.removeListener(increment));
+    return 0;
   }
-
-  service.addListener(listener);
-  ref.onDispose(() => service.removeListener(listener));
-  return version;
-});
+}
