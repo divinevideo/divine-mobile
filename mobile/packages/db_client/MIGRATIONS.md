@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 14** (see `app_database.dart`).
+**Version: 16** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -75,6 +75,21 @@ tag: nothing on such a row says which build recorded it, and the build replaying
 it is by construction a later one. The step is idempotent and is part of the
 guarded `beforeOpen` recovery chain, with the column in the repair probe beside
 `phase`.
+
+Version 15 adds `pending_reports` (#8053), the durable outbox for content
+reports, so the kind-1984 relay publish and the Zendesk ticket can be retried
+per channel instead of being fire-and-forget.
+
+Version 16 adds `saved_caption_styles` (#7742), the custom caption looks a
+user saves from the video editor's caption style picker — font, colors,
+background mode, font scale and animation — so one can be applied to captions
+in later videos. A custom caption style otherwise lives inside its draft's
+caption track and is lost to the next video. The style fields are a JSON blob
+rather than columns, so a new style field is an app-level change rather than a
+migration. Rows are owner-scoped like `clip_categories`, with the same
+legacy-row claim on sign-in and delete on destructive sign-out. The `from < 16`
+step creates the owner index by hand for the same reason v13 does:
+`createTable` does not emit `@TableIndex.sql` indexes.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

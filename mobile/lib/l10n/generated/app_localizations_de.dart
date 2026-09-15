@@ -8581,6 +8581,72 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Untertitel-Style';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Gespeichert';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Gespeicherte Styles';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'Aktuellen Style speichern';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Noch nichts gespeichert. Stell dir einen eigenen Style zusammen, speichere ihn hier und nutze den Look im nächsten Video wieder.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Deine gespeicherten Styles konnten nicht geladen werden.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Name des Styles';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Style speichern';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Speichern';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Style umbenennen';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Umbenennen';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '„$name“ löschen?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Untertitel, die diesen Style schon nutzen, behalten ihren Look.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name anwenden';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Weitere Optionen für $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '$name zum Sortieren ziehen';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Als „$name“ gespeichert';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'Der Style konnte nicht gespeichert werden.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klassisch';
 
   @override

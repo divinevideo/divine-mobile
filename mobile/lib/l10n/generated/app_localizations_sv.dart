@@ -8468,6 +8468,71 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Undertextstil';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Sparade';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Sparade stilar';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => 'Spara aktuell stil';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Inget sparat än. Sätt ihop en egen stil, spara den här och använd looken i nästa video.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Det gick inte att läsa in dina sparade stilar.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Stilens namn';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Spara stil';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Spara';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Byt namn på stil';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Byt namn';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'Ta bort ”$name”?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Undertexter som redan använder stilen behåller sin look.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'Använd $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Fler alternativ för $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Dra för att flytta $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Sparad som ”$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'Det gick inte att spara stilen.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klassisk';
 
   @override

@@ -8469,6 +8469,72 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'کیپشن اسٹائل';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'محفوظ شدہ';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'محفوظ شدہ اسٹائلز';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'موجودہ اسٹائل محفوظ کریں';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'ابھی تک کچھ محفوظ نہیں۔ اپنی پسند کا کسٹم اسٹائل بنائیں، یہاں محفوظ کریں اور اگلی ویڈیو میں وہی لُک دوبارہ استعمال کریں۔';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'آپ کے محفوظ شدہ اسٹائلز لوڈ نہیں ہو سکے۔';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'اسٹائل کا نام';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'اسٹائل محفوظ کریں';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'محفوظ کریں';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'اسٹائل کا نام بدلیں';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'نام بدلیں';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '\"$name\" حذف کریں؟';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'جو کیپشنز پہلے سے یہ اسٹائل استعمال کر رہے ہیں ان کا لُک برقرار رہے گا۔';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name لاگو کریں';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name کے لیے مزید اختیارات';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '$name کی ترتیب بدلنے کے لیے گھسیٹیں';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '\"$name\" کے نام سے محفوظ ہو گیا';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'اسٹائل محفوظ نہیں ہو سکا۔';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'کلاسک';
 
   @override

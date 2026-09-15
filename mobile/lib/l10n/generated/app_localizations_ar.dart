@@ -8423,6 +8423,70 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'أسلوب الترجمات';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'المحفوظة';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'الأنماط المحفوظة';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => 'حفظ النمط الحالي';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'لم يُحفظ أي نمط بعد. بعد إعداد نمط مخصص، يمكن حفظه هنا لإعادة استخدام المظهر في الفيديو التالي.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'تعذّر تحميل أنماطك المحفوظة.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'اسم النمط';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'حفظ النمط';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'حفظ';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'إعادة تسمية النمط';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'إعادة التسمية';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'حذف \"$name\"؟';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'الترجمات التي تستخدم هذا النمط بالفعل تحتفظ بمظهرها.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'تطبيق $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'خيارات إضافية لـ $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'السحب لإعادة ترتيب $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'تم الحفظ باسم \"$name\"';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => 'تعذّر حفظ النمط.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'كلاسيكي';
 
   @override

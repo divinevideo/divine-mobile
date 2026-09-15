@@ -92,6 +92,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     IdentityVerifications,
     SeenVideos,
     VanishedProfiles,
+    SavedCaptionStyles,
   ],
   daos: [
     UserProfilesDao,
@@ -124,6 +125,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     IdentityVerificationsDao,
     SeenVideosDao,
     VanishedProfilesDao,
+    SavedCaptionStylesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -134,7 +136,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -222,6 +224,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 15) {
         await m.createTable(pendingReports);
+      }
+      if (from < 16) {
+        await m.createTable(savedCaptionStyles);
+        // `createTable` does not emit `@TableIndex.sql` indexes; see the
+        // `from < 13` step above.
+        await _createSavedCaptionStyleIndexes();
       }
     },
     beforeOpen: (details) async {
@@ -488,6 +496,18 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_created_at '
       'ON personal_events (pubkey, created_at DESC)',
+    );
+  }
+
+  /// Creates the `saved_caption_styles` indexes (#7742).
+  ///
+  /// Kept beside the table's `@TableIndex.sql` annotation for the same reason
+  /// as [_createPersonalEventIndexes]: `createAll()` honours the annotation on
+  /// a fresh install, `createTable()` during an upgrade does not.
+  Future<void> _createSavedCaptionStyleIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_saved_caption_style_owner_pubkey '
+      'ON saved_caption_styles (owner_pubkey)',
     );
   }
 

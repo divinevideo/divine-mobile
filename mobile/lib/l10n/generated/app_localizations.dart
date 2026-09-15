@@ -14432,6 +14432,108 @@ abstract class AppLocalizations {
   /// **'Caption style'**
   String get videoEditorCaptionsPresetTitle;
 
+  /// Label of the tile in the caption style picker, beside Custom, that opens the list of caption styles the user saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get videoEditorCaptionsPresetSaved;
+
+  /// Title of the sheet listing the caption styles the user saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved styles'**
+  String get videoEditorCaptionsSavedStylesTitle;
+
+  /// Button in the saved caption styles sheet that saves the caption track's current custom style as a new named style.
+  ///
+  /// In en, this message translates to:
+  /// **'Save current style'**
+  String get videoEditorCaptionsSavedStylesSaveCurrent;
+
+  /// Shown in place of the list when the user has not saved a caption style yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet. Dial in a custom style, save it here, and reuse the look in your next video.'**
+  String get videoEditorCaptionsSavedStylesEmpty;
+
+  /// Shown in the saved caption styles sheet when the styles could not be read from the device.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your saved styles.'**
+  String get videoEditorCaptionsSavedStylesLoadFailed;
+
+  /// Label of the text field for naming a saved caption style when saving or renaming it.
+  ///
+  /// In en, this message translates to:
+  /// **'Style name'**
+  String get videoEditorCaptionsSavedStyleNameLabel;
+
+  /// Title of the prompt that asks for a name before saving a caption style, and the label of the button in the custom style editor that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Save style'**
+  String get videoEditorCaptionsSavedStyleSaveTitle;
+
+  /// Confirm button of the prompt that saves a caption style.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get videoEditorCaptionsSavedStyleSaveAction;
+
+  /// Title of the prompt that renames a saved caption style.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename style'**
+  String get videoEditorCaptionsSavedStyleRenameTitle;
+
+  /// Menu item and confirm button for renaming a saved caption style.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get videoEditorCaptionsSavedStyleRenameAction;
+
+  /// Title of the confirmation before deleting a saved caption style. {name} is the style's user-given name.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name);
+
+  /// Body of the confirmation before deleting a saved caption style, reassuring that captions already styled with it are unaffected.
+  ///
+  /// In en, this message translates to:
+  /// **'Captions already using this style keep their look.'**
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage;
+
+  /// Accessibility label for a row in the saved caption styles sheet; tapping it applies that style to the captions. {name} is the style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply {name}'**
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name);
+
+  /// Accessibility label for the button on a saved style's row that opens the rename/delete menu. {name} is the style name.
+  ///
+  /// In en, this message translates to:
+  /// **'More options for {name}'**
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name);
+
+  /// Accessibility label for the drag handle on a saved style's row. {name} is the style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to reorder {name}'**
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name);
+
+  /// Snackbar shown after a caption style was saved from the custom style editor. {name} is the name the user gave it.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved as “{name}”'**
+  String videoEditorCaptionsSavedStyleSaved(String name);
+
+  /// Snackbar shown when saving a caption style from the custom style editor failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the style.'**
+  String get videoEditorCaptionsSavedStyleSaveFailed;
+
   /// No description provided for @videoEditorCaptionsPresetClassic.
   ///
   /// In en, this message translates to:

@@ -1,7 +1,8 @@
 // ABOUTME: Tests for the caption preset picker's display-name resolution.
 // ABOUTME: Rendering is not widget-tested: the tiles draw real Google Fonts,
 // ABOUTME: which are not available in unit tests (same limitation as
-// ABOUTME: video_editor_text_font_selector_test.dart).
+// ABOUTME: video_editor_text_font_selector_test.dart). The Saved tile's sheet
+// ABOUTME: is covered by video_editor_saved_caption_styles_sheet_test.dart.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';

@@ -8568,6 +8568,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Caption style';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Saved';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Saved styles';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => 'Save current style';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Nothing saved yet. Dial in a custom style, save it here, and reuse the look in your next video.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Couldn\'t load your saved styles.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Style name';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Save style';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Save';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Rename style';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Rename';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Captions already using this style keep their look.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'Apply $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'More options for $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Drag to reorder $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Saved as “$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'Couldn\'t save the style.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Classic';
 
   @override

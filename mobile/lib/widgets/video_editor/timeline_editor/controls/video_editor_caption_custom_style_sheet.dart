@@ -1,15 +1,22 @@
 // ABOUTME: Bottom sheet to build a user-defined caption style: font, colors,
-// ABOUTME: background pill, and animation, with a looped live preview.
+// ABOUTME: background pill, and animation, with a looped live preview and a
+// ABOUTME: save action that keeps the style for later videos.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_editor/saved_caption_styles/saved_caption_styles_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
+import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
 import 'package:openvine/widgets/color_swatch_button.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_font_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_caption_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
@@ -28,11 +35,40 @@ Future<CaptionCustomStyle?> showCaptionCustomStyleSheet(
       context.l10n.videoEditorCaptionsCustomStyleTitle,
       style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
     ),
-    buildScrollBody: (scrollController) => _CaptionCustomStyleView(
+    buildScrollBody: (scrollController) => _CaptionCustomStylePage(
       initial: initial,
       scrollController: scrollController,
     ),
   );
+}
+
+/// Wires the editor to the account's saved styles, which is where its
+/// "Save style" action writes to.
+///
+/// Re-keyed on the repository so an account switch mid-sheet closes the
+/// cubit bound to the previous account.
+class _CaptionCustomStylePage extends ConsumerWidget {
+  const _CaptionCustomStylePage({
+    required this.initial,
+    required this.scrollController,
+  });
+
+  final CaptionCustomStyle initial;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.watch(savedCaptionStyleRepositoryProvider);
+    return BlocProvider<SavedCaptionStylesCubit>(
+      key: ValueKey(repository),
+      // No load: the editor never lists the saved styles, it only adds one.
+      create: (_) => SavedCaptionStylesCubit(repository: repository),
+      child: _CaptionCustomStyleView(
+        initial: initial,
+        scrollController: scrollController,
+      ),
+    );
+  }
 }
 
 class _CaptionCustomStyleView extends StatefulWidget {
@@ -53,6 +89,10 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     with SingleTickerProviderStateMixin {
   late CaptionCustomStyle _style = widget.initial;
   late final AnimationController _controller;
+
+  /// Outcome of the last "Save style", shown under the button until the
+  /// style is edited again — a snackbar would land behind the sheet.
+  _SaveOutcome? _saveOutcome;
 
   static const _loopMs = 2400;
 
@@ -88,13 +128,23 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     super.dispose();
   }
 
+  /// Replaces the working style. Any save confirmation refers to the look
+  /// that was saved, so an edit clears it rather than letting it describe a
+  /// look that is no longer on screen.
+  void _update(CaptionCustomStyle style) {
+    setState(() {
+      _style = style;
+      _saveOutcome = null;
+    });
+  }
+
   Future<void> _pickFont(int currentIndex) async {
     final index = await showCaptionFontSheet(
       context,
       selectedIndex: currentIndex,
     );
     if (index != null && mounted) {
-      setState(() => _style = _style.copyWith(fontIndex: index));
+      _update(_style.copyWith(fontIndex: index));
     }
   }
 
@@ -106,8 +156,39 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
   ) async {
     final color = await showFullColorPicker(context, initialColor: initial);
     if (color != null && mounted) {
-      setState(() => _style = apply(color));
+      _update(apply(color));
     }
+  }
+
+  /// Keeps the current look for later videos: asks for a name, writes it
+  /// through the cubit, and reports the outcome. The editor stays open so
+  /// the style can still be applied to this track.
+  Future<void> _saveStyle() async {
+    final l10n = context.l10n;
+    final cubit = context.read<SavedCaptionStylesCubit>();
+    final style = _style;
+    // The font is the most recognisable part of a look, so its name is the
+    // suggestion; one tap keeps it, typing replaces it.
+    final name = await showCaptionStyleNamePrompt(
+      context,
+      title: l10n.videoEditorCaptionsSavedStyleSaveTitle,
+      confirmLabel: l10n.videoEditorCaptionsSavedStyleSaveAction,
+      initialName: style.font.localizedDisplayName(l10n),
+    );
+    if (name == null || !mounted) return;
+
+    await cubit.save(name: name, style: style);
+    if (!mounted) return;
+    final failed = cubit.state.status == SavedCaptionStylesStatus.failure;
+    final message = failed
+        ? l10n.videoEditorCaptionsSavedStyleSaveFailed
+        : l10n.videoEditorCaptionsSavedStyleSaved(name.trim());
+    setState(() => _saveOutcome = (message: message, failed: failed));
+    await SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
+    );
   }
 
   @override
@@ -135,8 +216,7 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
               _SectionLabel(l10n.videoEditorCaptionsCustomTextColor),
               _ColorRow(
                 selected: _style.color,
-                onSelected: (color) =>
-                    setState(() => _style = _style.copyWith(color: color)),
+                onSelected: (color) => _update(_style.copyWith(color: color)),
                 onCustom: () => _pickColor(
                   _style.color,
                   (color) => _style.copyWith(color: color),
@@ -147,13 +227,13 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
                 state: hasBackground
                     ? DivineCheckboxState.selected
                     : DivineCheckboxState.unselected,
-                onChanged: (checked) => setState(() {
-                  _style = _style.copyWith(
+                onChanged: (checked) => _update(
+                  _style.copyWith(
                     colorMode: checked
                         ? LayerBackgroundMode.backgroundAndColor
                         : LayerBackgroundMode.onlyColor,
-                  );
-                }),
+                  ),
+                ),
                 label: Text(
                   l10n.videoEditorCaptionsCustomBackground,
                   style: VineTheme.bodyMediumFont(
@@ -166,9 +246,8 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
                 _SectionLabel(l10n.videoEditorCaptionsCustomBackgroundColor),
                 _ColorRow(
                   selected: _style.background,
-                  onSelected: (color) => setState(
-                    () => _style = _style.copyWith(background: color),
-                  ),
+                  onSelected: (color) =>
+                      _update(_style.copyWith(background: color)),
                   onCustom: () => _pickColor(
                     _style.background,
                     (color) => _style.copyWith(background: color),
@@ -179,10 +258,29 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
               _SectionLabel(l10n.videoEditorCaptionsCustomAnimation),
               _AnimationRow(
                 selected: _style.animation,
-                onSelected: (animation) => setState(
-                  () => _style = _style.copyWith(animation: animation),
-                ),
+                onSelected: (animation) =>
+                    _update(_style.copyWith(animation: animation)),
               ),
+              const SizedBox(height: 24),
+              DivineButton(
+                label: l10n.videoEditorCaptionsSavedStyleSaveTitle,
+                leadingIcon: DivineIconName.bookmarkPlus,
+                type: .secondary,
+                expanded: true,
+                onPressed: _saveStyle,
+              ),
+              if (_saveOutcome case final outcome?) ...[
+                const SizedBox(height: 8),
+                Text(
+                  outcome.message,
+                  textAlign: TextAlign.center,
+                  style: VineTheme.bodyMediumFont(
+                    color: outcome.failed
+                        ? context.vineColors.onErrorContainer
+                        : context.vineColors.accentPositive,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -221,6 +319,9 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     );
   }
 }
+
+/// What the last save reported, for the note under the save button.
+typedef _SaveOutcome = ({String message, bool failed});
 
 class _Preview extends StatelessWidget {
   const _Preview({
