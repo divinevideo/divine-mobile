@@ -598,7 +598,8 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
               .having((s) => s.mode, 'mode', FeedMode.latest)
-              .having((s) => s.videos.length, 'videos count', 5),
+              .having((s) => s.videos.length, 'videos count', 5)
+              .having((s) => s.hasMore, 'hasMore', isTrue),
         ],
       );
 
@@ -1894,12 +1895,46 @@ void main() {
           when(
             () => mockVideosRepository.getNewVideos(
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: 'p:next-page',
               skipCache: any(named: 'skipCache'),
               revalidate: any(named: 'revalidate'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(videos: moreVideos, hasMore: false),
+          );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: const VideoFeedSource.newVideos(),
+          videos: createTestVideos(3),
+          paginationCursor: 'p:next-page',
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        skip: 1,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse)
+              .having((s) => s.videos, 'videos', hasLength(5))
+              .having((s) => s.hasMore, 'hasMore', isFalse),
+        ],
+      );
+
+      // New Videos falls back to `until` pagination when the repository returns
+      // no cursor (Funnelcake outage or a legacy bare-list response), so a
+      // cursor-less page must not be read as exhaustion.
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'pages newVideos by until when the repository returns no cursor',
+        setUp: () {
+          when(
+            () => mockVideosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: moreVideos, hasMore: true),
           );
         },
         build: createBloc,
@@ -1914,8 +1949,19 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse)
               .having((s) => s.videos, 'videos', hasLength(5))
-              .having((s) => s.hasMore, 'hasMore', isFalse),
+              .having((s) => s.hasMore, 'hasMore', isTrue)
+              .having((s) => s.paginationCursor, 'paginationCursor', isNull),
         ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).called(1);
+        },
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(

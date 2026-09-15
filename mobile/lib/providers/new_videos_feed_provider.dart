@@ -1,4 +1,4 @@
-// ABOUTME: New Videos feed provider showing videos sorted by creation time
+// ABOUTME: New Videos feed provider showing videos by original publication time
 // ABOUTME: Uses VideosRepository.getNewVideos so Explore New is distinct from Popular
 
 import 'package:models/models.dart';
@@ -23,11 +23,14 @@ part 'new_videos_feed_provider.g.dart';
 @Riverpod(keepAlive: true)
 class NewVideosFeed extends _$NewVideosFeed {
   int? _nextCursor;
+  String? _paginationCursor;
+  int _paginationGeneration = 0;
   final _enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
   @override
   Future<VideoFeedState> build() async {
     _nextCursor = null;
+    _paginationCursor = null;
 
     ref.watch(contentFilterVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
@@ -69,16 +72,22 @@ class NewVideosFeed extends _$NewVideosFeed {
         return const VideoFeedState(videos: [], hasMoreContent: true);
       }
 
+      _paginationGeneration++;
+      _nextCursor = getOldestTimestamp(videos);
+      _paginationCursor = page.paginationCursor;
+
       if (videos.isEmpty) {
         Log.warning(
           'NewVideosFeed: No videos returned',
           name: 'NewVideosFeedProvider',
           category: LogCategory.video,
         );
-        return const VideoFeedState(videos: [], hasMoreContent: false);
+        return VideoFeedState(
+          videos: const [],
+          hasMoreContent: page.hasMore ?? false,
+        );
       }
 
-      _nextCursor = getOldestTimestamp(videos);
       final filteredVideos = _filterVideos(videos);
       _scheduleEnrichment(filteredVideos);
 
@@ -117,26 +126,34 @@ class NewVideosFeed extends _$NewVideosFeed {
     if (!ref.mounted || currentState.isLoadingMore) return;
     if (!currentState.hasMoreContent) return;
 
+    final paginationGeneration = _paginationGeneration;
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
       final page = await videosRepository.getNewVideos(
         limit: AppConstants.paginationBatchSize,
-        until: _nextCursor,
+        until: _paginationCursor == null ? _nextCursor : null,
+        cursor: _paginationCursor,
       );
       final newVideos = page.videos;
 
-      if (!ref.mounted) return;
+      // A refresh can install a new first page while this request is pending.
+      // Its cursor and visible rows must not be overwritten by the old page.
+      if (!ref.mounted || paginationGeneration != _paginationGeneration) return;
+
+      _nextCursor = getOldestTimestamp(newVideos);
+      _paginationCursor = page.paginationCursor;
 
       if (newVideos.isEmpty) {
         state = AsyncData(
-          currentState.copyWith(hasMoreContent: false, isLoadingMore: false),
+          currentState.copyWith(
+            hasMoreContent: page.hasMore ?? false,
+            isLoadingMore: false,
+          ),
         );
         return;
       }
-
-      _nextCursor = getOldestTimestamp(newVideos);
 
       final dedupedNew = dedupeByFeedKey(
         newVideos,
@@ -179,7 +196,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         category: LogCategory.video,
       );
 
-      if (!ref.mounted) return;
+      if (!ref.mounted || paginationGeneration != _paginationGeneration) return;
       state = AsyncData(
         currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
@@ -195,6 +212,7 @@ class NewVideosFeed extends _$NewVideosFeed {
     );
 
     _nextCursor = null;
+    _paginationCursor = null;
 
     await staleWhileRevalidate(
       getCurrentState: () => state,

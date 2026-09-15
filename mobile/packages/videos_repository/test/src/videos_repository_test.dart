@@ -273,6 +273,151 @@ void main() {
           },
         );
 
+        test(
+          'refresh keeps the merged tail a cursor-backed page can still reach',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'api-newer',
+                    pubkey: 'api-pubkey',
+                    dTag: 'api-newer',
+                    videoUrl: 'https://example.com/api-newer.mp4',
+                    createdAt: 2000,
+                    publishedAt: 2000,
+                  ),
+                  _createVideoStats(
+                    id: 'api-older',
+                    pubkey: 'api-pubkey',
+                    dTag: 'api-older',
+                    videoUrl: 'https://example.com/api-older.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1900,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-two',
+              ),
+            );
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                _createVideoEvent(
+                  id: 'relay-newer',
+                  pubkey: 'relay-pubkey',
+                  videoUrl: 'https://example.com/relay-newer.mp4',
+                  createdAt: 2500,
+                ),
+                _createVideoEvent(
+                  id: 'relay-older',
+                  pubkey: 'relay-pubkey',
+                  videoUrl: 'https://example.com/relay-older.mp4',
+                  createdAt: 2400,
+                ),
+              ],
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(
+              skipCache: true,
+              limit: 2,
+            );
+
+            // Trimming the merged list to `limit` would drop `api-newer` and
+            // `api-older` behind the returned cursor, which already resumes
+            // past them.
+            expect(
+              result.videos.map((video) => video.id),
+              equals([
+                'relay-newer',
+                'relay-older',
+                'api-newer',
+                'api-older',
+              ]),
+            );
+            expect(result.paginationCursor, equals('p:page-two'));
+          },
+        );
+
+        test(
+          'refresh does not reintroduce an edit older than the API page',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage([
+                _createVideoStats(
+                  id: 'newer-api-video',
+                  pubkey: 'newer-api-pubkey',
+                  dTag: 'newer-api-dtag',
+                  videoUrl: 'https://example.com/newer-api.mp4',
+                  createdAt: 2200,
+                  publishedAt: 2200,
+                ),
+                _createVideoStats(
+                  id: 'api-video',
+                  pubkey: 'api-pubkey',
+                  dTag: 'api-dtag',
+                  videoUrl: 'https://example.com/api.mp4',
+                  createdAt: 2000,
+                  publishedAt: 2000,
+                ),
+              ]),
+            );
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                _createVideoEvent(
+                  id: 'edited-old-video',
+                  pubkey: 'old-pubkey',
+                  videoUrl: 'https://example.com/edited-old.mp4',
+                  createdAt: 3000,
+                  extraTags: const [
+                    ['published_at', '500'],
+                  ],
+                ),
+                _createVideoEvent(
+                  id: 'new-relay-video',
+                  pubkey: 'new-pubkey',
+                  videoUrl: 'https://example.com/new.mp4',
+                  createdAt: 2500,
+                ),
+              ],
+            );
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = (await repositoryWithApi.getNewVideos(
+              skipCache: true,
+              limit: 3,
+            )).videos;
+
+            expect(
+              result.map((video) => video.id),
+              equals([
+                'new-relay-video',
+                'newer-api-video',
+                'api-video',
+              ]),
+            );
+          },
+        );
+
         test('passes limit and before to Funnelcake API', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
@@ -306,6 +451,183 @@ void main() {
           ).called(1);
         });
 
+        test(
+          'paginates API pages with the opaque publication cursor',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final requestedCursors = <String?>[];
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              return _recentPage([
+                _createVideoStats(
+                  id: 'edited-old-reply',
+                  pubkey: 'test-pubkey',
+                  dTag: 'edited-old-reply',
+                  videoUrl: 'https://example.com/edited.mp4',
+                  createdAt: 2000,
+                  publishedAt: 1000,
+                  rawTags: const {
+                    'E': 'root-event-id',
+                    'K': '34236',
+                    'P': 'root-author',
+                    'e': 'root-event-id',
+                    'k': '34236',
+                    'p': 'root-author',
+                  },
+                ),
+                _createVideoStats(
+                  id: 'visible-video',
+                  pubkey: 'test-pubkey',
+                  dTag: 'visible-video',
+                  videoUrl: 'https://example.com/visible.mp4',
+                  createdAt: 1900,
+                  publishedAt: 1800,
+                ),
+              ], nextCursor: 'p:equal-timestamp-and-id');
+            });
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                cursor: 'p:equal-timestamp-and-id',
+              ),
+            ).thenAnswer((_) async {
+              requestedCursors.add('p:equal-timestamp-and-id');
+              return _recentPage(<VideoStats>[], hasMore: false);
+            });
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await repositoryWithApi.getNewVideos(limit: 2);
+
+            expect(requestedCursors, equals(['p:equal-timestamp-and-id']));
+          },
+        );
+
+        test(
+          'returns the over-fetched tail so the opaque cursor cannot skip it',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            // Page one carries two reply-only rows, so only one visible video
+            // survives and the repository tops up from page two. Trimming the
+            // result back to `limit` would drop part of page two behind the
+            // returned cursor, and those videos would never be reachable.
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'reply-only-a',
+                    pubkey: 'test-pubkey',
+                    dTag: 'reply-only-a',
+                    videoUrl: 'https://example.com/reply-a.mp4',
+                    createdAt: 2200,
+                    publishedAt: 2200,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'reply-only-b',
+                    pubkey: 'test-pubkey',
+                    dTag: 'reply-only-b',
+                    videoUrl: 'https://example.com/reply-b.mp4',
+                    createdAt: 2100,
+                    publishedAt: 2100,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'first-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'first-visible',
+                    videoUrl: 'https://example.com/first.mp4',
+                    createdAt: 2000,
+                    publishedAt: 2000,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-two',
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                cursor: 'p:page-two',
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [
+                  _createVideoStats(
+                    id: 'second-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'second-visible',
+                    videoUrl: 'https://example.com/second.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1900,
+                  ),
+                  _createVideoStats(
+                    id: 'third-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'third-visible',
+                    videoUrl: 'https://example.com/third.mp4',
+                    createdAt: 1800,
+                    publishedAt: 1800,
+                  ),
+                  _createVideoStats(
+                    id: 'fourth-visible',
+                    pubkey: 'test-pubkey',
+                    dTag: 'fourth-visible',
+                    videoUrl: 'https://example.com/fourth.mp4',
+                    createdAt: 1700,
+                    publishedAt: 1700,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 'p:page-three',
+              ),
+            );
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(limit: 3);
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals([
+                'first-visible',
+                'second-visible',
+                'third-visible',
+                'fourth-visible',
+              ]),
+            );
+            expect(result.paginationCursor, equals('p:page-three'));
+            expect(result.hasMore, isTrue);
+          },
+        );
+
         test('falls back to Nostr when Funnelcake throws', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
@@ -336,6 +658,161 @@ void main() {
           expect(result.first.id, equals('nostr-video'));
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         });
+
+        test(
+          'preserves a failed cursor page for retry without replaying relays',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            var requests = 0;
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                cursor: 'p:next-page',
+              ),
+            ).thenAnswer((_) async {
+              if (requests++ == 0) {
+                throw const FunnelcakeException('Network error');
+              }
+              return _recentPage([
+                _createVideoStats(
+                  id: 'recovered-video',
+                  pubkey: 'test-pubkey',
+                  dTag: 'recovered-video',
+                  videoUrl: 'https://example.com/recovered.mp4',
+                ),
+              ], hasMore: false);
+            });
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await expectLater(
+              repositoryWithApi.getNewVideos(cursor: 'p:next-page'),
+              throwsA(isA<FunnelcakeException>()),
+            );
+            final result = await repositoryWithApi.getNewVideos(
+              cursor: 'p:next-page',
+            );
+            expect(result.videos.single.id, 'recovered-video');
+            expect(result.hasMore, isFalse);
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test(
+          'does not switch a publication cursor to an unavailable source',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => []);
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await expectLater(
+              repositoryWithApi.getNewVideos(cursor: 'p:next-page'),
+              throwsA(isA<FunnelcakeException>()),
+            );
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test(
+          'retains the terminal cursor-page tail after deduplication',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final rows = List.generate(
+              3,
+              (index) => _createVideoStats(
+                id: index.toRadixString(16).padLeft(64, '0'),
+                pubkey: ''.padLeft(64, 'f'),
+                dTag: 'clip-$index',
+                videoUrl: 'https://example.com/$index.mp4',
+                createdAt: 2000,
+                publishedAt: 1000,
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: 2,
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(
+                [rows.first, rows.first],
+                hasMore: true,
+                nextCursor: 'p:terminal',
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: 2,
+                cursor: 'p:terminal',
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage(rows.sublist(1), hasMore: false),
+            );
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getNewVideos(limit: 2);
+
+            expect(
+              result.videos.map((video) => video.id),
+              rows.map((row) => row.id),
+            );
+            expect(result.hasMore, isFalse);
+            expect(result.paginationCursor, isNull);
+          },
+        );
+
+        test(
+          'refresh retains a terminal envelope tail with no next cursor',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final rows = List.generate(
+              2,
+              (index) => _createVideoStats(
+                id: index.toRadixString(16).padLeft(64, '0'),
+                pubkey: ''.padLeft(64, 'f'),
+                dTag: 'clip-$index',
+                videoUrl: 'https://example.com/$index.mp4',
+                createdAt: 2000 - index,
+                publishedAt: 2000 - index,
+              ),
+            );
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(limit: 2),
+            ).thenAnswer((_) async => _recentPage(rows, hasMore: false));
+            final newest = _createVideoEvent(
+              id: ''.padLeft(64, 'a'),
+              pubkey: ''.padLeft(64, 'f'),
+              videoUrl: 'https://example.com/newest.mp4',
+              createdAt: 2100,
+            );
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [newest]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repo.getNewVideos(limit: 2, skipCache: true);
+
+            expect(result.videos.map((v) => v.id), [
+              newest.id,
+              ...rows.map((v) => v.id),
+            ]);
+            expect(result.hasMore, isFalse);
+            expect(result.paginationCursor, isNull);
+          },
+        );
 
         test(
           'trusts empty Funnelcake response without Nostr fallback',
@@ -713,6 +1190,129 @@ void main() {
 
         expect(filters.first.until, equals(until));
       });
+
+      test(
+        'relay pagination uses revision time and stays on its source '
+        'after recovery',
+        () async {
+          final api = MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(false);
+          final edited = _createVideoEvent(
+            id: ''.padLeft(64, 'a'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/edited.mp4',
+            createdAt: 2000,
+            extraTags: const [
+              ['published_at', '100'],
+            ],
+          );
+          final recent = _createVideoEvent(
+            id: ''.padLeft(64, 'b'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/recent.mp4',
+            createdAt: 1900,
+          );
+          final next = _createVideoEvent(
+            id: ''.padLeft(64, 'c'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/next.mp4',
+            createdAt: 1800,
+          );
+          final boundaries = <int?>[];
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+            call,
+          ) async {
+            final boundary =
+                (call.positionalArguments.first as List<Filter>).single.until;
+            boundaries.add(boundary);
+            return boundary == null
+                ? [edited, recent]
+                : boundary == 1899
+                ? [next]
+                : [];
+          });
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final first = await repo.getNewVideos(limit: 2);
+          expect(first.videos.map((video) => video.createdAt), contains(100));
+          expect(first.paginationCursor, 'relay:1899');
+          when(() => api.isAvailable).thenReturn(true);
+          final second = await repo.getNewVideos(
+            limit: 2,
+            cursor: first.paginationCursor,
+          );
+
+          expect(second.videos.single.id, next.id);
+          expect(second.hasMore, isFalse);
+          expect(second.paginationCursor, isNull);
+          expect(boundaries, [null, 1899]);
+          verifyNever(
+            () => api.getRecentVideosPage(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+        },
+      );
+
+      test('relay top-up retains every row consumed by its cursor', () async {
+        final events = List.generate(
+          3,
+          (index) => _createVideoEvent(
+            id: index.toRadixString(16).padLeft(64, '0'),
+            pubkey: ''.padLeft(64, 'f'),
+            videoUrl: 'https://example.com/$index.mp4',
+            createdAt: 2000 - index * 100,
+          ),
+        );
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer((call) async {
+          final boundary =
+              (call.positionalArguments.first as List<Filter>).single.until;
+          return boundary == null
+              ? [events.first, events.first]
+              : events.sublist(1);
+        });
+
+        final result = await repository.getNewVideos(limit: 2);
+
+        expect(result.videos.map((video) => video.id), events.map((e) => e.id));
+        expect(result.paginationCursor, 'relay:1799');
+        expect(result.hasMore, isTrue);
+      });
+
+      test('relay top-up stops after an exhausted raw page', () async {
+        final event = _createVideoEvent(
+          id: ''.padLeft(64, 'a'),
+          pubkey: ''.padLeft(64, 'f'),
+          videoUrl: 'https://example.com/video.mp4',
+          createdAt: 2000,
+        );
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer((call) async {
+          final boundary =
+              (call.positionalArguments.first as List<Filter>).single.until;
+          return boundary == null ? [event, event] : [];
+        });
+
+        final result = await repository.getNewVideos(limit: 2);
+
+        expect(result.videos.single.id, event.id);
+        expect(result.hasMore, isFalse);
+        expect(result.paginationCursor, isNull);
+      });
+
+      test(
+        'rejects a malformed relay cursor without replaying page one',
+        () async {
+          await expectLater(
+            repository.getNewVideos(cursor: 'relay:invalid'),
+            throwsFormatException,
+          );
+          verifyNever(() => mockNostrClient.queryEvents(any()));
+        },
+      );
 
       test('transforms valid events to VideoEvents', () async {
         final event = _createVideoEvent(
@@ -1599,6 +2199,128 @@ void main() {
           );
           verifyNever(() => mockNostrClient.queryEvents(any()));
         });
+
+        test(
+          'preserves the Funnelcake page order for the Following feed',
+          () async {
+            // The Following feed stays revision-ordered server-side and
+            // pages on a revision-time `next_cursor`. Re-sorting the page on
+            // publication time would order rows against the clock the cursor
+            // walks, so rows on a later page can be newer by publication than
+            // rows already rendered above them.
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'revised-recently',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-1',
+                    videoUrl: 'https://example.com/1.mp4',
+                    createdAt: 2000,
+                    publishedAt: 1000,
+                  ),
+                  _createVideoStats(
+                    id: 'published-later',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-2',
+                    videoUrl: 'https://example.com/2.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1800,
+                  ),
+                ],
+              ),
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 10,
+            );
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['revised-recently', 'published-later']),
+            );
+          },
+        );
+
+        test(
+          'falls back to the revision-time cursor when the feed omits one',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final requestedBefore = <int?>[];
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              final before = invocation.namedArguments[#before] as int?;
+              requestedBefore.add(before);
+              if (before != null) {
+                return const HomeFeedResponse(videos: []);
+              }
+              return HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'reply-only',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-reply',
+                    videoUrl: 'https://example.com/reply.mp4',
+                    createdAt: 2000,
+                    publishedAt: 1000,
+                    rawTags: const {
+                      'E': 'root-event-id',
+                      'K': '34236',
+                      'P': 'root-author',
+                      'e': 'root-event-id',
+                      'k': '34236',
+                      'p': 'root-author',
+                    },
+                  ),
+                  _createVideoStats(
+                    id: 'visible',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-visible',
+                    videoUrl: 'https://example.com/visible.mp4',
+                    createdAt: 1900,
+                    publishedAt: 500,
+                  ),
+                ],
+                hasMore: true,
+              );
+            });
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+
+            // The Following route pages on revision time, so the fallback
+            // cursor must step before the oldest `createdAt` (1900), not the
+            // oldest `publishedAt` (500).
+            expect(requestedBefore, equals([null, 1899]));
+          },
+        );
 
         test('hydrates sparse API results with bulk loop stats', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
@@ -13381,10 +14103,12 @@ RecentVideosResponse _recentPage(
   List<VideoStats> videos, {
   int? serverItemCount,
   bool? hasMore,
+  String? nextCursor,
 }) => RecentVideosResponse(
   videos: videos,
   serverItemCount: serverItemCount ?? videos.length,
   hasMore: hasMore,
+  nextCursor: nextCursor,
 );
 
 /// Creates a mock video event for testing.
@@ -13458,6 +14182,7 @@ VideoStats _createVideoStats({
   required String dTag,
   required String videoUrl,
   int createdAt = 1704067200,
+  int? publishedAt,
   String title = 'Test Video',
   String thumbnail = 'https://example.com/thumb.jpg',
   int? loops,
@@ -13474,6 +14199,7 @@ VideoStats _createVideoStats({
     pubkey: pubkey,
     createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
     kind: EventKind.videoVertical,
+    publishedAt: publishedAt,
     dTag: dTag,
     title: title,
     thumbnail: thumbnail,

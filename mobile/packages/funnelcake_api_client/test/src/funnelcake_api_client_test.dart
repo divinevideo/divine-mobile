@@ -288,7 +288,7 @@ void main() {
         expect(videos.first.title, equals('Recent Video'));
       });
 
-      test('constructs correct URL with sort=recent', () async {
+      test('constructs New-feed URL with sort=published', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response('[]', 200));
@@ -301,8 +301,8 @@ void main() {
         ).captured;
 
         final uri = captured.first as Uri;
-        expect(uri.path, equals('/api/videos'));
-        expect(uri.queryParameters['sort'], equals('recent'));
+        expect(uri.path, equals('/api/v2/videos'));
+        expect(uri.queryParameters['sort'], equals('published'));
         expect(uri.queryParameters['limit'], equals('50'));
         expect(uri.queryParameters['nsfw'], equals('show'));
         expect(
@@ -325,6 +325,29 @@ void main() {
 
         final uri = captured.first as Uri;
         expect(uri.queryParameters['before'], equals('1700000000'));
+      });
+
+      test('preserves the opaque publication cursor', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"data": [], "pagination": '
+            '{"has_more": true, "next_cursor": "p:next-page"}}',
+            200,
+          ),
+        );
+
+        final page = await client.getRecentVideosPage(cursor: 'p:current-page');
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+        final uri = captured.single as Uri;
+        expect(uri.queryParameters['cursor'], 'p:current-page');
+        expect(page.hasMore, isTrue);
+        expect(page.nextCursor, 'p:next-page');
       });
 
       test('constructs correct URL with custom limit', () async {

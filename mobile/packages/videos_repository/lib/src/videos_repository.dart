@@ -33,6 +33,7 @@ const int _videoKind = EventKind.videoVertical;
 
 /// Default number of videos to fetch per page.
 const int _defaultLimit = 25;
+const _recentRelayCursorPrefix = 'relay:';
 
 class _FollowingFetchResult {
   const _FollowingFetchResult({required this.videos, this.pageCount = 0});
@@ -377,7 +378,13 @@ class VideosRepository {
         before: cursor,
       );
 
-      final videos = _transformVideoStats(response.videos);
+      // Keep Funnelcake's order: the Following feed is revision-ordered and
+      // pages on a revision-time `next_cursor`, so re-sorting the page on
+      // publication time would order rows against the clock the cursor walks.
+      final videos = _transformVideoStats(
+        response.videos,
+        sortByCreatedAt: false,
+      );
       final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
       _appendUniqueVideos(
         visible,
@@ -717,10 +724,11 @@ class VideosRepository {
     return _transformAndFilter(events);
   }
 
-  /// Fetches the latest videos in chronological order (newest first).
+  /// Fetches the latest originally published videos (newest first).
   ///
   /// This is the "New" feed mode - shows all public videos sorted by
-  /// creation time.
+  /// their original publication time. Editing an older video does not move it
+  /// back to the front of the feed.
   ///
   /// Deliberately does not apply seen-freshness reordering. This feed is
   /// surfaced as "New", and that label is a chronological promise: a video
@@ -741,7 +749,7 @@ class VideosRepository {
   ///
   /// Parameters:
   /// - [limit]: Maximum number of videos to return (default 5)
-  /// - [until]: Only return videos created before this Unix timestamp
+  /// - [until]: Only return videos published before this Unix timestamp
   ///   (for pagination - pass `previousVideo.createdAt`)
   /// - [skipCache]: Full manual refresh (pull-to-refresh) — bypasses the
   ///   in-memory first-page cache and merges newer relay events into a
@@ -751,7 +759,7 @@ class VideosRepository {
   ///   fresh first page is wanted but the pull-to-refresh relay round-trip
   ///   is not.
   ///
-  /// Returns a [HomeFeedResult] whose videos are sorted by creation time
+  /// Returns a [HomeFeedResult] whose videos are sorted by publication time
   /// (newest first), with [HomeFeedResult.hasMore] reporting whether more
   /// sits behind this page — the source's own flag where it states one,
   /// otherwise whether the page filled.
@@ -762,15 +770,17 @@ class VideosRepository {
   /// legitimately be shorter than the limit that asked for it and still have
   /// more behind it.
   ///
-  /// Returns an empty result if no videos are found or on error.
+  /// Returns an empty result if no videos are found. Cursor-page failures
+  /// propagate so callers can retry without losing their position.
   Future<HomeFeedResult> getNewVideos({
     int limit = _defaultLimit,
     int? until,
+    String? cursor,
     bool skipCache = false,
     bool revalidate = false,
   }) async {
     // Return in-memory cached result when available (initial page only).
-    if (!skipCache && !revalidate && until == null) {
+    if (!skipCache && !revalidate && until == null && cursor == null) {
       final cached = _inMemoryFeedCache?.get('latest');
       if (cached != null) {
         return HomeFeedResult(
@@ -781,17 +791,29 @@ class VideosRepository {
       }
     }
 
+    // A relay continuation uses raw revision time, not publication time.
+    // Keep the source pinned until refresh, even if the API has recovered.
+    final isRelayCursor = cursor?.startsWith(_recentRelayCursorPrefix) ?? false;
+    final relayUntil = isRelayCursor
+        ? int.parse(cursor!.substring(_recentRelayCursorPrefix.length))
+        : until;
+
     // 1. Try Funnelcake API first
-    if (_funnelcakeApiClient != null && _funnelcakeApiClient.isAvailable) {
+    if (!isRelayCursor &&
+        _funnelcakeApiClient != null &&
+        _funnelcakeApiClient.isAvailable) {
       try {
         final page = await _fetchVisibleRecentVideosFromStatsApi(
           limit: limit,
           until: until,
+          cursor: cursor,
         );
-        final mergedVideos = skipCache && until == null
+        final mergedVideos = skipCache && until == null && cursor == null
             ? await _mergeRecentApiVideosWithRelayRefresh(
                 page.videos,
                 limit: limit,
+                trimToLimit:
+                    page.serverHasMore == null && page.nextCursor == null,
               )
             : page.videos;
         // Hydrate views/loops — list endpoint omits them for some rows.
@@ -799,21 +821,40 @@ class VideosRepository {
         return _recentVideosResult(
           hydrated,
           limit: limit,
-          until: until,
           serverHasMore: page.serverHasMore,
+          paginationCursor: page.nextCursor,
+          cacheResult: until == null && cursor == null,
         );
       } on FunnelcakeException {
+        // An opaque Funnelcake cursor cannot be translated into a relay time
+        // boundary. Replaying the relay's first page here would duplicate the
+        // opening feed and falsely keep pagination alive.
+        if (cursor != null) {
+          rethrow;
+        }
         // Fall through to Nostr
       }
     }
 
+    if (cursor != null && !isRelayCursor) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
     // 2. Nostr fallback
-    final videos = await _fetchVisibleRecentVideosFromRelays(
+    final page = await _fetchVisibleRecentVideosFromRelays(
       limit: limit,
-      until: until,
+      until: relayUntil,
     );
-    final hydrated = await _hydrateVideosWithBulkStats(videos);
-    return _recentVideosResult(hydrated, limit: limit, until: until);
+    final hydrated = await _hydrateVideosWithBulkStats(page.videos);
+    return _recentVideosResult(
+      hydrated,
+      limit: limit,
+      serverHasMore: page.nextBefore != null,
+      paginationCursor: page.nextBefore == null
+          ? null
+          : '$_recentRelayCursorPrefix${page.nextBefore}',
+      cacheResult: until == null && cursor == null,
+    );
   }
 
   /// Wraps a latest-feed page, recording whether more sits behind it so
@@ -826,35 +867,46 @@ class VideosRepository {
   HomeFeedResult _recentVideosResult(
     List<VideoEvent> videos, {
     required int limit,
-    required int? until,
     bool? serverHasMore,
+    String? paginationCursor,
+    bool cacheResult = false,
   }) {
     final result = HomeFeedResult(
       videos: videos,
       hasMore: serverHasMore ?? videos.length >= limit,
+      paginationCursor: paginationCursor,
     );
-    if (until == null) {
+    if (cacheResult) {
       _inMemoryFeedCache?.set('latest', result);
     }
     return result;
   }
 
-  Future<({List<VideoEvent> videos, bool? serverHasMore})>
+  Future<({List<VideoEvent> videos, bool? serverHasMore, String? nextCursor})>
   _fetchVisibleRecentVideosFromStatsApi({
     required int limit,
     int? until,
+    String? cursor,
   }) async {
-    var cursor = until;
+    var pageCursor = cursor;
+    var legacyBefore = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     bool? serverHasMore;
+    String? nextPageCursor;
 
     while (visible.length < limit) {
-      final page = await _funnelcakeApiClient!.getRecentVideosPage(
-        limit: limit,
-        before: cursor,
-      );
+      final page = pageCursor == null
+          ? await _funnelcakeApiClient!.getRecentVideosPage(
+              limit: limit,
+              before: legacyBefore,
+            )
+          : await _funnelcakeApiClient!.getRecentVideosPage(
+              limit: limit,
+              cursor: pageCursor,
+            );
       serverHasMore = page.hasMore;
+      nextPageCursor = page.nextCursor;
 
       final videos = _transformVideoStats(page.videos);
       _appendUniqueVideos(visible, videos, seenVideoKeys: seenVideoKeys);
@@ -862,36 +914,75 @@ class VideosRepository {
       // Compare the server's row count, not the surviving videos: dropping one
       // malformed row would otherwise read as the source running out and pin a
       // premature `hasMore: false` into the feed cache.
-      if (page.serverItemCount < limit) break;
+      if (page.hasMore == false || page.serverItemCount < limit) break;
 
-      final nextCursor = _cursorBeforeOldestStats(page.videos);
-      if (nextCursor == null || nextCursor == cursor) break;
-      cursor = nextCursor;
+      if (nextPageCursor != null) {
+        if (nextPageCursor == pageCursor) break;
+        pageCursor = nextPageCursor;
+        legacyBefore = null;
+      } else {
+        // Older Funnelcake builds returned a bare list with no cursor. Keep
+        // top-up behavior available for that response shape, but never expose
+        // the lossy timestamp fallback to feed pagination: current v2 builds
+        // supply the composite `(published_at, id)` cursor above.
+        final nextBefore = _cursorBeforeOldestStats(
+          page.videos,
+          usePublicationClock: true,
+        );
+        if (nextBefore == null || nextBefore == legacyBefore) break;
+        legacyBefore = nextBefore;
+        pageCursor = null;
+      }
     }
 
+    // A cursor-backed page returns every visible row, including an
+    // over-fetched tail: the opaque cursor resumes after the last fetched
+    // page, so trimming the tail here would place it behind the cursor and
+    // skip it for good. Legacy bare-list pages have no cursor, and the
+    // caller's `until` pagination re-reads whatever is trimmed here.
+    final cursorBacked = serverHasMore != null || nextPageCursor != null;
     return (
-      // Overshooting the limit means the trimmed remainder is more content,
-      // whatever the last page claimed.
-      videos: visible.take(limit).toList(),
-      serverHasMore: visible.length > limit ? true : serverHasMore,
+      videos: cursorBacked ? visible : visible.take(limit).toList(),
+      serverHasMore: !cursorBacked && visible.length > limit
+          ? true
+          : serverHasMore,
+      nextCursor: nextPageCursor,
     );
   }
 
   Future<List<VideoEvent>> _mergeRecentApiVideosWithRelayRefresh(
     List<VideoEvent> apiVideos, {
     required int limit,
+    bool trimToLimit = true,
   }) async {
     try {
-      final relayVideos = await _fetchVisibleRecentVideosFromRelays(
+      final relayPage = await _fetchVisibleRecentVideosFromRelays(
         limit: limit,
       ).timeout(_recentRelayRefreshTimeout);
+      final relayVideos = relayPage.videos;
       if (relayVideos.isEmpty) return apiVideos;
 
-      final candidates = [...relayVideos, ...apiVideos]
+      final oldestApiPublication = apiVideos.isEmpty
+          ? null
+          : apiVideos
+                .map((video) => video.createdAt)
+                .reduce(
+                  (oldest, current) => current < oldest ? current : oldest,
+                );
+      final relayRefresh = oldestApiPublication == null
+          ? relayVideos
+          : relayVideos
+                .where((video) => video.createdAt >= oldestApiPublication)
+                .toList();
+
+      final candidates = [...relayRefresh, ...apiVideos]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final merged = <VideoEvent>[];
       _appendUniqueVideos(merged, candidates, seenVideoKeys: <String>{});
-      return merged.take(limit).toList();
+      // Do not trim a cursor-backed page to `limit`: its opaque cursor resumes
+      // after the last merged API row, so dropping a merged tail would skip
+      // it. A legacy bare-list page pages on `until` and re-reads the tail.
+      return trimToLimit ? merged.take(limit).toList() : merged;
     } on Object catch (e) {
       Log.warning(
         'Recent relay refresh enrichment failed: $e',
@@ -902,15 +993,18 @@ class VideosRepository {
     }
   }
 
-  Future<List<VideoEvent>> _fetchVisibleRecentVideosFromRelays({
+  Future<({List<VideoEvent> videos, int? nextBefore})>
+  _fetchVisibleRecentVideosFromRelays({
     required int limit,
     int? until,
   }) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
+    int? nextBefore;
 
     while (visible.length < limit) {
+      nextBefore = null;
       final filter = Filter(kinds: [_videoKind], limit: limit, until: cursor);
       final events = await _nostrClient.queryEvents([filter]);
       if (events.isEmpty) break;
@@ -922,9 +1016,13 @@ class VideosRepository {
       final nextCursor = _cursorBeforeOldestEvent(events);
       if (nextCursor == null || nextCursor == cursor) break;
       cursor = nextCursor;
+      nextBefore = nextCursor;
     }
 
-    return visible.take(limit).toList();
+    // The boundary advances past every raw event consumed, including filtered
+    // revisions. Never derive it from VideoEvent.createdAt (publication time),
+    // or discard a visible top-up tail now sitting behind that boundary.
+    return (videos: visible, nextBefore: nextBefore);
   }
 
   /// Fetches classic Vine archive videos for the home feed's Classics mode.
@@ -1807,10 +1905,24 @@ class VideosRepository {
     }
   }
 
-  int? _cursorBeforeOldestStats(List<VideoStats> stats) {
+  /// Returns the timestamp immediately before the oldest row's cursor clock.
+  ///
+  /// New Videos pages on original publication time, so its fallback walks
+  /// [VideoStats.publishedAt] when the server supplied one. Following and
+  /// Popular stay on the revision clock (`createdAt`) their server routes walk,
+  /// so a publication-time cursor cannot skip rows between the two times.
+  int? _cursorBeforeOldestStats(
+    List<VideoStats> stats, {
+    bool usePublicationClock = false,
+  }) {
     if (stats.isEmpty) return null;
     final oldest = stats
-        .map((stat) => stat.createdAt.millisecondsSinceEpoch ~/ 1000)
+        .map(
+          (stat) => usePublicationClock
+              ? stat.publishedAt ??
+                    stat.createdAt.millisecondsSinceEpoch ~/ 1000
+              : stat.createdAt.millisecondsSinceEpoch ~/ 1000,
+        )
         .reduce((a, b) => a < b ? a : b);
     return oldest - 1;
   }

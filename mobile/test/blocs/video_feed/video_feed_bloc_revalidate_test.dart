@@ -119,6 +119,84 @@ void main() {
         homeFeedCache: homeFeedCache,
       );
 
+      test(
+        'late cached-window pagination cannot replace a fresh cursor',
+        () async {
+          final cached = _video(''.padLeft(64, 'a')).copyWith(createdAt: 1000);
+          final fresh = _video(''.padLeft(64, 'b')).copyWith(createdAt: 9000);
+          final stale = _video(''.padLeft(64, 'c')).copyWith(createdAt: 999);
+          final next = _video(''.padLeft(64, 'd')).copyWith(createdAt: 8999);
+          final oldPage = Completer<HomeFeedResult>();
+          final oldPageStarted = Completer<void>();
+          when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
+              .thenAnswer((_) async => [cached]);
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer((call) {
+            if (call.namedArguments[#revalidate] == true) {
+              return freshResult.future;
+            }
+            if (call.namedArguments[#cursor] == 'p:fresh') {
+              expect(call.namedArguments[#until], isNull);
+              return Future.value(
+                HomeFeedResult(videos: [next], hasMore: false),
+              );
+            }
+            expect(call.namedArguments[#until], 1000);
+            oldPageStarted.complete();
+            return oldPage.future;
+          });
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          final cachedReady = bloc.stream.firstWhere(
+            (s) => s.videos.isNotEmpty,
+          );
+          bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+          await cachedReady;
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await oldPageStarted.future;
+
+          final freshReady = bloc.stream.firstWhere(
+            (s) => s.paginationCursor == 'p:fresh',
+          );
+          freshResult.complete(
+            HomeFeedResult(
+              videos: [fresh],
+              hasMore: true,
+              paginationCursor: 'p:fresh',
+            ),
+          );
+          await freshReady;
+          oldPage.complete(
+            HomeFeedResult(
+              videos: [stale],
+              hasMore: true,
+              paginationCursor: 'p:old',
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(bloc.state.paginationCursor, 'p:fresh');
+          expect(bloc.state.videos.map((v) => v.id), [cached.id, fresh.id]);
+          expect(bloc.state.isLoadingMore, isFalse);
+
+          final nextReady = bloc.stream.firstWhere((s) => !s.hasMore);
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await nextReady;
+          expect(bloc.state.videos.map((v) => v.id), [
+            cached.id,
+            fresh.id,
+            next.id,
+          ]);
+        },
+      );
+
       // The regression this pins (#7719): `_onStarted` used to call
       // `_loadVideos` with the default `skipCache: false`, so the fetch that
       // exists to refresh the feed was itself answered from the repository's
