@@ -52,23 +52,23 @@ void main() {
 
         expect(
           container.read(currentEnvironmentProvider).environment,
-          AppEnvironment.production,
+          equals(AppEnvironment.production),
         );
-        expect(service.addListenerCalls, 1);
+        expect(service.addListenerCalls, equals(1));
 
         await service.setEnvironment(AppEnvironment.staging);
         await pumpEventQueue();
 
-        expect(environments, [AppEnvironment.staging]);
+        expect(environments, equals([AppEnvironment.staging]));
         expect(
           service.addListenerCalls,
-          1,
+          equals(1),
           reason: 'a notification must not rebuild the provider subscription',
         );
 
         subscription.close();
         await pumpEventQueue();
-        expect(service.removeListenerCalls, 1);
+        expect(service.removeListenerCalls, equals(1));
       });
     });
 
@@ -86,21 +86,21 @@ void main() {
         );
 
         expect(container.read(isDeveloperModeEnabledProvider), isFalse);
-        expect(service.addListenerCalls, 1);
+        expect(service.addListenerCalls, equals(1));
 
         await service.enableDeveloperMode();
         await pumpEventQueue();
 
-        expect(values, [true]);
+        expect(values, equals([true]));
         expect(
           service.addListenerCalls,
-          1,
+          equals(1),
           reason: 'a notification must not rebuild the provider subscription',
         );
 
         subscription.close();
         await pumpEventQueue();
-        expect(service.removeListenerCalls, 1);
+        expect(service.removeListenerCalls, equals(1));
       });
     });
   });

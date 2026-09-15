@@ -234,7 +234,7 @@ void main() {
           ),
           isFalse,
         );
-        expect(service.addListenerCalls, 1);
+        expect(service.addListenerCalls, equals(1));
 
         await service.setFlag(FeatureFlag.enhancedAnalytics, true);
         await pumpEventQueue();
@@ -245,16 +245,16 @@ void main() {
           ),
           isTrue,
         );
-        expect(enabledValues, [true]);
+        expect(enabledValues, equals([true]));
         expect(
           service.addListenerCalls,
-          1,
+          equals(1),
           reason: 'a notification must not rebuild the provider subscription',
         );
 
         subscription.close();
         await pumpEventQueue();
-        expect(service.removeListenerCalls, 1);
+        expect(service.removeListenerCalls, equals(1));
       },
     );
   });
