@@ -60,7 +60,9 @@ void main() {
     }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
-        mockProfileRepository: mockProfileRepository,
+        mockProfileRepository: profileRepositoryOverride == null
+            ? mockProfileRepository
+            : null,
         additionalOverrides: [
           videosRepositoryOverride ??
               videosRepositoryProvider.overrideWithValue(mockVideosRepository),
