@@ -173,11 +173,9 @@ class UploadRepository {
   bool isUploadWaitingForRetryBackoff(String uploadId) =>
       _retryPolicy.isWaitingForBackoff(uploadId);
 
-  /// Initialize the upload manager and load persisted uploads
-  /// Uses robust initialization with retry logic and recovery strategies
+  /// Initializes the upload manager, including persisted-upload recovery.
   Future<void> initialize() async {
     if (_isDisposed) return;
-
     if (_isInitialized && _store.isReady) {
       onStorageReady();
       Log.info(
@@ -195,7 +193,6 @@ class UploadRepository {
     );
 
     try {
-      // Delegate box open to the store.
       await _store.open();
       if (_isDisposed) {
         _store.disposeStore();
@@ -216,24 +213,18 @@ class UploadRepository {
         category: LogCategory.video,
       );
 
-      // Clean up any problematic uploads first
       await cleanupProblematicUploads();
 
-      // Clean up old completed/published uploads to prevent accumulation
       await cleanupCompletedUploads();
 
       if (_isDisposed) return;
       onStorageReady();
 
-      // Re-drive uploads left in `uploading`/`retrying` by a prior crash or
-      // background freeze. Fire-and-forget: this runs on the event loop and
-      // must not block startup. `failed` uploads are intentionally left to the
-      // user-driven retry flow (they carry a manual retry budget).
+      // Recover crash-interrupted uploads without blocking startup.
       unawaited(recoverInterruptedUploads());
     } catch (e, stackTrace) {
       _isInitialized = false;
 
-      // Log the error but don't rethrow immediately - the helper already retried
       Log.error(
         '❌ Failed to initialize UploadManager after all retries: $e',
         name: 'UploadManager',

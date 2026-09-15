@@ -109,6 +109,7 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
   final BackgroundActivityManager _backgroundActivityManager;
   final CrashReporter _crashReporting;
   bool _isBackgroundRegistered = false;
+  bool _isDisposed = false;
 
   @visibleForTesting
   CrashReporter get crashReporterForTesting => _crashReporting;
@@ -160,7 +161,7 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
 
   @override
   void onStorageReady() {
-    if (!_isBackgroundRegistered) {
+    if (!_isDisposed && !_isBackgroundRegistered) {
       _backgroundActivityManager.registerService(this);
       _isBackgroundRegistered = true;
     }
@@ -185,6 +186,7 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
 
   @override
   void dispose() {
+    _isDisposed = true;
     if (_isBackgroundRegistered) {
       _backgroundActivityManager.unregisterService(this);
       _isBackgroundRegistered = false;

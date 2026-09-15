@@ -121,6 +121,33 @@ void main() {
         expect(store.isReady, isFalse);
       });
 
+      test('ensureOpen() stays inert when dispose lands mid-open', () async {
+        final store = _newStore(
+          scopeUploadsToCurrentUser: false,
+          currentNostrPubkey: null,
+        );
+
+        final reopen = store.ensureOpen();
+        store.disposeStore();
+        await reopen;
+
+        expect(store.isReady, isFalse);
+      });
+
+      test('open() stays inert when dispose lands mid-open', () async {
+        final store = _newStore(
+          scopeUploadsToCurrentUser: false,
+          currentNostrPubkey: null,
+        );
+
+        final open = store.open();
+        store.disposeStore();
+        await open;
+
+        expect(store.isDisposed, isTrue);
+        expect(store.isReady, isFalse);
+      });
+
       test('length returns 0 before open', () {
         final store = _newStore(
           scopeUploadsToCurrentUser: false,
