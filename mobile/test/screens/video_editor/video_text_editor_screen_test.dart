@@ -170,8 +170,6 @@ void main() {
 
       testWidgets(
         'dispatches InitFromLayer when layer is provided',
-        // Skip: GoogleFonts triggers async font loading after test completion
-        skip: true,
         (tester) async {
           final layer = TextLayer(
             text: 'Test Text',
@@ -193,8 +191,6 @@ void main() {
 
       testWidgets(
         'uses color from layer when colorMode is onlyColor',
-        // Skip: GoogleFonts triggers async font loading after test completion
-        skip: true,
         (tester) async {
           final layer = TextLayer(
             text: 'Test',
@@ -222,8 +218,6 @@ void main() {
 
       testWidgets(
         'uses background from layer when colorMode is background',
-        // Skip: GoogleFonts triggers async font loading after test completion
-        skip: true,
         (tester) async {
           final layer = TextLayer(
             text: 'Test',
