@@ -178,5 +178,19 @@ void main() {
       );
       expect(diagnostics, contains('clockOffsetMs='));
     });
+
+    test('has no reachable pre-16.0 fallback for the sync clock', () {
+      // The app pins IPHONEOS_DEPLOYMENT_TARGET to 16.0 (mobile/ios and
+      // mobile/ios/Podfile), so a masterClock fallback behind
+      // #available(iOS 15.4, *) could never execute -- dead code standing in
+      // for a compatibility path the app does not support.
+      final clockFn = declarationAt(
+        source,
+        'private func synchronizationClock(',
+      );
+      expect(clockFn, contains('return session.synchronizationClock'));
+      expect(clockFn, isNot(contains('#available')));
+      expect(clockFn, isNot(contains('masterClock')));
+    });
   });
 }

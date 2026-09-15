@@ -3068,12 +3068,12 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     /// The clock a capture session stamps its output buffers on.
+    ///
+    /// `synchronizationClock` requires iOS 15.4, which the app's 16.0
+    /// deployment target always satisfies.
     private func synchronizationClock(of session: AVCaptureSession?) -> CMClock? {
         guard let session else { return nil }
-        if #available(iOS 15.4, *) {
-            return session.synchronizationClock
-        }
-        return session.masterClock
+        return session.synchronizationClock
     }
 
     /// Re-stamps an audio buffer from the audio capture session's clock onto
