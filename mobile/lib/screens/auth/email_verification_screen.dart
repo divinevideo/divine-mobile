@@ -116,17 +116,25 @@ class _EmailVerificationScreenState
     final authService = ref.read(authServiceProvider);
     _authSubscription = authService.authStateStream.listen((authState) {
       if (authState == AuthState.authenticated && mounted) {
-        Log.info(
-          'Auth state became authenticated, navigating to explore '
-          '(cubit=${_cubit.hashCode})',
-          name: 'EmailVerificationScreen',
-          category: LogCategory.auth,
+        _runDetached(
+          _handleAuthenticated(),
+          'handle authenticated state',
         );
-        _cubit.stopPolling();
-        ref.read(pendingVerificationServiceProvider).clear();
-        context.go(ExploreScreen.pathForTab('popular'));
       }
     });
+  }
+
+  Future<void> _handleAuthenticated() async {
+    Log.info(
+      'Auth state became authenticated, navigating to explore '
+      '(cubit=${_cubit.hashCode})',
+      name: 'EmailVerificationScreen',
+      category: LogCategory.auth,
+    );
+    _cubit.stopPolling();
+    await _clearPendingVerification('after authentication');
+    if (!mounted) return;
+    context.go(ExploreScreen.pathForTab('popular'));
   }
 
   void _initializeVerification() {
@@ -151,11 +159,17 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      unawaited(_restoreFromPersistedRecord());
+      _runDetached(
+        _restoreFromPersistedRecord(),
+        'restore pending verification',
+      );
     } else if (widget.isTokenMode) {
       // Token mode - check for persisted verification data for auto-login
       _isTokenMode = true;
-      _initTokenModeWithPersistenceCheck();
+      _runDetached(
+        _initTokenModeWithPersistenceCheck(),
+        'initialize token verification',
+      );
     } else {
       Log.warning(
         'EmailVerificationScreen opened without token or deviceCode',
@@ -242,7 +256,7 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      _verifyWithToken(widget.token!);
+      await _verifyWithToken(widget.token!);
     }
   }
 
@@ -261,7 +275,7 @@ class _EmailVerificationScreenState
     }
 
     if (result.errorCode == EmailVerificationError.emailAlreadyRegistered) {
-      unawaited(ref.read(pendingVerificationServiceProvider).clear());
+      await _clearPendingVerification('after registered-email response');
     }
     return result;
   }
@@ -286,7 +300,7 @@ class _EmailVerificationScreenState
         category: LogCategory.auth,
       );
       // In token mode without polling, redirect to login
-      _handleTokenModeSuccess();
+      await _handleTokenModeSuccess();
     }
   }
 
@@ -331,13 +345,16 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      unawaited(_verifyDeepLinkToken());
+      _runDetached(_verifyDeepLinkToken(), 'verify deep-link token');
     }
   }
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
+    _runDetached(
+      _authSubscription?.cancel() ?? Future<void>.value(),
+      'cancel auth subscription',
+    );
     // Stop polling when the screen is disposed (e.g., router redirect after
     // auth). The cubit is app-level so we don't close() it, but we must stop
     // its timers to prevent zombie polling.
@@ -345,9 +362,10 @@ class _EmailVerificationScreenState
     super.dispose();
   }
 
-  void _handleSuccess() {
+  Future<void> _handleSuccess() async {
     // Clear persisted verification data on successful login
-    ref.read(pendingVerificationServiceProvider).clear();
+    await _clearPendingVerification('after successful verification');
+    if (!mounted) return;
 
     if (!_isTokenMode) {
       // Polling mode: the auth-state listener navigates to the explore
@@ -359,13 +377,15 @@ class _EmailVerificationScreenState
       );
     } else {
       // Token mode: redirect to login screen
-      _handleTokenModeSuccess();
+      await _handleTokenModeSuccess(clearPending: false);
     }
   }
 
-  void _handleTokenModeSuccess() {
-    // Clear persisted verification data
-    ref.read(pendingVerificationServiceProvider).clear();
+  Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
+    if (clearPending) {
+      await _clearPendingVerification('before returning to sign in');
+      if (!mounted) return;
+    }
     // Show feedback message before redirecting to login
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -378,14 +398,15 @@ class _EmailVerificationScreenState
     context.go(WelcomeScreen.loginOptionsPath);
   }
 
-  void _handleCancel() {
+  Future<void> _handleCancel() async {
     _cubit.stopPolling();
     // On a normal post-registration cancel, don't clear pending verification
     // data — the user may still verify via the email link or PIN later. Data is
     // cleared on successful login, logout, or expiration (24h verify window).
     // On a cold-start restore, closing is the escape hatch ("register / log in
     // as a different user"), so clear the record to avoid restoring back here.
-    _maybeClearRestoredRecord();
+    await _maybeClearRestoredRecord();
+    if (!mounted) return;
     // Go back to previous screen (registration form)
     if (context.canPop()) {
       context.pop();
@@ -394,17 +415,22 @@ class _EmailVerificationScreenState
     }
   }
 
-  void _handleStartOver() {
+  Future<void> _handleStartOver() async {
     // Start Over is a terminal exit: verification failed and the persisted
     // record is unusable, so clear it unconditionally (not just in restored
     // mode) so a later cold start doesn't restore the user into a dead flow.
-    ref.read(pendingVerificationServiceProvider).clear();
+    await _clearPendingVerification('before starting over');
+    if (!mounted) return;
     context.go('/');
   }
 
-  void _handleSignInRecovery(String? email, EmailVerificationError errorCode) {
+  Future<void> _handleSignInRecovery(
+    String? email,
+    EmailVerificationError errorCode,
+  ) async {
     _cubit.stopPolling();
-    ref.read(pendingVerificationServiceProvider).clear();
+    await _clearPendingVerification('before sign-in recovery');
+    if (!mounted) return;
     context.go(
       WelcomeScreen.loginOptionsPathWithRecovery(
         email: email,
@@ -415,9 +441,35 @@ class _EmailVerificationScreenState
 
   /// Clears the persisted pending-verification record when this screen was
   /// restored on a cold start, so leaving it doesn't trap the user back here.
-  void _maybeClearRestoredRecord() {
+  Future<void> _maybeClearRestoredRecord() async {
     if (!widget.restored) return;
-    ref.read(pendingVerificationServiceProvider).clear();
+    await _clearPendingVerification('before leaving restored verification');
+  }
+
+  Future<void> _clearPendingVerification(String operation) async {
+    try {
+      await ref.read(pendingVerificationServiceProvider).clear();
+    } catch (error, stackTrace) {
+      Log.error(
+        'Failed to clear pending verification $operation: $error',
+        name: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  void _runDetached(Future<void> operation, String name) {
+    unawaited(
+      operation.catchError((Object error, StackTrace stackTrace) {
+        Log.error(
+          'Failed to $name: $error',
+          name: 'EmailVerificationScreen',
+          category: LogCategory.auth,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
   }
 
   @override
@@ -437,7 +489,8 @@ class _EmailVerificationScreenState
               listenWhen: (previous, current) =>
                   previous.status != current.status &&
                   current.status == EmailVerificationStatus.success,
-              listener: (context, state) => _handleSuccess(),
+              listener: (context, state) =>
+                  _runDetached(_handleSuccess(), 'handle verification success'),
             ),
             BlocListener<EmailVerificationCubit, EmailVerificationState>(
               listenWhen: (previous, current) =>
@@ -555,14 +608,20 @@ class _EmailVerificationScreenState
                                 EmailVerificationStatus.failure =>
                                   _ErrorContent(
                                     errorCode: state.errorCode,
-                                    onStartOver: _handleStartOver,
+                                    onStartOver: () => _runDetached(
+                                      _handleStartOver(),
+                                      'start verification over',
+                                    ),
                                     onSignInInstead:
                                         state.errorCode ==
                                             EmailVerificationError
                                                 .emailAlreadyRegistered
-                                        ? () => _handleSignInRecovery(
-                                            state.pendingEmail,
-                                            state.errorCode!,
+                                        ? () => _runDetached(
+                                            _handleSignInRecovery(
+                                              state.pendingEmail,
+                                              state.errorCode!,
+                                            ),
+                                            'recover through sign in',
                                           )
                                         : null,
                                   ),
@@ -582,9 +641,10 @@ class _EmailVerificationScreenState
                       start: _closeButtonInset,
                       child: DivineIconButton(
                         type: .secondary,
-                        onPressed: startsOver
-                            ? _handleStartOver
-                            : _handleCancel,
+                        onPressed: () => _runDetached(
+                          startsOver ? _handleStartOver() : _handleCancel(),
+                          'leave verification',
+                        ),
                         size: .small,
                         icon: .x,
                         semanticLabel: startsOver
@@ -861,7 +921,20 @@ class _PinEntrySectionState extends State<_PinEntrySection> {
         PinSubmissionStatus.submitting) {
       return;
     }
-    context.read<EmailVerificationCubit>().submitPin(_controller.text);
+    unawaited(_submitPin());
+  }
+
+  Future<void> _submitPin() async {
+    try {
+      await context.read<EmailVerificationCubit>().submitPin(_controller.text);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Failed to submit email verification PIN: $error',
+        name: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override

@@ -37,7 +37,6 @@ discarded_futures|lib/screens/apps/apps_directory_screen.dart	1
 discarded_futures|lib/screens/apps/apps_permissions_screen.dart	1
 discarded_futures|lib/screens/apps/nostr_app_sandbox_screen.dart	1
 discarded_futures|lib/screens/auth/create_account_screen.dart	1
-discarded_futures|lib/screens/auth/email_verification_screen.dart	9
 discarded_futures|lib/screens/auth/login_options_screen.dart	2
 discarded_futures|lib/screens/auth/nostr_connect_screen.dart	3
 discarded_futures|lib/screens/auth/secure_account_screen.dart	2
@@ -355,7 +354,6 @@ unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/providers/notifications_providers.dart	1
 unawaited_futures|lib/providers/video_editor_provider.dart	2
 unawaited_futures|lib/screens/auth/create_account_screen.dart	1
-unawaited_futures|lib/screens/auth/email_verification_screen.dart	1
 unawaited_futures|lib/screens/auth/nostr_connect_screen.dart	2
 unawaited_futures|lib/screens/auth/secure_account_screen.dart	1
 unawaited_futures|lib/screens/curated_list_feed_screen.dart	2
