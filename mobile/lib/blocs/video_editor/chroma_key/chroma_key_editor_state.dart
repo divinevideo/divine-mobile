@@ -31,8 +31,15 @@ class ChromaKeyEditorState extends Equatable {
   /// Which background the keyed area is filled with.
   ClipChromaKeyBackgroundType get backgroundType => chromaKey.backgroundType;
 
-  /// Whether a measurement is in flight, which disables the controls it would
-  /// overwrite.
+  /// Whether a measurement is in flight whose result is still wanted.
+  ///
+  /// Only Auto-detect is disabled while one runs, so a second tap cannot
+  /// start a second decode. Everything else stays live: setting the colour or
+  /// amount by hand, or picking a preset, writes the measurement off and takes
+  /// this back to `false`, and its result is dropped when it lands rather than
+  /// overwriting that edit. The written-off decode is still executing when
+  /// Auto-detect comes back that way, so a re-tap can start another one; the
+  /// cubit keeps only the newest measurement's result.
   bool get isDetecting => detectionStatus == ChromaKeyDetectionStatus.detecting;
 
   ChromaKeyEditorState copyWith({

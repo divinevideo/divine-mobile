@@ -76,10 +76,21 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   final EditorVideo _video;
   final ChromaKeyDetectFn _detect;
 
+  /// Identifies the measurement whose result is still wanted.
+  ///
+  /// Every start takes the next id. An edit while one runs writes it off
+  /// through `isDetecting` and leaves the id alone; a re-run takes a new id,
+  /// so a superseded measurement loses even though it lands on the re-run's
+  /// `detecting` status, and its failure cannot report over the re-run either.
+  int _latestDetectionId = 0;
+
   /// Measures the screen off the footage and adopts colour and similarity.
   ///
   /// Smoothness, spill and the chosen background are the user's, so a
-  /// measurement never overwrites them.
+  /// measurement never overwrites them. Neither does it overwrite a colour or
+  /// amount set by hand while it ran: that edit writes the measurement off
+  /// (see [_statusAfterManualKeyEdit]) and the result is dropped. A later
+  /// measurement supersedes an earlier one the same way.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
     // Both callers discard this future — the constructor with `unawaited`, the
@@ -91,6 +102,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     )) {
       return;
     }
+    final detectionId = ++_latestDetectionId;
 
     // Only the measurement is wrapped. A wider `try` would catch the emits
     // below as well and file a post-close `emit` throw as a detection failure,
@@ -106,13 +118,13 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
         name: _logName,
         category: LogCategory.video,
       );
-      _reportDetectionFailure(error, stackTrace);
+      _reportDetectionFailure(detectionId, error, stackTrace);
       return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
       // not.
-      _reportDetectionFailure(switch (error) {
+      _reportDetectionFailure(detectionId, switch (error) {
         StateError() ||
         TypeError() ||
         RangeError() => Reportable(error, context: 'detectFromFootage'),
@@ -120,6 +132,12 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       }, stackTrace);
       return;
     }
+
+    // A colour or amount set by hand while this ran already took the status
+    // back to idle, and a re-run since has taken the latest id. Either way
+    // this result is spent: the edit was deliberate and this is a guess, and
+    // a later guess beats an earlier one.
+    if (!state.isDetecting || detectionId != _latestDetectionId) return;
 
     emitIfOpen(
       state.copyWith(
@@ -135,14 +153,19 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     );
   }
 
-  /// Reports a failed measurement, unless the screen already closed.
+  /// Reports a failed measurement, unless the screen already closed or a later
+  /// measurement has replaced this one.
   ///
   /// `BlocBase.addError` documents that it must not be called on a closed
   /// sink, and it has no `isClosed` check of its own: it forwards straight to
   /// the observer, which logs and — for an invariant violation — files a crash
   /// report against a cubit the user already backed out of.
-  void _reportDetectionFailure(Object error, StackTrace stackTrace) {
-    if (isClosed) return;
+  void _reportDetectionFailure(
+    int detectionId,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    if (isClosed || detectionId != _latestDetectionId) return;
     addError(error, stackTrace);
     emitIfOpen(
       state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
@@ -155,13 +178,18 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.idle));
   }
 
-  /// Sets the screen colour to remove.
-  void setKeyColor(Color color) =>
-      _updateKey((key) => key.copyWith(color: color));
+  /// Sets the screen colour to remove, writing off a measurement in flight.
+  void setKeyColor(Color color) => _updateKey(
+    (key) => key.copyWith(color: color),
+    detectionStatus: _statusAfterManualKeyEdit,
+  );
 
-  /// Sets how far from the key colour a pixel may sit and still be removed.
-  void setSimilarity(double value) =>
-      _updateKey((key) => key.copyWith(similarity: value));
+  /// Sets how far from the key colour a pixel may sit and still be removed,
+  /// writing off a measurement in flight.
+  void setSimilarity(double value) => _updateKey(
+    (key) => key.copyWith(similarity: value),
+    detectionStatus: _statusAfterManualKeyEdit,
+  );
 
   /// Sets the width of the soft ramp just beyond the similarity threshold.
   void setSmoothness(double value) =>
@@ -171,10 +199,12 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void setSpill(double value) =>
       _updateKey((key) => key.copyWith(spill: value));
 
-  /// Adopts the green-screen preset, keeping the chosen background.
+  /// Adopts the green-screen preset, keeping the chosen background and
+  /// writing off a measurement in flight.
   void useGreenScreenPreset() => _usePreset(const ChromaKey.greenScreen());
 
-  /// Adopts the blue-screen preset, keeping the chosen background.
+  /// Adopts the blue-screen preset, keeping the chosen background and
+  /// writing off a measurement in flight.
   ///
   /// Blue keys tighter than green and despills more gently: denim, blue eyes
   /// and light blue shirts all crowd a blue screen.
@@ -193,9 +223,19 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
           ),
           backgroundVideoPath: current.backgroundVideoPath,
         ),
+        detectionStatus: _statusAfterManualKeyEdit,
       ),
     );
   }
+
+  /// The status to emit with a colour or amount the user set by hand.
+  ///
+  /// A measurement writes exactly those two fields, so an edit to either while
+  /// one is in flight is the user overtaking it: the panel goes back to idle
+  /// now, and [detectFromFootage] drops the result when it lands. Anything
+  /// else — a failure not yet acknowledged, or nothing running — is kept.
+  ChromaKeyDetectionStatus? get _statusAfterManualKeyEdit =>
+      state.isDetecting ? ChromaKeyDetectionStatus.idle : null;
 
   /// Leaves the keyed area unfilled.
   void useTransparentBackground() => _setBackground(
@@ -227,7 +267,10 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void _setBackground(ClipChromaKey chromaKey) =>
       emit(state.copyWith(chromaKey: chromaKey));
 
-  void _updateKey(ChromaKey Function(ChromaKey key) update) {
+  void _updateKey(
+    ChromaKey Function(ChromaKey key) update, {
+    ChromaKeyDetectionStatus? detectionStatus,
+  }) {
     final current = state.chromaKey;
     emit(
       state.copyWith(
@@ -235,6 +278,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
           key: update(current.key),
           backgroundVideoPath: current.backgroundVideoPath,
         ),
+        detectionStatus: detectionStatus,
       ),
     );
   }

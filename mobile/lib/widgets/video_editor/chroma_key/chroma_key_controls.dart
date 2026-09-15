@@ -194,6 +194,12 @@ class _InfoRow extends StatelessWidget {
 }
 
 /// Auto-detect plus the two screen presets.
+///
+/// Only Auto-detect waits for a wanted measurement. The presets stay live,
+/// like the swatch and the sliders below: someone who shot on blue should not
+/// have to sit out the green measurement the panel started on its own. A
+/// preset tapped while one runs writes it off instead — see
+/// [ChromaKeyEditorState.isDetecting].
 class _DetectRow extends StatelessWidget {
   const _DetectRow();
 
@@ -220,13 +226,13 @@ class _DetectRow extends StatelessWidget {
           label: context.l10n.videoEditorChromaKeyPresetGreen,
           type: .secondary,
           size: .small,
-          onPressed: isDetecting ? null : cubit.useGreenScreenPreset,
+          onPressed: cubit.useGreenScreenPreset,
         ),
         DivineButton(
           label: context.l10n.videoEditorChromaKeyPresetBlue,
           type: .secondary,
           size: .small,
-          onPressed: isDetecting ? null : cubit.useBlueScreenPreset,
+          onPressed: cubit.useBlueScreenPreset,
         ),
       ],
     );
