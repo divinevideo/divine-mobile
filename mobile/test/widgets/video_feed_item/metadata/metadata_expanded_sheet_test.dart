@@ -1395,7 +1395,7 @@ void main() {
       // Unmount explicitly and let Riverpod run its zero-duration disposal
       // task before the test binding checks for leaked timers.
       await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
     });
   });
 
