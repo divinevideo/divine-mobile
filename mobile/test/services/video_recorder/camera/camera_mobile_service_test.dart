@@ -7,6 +7,11 @@ import 'package:openvine/services/video_recorder/camera/camera_mobile_service.da
 class _FakeCameraPlatform extends DivineCameraPlatform {
   bool shouldFail = true;
 
+  /// When set, the audio-capture calls throw instead of recording.
+  bool failAudioCapture = false;
+
+  final List<String> audioCaptureCalls = [];
+
   @override
   void Function(VideoRecordingResult result)? onRecordingAutoStopped;
 
@@ -28,6 +33,18 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
 
   @override
   Future<void> disposeCamera() async {}
+
+  @override
+  Future<void> suspendAudioCapture() async {
+    if (failAudioCapture) throw StateError('no audio session');
+    audioCaptureCalls.add('suspend');
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    if (failAudioCapture) throw StateError('no audio session');
+    audioCaptureCalls.add('resume');
+  }
 }
 
 void main() {
@@ -75,6 +92,36 @@ void main() {
       expect(service.isInitialized, isTrue);
       expect(service.initializationError, isNull);
       expect(rebuildRequests, [isTrue, isTrue]);
+    });
+
+    group('audio capture suspension', () {
+      test('forwards suspend and resume once initialized', () async {
+        platform.shouldFail = false;
+        await service.initialize();
+
+        await service.suspendAudioCapture();
+        await service.resumeAudioCapture();
+
+        expect(platform.audioCaptureCalls, ['suspend', 'resume']);
+      });
+
+      test('does not reach the platform before initialize', () async {
+        await service.suspendAudioCapture();
+        await service.resumeAudioCapture();
+
+        expect(platform.audioCaptureCalls, isEmpty);
+      });
+
+      test('swallows a platform failure so the countdown still runs', () async {
+        // A failed suspend only keeps today's audio path; a failed resume
+        // leaves the reopen to the record tap. Neither may abort the start.
+        platform.shouldFail = false;
+        await service.initialize();
+        platform.failAudioCapture = true;
+
+        await expectLater(service.suspendAudioCapture(), completes);
+        await expectLater(service.resumeAudioCapture(), completes);
+      });
     });
   });
 }

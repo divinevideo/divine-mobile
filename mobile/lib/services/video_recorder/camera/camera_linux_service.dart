@@ -145,6 +145,16 @@ class CameraLinuxService extends CameraService {
   }
 
   @override
+  Future<void> suspendAudioCapture() async {
+    // The Linux camera has no microphone to release.
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    // The Linux camera has no microphone to reopen.
+  }
+
+  @override
   void setOnRemoteRecordTrigger(void Function()? callback) {
     // Remote record control is not supported on Linux.
   }

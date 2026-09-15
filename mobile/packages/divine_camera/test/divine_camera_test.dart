@@ -18,6 +18,12 @@ class MockDivineCameraPlatform
   /// Records the `releaseAudio` argument of the last [pausePreview] call, or
   /// `null` if it was never called.
   bool? lastPauseReleaseAudio;
+
+  /// Counts [suspendAudioCapture] calls that reached the platform.
+  int suspendAudioCaptureCalls = 0;
+
+  /// Counts [resumeAudioCapture] calls that reached the platform.
+  int resumeAudioCaptureCalls = 0;
   void Function(VideoRecordingResult result)? _onRecordingAutoStopped;
   void Function(RemoteRecordTrigger trigger)? _onRemoteRecordTrigger;
 
@@ -215,6 +221,16 @@ class MockDivineCameraPlatform
 
   @override
   Future<void> resumePreview() async {}
+
+  @override
+  Future<void> suspendAudioCapture() async {
+    suspendAudioCaptureCalls++;
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    resumeAudioCaptureCalls++;
+  }
 
   @override
   Future<CameraState> getCameraState() async {
@@ -833,6 +849,52 @@ void main() {
         final result = await DivineCamera.instance.capturePhoto();
 
         expect(result, isNull);
+      });
+    });
+
+    group('audio capture suspension', () {
+      test('suspendAudioCapture reaches the platform when idle', () async {
+        await DivineCamera.instance.initialize();
+
+        await DivineCamera.instance.suspendAudioCapture();
+
+        expect(mockPlatform.suspendAudioCaptureCalls, 1);
+      });
+
+      test('suspendAudioCapture is a no-op before initialize', () async {
+        await DivineCamera.instance.dispose();
+
+        await DivineCamera.instance.suspendAudioCapture();
+
+        expect(mockPlatform.suspendAudioCaptureCalls, 0);
+      });
+
+      test('suspendAudioCapture is a no-op while recording', () async {
+        await DivineCamera.instance.initialize();
+        await DivineCamera.instance.startRecording();
+
+        await DivineCamera.instance.suspendAudioCapture();
+
+        expect(mockPlatform.suspendAudioCaptureCalls, 0);
+      });
+
+      test(
+        'resumeAudioCapture reaches the platform when initialized',
+        () async {
+          await DivineCamera.instance.initialize();
+
+          await DivineCamera.instance.resumeAudioCapture();
+
+          expect(mockPlatform.resumeAudioCaptureCalls, 1);
+        },
+      );
+
+      test('resumeAudioCapture is a no-op before initialize', () async {
+        await DivineCamera.instance.dispose();
+
+        await DivineCamera.instance.resumeAudioCapture();
+
+        expect(mockPlatform.resumeAudioCaptureCalls, 0);
       });
     });
 
