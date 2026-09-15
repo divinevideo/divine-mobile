@@ -1087,12 +1087,15 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               playTimeNotifier: _playTimeNotifier,
               playheadAdvancingNotifier: _playheadAdvancingNotifier,
               fromLibrary: widget.fromLibrary,
-              onOpenCamera: () => _openCamera(
-                clipEditorBloc: context.read<ClipEditorBloc>(),
-                playhead: context
-                    .read<VideoEditorMainBloc>()
-                    .state
-                    .currentPosition,
+              onOpenCamera: () => _runDetached(
+                _openCamera(
+                  clipEditorBloc: context.read<ClipEditorBloc>(),
+                  playhead: context
+                      .read<VideoEditorMainBloc>()
+                      .state
+                      .currentPosition,
+                ),
+                'open camera recorder',
               ),
               onOpenClipsEditor: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
@@ -1105,7 +1108,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                   'open clips editor',
                 );
               },
-              onAddStickers: _addStickers,
+              onAddStickers: () =>
+                  _runDetached(_addStickers(), 'open sticker picker'),
               onAddEditTextLayer: ([layer]) {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final textBloc = context.read<VideoEditorTextBloc>();
@@ -1116,7 +1120,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                   layer: layer,
                 );
               },
-              onOpenMusicLibrary: _openMusicLibrary,
+              onOpenMusicLibrary: () =>
+                  _runDetached(_openMusicLibrary(), 'open music library'),
               onOpenVoiceOver: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 _runDetached(
