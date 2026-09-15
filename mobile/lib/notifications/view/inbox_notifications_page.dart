@@ -1,8 +1,6 @@
 // ABOUTME: Inbox notifications scaffold — six filter tabs plus actionable
 // ABOUTME: pending-badge banner wrapping NotificationsView.
 
-import 'dart:async';
-
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,7 +17,7 @@ import 'package:openvine/notifications/providers/notification_repository_provide
 import 'package:openvine/notifications/view/notifications_view.dart';
 import 'package:openvine/notifications/view/pending_badge_awards_view.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:unified_logger/unified_logger.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// Inbox notifications page — owns the BLoC and tab scaffold.
 ///
@@ -94,7 +92,12 @@ class _InboxNotificationsScaffoldState
   void initState() {
     super.initState();
     _badgesCubit = BadgesCubit(repository: widget.badgeRepository);
-    _runDetached(_badgesCubit.load(), 'load badges');
+    runDetached(
+      _badgesCubit.load(),
+      'load badges',
+      logName: 'InboxNotifications',
+      category: LogCategory.ui,
+    );
   }
 
   @override
@@ -105,11 +108,21 @@ class _InboxNotificationsScaffoldState
       // See PR #8046.
       final previous = _badgesCubit;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _runDetached(previous.close(), 'close replaced badges cubit');
+        runDetached(
+          previous.close(),
+          'close replaced badges cubit',
+          logName: 'InboxNotifications',
+          category: LogCategory.ui,
+        );
       });
       setState(() {
         _badgesCubit = BadgesCubit(repository: widget.badgeRepository);
-        _runDetached(_badgesCubit.load(), 'load replacement badges');
+        runDetached(
+          _badgesCubit.load(),
+          'load replacement badges',
+          logName: 'InboxNotifications',
+          category: LogCategory.ui,
+        );
       });
       return;
     }
@@ -118,28 +131,25 @@ class _InboxNotificationsScaffoldState
       final cubit = _badgesCubit;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !identical(_badgesCubit, cubit)) return;
-        _runDetached(cubit.refresh(), 'refresh badges');
+        runDetached(
+          cubit.refresh(),
+          'refresh badges',
+          logName: 'InboxNotifications',
+          category: LogCategory.ui,
+        );
       });
     }
   }
 
   @override
   void dispose() {
-    _runDetached(_badgesCubit.close(), 'close badges cubit');
-    super.dispose();
-  }
-
-  void _runDetached(Future<void> operation, String name) {
-    unawaited(
-      operation.catchError((Object error, StackTrace stackTrace) {
-        Log.error(
-          'Failed to $name: $error',
-          name: 'InboxNotifications',
-          category: LogCategory.ui,
-          stackTrace: stackTrace,
-        );
-      }),
+    runDetached(
+      _badgesCubit.close(),
+      'close badges cubit',
+      logName: 'InboxNotifications',
+      category: LogCategory.ui,
     );
+    super.dispose();
   }
 
   @override

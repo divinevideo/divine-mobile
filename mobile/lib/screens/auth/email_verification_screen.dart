@@ -23,6 +23,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pending_verification_restore_policy.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -137,9 +138,11 @@ class _EmailVerificationScreenState
     final authService = ref.read(authServiceProvider);
     _authSubscription = authService.authStateStream.listen((authState) {
       if (authState == AuthState.authenticated && mounted) {
-        _runDetached(
+        runDetached(
           _handleAuthenticated(),
           'handle authenticated state',
+          logName: 'EmailVerificationScreen',
+          category: LogCategory.auth,
         );
       }
     });
@@ -181,16 +184,20 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      _runDetached(
+      runDetached(
         _restoreFromPersistedRecord(),
         'restore pending verification',
+        logName: 'EmailVerificationScreen',
+        category: LogCategory.auth,
       );
     } else if (widget.isTokenMode) {
       // Token mode - check for persisted verification data for auto-login
       _isTokenMode = true;
-      _runDetached(
+      runDetached(
         _initTokenModeWithPersistenceCheck(),
         'initialize token verification',
+        logName: 'EmailVerificationScreen',
+        category: LogCategory.auth,
       );
     } else {
       Log.warning(
@@ -367,15 +374,22 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      _runDetached(_verifyDeepLinkToken(), 'verify deep-link token');
+      runDetached(
+        _verifyDeepLinkToken(),
+        'verify deep-link token',
+        logName: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+      );
     }
   }
 
   @override
   void dispose() {
-    _runDetached(
+    runDetached(
       _authSubscription?.cancel() ?? Future<void>.value(),
       'cancel auth subscription',
+      logName: 'EmailVerificationScreen',
+      category: LogCategory.auth,
     );
     // Stop polling when the screen is disposed (e.g., router redirect after
     // auth). The cubit is app-level so we don't close() it, but we must stop
@@ -474,23 +488,10 @@ class _EmailVerificationScreenState
 
   /// [PendingVerificationService.clear] is itself best-effort and never
   /// rethrows; a failure here only ever means the `ref` lookup broke, which
-  /// surfaces through this call's own [_runDetached] wrapper like everything
+  /// surfaces through this call's own [runDetached] wrapper like everything
   /// else in this screen.
   Future<void> _clearPendingVerification() =>
       ref.read(pendingVerificationServiceProvider).clear();
-
-  void _runDetached(Future<void> operation, String name) {
-    unawaited(
-      operation.catchError((Object error, StackTrace stackTrace) {
-        Log.error(
-          'Failed to $name: $error',
-          name: 'EmailVerificationScreen',
-          category: LogCategory.auth,
-          stackTrace: stackTrace,
-        );
-      }),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -509,8 +510,12 @@ class _EmailVerificationScreenState
               listenWhen: (previous, current) =>
                   previous.status != current.status &&
                   current.status == EmailVerificationStatus.success,
-              listener: (context, state) =>
-                  _runDetached(_handleSuccess(), 'handle verification success'),
+              listener: (context, state) => runDetached(
+                _handleSuccess(),
+                'handle verification success',
+                logName: 'EmailVerificationScreen',
+                category: LogCategory.auth,
+              ),
             ),
             BlocListener<EmailVerificationCubit, EmailVerificationState>(
               listenWhen: (previous, current) =>
@@ -628,20 +633,24 @@ class _EmailVerificationScreenState
                                 EmailVerificationStatus.failure =>
                                   _ErrorContent(
                                     errorCode: state.errorCode,
-                                    onStartOver: () => _runDetached(
+                                    onStartOver: () => runDetached(
                                       _handleStartOver(),
                                       'start verification over',
+                                      logName: 'EmailVerificationScreen',
+                                      category: LogCategory.auth,
                                     ),
                                     onSignInInstead:
                                         state.errorCode ==
                                             EmailVerificationError
                                                 .emailAlreadyRegistered
-                                        ? () => _runDetached(
+                                        ? () => runDetached(
                                             _handleSignInRecovery(
                                               state.pendingEmail,
                                               state.errorCode!,
                                             ),
                                             'recover through sign in',
+                                            logName: 'EmailVerificationScreen',
+                                            category: LogCategory.auth,
                                           )
                                         : null,
                                   ),
@@ -661,9 +670,11 @@ class _EmailVerificationScreenState
                       start: _closeButtonInset,
                       child: DivineIconButton(
                         type: .secondary,
-                        onPressed: () => _runDetached(
+                        onPressed: () => runDetached(
                           startsOver ? _handleStartOver() : _handleCancel(),
                           'leave verification',
+                          logName: 'EmailVerificationScreen',
+                          category: LogCategory.auth,
                         ),
                         size: .small,
                         icon: .x,
