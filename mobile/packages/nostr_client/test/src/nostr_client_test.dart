@@ -5893,6 +5893,7 @@ void main() {
           );
           await firstQueryStarted.future;
 
+          final waiterStarted = DateTime.now();
           final expired = await pooledClient.readEvents(
             [
               Filter(kinds: const [EventKind.reaction]),
@@ -5901,6 +5902,13 @@ void main() {
             timeout: const Duration(milliseconds: 800),
           );
           expect(expired.endedBy, QueryEnd.deadline);
+          expect(
+            DateTime.now().difference(waiterStarted),
+            lessThan(const Duration(milliseconds: 400)),
+            reason:
+                'the waiter gives up before the reserved network window, so '
+                'it cannot spend the caller deadline on the slot it never got',
+          );
 
           releaseFirstQuery.complete();
           await firstQuery;
@@ -5971,6 +5979,67 @@ void main() {
             reason:
                 "preparatory work must leave a useful share of the caller's "
                 'short deadline for the relay read',
+          );
+        },
+      );
+
+      test(
+        'a hung cache cannot spend the reserved network window',
+        () async {
+          final mockDbClient = _MockAppDbClient();
+          final mockDatabase = _MockAppDatabase();
+          final dao = _MockNostrEventsDao();
+          when(() => mockDbClient.database).thenReturn(mockDatabase);
+          when(() => mockDatabase.nostrEventsDao).thenReturn(dao);
+          // A cache read that never returns: it may spend the whole
+          // preparation budget, and the relay leg must still be handed the
+          // window that budget was held back for.
+          when(
+            () => dao.getEventsByFilter(any()),
+          ).thenAnswer((_) => Completer<List<Event>>().future);
+
+          Duration? handedBudget;
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            handedBudget = invocation.namedArguments[#timeout] as Duration;
+            return const [];
+          });
+
+          final clientWithCache = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+            dbClient: mockDbClient,
+          );
+          addTearDown(clientWithCache.dispose);
+
+          // Just above the reserved window, so preparation is cut at the
+          // reservation rather than at the caller's deadline.
+          const requestedTimeout = Duration(milliseconds: 1200);
+          final result = await clientWithCache.readEvents(
+            [
+              Filter(kinds: const [EventKind.textNote]),
+            ],
+            timeout: requestedTimeout,
+          );
+
+          expect(result.endedBy, QueryEnd.complete);
+          verify(() => dao.getEventsByFilter(any())).called(1);
+          expect(
+            handedBudget,
+            greaterThanOrEqualTo(
+              RelayPool.querySettleWindow - const Duration(milliseconds: 50),
+            ),
+            reason:
+                'a cache read that spends the whole preparation budget must '
+                'not eat into the window reserved for the relay leg',
           );
         },
       );
