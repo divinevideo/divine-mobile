@@ -1,38 +1,9 @@
 // ABOUTME: Static guards for the iOS recording audio-alignment breadcrumb.
 // ABOUTME: A finished clip must carry why its audio started where it did.
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-String _readNativeSource(String fileName) {
-  final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-/// Returns the Swift declaration or block starting at [signature] up to its
-/// closing brace, so an assertion cannot match an identical line elsewhere in
-/// the file, nor a line that sits outside the scope being asserted on.
-String _declarationAt(String source, String signature) {
-  final start = source.indexOf(signature);
-  if (start < 0) {
-    throw StateError('No declaration starting with "$signature".');
-  }
-
-  var depth = 0;
-  for (var i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] == '{') depth++;
-    if (source[i] == '}') {
-      depth--;
-      if (depth == 0) return source.substring(start, i + 1);
-    }
-  }
-  throw StateError('Unbalanced braces after "$signature".');
-}
+import 'helpers/native_source.dart';
 
 void main() {
   group('iOS recording audio-alignment diagnostics', () {
@@ -40,8 +11,8 @@ void main() {
     late final String diagnostics;
 
     setUpAll(() {
-      source = _readNativeSource('CameraController.swift');
-      diagnostics = _declarationAt(
+      source = readIosNativeSource('CameraController.swift');
+      diagnostics = declarationAt(
         source,
         'private func logAudioAlignmentDiagnostics(',
       );
@@ -81,7 +52,7 @@ void main() {
       // A clip with no audio at all is the loudest version of this bug, so the
       // breadcrumb must not sit behind the hasAudioTrack branch that only
       // covers the good case.
-      final stop = _declarationAt(source, 'func stopRecording(');
+      final stop = declarationAt(source, 'func stopRecording(');
       final call = stop.indexOf('self.logAudioAlignmentDiagnostics(asset:');
       final branch = stop.indexOf('if hasAudioTrack {');
       expect(call, greaterThan(-1));
@@ -93,7 +64,7 @@ void main() {
       // The anchor is every lead-in measurement's zero point. Recording it
       // anywhere but at startSession would measure a different instant than
       // the one the audio gate compares against.
-      final delegate = _declarationAt(
+      final delegate = declarationAt(
         source,
         'func captureOutput(_ output: AVCaptureOutput,',
       );
@@ -112,7 +83,7 @@ void main() {
       // writer session not being open yet. Behind any of them a clip whose
       // mic never delivered and a clip whose buffers were all discarded both
       // report n/a -- the one distinction the field is here to make.
-      final audioBranch = _declarationAt(
+      final audioBranch = declarationAt(
         source,
         'else if output == audioOutput {',
       );
@@ -135,7 +106,7 @@ void main() {
       // the reuse branch and the first-time build -- have their own repair
       // call, so both are pinned; the call text is matched rather than the
       // bare function name, which also appears in the surrounding comments.
-      final attach = _declarationAt(
+      final attach = declarationAt(
         source,
         'private func attachAudioToSessionIfNeeded()',
       );
@@ -160,7 +131,7 @@ void main() {
     test('measures the attach around the call, not inside it', () {
       // The cost that matters is what the record tap waits for, which includes
       // every branch attach can take -- including the ones that return early.
-      final start = _declarationAt(source, 'func startRecording(');
+      final start = declarationAt(source, 'func startRecording(');
       expect(start, contains('let attachStart = Date()'));
       expect(
         start.indexOf('lastAudioAttachMs = Date().timeIntervalSince'),
@@ -176,7 +147,7 @@ void main() {
       // another attach's duration -- sessionQueue is serial, so the pre-warm
       // cannot overlap the tap's attach, but it becomes ready at its deadline
       // and runs straight after it, mid-recording.
-      final start = _declarationAt(source, 'func startRecording(');
+      final start = declarationAt(source, 'func startRecording(');
       final snapshot = start.indexOf(
         'self.recordingAudioAttachPath = self.lastAudioAttachPath',
       );
