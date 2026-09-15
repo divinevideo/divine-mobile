@@ -1184,6 +1184,150 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    /**
+     * An instance whose metadata thread is [executor] — held, so a loop decode
+     * queued behind a stalled read cannot run until the test lets it.
+     */
+    private fun heldInstance(executor: HeldExecutorService): DivineVideoPlayerInstance =
+        DivineVideoPlayerInstance(
+            messenger = messenger,
+            context = context,
+            playerId = 4,
+            playerFactory = { _ -> mockPlayer },
+            mainHandler = mockHandler,
+            audioOverlayManagerFactory = { _ -> mockAudioManager },
+            metadataExecutor = executor,
+        )
+
+    /** Reads the [Runnable] posted for the loop-audio deadline, once armed. */
+    private fun captureClipAudioDeadline(): () -> Runnable {
+        val deadline = slot<Runnable>()
+        every {
+            mockHandler.postDelayed(
+                capture(deadline),
+                DivineVideoPlayerInstance.CLIP_AUDIO_LOOP_DEADLINE_MS,
+            )
+        } returns true
+        return { deadline.captured }
+    }
+
+    @Test
+    fun `a decode held behind a stalled read hands the audio back on the deadline`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.isPlaying } returns true
+            every { mockPlayer.currentPosition } returns 40L
+            every { mockPlayer.volume } returns 1f
+            val disabled = captureAudioTrackDisables()
+            val deadline = captureClipAudioDeadline()
+            val listenerSlot = slot<Player.Listener>()
+            every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+            val executor = HeldExecutorService()
+            val held = heldInstance(executor)
+
+            held.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            held.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // The renderer's audio goes before the decode is even queued, and
+            // the decode sits behind the stalled read: picture over silence,
+            // and nothing else on the instance ends that.
+            assertEquals(true, disabled.last())
+
+            deadline().run()
+
+            assertEquals(false, disabled.last())
+
+            // The read gives up and the decode lands mid-lap, with ExoPlayer
+            // sounding. Switching here would cut the sound in the middle; the
+            // loop waits for the restart, where the seam is anyway.
+            executor.drain()
+            capturePostedRunnables().forEach { it.run() }
+
+            verify(exactly = 0) { loop.play(any(), any()) }
+            assertEquals(false, disabled.last())
+
+            listenerSlot.captured.onPositionDiscontinuity(
+                positionInfo(mediaItemIndex = 0),
+                positionInfo(mediaItemIndex = 0),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+            )
+
+            assertEquals(true, disabled.last())
+            verify(exactly = 1) { loop.play(40L, 1f) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a loop that lands late takes over at once while nothing is playing`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.isPlaying } returns false
+            every { mockPlayer.currentPosition } returns 0L
+            every { mockPlayer.volume } returns 1f
+            val disabled = captureAudioTrackDisables()
+            val deadline = captureClipAudioDeadline()
+            val listenerSlot = slot<Player.Listener>()
+            every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+            val executor = HeldExecutorService()
+            val held = heldInstance(executor)
+
+            held.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            held.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+            deadline().run()
+            assertEquals(false, disabled.last())
+
+            // Nothing is sounding on a paused player, so there is no seam to
+            // wait for: the loop takes the audio now and starts with play.
+            executor.drain()
+            capturePostedRunnables().forEach { it.run() }
+
+            assertEquals(true, disabled.last())
+            verify(exactly = 0) { loop.play(any(), any()) }
+
+            listenerSlot.captured.onIsPlayingChanged(true)
+
+            verify(exactly = 1) { loop.play(0L, 1f) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a loop that lands in time keeps the audio and drops its deadline`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { mockPlayer.duration } returns 3_000L
+            val disabled = captureAudioTrackDisables()
+            val deadline = captureClipAudioDeadline()
+            capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+            capturePostedRunnables().forEach { it.run() }
+
+            assertEquals(true, disabled.last())
+            verify { mockHandler.removeCallbacks(deadline()) }
+
+            // A deadline that fires anyway must not take the audio away from
+            // a loop that is already sounding.
+            deadline().run()
+
+            assertEquals(true, disabled.last())
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
     private fun trimmingSetClipsCall(uri: String): MethodCall =
         MethodCall(
             "setClips",
@@ -1644,6 +1788,42 @@ private class DirectExecutorService : java.util.concurrent.AbstractExecutorServi
     override fun shutdownNow(): MutableList<Runnable> {
         stopped = true
         return mutableListOf()
+    }
+
+    override fun isShutdown(): Boolean = stopped
+
+    override fun isTerminated(): Boolean = stopped
+
+    override fun awaitTermination(
+        timeout: Long,
+        unit: java.util.concurrent.TimeUnit,
+    ): Boolean = true
+}
+
+/**
+ * Holds every task until [drain] — the single metadata thread with a stalled
+ * read at its head, as seen by everything queued behind it.
+ */
+private class HeldExecutorService : java.util.concurrent.AbstractExecutorService() {
+    private val queue = ArrayDeque<Runnable>()
+    private var stopped = false
+
+    override fun execute(command: Runnable) {
+        queue.addLast(command)
+    }
+
+    /** Runs what was queued, in order, as the thread would once unstuck. */
+    fun drain() {
+        while (queue.isNotEmpty()) queue.removeFirst().run()
+    }
+
+    override fun shutdown() {
+        stopped = true
+    }
+
+    override fun shutdownNow(): MutableList<Runnable> {
+        stopped = true
+        return queue.toMutableList().also { queue.clear() }
     }
 
     override fun isShutdown(): Boolean = stopped
