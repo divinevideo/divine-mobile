@@ -105,8 +105,10 @@ void main() {
       // font that is not bundled. Those expected failures go to a nested zone
       // so the assertion below is about the identifiers, not the loads.
       final mismatches = <String>[];
+      var checked = 0;
       runZonedGuarded(() {
         for (final font in VideoEditorConstants.textFonts) {
+          checked++;
           final identifier = font().fontFamily;
           final index = editorTextFontIndexFor(identifier);
           final expected = VideoEditorConstants.textFonts.indexOf(font);
@@ -115,6 +117,7 @@ void main() {
           }
         }
       }, (error, stackTrace) {});
+      expect(checked, VideoEditorConstants.textFonts.length);
       expect(mismatches, isEmpty);
     });
   });

@@ -189,6 +189,34 @@ void main() {
         },
       );
 
+      testWidgets('selects the catalogue index of a serialized layer font', (
+        tester,
+      ) async {
+        final layer = TextLayer(
+          text: 'Test Text',
+          color: Colors.red,
+          background: Colors.blue,
+          colorMode: LayerBackgroundMode.onlyColor,
+          fontScale: 1.5,
+          textStyle: const TextStyle(fontFamily: 'BebasNeue_regular'),
+        );
+
+        await tester.pumpWidget(buildWidget(layer: layer));
+        await tester.pump();
+
+        final captured = verify(
+          () => mockBloc.add(
+            captureAny(that: isA<VideoEditorTextInitFromLayer>()),
+          ),
+        ).captured;
+
+        final event = captured.first as VideoEditorTextInitFromLayer;
+        expect(
+          event.selectedFontIndex,
+          VideoEditorConstants.textFonts.indexOf(GoogleFonts.bebasNeue),
+        );
+      });
+
       testWidgets(
         'uses color from layer when colorMode is onlyColor',
         (tester) async {
