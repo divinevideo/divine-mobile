@@ -747,7 +747,7 @@ final class AudioReuseTermsProvider
   }
 }
 
-String _$audioReuseTermsHash() => r'29a3be9aebb039c124e6afc99f33c2492a55bc6a';
+String _$audioReuseTermsHash() => r'6c5b36e30d803320d075b60393eb586e6e2fc72d';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
@@ -773,27 +773,27 @@ final class AudioReuseTermsFamily extends $Family
 
 /// Fail-closed reuse consent for explicit and legacy audio events.
 ///
-/// A creator always has consent for their own sound. The shared permission
-/// provider owns that rule so call sites agree; UI may still short-circuit
-/// synchronously knowable cases to avoid one-frame action flicker.
+/// A creator may always reuse their own sound. The shared permission provider
+/// owns that rule so call sites agree; UI may still short-circuit synchronously
+/// knowable cases to avoid one-frame action flicker.
 
 @ProviderFor(audioReuseConsent)
 final audioReuseConsentProvider = AudioReuseConsentFamily._();
 
 /// Fail-closed reuse consent for explicit and legacy audio events.
 ///
-/// A creator always has consent for their own sound. The shared permission
-/// provider owns that rule so call sites agree; UI may still short-circuit
-/// synchronously knowable cases to avoid one-frame action flicker.
+/// A creator may always reuse their own sound. The shared permission provider
+/// owns that rule so call sites agree; UI may still short-circuit synchronously
+/// knowable cases to avoid one-frame action flicker.
 
 final class AudioReuseConsentProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
   /// Fail-closed reuse consent for explicit and legacy audio events.
   ///
-  /// A creator always has consent for their own sound. The shared permission
-  /// provider owns that rule so call sites agree; UI may still short-circuit
-  /// synchronously knowable cases to avoid one-frame action flicker.
+  /// A creator may always reuse their own sound. The shared permission provider
+  /// owns that rule so call sites agree; UI may still short-circuit synchronously
+  /// knowable cases to avoid one-frame action flicker.
   AudioReuseConsentProvider._({
     required AudioReuseConsentFamily super.from,
     required AudioEvent super.argument,
@@ -837,13 +837,13 @@ final class AudioReuseConsentProvider
   }
 }
 
-String _$audioReuseConsentHash() => r'd1e80a3056b98eaab653f8708aeac735cd21d4e8';
+String _$audioReuseConsentHash() => r'7949ee74ffd86f788f2ff4c77050697c37a182a0';
 
 /// Fail-closed reuse consent for explicit and legacy audio events.
 ///
-/// A creator always has consent for their own sound. The shared permission
-/// provider owns that rule so call sites agree; UI may still short-circuit
-/// synchronously knowable cases to avoid one-frame action flicker.
+/// A creator may always reuse their own sound. The shared permission provider
+/// owns that rule so call sites agree; UI may still short-circuit synchronously
+/// knowable cases to avoid one-frame action flicker.
 
 final class AudioReuseConsentFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, AudioEvent> {
@@ -858,9 +858,9 @@ final class AudioReuseConsentFamily extends $Family
 
   /// Fail-closed reuse consent for explicit and legacy audio events.
   ///
-  /// A creator always has consent for their own sound. The shared permission
-  /// provider owns that rule so call sites agree; UI may still short-circuit
-  /// synchronously knowable cases to avoid one-frame action flicker.
+  /// A creator may always reuse their own sound. The shared permission provider
+  /// owns that rule so call sites agree; UI may still short-circuit synchronously
+  /// knowable cases to avoid one-frame action flicker.
 
   AudioReuseConsentProvider call(AudioEvent sound) =>
       AudioReuseConsentProvider._(argument: sound, from: this);

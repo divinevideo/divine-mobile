@@ -156,6 +156,75 @@ void main() {
       expect(repository, isNotNull);
     });
 
+    group('refreshAudioReusePolicy', () {
+      final video = VideoEvent(
+        id: 'video-id',
+        pubkey: 'a' * 64,
+        createdAt: 1704067200,
+        content: '',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+        addressableDTag: 'classic-id',
+      );
+      const policy = AudioReusePolicy(
+        audioReuseSuppressed: false,
+        validFor: Duration(seconds: 60),
+      );
+
+      test('delegates to an available Funnelcake client', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        when(
+          () => client.refreshAudioReusePolicy(
+            kind: 34236,
+            pubkey: video.pubkey,
+            dTag: 'classic-id',
+          ),
+        ).thenAnswer((_) async => policy);
+        final repositoryWithClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+
+        await expectLater(
+          repositoryWithClient.refreshAudioReusePolicy(video),
+          completion(same(policy)),
+        );
+        verify(
+          () => client.refreshAudioReusePolicy(
+            kind: 34236,
+            pubkey: video.pubkey,
+            dTag: 'classic-id',
+          ),
+        ).called(1);
+      });
+
+      test('fails closed without an available Funnelcake client', () {
+        expect(
+          () => repository.refreshAudioReusePolicy(video),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(false);
+        final repositoryWithUnavailableClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+
+        expect(
+          () => repositoryWithUnavailableClient.refreshAudioReusePolicy(video),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+        verifyNever(
+          () => client.refreshAudioReusePolicy(
+            kind: any(named: 'kind'),
+            pubkey: any(named: 'pubkey'),
+            dTag: any(named: 'dTag'),
+          ),
+        );
+      });
+    });
+
     test('isVideoKnownDeleted delegates to the injected deletion filter', () {
       final visibleVideo = VideoEvent(
         id: 'visible-video',
@@ -1252,19 +1321,16 @@ void main() {
             ),
           ).thenAnswer((invocation) async {
             final limit = invocation.namedArguments[#limit] as int;
-            return _recentPage(
-              [
-                for (var i = 0; i < limit; i++)
-                  _createVideoStats(
-                    id: 'v$i',
-                    pubkey: 'p$i',
-                    dTag: 'd$i',
-                    videoUrl: 'https://example.com/v$i.mp4',
-                    createdAt: 1704060000 - i,
-                  ),
-              ],
-              hasMore: false,
-            );
+            return _recentPage([
+              for (var i = 0; i < limit; i++)
+                _createVideoStats(
+                  id: 'v$i',
+                  pubkey: 'p$i',
+                  dTag: 'd$i',
+                  videoUrl: 'https://example.com/v$i.mp4',
+                  createdAt: 1704060000 - i,
+                ),
+            ], hasMore: false);
           });
 
           final page = await repoWithCache.getNewVideos(limit: 3);
@@ -10537,58 +10603,54 @@ void main() {
         expect(result!.id, equals(fallbackEventId));
       });
 
-      test(
-        'still tries fallback route IDs when the primary lookup was '
-        'unreachable',
-        () async {
-          // The unreachable-lookup rethrow must not pre-empt the fallbacks.
-          // A DM-shared video passes the bare stable ID as the primary route
-          // and the author-scoped addressable as a fallback, which is a
-          // relay-only query that resolves fine while Funnelcake is down.
-          const fallbackEventId =
-              'e46ff7d0d71d6c8114b58728afa43f08'
-              'd6286fd9a704683af799fd8f855586c2';
-          const author =
-              '076c979382b90f5d3a2b21f95e1ee86b'
-              '6033f14c92e79b7fad3fe1f1073f4886';
-          const missingAddressableId = '34236:$author:missing-stable-id';
-          final fallbackEvent = _createVideoEvent(
-            id: fallbackEventId,
-            pubkey: author,
-            videoUrl: 'https://example.com/fallback.mp4',
-            createdAt: 1777868006,
-          );
+      test('still tries fallback route IDs when the primary lookup was '
+          'unreachable', () async {
+        // The unreachable-lookup rethrow must not pre-empt the fallbacks.
+        // A DM-shared video passes the bare stable ID as the primary route
+        // and the author-scoped addressable as a fallback, which is a
+        // relay-only query that resolves fine while Funnelcake is down.
+        const fallbackEventId =
+            'e46ff7d0d71d6c8114b58728afa43f08'
+            'd6286fd9a704683af799fd8f855586c2';
+        const author =
+            '076c979382b90f5d3a2b21f95e1ee86b'
+            '6033f14c92e79b7fad3fe1f1073f4886';
+        const missingAddressableId = '34236:$author:missing-stable-id';
+        final fallbackEvent = _createVideoEvent(
+          id: fallbackEventId,
+          pubkey: author,
+          videoUrl: 'https://example.com/fallback.mp4',
+          createdAt: 1777868006,
+        );
 
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.getVideoEvent(any()),
-          ).thenThrow(const FunnelcakeTimeoutException('https://example.com'));
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((
-            invocation,
-          ) async {
-            final filters =
-                invocation.positionalArguments.single as List<Filter>;
-            final filter = filters.single;
-            if (filter.ids?.contains(fallbackEventId) ?? false) {
-              return [fallbackEvent];
-            }
-            return <Event>[];
-          });
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(
+          () => mockFunnelcakeClient.getVideoEvent(any()),
+        ).thenThrow(const FunnelcakeTimeoutException('https://example.com'));
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filters = invocation.positionalArguments.single as List<Filter>;
+          final filter = filters.single;
+          if (filter.ids?.contains(fallbackEventId) ?? false) {
+            return [fallbackEvent];
+          }
+          return <Event>[];
+        });
 
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
 
-          final result = await repo.fetchVideoWithStatsForRouteId(
-            missingAddressableId,
-            fallbackRouteIds: const [fallbackEventId],
-          );
+        final result = await repo.fetchVideoWithStatsForRouteId(
+          missingAddressableId,
+          fallbackRouteIds: const [fallbackEventId],
+        );
 
-          expect(result, isNotNull);
-          expect(result!.id, equals(fallbackEventId));
-        },
-      );
+        expect(result, isNotNull);
+        expect(result!.id, equals(fallbackEventId));
+      });
 
       test(
         'rethrows once every fallback route ID has also come up empty',

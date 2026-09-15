@@ -1794,6 +1794,49 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Refreshes the action-time takedown decision for one selected video.
+  Future<AudioReusePolicy> refreshAudioReusePolicy({
+    required int kind,
+    required String pubkey,
+    required String dTag,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (kind != 34235 && kind != 34236) {
+      throw const FunnelcakeException('Unsupported video kind');
+    }
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(pubkey) || dTag.isEmpty) {
+      throw const FunnelcakeException('Invalid video coordinate');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/videos/audio-reuse/bulk');
+    final elapsed = Stopwatch()..start();
+    try {
+      final response = await _post(
+        uri,
+        body: {
+          'videos': [
+            {'kind': kind, 'pubkey': pubkey.toLowerCase(), 'd_tag': dTag},
+          ],
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return AudioReusePolicy.fromRefreshJson(data, elapsed: elapsed.elapsed);
+      }
+      throw FunnelcakeApiException(
+        message: 'Failed to refresh audio reuse policy',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to refresh audio reuse policy: $error');
+    }
+  }
+
   /// Fetches the pubkeys that have liked a video, most recent first.
   ///
   /// [eventId] is the Nostr event ID (or d-tag) for the video.

@@ -57,23 +57,23 @@ class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 /// so a test can assert on selection rather than on playback plumbing.
 _MockAudioPlaybackService _stubbedAudioService() {
   final service = _MockAudioPlaybackService();
-  when(() => service.positionStream).thenAnswer(
-    (_) => const Stream<Duration>.empty(),
-  );
-  when(() => service.durationStream).thenAnswer(
-    (_) => const Stream<Duration?>.empty(),
-  );
-  when(() => service.headphonesConnectedStream).thenAnswer(
-    (_) => const Stream<bool>.empty(),
-  );
+  when(
+    () => service.positionStream,
+  ).thenAnswer((_) => const Stream<Duration>.empty());
+  when(
+    () => service.durationStream,
+  ).thenAnswer((_) => const Stream<Duration?>.empty());
+  when(
+    () => service.headphonesConnectedStream,
+  ).thenAnswer((_) => const Stream<bool>.empty());
   when(() => service.duration).thenReturn(null);
   when(() => service.isPlaying).thenReturn(false);
-  when(() => service.playingStream).thenAnswer(
-    (_) => const Stream<bool>.empty(),
-  );
-  when(() => service.loadAudio(any())).thenAnswer(
-    (_) async => const Duration(seconds: 5),
-  );
+  when(
+    () => service.playingStream,
+  ).thenAnswer((_) => const Stream<bool>.empty());
+  when(
+    () => service.loadAudio(any()),
+  ).thenAnswer((_) async => const Duration(seconds: 5));
   when(() => service.seek(Duration.zero)).thenAnswer((_) async {});
   when(service.play).thenAnswer((_) async {});
   when(service.pause).thenAnswer((_) async {});
@@ -104,6 +104,8 @@ void main() {
       AudioPlaybackService? audioService,
       String? viewerPubkey,
       Map<String, int>? usageCounts,
+      AudioEvent? consentSound,
+      bool? consentResult,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -130,6 +132,14 @@ void main() {
             // creator consent for their own sound.
             authServiceProvider.overrideWithValue(
               _StubAuthService(viewerPubkey),
+            ),
+            audioReuseConsentProvider.overrideWith(
+              (ref, sound) async {
+                if (sound.hasExplicitReuseConsent && !sound.allowsReuse) {
+                  return false;
+                }
+                return sound.id != consentSound?.id || (consentResult ?? true);
+              },
             ),
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
@@ -345,6 +355,42 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
+      });
+
+      testWidgets('selects a legacy-policy verified archive original sound', (
+        tester,
+      ) async {
+        final classicVideo = VideoEvent(
+          id: 'a' * 64,
+          pubkey: 'b' * 64,
+          createdAt: 1704067200,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          videoUrl: 'https://example.com/classic.mp4',
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
+        );
+        final classicSound = AudioEvent.fromVideoOriginalSound(
+          classicVideo,
+          creatorName: 'Classic Creator',
+        );
+
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([classicSound]),
+            consentSound: classicSound,
+            consentResult: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Original sound - Classic Creator'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
       });
 
       testWidgets('collapses repeated reuse-blocked toasts into one', (
