@@ -70,6 +70,9 @@ void main() {
     setUp(() {
       tmp = Directory.systemTemp.createTempSync('service_god_file_test');
       Directory('${tmp.path}/mobile/lib/services').createSync(recursive: true);
+      Directory(
+        '${tmp.path}/mobile/packages/upload_repository/lib',
+      ).createSync(recursive: true);
       Directory('${tmp.path}/mobile/scripts/lib').createSync(recursive: true);
       Directory(
         '${tmp.path}/mobile/scripts/baseline',
@@ -235,7 +238,33 @@ void main() {
         final res = runAgainstBase();
 
         expect(res.exitCode, 1);
-        expect(res.stdout, contains('is not a Git rename'));
+        expect(res.stdout, contains('is not a Git rename or copy'));
+      });
+
+      test('accepts a verified copy when the source survives as a facade', () {
+        // The upload-core lift (#8301) is the shape this pins: the old god file
+        // sheds down to a thin facade instead of being deleted, so git reports
+        // a copy rather than a rename. The package copy must still inherit the
+        // retired ceiling.
+        seedRenameBase();
+        writeDistinctLines('old_service.dart', 4, prefix: 'facade');
+        final copied = File(
+          '${tmp.path}/mobile/packages/upload_repository/lib/copied_service.dart',
+        );
+        copied.writeAsStringSync(
+          '${List.generate(6, (index) => '// kept line $index').join('\n')}\n',
+        );
+        File(baselinePath).writeAsStringSync(
+          '# Frozen baseline\n'
+          'packages/upload_repository/lib/copied_service.dart\t6 '
+          '# renamed-from: lib/services/old_service.dart\n',
+        );
+        commit('copy to package');
+
+        final res = runAgainstBase();
+
+        expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+        expect(res.stderr, contains('honoured rename claim'));
       });
 
       test('rejects ceiling headroom above the current extracted size', () {

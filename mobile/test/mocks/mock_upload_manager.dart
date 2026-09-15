@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:models/models.dart' show NativeProofData;
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_manager.dart';
 
 class MockUploadManager implements UploadManager {

@@ -6,10 +6,7 @@ import 'dart:async';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
-import 'package:openvine/services/upload/upload_retry_policy.dart';
-import 'package:openvine/services/upload_manager.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 class _MockPendingUploadStore extends Mock implements PendingUploadStore {}
 
@@ -316,7 +313,7 @@ void main() {
         }, isRetriable: (_) => false);
 
         await persistStarted.future;
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(executeCalled, isFalse);
 
         allowPersistToFinish.complete();
@@ -405,7 +402,7 @@ void main() {
       );
 
       // Fire microtasks from unawaited calls
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isTrue);
     });
 
@@ -422,7 +419,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isTrue);
     });
 
@@ -437,7 +434,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isFalse);
     });
 
@@ -453,7 +450,7 @@ void main() {
         },
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(called, isFalse);
     });
   });
@@ -575,7 +572,7 @@ void main() {
       policy.enqueueSessionPersist('upload-1', session, 1024000);
 
       // Allow chained future to run
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       final captured = verify(() => store.update(captureAny())).captured;
       expect(captured, hasLength(1));
@@ -602,7 +599,7 @@ void main() {
         );
 
         policy.enqueueSessionPersist('upload-1', session, 1024000);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         final captured = verify(() => store.update(captureAny())).captured;
         final updated = captured.first as PendingUpload;
@@ -625,7 +622,7 @@ void main() {
       );
 
       policy.enqueueSessionPersist('upload-1', session, 1000000);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       final captured = verify(() => store.update(captureAny())).captured;
       final updated = captured.first as PendingUpload;
@@ -646,7 +643,7 @@ void main() {
       );
 
       policy.enqueueSessionPersist('upload-1', session, 1000);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       verifyNever(() => store.update(any()));
     });

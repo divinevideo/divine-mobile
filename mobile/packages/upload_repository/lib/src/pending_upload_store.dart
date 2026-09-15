@@ -4,26 +4,31 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
-import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload_initialization_helper.dart';
-import 'package:openvine/services/upload_publishability.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:unified_logger/unified_logger.dart';
+
+import 'package:upload_repository/src/pending_upload.dart';
+import 'package:upload_repository/src/upload_ports.dart';
+import 'package:upload_repository/src/upload_publishability.dart';
 
 /// Owns the Hive persistence layer for [PendingUpload] records.
 ///
-/// [UploadManager] constructs exactly one instance and delegates all
-/// storage reads and writes here.  The two scoping params mirror the
-/// corresponding fields that previously lived on [UploadManager].
+/// [UploadRepository] constructs exactly one instance and delegates all
+/// storage reads and writes here.
 class PendingUploadStore {
   PendingUploadStore({
     required this.scopeUploadsToCurrentUser,
     required this.currentNostrPubkey,
-  });
+    required PendingUploadBoxOpener openBox,
+    required bool isWeb,
+  }) : _openBox = openBox,
+       _isWeb = isWeb;
 
   final bool scopeUploadsToCurrentUser;
   final String? currentNostrPubkey;
+  final PendingUploadBoxOpener _openBox;
+  final bool _isWeb;
 
   Box<PendingUpload>? _box;
 
@@ -63,7 +68,7 @@ class PendingUploadStore {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
-  /// Open the Hive box for the first time (called from [UploadManager.initialize]).
+  /// Open the Hive box for the first time.
   ///
   /// On failure the box pointer is reset to null so [isReady] reports false –
   /// mirroring the original `initialize()` catch that nulled the box – before
@@ -75,9 +80,7 @@ class PendingUploadStore {
     final generation = ++_lifecycleGeneration;
     _disposed = false;
     try {
-      final box = await UploadInitializationHelper.initializeUploadsBox(
-        forceReinit: true,
-      );
+      final box = await _openBox(forceReinit: true);
       if (_disposed || generation != _lifecycleGeneration) return;
       _box = box;
     } catch (_) {
@@ -94,9 +97,7 @@ class PendingUploadStore {
     // deliberate re-init entrypoint — clears the latch and is the only revival.
     final generation = _lifecycleGeneration;
     if (_disposed) return;
-    final box = await UploadInitializationHelper.initializeUploadsBox(
-      forceReinit: true,
-    );
+    final box = await _openBox(forceReinit: true);
     // disposeStore() can land while the open above is suspended. The entry check
     // is before the await, so re-check before reviving _box, or a disposed store
     // comes back alive (isReady → true while _disposed).
@@ -457,7 +458,7 @@ class PendingUploadStore {
       }
 
       // Remove failed uploads whose video file no longer exists (unrecoverable).
-      if (upload.status == UploadStatus.failed && !kIsWeb) {
+      if (upload.status == UploadStatus.failed && !_isWeb) {
         final videoFile = File(upload.localVideoPath);
         if (!videoFile.existsSync()) {
           uploadsToClean.add(upload);

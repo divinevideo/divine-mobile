@@ -2,7 +2,7 @@
 // ABOUTME: interface is implementable and forwards its arguments faithfully.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/upload/upload_ports.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 /// Records every call so the test can assert faithful argument forwarding.
 class _RecordingReporter implements UploadCrashReporter {

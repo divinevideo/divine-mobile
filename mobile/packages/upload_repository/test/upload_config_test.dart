@@ -2,7 +2,7 @@
 // ABOUTME: the progress-bar share the manager and retry policy must agree on.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/upload/upload_config.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('UploadRetryConfig', () {

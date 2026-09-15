@@ -4,8 +4,8 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

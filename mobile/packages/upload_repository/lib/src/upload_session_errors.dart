@@ -1,6 +1,6 @@
 // ABOUTME: Shared upload failure types and the expired-resumable-session
 // ABOUTME: predicate, used by UploadRetryPolicy, UploadProgressReporter and
-// ABOUTME: UploadManager.
+// ABOUTME: UploadRepository.
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 

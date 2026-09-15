@@ -5,15 +5,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/circuit_breaker_service.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
-import 'package:openvine/services/upload/upload_config.dart';
-import 'package:openvine/services/upload/upload_ports.dart';
-import 'package:openvine/services/upload/upload_session_errors.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+import 'package:upload_repository/src/pending_upload.dart';
+import 'package:upload_repository/src/pending_upload_store.dart';
+import 'package:upload_repository/src/upload_config.dart';
+import 'package:upload_repository/src/upload_ports.dart';
+import 'package:upload_repository/src/upload_session_errors.dart';
+import 'package:upload_repository/src/video_circuit_breaker.dart';
 
 /// Upload performance metrics
 class UploadMetrics {
@@ -39,36 +38,32 @@ class UploadMetrics {
   final bool wasSuccessful;
 }
 
-/// Get platform name for logging (web-safe).
-///
-/// Duplicated from upload_manager.dart top-level helper to avoid
-/// cross-file dependency on a private top-level function.
-String _getPlatformName() {
-  if (kIsWeb) return 'web';
-  try {
-    return defaultTargetPlatform.name;
-  } catch (_) {
-    return 'unknown';
-  }
-}
-
 /// Owns the progress-tracking, network-diagnostic, error-categorisation, and
-/// crash-report concerns extracted from [UploadManager].
+/// crash-report concerns used by [UploadRepository].
 class UploadProgressReporter {
   UploadProgressReporter({
     required PendingUploadStore store,
     required VideoCircuitBreaker circuitBreaker,
     required UploadRetryConfig retryConfig,
     required UploadCrashReporter crashReporter,
+    required UploadConnectivityProvider connectivityProvider,
+    required String platformName,
+    required bool isWeb,
   }) : _store = store,
        _circuitBreaker = circuitBreaker,
        _retryConfig = retryConfig,
-       _crashReporter = crashReporter;
+       _crashReporter = crashReporter,
+       _connectivityProvider = connectivityProvider,
+       _platformName = platformName,
+       _isWeb = isWeb;
 
   final PendingUploadStore _store;
   final VideoCircuitBreaker _circuitBreaker;
   final UploadRetryConfig _retryConfig;
   final UploadCrashReporter _crashReporter;
+  final UploadConnectivityProvider _connectivityProvider;
+  final String _platformName;
+  final bool _isWeb;
 
   final Map<String, StreamSubscription<double>> _progressSubscriptions = {};
   final Map<String, UploadMetrics> _uploadMetrics = {};
@@ -102,7 +97,7 @@ class UploadProgressReporter {
 
   /// Cancel and remove the progress subscription for [uploadId].
   void cancelAndRemoveSubscription(String uploadId) {
-    _progressSubscriptions[uploadId]?.cancel();
+    unawaited(_progressSubscriptions[uploadId]?.cancel());
     _progressSubscriptions.remove(uploadId);
   }
 
@@ -116,7 +111,7 @@ class UploadProgressReporter {
     if (upload != null &&
         (upload.status == UploadStatus.uploading ||
             upload.status == UploadStatus.retrying)) {
-      _store.update(upload.copyWith(uploadProgress: progress));
+      unawaited(_store.update(upload.copyWith(uploadProgress: progress)));
     }
   }
 
@@ -125,51 +120,32 @@ class UploadProgressReporter {
   // ---------------------------------------------------------------------------
 
   /// Check current network connectivity, preferring WiFi > Cellular > Ethernet.
-  Future<ConnectivityResult> checkNetworkConnectivity() async {
+  Future<UploadConnectivity> checkNetworkConnectivity() async {
     try {
-      final connectivity = Connectivity();
-      final result = await connectivity.checkConnectivity();
-
-      // connectivity_plus 7.x returns List<ConnectivityResult>
-      final resultList = result.cast<ConnectivityResult>();
-      if (resultList.contains(ConnectivityResult.wifi)) {
-        return ConnectivityResult.wifi;
-      }
-      if (resultList.contains(ConnectivityResult.mobile)) {
-        return ConnectivityResult.mobile;
-      }
-      if (resultList.contains(ConnectivityResult.ethernet)) {
-        return ConnectivityResult.ethernet;
-      }
-      if (resultList.contains(ConnectivityResult.vpn)) {
-        return ConnectivityResult.vpn;
-      }
-      return ConnectivityResult.none;
+      return await _connectivityProvider();
     } catch (e) {
       Log.error(
         'Failed to check network connectivity: $e',
         name: 'UploadManager',
         category: LogCategory.video,
       );
-      return ConnectivityResult.none;
+      return UploadConnectivity.none;
     }
   }
 
-  /// Convert a [ConnectivityResult] enum value to a human-readable string.
-  String getNetworkTypeString(ConnectivityResult connectivity) {
+  /// Convert an [UploadConnectivity] value to a human-readable string.
+  static String networkTypeString(UploadConnectivity connectivity) {
     switch (connectivity) {
-      case ConnectivityResult.wifi:
+      case UploadConnectivity.wifi:
         return 'WiFi';
-      case ConnectivityResult.mobile:
+      case UploadConnectivity.mobile:
         return 'Cellular';
-      case ConnectivityResult.ethernet:
+      case UploadConnectivity.ethernet:
         return 'Ethernet';
-      case ConnectivityResult.vpn:
+      case UploadConnectivity.vpn:
         return 'VPN';
-      case ConnectivityResult.none:
+      case UploadConnectivity.none:
         return 'Offline';
-      default:
-        return 'Unknown';
     }
   }
 
@@ -190,7 +166,7 @@ class UploadProgressReporter {
 
     final connectivity = await checkNetworkConnectivity();
 
-    if (connectivity == ConnectivityResult.none) {
+    if (connectivity == UploadConnectivity.none) {
       return 'NO_INTERNET';
     }
 
@@ -247,7 +223,7 @@ class UploadProgressReporter {
     final errorStr = error.toString().toLowerCase();
 
     if (errorStr.contains('timeout')) {
-      if (connectivity == ConnectivityResult.mobile) {
+      if (connectivity == UploadConnectivity.mobile) {
         return 'SLOW_CONNECTION';
       }
       return 'TIMEOUT';
@@ -271,9 +247,9 @@ class UploadProgressReporter {
   }
 
   /// Return a user-friendly error message for the given [category].
-  String getUserFriendlyErrorMessage(
+  static String userFriendlyErrorMessage(
     String category,
-    ConnectivityResult connectivity,
+    UploadConnectivity connectivity,
   ) {
     switch (category) {
       case 'NO_INTERNET':
@@ -286,7 +262,7 @@ class UploadProgressReporter {
         return 'Upload timed out. Your connection might be slow. Try again or connect to WiFi.';
 
       case 'NETWORK_ERROR':
-        final networkType = getNetworkTypeString(connectivity);
+        final networkType = networkTypeString(connectivity);
         return 'Network error on $networkType. Check your connection and try again.';
 
       case 'DNS_ERROR':
@@ -422,7 +398,7 @@ class UploadProgressReporter {
     Object error,
     String errorCategory,
     UploadMetrics? metrics,
-    ConnectivityResult connectivity, {
+    UploadConnectivity connectivity, {
     required StackTrace stackTrace,
     required bool isManagerInitialized,
   }) async {
@@ -443,13 +419,13 @@ class UploadProgressReporter {
         'cdn_url': upload.cdnUrl,
         'upload_progress': upload.uploadProgress,
         'created_at': upload.createdAt.toIso8601String(),
-        'file_exists': !kIsWeb && File(upload.localVideoPath).existsSync(),
+        'file_exists': !_isWeb && File(upload.localVideoPath).existsSync(),
         // Network connectivity information
-        'network_type': getNetworkTypeString(connectivity),
-        'network_status': connectivity.toString(),
-        'is_offline': connectivity == ConnectivityResult.none,
-        'is_cellular': connectivity == ConnectivityResult.mobile,
-        'is_wifi': connectivity == ConnectivityResult.wifi,
+        'network_type': networkTypeString(connectivity),
+        'network_status': _legacyConnectivityName(connectivity),
+        'is_offline': connectivity == UploadConnectivity.none,
+        'is_cellular': connectivity == UploadConnectivity.mobile,
+        'is_wifi': connectivity == UploadConnectivity.wifi,
       };
 
       if (metrics != null) {
@@ -466,7 +442,7 @@ class UploadProgressReporter {
         'total_uploads': _store.length,
         'active_uploads': _progressSubscriptions.length,
         'queued_uploads': _store.queuedCount,
-        'platform': _getPlatformName(),
+        'platform': _platformName,
         'is_initialized': isManagerInitialized,
         'timestamp': DateTime.now().toIso8601String(),
       });
@@ -478,7 +454,7 @@ class UploadProgressReporter {
         );
       }
 
-      final fileExists = kIsWeb
+      final fileExists = _isWeb
           ? 'N/A (web)'
           : '${File(upload.localVideoPath).existsSync()}';
       final detailedError =
@@ -487,7 +463,7 @@ Upload Failure Report:
 - Upload ID: ${upload.id}
 - Error Category: $errorCategory
 - Error: $error
-- Network: ${getNetworkTypeString(connectivity)} (${connectivity == ConnectivityResult.none ? 'OFFLINE' : 'ONLINE'})
+- Network: ${networkTypeString(connectivity)} (${connectivity == UploadConnectivity.none ? 'OFFLINE' : 'ONLINE'})
 - File: ${upload.localVideoPath}
 - File Exists: $fileExists
 - Upload Status: ${upload.status}
@@ -537,6 +513,16 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
     };
   }
 
+  // Preserve values used by existing Crashlytics filters before extraction.
+  static String _legacyConnectivityName(UploadConnectivity connectivity) =>
+      switch (connectivity) {
+        UploadConnectivity.wifi => 'ConnectivityResult.wifi',
+        UploadConnectivity.mobile => 'ConnectivityResult.mobile',
+        UploadConnectivity.ethernet => 'ConnectivityResult.ethernet',
+        UploadConnectivity.vpn => 'ConnectivityResult.vpn',
+        UploadConnectivity.none => 'ConnectivityResult.none',
+      };
+
   /// Send an initialization-failure report to Crashlytics.
   Future<void> sendInitializationFailureCrashReport(
     Object error,
@@ -546,10 +532,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
       final crashReporting = _crashReporter;
 
       await crashReporting.setCustomKey('init_failure_error', error.toString());
-      await crashReporting.setCustomKey(
-        'init_failure_platform',
-        _getPlatformName(),
-      );
+      await crashReporting.setCustomKey('init_failure_platform', _platformName);
       await crashReporting.setCustomKey(
         'init_failure_timestamp',
         DateTime.now().toIso8601String(),
@@ -563,7 +546,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
           '''
 UploadManager Initialization Failure:
 - Error: $error
-- Platform: ${_getPlatformName()}
+- Platform: $_platformName
 - Timestamp: ${DateTime.now().toIso8601String()}
 - Context: Failed after all retry attempts in UploadInitializationHelper
 ''';
@@ -606,9 +589,9 @@ UploadManager Initialization Failure:
             _retryConfig.networkTimeout.inMinutes,
         'timeout_retry_count': upload.retryCount ?? 0,
         'timeout_upload_status': upload.status.toString(),
-        'timeout_platform': _getPlatformName(),
+        'timeout_platform': _platformName,
         'timeout_file_exists':
-            !kIsWeb && File(upload.localVideoPath).existsSync(),
+            !_isWeb && File(upload.localVideoPath).existsSync(),
         'timeout_timestamp': DateTime.now().toIso8601String(),
       };
 
@@ -616,7 +599,7 @@ UploadManager Initialization Failure:
         await crashReporting.setCustomKey(entry.key, entry.value.toString());
       }
 
-      final fileExists = kIsWeb
+      final fileExists = _isWeb
           ? 'N/A (web)'
           : '${File(upload.localVideoPath).existsSync()}';
       final detailedError =
@@ -629,7 +612,7 @@ Upload Timeout Failure:
 - Timeout Duration: ${_retryConfig.networkTimeout.inMinutes} minutes
 - Retry Count: ${upload.retryCount ?? 0}
 - Upload Status: ${upload.status}
-- Platform: ${_getPlatformName()}
+- Platform: $_platformName
 - Timestamp: ${DateTime.now().toIso8601String()}
 ''';
 
@@ -662,7 +645,7 @@ Upload Timeout Failure:
 
   void dispose() {
     for (final subscription in _progressSubscriptions.values) {
-      subscription.cancel();
+      unawaited(subscription.cancel());
     }
     _progressSubscriptions.clear();
     // Drop all metrics (not just the 7-day prune) so a later initialize()

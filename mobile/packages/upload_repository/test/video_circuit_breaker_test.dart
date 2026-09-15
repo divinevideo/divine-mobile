@@ -1,6 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/circuit_breaker_service.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 class _MixinHarness with CircuitBreakerMixin {}
 

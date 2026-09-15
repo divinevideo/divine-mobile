@@ -3,8 +3,9 @@
 
 import 'dart:io';
 
-import 'package:openvine/models/pending_upload.dart';
 import 'package:path/path.dart' as p;
+import 'package:upload_repository/upload_repository.dart'
+    show PendingUpload, UploadStatus;
 
 /// Filename pattern for a regenerable temp render.
 class TempRenderPattern {
