@@ -8889,6 +8889,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Nenhum fundo encontrado: ele precisa preencher todo o quadro atrás de você. Uma parede lisa vale. Ou escolha a cor na mão.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Medir o fundo demorou demais. Tente Detetar automaticamente de novo, ou escolha a cor na mão.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Escolher um clipe';
 
   @override

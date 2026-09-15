@@ -8937,6 +8937,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Kein Screen gefunden – er muss das ganze Bild hinter dir füllen. Eine glatte Wand zählt. Oder wähl die Farbe von Hand.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Das Messen des Screens hat zu lange gedauert. Versuch „Automatisch erkennen“ noch mal – oder wähl die Farbe von Hand.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Clip auswählen';
 
   @override

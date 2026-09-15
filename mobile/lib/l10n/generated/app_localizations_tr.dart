@@ -8742,6 +8742,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Perdeyi ölçmek çok uzun sürdü. Otomatik algıla\'yı yeniden dene ya da rengi elle seç.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';
 
   @override

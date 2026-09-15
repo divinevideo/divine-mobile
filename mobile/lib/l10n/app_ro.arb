@@ -3616,6 +3616,7 @@
     "videoEditorChromaKeyCanvasTransparentHint": "Ce se află în spatele clipului se vede prin el.",
     "videoEditorChromaKeySurfaceHint": "Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.",
     "videoEditorChromaKeyDetectFailed": "Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.",
+    "videoEditorChromaKeyDetectTimedOut": "Măsurarea fundalului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.",
     "videoEditorChromaKeyPickClipTitle": "Alege un clip",
     "videoEditorChromaKeyNoLibraryClips": "Biblioteca ta e goală. Salvează întâi un clip, apoi folosește-l ca fundal.",
     "videoEditorChromaKeyImagePickFailed": "Imaginea nu a putut fi încărcată.",

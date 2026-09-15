@@ -9021,6 +9021,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Măsurarea fundalului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';
 
   @override

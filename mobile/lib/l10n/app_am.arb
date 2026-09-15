@@ -3734,6 +3734,7 @@
     "videoEditorChromaKeyCanvasTransparentHint": "ከቅንጥቡ ጀርባ ያለው ነገር በውስጡ ይታያል።",
     "videoEditorChromaKeySurfaceHint": "ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።",
     "videoEditorChromaKeyDetectFailed": "ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።",
+    "videoEditorChromaKeyDetectTimedOut": "ስክሪኑን ለመለካት ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።",
     "videoEditorChromaKeyPickClipTitle": "ቅንጥብ ምረጥ",
     "videoEditorChromaKeyNoLibraryClips": "ቤተ-መጻሕፍትህ ባዶ ነው። መጀመሪያ ቅንጥብ አስቀምጥ፣ ከዚያ እንደ ዳራ ተጠቀምበት።",
     "videoEditorChromaKeyImagePickFailed": "ያንን ምስል መጫን አልተቻለም።",

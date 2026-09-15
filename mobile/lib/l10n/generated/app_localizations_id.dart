@@ -8739,6 +8739,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Layar tidak ditemukan: harus memenuhi seluruh bingkai di belakang kamu. Tembok polos juga bisa. Atau pilih warnanya sendiri.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Mengukur layar terlalu lama. Coba Deteksi otomatis lagi, atau pilih warnanya sendiri.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';
 
   @override

@@ -3616,6 +3616,7 @@
     "videoEditorChromaKeyCanvasTransparentHint": "O que estiver atrás do clipe aparece através dele.",
     "videoEditorChromaKeySurfaceHint": "Qualquer superfície lisa atrás de você funciona — uma parede já serve — desde que preencha todo o quadro.",
     "videoEditorChromaKeyDetectFailed": "Nenhum fundo encontrado: ele precisa preencher todo o quadro atrás de você. Uma parede lisa vale. Ou escolha a cor na mão.",
+    "videoEditorChromaKeyDetectTimedOut": "Medir o fundo demorou demais. Tente Detetar automaticamente de novo, ou escolha a cor na mão.",
     "videoEditorChromaKeyPickClipTitle": "Escolher um clipe",
     "videoEditorChromaKeyNoLibraryClips": "A tua biblioteca está vazia. Guarda primeiro um clipe e depois usa-o como fundo.",
     "videoEditorChromaKeyImagePickFailed": "Não foi possível carregar essa imagem.",

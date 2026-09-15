@@ -8396,6 +8396,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '背景が見つかりませんでした。後ろの面が画面いっぱいに広がっている必要があります。無地の壁でも大丈夫です。手動で色を選ぶこともできます。';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      '背景の測定に時間がかかりすぎました。もう一度「自動検出」を試すか、手動で色を選んでください。';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'クリップを選ぶ';
 
   @override

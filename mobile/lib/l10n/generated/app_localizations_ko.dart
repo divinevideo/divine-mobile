@@ -8409,6 +8409,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '배경을 찾지 못했어요. 뒤쪽 면이 화면을 가득 채워야 해요. 단색 벽도 괜찮아요. 색을 직접 골라도 돼요.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      '배경을 측정하는 데 시간이 너무 오래 걸렸어요. 자동 감지를 다시 시도하거나, 색을 직접 골라 보세요.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => '클립 고르기';
 
   @override

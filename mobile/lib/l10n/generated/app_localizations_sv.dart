@@ -8820,6 +8820,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Hittade ingen bakgrund – den måste fylla hela bilden bakom dig. En slät vägg räcker. Eller välj färgen för hand.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Det tog för lång tid att mäta bakgrunden. Prova Hitta automatiskt igen, eller välj färgen för hand.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Välj ett klipp';
 
   @override
