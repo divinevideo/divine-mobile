@@ -5,29 +5,35 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/painting.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Extension on [TextFont] for text editor UI purposes.
 extension TextEditorFont on TextFont {
-  /// Returns the cleaned display name of this font.
+  /// Returns the display name of this font, or `null` when it is neither a
+  /// Google Font nor a style with a family name.
   ///
-  /// Removes common suffixes like "_regular" and converts underscores to spaces.
-  String get displayName {
+  /// A Google Font resolves to its published family name ("Shadows Into
+  /// Light") rather than the squashed `fontFamily` identifier
+  /// ("ShadowsIntoLight_regular"). Anything else falls back to its
+  /// `fontFamily` with the "_regular" suffix removed and underscores converted
+  /// to spaces.
+  String? get _resolvedDisplayName {
+    final googleFontName = googleFontFamilyName(this);
+    if (googleFontName != null) return googleFontName;
     final fontFamily = this().fontFamily;
-    if (fontFamily == null) return 'Unknown';
+    if (fontFamily == null) return null;
     return fontFamily
         .replaceAll(RegExp(r'_regular$', caseSensitive: false), '')
         .replaceAll('_', ' ');
   }
 
+  /// Returns the display name of this font.
+  String get displayName => _resolvedDisplayName ?? 'Unknown';
+
   /// Returns the localized display name, using [l10n] for the unknown fallback.
-  String localizedDisplayName(AppLocalizations l10n) {
-    final fontFamily = this().fontFamily;
-    if (fontFamily == null) return l10n.videoEditorFontUnknown;
-    return fontFamily
-        .replaceAll(RegExp(r'_regular$', caseSensitive: false), '')
-        .replaceAll('_', ' ');
-  }
+  String localizedDisplayName(AppLocalizations l10n) =>
+      _resolvedDisplayName ?? l10n.videoEditorFontUnknown;
 }
 
 /// Extension on [TextAlign] for text editor UI purposes.
