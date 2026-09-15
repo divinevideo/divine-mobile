@@ -145,7 +145,18 @@ class VideoEditorConstants {
     Color(0xFF34BBF1),
   ];
 
-  /// Available text fonts for text overlays, sorted by popularity.
+  /// Available text fonts for text overlays.
+  ///
+  /// The first 35 are sorted by popularity; every later addition is appended
+  /// in category groups. **Append only, never reorder or remove**: a caption
+  /// track persists its font as an index into this list
+  /// (`CaptionCustomStyle.fontIndex`), so a moved entry silently changes the
+  /// font of every saved draft.
+  ///
+  /// Every entry ships under the SIL Open Font License 1.1, Apache 2.0 or the
+  /// Ubuntu Font License, all of which permit commercial use. Before adding a
+  /// font, confirm it lives under `ofl/`, `apache/` or `ufl/` in
+  /// https://github.com/google/fonts — nothing else is acceptable here.
   static const List<TextFont> textFonts = [
     GoogleFonts.inter,
     GoogleFonts.bricolageGrotesque,
@@ -182,6 +193,56 @@ class VideoEditorConstants {
     GoogleFonts.crimsonText,
     GoogleFonts.ibmPlexMono,
     GoogleFonts.anonymousPro,
+    // Display and headline faces.
+    GoogleFonts.anton,
+    GoogleFonts.bangers,
+    GoogleFonts.archivoBlack,
+    GoogleFonts.alfaSlabOne,
+    GoogleFonts.luckiestGuy,
+    GoogleFonts.lilitaOne,
+    GoogleFonts.righteous,
+    GoogleFonts.russoOne,
+    GoogleFonts.blackOpsOne,
+    GoogleFonts.bungee,
+    GoogleFonts.fredoka,
+    GoogleFonts.abrilFatface,
+    // Script and handwriting.
+    GoogleFonts.satisfy,
+    GoogleFonts.greatVibes,
+    GoogleFonts.sacramento,
+    GoogleFonts.amaticSc,
+    GoogleFonts.shadowsIntoLight,
+    GoogleFonts.indieFlower,
+    GoogleFonts.patrickHand,
+    GoogleFonts.kalam,
+    GoogleFonts.courgette,
+    GoogleFonts.rockSalt,
+    // Serif.
+    GoogleFonts.cormorantGaramond,
+    GoogleFonts.ebGaramond,
+    GoogleFonts.libreBaskerville,
+    GoogleFonts.dmSerifDisplay,
+    GoogleFonts.cinzel,
+    GoogleFonts.robotoSlab,
+    // Modern sans.
+    GoogleFonts.dmSans,
+    GoogleFonts.manrope,
+    GoogleFonts.plusJakartaSans,
+    GoogleFonts.figtree,
+    GoogleFonts.spaceGrotesk,
+    GoogleFonts.outfit,
+    // Retro, typewriter and tech.
+    GoogleFonts.spaceMono,
+    GoogleFonts.courierPrime,
+    GoogleFonts.specialElite,
+    GoogleFonts.vt323,
+    GoogleFonts.pressStart2p,
+    GoogleFonts.orbitron,
+    // Themed.
+    GoogleFonts.creepster,
+    GoogleFonts.monoton,
+    GoogleFonts.pirataOne,
+    GoogleFonts.unifrakturMaguntia,
   ];
 
   /// Width of drawing tool items in the draw editor toolbar.

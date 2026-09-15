@@ -278,12 +278,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       );
 
       // A restored draft's text layers carry only the serialized Google Font
-      // family name. Re-register the editor fonts before the canvas imports
+      // family name. Re-register the fonts they name before the canvas imports
       // the state history, otherwise the imported overlays fall back to the
       // default font (see #5181).
-      if (mounted &&
-          ref.read(videoEditorProvider).editorStateHistory.isNotEmpty) {
-        await preloadEditorTextFonts();
+      if (mounted) {
+        final editorStateHistory = ref
+            .read(videoEditorProvider)
+            .editorStateHistory;
+        if (editorStateHistory.isNotEmpty) {
+          await preloadEditorTextFonts(
+            fontFamilies: textFontFamiliesInHistory(editorStateHistory),
+          );
+        }
       }
 
       if (mounted) {
