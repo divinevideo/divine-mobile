@@ -151,11 +151,19 @@ gh api --method POST repos/OWNER/REPO/pulls/NUMBER/reviews --input review.json
 
 With `gh pr review`, use `--repo OWNER/REPO`, the appropriate verdict flag and
 `--body-file`; recheck the head immediately before submitting. With either
-method, fetch the resulting review and the live PR head afterward. Verify its
-`state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as intended, its
-`commit_id` equals the reviewed SHA, and `submitted_at` is present. If the head
-changed during submission, report that the verdict covers the older commit
-and re-review before claiming the current head is approved.
+method, fetch the resulting review and the live PR head afterward:
+
+```bash
+gh api repos/OWNER/REPO/pulls/NUMBER/reviews \
+  --jq '.[-1] | {state, commit_id, submitted_at, html_url}'
+```
+
+Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
+intended, its `commit_id` equals the reviewed SHA, and `submitted_at` is
+present. A review submitted with `gh pr review` carries the head GitHub saw at
+submission; only the REST form pins the SHA you chose. If the head changed
+during submission, report that the verdict covers the older commit and
+re-review before claiming the current head is approved.
 
 Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
 or an overall `reviewDecision` alone is insufficient: other reviewers and
