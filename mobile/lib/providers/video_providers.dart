@@ -133,7 +133,10 @@ SeenVideosService seenVideosService(Ref ref) {
   } catch (_) {
     db = null;
   }
-  final service = SeenVideosService(database: db);
+  final service = SeenVideosService(
+    database: db,
+    performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
+  );
   unawaited(service.initialize());
   ref.onDispose(() => unawaited(service.dispose()));
   return service;
@@ -623,7 +626,7 @@ VideosRepository videosRepository(Ref ref) {
     seenVideoLookup: clientSeenFilteringEnabled
         ? SeenVideoLookup(
             wasSeenRecently: seenVideosService.wasSeenRecently,
-            initialize: seenVideosService.initialize,
+            initialize: seenVideosService.initializeForFeed,
           )
         : null,
   );

@@ -176,7 +176,7 @@ final class SeenVideosServiceProvider
   }
 }
 
-String _$seenVideosServiceHash() => r'f591d3c80445dab2fab1d4157f1ff5b50ef7509a';
+String _$seenVideosServiceHash() => r'b7208357bb91e089ae950eb18dde422bd3104e52';
 
 /// Subscription manager for centralized subscription management
 
@@ -1019,7 +1019,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'ed76873b99e97dac7980173e4b0cefdc79a03aae';
+String _$videosRepositoryHash() => r'3fe5fac790ee761f89781a7db49d0d07fd316c72';
 
 /// Provider for LikesRepository instance
 ///

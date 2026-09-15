@@ -64,5 +64,76 @@ void main() {
       expect(trace.attributes['completion'], 'first_relay_event');
       expect(trace.stopCount, 1);
     });
+
+    test('cache completion excludes later relay work', () {
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 0)
+        ..startPhase('cache_ingest_ms')
+        ..complete('cache', eventTotal: 50);
+      final metricsAtCompletion = Map<String, int>.of(trace.metrics);
+      load
+        ..startPhase('relay_wait_ms')
+        ..complete('first_relay_event');
+
+      expect(trace.attributes['terminal_phase'], 'cache_ingest_ms');
+      expect(trace.metrics, contains('cache_read_ms'));
+      expect(trace.metrics, contains('cache_ingest_ms'));
+      expect(trace.metrics, metricsAtCompletion);
+      expect(trace.stopCount, 1);
+    });
+
+    test(
+      'cancellation records the interrupted phase and ignores late work',
+      () {
+        final load = FeedLoadTrace(trace: trace, eventCount: () => 0)
+          ..complete('cancelled');
+        load.startPhase('cache_ingest_ms');
+        expect(trace.attributes['terminal_phase'], 'cache_read_ms');
+        expect(trace.metrics, contains('cache_read_ms'));
+        expect(trace.metrics, isNot(contains('cache_ingest_ms')));
+      },
+    );
+
+    test('startPhaseAfter advances once the awaited work returns', () async {
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 0);
+      await Future<void>.value().startPhaseAfter(load, 'cache_ingest_ms');
+      load.complete('cache');
+
+      expect(trace.attributes['terminal_phase'], 'cache_ingest_ms');
+    });
+
+    test(
+      'startPhaseAfter preserves the active phase when work fails',
+      () async {
+        final load = FeedLoadTrace(trace: trace, eventCount: () => 0);
+
+        await expectLater(
+          Future<void>.error(
+            StateError('cache read failed'),
+          ).startPhaseAfter(load, 'cache_ingest_ms'),
+          throwsStateError,
+        );
+        load.complete('setup_error');
+
+        expect(trace.attributes['terminal_phase'], 'cache_read_ms');
+        expect(trace.metrics, contains('cache_read_ms'));
+        expect(trace.metrics, isNot(contains('cache_ingest_ms')));
+      },
+    );
+
+    test('track registers a trace and releases it on completion', () async {
+      final pending = <String, FeedLoadTrace>{};
+      final load = FeedLoadTrace(trace: trace, eventCount: () => 2);
+      final complete = pending.track('sub_1', load);
+
+      expect(pending['sub_1'], same(load));
+      complete('cache', eventTotal: 4);
+      complete('disposed');
+      await pumpEventQueue();
+
+      expect(pending, isEmpty);
+      expect(trace.metrics['event_count'], 4);
+      expect(trace.attributes['completion'], 'cache');
+      expect(trace.stopCount, 1);
+    });
   });
 }
