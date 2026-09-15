@@ -132,7 +132,7 @@ class _EmailVerificationScreenState
       category: LogCategory.auth,
     );
     _cubit.stopPolling();
-    await _clearPendingVerification('after authentication');
+    await _clearPendingVerification();
     if (!mounted) return;
     context.go(ExploreScreen.pathForTab('popular'));
   }
@@ -275,7 +275,7 @@ class _EmailVerificationScreenState
     }
 
     if (result.errorCode == EmailVerificationError.emailAlreadyRegistered) {
-      await _clearPendingVerification('after registered-email response');
+      await _clearPendingVerification();
     }
     return result;
   }
@@ -364,7 +364,7 @@ class _EmailVerificationScreenState
 
   Future<void> _handleSuccess() async {
     // Clear persisted verification data on successful login
-    await _clearPendingVerification('after successful verification');
+    await _clearPendingVerification();
     if (!mounted) return;
 
     if (!_isTokenMode) {
@@ -383,7 +383,7 @@ class _EmailVerificationScreenState
 
   Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
     if (clearPending) {
-      await _clearPendingVerification('before returning to sign in');
+      await _clearPendingVerification();
       if (!mounted) return;
     }
     // Show feedback message before redirecting to login
@@ -419,7 +419,7 @@ class _EmailVerificationScreenState
     // Start Over is a terminal exit: verification failed and the persisted
     // record is unusable, so clear it unconditionally (not just in restored
     // mode) so a later cold start doesn't restore the user into a dead flow.
-    await _clearPendingVerification('before starting over');
+    await _clearPendingVerification();
     if (!mounted) return;
     context.go('/');
   }
@@ -429,7 +429,7 @@ class _EmailVerificationScreenState
     EmailVerificationError errorCode,
   ) async {
     _cubit.stopPolling();
-    await _clearPendingVerification('before sign-in recovery');
+    await _clearPendingVerification();
     if (!mounted) return;
     context.go(
       WelcomeScreen.loginOptionsPathWithRecovery(
@@ -443,21 +443,15 @@ class _EmailVerificationScreenState
   /// restored on a cold start, so leaving it doesn't trap the user back here.
   Future<void> _maybeClearRestoredRecord() async {
     if (!widget.restored) return;
-    await _clearPendingVerification('before leaving restored verification');
+    await _clearPendingVerification();
   }
 
-  Future<void> _clearPendingVerification(String operation) async {
-    try {
-      await ref.read(pendingVerificationServiceProvider).clear();
-    } catch (error, stackTrace) {
-      Log.error(
-        'Failed to clear pending verification $operation: $error',
-        name: 'EmailVerificationScreen',
-        category: LogCategory.auth,
-        stackTrace: stackTrace,
-      );
-    }
-  }
+  /// [PendingVerificationService.clear] is itself best-effort and never
+  /// rethrows; a failure here only ever means the `ref` lookup broke, which
+  /// surfaces through this call's own [_runDetached] wrapper like everything
+  /// else in this screen.
+  Future<void> _clearPendingVerification() =>
+      ref.read(pendingVerificationServiceProvider).clear();
 
   void _runDetached(Future<void> operation, String name) {
     unawaited(
