@@ -36,6 +36,17 @@ const supporterApiBaseUrl = String.fromEnvironment(
   defaultValue: 'https://supporters.divine.video',
 );
 
+/// Whether this build can talk to the supporter Worker at all.
+///
+/// Equivalent to `supporterApiClientProvider != null`, because an empty base
+/// URL is the only thing that makes that provider null — but it answers the
+/// question without *building* the client, which pulls in the NIP-98 and
+/// secure-auth services and the work they start. A settings tile deciding
+/// whether to render, and a route guard evaluating a redirect, should not pay
+/// that cost or leave those services running behind them.
+@riverpod
+bool supporterApiConfigured(Ref ref) => supporterApiBaseUrl.isNotEmpty;
+
 /// The NIP-98 authenticated supporter Worker client, when configured.
 @riverpod
 SupporterApiClient? supporterApiClient(Ref ref) {

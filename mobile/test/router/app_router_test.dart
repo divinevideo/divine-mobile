@@ -410,7 +410,7 @@ void main() {
         supporterRedirectIfUnavailable,
       );
       final container = ProviderContainer(
-        overrides: [supporterApiClientProvider.overrideWithValue(null)],
+        overrides: [supporterApiConfiguredProvider.overrideWithValue(false)],
       );
       addTearDown(container.dispose);
 

@@ -322,8 +322,7 @@ String? monetizationLinksRedirectIfDisabled(Ref ref) {
 }
 
 String? supporterRedirectIfUnavailable(Ref ref) {
-  final verificationAvailable = ref.read(supporterApiClientProvider) != null;
-  if (verificationAvailable) return null;
+  if (ref.read(supporterApiConfiguredProvider)) return null;
   return SettingsScreen.path;
 }
 

@@ -8,6 +8,74 @@ part of 'supporter_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Whether this build can talk to the supporter Worker at all.
+///
+/// Equivalent to `supporterApiClientProvider != null`, because an empty base
+/// URL is the only thing that makes that provider null — but it answers the
+/// question without *building* the client, which pulls in the NIP-98 and
+/// secure-auth services and the work they start. A settings tile deciding
+/// whether to render, and a route guard evaluating a redirect, should not pay
+/// that cost or leave those services running behind them.
+
+@ProviderFor(supporterApiConfigured)
+final supporterApiConfiguredProvider = SupporterApiConfiguredProvider._();
+
+/// Whether this build can talk to the supporter Worker at all.
+///
+/// Equivalent to `supporterApiClientProvider != null`, because an empty base
+/// URL is the only thing that makes that provider null — but it answers the
+/// question without *building* the client, which pulls in the NIP-98 and
+/// secure-auth services and the work they start. A settings tile deciding
+/// whether to render, and a route guard evaluating a redirect, should not pay
+/// that cost or leave those services running behind them.
+
+final class SupporterApiConfiguredProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether this build can talk to the supporter Worker at all.
+  ///
+  /// Equivalent to `supporterApiClientProvider != null`, because an empty base
+  /// URL is the only thing that makes that provider null — but it answers the
+  /// question without *building* the client, which pulls in the NIP-98 and
+  /// secure-auth services and the work they start. A settings tile deciding
+  /// whether to render, and a route guard evaluating a redirect, should not pay
+  /// that cost or leave those services running behind them.
+  SupporterApiConfiguredProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'supporterApiConfiguredProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$supporterApiConfiguredHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return supporterApiConfigured(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$supporterApiConfiguredHash() =>
+    r'ee4d0338dca7a117c44516d34a75073fe89331c8';
+
 /// The NIP-98 authenticated supporter Worker client, when configured.
 
 @ProviderFor(supporterApiClient)

@@ -341,8 +341,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final monetizationLinksEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
     );
-    final supporterVerificationAvailable =
-        ref.watch(supporterApiClientProvider) != null;
+    final supporterVerificationAvailable = ref.watch(
+      supporterApiConfiguredProvider,
+    );
     // Watched here (not just in _VersionTile) so the Developer Options tile
     // appears immediately when dev mode is unlocked via the version tap.
     final isDeveloperMode = ref.watch(isDeveloperModeEnabledProvider);

@@ -244,11 +244,20 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn("submit_as_draft", block)
         self.assertNotIn("track: production", block)
 
-    def test_shorebird_supporters_defines_are_optional(self) -> None:
-        self.assertIn("optional_names = %w[", self.contents)
-        self.assertIn("SUPPORTERS_API_BASE_URL", self.contents)
-        self.assertIn("FF_DIVINE_SUPPORTERS", self.contents)
-        self.assertIn("defines[name] = ENV.fetch(name, '')", self.contents)
+    def test_supporters_defines_are_not_passed_by_the_build(self) -> None:
+        """The supporter client is configured in the app, not by the build.
+
+        `supporterApiBaseUrl` carries a compiled default, so no workflow needs
+        to pass it. Passing it back is actively harmful: both
+        `--dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL` and the
+        Shorebird `ENV.fetch(name, '')` path substitute an *empty string* when
+        the variable is unset, and an empty base URL disables the supporter
+        client entirely — the settings tile disappears and the route redirects,
+        which looks exactly like the feature was never built.
+        """
+        self.assertNotIn("SUPPORTERS_API_BASE_URL", self.contents)
+        self.assertNotIn("FF_DIVINE_SUPPORTERS", self.contents)
+        self.assertNotIn("optional_names", self.contents)
 
     def test_store_gate_probes_only_the_selected_environment(self) -> None:
         self.assertRegex(
