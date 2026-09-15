@@ -46,13 +46,12 @@ bool shouldRenderLocalPushNotification(RemoteMessage message) {
 }
 
 typedef BackgroundFirebaseInitializer = Future<void> Function();
-typedef BackgroundLocalPushRenderer =
-    Future<void> Function({
-      required int id,
-      required String? title,
-      required String body,
-      required Map<String, dynamic> data,
-    });
+typedef BackgroundLocalPushRenderer = Future<void> Function({
+  required int id,
+  required String? title,
+  required String body,
+  required Map<String, dynamic> data,
+});
 Future<void> handleFirebaseMessagingBackgroundMessage(
   RemoteMessage message, {
   BackgroundFirebaseInitializer initializeFirebase =
