@@ -1350,7 +1350,7 @@ void main() {
     testWidgetsWithSurfaceSize('adds no new credits to a reply', (
       tester,
     ) async {
-      final video = _makeVideo(
+      VideoEvent video({required bool reply}) => _makeVideo(
         inspiredByNpub: normalizeToNpub(_collaborator1),
         clipSourceCredits: const [
           ClipSourceCredit(
@@ -1358,17 +1358,38 @@ void main() {
             addressableId: '34236:$_collaborator2:reused-clip',
           ),
         ],
-        nostrEventTags: const [
-          ['E', _parentEventId],
-          ['K', '34236'],
+        nostrEventTags: reply
+            ? const [
+                ['E', _parentEventId],
+                ['K', '34236'],
+              ]
+            : const [],
+      );
+      Widget subject(VideoEvent video) => buildSubject(
+        providerOverrides: [
+          fetchUserProfileProvider(_collaborator1).overrideWith(
+            (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
+          ),
+          fetchUserProfileProvider(_collaborator2).overrideWith(
+            (ref) async => _makeProfile(_collaborator2, 'Clip Source Creator'),
+          ),
         ],
+        child: MetadataInspiredBySection(video: video),
       );
 
-      await tester.pumpWidget(
-        buildSubject(child: MetadataInspiredBySection(video: video)),
-      );
+      // Positive control: off a reply the same sources render both credits.
+      await tester.pumpWidget(subject(video(reply: false)));
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+      expect(find.text('Referenced Creator'), findsOneWidget);
+      expect(find.text('Clip Source Creator'), findsOneWidget);
 
-      expect(find.text('Inspired by'), findsNothing);
+      await tester.pumpWidget(subject(video(reply: true)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.metadataInspiredByLabel), findsNothing);
+      expect(find.byType(MetadataSection), findsNothing);
     });
   });
 
