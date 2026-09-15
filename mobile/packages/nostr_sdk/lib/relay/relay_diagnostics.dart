@@ -66,6 +66,56 @@ class RelayDiagnostic {
 /// relay call sites so diagnostics never duplicate an existing console entry.
 typedef RelayDiagnosticsSink = void Function(RelayDiagnostic diagnostic);
 
+const int _maxRelayNoticeLength = 256;
+const String _redactedRelayNoticeValue = '[REDACTED]';
+const String _omittedRelayNotice =
+    '[NOTICE omitted: message exceeds 256 characters]';
+
+final RegExp _relayNoticeControls = RegExp(r'[\x00-\x1f\x7f]');
+final RegExp _relayNoticeWhitespace = RegExp(r'\s+');
+final RegExp _relayNoticeSigningMaterial = RegExp(
+  r'\b(?:nsec1|ncryptsec1)[a-z0-9]+\b',
+  caseSensitive: false,
+);
+final RegExp _relayNoticeAuthorization = RegExp(
+  r'\bauthorization\s*([:=])\s*[^\s,;]+(?:\s+[^\s,;]+)?',
+  caseSensitive: false,
+);
+final RegExp _relayNoticeCredential = RegExp(
+  r'''\b(passphrase|passcode|password|passwd|pwd|token|jwt|secret|api[_-]?key|private[_-]?key)\s*([:=])\s*("[^"]*"|'[^']*'|[^\s,;]+)''',
+  caseSensitive: false,
+);
+
+/// Makes a relay-controlled NOTICE body safe and bounded for support logs.
+///
+/// Public Nostr identifiers are deliberately retained in full. When the
+/// length boundary lands inside the final token, that whole token is omitted
+/// so an identifier is never shortened into something that looks usable.
+String relayNoticeForDiagnostics(String message) {
+  var sanitized = message
+      .replaceAll(_relayNoticeControls, ' ')
+      .replaceAll(_relayNoticeSigningMaterial, _redactedRelayNoticeValue)
+      .replaceAllMapped(
+        _relayNoticeAuthorization,
+        (match) => 'authorization${match.group(1)}$_redactedRelayNoticeValue',
+      )
+      .replaceAllMapped(
+        _relayNoticeCredential,
+        (match) =>
+            '${match.group(1)}${match.group(2)}$_redactedRelayNoticeValue',
+      )
+      .replaceAll(_relayNoticeWhitespace, ' ')
+      .trim();
+
+  if (sanitized.length <= _maxRelayNoticeLength) return sanitized;
+
+  final prefix = sanitized.substring(0, _maxRelayNoticeLength);
+  final lastBoundary = prefix.lastIndexOf(' ');
+  if (lastBoundary < 0) return _omittedRelayNotice;
+  sanitized = prefix.substring(0, lastBoundary).trimRight();
+  return '$sanitized … [truncated]';
+}
+
 /// Emits [diagnostic] to [sink] without allowing observability failures to
 /// affect relay I/O.
 void emitRelayDiagnostic(
