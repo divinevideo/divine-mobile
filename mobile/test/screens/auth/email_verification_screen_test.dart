@@ -788,6 +788,54 @@ void main() {
       );
     });
 
+    group('concurrent exit handling', () {
+      // Two independent signals can each decide to leave this screen: the
+      // auth-state listener and the user's own Cancel tap. `mounted` alone
+      // doesn't close the race, because `context.go`/`context.pop` don't
+      // unmount the screen until the next frame — a second handler resuming
+      // from its own await in that window still reads `mounted == true`.
+      testWidgets(
+        'authenticated navigation racing a Cancel tap navigates only once',
+        (tester) async {
+          final clearCompleter = Completer<void>();
+          when(
+            () => mockPendingVerification.clear(),
+          ).thenAnswer((_) => clearCompleter.future);
+
+          await pumpVerificationScreen(
+            tester,
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+            email: 'user@example.com',
+            restored: true,
+            initialState: const EmailVerificationState(
+              status: EmailVerificationStatus.polling,
+              pendingEmail: 'user@example.com',
+            ),
+          );
+          await tester.pump();
+
+          // Both handlers start and block on the same in-flight clear()
+          // call, before either has claimed the exit or navigated.
+          authStateController.add(AuthState.authenticated);
+          await tester.pump();
+          await tester.tap(_divineIcon(DivineIconName.x));
+          await tester.pump();
+
+          expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+          // Release both continuations together.
+          clearCompleter.complete();
+          await tester.pumpAndSettle();
+
+          // Only the handler that claimed the exit first cleared the
+          // pending record and navigated; the second is a no-op.
+          verify(() => mockPendingVerification.clear()).called(1);
+          expect(find.byType(EmailVerificationScreen), findsNothing);
+        },
+      );
+    });
+
     group('PIN entry fallback', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -1749,6 +1797,44 @@ void main() {
 
       expect(find.text(l10n.authVerificationPollingStopped), findsOneWidget);
     });
+
+    testWidgets(
+      'clears the pending record exactly once when success lands after '
+      'polling',
+      (tester) async {
+        // _handleSuccess clears the pending record itself, then calls
+        // _handleTokenModeSuccess(clearPending: false) — pins that dedup so
+        // a token-mode success never clears twice in the same flow.
+        when(() => mockPendingVerification.load()).thenAnswer(
+          (_) async => PendingVerification(
+            deviceCode: 'persisted-device-code',
+            verifier: 'persisted-verifier',
+            email: 'user@example.com',
+            createdAt: DateTime.utc(2026),
+          ),
+        );
+        when(
+          () => mockCubit.startPolling(
+            deviceCode: any(named: 'deviceCode'),
+            verifier: any(named: 'verifier'),
+            email: any(named: 'email'),
+          ),
+        ).thenReturn(null);
+
+        await pumpVerificationScreen(
+          tester,
+          token: 'verification-token',
+          stateStream: Stream<EmailVerificationState>.fromIterable(const [
+            EmailVerificationState(status: EmailVerificationStatus.polling),
+            EmailVerificationState(status: EmailVerificationStatus.success),
+          ]),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Login Options'), findsOneWidget);
+        verify(() => mockPendingVerification.clear()).called(1);
+      },
+    );
   });
 
   group('resend affordance', () {

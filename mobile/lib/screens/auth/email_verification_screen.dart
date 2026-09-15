@@ -91,6 +91,27 @@ class _EmailVerificationScreenState
   StreamSubscription<AuthState>? _authSubscription;
   late final EmailVerificationCubit _cubit;
 
+  /// True once this screen has committed to leaving verification.
+  ///
+  /// Four independent signals can each decide to navigate away — the
+  /// auth-state listener, a Bloc success transition, and the user's own
+  /// Cancel / Start Over / Sign In Instead taps — and `mounted` alone
+  /// doesn't stop two of them firing together: `context.go`/`context.pop`
+  /// don't unmount this widget until the next frame, so a second handler
+  /// resuming from its own `await` in that same frame still reads
+  /// `mounted == true`. See [_claimLeavingVerification].
+  bool _hasLeftVerification = false;
+
+  /// Claims the one-time transition away from this screen.
+  ///
+  /// Returns `false` when another handler already claimed it, so the
+  /// caller should do nothing further.
+  bool _claimLeavingVerification() {
+    if (_hasLeftVerification) return false;
+    _hasLeftVerification = true;
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +146,7 @@ class _EmailVerificationScreenState
   }
 
   Future<void> _handleAuthenticated() async {
+    if (!_claimLeavingVerification()) return;
     Log.info(
       'Auth state became authenticated, navigating to explore '
       '(cubit=${_cubit.hashCode})',
@@ -382,6 +404,7 @@ class _EmailVerificationScreenState
   }
 
   Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
+    if (!_claimLeavingVerification()) return;
     if (clearPending) {
       await _clearPendingVerification();
       if (!mounted) return;
@@ -399,6 +422,7 @@ class _EmailVerificationScreenState
   }
 
   Future<void> _handleCancel() async {
+    if (!_claimLeavingVerification()) return;
     _cubit.stopPolling();
     // On a normal post-registration cancel, don't clear pending verification
     // data — the user may still verify via the email link or PIN later. Data is
@@ -416,6 +440,7 @@ class _EmailVerificationScreenState
   }
 
   Future<void> _handleStartOver() async {
+    if (!_claimLeavingVerification()) return;
     // Start Over is a terminal exit: verification failed and the persisted
     // record is unusable, so clear it unconditionally (not just in restored
     // mode) so a later cold start doesn't restore the user into a dead flow.
@@ -428,6 +453,7 @@ class _EmailVerificationScreenState
     String? email,
     EmailVerificationError errorCode,
   ) async {
+    if (!_claimLeavingVerification()) return;
     _cubit.stopPolling();
     await _clearPendingVerification();
     if (!mounted) return;
