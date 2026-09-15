@@ -7991,6 +7991,69 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => '字幕样式';
 
   @override
+  String get videoEditorCaptionsPresetSaved => '已保存';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => '已保存的样式';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => '保存当前样式';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      '还没有保存任何样式。调好一个自定义样式，保存到这里，下个视频就能直接复用。';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed => '无法加载你保存的样式。';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => '样式名称';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => '保存样式';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => '保存';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => '重命名样式';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => '重命名';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      '已经使用此样式的字幕会保持原样。';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '应用 $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name 的更多选项';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '拖动以调整 $name 的顺序';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '已保存为“$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => '无法保存样式。';
+
+  @override
   String get videoEditorCaptionsPresetClassic => '经典';
 
   @override

@@ -606,6 +606,76 @@ void main() {
       },
     );
 
+    Future<void> saveCaptionStyleFor(String id, String? pubkey) =>
+        db.savedCaptionStylesDao.upsertStyle(
+          id: id,
+          name: 'Intro',
+          style: '{}',
+          createdAt: DateTime.utc(2026),
+          ownerPubkey: pubkey,
+        );
+
+    test(
+      "destructive cleanup drops only the departing user's saved caption "
+      'styles (#7742)',
+      () async {
+        await saveCaptionStyleFor('style_a', _pubkeyA);
+        await saveCaptionStyleFor('style_b', _pubkeyB);
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        final remaining = await db.savedCaptionStylesDao.getStyles();
+        expect(remaining.map((row) => row.id), ['style_b']);
+      },
+    );
+
+    test('a plain account switch keeps saved caption styles (#7742)', () async {
+      await saveCaptionStyleFor('style_a', _pubkeyA);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      final remaining = await db.savedCaptionStylesDao.getStyles();
+      expect(remaining.map((row) => row.id), ['style_a']);
+    });
+
+    test('sign-in claims ownerless saved caption styles (#7742)', () async {
+      await saveCaptionStyleFor('style_legacy', null);
+      await saveCaptionStyleFor('style_b', _pubkeyB);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      expect(service.onClaimLegacyRows, isNotNull);
+      await service.onClaimLegacyRows!(_pubkeyA);
+
+      final claimed = await db.savedCaptionStylesDao.getStyles(
+        ownerPubkey: _pubkeyA,
+      );
+      expect(claimed.map((row) => row.id), ['style_legacy']);
+      expect(claimed.single.ownerPubkey, _pubkeyA);
+    });
+
     test('non-destructive cleanup preserves pending reports (#8053)', () async {
       await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
 

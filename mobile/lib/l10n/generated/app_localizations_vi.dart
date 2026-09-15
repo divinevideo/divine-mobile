@@ -8440,6 +8440,70 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Kiểu phụ đề';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Đã lưu';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Kiểu đã lưu';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => 'Lưu kiểu hiện tại';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Chưa lưu gì cả. Tạo một kiểu tuỳ chỉnh, lưu vào đây rồi dùng lại diện mạo đó cho video tiếp theo.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Không tải được các kiểu bạn đã lưu.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Tên kiểu';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Lưu kiểu';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Lưu';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Đổi tên kiểu';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Đổi tên';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'Xoá “$name”?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Những phụ đề đang dùng kiểu này vẫn giữ nguyên diện mạo.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'Áp dụng $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Tuỳ chọn khác cho $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Kéo để sắp xếp lại $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Đã lưu với tên “$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => 'Không lưu được kiểu.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Cổ điển';
 
   @override

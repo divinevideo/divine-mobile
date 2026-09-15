@@ -8389,6 +8389,72 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Gaya subtitel';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Tersimpan';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Gaya tersimpan';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'Simpan gaya saat ini';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Belum ada yang disimpan. Buat gaya kustom, simpan di sini, lalu pakai lagi tampilannya di video berikutnya.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Gaya tersimpan kamu tidak bisa dimuat.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Nama gaya';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Simpan gaya';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Simpan';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Ganti nama gaya';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Ganti nama';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'Hapus “$name”?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Teks yang sudah memakai gaya ini tetap mempertahankan tampilannya.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'Terapkan $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Opsi lainnya untuk $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Seret untuk mengubah urutan $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Disimpan sebagai “$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'Gaya tidak bisa disimpan.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasik';
 
   @override

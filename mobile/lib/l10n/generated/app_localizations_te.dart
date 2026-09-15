@@ -8719,6 +8719,72 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'శీర్షిక శైలి';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'సేవ్ చేసినవి';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'సేవ్ చేసిన శైలులు';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'ప్రస్తుత శైలిని సేవ్ చేయండి';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'ఇంకా ఏమీ సేవ్ చేయలేదు. మీకు నచ్చిన కస్టమ్ శైలిని సిద్ధం చేసి, ఇక్కడ సేవ్ చేయండి; తర్వాతి వీడియోలో అదే లుక్‌ను మళ్లీ వాడుకోవచ్చు.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'మీరు సేవ్ చేసిన శైలులను లోడ్ చేయలేకపోయాం.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'శైలి పేరు';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'శైలిని సేవ్ చేయండి';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'సేవ్ చేయండి';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'శైలి పేరు మార్చండి';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'పేరు మార్చండి';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '\"$name\"ను తొలగించాలా?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'ఈ శైలిని ఇప్పటికే వాడుతున్న క్యాప్షన్లు వాటి లుక్‌ను అలాగే ఉంచుకుంటాయి.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name వర్తింపజేయండి';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name కోసం మరిన్ని ఎంపికలు';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '$name క్రమాన్ని మార్చడానికి లాగండి';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '\"$name\" గా సేవ్ చేయబడింది';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'శైలిని సేవ్ చేయలేకపోయాం.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'క్లాసిక్';
 
   @override
