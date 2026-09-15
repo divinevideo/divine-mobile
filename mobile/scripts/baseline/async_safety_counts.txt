@@ -14,9 +14,6 @@ discarded_futures|lib/main.dart	1
 discarded_futures|lib/mixins/grid_prefetch_mixin.dart	2
 discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
 discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
-discarded_futures|lib/notifications/notification_tap_router.dart	1
-discarded_futures|lib/notifications/view/inbox_notifications_page.dart	4
-discarded_futures|lib/notifications/view/notifications_view.dart	3
 discarded_futures|lib/providers/auth_providers.dart	1
 discarded_futures|lib/providers/curation_providers.dart	1
 discarded_futures|lib/providers/foreground_idle_warmup_provider.dart	1
@@ -35,11 +32,6 @@ discarded_futures|lib/providers/video_editor_provider.dart	3
 discarded_futures|lib/providers/video_events_providers.dart	2
 discarded_futures|lib/providers/video_providers.dart	4
 discarded_futures|lib/repositories/feed_repository_impl.dart	2
-discarded_futures|lib/router/deep_link_coordinator.dart	6
-discarded_futures|lib/router/nav_extensions.dart	1
-discarded_futures|lib/router/providers/router_location_provider.dart	1
-discarded_futures|lib/router/router_refresh_listenable.dart	1
-discarded_futures|lib/router/widgets/resolved_app_route_screen.dart	1
 discarded_futures|lib/screens/apps/app_detail_screen.dart	1
 discarded_futures|lib/screens/apps/apps_directory_screen.dart	1
 discarded_futures|lib/screens/apps/apps_permissions_screen.dart	1
