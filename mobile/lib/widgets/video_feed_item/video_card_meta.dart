@@ -56,7 +56,9 @@ VideoCardMeta resolveVideoCardMeta({
 }
 
 int? _resolveLoopCount({required VideoEvent video, required bool isOwnVideo}) {
-  if (isOwnVideo) return video.totalLoops;
+  if (isOwnVideo) {
+    return video.hasLoopMetadata ? video.totalLoops : null;
+  }
 
   final publicCount = _publicCount(video);
   return publicCount >= publicLoopCountFloor ? publicCount : null;

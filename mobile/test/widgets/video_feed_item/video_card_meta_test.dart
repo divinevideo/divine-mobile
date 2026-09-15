@@ -132,6 +132,12 @@ void main() {
     });
 
     group('for your own video', () {
+      test('omits the count when loop metadata is unavailable', () {
+        final meta = resolveVideoCardMeta(video: _video(), isOwnVideo: true);
+
+        expect(meta.loopCount, isNull);
+      });
+
       test('surfaces both the date and the combined count', () {
         final meta = resolveVideoCardMeta(
           video: _video(originalLoops: 3, rawTags: {'views': '9'}),
