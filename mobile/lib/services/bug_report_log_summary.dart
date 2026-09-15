@@ -28,8 +28,9 @@ Future<String?> buildLogsSummaryOffMain(List<LogEntry> logs) async {
 /// Build a log summary prioritizing errors/warnings with recent context.
 ///
 /// Returns null if logs are empty. Takes up to 200 most recent error/warning
-/// entries plus the last 50 entries of any level, deduplicates, and sorts
-/// chronologically. Individual entries are truncated to
+/// entries, the 20 most recent notification REST outcomes, plus the last 50
+/// entries of any level, deduplicates, and sorts chronologically. Individual
+/// entries are truncated to
 /// [BugReportConfig.maxLogEntryLength] characters and the total summary is
 /// capped at [BugReportConfig.maxLogSummaryLength] characters.
 String? buildLogsSummary(List<LogEntry> logs) {
@@ -42,12 +43,24 @@ String? buildLogsSummary(List<LogEntry> logs) {
       ? errorWarnings.sublist(errorWarnings.length - 200)
       : errorWarnings;
 
+  final notificationRestOutcomes = logs
+      .where(
+        (entry) => entry.name == 'NotificationRepository.getNotifications',
+      )
+      .toList();
+  final recentNotificationRestOutcomes = notificationRestOutcomes.length > 20
+      ? notificationRestOutcomes.sublist(notificationRestOutcomes.length - 20)
+      : notificationRestOutcomes;
+
   final recentContext = logs.length > 50
       ? logs.sublist(logs.length - 50)
       : logs;
 
-  final merged = <LogEntry>{...recentErrors, ...recentContext}.toList()
-    ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  final merged = <LogEntry>{
+    ...recentErrors,
+    ...recentNotificationRestOutcomes,
+    ...recentContext,
+  }.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
   final buffer = StringBuffer();
   for (var i = 0; i < merged.length; i++) {
