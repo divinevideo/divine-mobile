@@ -1058,8 +1058,8 @@ class VideoEvent {
   /// content reference, the `inspired-by` p-tags, then factual clip-source
   /// credits. Deduplicated; empty when the video credits nobody.
   ///
-  /// NIP-22 replies carry their parent context instead of the Inspired By
-  /// treatment, so on a reply only legacy `inspired-by` p-tags are credited.
+  /// NIP-22 replies keep content and legacy `inspired-by` p-tag credits in
+  /// About, while their parent context replaces video and clip-source credits.
   List<String> get creditedInspiredByPubkeys {
     final pubkeys = <String>[];
     final seen = <String>{};
@@ -1070,10 +1070,8 @@ class VideoEvent {
       if (seen.add(normalized)) pubkeys.add(normalized);
     }
 
-    if (!isVideoReply) {
-      add(inspiredByVideo?.creatorPubkey);
-      if (inspiredByNpub case final npub?) add(Nip19.decode(npub));
-    }
+    if (!isVideoReply) add(inspiredByVideo?.creatorPubkey);
+    if (inspiredByNpub case final npub?) add(Nip19.decode(npub));
     inspiredByPubkeys.forEach(add);
     if (!isVideoReply) {
       clipSourceCredits.map((credit) => credit.authorPubkey).forEach(add);

@@ -1104,7 +1104,7 @@ void main() {
       },
     );
 
-    test('should credit only legacy p-tags on a reply', () {
+    test('should keep content and legacy p-tag credits on a reply', () {
       const legacyCreator =
           'ffff567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
       final nostrEvent = Event(
@@ -1135,7 +1135,10 @@ void main() {
       final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
       expect(videoEvent.isVideoReply, isTrue);
-      expect(videoEvent.creditedInspiredByPubkeys, equals([legacyCreator]));
+      expect(
+        videoEvent.creditedInspiredByPubkeys,
+        equals([creatorPubkey, legacyCreator]),
+      );
     });
 
     test('leaves an attribution line whose npub does not decode alone', () {

@@ -602,19 +602,21 @@ class VideoOverlayActions extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  // Collaborator avatar row (if video has collaborators)
-                  if (video != null && video.hasCollaborators) ...[
-                    const SizedBox(height: 4),
-                    CollaboratorAvatarRow(video: video),
-                  ],
-                  if (video != null && video.isVideoReply) ...[
-                    const SizedBox(height: 4),
-                    VideoReplyParentLink(
-                      video: video,
-                      variant: VideoReplyParentLinkVariant.overlay,
-                      onInteracted: onInteracted,
-                    ),
-                  ],
+                ],
+                // These are video relationships, not caption content. Keep
+                // them visible when stripping wire-format attribution leaves
+                // an otherwise captionless video.
+                if (video != null && video.hasCollaborators) ...[
+                  const SizedBox(height: 4),
+                  CollaboratorAvatarRow(video: video),
+                ],
+                if (video != null && video.isVideoReply) ...[
+                  const SizedBox(height: 4),
+                  VideoReplyParentLink(
+                    video: video,
+                    variant: VideoReplyParentLinkVariant.overlay,
+                    onInteracted: onInteracted,
+                  ),
                 ],
                 // Audio attribution row (all videos)
                 const SizedBox(height: 4),

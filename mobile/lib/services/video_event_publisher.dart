@@ -1398,10 +1398,10 @@ class VideoEventPublisher {
       // p-tag the inspired-by creator(s) so they are notifiable. Added after
       // the collaborator/mention p-tags so those win dedup and caption
       // @token resolution keeps matching caption mentions first. Reply
-      // videos never carry inspired-by p-tags: the model credits only legacy
-      // p-tags on replies (VideoEvent.creditedInspiredByPubkeys) and the edit
-      // flow cannot own the tag there, so emitting one would notify a creator
-      // the video never visibly credits and could never un-credit.
+      // videos never carry new inspired-by p-tags: the model credits their
+      // content reference and any legacy p-tags in About, while the edit flow
+      // cannot own a new p-tag there. Emitting one would notify a creator the
+      // editor could never un-credit.
       if (replyContext == null) {
         tags.addAll(
           buildInspiredByPTags(

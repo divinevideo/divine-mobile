@@ -1347,7 +1347,7 @@ void main() {
       },
     );
 
-    testWidgetsWithSurfaceSize('adds no new credits to a reply', (
+    testWidgetsWithSurfaceSize('keeps the content credit on a reply', (
       tester,
     ) async {
       VideoEvent video({required bool reply}) => _makeVideo(
@@ -1388,8 +1388,9 @@ void main() {
       await tester.pumpWidget(subject(video(reply: true)));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.metadataInspiredByLabel), findsNothing);
-      expect(find.byType(MetadataSection), findsNothing);
+      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+      expect(find.text('Referenced Creator'), findsOneWidget);
+      expect(find.text('Clip Source Creator'), findsNothing);
     });
   });
 
