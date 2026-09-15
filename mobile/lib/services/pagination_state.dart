@@ -25,6 +25,7 @@ class PaginationState {
   }
 
   void markEventSeen(String eventId) {
+    // Normalize ID to lowercase for case-insensitive deduplication
     seenEventIds.add(eventId.toLowerCase());
   }
 
@@ -40,9 +41,13 @@ class PaginationState {
 
   /// Records a per-query tally the caller counted for itself.
   ///
-  /// [incrementEventCount] only fires for events flagged `isHistorical`. An
-  /// initial subscription delivers its stored backlog through the real-time
-  /// handler, so its tally stays at zero without this externally observed count.
+  /// [incrementEventCount] only fires for events flagged `isHistorical`, which
+  /// is set on the load-more path alone. An initial subscription delivers its
+  /// stored backlog through the real-time handler, so its tally stays at zero
+  /// and [completeQuery] would call the feed exhausted however much arrived.
+  ///
+  /// Takes the larger of the two counts so an externally observed tally seeds
+  /// missing events without erasing events already counted on this query.
   void recordReceivedCount(int count) {
     if (count > eventsReceivedInCurrentQuery) {
       eventsReceivedInCurrentQuery = count;
