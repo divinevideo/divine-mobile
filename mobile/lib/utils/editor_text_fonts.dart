@@ -42,6 +42,20 @@ List<TextFont> editorTextFontsFor(Iterable<String> fontFamilies) {
   ];
 }
 
+/// The index in [VideoEditorConstants.textFonts] of the editor font a
+/// serialized text layer carrying [fontFamily] names, or `-1` when no editor
+/// font does.
+///
+/// Maps a restored layer back to its catalogue entry without calling any font:
+/// calling one registers a load, which is the fetch a restore is trying to
+/// avoid.
+int editorTextFontIndexFor(String? fontFamily) {
+  if (fontFamily == null) return -1;
+  final fonts = editorTextFontsFor([fontFamily]);
+  if (fonts.isEmpty) return -1;
+  return VideoEditorConstants.textFonts.indexOf(fonts.first);
+}
+
 /// The `fontFamily` identifiers of every text layer in a serialized editor
 /// state history, as `exportStateHistory` writes it with `enableMinify: false`.
 ///

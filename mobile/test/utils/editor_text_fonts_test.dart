@@ -66,6 +66,38 @@ void main() {
     });
   });
 
+  group('editorTextFontIndexFor', () {
+    test('maps a serialized identifier back to its catalogue index', () {
+      expect(
+        editorTextFontIndexFor('BebasNeue_regular'),
+        VideoEditorConstants.textFonts.indexOf(GoogleFonts.bebasNeue),
+      );
+      expect(
+        editorTextFontIndexFor('ShadowsIntoLight_regular'),
+        VideoEditorConstants.textFonts.indexOf(GoogleFonts.shadowsIntoLight),
+      );
+      expect(
+        editorTextFontIndexFor('PressStart2P_regular'),
+        VideoEditorConstants.textFonts.indexOf(GoogleFonts.pressStart2p),
+      );
+    });
+
+    test('does not fall back to the first font for a known layer font', () {
+      // A restored layer used to be looked up by style equality, which no
+      // restored style matches, so every layer opened on Inter. The index for
+      // a serialized identifier has to be the font that identifier names.
+      expect(editorTextFontIndexFor('BebasNeue_regular'), isNot(0));
+    });
+
+    test('returns -1 for an unknown identifier', () {
+      expect(editorTextFontIndexFor('Nope_regular'), -1);
+    });
+
+    test('returns -1 for a missing identifier', () {
+      expect(editorTextFontIndexFor(null), -1);
+    });
+  });
+
   group('textFontFamiliesInHistory', () {
     test('collects families from references and history deltas', () {
       final families = textFontFamiliesInHistory({
