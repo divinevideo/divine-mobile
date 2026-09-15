@@ -563,5 +563,28 @@ void main() {
       );
       expect(VideoAudioEditorTimingScreen.path, equals('/video-audio-timing'));
     });
+
+    testWidgets('survives a clip player that fails to pause on drag', (
+      tester,
+    ) async {
+      // The drag handlers fire the player commands without awaiting them. A
+      // player failure used to surface as an unhandled future rejection, which
+      // the test zone reports as a test failure; routed through runDetached it
+      // is logged and the screen stays interactive.
+      when(() => mockClipPlayer.pause()).thenThrow(StateError('pause failed'));
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      await tester.drag(
+        find.byKey(VideoAudioEditorTimingScreen.videoDurationSegmentKey),
+        const Offset(40, 0),
+      );
+      await tester.pump();
+
+      verify(() => mockClipPlayer.pause()).called(1);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(VideoAudioEditorTimingScreen), findsOneWidget);
+    });
   });
 }
