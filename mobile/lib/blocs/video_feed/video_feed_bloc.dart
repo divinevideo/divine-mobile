@@ -491,9 +491,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         }
       }
 
-      // Cursor-backed feeds (For You, Classics) arrive in server-ranked
-      // order; re-sorting by createdAt would shuffle new videos around the
-      // current play index and resurface already-seen ones.
+      // Cursor-backed pages (For You, Classics, and New Videos when the
+      // repository supplied a cursor) arrive in server-ranked order;
+      // re-sorting by createdAt would shuffle new videos around the current
+      // play index and resurface already-seen ones.
       if (!usesCursor) {
         updatedVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }

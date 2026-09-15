@@ -1,4 +1,4 @@
-// ABOUTME: New Videos feed provider showing videos sorted by creation time
+// ABOUTME: New Videos feed provider showing videos by original publication time
 // ABOUTME: Uses VideosRepository.getNewVideos so Explore New is distinct from Popular
 
 import 'package:models/models.dart';
