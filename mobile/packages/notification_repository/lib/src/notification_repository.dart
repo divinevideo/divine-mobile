@@ -483,6 +483,16 @@ class NotificationRepository {
               cursorId: effectiveCursorId,
               filter: filter,
             );
+      Log.info(
+        'Notifications REST completed '
+        '(page=${isFirstPage ? 'first' : 'paginated'}, '
+        'resultCount=${response.notifications.length}, '
+        'hasMore=${response.hasMore}, '
+        'nextCursor=${response.nextCursor != null}, '
+        'nextCursorId=${response.nextCursorId != null})',
+        name: 'NotificationRepository.getNotifications',
+        category: LogCategory.api,
+      );
       if (generation != feed.fetchGeneration) {
         return (page: feed.snapshot.value, applied: false);
       }
@@ -519,10 +529,11 @@ class NotificationRepository {
       return (page: page, applied: true);
     } on Exception catch (e, s) {
       Log.error(
-        'Failed to fetch notifications: $e',
+        'Notifications REST failed '
+        '(page=${isFirstPage ? 'first' : 'paginated'}, '
+        'failure=${_fetchFailureClass(e)})',
         name: 'NotificationRepository.getNotifications',
         category: LogCategory.api,
-        error: e,
         stackTrace: s,
       );
       if (isFirstPage && generation == feed.fetchGeneration) {
@@ -592,10 +603,9 @@ class NotificationRepository {
         Log.error(
           'Transient notifications fetch failure '
           '(attempt ${attempt + 1}/${_NotificationRetryConfig.maxAttempts}): '
-          '$e',
+          '${_fetchFailureClass(e)}',
           name: 'NotificationRepository._fetchWithRetry',
           category: LogCategory.api,
-          error: e,
           stackTrace: s,
         );
         await Future<void>.delayed(_backoffFor(attempt));
@@ -621,6 +631,15 @@ class NotificationRepository {
       return status >= 500 && status < 600;
     }
     return false;
+  }
+
+  static String _fetchFailureClass(Exception error) {
+    if (error is FunnelcakeApiException) {
+      return 'http_${error.statusCode}';
+    }
+    if (error is FunnelcakeTimeoutException) return 'timeout';
+    if (error is FunnelcakeNotConfiguredException) return 'not_configured';
+    return 'unexpected_${error.runtimeType}';
   }
 
   /// Computes the delay for the i-th retry (0-indexed) using full jitter
@@ -2606,10 +2625,7 @@ class NotificationRepository {
   /// `referenced_event_id` while including `root_event_id`. For comments, the
   /// root ID is the video we want to open and group on unless the referenced
   /// event is itself a video, which happens for comments on video replies.
-  String? _videoAnchorEventId(
-    NotificationKind kind,
-    RelayNotification n,
-  ) {
+  String? _videoAnchorEventId(NotificationKind kind, RelayNotification n) {
     if (kind == NotificationKind.mention && _isVideoSourcedMention(n)) {
       return _nonEmpty(n.sourceEventId);
     }

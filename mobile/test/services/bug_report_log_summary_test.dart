@@ -6,10 +6,16 @@ import 'package:logging_types/logging_types.dart'
     show LogCategory, LogEntry, LogLevel;
 import 'package:openvine/services/bug_report_log_summary.dart';
 
-LogEntry _log(int minute, LogLevel level, String msg) => LogEntry(
+LogEntry _log(
+  int minute,
+  LogLevel level,
+  String msg, {
+  String? name,
+}) => LogEntry(
   timestamp: DateTime(2026, 3, 30, 10, minute),
   level: level,
   message: msg,
+  name: name,
 );
 
 void main() {
@@ -117,6 +123,24 @@ void main() {
       expect(result, isNot(contains('info-0')));
       expect(result, contains('info-50'));
       expect(result, contains('info-99'));
+    });
+
+    test('retains notification REST outcomes beyond recent context', () {
+      final logs = <LogEntry>[
+        _log(
+          0,
+          LogLevel.info,
+          'Notifications REST completed (resultCount=0)',
+          name: 'NotificationRepository.getNotifications',
+        ),
+        for (var i = 1; i <= 100; i++) _log(i, LogLevel.info, 'later-info-$i'),
+      ];
+
+      final result = buildLogsSummary(logs)!;
+
+      expect(result, contains('Notifications REST completed'));
+      expect(result, isNot(contains('later-info-25')));
+      expect(result, contains('later-info-100'));
     });
 
     test('truncates individual entries longer than 500 characters', () {

@@ -13,6 +13,7 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
@@ -269,6 +270,90 @@ void main() {
 
   group(NotificationRepository, () {
     group('getNotifications', () {
+      LogEntry latestRestDiagnostic() =>
+          LogCaptureService().getRecentLogs().lastWhere(
+            (entry) => entry.name == 'NotificationRepository.getNotifications',
+          );
+
+      test('diagnoses an empty first-page REST response', () async {
+        stubNotifications([]);
+        stubProfiles({});
+
+        await repository.getNotifications();
+
+        final diagnostic = latestRestDiagnostic();
+        expect(diagnostic.level, LogLevel.info);
+        expect(
+          diagnostic.message,
+          'Notifications REST completed '
+          '(page=first, resultCount=0, hasMore=false, '
+          'nextCursor=false, nextCursorId=false)',
+        );
+      });
+
+      test('diagnoses a populated REST response', () async {
+        stubNotifications([makeNotification()]);
+        stubProfiles({});
+
+        await repository.getNotifications();
+
+        expect(latestRestDiagnostic().message, contains('resultCount=1'));
+      });
+
+      test(
+        'diagnoses pagination state without logging cursor values',
+        () async {
+          stubNotifications(
+            [],
+            hasMore: true,
+            nextCursor: 'sensitive_cursor_value',
+            nextCursorId: stableCursorId,
+          );
+          stubProfiles({});
+
+          await repository.getNotifications(cursor: 'existing_cursor');
+
+          final message = latestRestDiagnostic().message;
+          expect(message, contains('page=paginated'));
+          expect(message, contains('hasMore=true'));
+          expect(message, contains('nextCursor=true'));
+          expect(message, contains('nextCursorId=true'));
+          expect(message, isNot(contains('sensitive_cursor_value')));
+          expect(message, isNot(contains(stableCursorId)));
+        },
+      );
+
+      test('classifies failures without logging response bodies', () async {
+        when(
+          () => funnelcakeApiClient.getNotifications(
+            pubkey: any(named: 'pubkey'),
+            cursor: any(named: 'cursor'),
+            cursorId: any(named: 'cursorId'),
+            types: any(named: 'types'),
+            requestUri: any(named: 'requestUri'),
+            authHeaders: any(named: 'authHeaders'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenThrow(
+          const FunnelcakeApiException(
+            message: 'request rejected',
+            statusCode: 400,
+            responseBody: 'private response body',
+          ),
+        );
+
+        await expectLater(
+          repository.getNotifications(),
+          throwsA(isA<FunnelcakeApiException>()),
+        );
+
+        final diagnostic = latestRestDiagnostic();
+        expect(diagnostic.level, LogLevel.error);
+        expect(diagnostic.message, contains('failure=http_400'));
+        expect(diagnostic.message, isNot(contains('private response body')));
+        expect(diagnostic.error, isNull);
+      });
+
       test('signs the full first-page notifications URL', () async {
         var signedUrl = '';
         var signedMethod = '';
