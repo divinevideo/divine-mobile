@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 abstract interface class NotificationPreferencesStore {
@@ -214,9 +215,10 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
     }
   }
 
-  static Future<Box<dynamic>> openBox() => Hive.openBox<dynamic>(_boxName);
+  static Future<Box<dynamic>> openBox() =>
+      HiveBoxOpener.open<dynamic>(_boxName);
   static Future<Box<dynamic>> openDirtyBox() =>
-      Hive.openBox<dynamic>(_dirtyBoxName);
+      HiveBoxOpener.open<dynamic>(_dirtyBoxName);
 
   static String _dirtyKey(String pubkey) => '$_dirtyPrefix$pubkey';
 

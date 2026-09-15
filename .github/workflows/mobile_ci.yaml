@@ -196,6 +196,8 @@ jobs:
           # installs of the five shared channels so new ones must go through
           # overrideSharedChannel(...). #5738.
           bash scripts/check_shared_channel_overrides.sh
+      - name: 🐝 Verify production Hive opens use the observable seam
+        run: bash scripts/check_direct_hive_opens.sh
       - name: 📦 Verify no new package-test channel leaks (per-package merged-isolate ratchet)
         run: |
           # Packages analogue of the shared-channel ratchet above. Each package runs
@@ -666,7 +668,7 @@ jobs:
         # instead of a copy that can drift from them.
         run: |
           SEED=$(( (RANDOM << 15) | RANDOM ))
-          FLAGS="--optimization --concurrency=4 --exclude-tags integration --dart-define=DIVINE_STRICT_CHANNELS=true"
+          FLAGS="--optimization --concurrency=4 --exclude-tags integration --dart-define=DIVINE_STRICT_CHANNELS=true --dart-define=DIVINE_STRICT_HIVE_BOXES=true"
           {
             echo "TEST_SEED=$SEED"
             echo "TEST_FLAGS=$FLAGS"
