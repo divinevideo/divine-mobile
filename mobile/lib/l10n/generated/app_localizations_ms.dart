@@ -8832,6 +8832,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Mengukur skrin mengambil masa terlalu lama. Cuba Kesan automatik sekali lagi, atau pilih warnanya secara manual.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';
 
   @override

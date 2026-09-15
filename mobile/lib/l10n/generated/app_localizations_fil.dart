@@ -8892,6 +8892,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Walang nahanap na screen: kailangang punuin nito ang buong frame sa likod mo. Pwede ang plain na pader. O pumili ng kulay nang manual.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Masyadong natagalan ang pagsukat ng screen. Subukan ulit ang Auto-detect, o pumili ng kulay nang manual.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';
 
   @override

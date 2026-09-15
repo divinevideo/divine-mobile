@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -91,6 +92,12 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   /// amount set by hand while it ran: that edit writes the measurement off
   /// (see [_statusAfterManualKeyEdit]) and the result is dropped. A later
   /// measurement supersedes an earlier one the same way.
+  ///
+  /// The wait is bounded by [VideoEditorConstants.chromaKeyDetectTimeout]. The
+  /// screen keeps Done disabled while [ChromaKeyEditorState.isDetecting] is
+  /// true, so a decode that never called back would otherwise leave the panel
+  /// with no way out but backing off it (#8904). A measurement landing after
+  /// the bound is discarded rather than adopted late.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
     // Both callers discard this future — the constructor with `unawaited`, the
@@ -109,7 +116,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     // which is both wrong and unfalsifiable from a test.
     final ChromaKeyDetection detection;
     try {
-      detection = await _detect(_video);
+      detection = await _detect(
+        _video,
+      ).timeout(VideoEditorConstants.chromaKeyDetectTimeout);
     } on ChromaKeyDetectionException catch (error, stackTrace) {
       // Expected: plenty of footage has no screen reaching the frame border.
       // The UI says so and the user sets the key by hand — not a crash report.
@@ -119,6 +128,30 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
         category: LogCategory.video,
       );
       _reportDetectionFailure(detectionId, error, stackTrace);
+      return;
+    } on TimeoutException catch (error, stackTrace) {
+      // A stalled decode, not a verdict on the footage, so it gets its own
+      // status and the user is told to try again rather than to fix the
+      // screen. Expected on the odd truncated file; stays out of Crashlytics.
+      //
+      // Unlike a failure, it is only worth saying while the result was still
+      // wanted. A "no screen" verdict after an edit is news about the footage;
+      // a stall after one is noise, and Done has been live since the edit, so
+      // the snackbar could land on top of a bake. A re-run's own bound covers
+      // the re-run.
+      if (!state.isDetecting || detectionId != _latestDetectionId) return;
+      Log.warning(
+        'Chroma-key auto-detect gave up after '
+        '${VideoEditorConstants.chromaKeyDetectTimeout.inSeconds}s',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      _reportDetectionFailure(
+        detectionId,
+        error,
+        stackTrace,
+        status: ChromaKeyDetectionStatus.timedOut,
+      );
       return;
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
@@ -163,18 +196,17 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void _reportDetectionFailure(
     int detectionId,
     Object error,
-    StackTrace stackTrace,
-  ) {
+    StackTrace stackTrace, {
+    ChromaKeyDetectionStatus status = ChromaKeyDetectionStatus.failure,
+  }) {
     if (isClosed || detectionId != _latestDetectionId) return;
     addError(error, stackTrace);
-    emitIfOpen(
-      state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
-    );
+    emitIfOpen(state.copyWith(detectionStatus: status));
   }
 
-  /// Clears a failed measurement so the UI stops reporting it.
+  /// Clears a failed or timed-out measurement so the UI stops reporting it.
   void acknowledgeDetectionFailure() {
-    if (state.detectionStatus != ChromaKeyDetectionStatus.failure) return;
+    if (!state.detectionFailed) return;
     emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.idle));
   }
 

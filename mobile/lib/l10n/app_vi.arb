@@ -4725,6 +4725,7 @@
   "videoEditorChromaKeyCanvasTransparentHint": "Bất cứ thứ gì phía sau clip sẽ hiện xuyên qua.",
   "videoEditorChromaKeySurfaceHint": "Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.",
   "videoEditorChromaKeyDetectFailed": "Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.",
+  "videoEditorChromaKeyDetectTimedOut": "Đo phông nền mất quá lâu. Thử Tự động nhận diện lại, hoặc tự chọn màu.",
   "videoEditorChromaKeyPickClipTitle": "Chọn một clip",
   "videoEditorChromaKeyNoLibraryClips": "Thư viện của bạn đang trống. Lưu một clip trước đã, rồi dùng nó làm nền.",
   "videoEditorChromaKeyImagePickFailed": "Không tải được ảnh đó.",

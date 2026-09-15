@@ -4725,6 +4725,7 @@
   "videoEditorChromaKeyCanvasTransparentHint": "Apa sahaja di belakang klip akan kelihatan menembusinya.",
   "videoEditorChromaKeySurfaceHint": "Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.",
   "videoEditorChromaKeyDetectFailed": "Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.",
+  "videoEditorChromaKeyDetectTimedOut": "Mengukur skrin mengambil masa terlalu lama. Cuba Kesan automatik sekali lagi, atau pilih warnanya secara manual.",
   "videoEditorChromaKeyPickClipTitle": "Pilih klip",
   "videoEditorChromaKeyNoLibraryClips": "Pustaka anda kosong. Simpan klip dahulu, kemudian gunakannya sebagai latar.",
   "videoEditorChromaKeyImagePickFailed": "Imej itu tidak dapat dimuatkan.",

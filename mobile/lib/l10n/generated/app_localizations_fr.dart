@@ -8951,6 +8951,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun fond trouvé : il doit remplir tout le cadre derrière toi. Un mur uni fait l\'affaire. Ou choisis la couleur à la main.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'La mesure du fond a pris trop de temps. Relance « Détection auto », ou choisis la couleur à la main.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Choisir un clip';
 
   @override

@@ -8771,6 +8771,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'استغرق قياس الخلفية وقتًا طويلًا. جرّب «كشف تلقائي» مرة أخرى، أو اختر اللون يدويًا.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'اختر مقطعًا';
 
   @override

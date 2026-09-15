@@ -8862,6 +8862,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Het meten van de achtergrond duurde te lang. Probeer Automatisch detecteren opnieuw, of kies de kleur zelf.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';
 
   @override

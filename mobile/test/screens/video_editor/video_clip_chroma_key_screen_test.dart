@@ -1,6 +1,6 @@
 // ABOUTME: Covers the chroma-key screen's on-open measurement reaching the
-// ABOUTME: controls, and pins the background photo to the camera — the gallery
-// ABOUTME: is how an AI-generated image would get into a Divine video.
+// ABOUTME: controls and gating Done, and pins the background photo to the
+// ABOUTME: camera — the gallery is how an AI-generated image would get in.
 
 import 'dart:async';
 
@@ -16,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -36,6 +37,10 @@ void main() {
   group(VideoClipChromaKeyScreen, () {
     late _MockClipEditorBloc bloc;
     late List<MethodCall> pickerCalls;
+
+    setUpAll(() {
+      registerFallbackValue(const ClipEditorEditingStopped());
+    });
 
     setUp(() {
       bloc = _MockClipEditorBloc();
@@ -185,6 +190,81 @@ void main() {
         ),
       );
       expect(autoDetect.isLoading, isTrue);
+
+      // Let the measurement land so its liveness bound is disarmed before the
+      // tree is torn down.
+      detection.complete(measured);
+      await tester.pump();
+    });
+
+    /// The key the screen handed to the bloc to bake, or `null` when Done did
+    /// nothing.
+    ClipChromaKey? requestedKey() {
+      final captured = verify(() => bloc.add(captureAny())).captured;
+      return captured
+          .whereType<ClipEditorChromaKeyRequested>()
+          .map((event) => event.chromaKey)
+          .singleOrNull;
+    }
+
+    testWidgets('holds Done until the measurement lands', (tester) async {
+      final detection = Completer<ChromaKeyDetection>();
+      await pump(tester, detect: (_) => detection.future);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final done = find.bySemanticsLabel(
+        l10n.videoEditorChromaKeyDoneSemanticLabel,
+      );
+
+      // Confirming now would bake the green preset the panel opened on and
+      // discard the measurement that lands moments later (#8904).
+      await tester.tap(done, warnIfMissed: false);
+      await tester.pump();
+      verifyNever(() => bloc.add(any()));
+
+      detection.complete(measured);
+      await tester.pump();
+
+      await tester.tap(done);
+      await tester.pump();
+
+      // The measured key, not the preset: what the bloc bakes is what the
+      // screen showed once it had finished looking at the footage.
+      expect(requestedKey()?.key.color, const Color(0xFF19A55B));
+    });
+
+    testWidgets('frees Done with the preset once the measurement times out', (
+      tester,
+    ) async {
+      await pump(tester, detect: (_) => Completer<ChromaKeyDetection>().future);
+
+      await tester.pump(VideoEditorConstants.chromaKeyDetectTimeout);
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      // Told to try again — not that the screen is wrong, which the stalled
+      // decode never got to judge.
+      expect(
+        find.text(l10n.videoEditorChromaKeyDetectTimedOut),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.videoEditorChromaKeyDetectFailed), findsNothing);
+      final autoDetect = tester.widget<DivineButton>(
+        find.widgetWithText(
+          DivineButton,
+          l10n.videoEditorChromaKeyAutoDetect,
+        ),
+      );
+      expect(autoDetect.isLoading, isFalse);
+
+      // Done is back, and it bakes the preset the panel fell back to rather
+      // than staying locked behind a measurement that will never return.
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoEditorChromaKeyDoneSemanticLabel),
+      );
+      await tester.pump();
+
+      expect(requestedKey()?.key.color, const Color(0xFF00B140));
     });
 
     testWidgets('shows the measured colour and amount once it lands', (

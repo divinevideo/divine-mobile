@@ -8818,6 +8818,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'اسکرین کی پیمائش میں بہت وقت لگ گیا۔ «خودکار شناخت» دوبارہ آزمائیں، یا رنگ خود منتخب کریں۔';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';
 
   @override

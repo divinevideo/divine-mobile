@@ -15062,6 +15062,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.'**
   String get videoEditorChromaKeyDetectFailed;
 
+  /// Shown when auto-detect gave up waiting for the footage to decode, which says nothing about the footage itself. Two things have to survive translation: that the user can simply run Auto-detect again, and that the colour can be picked by hand instead. Name the button exactly as videoEditorChromaKeyAutoDetect does in this locale, use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel, and end on what the user can do next.
+  ///
+  /// In en, this message translates to:
+  /// **'Took too long to measure the screen. Try Auto-detect again, or pick the color by hand.'**
+  String get videoEditorChromaKeyDetectTimedOut;
+
   /// No description provided for @videoEditorChromaKeyPickClipTitle.
   ///
   /// In en, this message translates to:
