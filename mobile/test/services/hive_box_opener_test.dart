@@ -40,7 +40,7 @@ void main() {
     PathProviderPlatform.instance = originalPathProvider;
     HiveBoxOpener.observerForTesting = originalHiveOpenObserver;
     await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
-    Hive.init(null);
+    TestHelpers.resetHiveHomeForTesting();
     if (tempDir.existsSync()) {
       await tempDir.delete(recursive: true);
     }
