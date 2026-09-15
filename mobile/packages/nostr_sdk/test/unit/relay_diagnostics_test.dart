@@ -419,5 +419,37 @@ void main() {
 
       expect(sanitized, 'rate limited for now');
     });
+
+    test('omits an identifier the length limit lands inside, whole', () {
+      // 230 characters of prose put the 256-character limit 26 characters
+      // into the event id, which is where a plain substring cut would leave
+      // a partial id that looks usable and is not.
+      final eventId = 'e' * 64;
+      final notice = '${'w ' * 115}$eventId';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, '${'w ' * 114}w … [truncated]');
+    });
+
+    test('keeps a message at exactly the length limit untouched', () {
+      final notice = 'y' * 256;
+
+      expect(relayNoticeForDiagnostics(notice), notice);
+    });
+
+    test('replaces an overlong message that has no token boundary', () {
+      final sanitized = relayNoticeForDiagnostics('x' * 300);
+
+      expect(sanitized, '[NOTICE omitted: message exceeds 256 characters]');
+    });
+
+    test('redacts encrypted signing material', () {
+      final sanitized = relayNoticeForDiagnostics(
+        'rejected ncryptsec1${'q' * 40} for this key',
+      );
+
+      expect(sanitized, 'rejected [REDACTED] for this key');
+    });
   });
 }
