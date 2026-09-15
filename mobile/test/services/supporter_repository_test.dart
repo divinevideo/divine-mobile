@@ -362,6 +362,50 @@ void main() {
       expect(repo.isSupporter, isTrue);
     });
 
+    test('reports no recoverable evidence without a cache or claim', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+      expect(repo.hasRecoverableEvidence, isFalse);
+    });
+
+    test('reports recoverable evidence from a cached entitlement', () async {
+      final cached = SupporterEntitlement(
+        productId: 'divine.supporter.monthly',
+        source: EntitlementSource.appStore,
+        purchaseDate: DateTime.utc(2030),
+      ).toJson();
+      SharedPreferences.setMockInitialValues({
+        'divine_supporter_entitlement:$pubkeyA': jsonEncode(cached),
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+      expect(repo.hasRecoverableEvidence, isTrue);
+    });
+
+    test('reports recoverable evidence from an interrupted claim', () async {
+      SharedPreferences.setMockInitialValues({
+        'divine_supporter_pending_owner:divine.supporter.monthly': pubkeyA,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+      );
+      addTearDown(repo.dispose);
+      expect(repo.hasRecoverableEvidence, isTrue);
+    });
+
     test('marks expired cached entitlement inactive on load', () async {
       final cached = SupporterEntitlement(
         productId: 'divine.supporter.monthly',
