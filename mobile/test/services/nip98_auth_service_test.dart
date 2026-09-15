@@ -441,14 +441,14 @@ void main() {
     });
 
     group('payload hashing', () {
-      test('includes payload hash when payload is provided', () async {
+      test('hashes the exact UTF-8 payload bytes', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         _stubSignEvent(mockAuthService);
 
         await service.createAuthToken(
           url: 'https://relay.example.com/api/endpoint',
           method: HttpMethod.post,
-          payload: '{"key": "value"}',
+          payload: '{"event":{"content":"Delete café 🌱"}}',
         );
 
         final captured =
@@ -463,7 +463,10 @@ void main() {
 
         final payloadTag = captured.where((tag) => tag[0] == 'payload');
         expect(payloadTag, isNotEmpty);
-        expect(payloadTag.first[1], isNotEmpty);
+        expect(
+          payloadTag.first[1],
+          '878223c6729d0160fadf2823f4773228d0d71e1d9f5fc8d950f78a56ed49a707',
+        );
       });
 
       test('omits payload tag for GET requests', () async {

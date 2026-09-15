@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -43,6 +44,17 @@ void main() {
     title: 'Owned video',
     videoUrl: 'https://example.com/owned.mp4',
   );
+  final deletionEvent = Event.fromJson({
+    'id': 'delete-event-id',
+    'pubkey': ownPubkey,
+    'created_at': DateTime(2026).millisecondsSinceEpoch ~/ 1000,
+    'kind': 5,
+    'tags': [
+      ['e', video.id],
+    ],
+    'content': '',
+    'sig': '12' * 64,
+  });
 
   group('owner delete', () {
     testWidgets('shows the relay failure result after delete', (tester) async {
@@ -121,7 +133,10 @@ void main() {
         ),
       ).thenAnswer((_) => relayCompleter.future);
       when(
-        () => enforcementRepository.enforce('delete-event-id'),
+        () => enforcementRepository.enforce(
+          'delete-event-id',
+          deletionEvent: deletionEvent,
+        ),
       ).thenAnswer((_) => cleanupCompleter.future);
 
       await tester.pumpWidget(
@@ -166,6 +181,7 @@ void main() {
         DeleteResult.createSuccess(
           'delete-event-id',
           acceptance: DeleteAcceptance.everyRelay,
+          deleteEvent: deletionEvent,
         ),
       );
       await tester.pumpAndSettle();

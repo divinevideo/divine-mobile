@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
@@ -34,6 +35,17 @@ void main() {
       timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
       videoUrl: 'https://example.com/video.mp4',
     );
+    final deletionEvent = Event.fromJson({
+      'id': 'delete-event-id',
+      'pubkey': video.pubkey,
+      'created_at': 1757385263,
+      'kind': 5,
+      'tags': [
+        ['e', video.id],
+      ],
+      'content': '',
+      'sig': '12' * 64,
+    });
 
     late _MockContentDeletionService deletionService;
     late _MockVideoEventService videoEventService;
@@ -46,7 +58,12 @@ void main() {
       deletionService = _MockContentDeletionService();
       videoEventService = _MockVideoEventService();
       enforcementRepository = _MockEnforcementRepository();
-      when(() => enforcementRepository.enforce(any())).thenAnswer(
+      when(
+        () => enforcementRepository.enforce(
+          any(),
+          deletionEvent: any(named: 'deletionEvent'),
+        ),
+      ).thenAnswer(
         (_) async => const CreatorDeleteEnforcementResult.confirmed(),
       );
       when(
@@ -72,6 +89,7 @@ void main() {
             ? DeleteResult.createSuccess(
                 'delete-event-id',
                 acceptance: DeleteAcceptance.everyRelay,
+                deleteEvent: deletionEvent,
               )
             : DeleteResult.failure(
                 'rejected',

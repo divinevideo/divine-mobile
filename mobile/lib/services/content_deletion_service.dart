@@ -68,12 +68,16 @@ class DeleteResult {
     required this.timestamp,
     this.error,
     this.deleteEventId,
+    this.deleteEvent,
     this.failureKind,
     this.acceptance,
   });
   final bool success;
   final String? error;
   final String? deleteEventId;
+
+  /// Signed event accepted by a relay, for cleanup before relay indexing.
+  final Event? deleteEvent;
   final DateTime timestamp;
 
   /// Set when [success] is false; use for localized UI messages.
@@ -85,9 +89,11 @@ class DeleteResult {
   factory DeleteResult.createSuccess(
     String deleteEventId, {
     required DeleteAcceptance acceptance,
+    required Event deleteEvent,
   }) => DeleteResult(
     success: true,
     deleteEventId: deleteEventId,
+    deleteEvent: deleteEvent,
     acceptance: acceptance,
     timestamp: DateTime.now(),
   );
@@ -331,7 +337,11 @@ class ContentDeletionService {
         name: 'ContentDeletionService',
         category: LogCategory.system,
       );
-      return DeleteResult.createSuccess(deleteEvent.id, acceptance: acceptance);
+      return DeleteResult.createSuccess(
+        deleteEvent.id,
+        acceptance: acceptance,
+        deleteEvent: deleteEvent,
+      );
     } catch (e) {
       Log.error(
         'Failed to delete content: $e',

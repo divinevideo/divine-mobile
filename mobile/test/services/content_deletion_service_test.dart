@@ -249,6 +249,7 @@ void main() {
           expect(result.success, isTrue);
           expect(result.acceptance, equals(DeleteAcceptance.everyRelay));
           expect(result.deleteEventId, equals(deleteEvent.id));
+          expect(result.deleteEvent, same(deleteEvent));
           expect(service.hasBeenDeleted(video.id), isTrue);
           expect(
             service.hasBeenDeleted(

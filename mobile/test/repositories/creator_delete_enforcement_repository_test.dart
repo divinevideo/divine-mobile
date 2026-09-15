@@ -2,11 +2,13 @@
 // ABOUTME: Covers every response class in the mobile/backend contract.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
@@ -48,12 +50,90 @@ void main() {
     );
 
     test('maps synchronous success to confirmed', () async {
-      final result = await build(
-        (_) => http.Response('{"status":"success"}', 200),
-      ).enforce('kind5');
+      final result = await build((request) {
+        expect(request.bodyBytes, isEmpty);
+        return http.Response('{"status":"success"}', 200);
+      }).enforce('kind5');
 
       expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
+      verify(
+        () => auth.createAuthToken(
+          url: 'https://moderation.example/api/delete/kind5',
+          method: HttpMethod.post,
+          payload: '',
+        ),
+      ).called(1);
     });
+
+    test(
+      'posts the signed event and authenticates the exact UTF-8 body',
+      () async {
+        final event = Event.fromJson({
+          'id': 'ab' * 32,
+          'pubkey': 'cd' * 32,
+          'created_at': 1757385263,
+          'kind': 5,
+          'tags': [
+            ['e', 'ef' * 32],
+          ],
+          'content': 'Delete café 🌱',
+          'sig': '12' * 64,
+        });
+        final body = jsonEncode({'event': event.toJson()});
+        final result = await build((request) {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/delete/${event.id}');
+          expect(request.headers['content-type'], contains('application/json'));
+          expect(request.bodyBytes, utf8.encode(body));
+          expect(jsonDecode(request.body), {'event': event.toJson()});
+          return http.Response('{"status":"success"}', 200);
+        }).enforce(event.id, deletionEvent: event);
+
+        expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
+        verify(
+          () => auth.createAuthToken(
+            url: 'https://moderation.example/api/delete/${event.id}',
+            method: HttpMethod.post,
+            payload: body,
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'signed event is sent only on POST when cleanup needs polling',
+      () async {
+        final event = Event.fromJson({
+          'id': 'ab' * 32,
+          'pubkey': 'cd' * 32,
+          'created_at': 1757385263,
+          'kind': 5,
+          'tags': <List<String>>[],
+          'content': '',
+          'sig': '12' * 64,
+        });
+        var calls = 0;
+        final result = await build((request) {
+          calls++;
+          if (request.method == 'POST') {
+            expect(jsonDecode(request.body), {'event': event.toJson()});
+            return http.Response('', 202);
+          }
+          expect(request.method, 'GET');
+          expect(request.bodyBytes, isEmpty);
+          return http.Response('{"targets":[{"status":"success"}]}', 200);
+        }).enforce(event.id, deletionEvent: event);
+
+        expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
+        expect(calls, 2);
+        verify(
+          () => auth.createAuthToken(
+            url: 'https://moderation.example/api/delete-status/${event.id}',
+            method: HttpMethod.get,
+          ),
+        ).called(1);
+      },
+    );
 
     test('disabled enforcement does not contact the production API', () async {
       var calls = 0;
@@ -172,7 +252,7 @@ void main() {
       expect(calls, 1);
     });
 
-    for (final statusCode in [400, 403]) {
+    for (final statusCode in [400, 403, 413]) {
       test('$statusCode is a reportable client-contract failure', () async {
         final result = await build(
           (_) => http.Response('', statusCode),
