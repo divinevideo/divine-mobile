@@ -23,6 +23,7 @@ import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/profile_tab_index_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_banner_layer.dart';
 import 'package:openvine/widgets/profile/profile_collabs_grid.dart';
 import 'package:openvine/widgets/profile/profile_comments_grid.dart';
@@ -125,6 +126,20 @@ class ProfileGridView extends ConsumerStatefulWidget {
 
 class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
+  void _runDetached(Future<void> operation, String description) {
+    runDetached(
+      operation,
+      description,
+      logName: 'ProfileGridView',
+      category: LogCategory.ui,
+    );
+  }
+
+  void _observeCancellation(Future<void>? cancellation, String description) {
+    if (cancellation == null) return;
+    _runDetached(cancellation, description);
+  }
+
   @override
   int get tabCount => _tabKinds.length;
 
@@ -283,7 +298,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   }
 
   void _onRefreshRequested() {
-    unawaited(_refreshSyncedTabs());
+    _runDetached(_refreshSyncedTabs(), 'refresh synced profile tabs');
   }
 
   /// Re-syncs every tab the user has viewed and resolves once all of them have
@@ -371,15 +386,29 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   @override
   void dispose() {
     widget.refreshNotifier?.removeListener(_onRefreshRequested);
-    _likedRefreshSub?.cancel();
-    _repostsRefreshSub?.cancel();
-    _collabsRefreshSub?.cancel();
+    _observeCancellation(
+      _likedRefreshSub?.cancel(),
+      'cancel liked videos refresh subscription',
+    );
+    _observeCancellation(
+      _repostsRefreshSub?.cancel(),
+      'cancel reposts refresh subscription',
+    );
+    _observeCancellation(
+      _collabsRefreshSub?.cancel(),
+      'cancel collabs refresh subscription',
+    );
     // Close the BLoCs we created
-    _likedVideosBloc?.close();
-    _repostedVideosBloc?.close();
-    _collabVideosBloc?.close();
-    _commentsBloc?.close();
+    _closeBloc(_likedVideosBloc, 'liked videos');
+    _closeBloc(_repostedVideosBloc, 'reposted videos');
+    _closeBloc(_collabVideosBloc, 'collab videos');
+    _closeBloc(_commentsBloc, 'profile comments');
     super.dispose();
+  }
+
+  void _closeBloc(BlocBase<Object?>? bloc, String name) {
+    if (bloc == null) return;
+    _runDetached(bloc.close(), 'close $name BLoC');
   }
 
   /// The grid widget for a given tab [kind].
@@ -490,10 +519,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     // account switch, sign-out, own↔other flip). Store references for
     // refresh capability.
     if (_blocsDeps != blocsDeps) {
-      _likedVideosBloc?.close();
-      _repostedVideosBloc?.close();
-      _collabVideosBloc?.close();
-      _commentsBloc?.close();
+      _closeBloc(_likedVideosBloc, 'stale liked videos');
+      _closeBloc(_repostedVideosBloc, 'stale reposted videos');
+      _closeBloc(_collabVideosBloc, 'stale collab videos');
+      _closeBloc(_commentsBloc, 'stale profile comments');
 
       // Reset lazy load flags when switching profiles
       _syncedKinds.clear();
@@ -513,7 +542,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
       // Mirror the Liked bloc's refreshing flag so the pinned tab bar can
       // render the sticky revalidation bar.
-      _likedRefreshSub?.cancel();
+      _observeCancellation(
+        _likedRefreshSub?.cancel(),
+        'cancel stale liked videos refresh subscription',
+      );
       _likedRefreshing = false;
       _likedRefreshSub = _likedVideosBloc!.stream.listen((likedState) {
         if (likedState.isRefreshing != _likedRefreshing && mounted) {
@@ -531,7 +563,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       )..add(const ProfileRepostedVideosSubscriptionRequested());
       // Sync deferred until user views Reposts tab
 
-      _repostsRefreshSub?.cancel();
+      _observeCancellation(
+        _repostsRefreshSub?.cancel(),
+        'cancel stale reposts refresh subscription',
+      );
       _repostsRefreshing = false;
       _repostsRefreshSub = _repostedVideosBloc!.stream.listen((repostsState) {
         if (repostsState.isRefreshing != _repostsRefreshing && mounted) {
@@ -546,7 +581,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         removedVideoIds: videosRepository.removedVideoIds,
         deletedVideoFilter: videosRepository.isVideoKnownDeleted,
       );
-      _collabsRefreshSub?.cancel();
+      _observeCancellation(
+        _collabsRefreshSub?.cancel(),
+        'cancel stale collabs refresh subscription',
+      );
       _collabsRefreshing = false;
       _collabsRefreshSub = _collabVideosBloc!.stream.listen((collabsState) {
         if (collabsState.isRefreshing != _collabsRefreshing && mounted) {
