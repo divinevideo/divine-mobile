@@ -64,19 +64,29 @@ class CreatorDeleteEnforcementRepository {
   final Future<void> Function(Duration) _delay;
   final void Function(Object, StackTrace)? _reportError;
 
-  Future<CreatorDeleteEnforcementResult> enforce(String kind5Id) async {
+  Future<CreatorDeleteEnforcementResult> enforce(
+    String kind5Id, {
+    Map<String, dynamic>? deletionEvent,
+  }) async {
     if (!_enabled) return const CreatorDeleteEnforcementResult.unavailable();
     try {
-      return await _enforce(kind5Id);
+      // Encode once so NIP-98 binds exactly the bytes sent to the service.
+      final body = deletionEvent == null
+          ? null
+          : jsonEncode({'event': deletionEvent});
+      return await _enforce(kind5Id, body: body);
     } on Object catch (error, stackTrace) {
       _reportError?.call(error, stackTrace);
       return const CreatorDeleteEnforcementResult.delayed();
     }
   }
 
-  Future<CreatorDeleteEnforcementResult> _enforce(String kind5Id) async {
+  Future<CreatorDeleteEnforcementResult> _enforce(
+    String kind5Id, {
+    String? body,
+  }) async {
     final postUri = _uri('/api/delete', kind5Id);
-    final firstResponse = await _request(postUri, HttpMethod.post);
+    final firstResponse = await _request(postUri, HttpMethod.post, body: body);
     if (firstResponse?.statusCode == 202) return _poll(kind5Id);
     final result = _terminalPostResult(firstResponse);
     if (result != null) return result;
@@ -89,7 +99,7 @@ class CreatorDeleteEnforcementRepository {
         response.statusCode >= 500) {
       return const CreatorDeleteEnforcementResult.delayed();
     }
-    if ({400, 403}.contains(response.statusCode)) {
+    if ({400, 403, 413}.contains(response.statusCode)) {
       _reportContractFailure('POST rejected with ${response.statusCode}');
       return const CreatorDeleteEnforcementResult.failed();
     }
@@ -183,6 +193,7 @@ class CreatorDeleteEnforcementRepository {
     Uri uri,
     HttpMethod method, {
     Duration? timeout,
+    String? body,
   }) async {
     final requestBudget = timeout ?? _requestTimeout;
     final stopwatch = Stopwatch()..start();
@@ -190,7 +201,7 @@ class CreatorDeleteEnforcementRepository {
       final tokenFuture = _nip98AuthService.createAuthToken(
         url: uri.toString(),
         method: method,
-        payload: method == HttpMethod.post ? '' : null,
+        payload: method == HttpMethod.post ? body ?? '' : null,
       );
       // Keycast signing is an unattended network request and must share the
       // request budget. Human-approved signers remain unbounded so the user
@@ -203,12 +214,17 @@ class CreatorDeleteEnforcementRepository {
       }
       final remaining = requestBudget - stopwatch.elapsed;
       if (remaining <= Duration.zero) return null;
-      final headers = {'Authorization': token.authorizationHeader};
+      final headers = {
+        'Authorization': token.authorizationHeader,
+        if (body != null) 'Content-Type': 'application/json; charset=utf-8',
+      };
       return await switch (method) {
         HttpMethod.get =>
           _httpClient.get(uri, headers: headers).timeout(remaining),
         HttpMethod.post =>
-          _httpClient.post(uri, headers: headers).timeout(remaining),
+          _httpClient
+              .post(uri, headers: headers, body: body)
+              .timeout(remaining),
         _ => throw ArgumentError.value(method, 'method'),
       };
     } on TimeoutException {

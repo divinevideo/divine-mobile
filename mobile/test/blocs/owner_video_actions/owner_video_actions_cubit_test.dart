@@ -7,6 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
 import 'package:openvine/services/content_deletion_service.dart';
@@ -57,6 +58,58 @@ void main() {
       enforcementRepository = _MockEnforcementRepository();
       when(() => enforcementRepository.enforce(any())).thenAnswer(
         (_) async => const CreatorDeleteEnforcementResult.confirmed(),
+      );
+    });
+
+    test('passes the published signed deletion event to cleanup', () async {
+      final event = Event(
+        video.pubkey,
+        5,
+        [
+          ['e', video.id],
+        ],
+        'Delete this video',
+        createdAt: 1757385263,
+      );
+      event.sig = '12' * 64;
+      final cleanupCompleter = Completer<CreatorDeleteEnforcementResult>();
+      when(
+        () => deletionService.quickDelete(
+          video: video,
+          reason: DeleteReason.personalChoice,
+        ),
+      ).thenAnswer(
+        (_) async => DeleteResult.createSuccess(
+          event.id,
+          acceptance: DeleteAcceptance.someRelays,
+          deleteEvent: event,
+        ),
+      );
+      when(
+        () => enforcementRepository.enforce(
+          event.id,
+          deletionEvent: any(named: 'deletionEvent'),
+        ),
+      ).thenAnswer((_) => cleanupCompleter.future);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      await cubit.deleteVideo(video);
+      final completion = cubit.cleanupCompletionFor(video.id);
+      expect(completion, isNotNull);
+      final suppliedEvent = verify(
+        () => enforcementRepository.enforce(
+          event.id,
+          deletionEvent: captureAny(named: 'deletionEvent'),
+        ),
+      ).captured.single;
+      expect(suppliedEvent, event.toJson());
+      cleanupCompleter.complete(
+        const CreatorDeleteEnforcementResult.confirmed(),
+      );
+      expect(
+        (await completion)!.cleanupStatus,
+        OwnerVideoCleanupStatus.confirmed,
       );
     });
 

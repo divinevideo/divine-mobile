@@ -180,7 +180,10 @@ class OwnerVideoActionsCubit extends Cubit<OwnerVideoActionsState>
       if (deleteEventId == null) {
         throw StateError('Successful delete result has no delete event ID');
       }
-      final result = await enforcementRepository.enforce(deleteEventId);
+      final result = await enforcementRepository.enforce(
+        deleteEventId,
+        deletionEvent: deleteResult.deleteEvent?.toJson(),
+      );
       cleanupStatus = switch (result.status) {
         CreatorDeleteEnforcementStatus.confirmed =>
           OwnerVideoCleanupStatus.confirmed,
