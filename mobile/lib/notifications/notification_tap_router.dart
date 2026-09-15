@@ -216,11 +216,10 @@ Future<void> routeNotificationTap({
 
   switch (target) {
     case OpenListTarget(:final pubkey, :final listId):
-      container
-          .read(goRouterProvider)
-          .push(
-            CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
-          );
+      _pushRoute(
+        container,
+        CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
+      );
     case OpenProfileTarget(:final actorPubkey):
       _navigateToNotificationProfile(container, actorPubkey);
     case OpenInboxTarget():
@@ -320,7 +319,24 @@ void _navigateToNotificationProfile(
   String actorPubkeyHex,
 ) {
   final npub = NostrKeyUtils.encodePubKey(actorPubkeyHex);
-  container.read(goRouterProvider).push(OtherProfileScreen.pathForNpub(npub));
+  _pushRoute(container, OtherProfileScreen.pathForNpub(npub));
+}
+
+void _pushRoute(ProviderContainer container, String location) {
+  // A push future is the eventual pop result; keep tap routing non-blocking.
+  unawaited(
+    container.read(goRouterProvider).push<void>(location).catchError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      Log.error(
+        'Notification route failed: $error',
+        name: 'PushNotifications',
+        category: LogCategory.ui,
+        stackTrace: stackTrace,
+      );
+    }),
+  );
 }
 
 /// Opens the notifications inbox — the deterministic safe fallback when a tap
