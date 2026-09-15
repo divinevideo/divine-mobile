@@ -31,8 +31,13 @@ class ChromaKeyEditorState extends Equatable {
   /// Which background the keyed area is filled with.
   ClipChromaKeyBackgroundType get backgroundType => chromaKey.backgroundType;
 
-  /// Whether a measurement is in flight, which disables the controls it would
-  /// overwrite.
+  /// Whether a measurement is in flight whose result is still wanted.
+  ///
+  /// Only Auto-detect is disabled while one runs, so a tap cannot start a
+  /// second decode of the same footage. Everything else stays live: setting
+  /// the colour or amount by hand, or picking a preset, writes the measurement
+  /// off and takes this back to `false`, and its result is dropped when it
+  /// lands rather than overwriting that edit.
   bool get isDetecting => detectionStatus == ChromaKeyDetectionStatus.detecting;
 
   ChromaKeyEditorState copyWith({

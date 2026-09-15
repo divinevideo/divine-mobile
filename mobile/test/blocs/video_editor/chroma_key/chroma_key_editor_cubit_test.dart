@@ -337,6 +337,179 @@ void main() {
       );
     });
 
+    group('a hand edit while measuring', () {
+      late Completer<ChromaKeyDetection> gate;
+
+      /// A cubit whose measurement stays in flight until [gate] completes.
+      ///
+      /// The gate is made here rather than in `setUp` because `blocTest` runs
+      /// `build` and `act` inside their own error zone: an error completed
+      /// into a future from outside that zone is not delivered to the `await`
+      /// inside it but reported as uncaught, and the measurement never lands.
+      ChromaKeyEditorCubit buildGated() {
+        gate = Completer<ChromaKeyDetection>();
+        return build(detect: (_) => gate.future);
+      }
+
+      /// Starts a measurement that stays in flight until [gate] completes,
+      /// runs [edit] against it, then lets it land.
+      Future<void> editMidFlight(
+        ChromaKeyEditorCubit cubit,
+        void Function(ChromaKeyEditorCubit cubit) edit,
+      ) async {
+        final measuring = cubit.detectFromFootage();
+        edit(cubit);
+        gate.complete(measured);
+        await measuring;
+      }
+
+      final detecting = isA<ChromaKeyEditorState>().having(
+        (s) => s.detectionStatus,
+        'detectionStatus',
+        ChromaKeyDetectionStatus.detecting,
+      );
+
+      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
+        'a colour picked while it runs is kept over the measurement',
+        build: buildGated,
+        act: (cubit) => editMidFlight(
+          cubit,
+          (cubit) => cubit.setKeyColor(const Color(0xFF0000FF)),
+        ),
+        // The panel is live during the on-open measurement, which the user
+        // never asked for. The edit ends the wait on the spot, and the result
+        // landing afterwards must not put the measured colour back — that is
+        // the silent revert of #8905. Exactly two states: a third would be
+        // the measurement landing anyway.
+        expect: () => [
+          detecting,
+          isA<ChromaKeyEditorState>()
+              .having(
+                (s) => s.chromaKey.key.color,
+                'color',
+                const Color(0xFF0000FF),
+              )
+              .having(
+                (s) => s.detectionStatus,
+                'detectionStatus',
+                ChromaKeyDetectionStatus.idle,
+              ),
+        ],
+        verify: (cubit) {
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF0000FF));
+          // The measured similarity goes with the measured colour, so none
+          // of the measurement is adopted — not even the half the user left
+          // alone.
+          expect(
+            cubit.state.chromaKey.key.similarity,
+            const ChromaKey.greenScreen().similarity,
+          );
+        },
+      );
+
+      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
+        'an amount dragged while it runs is kept over the measurement',
+        build: buildGated,
+        act: (cubit) =>
+            editMidFlight(cubit, (cubit) => cubit.setSimilarity(0.4)),
+        expect: () => [
+          detecting,
+          isA<ChromaKeyEditorState>()
+              .having((s) => s.chromaKey.key.similarity, 'similarity', 0.4)
+              .having(
+                (s) => s.detectionStatus,
+                'detectionStatus',
+                ChromaKeyDetectionStatus.idle,
+              ),
+        ],
+        verify: (cubit) {
+          expect(cubit.state.chromaKey.key.similarity, 0.4);
+          expect(
+            cubit.state.chromaKey.key.color,
+            const ChromaKey.greenScreen().color,
+          );
+        },
+      );
+
+      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
+        'a preset tapped while it runs is kept over the measurement',
+        build: buildGated,
+        act: (cubit) =>
+            editMidFlight(cubit, (cubit) => cubit.useBlueScreenPreset()),
+        // Someone who shot on blue taps "Blue" the moment the panel opens,
+        // during a green measurement they did not ask for. The preset is the
+        // answer; the measurement is not allowed to overrule it.
+        expect: () => [
+          detecting,
+          isA<ChromaKeyEditorState>()
+              .having(
+                (s) => s.chromaKey.key,
+                'key',
+                const ChromaKey.blueScreen(),
+              )
+              .having(
+                (s) => s.detectionStatus,
+                'detectionStatus',
+                ChromaKeyDetectionStatus.idle,
+              ),
+        ],
+      );
+
+      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
+        'an edge or spill edit leaves the measurement running',
+        build: buildGated,
+        act: (cubit) =>
+            editMidFlight(cubit, (cubit) => cubit.setSmoothness(0.3)),
+        // Smoothness is never measured, so changing it neither loses the
+        // measurement nor is lost to it.
+        expect: () => [
+          detecting,
+          isA<ChromaKeyEditorState>()
+              .having((s) => s.chromaKey.key.smoothness, 'smoothness', 0.3)
+              .having(
+                (s) => s.detectionStatus,
+                'detectionStatus',
+                ChromaKeyDetectionStatus.detecting,
+              ),
+          isA<ChromaKeyEditorState>()
+              .having((s) => s.chromaKey.key.color, 'color', measured.color)
+              .having(
+                (s) => s.chromaKey.key.similarity,
+                'similarity',
+                measured.similarity,
+              )
+              .having((s) => s.chromaKey.key.smoothness, 'smoothness', 0.3)
+              .having(
+                (s) => s.detectionStatus,
+                'detectionStatus',
+                ChromaKeyDetectionStatus.idle,
+              ),
+        ],
+      );
+
+      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
+        'a measurement that fails after the edit still says so',
+        build: buildGated,
+        act: (cubit) async {
+          final measuring = cubit.detectFromFootage();
+          cubit.setSimilarity(0.4);
+          gate.completeError(const ChromaKeyDetectionException('no screen'));
+          await measuring;
+        },
+        // The edit wrote the result off, not the news that the footage has
+        // no screen at the frame border — that is still worth a line, and it
+        // must not touch what the user set.
+        errors: () => [isA<ChromaKeyDetectionException>()],
+        verify: (cubit) {
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.failure,
+          );
+          expect(cubit.state.chromaKey.key.similarity, 0.4);
+        },
+      );
+    });
+
     group('background', () {
       test('switching to a colour clears an image', () {
         final cubit = build(

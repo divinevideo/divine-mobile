@@ -79,7 +79,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   /// Measures the screen off the footage and adopts colour and similarity.
   ///
   /// Smoothness, spill and the chosen background are the user's, so a
-  /// measurement never overwrites them.
+  /// measurement never overwrites them. Neither does it overwrite a colour or
+  /// amount set by hand while it ran: that edit writes the measurement off
+  /// (see [_statusAfterManualKeyEdit]) and the result is dropped.
   Future<void> detectFromFootage() async {
     if (state.isDetecting) return;
     // Both callers discard this future — the constructor with `unawaited`, the
@@ -121,6 +123,10 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       return;
     }
 
+    // A colour or amount set by hand while this ran already took the status
+    // back to idle. That edit was deliberate and this is a guess, so it loses.
+    if (!state.isDetecting) return;
+
     emitIfOpen(
       state.copyWith(
         chromaKey: ClipChromaKey(
@@ -155,13 +161,18 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
     emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.idle));
   }
 
-  /// Sets the screen colour to remove.
-  void setKeyColor(Color color) =>
-      _updateKey((key) => key.copyWith(color: color));
+  /// Sets the screen colour to remove, writing off a measurement in flight.
+  void setKeyColor(Color color) => _updateKey(
+    (key) => key.copyWith(color: color),
+    detectionStatus: _statusAfterManualKeyEdit,
+  );
 
-  /// Sets how far from the key colour a pixel may sit and still be removed.
-  void setSimilarity(double value) =>
-      _updateKey((key) => key.copyWith(similarity: value));
+  /// Sets how far from the key colour a pixel may sit and still be removed,
+  /// writing off a measurement in flight.
+  void setSimilarity(double value) => _updateKey(
+    (key) => key.copyWith(similarity: value),
+    detectionStatus: _statusAfterManualKeyEdit,
+  );
 
   /// Sets the width of the soft ramp just beyond the similarity threshold.
   void setSmoothness(double value) =>
@@ -171,10 +182,12 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void setSpill(double value) =>
       _updateKey((key) => key.copyWith(spill: value));
 
-  /// Adopts the green-screen preset, keeping the chosen background.
+  /// Adopts the green-screen preset, keeping the chosen background and
+  /// writing off a measurement in flight.
   void useGreenScreenPreset() => _usePreset(const ChromaKey.greenScreen());
 
-  /// Adopts the blue-screen preset, keeping the chosen background.
+  /// Adopts the blue-screen preset, keeping the chosen background and
+  /// writing off a measurement in flight.
   ///
   /// Blue keys tighter than green and despills more gently: denim, blue eyes
   /// and light blue shirts all crowd a blue screen.
@@ -193,9 +206,19 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
           ),
           backgroundVideoPath: current.backgroundVideoPath,
         ),
+        detectionStatus: _statusAfterManualKeyEdit,
       ),
     );
   }
+
+  /// The status to emit with a colour or amount the user set by hand.
+  ///
+  /// A measurement writes exactly those two fields, so an edit to either while
+  /// one is in flight is the user overtaking it: the panel goes back to idle
+  /// now, and [detectFromFootage] drops the result when it lands. Anything
+  /// else — a failure not yet acknowledged, or nothing running — is kept.
+  ChromaKeyDetectionStatus? get _statusAfterManualKeyEdit =>
+      state.isDetecting ? ChromaKeyDetectionStatus.idle : null;
 
   /// Leaves the keyed area unfilled.
   void useTransparentBackground() => _setBackground(
@@ -227,7 +250,10 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void _setBackground(ClipChromaKey chromaKey) =>
       emit(state.copyWith(chromaKey: chromaKey));
 
-  void _updateKey(ChromaKey Function(ChromaKey key) update) {
+  void _updateKey(
+    ChromaKey Function(ChromaKey key) update, {
+    ChromaKeyDetectionStatus? detectionStatus,
+  }) {
     final current = state.chromaKey;
     emit(
       state.copyWith(
@@ -235,6 +261,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
           key: update(current.key),
           backgroundVideoPath: current.backgroundVideoPath,
         ),
+        detectionStatus: detectionStatus,
       ),
     );
   }

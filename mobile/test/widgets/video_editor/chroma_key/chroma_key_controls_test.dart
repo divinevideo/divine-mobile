@@ -3,9 +3,11 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -36,6 +38,9 @@ void main() {
       TextScaler textScaler = TextScaler.noScaling,
       Locale? locale,
       ChromaKeySurface surface = ChromaKeySurface.track,
+      // Off for a panel mid-measurement: Auto-detect spins for as long as
+      // the measurement runs, so that frame never settles.
+      bool settle = true,
     }) async {
       // A phone, not the 800x600 default. The panel is a narrow column of
       // rows, so a surface 2.2x a phone's width cannot show one overflowing
@@ -73,7 +78,11 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+      }
     }
 
     /// Every colour the panel resolves for its own text.
@@ -169,6 +178,52 @@ void main() {
             'panel is still inert to a first-time user (#8547). find.text '
             'alone passes with the hint moved below the fold.',
       );
+    });
+
+    testWidgets('leaves everything but Auto-detect live while measuring', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ChromaKeyEditorState>.empty(),
+        initialState: const ChromaKeyEditorState(
+          chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+          detectionStatus: ChromaKeyDetectionStatus.detecting,
+        ),
+      );
+      await pump(tester, VineTheme.theme, settle: false);
+
+      final en = lookupAppLocalizations(const Locale('en'));
+      final autoDetect = tester.widget<DivineButton>(
+        find.widgetWithText(DivineButton, en.videoEditorChromaKeyAutoDetect),
+      );
+      expect(autoDetect.isLoading, isTrue);
+      expect(autoDetect.onPressed, isNull);
+
+      // The measurement on open is not something the user asked for, so the
+      // presets cannot sit greyed out behind it: someone who shot on blue
+      // taps "Blue" straight away, and the cubit writes the measurement off.
+      await tester.tap(find.text(en.videoEditorChromaKeyPresetBlue));
+      await tester.tap(find.text(en.videoEditorChromaKeyPresetGreen));
+      verify(() => cubit.useBlueScreenPreset()).called(1);
+      verify(() => cubit.useGreenScreenPreset()).called(1);
+
+      // The swatch and the Amount slider were never gated. The dartdoc used to
+      // claim they were, and gating them now would freeze the panel for the
+      // whole of a measurement that has no timeout (#8905).
+      final swatch = tester.getSemantics(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.button == true &&
+              widget.properties.label ==
+                  en.videoEditorChromaKeyScreenColorLabel,
+        ),
+      );
+      expect(swatch.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      await tester.drag(find.byType(Slider).first, const Offset(80, 0));
+      verify(() => cubit.setSimilarity(any())).called(greaterThan(0));
+      verifyNever(() => cubit.detectFromFootage());
     });
 
     testWidgets('holds at the largest system text scale', (tester) async {
