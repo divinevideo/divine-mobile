@@ -2165,7 +2165,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       notifier.setProcessing(false);
       return;
     }
-    await notifier.startRenderVideo();
+    _runDetached(notifier.startRenderVideo(), 'start final render');
   }
 
   /// Handles the done action from the main editor.
