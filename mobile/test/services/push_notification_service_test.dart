@@ -79,9 +79,8 @@ void main() {
     mockNostrSigner = _MockNostrSigner();
 
     when(() => mockNostrClient.signer).thenReturn(mockNostrSigner);
-    when(
-      () => mockNostrSigner.nip44Encrypt(any(), any()),
-    ).thenAnswer((_) async => encryptedPayload);
+    when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+        .thenAnswer((_) async => encryptedPayload);
 
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<String>[]);
@@ -105,75 +104,80 @@ void main() {
 
   group(PushNotificationService, () {
     group('register', () {
-      test(
-        'encrypts token JSON and publishes kind 3079 event to environment relay with OK timeout',
-        () async {
-          when(
-            () => mockNostrSigner.nip44Encrypt(
-              testEnvironment.pushServicePubkey,
-              any(),
-            ),
-          ).thenAnswer((_) async => encryptedPayload);
+      test('encrypts token JSON and publishes kind 3079 event to environment relay with OK timeout', () async {
+        when(
+          () => mockNostrSigner.nip44Encrypt(
+            testEnvironment.pushServicePubkey,
+            any(),
+          ),
+        ).thenAnswer((_) async => encryptedPayload);
 
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushRegistrationKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushRegistrationKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: [testEnvironment.relayUrl],
-              rejectedBy: const {},
-              noResponseFrom: const [],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: [testEnvironment.relayUrl],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
 
-          final service = buildService();
-          await service.register(testPubkey);
+        final service = buildService();
+        await service.register(testPubkey);
 
-          verify(
-            () => mockNostrSigner.nip44Encrypt(
-              testEnvironment.pushServicePubkey,
-              '{"token":"$testToken"}',
-            ),
-          ).called(1);
+        final registrationCapture = verify(
+          () => mockNostrSigner.nip44Encrypt(
+            testEnvironment.pushServicePubkey,
+            captureAny(),
+          ),
+        );
+        registrationCapture.called(1);
+        final registrationJson = jsonDecode(
+          registrationCapture.captured.single as String,
+        ) as Map<String, dynamic>;
+        expect(registrationJson['token'], testToken);
+        expect(
+          registrationJson['timezoneOffsetMinutes'],
+          DateTime.now().timeZoneOffset.inMinutes,
+        );
 
-          verify(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushRegistrationKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).called(1);
+        verify(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushRegistrationKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).called(1);
 
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).called(1);
-          service.dispose();
-        },
-      );
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).called(1);
+        service.dispose();
+      });
 
       test('includes required tags on registration event', () async {
         List<List<String>>? capturedTags;
 
-        when(
-          () => mockNostrSigner.nip44Encrypt(any(), any()),
-        ).thenAnswer((_) async => encryptedPayload);
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
 
         final fakeEvent = _FakeEvent();
         when(
@@ -300,9 +304,8 @@ void main() {
       );
 
       test('does nothing when NIP-44 encryption fails', () async {
-        when(
-          () => mockNostrSigner.nip44Encrypt(any(), any()),
-        ).thenAnswer((_) async => null);
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => null);
 
         final service = buildService();
         expect(
@@ -320,9 +323,8 @@ void main() {
       });
 
       test('does nothing when event signing returns null', () async {
-        when(
-          () => mockNostrSigner.nip44Encrypt(any(), any()),
-        ).thenAnswer((_) async => encryptedPayload);
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
 
         when(
           () => mockAuthService.createAndSignEvent(
@@ -348,52 +350,47 @@ void main() {
         service.dispose();
       });
 
-      test(
-        'returns uncertain failure when registration publish receives no OK response',
-        () async {
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
+      test('returns uncertain failure when registration publish receives no OK response', () async {
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
 
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: const [],
-              rejectedBy: const {},
-              noResponseFrom: [testEnvironment.relayUrl],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: [testEnvironment.relayUrl],
+          ),
+        );
 
-          final service = buildService();
-          expect(
-            await service.register(testPubkey),
-            PushRegistrationResult.uncertainFailure,
-          );
-          service.dispose();
-        },
-      );
+        final service = buildService();
+        expect(
+          await service.register(testPubkey),
+          PushRegistrationResult.uncertainFailure,
+        );
+        service.dispose();
+      });
 
       test(
         'returns terminal failure when registration publish is rejected',
         () async {
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
+          when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+              .thenAnswer((_) async => encryptedPayload);
 
           final fakeEvent = _FakeEvent();
           when(
@@ -651,38 +648,35 @@ void main() {
         );
         service.dispose();
       });
-      test(
-        'completes without error when deregistration publish receives no OK response',
-        () async {
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+      test('completes without error when deregistration publish receives no OK response', () async {
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: const [],
-              rejectedBy: const {},
-              noResponseFrom: [testEnvironment.relayUrl],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: [testEnvironment.relayUrl],
+          ),
+        );
 
-          final service = buildService();
-          await expectLater(service.deregister(testPubkey), completes);
-          service.dispose();
-        },
-      );
+        final service = buildService();
+        await expectLater(service.deregister(testPubkey), completes);
+        service.dispose();
+      });
 
       test(
         'completes without error when deregistration publish is rejected',
@@ -736,244 +730,220 @@ void main() {
         },
       );
 
-      test(
-        'does not publish deregistration when session becomes stale after signing',
-        () async {
-          var current = true;
-          final fakeEvent = _MockEvent();
-          when(
-            () => fakeEvent.id,
-          ).thenReturn('captured-deregistration-event-id');
-          when(() => fakeEvent.isSigned).thenReturn(true);
-          when(() => fakeEvent.isValid).thenReturn(true);
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushDeregistrationKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async {
-            current = false;
-            return fakeEvent;
-          });
+      test('does not publish deregistration when session becomes stale after signing', () async {
+        var current = true;
+        final fakeEvent = _MockEvent();
+        when(() => fakeEvent.id).thenReturn('captured-deregistration-event-id');
+        when(() => fakeEvent.isSigned).thenReturn(true);
+        when(() => fakeEvent.isValid).thenReturn(true);
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushDeregistrationKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async {
+          current = false;
+          return fakeEvent;
+        });
 
-          final service = buildService(isCurrent: () => current);
+        final service = buildService(isCurrent: () => current);
 
-          await service.deregister(testPubkey);
+        await service.deregister(testPubkey);
 
-          verify(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushDeregistrationKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).called(1);
-          verifyNever(() => mockNostrClient.publishEvent(any()));
-          service.dispose();
-        },
-      );
+        verify(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushDeregistrationKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).called(1);
+        verifyNever(() => mockNostrClient.publishEvent(any()));
+        service.dispose();
+      });
 
-      test(
-        'can sign deregistration with captured outgoing identity',
-        () async {
-          final capturedSigner = _MockNostrSigner();
-          final capturedIdentity = KeycastNostrIdentity(
-            pubkey: testPubkey,
-            rpcSigner: capturedSigner,
-          );
-          final fakeEvent = _MockEvent();
-          when(
-            () => fakeEvent.id,
-          ).thenReturn('captured-deregistration-event-id');
-          when(() => fakeEvent.isSigned).thenReturn(true);
-          when(() => fakeEvent.isValid).thenReturn(true);
-          when(
-            () => capturedSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
-          when(
-            () => capturedSigner.signEvent(any()),
-          ).thenAnswer((_) async => fakeEvent);
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: [testEnvironment.relayUrl],
-              rejectedBy: const {},
-              noResponseFrom: const [],
-            ),
-          );
+      test('can sign deregistration with captured outgoing identity', () async {
+        final capturedSigner = _MockNostrSigner();
+        final capturedIdentity = KeycastNostrIdentity(
+          pubkey: testPubkey,
+          rpcSigner: capturedSigner,
+        );
+        final fakeEvent = _MockEvent();
+        when(() => fakeEvent.id).thenReturn('captured-deregistration-event-id');
+        when(() => fakeEvent.isSigned).thenReturn(true);
+        when(() => fakeEvent.isValid).thenReturn(true);
+        when(() => capturedSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
+        when(() => capturedSigner.signEvent(any()))
+            .thenAnswer((_) async => fakeEvent);
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: [testEnvironment.relayUrl],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
 
-          final service = buildService(isCurrent: () => false);
-          await service.deregister(
-            testPubkey,
-            signingIdentity: capturedIdentity,
-          );
+        final service = buildService(isCurrent: () => false);
+        await service.deregister(testPubkey, signingIdentity: capturedIdentity);
 
-          verifyNever(
-            () => mockAuthService.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          );
-          verify(() => capturedSigner.signEvent(any())).called(1);
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).called(1);
-          service.dispose();
-        },
-      );
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+        verify(() => capturedSigner.signEvent(any())).called(1);
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).called(1);
+        service.dispose();
+      });
 
-      test(
-        'publishes captured-identity deregistration with supplied cleanup client',
-        () async {
-          final capturedSigner = _MockNostrSigner();
-          final capturedIdentity = KeycastNostrIdentity(
-            pubkey: testPubkey,
-            rpcSigner: capturedSigner,
-          );
-          final cleanupClient = _MockNostrClient();
-          final fakeEvent = _MockEvent();
-          when(
-            () => fakeEvent.id,
-          ).thenReturn('cleanup-deregistration-event-id');
-          when(() => fakeEvent.isSigned).thenReturn(true);
-          when(() => fakeEvent.isValid).thenReturn(true);
-          when(
-            () => capturedSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
-          when(
-            () => capturedSigner.signEvent(any()),
-          ).thenAnswer((_) async => fakeEvent);
-          when(
-            () => cleanupClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: [testEnvironment.relayUrl],
-              rejectedBy: const {},
-              noResponseFrom: const [],
-            ),
-          );
+      test('publishes captured-identity deregistration with supplied cleanup client', () async {
+        final capturedSigner = _MockNostrSigner();
+        final capturedIdentity = KeycastNostrIdentity(
+          pubkey: testPubkey,
+          rpcSigner: capturedSigner,
+        );
+        final cleanupClient = _MockNostrClient();
+        final fakeEvent = _MockEvent();
+        when(() => fakeEvent.id).thenReturn('cleanup-deregistration-event-id');
+        when(() => fakeEvent.isSigned).thenReturn(true);
+        when(() => fakeEvent.isValid).thenReturn(true);
+        when(() => capturedSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
+        when(() => capturedSigner.signEvent(any()))
+            .thenAnswer((_) async => fakeEvent);
+        when(
+          () => cleanupClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: [testEnvironment.relayUrl],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
 
-          final service = buildService(isCurrent: () => false);
-          await service.deregister(
-            testPubkey,
-            signingIdentity: capturedIdentity,
-            publishClient: cleanupClient,
-          );
+        final service = buildService(isCurrent: () => false);
+        await service.deregister(
+          testPubkey,
+          signingIdentity: capturedIdentity,
+          publishClient: cleanupClient,
+        );
 
-          verify(() => capturedSigner.signEvent(any())).called(1);
-          verifyNever(
-            () => mockNostrClient.publishEventAwaitOk(
-              any(),
-              targetRelays: any(named: 'targetRelays'),
-              timeout: any(named: 'timeout'),
-            ),
-          );
-          verify(
-            () => cleanupClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).called(1);
-          service.dispose();
-        },
-      );
+        verify(() => capturedSigner.signEvent(any())).called(1);
+        verifyNever(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+        verify(
+          () => cleanupClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).called(1);
+        service.dispose();
+      });
     });
 
     group('updatePreferences', () {
-      test(
-        'encrypts kinds JSON and publishes kind 3083 event to environment relay with OK timeout',
-        () async {
-          const prefs = NotificationPreferences(
-            commentsEnabled: false,
-            mentionsEnabled: false,
-            repostsEnabled: false,
-          );
+      test('encrypts kinds JSON and publishes kind 3083 event to environment relay with OK timeout', () async {
+        const prefs = NotificationPreferences(
+          commentsEnabled: false,
+          mentionsEnabled: false,
+          repostsEnabled: false,
+        );
 
-          when(
-            () => mockNostrSigner.nip44Encrypt(
-              testEnvironment.pushServicePubkey,
-              any(),
-            ),
-          ).thenAnswer((_) async => encryptedPayload);
+        when(
+          () => mockNostrSigner.nip44Encrypt(
+            testEnvironment.pushServicePubkey,
+            any(),
+          ),
+        ).thenAnswer((_) async => encryptedPayload);
 
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushPreferencesKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushPreferencesKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: [testEnvironment.relayUrl],
-              rejectedBy: const {},
-              noResponseFrom: const [],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: [testEnvironment.relayUrl],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
 
-          final service = buildService();
-          await service.updatePreferences(prefs);
+        final service = buildService();
+        await service.updatePreferences(prefs);
 
-          final captureResult = verify(
-            () => mockNostrSigner.nip44Encrypt(
-              testEnvironment.pushServicePubkey,
-              captureAny(),
-            ),
-          );
-          captureResult.called(1);
+        final captureResult = verify(
+          () => mockNostrSigner.nip44Encrypt(
+            testEnvironment.pushServicePubkey,
+            captureAny(),
+          ),
+        );
+        captureResult.called(1);
 
-          final capturedJson = captureResult.captured.first as String;
-          expect(capturedJson, contains('"kinds"'));
+        final capturedJson = captureResult.captured.first as String;
+        expect(capturedJson, contains('"kinds"'));
+        expect(capturedJson, contains('"campaignsEnabled":false'));
 
-          final kinds = prefs.toKindsList();
-          for (final kind in kinds) {
-            expect(capturedJson, contains(kind.toString()));
-          }
+        final kinds = prefs.toKindsList();
+        for (final kind in kinds) {
+          expect(capturedJson, contains(kind.toString()));
+        }
 
-          verify(
-            () => mockAuthService.createAndSignEvent(
-              kind: PushNotificationService.pushPreferencesKind,
-              content: encryptedPayload,
-              tags: any(named: 'tags'),
-            ),
-          ).called(1);
+        verify(
+          () => mockAuthService.createAndSignEvent(
+            kind: PushNotificationService.pushPreferencesKind,
+            content: encryptedPayload,
+            tags: any(named: 'tags'),
+          ),
+        ).called(1);
 
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).called(1);
-          service.dispose();
-        },
-      );
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).called(1);
+        service.dispose();
+      });
 
       test(
         'skips preferences update when push service pubkey is placeholder',
@@ -1000,53 +970,48 @@ void main() {
           service.dispose();
         },
       );
-      test(
-        'completes without error when preferences publish receives no OK response',
-        () async {
-          const prefs = NotificationPreferences();
+      test('completes without error when preferences publish receives no OK response', () async {
+        const prefs = NotificationPreferences();
 
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
 
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: const [],
-              rejectedBy: const {},
-              noResponseFrom: [testEnvironment.relayUrl],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: [testEnvironment.relayUrl],
+          ),
+        );
 
-          final service = buildService();
-          await expectLater(service.updatePreferences(prefs), completes);
-          service.dispose();
-        },
-      );
+        final service = buildService();
+        await expectLater(service.updatePreferences(prefs), completes);
+        service.dispose();
+      });
 
       test(
         'completes without error when preferences publish is rejected',
         () async {
           const prefs = NotificationPreferences();
 
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
+          when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+              .thenAnswer((_) async => encryptedPayload);
 
           final fakeEvent = _FakeEvent();
           when(
@@ -1083,9 +1048,8 @@ void main() {
         () async {
           const prefs = NotificationPreferences();
           var current = true;
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
+          when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+              .thenAnswer((_) async => encryptedPayload);
 
           final fakeEvent = _FakeEvent();
           when(
@@ -1225,65 +1189,67 @@ void main() {
     });
 
     group('registerToken', () {
-      test(
-        'publishes provided refreshed token through environment relay OK publish',
-        () async {
-          when(
-            () => mockNostrSigner.nip44Encrypt(any(), any()),
-          ).thenAnswer((_) async => encryptedPayload);
-          when(() => mockAuthService.currentIdentity).thenReturn(
-            KeycastNostrIdentity(
-              pubkey: testPubkey,
-              rpcSigner: mockNostrSigner,
-            ),
-          );
+      test('publishes provided refreshed token through environment relay OK publish', () async {
+        when(() => mockNostrSigner.nip44Encrypt(any(), any()))
+            .thenAnswer((_) async => encryptedPayload);
+        when(() => mockAuthService.currentIdentity).thenReturn(
+          KeycastNostrIdentity(pubkey: testPubkey, rpcSigner: mockNostrSigner),
+        );
 
-          final fakeEvent = _FakeEvent();
-          when(
-            () => mockAuthService.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          ).thenAnswer((_) async => fakeEvent);
+        final fakeEvent = _FakeEvent();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => fakeEvent);
 
-          when(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).thenAnswer(
-            (_) async => PublishOutcome(
-              eventId: fakeEvent.id,
-              acceptedBy: [testEnvironment.relayUrl],
-              rejectedBy: const {},
-              noResponseFrom: const [],
-            ),
-          );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: fakeEvent.id,
+            acceptedBy: [testEnvironment.relayUrl],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
 
-          final service = buildService();
+        final service = buildService();
 
-          await service.registerToken(testPubkey, 'new-refreshed-token');
+        await service.registerToken(testPubkey, 'new-refreshed-token');
 
-          verify(
-            () => mockNostrSigner.nip44Encrypt(
-              testEnvironment.pushServicePubkey,
-              '{"token":"new-refreshed-token"}',
-            ),
-          ).called(1);
+        final registrationCapture = verify(
+          () => mockNostrSigner.nip44Encrypt(
+            testEnvironment.pushServicePubkey,
+            captureAny(),
+          ),
+        );
+        registrationCapture.called(1);
+        final registrationJson = jsonDecode(
+          registrationCapture.captured.single as String,
+        ) as Map<String, dynamic>;
+        expect(registrationJson['token'], 'new-refreshed-token');
+        expect(
+          registrationJson['timezoneOffsetMinutes'],
+          DateTime.now().timeZoneOffset.inMinutes,
+        );
 
-          verify(
-            () => mockNostrClient.publishEventAwaitOk(
-              fakeEvent,
-              targetRelays: [testEnvironment.relayUrl],
-              timeout: pushPublishTimeout,
-            ),
-          ).called(1);
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            fakeEvent,
+            targetRelays: [testEnvironment.relayUrl],
+            timeout: pushPublishTimeout,
+          ),
+        ).called(1);
 
-          service.dispose();
-        },
-      );
+        service.dispose();
+      });
 
       test(
         'drops refreshed token registration when session is stale',

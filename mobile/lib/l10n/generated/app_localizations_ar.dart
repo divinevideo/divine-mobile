@@ -2672,6 +2672,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationSettingsNewPostsSubtitle => 'عندما ينشر شخص تتابعه';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'الإجراءات';
 
   @override

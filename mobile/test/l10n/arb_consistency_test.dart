@@ -489,6 +489,11 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Explicit campaign-consent copy (#6745 / divine-push-service#40). Keep the
+  // opt-in wording in English until a human translation pass can preserve the
+  // distinction between product updates and social notifications.
+  'notificationSettingsCampaigns',
+  'notificationSettingsCampaignsSubtitle',
   // Discord proof-rejection reasons (verifier PR #43). Each names a distinct
   // way a Discord proof can fail, replacing one message that blamed the npub
   // for all of them. Deferred to the next human pass rather than

@@ -3,7 +3,7 @@ import 'package:openvine/models/notification_preferences.dart';
 
 void main() {
   group(NotificationPreferences, () {
-    test('defaults all preferences to true', () {
+    test('defaults social preferences on and campaign consent off', () {
       const prefs = NotificationPreferences();
       expect(prefs.likesEnabled, isTrue);
       expect(prefs.commentsEnabled, isTrue);
@@ -11,6 +11,7 @@ void main() {
       expect(prefs.mentionsEnabled, isTrue);
       expect(prefs.repostsEnabled, isTrue);
       expect(prefs.newPostsEnabled, isTrue);
+      expect(prefs.campaignsEnabled, isFalse);
     });
 
     group('toKindsList', () {
@@ -94,6 +95,7 @@ void main() {
         const original = NotificationPreferences(
           commentsEnabled: false,
           mentionsEnabled: false,
+          campaignsEnabled: true,
         );
         final json = original.toJson();
         final restored = NotificationPreferences.fromJson(json);

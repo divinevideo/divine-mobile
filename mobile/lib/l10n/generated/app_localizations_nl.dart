@@ -2706,6 +2706,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Wanneer iemand die je volgt post';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Acties';
 
   @override

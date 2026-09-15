@@ -2738,6 +2738,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Когато някой, когото следиш, публикува';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Действия';
 
   @override

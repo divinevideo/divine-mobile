@@ -2717,6 +2717,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Quando alguém que você acompanha posta';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Ações';
 
   @override

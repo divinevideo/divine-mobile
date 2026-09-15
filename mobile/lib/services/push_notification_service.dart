@@ -281,7 +281,10 @@ class PushNotificationService {
     if (pushServicePubkey == null) return false;
     if (!await _isPublishCurrent(null)) return false;
     final kinds = prefs.toKindsList();
-    final plaintext = jsonEncode({'kinds': kinds});
+    final plaintext = jsonEncode({
+      'kinds': kinds,
+      'campaignsEnabled': prefs.campaignsEnabled,
+    });
 
     final encrypted = await _nostrClient.signer.nip44Encrypt(
       pushServicePubkey,
@@ -365,7 +368,10 @@ class PushNotificationService {
       return PushRegistrationResult.terminalFailure;
     }
 
-    final plaintext = jsonEncode({'token': token});
+    final plaintext = jsonEncode({
+      'token': token,
+      'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+    });
 
     final encrypted = await _nostrClient.signer.nip44Encrypt(
       pushServicePubkey,

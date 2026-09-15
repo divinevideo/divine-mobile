@@ -2514,6 +2514,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationSettingsNewPostsSubtitle => 'フォロー中の人が投稿した時';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'アクション';
 
   @override

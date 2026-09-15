@@ -2742,6 +2742,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'When someone you\'re watching posts';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Actions';
 
   @override

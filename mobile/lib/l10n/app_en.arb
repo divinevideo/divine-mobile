@@ -1780,6 +1780,8 @@
   "notificationSettingsRepostsSubtitle": "When someone reposts your videos",
   "notificationSettingsNewPosts": "New vines",
   "notificationSettingsNewPostsSubtitle": "When someone you're watching posts",
+  "notificationSettingsCampaigns": "Divine updates",
+  "notificationSettingsCampaignsSubtitle": "Occasional product and community updates",
   "notificationSettingsActions": "Actions",
   "notificationSettingsMarkAllAsRead": "Mark All as Read",
   "notificationSettingsMarkAllAsReadSubtitle": "Mark all notifications as read",
