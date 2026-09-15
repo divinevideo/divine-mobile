@@ -8920,6 +8920,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Nessuno sfondo trovato: deve riempire tutta l\'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Misurare lo sfondo ha richiesto troppo tempo. Riprova con «Rilevamento automatico» oppure scegli il colore a mano.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Scegli una clip';
 
   @override

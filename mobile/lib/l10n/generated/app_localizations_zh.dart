@@ -8322,6 +8322,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      '测量幕布花的时间太长了。再试一次「自动识别」，或者手动选颜色。';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';
 
   @override

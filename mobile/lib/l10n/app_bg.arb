@@ -3740,6 +3740,7 @@
     "videoEditorChromaKeyCanvasTransparentHint": "Каквото е зад клипа, прозира през него.",
     "videoEditorChromaKeySurfaceHint": "Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.",
     "videoEditorChromaKeyDetectFailed": "Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.",
+    "videoEditorChromaKeyDetectTimedOut": "Измерването на фона отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.",
     "videoEditorChromaKeyPickClipTitle": "Избери клип",
     "videoEditorChromaKeyNoLibraryClips": "Библиотеката ти е празна. Първо запази клип, после го използвай като фон.",
     "videoEditorChromaKeyImagePickFailed": "Изображението не можа да се зареди.",

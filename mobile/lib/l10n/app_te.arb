@@ -5606,6 +5606,7 @@
   "videoEditorChromaKeyCanvasTransparentHint": "క్లిప్ వెనుక ఉన్నది దాని ద్వారా కనిపిస్తుంది.",
   "videoEditorChromaKeySurfaceHint": "మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.",
   "videoEditorChromaKeyDetectFailed": "స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.",
+  "videoEditorChromaKeyDetectTimedOut": "స్క్రీన్‌ను కొలవడానికి చాలా సమయం పట్టింది. ఆటో-డిటెక్ట్‌ను మళ్లీ ప్రయత్నించండి, లేదా రంగును మీరే ఎంచుకోండి.",
   "videoEditorChromaKeyPickClipTitle": "క్లిప్‌ను ఎంచుకోండి",
   "videoEditorChromaKeyNoLibraryClips": "మీ లైబ్రరీ ఖాళీగా ఉంది. ముందుగా క్లిప్‌ను సేవ్ చేసి, ఆపై దాన్ని నేపథ్యంగా ఉపయోగించండి.",
   "videoEditorChromaKeyImagePickFailed": "ఆ చిత్రాన్ని లోడ్ చేయడం సాధ్యపడలేదు.",

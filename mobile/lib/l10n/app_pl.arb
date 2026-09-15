@@ -3616,6 +3616,7 @@
     "videoEditorChromaKeyCanvasTransparentHint": "To, co jest za klipem, prześwituje.",
     "videoEditorChromaKeySurfaceHint": "Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.",
     "videoEditorChromaKeyDetectFailed": "Nie znaleziono tła — musi wypełniać cały kadr za tobą. Gładka ściana wystarczy. Albo wybierz kolor ręcznie.",
+    "videoEditorChromaKeyDetectTimedOut": "Pomiar tła trwał za długo. Spróbuj ponownie „Wykryj automatycznie” albo wybierz kolor ręcznie.",
     "videoEditorChromaKeyPickClipTitle": "Wybierz klip",
     "videoEditorChromaKeyNoLibraryClips": "Twoja biblioteka jest pusta. Zapisz najpierw klip, a potem użyj go jako tła.",
     "videoEditorChromaKeyImagePickFailed": "Nie udało się wczytać tego obrazu.",

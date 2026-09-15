@@ -5712,6 +5712,10 @@
   "@videoEditorChromaKeyDetectFailed": {
     "description": "Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background."
   },
+  "videoEditorChromaKeyDetectTimedOut": "Took too long to measure the screen. Try Auto-detect again, or pick the color by hand.",
+  "@videoEditorChromaKeyDetectTimedOut": {
+    "description": "Shown when auto-detect gave up waiting for the footage to decode, which says nothing about the footage itself. Two things have to survive translation: that the user can simply run Auto-detect again, and that the colour can be picked by hand instead. Name the button exactly as videoEditorChromaKeyAutoDetect does in this locale, use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel, and end on what the user can do next."
+  },
   "videoEditorChromaKeyPickClipTitle": "Pick a clip",
   "videoEditorChromaKeyNoLibraryClips": "Your library is empty. Save a clip first, then use it as a background.",
   "videoEditorChromaKeyImagePickFailed": "Couldn't load that image.",

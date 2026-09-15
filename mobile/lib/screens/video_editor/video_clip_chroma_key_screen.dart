@@ -388,14 +388,17 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                   listenWhen: (previous, current) =>
                       previous.detectionStatus != current.detectionStatus,
                   listener: (context, state) {
-                    if (state.detectionStatus !=
-                        ChromaKeyDetectionStatus.failure) {
-                      return;
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      DivineSnackbarContainer.snackBar(
+                    final message = switch (state.detectionStatus) {
+                      ChromaKeyDetectionStatus.failure =>
                         context.l10n.videoEditorChromaKeyDetectFailed,
-                      ),
+                      ChromaKeyDetectionStatus.timedOut =>
+                        context.l10n.videoEditorChromaKeyDetectTimedOut,
+                      ChromaKeyDetectionStatus.idle ||
+                      ChromaKeyDetectionStatus.detecting => null,
+                    };
+                    if (message == null) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      DivineSnackbarContainer.snackBar(message),
                     );
                     context
                         .read<ChromaKeyEditorCubit>()
@@ -417,19 +420,35 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                 children: [
                   Column(
                     children: [
-                      VideoEditorToolbar(
-                        onClose: () {
-                          if (!isBaking) Navigator.of(context).pop();
-                        },
-                        onDone: isBaking ? null : () => _confirm(context),
-                        closeSemanticLabel:
-                            context.l10n.videoEditorChromaKeyCloseSemanticLabel,
-                        doneSemanticLabel:
-                            context.l10n.videoEditorChromaKeyDoneSemanticLabel,
-                        center: Text(
-                          context.l10n.videoEditorChromaKeyTitle,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.onSurface,
+                      // Done commits whatever key is on screen, and while a
+                      // measurement is wanted that key is still the guess it
+                      // is about to replace — so Done waits (#8904). Any
+                      // hand edit lifts the wait by writing the measurement
+                      // off, and Close stays live throughout.
+                      BlocSelector<
+                        ChromaKeyEditorCubit,
+                        ChromaKeyEditorState,
+                        bool
+                      >(
+                        selector: (state) => state.isDetecting,
+                        builder: (context, isDetecting) => VideoEditorToolbar(
+                          onClose: () {
+                            if (!isBaking) Navigator.of(context).pop();
+                          },
+                          onDone: isBaking || isDetecting
+                              ? null
+                              : () => _confirm(context),
+                          closeSemanticLabel: context
+                              .l10n
+                              .videoEditorChromaKeyCloseSemanticLabel,
+                          doneSemanticLabel: context
+                              .l10n
+                              .videoEditorChromaKeyDoneSemanticLabel,
+                          center: Text(
+                            context.l10n.videoEditorChromaKeyTitle,
+                            style: VineTheme.titleMediumFont(
+                              color: context.vineColors.onSurface,
+                            ),
                           ),
                         ),
                       ),

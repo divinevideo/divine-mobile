@@ -113,6 +113,17 @@ class VideoEditorConstants {
   /// guards the first, uncached load before the canvas imports the overlays.
   static const textFontLoadTimeout = Duration(seconds: 3);
 
+  /// How long a chroma-key screen measurement may run before it is treated
+  /// as never returning.
+  ///
+  /// A liveness bound, not a performance budget: the measurement is a metadata
+  /// call and three small thumbnail decodes, which finish in well under a
+  /// second. The green-screen panel keeps Done disabled while it runs —
+  /// confirming earlier would bake the preset the measurement is about to
+  /// replace — so without this a decode that never calls back would lock the
+  /// panel for good (#8904).
+  static const Duration chromaKeyDetectTimeout = Duration(seconds: 15);
+
   /// Maximum time to wait for a draft write to complete before treating it as
   /// failed. A draft save is a local DB write that normally finishes in
   /// milliseconds; bounding it ensures a stalled write surfaces as a failure

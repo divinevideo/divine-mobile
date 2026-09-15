@@ -1,11 +1,25 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+/// Records every `addError` so a test can assert a measurement said nothing.
+class _RecordingObserver extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 void main() {
   group(ChromaKeyEditorCubit, () {
@@ -583,6 +597,213 @@ void main() {
           expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
         },
       );
+    });
+
+    group('timeout', () {
+      const bound = VideoEditorConstants.chromaKeyDetectTimeout;
+
+      test('gives up on a measurement that never returns', () {
+        fakeAsync((async) {
+          final cubit = build(
+            detect: (_) => Completer<ChromaKeyDetection>().future,
+          );
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.flushMicrotasks();
+          expect(cubit.state.isDetecting, isTrue);
+
+          // The screen keeps Done disabled while this is true, so a decode
+          // that never calls back would otherwise lock the panel for good.
+          async.elapse(bound);
+          async.flushMicrotasks();
+
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.timedOut,
+          );
+          expect(cubit.state.isDetecting, isFalse);
+          // A stall is not a verdict on the footage: the preset the controls
+          // act on stays, and the user is not told their screen is wrong.
+          expect(cubit.state.chromaKey.key, const ChromaKey.greenScreen());
+        });
+      });
+
+      test('discards a measurement that lands after the bound', () {
+        fakeAsync((async) {
+          final gate = Completer<ChromaKeyDetection>();
+          final cubit = build(detect: (_) => gate.future);
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.elapse(bound);
+          async.flushMicrotasks();
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.timedOut,
+          );
+
+          // Adopting it late would change the key under a user who has since
+          // been told to set it by hand — possibly mid-bake.
+          gate.complete(measured);
+          async.flushMicrotasks();
+
+          expect(cubit.state.chromaKey.key, const ChromaKey.greenScreen());
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.timedOut,
+          );
+        });
+      });
+
+      test('a measurement inside the bound is not cut short', () {
+        fakeAsync((async) {
+          final gate = Completer<ChromaKeyDetection>();
+          final cubit = build(detect: (_) => gate.future);
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.elapse(bound - const Duration(seconds: 1));
+          gate.complete(measured);
+          async.flushMicrotasks();
+
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+
+          // Nothing left armed: the bound must not fire on a result that
+          // already landed.
+          async.elapse(bound);
+          async.flushMicrotasks();
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        });
+      });
+
+      test('the manual control re-measures after a timeout', () {
+        fakeAsync((async) {
+          var calls = 0;
+          final cubit = build(
+            detect: (_) async {
+              calls++;
+              if (calls == 1) {
+                return Completer<ChromaKeyDetection>().future;
+              }
+              return measured;
+            },
+          );
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.elapse(bound);
+          async.flushMicrotasks();
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.timedOut,
+          );
+
+          // The copy tells the user to try Auto-detect again, so the timed
+          // out attempt must not be the one and only.
+          unawaited(cubit.detectFromFootage());
+          async.flushMicrotasks();
+
+          expect(calls, 2);
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        });
+      });
+
+      test('a stall written off by a hand edit times out silently', () {
+        final observer = _RecordingObserver();
+        final previousObserver = Bloc.observer;
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previousObserver);
+
+        fakeAsync((async) {
+          final cubit = build(
+            detect: (_) => Completer<ChromaKeyDetection>().future,
+          );
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.flushMicrotasks();
+          cubit.setKeyColor(const Color(0xFF0000FF));
+          expect(cubit.state.isDetecting, isFalse);
+
+          // The edit ended the wait, Done has been live since, and the panel
+          // may be sitting under a bake by now: a "took too long" landing
+          // here would report a measurement nobody is waiting for. A "no
+          // screen" verdict after an edit is news about the footage and still
+          // reports; a stall is not.
+          async.elapse(bound);
+          async.flushMicrotasks();
+
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF0000FF));
+          expect(observer.errors, isEmpty);
+        });
+      });
+
+      test('a superseded stall times out silently under the re-run', () {
+        fakeAsync((async) {
+          var calls = 0;
+          final rerun = Completer<ChromaKeyDetection>();
+          final cubit = build(
+            detect: (_) {
+              calls++;
+              return calls == 1
+                  ? Completer<ChromaKeyDetection>().future
+                  : rerun.future;
+            },
+          );
+          addTearDown(cubit.close);
+
+          const headStart = Duration(seconds: 5);
+          unawaited(cubit.detectFromFootage());
+          async.elapse(headStart);
+          // Writing the stall off is what brings Auto-detect back, so the
+          // re-run starts while the first decode is still out there.
+          cubit.setSimilarity(0.4);
+          unawaited(cubit.detectFromFootage());
+          async.flushMicrotasks();
+          expect(calls, 2);
+          expect(cubit.state.isDetecting, isTrue);
+
+          // The first bound expires while the re-run is measuring. It is an
+          // older generation, so it must not knock the re-run out of
+          // `detecting` — the re-run's own bound is still to come.
+          async.elapse(bound - headStart);
+          async.flushMicrotasks();
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.detecting,
+          );
+
+          rerun.complete(measured);
+          async.flushMicrotasks();
+          expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        });
+      });
+
+      test('acknowledgeDetectionFailure clears a timeout too', () {
+        fakeAsync((async) {
+          final cubit = build(
+            detect: (_) => Completer<ChromaKeyDetection>().future,
+          );
+          addTearDown(cubit.close);
+
+          unawaited(cubit.detectFromFootage());
+          async.elapse(bound);
+          async.flushMicrotasks();
+          expect(
+            cubit.state.detectionStatus,
+            ChromaKeyDetectionStatus.timedOut,
+          );
+
+          cubit.acknowledgeDetectionFailure();
+
+          expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.idle);
+        });
+      });
     });
 
     group('background', () {

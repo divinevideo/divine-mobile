@@ -8902,6 +8902,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Измерването на фона отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';
 
   @override

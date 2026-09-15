@@ -8994,6 +8994,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie znaleziono tła — musi wypełniać cały kadr za tobą. Gładka ściana wystarczy. Albo wybierz kolor ręcznie.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Pomiar tła trwał za długo. Spróbuj ponownie „Wykryj automatycznie” albo wybierz kolor ręcznie.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Wybierz klip';
 
   @override

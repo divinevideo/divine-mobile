@@ -8788,6 +8788,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'Đo phông nền mất quá lâu. Thử Tự động nhận diện lại, hoặc tự chọn màu.';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'Chọn một clip';
 
   @override

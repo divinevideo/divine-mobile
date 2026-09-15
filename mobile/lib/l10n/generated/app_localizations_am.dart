@@ -8620,6 +8620,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።';
 
   @override
+  String get videoEditorChromaKeyDetectTimedOut =>
+      'ስክሪኑን ለመለካት ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።';
+
+  @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';
 
   @override
