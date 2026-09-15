@@ -54,6 +54,42 @@ void main() {
   });
 
   group('AppDatabase', () {
+    group('pending report schema recovery', () {
+      test(
+        'restores moderation columns without losing an accepted report',
+        () async {
+          await database.pendingReportsDao.enqueue(
+            PendingReport(
+              reportId: 'repair-report',
+              userPubkey: testPubkey,
+              eventJson: '{}',
+              zendeskPayload: '{}',
+              createdAt: DateTime(2026),
+            ),
+          );
+          for (final column in [
+            'moderation_payload',
+            'moderation_status',
+            'moderation_attempts',
+          ]) {
+            await database.customStatement(
+              'ALTER TABLE pending_reports DROP COLUMN $column',
+            );
+          }
+          await database.close();
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          final report = await database.pendingReportsDao.getById(
+            'repair-report',
+          );
+          expect(report, isNotNull);
+          expect(report!.relayStatus, PendingReportChannelStatus.pending);
+          expect(report.moderationPayload, isNull);
+          expect(report.moderationStatus, PendingReportChannelStatus.done);
+          expect(report.moderationAttempts, 0);
+        },
+      );
+    });
+
     group('runStartupCleanup', () {
       test('deletes expired nostr events', () async {
         final dao = database.nostrEventsDao;
@@ -1254,6 +1290,46 @@ void main() {
 
     group('schema repair', () {
       test(
+        'restores the queued view-event recording version on a damaged '
+        'current-version database',
+        () async {
+          await database.customSelect('SELECT 1').get();
+          await database.close();
+          final raw = sqlite3.open(tempDbPath);
+          try {
+            // A current-version database that lost the column: the upgrade
+            // step cannot help, so recovery depends on the repair probe
+            // listing app_version and the beforeOpen chain repairing it.
+            raw.execute(
+              'ALTER TABLE pending_view_events DROP COLUMN app_version;',
+            );
+            final damaged = raw
+                .select('PRAGMA table_info(pending_view_events);')
+                .map((row) => row['name'] as String);
+            expect(
+              damaged,
+              isNot(contains('app_version')),
+              reason: 'precondition: the column must be missing',
+            );
+          } finally {
+            raw.close();
+          }
+
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          await database.customSelect('SELECT 1').get();
+
+          final repaired = await database
+              .customSelect('PRAGMA table_info(pending_view_events);')
+              .get();
+          expect(
+            repaired.map((row) => row.data['name'] as String),
+            contains('app_version'),
+            reason: 'reopening a damaged database must restore the column',
+          );
+        },
+      );
+
+      test(
         'repairs the v4 clip organization schema on a damaged current-version '
         'database',
         () async {
@@ -1986,6 +2062,7 @@ const _v1NormalizationTables = <String>[
   'pending_profile_saves',
   'dm_message_reactions',
   'pending_view_events',
+  'pending_reports',
   'pending_product_events',
   'pending_gift_wraps',
   'processed_gift_wraps',

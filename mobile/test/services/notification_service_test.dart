@@ -658,6 +658,27 @@ void main() {
       expect(events.single.referencedEventId, isNull);
     });
 
+    test('a campaign local payload round-trips its app-route target', () async {
+      final events = <NotificationTapEvent>[];
+      final sub = service.notificationTapStream.listen(events.add);
+      addTearDown(sub.cancel);
+
+      final payload = jsonEncode(
+        localNotificationTapPayload(const {
+          'type': 'campaign',
+          'tapTargetType': 'app_route',
+          'tapTargetValue': '/following/new',
+        }),
+      );
+      service.handleNotificationTapPayload(payload);
+      await pumpEventQueue();
+
+      expect(events, hasLength(1));
+      expect(events.single.notificationType, equals('campaign'));
+      expect(events.single.tapTargetType, equals('app_route'));
+      expect(events.single.tapTargetValue, equals('/following/new'));
+    });
+
     test('no-ops gracefully when the stream has no listeners', () {
       expect(
         () => service.handleNotificationTapPayload(
@@ -833,11 +854,15 @@ void main() {
         referencedEventId: 'abc123',
         referencedAddress: '34236:owner:vine',
         notificationType: 'reply',
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
       );
       const second = NotificationTapEvent(
         referencedEventId: 'abc123',
         referencedAddress: '34236:owner:vine',
         notificationType: 'reply',
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
       );
       const third = NotificationTapEvent(
         referencedEventId: 'xyz789',
@@ -848,11 +873,19 @@ void main() {
         referencedAddress: '34236:owner:other-vine',
         notificationType: 'reply',
       );
+      const differsByTarget = NotificationTapEvent(
+        referencedEventId: 'abc123',
+        referencedAddress: '34236:owner:vine',
+        notificationType: 'reply',
+        tapTargetType: 'app_route',
+        tapTargetValue: '/notifications',
+      );
 
       expect(first, equals(second));
       expect(first.hashCode, equals(second.hashCode));
       expect(first, isNot(equals(third)));
       expect(first, isNot(equals(differsByAddress)));
+      expect(first, isNot(equals(differsByTarget)));
     });
   });
 }

@@ -27,7 +27,7 @@ enum InlineReelReplyStatus {
   /// unknown. Distinct from [success] because nothing proved delivery, and
   /// from [failure] because there is no row left to retry — offering one
   /// would fall through to a fresh send and mint the duplicate this flow
-  /// exists to prevent. Mirrors `ModerationDmOutcome.unverifiable`.
+  /// exists to prevent.
   unverifiable,
 }
 

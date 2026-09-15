@@ -1,85 +1,70 @@
 #!/usr/bin/env bash
-# Fails a build whose supporter subscription configuration is incoherent.
+# ABOUTME: Guards the divine-supporters client configuration for a shipping build.
+# ABOUTME: The feature is always on; this checks the Worker URL it will talk to.
 #
-# Two variables drive the feature:
+# The supporter feature is not behind a flag. `supporterApiBaseUrl` in
+# mobile/lib/providers/supporter_providers.dart carries a compiled default, and
+# no build step passes a supporter `--dart-define`, so an ordinary build ships a
+# working supporter flow with no configuration at all.
 #
-#   FF_DIVINE_SUPPORTERS   - master switch, read by bool.fromEnvironment
-#   SUPPORTERS_API_BASE_URL - base URL of the divine-supporters Worker
+# What can still break, and why each is silent without this check:
+#   - The compiled default stops being an absolute https URL, or grows a query
+#     or fragment. SupporterApiClient resolves paths against this base, so a
+#     query or fragment corrupts every request.
+#   - Someone reintroduces `--dart-define=SUPPORTERS_API_BASE_URL=$VAR` for a
+#     staging or QA build. Both that form and the Shorebird `ENV.fetch(name, '')`
+#     path substitute an *empty string* when the variable is unset, and an empty
+#     base URL makes supporterApiClientProvider null — the settings tile
+#     disappears and the route redirects, which looks exactly like the feature
+#     was never built.
 #
-# The build steps interpolate both unconditionally, so an unset variable emits
-# `--dart-define=NAME=` — a define that is present but empty, which overrides
-# the Dart-side default rather than falling back to it. For these two that
-# happens to fail safe (empty URL means supporterApiClientProvider returns
-# null, empty flag is false), but it fails *silently*: you get a build where
-# the supporter screen appears and can never reach the server, and nothing
-# says so until a purchase 500s in someone's hands.
-#
-# So the invariant enforced here is not "both must be set" — it is "these two
-# must agree". A flag turned on without a server is the broken combination.
+# A leftover environment-group variable that no build passes to Dart is inert.
+# It is reported, never fatal: a stale variable must not fail a store build.
 #
 # Runs as a Codemagic build step in every workflow that ships an artifact.
 set -euo pipefail
 
-flag="${FF_DIVINE_SUPPORTERS:-}"
-base_url="${SUPPORTERS_API_BASE_URL:-}"
+providers="mobile/lib/providers/supporter_providers.dart"
+[ -f "$providers" ] || providers="lib/providers/supporter_providers.dart"
 
-# The flag, when set at all, must be something bool.fromEnvironment understands.
-# Anything else silently evaluates to false, which looks like the feature was
-# never enabled rather than like a typo.
-if [ -n "$flag" ] && [ "$flag" != "true" ] && [ "$flag" != "false" ]; then
-  echo "ERROR: FF_DIVINE_SUPPORTERS is '$flag'." >&2
-  echo "  bool.fromEnvironment only recognises 'true' or 'false'. Any other" >&2
-  echo "  value evaluates to false, so the feature would stay off and look" >&2
-  echo "  like it was never enabled." >&2
+fail=0
+
+note_inert_variable() {
+  echo "NOTE: $1 is set in this environment but no build step passes it to" >&2
+  echo "  Dart, so it has no effect. Remove it from the environment group to" >&2
+  echo "  avoid implying it still configures something." >&2
+}
+
+[ -n "${FF_DIVINE_SUPPORTERS:-}" ] && note_inert_variable FF_DIVINE_SUPPORTERS
+[ -n "${SUPPORTERS_API_BASE_URL:-}" ] && note_inert_variable SUPPORTERS_API_BASE_URL
+
+# Validate the compiled default: it is what every build actually ships.
+default_url=$(sed -n "s/.*defaultValue: '\([^']*\)'.*/\1/p" "$providers" | head -1)
+
+if [ -z "$default_url" ]; then
+  echo "ERROR: $providers has no compiled default for SUPPORTERS_API_BASE_URL." >&2
+  echo "  Without it, a build with no dart-define ships the supporter client" >&2
+  echo "  disabled: no settings tile, and the route redirects." >&2
   exit 1
 fi
 
-# A flag with no server is the combination that ships broken.
-if [ "$flag" = "true" ] && [ -z "$base_url" ]; then
-  echo "ERROR: FF_DIVINE_SUPPORTERS=true but SUPPORTERS_API_BASE_URL is empty." >&2
-  echo "  supporterApiClientProvider returns null when the URL is empty, so the" >&2
-  echo "  supporter screen would render with no way to claim a purchase or read" >&2
-  echo "  entitlement. Configure SUPPORTERS_API_BASE_URL for this build, or" >&2
-  echo "  turn the flag off." >&2
-  exit 1
-fi
-
-# An unset URL is fine on its own: the feature is inert.
-if [ -z "$base_url" ]; then
-  exit 0
-fi
-
-case "$base_url" in
+case "$default_url" in
   https://*) ;;
   *)
-    echo "ERROR: SUPPORTERS_API_BASE_URL must be an absolute https URL." >&2
-    echo "  Got: $base_url" >&2
-    exit 1
+    echo "ERROR: the compiled SUPPORTERS_API_BASE_URL default is not https." >&2
+    echo "  Got: $default_url" >&2
+    fail=1
     ;;
 esac
 
-# SupporterApiClient normalises the base through _trimBaseUri(), which strips
-# trailing slashes and appends exactly one, then resolves each path against it.
-# Trailing slashes and path prefixes both survive that correctly:
-#
-#   https://host      -> https://host/v1/me
-#   https://host/     -> https://host/v1/me
-#   https://host/api  -> https://host/api/v1/me
-#
-# A query or fragment does not. _trimBaseUri concatenates the slash onto the
-# full string, so 'https://host/api?x=1' becomes 'https://host/api?x=1/' and
-# resolving '/v1/me' against it yields 'https://host/v1/me' — the '/api'
-# prefix is silently dropped and every request goes to the wrong path.
-case "$base_url" in
-  *\?* | *\#*)
-    echo "ERROR: SUPPORTERS_API_BASE_URL must not contain a query or fragment." >&2
-    echo "  SupporterApiClient appends a slash to this value before resolving" >&2
-    echo "  each request path. A query or fragment makes that resolution drop" >&2
-    echo "  the base path, so requests silently go somewhere else." >&2
-    echo "  Got: $base_url" >&2
-    echo "  Expected something like: https://supporters.divine.video" >&2
-    exit 1
+case "$default_url" in
+  *\?* | *"#"*)
+    echo "ERROR: the compiled SUPPORTERS_API_BASE_URL default carries a query" >&2
+    echo "  or fragment. SupporterApiClient resolves request paths against this" >&2
+    echo "  base, so either one corrupts every request it makes." >&2
+    echo "  Got: $default_url" >&2
+    fail=1
     ;;
 esac
 
-echo "Supporter config OK (flag='${flag:-unset}', base='$base_url')."
+exit "$fail"

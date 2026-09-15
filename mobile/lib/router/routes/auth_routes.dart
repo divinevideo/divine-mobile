@@ -3,15 +3,10 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/invite_availability_providers.dart';
-import 'package:openvine/router/invite_availability_redirects.dart';
 import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/auth/create_account_screen.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
-import 'package:openvine/screens/auth/invite_gate_screen.dart';
-import 'package:openvine/screens/auth/invite_protected_create_account_screen.dart';
 import 'package:openvine/screens/auth/login_options_screen.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
@@ -33,34 +28,11 @@ List<RouteBase> authRoutes(Ref ref) {
       },
       routes: [
         GoRoute(
-          path: 'invite',
-          name: InviteGateScreen.routeName,
-          redirect: (_, state) => inviteGateRedirectIfDisabled(
-            ref.read(inviteAvailabilityCubitProvider),
-            state,
-          ),
-          builder: (_, state) {
-            _captureProductAnalyticsUtm(ref, state);
-            return InviteGateScreen(
-              initialCode: state.uri.queryParameters['code'],
-              initialError: state.uri.queryParameters['error'],
-              initialErrorReason: InviteGateError.fromQuery(
-                state.uri.queryParameters['errorReason'],
-              ),
-              initialSourceSlug: state.uri.queryParameters['sourceSlug'],
-            );
-          },
-        ),
-        GoRoute(
           path: 'create-account',
           name: CreateAccountScreen.routeName,
           builder: (_, state) {
             _captureProductAnalyticsUtm(ref, state);
-            return InviteProtectedCreateAccountScreen(
-              initialCode: state.uri.queryParameters['code'],
-              initialError: state.uri.queryParameters['error'],
-              initialSourceSlug: state.uri.queryParameters['sourceSlug'],
-            );
+            return const CreateAccountScreen();
           },
         ),
         GoRoute(

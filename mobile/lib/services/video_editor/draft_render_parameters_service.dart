@@ -99,6 +99,7 @@ class DraftRenderParametersService {
       // timeline track, so without this the same draft publishes with music
       // from the editor and silent from the library.
       selectedSound: draft.selectedSound,
+      logName: _logName,
     );
 
     final stickers = <StickerData>[];
@@ -297,14 +298,18 @@ class DraftRenderParametersService {
   /// Resolves everything the mounted layers need before they are captured.
   ///
   /// Runs while the layers are mounted but before the capture frame, so both
-  /// halves land in the first build the rasterizer measures: fonts for text
-  /// and emoji layers, images for stickers.
+  /// halves land in the first build the rasterizer measures: the fonts the
+  /// text layers name, images for stickers.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
   ) => Future.wait([
-    if (layers.any((layer) => layer is TextLayer || layer is EmojiLayer))
-      preloadEditorTextFonts(),
+    preloadEditorTextFonts(
+      fontFamilies: layers
+          .whereType<TextLayer>()
+          .map((layer) => layer.textStyle?.fontFamily)
+          .nonNulls,
+    ),
     _precacheStickers(stickers),
   ]);
 

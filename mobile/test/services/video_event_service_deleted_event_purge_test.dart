@@ -12,7 +12,6 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:path/path.dart' as p;
 
@@ -137,7 +136,6 @@ void main() {
       nostrService = _StreamingNostrService();
       service = VideoEventService(
         nostrService,
-        subscriptionManager: SubscriptionManager(nostrService),
         crashReporter: const SilentCrashReporter(),
         eventRouter: eventRouter,
       );

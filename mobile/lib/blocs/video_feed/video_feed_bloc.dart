@@ -223,14 +223,20 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// (skipping the first replay) so curated list changes refresh the feed.
   ///
   /// If a feed mode was previously saved to SharedPreferences, that mode is
-  /// restored. Otherwise [event.mode] is used.
+  /// restored. Otherwise [event.mode] is used. A forced start
+  /// ([VideoFeedStarted.forceMode]) uses [event.mode] and leaves the stored
+  /// preference untouched, so a campaign landing cannot rewrite the account's
+  /// home source.
   Future<void> _onStarted(
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    final source = _modePreferences.restoreSource(event.mode);
-    if (_sharedPreferences?.getString(_modePreferences.key) !=
-        source.persistenceValue) {
+    final source = event.forceMode
+        ? VideoFeedSource.fromMode(event.mode)
+        : _modePreferences.restoreSource(event.mode);
+    if (!event.forceMode &&
+        _sharedPreferences?.getString(_modePreferences.key) !=
+            source.persistenceValue) {
       await _modePreferences.persist(source);
     }
 

@@ -377,6 +377,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         latestPixelBuffer = pixelBuffer
         os_unfair_lock_unlock(&pixelBufferLock)
         guard isFrameDeliveryEnabled else { return }
+        PlaybackDiagnostics.shared.recordFrameDelivered()
         registry.textureFrameAvailable(textureId)
         if !hasDeliveredFirstFrame {
             hasDeliveredFirstFrame = true

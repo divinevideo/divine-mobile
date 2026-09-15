@@ -25,8 +25,6 @@ void main() {
     });
   });
 
-  group('PermissionsService', () {});
-
   group('PermissionHandlerPermissionsService', () {
     late PermissionHandlerPermissionsService service;
 

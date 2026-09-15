@@ -1,10 +1,11 @@
 // ABOUTME: Handles deep links delivered while the app is already running
 // ABOUTME: Extracted from a 414-line closure inside main.dart's build() (#3337)
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -118,6 +119,23 @@ class DeepLinkCoordinator {
   final GoRouter _router;
   final AuthService _authService;
 
+  void _push(String location, {Object? extra}) {
+    // A push future is the eventual pop result; keep listening and log errors.
+    unawaited(
+      _router.push<void>(location, extra: extra).catchError((
+        Object error,
+        StackTrace stack,
+      ) {
+        Log.error(
+          '❌ Pushed route failed: $error',
+          name: 'DeepLinkHandler',
+          category: LogCategory.ui,
+          stackTrace: stack,
+        );
+      }),
+    );
+  }
+
   /// Handles one event from the deep-link stream.
   void handle(AsyncValue<DeepLink> next) {
     Log.info(
@@ -180,7 +198,7 @@ class DeepLinkCoordinator {
                   case VideoDeepLinkNavAction.push:
                     // Keep the home route underneath the first shared video
                     // so back navigation returns to the main screen.
-                    router.push(targetPath, extra: routeExtra);
+                    _push(targetPath, extra: routeExtra);
                 }
                 Log.info(
                   '✅ Navigation completed to: $targetPath',
@@ -238,7 +256,7 @@ class DeepLinkCoordinator {
                   case DeepLinkNavAction.push:
                     // Keep the current route underneath so back returns to
                     // wherever the user was instead of wiping the stack.
-                    router.push(targetPath);
+                    _push(targetPath);
                 }
                 Log.info(
                   '✅ Navigation completed to: $targetPath',
@@ -289,7 +307,7 @@ class DeepLinkCoordinator {
                   case DeepLinkNavAction.push:
                     // Keep the current route underneath so back returns to
                     // wherever the user was instead of wiping the stack.
-                    router.push(targetPath);
+                    _push(targetPath);
                 }
                 Log.info(
                   '✅ Navigation completed to: $targetPath',
@@ -327,9 +345,7 @@ class DeepLinkCoordinator {
                   targetPath: targetPath,
                   isRouteFamilyLocation: (location) =>
                       location == SearchResultsPage.emptyPath ||
-                      location.startsWith(
-                        '${SearchResultsPage.pathPrefix}/',
-                      ) ||
+                      location.startsWith('${SearchResultsPage.pathPrefix}/') ||
                       location.startsWith('${SearchResultsPage.emptyPath}?'),
                 );
                 switch (action) {
@@ -346,7 +362,7 @@ class DeepLinkCoordinator {
                   case DeepLinkNavAction.push:
                     // Keep the current route underneath so back returns to
                     // wherever the user was instead of wiping the stack.
-                    router.push(targetPath);
+                    _push(targetPath);
                 }
                 Log.info(
                   '✅ Navigation completed to: $targetPath',
@@ -386,9 +402,8 @@ class DeepLinkCoordinator {
                 final action = resolveDeepLinkNavAction(
                   currentLocation: currentLocation,
                   targetPath: targetPath,
-                  isRouteFamilyLocation: (location) => location.startsWith(
-                    '${CuratedListFeedScreen.basePath}/',
-                  ),
+                  isRouteFamilyLocation: (location) =>
+                      location.startsWith('${CuratedListFeedScreen.basePath}/'),
                 );
                 switch (action) {
                   case DeepLinkNavAction.skip:
@@ -413,7 +428,7 @@ class DeepLinkCoordinator {
                   case DeepLinkNavAction.push:
                     // Keep the current route underneath so back returns to
                     // wherever the user was instead of wiping the stack.
-                    router.push(targetPath);
+                    _push(targetPath);
                     Log.info(
                       '✅ Navigation completed to: $targetPath',
                       name: 'DeepLinkHandler',
@@ -430,32 +445,6 @@ class DeepLinkCoordinator {
             } else {
               Log.warning(
                 '⚠️ List deep link missing list id',
-                name: 'DeepLinkHandler',
-                category: LogCategory.ui,
-              );
-            }
-          case DeepLinkType.invite:
-            if (deepLink.inviteCode != null) {
-              final targetPath = WelcomeScreen.inviteGatePathWithCode(
-                deepLink.inviteCode!,
-              );
-              Log.info(
-                '📱 Navigating to invite gate: ${redactUriStringForLogs(targetPath)}',
-                name: 'DeepLinkHandler',
-                category: LogCategory.ui,
-              );
-              try {
-                router.go(targetPath);
-              } catch (e) {
-                Log.error(
-                  '❌ Invite navigation failed: $e',
-                  name: 'DeepLinkHandler',
-                  category: LogCategory.ui,
-                );
-              }
-            } else {
-              Log.warning(
-                '⚠️ Invite deep link missing code',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
@@ -484,7 +473,7 @@ class DeepLinkCoordinator {
                 case DeepLinkNavAction.push:
                   // Keep the current route underneath so back returns to
                   // wherever the user was instead of wiping the stack.
-                  router.push(targetPath);
+                  _push(targetPath);
               }
               Log.info(
                 '✅ Navigation completed to: $targetPath',

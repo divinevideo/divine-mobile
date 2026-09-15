@@ -1,5 +1,5 @@
 // ABOUTME: Widget tests for sharing Divine from the Settings account header.
-// ABOUTME: Verifies invite availability cannot hide the anchored share action.
+// ABOUTME: Verifies the anchored share action and responsive layout.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -10,7 +10,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
@@ -35,8 +34,6 @@ import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../helpers/invite_availability_harness.dart';
 
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
 
@@ -172,15 +169,10 @@ void main() {
   });
 
   Widget wrap({
-    required OnboardingMode onboardingMode,
     Locale locale = const Locale('en'),
     double textScaleFactor = 1,
   }) {
     final divineHostFilterService = DivineHostFilterService(sharedPreferences);
-    final availabilityCubit = seededInviteAvailabilityCubit(
-      serverMode: onboardingMode,
-    );
-    addTearDown(availabilityCubit.close);
 
     return ProviderScope(
       overrides: [
@@ -227,11 +219,8 @@ void main() {
           maxScaleFactor: textScaleFactor,
           child: child!,
         ),
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<LocaleCubit>.value(value: localeCubit),
-            BlocProvider.value(value: availabilityCubit),
-          ],
+        home: BlocProvider<LocaleCubit>.value(
+          value: localeCubit,
           child: const SettingsScreen(),
         ),
       ),
@@ -239,34 +228,30 @@ void main() {
   }
 
   group('interactions', () {
-    for (final onboardingMode in OnboardingMode.values) {
-      testWidgets('shares Divine when onboarding mode is $onboardingMode', (
-        tester,
-      ) async {
-        await tester.binding.setSurfaceSize(const Size(800, 1600));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        await tester.pumpWidget(wrap(onboardingMode: onboardingMode));
-        await tester.pumpAndSettle();
+    testWidgets('shares Divine', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
 
-        final label = lookupAppLocalizations(
-          const Locale('en'),
-        ).settingsShareDivine;
-        expect(find.text(label), findsOneWidget);
-        final shareAction = find.ancestor(
-          of: find.text(label),
-          matching: find.byType(InkWell),
-        );
-        expect(tester.getSize(shareAction).height, greaterThanOrEqualTo(48));
+      final label = lookupAppLocalizations(
+        const Locale('en'),
+      ).settingsShareDivine;
+      expect(find.text(label), findsOneWidget);
+      final shareAction = find.ancestor(
+        of: find.text(label),
+        matching: find.byType(InkWell),
+      );
+      expect(tester.getSize(shareAction).height, greaterThanOrEqualTo(48));
 
-        await tester.tap(find.text(label));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
 
-        expect(shareCalls, hasLength(1));
-        expect(shareCalls.single['text'], AppConstants.downloadUrl);
-        expect(shareCalls.single['originWidth'], isNotNull);
-        expect(shareCalls.single['originHeight'], isNotNull);
-      });
-    }
+      expect(shareCalls, hasLength(1));
+      expect(shareCalls.single['text'], AppConstants.downloadUrl);
+      expect(shareCalls.single['originWidth'], isNotNull);
+      expect(shareCalls.single['originHeight'], isNotNull);
+    });
   });
 
   group('renders', () {
@@ -290,11 +275,7 @@ void main() {
           addTearDown(() => tester.binding.setSurfaceSize(null));
 
           await tester.pumpWidget(
-            wrap(
-              onboardingMode: OnboardingMode.open,
-              locale: probe.locale,
-              textScaleFactor: probe.textScale,
-            ),
+            wrap(locale: probe.locale, textScaleFactor: probe.textScale),
           );
           await tester.pumpAndSettle();
 

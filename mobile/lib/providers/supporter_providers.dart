@@ -25,16 +25,53 @@ bool get hasInAppPurchaseStore =>
     defaultTargetPlatform != TargetPlatform.windows &&
     defaultTargetPlatform != TargetPlatform.macOS;
 
-/// Optional Worker URL supplied by the build once divine-supporters exists.
+/// Base URL of the divine-supporters Worker.
 ///
-/// Keeping this empty by default prevents the flag-gated client foundation
-/// from sending requests to an invented or undeployed endpoint.
-const supporterApiBaseUrl = String.fromEnvironment('SUPPORTERS_API_BASE_URL');
+/// Defaults to the deployed production Worker so an ordinary build ships a
+/// working supporter flow. A build overrides it with
+/// `--dart-define=SUPPORTERS_API_BASE_URL=...` to point at staging or a QA
+/// deployment; passing an empty or malformed value disables the client
+/// entirely.
+const supporterApiBaseUrl = String.fromEnvironment(
+  'SUPPORTERS_API_BASE_URL',
+  defaultValue: 'https://supporters.divine.video',
+);
+
+/// Whether [baseUrl] is a usable base for the supporter Worker.
+///
+/// A usable base URL is a non-empty absolute `https` URL with a host and no
+/// query or fragment. The query and fragment matter because
+/// [SupporterApiClient] appends a slash to the base before resolving request
+/// paths: `https://host/api?x=1` becomes `https://host/api?x=1/`, so resolving
+/// `/v1/me` against it silently drops the `/api` prefix and every request goes
+/// somewhere else. Treating a malformed override as unusable disables the
+/// client deliberately instead of misrouting it.
+bool supporterApiUsable(String baseUrl) {
+  if (baseUrl.isEmpty || baseUrl != baseUrl.trim()) return false;
+  final uri = Uri.tryParse(baseUrl);
+  return uri != null &&
+      uri.isAbsolute &&
+      uri.scheme == 'https' &&
+      uri.host.isNotEmpty &&
+      !uri.hasQuery &&
+      !uri.hasFragment;
+}
+
+/// Whether this build can talk to the supporter Worker at all.
+///
+/// Equivalent to `supporterApiClientProvider != null`, because an unusable
+/// base URL is the only thing that makes that provider null — but it answers
+/// the question without *building* the client, which pulls in the NIP-98 and
+/// secure-auth services and the work they start. A settings tile deciding
+/// whether to render, and a route guard evaluating a redirect, should not pay
+/// that cost or leave those services running behind them.
+@riverpod
+bool supporterApiConfigured(Ref ref) => supporterApiUsable(supporterApiBaseUrl);
 
 /// The NIP-98 authenticated supporter Worker client, when configured.
 @riverpod
 SupporterApiClient? supporterApiClient(Ref ref) {
-  if (supporterApiBaseUrl.isEmpty) return null;
+  if (!supporterApiUsable(supporterApiBaseUrl)) return null;
 
   final authService = ref.watch(nip98AuthServiceProvider);
   final client = SupporterApiClient(
@@ -92,10 +129,14 @@ SupporterRepository supporterRepository(Ref ref) {
 /// foreground.
 ///
 /// This deliberately does not depend on the Supporter screen or the feature
-/// flag. Purchases with a known local or canonical account owner can recover
-/// without opening Settings. Unbound legacy purchases require explicit Restore
-/// to choose their account. The repository coalesces overlapping calls and
-/// retries temporary failures on a later foreground edge.
+/// flag. It runs only when the device already carries local evidence of a
+/// purchase — a cached entitlement or an interrupted claim — so an account that
+/// never bought anything does not spend an authenticated request and a store
+/// restore to find nothing. A purchase known only canonically (a reinstall, a
+/// new device) is picked up when the user opens the Supporter screen, or by an
+/// explicit Restore; unbound legacy purchases require that explicit Restore to
+/// choose their account. The repository coalesces overlapping calls and retries
+/// temporary failures on a later foreground edge.
 final supporterRecoveryProvider = Provider<Future<void>?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final authState = ref.watch(currentAuthStateProvider);
@@ -109,5 +150,8 @@ final supporterRecoveryProvider = Provider<Future<void>?>((ref) {
 
   final repository = ref.watch(supporterRepositoryProvider);
   if (!repository.hasServerClient) return null;
+  // Nothing to recover until this device has seen a purchase. See
+  // [SupporterRepository.hasRecoverableEvidence].
+  if (!repository.hasRecoverableEvidence) return null;
   return repository.recoverPurchases();
 });

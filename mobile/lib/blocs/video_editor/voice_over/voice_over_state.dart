@@ -11,6 +11,11 @@ enum VoiceOverStatus {
   /// A take is currently being recorded.
   recording,
 
+  /// A take was stopped and is being finalized — the recorder is closing its
+  /// file and the audio session is being restored — before it lands in
+  /// [VoiceOverState.takes].
+  stopping,
+
   /// An unexpected error occurred while starting or stopping a recording.
   error,
 }
@@ -59,6 +64,16 @@ class VoiceOverState extends Equatable {
   /// Whether a take is currently being recorded.
   bool get isRecording => status == VoiceOverStatus.recording;
 
+  /// Whether a stopped take is still being finalized. Announced the moment
+  /// stop is tapped, so the UI — and the preview behind it — can hold
+  /// before the recorder's own stop has finished.
+  bool get isStopping => status == VoiceOverStatus.stopping;
+
+  /// Whether a take is in flight: recording, or stopped but not yet landed
+  /// in [takes]. Its window on the video is [nextTakeStart] plus
+  /// [currentDuration] either way.
+  bool get hasLiveTake => isRecording || isStopping;
+
   /// Number of recordings captured in this session.
   int get recordingCount => takes.length;
 
@@ -83,6 +98,30 @@ class VoiceOverState extends Equatable {
   bool get isOverAvailable =>
       availableDuration > Duration.zero &&
       totalRecordedDuration > availableDuration;
+
+  /// Where this session's completed takes land on the video — back to back,
+  /// clamped to the video, wrapping to the start once it is full — laid out
+  /// the same way Done commits them, from the recorder's duration estimate
+  /// for each take.
+  List<AudioEvent> get placedTakes => placeVoiceOverTakes(
+    takes: takes,
+    takeDurationsSecs: [for (final take in takes) take.duration ?? 0],
+    availableDuration: availableDuration,
+    nowMs: 0,
+  );
+
+  /// Video position the next take starts at: where the last placed take
+  /// ended, or the start once the video is full.
+  ///
+  /// While a take records this is that take's own start, since [takes] holds
+  /// completed ones only. The preview plays from here so the recording can
+  /// be timed against the picture it will actually sit over.
+  Duration get nextTakeStart {
+    final placed = placedTakes;
+    if (placed.isEmpty) return Duration.zero;
+    final cursor = placed.last.endTime ?? Duration.zero;
+    return cursor < availableDuration ? cursor : Duration.zero;
+  }
 
   /// Creates a copy with the given fields replaced.
   VoiceOverState copyWith({

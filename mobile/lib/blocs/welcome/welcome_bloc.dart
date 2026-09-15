@@ -1,6 +1,8 @@
 // ABOUTME: BLoC for welcome screen returning-user state
 // ABOUTME: Loads known accounts list for multi-account sign-in support
 
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:db_client/db_client.dart';
@@ -132,7 +134,7 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
     );
 
     // Hydrate profiles from SQLite in parallel, then update state.
-    _hydrateProfiles(knownAccounts);
+    unawaited(_hydrateProfiles(knownAccounts));
   }
 
   /// Loads cached profiles for each known account in parallel and fires
@@ -269,7 +271,7 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         name: 'WelcomeBloc',
         category: LogCategory.auth,
       );
-      // Auth-flow failures dominate (OAuth/Invite/network) — matrix-NO.
+      // Auth-flow failures dominate (OAuth/network) — matrix-NO.
       // YES-narrowing for invariant types deferred per #4592; analogous
       // to #4597's `_onMessageSent` deferral.
       addError(e, stackTrace);

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
@@ -1850,6 +1851,96 @@ void main() {
         expect(result, isTrue);
         expect(refreshCallCount, 0);
         expect(methodCalls, ['setAnonymousIdentity', 'showTicketList']);
+      },
+    );
+  });
+
+  group('queued report account ownership', () {
+    test(
+      'does not create a ticket after account switch during JWT refresh',
+      () async {
+        final methods = <String>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              methods.add(call.method);
+              return true;
+            });
+        await ZendeskSupportService.initialize(
+          appId: 'test',
+          clientId: 'test',
+          zendeskUrl: 'https://support.example',
+        );
+        final owner = Nip19.encodePubKey('a' * 64);
+        ZendeskSupportService.setUserIdentity(npub: owner);
+        ZendeskSupportService.storeAuthContext(
+          nip98Service: _FakeNip98AuthService(),
+          relayManagerUrl: 'https://relay.example',
+        );
+        final refreshing = Completer<void>();
+        final release = Completer<bool>();
+        ZendeskSupportService.setTestHooks(
+          jwtIdentityRefresh:
+              ({
+                required Nip98AuthService nip98Service,
+                required String relayManagerUrl,
+              }) {
+                refreshing.complete();
+                return release.future;
+              },
+        );
+        final filing = ZendeskSupportService.createTicket(
+          subject: 'Report',
+          description: 'Saved by the previous account',
+          expectedNpub: owner,
+        );
+        await refreshing.future;
+        ZendeskSupportService.setUserIdentity(
+          npub: Nip19.encodePubKey('b' * 64),
+        );
+        release.complete(true);
+        expect(await filing, isFalse);
+        expect(methods, isNot(contains('createTicket')));
+      },
+    );
+
+    test(
+      'does not install a stale JWT after account switch during token fetch',
+      () async {
+        final methods = <String>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              methods.add(call.method);
+              return true;
+            });
+        await ZendeskSupportService.initialize(
+          appId: 'test',
+          clientId: 'test',
+          zendeskUrl: 'https://support.example',
+        );
+        ZendeskSupportService.setUserIdentity(
+          npub: Nip19.encodePubKey('a' * 64),
+        );
+        final requested = Completer<void>();
+        final response = Completer<http.Response>();
+        final signing = http.runWithClient(
+          () => ZendeskSupportService.setJwtIdentity(
+            nip98Service: _RecordingUrlNip98AuthService(),
+            relayManagerUrl: 'https://relay.example',
+          ),
+          () => MockClient((_) {
+            requested.complete();
+            return response.future;
+          }),
+        );
+        await requested.future;
+        ZendeskSupportService.setUserIdentity(
+          npub: Nip19.encodePubKey('b' * 64),
+        );
+        response.complete(
+          http.Response('{"success":true,"token":"test-token"}', 200),
+        );
+        expect(await signing, isFalse);
+        expect(methods, isNot(contains('setJwtIdentity')));
       },
     );
   });

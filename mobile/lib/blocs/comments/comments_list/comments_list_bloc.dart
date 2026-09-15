@@ -142,7 +142,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
-      _startWatchingComments();
+      await _startWatchingComments();
     } on CommentsRepositoryException catch (e, stackTrace) {
       // *FailedException + relay timeouts are matrix-NO (API/domain +
       // Network/IO). addError logs without flagging Reportable so they stay
@@ -467,8 +467,15 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// Called from [_onLoadRequested] after the initial load so the REST-backed
   /// first paint is not blocked by relay backfill. Routes incoming comments
   /// through [NewCommentReceived].
-  void _startWatchingComments() {
-    _commentStreamSubscription?.cancel();
+  Future<void> _startWatchingComments() async {
+    // Detached on purpose: the replacement subscription does not depend on the
+    // old one finishing teardown, and awaiting here suspends between reading
+    // _commentStreamSubscription and assigning it. _onLoadRequested emits
+    // success before calling this, so its `status == loading` guard is open
+    // during that window and a second load can enter, leaving the first
+    // subscription assigned over and never cancelled. Pinned by
+    // comments_list_reload_race_test.dart.
+    unawaited(_commentStreamSubscription?.cancel());
 
     try {
       final stream = _commentsRepository.watchComments(

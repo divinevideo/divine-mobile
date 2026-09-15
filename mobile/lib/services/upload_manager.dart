@@ -162,11 +162,10 @@ class UploadManager implements BackgroundAwareService {
   final UploadRetryConfig _retryConfig;
   final Dio _dio = Dio();
 
-  // Background-aware lifecycle. The manager registers itself so that
-  // [onAppResumed] can re-drive uploads whose retry backoff froze while the
-  // app was suspended (Dart Timers do not fire while iOS suspends the app).
+  // Registers resume callbacks that re-drive backoffs frozen by iOS suspension.
   final BackgroundActivityManager _backgroundActivityManager;
   bool _isBackgroundRegistered = false;
+  bool _isDisposed = false;
 
   // Extracted concerns
   late final UploadRetryPolicy _retryPolicy;
@@ -218,14 +217,15 @@ class UploadManager implements BackgroundAwareService {
       _retryPolicy.isWaitingForBackoff(uploadId);
 
   void _registerForBackgroundActivity() {
-    if (_isBackgroundRegistered) return;
+    if (_isDisposed || _isBackgroundRegistered) return;
     _backgroundActivityManager.registerService(this);
     _isBackgroundRegistered = true;
   }
 
-  /// Initialize the upload manager and load persisted uploads
-  /// Uses robust initialization with retry logic and recovery strategies
+  /// Initializes unless disposed; disposal is terminal and requires a new manager.
   Future<void> initialize() async {
+    if (_isDisposed) return;
+
     if (_isInitialized && _store.isReady) {
       Log.info(
         'UploadManager already initialized',
@@ -242,8 +242,11 @@ class UploadManager implements BackgroundAwareService {
     );
 
     try {
-      // Delegate box open to the store.
       await _store.open();
+      if (_isDisposed) {
+        _store.disposeStore();
+        return;
+      }
 
       if (!_store.isReady) {
         throw Exception(
@@ -265,15 +268,11 @@ class UploadManager implements BackgroundAwareService {
       // Clean up old completed/published uploads to prevent accumulation
       await cleanupCompletedUploads();
 
-      // Register for background-lifecycle callbacks so [onAppResumed] can
-      // re-drive uploads whose retry backoff froze while the app was
-      // suspended (Dart Timers do not fire while iOS suspends the app).
+      if (_isDisposed) return;
+      // Resume callbacks thaw upload retries frozen by iOS suspension.
       _registerForBackgroundActivity();
 
-      // Re-drive uploads left in `uploading`/`retrying` by a prior crash or
-      // background freeze. Fire-and-forget: this runs on the event loop and
-      // must not block startup. `failed` uploads are intentionally left to the
-      // user-driven retry flow (they carry a manual retry budget).
+      // Recover crash-interrupted uploads without blocking startup.
       unawaited(_recoverStuckUploads());
     } catch (e, stackTrace) {
       _isInitialized = false;
@@ -1779,6 +1778,7 @@ class UploadManager implements BackgroundAwareService {
   }
 
   void dispose() {
+    _isDisposed = true;
     // Unregister from background-lifecycle callbacks before tearing down.
     if (_isBackgroundRegistered) {
       _backgroundActivityManager.unregisterService(this);

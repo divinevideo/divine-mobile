@@ -27,6 +27,7 @@ const legacyV1NormalizationRepairTables = <String>[
   'pending_profile_saves',
   'dm_message_reactions',
   'pending_view_events',
+  'pending_reports',
   'pending_product_events',
   'pending_gift_wraps',
   'processed_gift_wraps',
@@ -81,6 +82,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     Conversations,
     OutgoingDms,
     PendingViewEvents,
+    PendingReports,
     PendingProductEvents,
     PendingGiftWraps,
     ProcessedGiftWraps,
@@ -112,6 +114,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ConversationsDao,
     OutgoingDmsDao,
     PendingViewEventsDao,
+    PendingReportsDao,
     PendingProductEventsDao,
     PendingGiftWrapsDao,
     ProcessedGiftWrapsDao,
@@ -131,7 +134,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -214,6 +217,12 @@ class AppDatabase extends _$AppDatabase {
         // index set — the same divergence #7040 had to backfill at v7.
         await _createPersonalEventIndexes();
       }
+      if (from < 14) {
+        await _repairSchemaV14();
+      }
+      if (from < 15) {
+        await m.createTable(pendingReports);
+      }
     },
     beforeOpen: (details) async {
       // v1 databases are normalized by onUpgrade. This guarded path remains
@@ -230,6 +239,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV10();
         await _repairSchemaV11();
         await _migrateToV12OwnerScopedDmKeys();
+        await _repairSchemaV14();
       }
 
       // Run cleanup of expired data on every app startup
@@ -351,6 +361,20 @@ class AppDatabase extends _$AppDatabase {
   /// Adds the two-phase reporting column to the queued view-event outbox.
   Future<void> _repairSchemaV8() async {
     await _addColumnIfMissing('pending_view_events', 'phase', 'TEXT NULL');
+  }
+
+  /// Adds the recording-build version to the queued view-event outbox
+  /// (#9077).
+  ///
+  /// Existing rows stay NULL: nothing on a pre-v14 row says which build
+  /// recorded it, and the replay path omits the `version` tag for those
+  /// rather than attributing the view to the build that happens to replay it.
+  Future<void> _repairSchemaV14() async {
+    await _addColumnIfMissing(
+      'pending_view_events',
+      'app_version',
+      'TEXT NULL',
+    );
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1113,6 +1137,7 @@ class AppDatabase extends _$AppDatabase {
           total_duration_ms INTEGER,
           loop_count INTEGER,
           phase TEXT,
+          app_version TEXT,
           traffic_source TEXT NOT NULL,
           source_detail TEXT,
           status TEXT NOT NULL,
@@ -1131,6 +1156,50 @@ class AppDatabase extends _$AppDatabase {
       CREATE INDEX IF NOT EXISTS idx_pending_view_events_created_at
       ON pending_view_events (created_at)
     ''');
+
+    final pendingReportsResult = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='pending_reports'",
+    ).get();
+
+    if (pendingReportsResult.isEmpty) {
+      await customStatement('''
+        CREATE TABLE pending_reports (
+          report_id TEXT NOT NULL,
+          user_pubkey TEXT NOT NULL,
+          event_json TEXT NOT NULL,
+          target_relays TEXT NULL,
+          zendesk_payload TEXT NOT NULL,
+          moderation_payload TEXT NULL,
+          moderation_status TEXT NOT NULL DEFAULT 'done',
+          moderation_attempts INTEGER NOT NULL DEFAULT 0,
+          relay_status TEXT NOT NULL,
+          zendesk_status TEXT NOT NULL,
+          relay_attempts INTEGER NOT NULL DEFAULT 0,
+          zendesk_attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NULL,
+          last_attempt_at INTEGER NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (report_id)
+        )
+      ''');
+    }
+
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_payload',
+      'TEXT NULL',
+    );
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_status',
+      "TEXT NOT NULL DEFAULT 'done'",
+    );
+    await _addColumnIfMissing(
+      'pending_reports',
+      'moderation_attempts',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
 
     final pendingProductEventsResult = await customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' "
@@ -1444,6 +1513,15 @@ class AppDatabase extends _$AppDatabase {
         'video_addressable_d_tag',
         'video_event_kind',
         'phase',
+        'app_version',
+      ],
+      'pending_reports': [
+        'moderation_payload',
+        'moderation_status',
+        'moderation_attempts',
+        'report_id',
+        'relay_status',
+        'zendesk_status',
       ],
     };
 

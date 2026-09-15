@@ -8,13 +8,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -22,7 +19,6 @@ import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -35,6 +31,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/environment_service.dart';
@@ -43,7 +40,6 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/go_router.dart';
-import '../helpers/invite_availability_harness.dart';
 import '../helpers/scroll.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -59,17 +55,7 @@ class _FakeDraft extends Fake implements DivineVideoDraft {
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
-
 class _MockLocaleCubit extends MockCubit<LocaleState> implements LocaleCubit {}
-
-_MockInviteStatusCubit _createMockInviteCubit() {
-  final cubit = _MockInviteStatusCubit();
-  when(() => cubit.state).thenReturn(const InviteStatusState());
-  when(cubit.load).thenAnswer((_) async {});
-  return cubit;
-}
 
 _MockBackgroundPublishBloc _stubbedPublishBloc() {
   final bloc = _MockBackgroundPublishBloc();
@@ -136,17 +122,13 @@ void main() {
       AuthState authState = AuthState.authenticated,
       MockGoRouter? goRouter,
       List<KnownAccount> knownAccounts = const [],
-      _MockInviteStatusCubit? inviteCubit,
       _MockBackgroundPublishBloc? publishBloc,
-      InviteAvailabilityCubit? availabilityCubit,
       bool developerMode = false,
       AccountEnforcementKind? enforcement,
     }) {
       when(
         () => mockAuthService.getKnownAccounts(),
       ).thenAnswer((_) async => knownAccounts);
-
-      final mockInviteCubit = inviteCubit ?? _createMockInviteCubit();
 
       // Default publish bloc has no uploads in progress.
       final effectivePublishBloc = publishBloc ?? _MockBackgroundPublishBloc();
@@ -168,7 +150,7 @@ void main() {
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
-          currentAuthStateProvider.overrideWith((ref) => authState),
+          currentAuthStateProvider.overrideWithValue(authState),
           knownAccountsProvider.overrideWith((ref) async => knownAccounts),
           isAccountEnforcedProvider.overrideWithValue(
             enforcement?.isEnforced ?? false,
@@ -188,11 +170,6 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: MultiBlocProvider(
             providers: [
-              if (availabilityCubit != null)
-                BlocProvider<InviteAvailabilityCubit>.value(
-                  value: availabilityCubit,
-                ),
-              BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
               BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
               BlocProvider<BackgroundPublishBloc>.value(
                 value: effectivePublishBloc,
@@ -260,9 +237,7 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(
               mockDraftStorageService,
             ),
-            currentAuthStateProvider.overrideWith(
-              (ref) => AuthState.authenticated,
-            ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             knownAccountsProvider.overrideWith((ref) async => const []),
             // No NIP-05, but a follower count from the REST profile. Social
             // proof must not stand in for the signed-in account's identifier.
@@ -283,9 +258,6 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: MultiBlocProvider(
               providers: [
-                BlocProvider<InviteStatusCubit>.value(
-                  value: _createMockInviteCubit(),
-                ),
                 BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 BlocProvider<BackgroundPublishBloc>.value(
                   value: _stubbedPublishBloc(),
@@ -303,88 +275,6 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.socialProofFollowerCount(12, '12')), findsNothing);
-
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump();
-    });
-
-    testWidgets('does not load invite status for the share action', (
-      tester,
-    ) async {
-      final mockInviteCubit = _createMockInviteCubit();
-
-      await tester.pumpWidget(buildSubject(inviteCubit: mockInviteCubit));
-      await tester.pumpAndSettle();
-
-      verifyNever(mockInviteCubit.load);
-      expect(find.text(l10n.settingsShareDivine), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump();
-    });
-
-    testWidgets('shows share action when signup invites are disabled', (
-      tester,
-    ) async {
-      final availabilityCubit = seededInviteAvailabilityCubit(
-        serverMode: OnboardingMode.open,
-      );
-      addTearDown(availabilityCubit.close);
-
-      await tester.pumpWidget(
-        buildSubject(availabilityCubit: availabilityCubit),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.settingsShareDivine), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump();
-    });
-
-    testWidgets('keeps share action when invite override forces disabled', (
-      tester,
-    ) async {
-      final availabilityCubit = seededInviteAvailabilityCubit();
-      addTearDown(availabilityCubit.close);
-
-      await tester.pumpWidget(
-        buildSubject(availabilityCubit: availabilityCubit),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.settingsShareDivine), findsOneWidget);
-
-      availabilityCubit.setOverride(InviteAvailabilityOverride.forceDisabled);
-      expect(availabilityCubit.state.isEnabled, isFalse);
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.settingsShareDivine), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump();
-    });
-
-    testWidgets('share action does not show an invite activity badge', (
-      tester,
-    ) async {
-      final mockInviteCubit = _MockInviteStatusCubit();
-      when(() => mockInviteCubit.state).thenReturn(
-        const InviteStatusState(
-          status: InviteStatusLoadingStatus.loaded,
-          inviteStatus: InviteStatus(
-            canInvite: true,
-            remaining: 5,
-            total: 5,
-            codes: [],
-          ),
-        ),
-      );
-
-      await tester.pumpWidget(buildSubject(inviteCubit: mockInviteCubit));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.settingsShareDivine), findsOneWidget);
-      expect(find.text('5'), findsNothing);
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
@@ -463,8 +353,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               knownAccountsProvider.overrideWith((ref) async => accounts),
               userProfileReactiveProvider.overrideWith(
@@ -484,9 +374,6 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
-                  BlocProvider<InviteStatusCubit>.value(
-                    value: _createMockInviteCubit(),
-                  ),
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                   BlocProvider<BackgroundPublishBloc>.value(value: publishBloc),
                 ],
@@ -543,6 +430,36 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('renders the supporter tile when the Worker is configured', (
+      tester,
+    ) async {
+      // The compiled default is a usable https URL, so no override is needed:
+      // the tile is the user-visible half of the condition the supporter route
+      // guard checks.
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.supporterTitle),
+        300,
+        scrollable: scrollable,
+      );
+      expect(find.text(l10n.supporterTitle), findsOneWidget);
+
+      await tester.tap(find.text(l10n.supporterTitle));
+      await tester.pumpAndSettle();
+
+      verify(() => mockGoRouter.push(SupporterScreen.path)).called(1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
     testWidgets('tapping Integration Permissions opens the permissions route', (
       tester,
     ) async {
@@ -581,9 +498,7 @@ void main() {
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
-          currentAuthStateProvider.overrideWith(
-            (ref) => AuthState.authenticated,
-          ),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           userProfileReactiveProvider.overrideWith(
             (ref, pubkey) => Stream.value(null),
           ),
@@ -601,9 +516,6 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
-                  BlocProvider<InviteStatusCubit>.value(
-                    value: _createMockInviteCubit(),
-                  ),
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
                 child: const SettingsScreen(),
@@ -705,9 +617,6 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
-                  BlocProvider<InviteStatusCubit>.value(
-                    value: _createMockInviteCubit(),
-                  ),
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
                 child: const SettingsScreen(),
@@ -777,8 +686,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               userProfileReactiveProvider.overrideWith(
                 (ref, pubkey) => Stream.value(null),
@@ -792,9 +701,6 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
-                  BlocProvider<InviteStatusCubit>.value(
-                    value: _createMockInviteCubit(),
-                  ),
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
                 child: const SettingsScreen(),
@@ -1049,8 +955,8 @@ void main() {
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
-              currentAuthStateProvider.overrideWith(
-                (ref) => AuthState.authenticated,
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
               ),
               userProfileReactiveProvider.overrideWith(
                 (ref, pubkey) => Stream.value(null),
@@ -1062,9 +968,6 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MultiBlocProvider(
                 providers: [
-                  BlocProvider<InviteStatusCubit>.value(
-                    value: _createMockInviteCubit(),
-                  ),
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
                 child: const SettingsScreen(),

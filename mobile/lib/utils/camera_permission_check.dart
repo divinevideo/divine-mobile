@@ -28,12 +28,19 @@ extension CameraPermissionNavigation on BuildContext {
   /// the gate's settings prompt. A denial — including a dialog dismissed with
   /// the back button — keeps the user here so the next camera tap re-prompts.
   ///
+  /// [autoRecord] opens the recorder in capture mode and starts recording as
+  /// soon as the camera is ready — see [VideoRecorderView.autoRecord].
+  ///
   /// Returns `true` if navigation occurred.
   Future<bool> pushToCameraWithPermission({
     String entryPoint = CreationEntryPoint.cameraFab,
+    bool autoRecord = false,
   }) async {
     final bloc = read<CameraPermissionBloc>();
-    final recorderPath = VideoRecorderScreen.pathForEntryPoint(entryPoint);
+    final recorderPath = VideoRecorderScreen.pathForEntryPoint(
+      entryPoint,
+      autoRecord: autoRecord,
+    );
 
     if (kIsWeb) {
       await pushWithVideoPause(recorderPath);

@@ -88,7 +88,6 @@ class ServiceInitHelper {
       final subscriptionManager = SubscriptionManager(nostrService);
       final videoEventService = VideoEventService(
         nostrService,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
 
@@ -114,7 +113,6 @@ class ServiceInitHelper {
     final subscriptionManager = SubscriptionManager(testNostrService);
     final videoEventService = VideoEventService(
       testNostrService,
-      subscriptionManager: subscriptionManager,
       crashReporter: const SilentCrashReporter(),
     );
 

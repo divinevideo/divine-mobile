@@ -133,7 +133,10 @@ SeenVideosService seenVideosService(Ref ref) {
   } catch (_) {
     db = null;
   }
-  final service = SeenVideosService(database: db);
+  final service = SeenVideosService(
+    database: db,
+    performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
+  );
   unawaited(service.initialize());
   ref.onDispose(() => unawaited(service.dispose()));
   return service;
@@ -163,7 +166,6 @@ SubscriptionManager subscriptionManager(Ref ref) {
 @Riverpod(keepAlive: true)
 VideoEventService videoEventService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
-  final subscriptionManager = ref.watch(subscriptionManagerProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);
   final videoFilterBuilder = ref.watch(videoFilterBuilderProvider);
@@ -191,7 +193,6 @@ VideoEventService videoEventService(Ref ref) {
 
   final service = VideoEventService(
     nostrService,
-    subscriptionManager: subscriptionManager,
     crashReporter: ref.read(crashReportingServiceProvider),
     profileRepository: profileRepository,
     eventRouter: eventRouter,
@@ -625,7 +626,7 @@ VideosRepository videosRepository(Ref ref) {
     seenVideoLookup: clientSeenFilteringEnabled
         ? SeenVideoLookup(
             wasSeenRecently: seenVideosService.wasSeenRecently,
-            initialize: seenVideosService.initialize,
+            initialize: seenVideosService.initializeForFeed,
           )
         : null,
   );

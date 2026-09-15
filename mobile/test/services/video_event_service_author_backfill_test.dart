@@ -8,12 +8,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 const _authorA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -50,12 +47,10 @@ void main() {
   group('VideoEventService.subscribeToUserVideos backfill', () {
     late VideoEventService service;
     late _MockNostrClient nostr;
-    late _MockSubscriptionManager subscriptionManager;
     late StreamController<Event> eventStream;
 
     setUp(() {
       nostr = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       eventStream = StreamController<Event>.broadcast();
 
       when(() => nostr.isInitialized).thenReturn(true);
@@ -72,7 +67,6 @@ void main() {
 
       service = VideoEventService(
         nostr,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

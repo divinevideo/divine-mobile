@@ -1,4 +1,4 @@
-// ABOUTME: Shared hero section widget for auth/invite screens
+// ABOUTME: Shared hero section widget for authentication screens
 // ABOUTME: Large tagline text with decorative 3D emoji stickers and Divine logo
 
 import 'package:divine_ui/divine_ui.dart';

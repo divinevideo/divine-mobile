@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_style_bar.dart';
@@ -63,9 +64,7 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         ? layer.background
         : layer.color;
 
-    final fontIndex = VideoEditorConstants.textFonts.indexWhere(
-      (el) => el() == layer.textStyle,
-    );
+    final fontIndex = editorTextFontIndexFor(layer.textStyle?.fontFamily);
 
     bloc.add(
       VideoEditorTextInitFromLayer(

@@ -9,7 +9,19 @@ import FlutterMacOS
 /// stitches multiple clips into a seamless timeline.
 ///
 /// Communicates with Dart via per-player MethodChannel/EventChannel.
-final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
+final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackDiagnosticResource {
+
+    private var diagnosticDisposed = false
+    private var diagnosticPendingLoads = 0
+    var playbackDiagnosticState: PlaybackDiagnosticState {
+        PlaybackDiagnosticState(
+            disposed: diagnosticDisposed,
+            hasPlayer: player != nil,
+            isPlaying: (player?.rate ?? 0) != 0,
+            hasTexture: textureOutput != nil,
+            pendingLoads: diagnosticPendingLoads
+        )
+    }
 
     private let playerId: Int
     /// Identifies this player in diagnostic logs.
@@ -230,6 +242,23 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
 
     // MARK: - Clip composition
 
+    /// Answers a `setClips` caller whose load was cancelled because the
+    /// instance was disposed while it was suspended in an await.
+    ///
+    /// `DivineVideoPlayerController` swallows `CANCELLED`, so an awaiting
+    /// caller is unblocked without surfacing an error — the same contract the
+    /// Android instance uses. Never drop the result: `await setClips()` would
+    /// stay pending for the life of the process.
+    private func answerCancelledSetClips(_ result: @escaping FlutterResult) {
+        result(
+            FlutterError(
+                code: "CANCELLED",
+                message: "Disposed during setClips",
+                details: nil
+            )
+        )
+    }
+
     private func handleSetClips(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
             let clipsRaw = args["clips"] as? [[String: Any]]
@@ -245,6 +274,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         // Build the player item asynchronously.
         Task { @MainActor [weak self] in
             guard let self else { return }
+            self.diagnosticPendingLoads += 1
+            defer { self.diagnosticPendingLoads -= 1 }
             do {
                 let playerItem: AVPlayerItem
                 let offsets: [Double]
@@ -255,6 +286,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
                 } else {
                     (playerItem, offsets, durations) =
                         try await self.makeCompositionPlayerItem(from: clipsRaw)
+                }
+                // dispose() can run while the above await is suspended; a
+                // disposed instance must never resurrect a player/observers.
+                guard !self.diagnosticDisposed else {
+                    self.answerCancelledSetClips(result)
+                    return
                 }
                 self.clipOffsets = offsets
                 self.clipDurations = durations
@@ -304,6 +341,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
                 if let existing = self.player {
                     self.configureQueue(with: playerItem)
                     await existing.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    guard !self.diagnosticDisposed else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
                     self.textureOutput?.forceRefresh(for: startTime)
                 } else {
                     let newPlayer = AVQueuePlayer()
@@ -313,6 +354,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
                     self.observeCurrentItem()
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    guard !self.diagnosticDisposed else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
                     self.textureOutput?.forceRefresh(for: startTime)
                 }
 
@@ -1541,6 +1586,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     // MARK: - Dispose
 
     func dispose() {
+        diagnosticDisposed = true
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
             timeObserver = nil

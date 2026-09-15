@@ -28,7 +28,11 @@ class SubscriptionManager {
 
   bool _isDisposed = false;
 
-  /// Inject cache lookup functions after construction (for circular dependency resolution)
+  /// Inject cache lookup functions after construction.
+  ///
+  /// Has no caller. It existed to break the profileRepository ->
+  /// subscriptionManager cycle, and that edge was cut in #9130. Without it
+  /// the Kind 0 skip-list in [createSubscription] stays inactive.
   void setCacheLookup({
     Event? Function(String)? getCachedEvent,
     bool Function(String)? hasProfileCached,

@@ -1507,6 +1507,17 @@ class PendingViewEvents extends Table {
   /// only — the relay counts the view on the matching `start` row.
   TextColumn get phase => text().nullable().named('phase')();
 
+  /// Version of the build that recorded the view (#9077).
+  ///
+  /// The healthy path flushes a row immediately, so the published `version`
+  /// tag normally matches the recording build. A failed row can outlive an
+  /// app update, and replaying it with the successor's runtime version would
+  /// understate the release that dropped the view and inflate the one that
+  /// restored publishing. NULL marks a row queued before this column existed;
+  /// such a row replays without a `version` tag, because the build replaying
+  /// it is never the build that recorded it.
+  TextColumn get appVersion => text().nullable().named('app_version')();
+
   TextColumn get trafficSource => text().named('traffic_source')();
 
   TextColumn get sourceDetail => text().nullable().named('source_detail')();
@@ -1538,6 +1549,68 @@ class PendingViewEvents extends Table {
           'ON pending_view_events (created_at)',
     ),
   ];
+}
+
+/// Durable queue of content reports awaiting off-device delivery.
+///
+/// One row per report. The kind-1984 relay publish and the Zendesk ticket each
+/// retire independently (`relay_status` / `zendesk_status`), so a report whose
+/// relay leg succeeded but whose Zendesk leg is still failing keeps only the
+/// Zendesk leg queued. Private moderation intent is saved here before its
+/// handoff to the `outgoing_dms` outbox. See #8053.
+@DataClassName('PendingReportRow')
+class PendingReports extends Table {
+  @override
+  String get tableName => 'pending_reports';
+
+  /// Matches `ContentReport.reportId`; also passed as the Zendesk `external_id`
+  /// (best-effort, REST path only). Zendesk does not upsert on external_id, so
+  /// this does not prevent a duplicate on a lost-ACK retry; it lets moderation
+  /// tooling merge the rare duplicate by report id.
+  TextColumn get reportId => text().named('report_id')();
+
+  TextColumn get userPubkey => text().named('user_pubkey')();
+
+  /// Serialized kind-1984 intent, initially unsigned for offline acceptance.
+  /// Delivery saves its signature before publishing and reuses it on retries.
+  TextColumn get eventJson => text().named('event_json')();
+
+  /// JSON list of target relays for the report, or null for the default set.
+  TextColumn get targetRelays => text().nullable().named('target_relays')();
+
+  /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  TextColumn get zendeskPayload => text().named('zendesk_payload')();
+
+  /// Private moderation-DM intent, redacted before storage.
+  TextColumn get moderationPayload =>
+      text().nullable().named('moderation_payload')();
+
+  TextColumn get moderationStatus =>
+      text().withDefault(const Constant('done')).named('moderation_status')();
+
+  IntColumn get moderationAttempts =>
+      integer().withDefault(const Constant(0)).named('moderation_attempts')();
+
+  /// `pending` | `done` | `deadLetter` (parsed throw-on-unknown).
+  TextColumn get relayStatus => text().named('relay_status')();
+
+  TextColumn get zendeskStatus => text().named('zendesk_status')();
+
+  IntColumn get relayAttempts =>
+      integer().withDefault(const Constant(0)).named('relay_attempts')();
+
+  IntColumn get zendeskAttempts =>
+      integer().withDefault(const Constant(0)).named('zendesk_attempts')();
+
+  TextColumn get lastError => text().nullable().named('last_error')();
+
+  DateTimeColumn get lastAttemptAt =>
+      dateTime().nullable().named('last_attempt_at')();
+
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  @override
+  Set<Column> get primaryKey => {reportId};
 }
 
 /// Durable queue of product analytics events awaiting ingest publish.

@@ -84,7 +84,7 @@ class MemoryTelemetryService {
     required int Function() queueDepth,
     required int Function() imageCacheBytes,
     required int Function() imageCacheLiveCount,
-    required void Function(MemorySnapshot) emit,
+    required void Function(MemorySnapshot snapshot, String trigger) emit,
     this.interval = const Duration(seconds: 30),
   }) : _readRssBytes = readRssBytes,
        _readPeakRssBytes = readPeakRssBytes,
@@ -100,7 +100,7 @@ class MemoryTelemetryService {
   final int Function() _queueDepth;
   final int Function() _imageCacheBytes;
   final int Function() _imageCacheLiveCount;
-  final void Function(MemorySnapshot) _emit;
+  final void Function(MemorySnapshot snapshot, String trigger) _emit;
 
   /// How often [start] samples the gauges.
   final Duration interval;
@@ -113,17 +113,14 @@ class MemoryTelemetryService {
   ///
   /// The peak is the OS high-water mark, floored by the highest sampled RSS
   /// so a platform without an OS gauge still reports something monotonic.
-  void sampleOnce() {
+  void sampleOnce({String trigger = 'periodic'}) {
     final rss = _readGauge(_readRssBytes);
     final imageCacheBytes = _readGauge(
       _imageCacheBytes,
       unavailable: MemorySnapshot.unavailableGauge,
     );
     if (imageCacheBytes != MemorySnapshot.unavailableGauge) {
-      _peakImageCacheBytes = math.max(
-        _peakImageCacheBytes,
-        imageCacheBytes,
-      );
+      _peakImageCacheBytes = math.max(_peakImageCacheBytes, imageCacheBytes);
     }
     _peakRssBytes = math.max(
       math.max(_peakRssBytes, rss),
@@ -142,6 +139,7 @@ class MemoryTelemetryService {
           unavailable: MemorySnapshot.unavailableGauge,
         ),
       ),
+      trigger,
     );
   }
 

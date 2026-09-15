@@ -42,91 +42,20 @@ import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/feed_load_trace.dart';
 import 'package:openvine/services/feed_retry_scheduler.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/pagination_state.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/repost_resolver.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_block_policy.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/log_tag_sanitizer.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_event_cache/video_event_cache.dart';
 
-/// Pagination state for tracking cursor position and loading status per subscription
-class PaginationState {
-  int? oldestTimestamp;
-  bool isLoading;
-  bool hasMore;
-  Set<String> seenEventIds;
-  int eventsReceivedInCurrentQuery;
-
-  PaginationState({
-    this.oldestTimestamp,
-    this.isLoading = false,
-    this.hasMore = true,
-    Set<String>? seenEventIds,
-    this.eventsReceivedInCurrentQuery = 0,
-  }) : seenEventIds = seenEventIds ?? <String>{};
-
-  void updateOldestTimestamp(int timestamp) {
-    if (oldestTimestamp == null || timestamp < oldestTimestamp!) {
-      oldestTimestamp = timestamp;
-    }
-  }
-
-  void markEventSeen(String eventId) {
-    // Normalize ID to lowercase for case-insensitive deduplication
-    seenEventIds.add(eventId.toLowerCase());
-  }
-
-  void startQuery() {
-    eventsReceivedInCurrentQuery = 0;
-    hasMore = true;
-    isLoading = true;
-  }
-
-  void incrementEventCount() {
-    eventsReceivedInCurrentQuery++;
-  }
-
-  /// Records a per-query tally the caller counted for itself.
-  ///
-  /// [incrementEventCount] only fires for events flagged `isHistorical`, which
-  /// is set on the load-more path alone. An initial subscription delivers its
-  /// stored backlog through the real-time handler, so its tally stays at zero
-  /// and [completeQuery] would call the feed exhausted however much arrived.
-  ///
-  /// Takes the larger of the two counts so an externally observed tally seeds
-  /// missing events without erasing events already counted on this query.
-  void recordReceivedCount(int count) {
-    if (count > eventsReceivedInCurrentQuery) {
-      eventsReceivedInCurrentQuery = count;
-    }
-  }
-
-  void completeQuery(int requestedLimit) {
-    isLoading = false;
-    // If we received fewer events than requested, assume no more content
-    if (eventsReceivedInCurrentQuery < requestedLimit) {
-      hasMore = false;
-      Log.info(
-        'PaginationState: No more content available - received $eventsReceivedInCurrentQuery < $requestedLimit requested',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-    }
-  }
-
-  void reset() {
-    oldestTimestamp = null;
-    isLoading = false;
-    hasMore = true;
-    seenEventIds.clear();
-    eventsReceivedInCurrentQuery = 0;
-  }
-}
+export 'package:openvine/services/pagination_state.dart';
 
 /// Subscription types for different video feed categories
 enum SubscriptionType {
@@ -145,15 +74,13 @@ enum SubscriptionType {
 class VideoEventService extends ChangeNotifier implements VideoEventCache {
   VideoEventService(
     this._nostrService, {
-    required SubscriptionManager subscriptionManager,
     required CrashReporter crashReporter,
     ProfileRepository? profileRepository,
     EventRouter? eventRouter,
     VideoFilterBuilder? videoFilterBuilder,
     PerformanceTraceMonitor? performanceMonitor,
     ConnectionStatusService? connectionService,
-  }) : _subscriptionManager = subscriptionManager,
-       _crashReporter = crashReporter,
+  }) : _crashReporter = crashReporter,
        _profileRepository = profileRepository,
        _eventRouter = eventRouter,
        _videoFilterBuilder = videoFilterBuilder,
@@ -205,7 +132,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   // [_subscriptions], so concurrent identical subscribes can't both
   // issue a relay REQ.
   final Set<String> _pendingSubscriptionIds = {};
-  final List<String> _activeSubscriptionIds = [];
 
   // Global state
   bool _isLoading = false;
@@ -291,7 +217,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   FeedAspectRatioPreferenceService? _feedAspectRatioPreferenceService;
   BrokenVideoTracker? _brokenVideoTracker;
   late String? Function() _currentUserPubkey = () => _nostrService.publicKey;
-  final SubscriptionManager _subscriptionManager;
 
   final CrashReporter _crashReporter;
 
@@ -856,14 +781,17 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
     // Use Future.microtask instead of WidgetsBinding.addPostFrameCallback
     // This is more reliable on web and avoids "disposed view" errors
-    Future.microtask(() {
-      if (!_hasScheduledFrameUpdate) return; // Already processed
-      _hasScheduledFrameUpdate = false;
-      // A load can be abandoned between scheduling and this microtask —
-      // notifying then throws "used after being disposed".
-      if (_isDisposed) return;
-      notifyListeners();
-    });
+    _runDetached(
+      Future.microtask(() {
+        if (!_hasScheduledFrameUpdate) return; // Already processed
+        _hasScheduledFrameUpdate = false;
+        // A load can be abandoned between scheduling and this microtask —
+        // notifying then throws "used after being disposed".
+        if (_isDisposed) return;
+        notifyListeners();
+      }),
+      'notify listeners after the current event batch',
+    );
   }
 
   /// Get videos for a specific subscription type
@@ -2089,7 +2017,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         throw Exception('NostrService not initialized');
       }
 
-      // BYPASS SubscriptionManager for main video feed - go directly to NostrService
       // Holds the id claimed in _pendingSubscriptionIds so the catch
       // below (where subscriptionId is out of scope) can release it.
       String? pendingClaimId;
@@ -2241,11 +2168,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           ),
           eventCount: () => eventCount,
         );
-        _pendingFeedLoadTraces[subscriptionId] = pendingTrace;
-        void completeFeedLoadTrace(String completion, {int? eventTotal}) {
-          _pendingFeedLoadTraces.remove(subscriptionId);
-          pendingTrace.complete(completion, eventTotal: eventTotal);
-        }
+        final completeFeedLoadTrace = _pendingFeedLoadTraces.track(
+          subscriptionId,
+          pendingTrace,
+        );
 
         Log.info(
           '📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
@@ -2300,18 +2226,26 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
             // REQ in the SDK, which force-cycles the relay if the socket
             // swallowed it — so the retry below runs on a live connection.
             final sub = _subscriptions.remove(subscriptionId);
-            sub?.cancel();
+            if (sub != null) {
+              _runDetached(
+                sub.cancel(),
+                'cancel the timed-out $subscriptionType subscription',
+              );
+            }
 
             // Reset loading state
             _paginationStates[subscriptionType]?.isLoading = false;
 
             // Report timeout to Crashlytics
-            _reportFeedLoadingTimeout(
-              subscriptionType: subscriptionType,
-              filters: filters,
-              duration: DateTime.now().difference(subscriptionStartTime),
-              relayConnected: _nostrService.connectedRelayCount > 0,
-              isOnline: _connectionService.isOnline,
+            _runDetached(
+              _reportFeedLoadingTimeout(
+                subscriptionType: subscriptionType,
+                filters: filters,
+                duration: DateTime.now().difference(subscriptionStartTime),
+                relayConnected: _nostrService.connectedRelayCount > 0,
+                isOnline: _connectionService.isOnline,
+              ),
+              'record $subscriptionType feed timeout diagnostics',
             );
 
             completeFeedLoadTrace('timeout');
@@ -2337,7 +2271,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           until: effectiveUntil,
           limit: limit,
           sortBy: sortBy,
-        );
+        ).startPhaseAfter(pendingTrace, 'cache_ingest_ms');
 
         // Disposed while the cache read was in flight, so dispose has already
         // closed this load's trace. Carrying on would notify a dead
@@ -2366,6 +2300,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           completeFeedLoadTrace('cache', eventTotal: cachedEvents.length);
         }
 
+        pendingTrace.startPhase('relay_wait_ms');
         final eventStream = _nostrService.subscribe(
           filters,
           onEose: () {
@@ -2409,15 +2344,21 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
               );
 
               // Run automatic diagnostics for debugging empty feeds
-              _runAutoDiagnostics(subscriptionType, filters);
+              _runDetached(
+                _runAutoDiagnostics(subscriptionType, filters),
+                'run $subscriptionType empty-feed diagnostics',
+              );
 
               // Report to Crashlytics - this is a critical user experience issue
-              _reportEmptyFeedToCrashlytics(
-                subscriptionType: subscriptionType,
-                filters: filters,
-                eoseDuration: eoseDuration,
-                relayConnected: _nostrService.connectedRelayCount > 0,
-                isOnline: _connectionService.isOnline,
+              _runDetached(
+                _reportEmptyFeedToCrashlytics(
+                  subscriptionType: subscriptionType,
+                  filters: filters,
+                  eoseDuration: eoseDuration,
+                  relayConnected: _nostrService.connectedRelayCount > 0,
+                  isOnline: _connectionService.isOnline,
+                ),
+                'record $subscriptionType empty-feed diagnostics',
               );
               completeFeedLoadTrace('eose_empty');
             } else {
@@ -2577,9 +2518,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       _ensureDefaultContent();
 
       // Progressive loading removed - let UI trigger loadMore as needed
-      final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
       Log.debug(
-        'Subscription status: active=$totalSubs subscriptions (${_activeSubscriptionIds.length} managed, ${_subscriptions.length} direct)',
+        'Subscription status: active=${_subscriptions.length} direct subscriptions',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
@@ -2770,22 +2710,16 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           try {
             final profile = UserProfile.fromNostrEvent(event);
             // Fire-and-forget: cache the profile asynchronously
-            _profileRepository
-                .cacheProfile(profile)
-                .then((_) {
-                  Log.verbose(
-                    '✅ Cached profile event for ${pubkeyForLogs(event.pubkey)} from video subscription',
-                    name: 'VideoEventService',
-                    category: LogCategory.video,
-                  );
-                })
-                .catchError((e) {
-                  Log.error(
-                    'Failed to cache profile event: $e',
-                    name: 'VideoEventService',
-                    category: LogCategory.video,
-                  );
-                });
+            _runDetached(
+              _profileRepository.cacheProfile(profile).then((_) {
+                Log.verbose(
+                  '✅ Cached profile event for ${pubkeyForLogs(event.pubkey)} from video subscription',
+                  name: 'VideoEventService',
+                  category: LogCategory.video,
+                );
+              }),
+              'cache a profile delivered with a video subscription',
+            );
           } catch (e) {
             Log.error(
               'Failed to parse profile event: $e',
@@ -2982,7 +2916,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           );
         }
       } else if (event.kind == 16) {
-        _handleRepostEvent(event, subscriptionType, isHistorical: false);
+        _runDetached(
+          _handleRepostEvent(event, subscriptionType, isHistorical: false),
+          'resolve a live repost event',
+        );
       }
     } catch (e) {
       Log.error(
@@ -3164,7 +3101,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           );
         }
       } else if (event.kind == 16) {
-        _handleRepostEvent(event, subscriptionType, isHistorical: true);
+        _runDetached(
+          _handleRepostEvent(event, subscriptionType, isHistorical: true),
+          'resolve a historical repost event',
+        );
       }
     } catch (e) {
       Log.error(
@@ -3232,10 +3172,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       name: 'VideoEventService',
       category: LogCategory.video,
     );
-    final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-      'Current state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      'Current state: $subscriptionType events=$eventCount, subscriptions=${_subscriptions.length}',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -3258,10 +3197,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       name: 'VideoEventService',
       category: LogCategory.video,
     );
-    final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-      'Final state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      'Final state: $subscriptionType events=$eventCount, subscriptions=${_subscriptions.length}',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -3398,7 +3336,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           category: LogCategory.video,
         );
         if (!completer.isCompleted) {
-          streamSubscription.cancel();
           completer.complete();
         }
       });
@@ -3947,35 +3884,38 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       }
 
       // Use subscription-aware historical query (non-blocking streaming)
-      _queryHistoricalEvents(
-            subscriptionType: subscriptionType,
-            until: until,
-            limit: limit,
-          )
-          .then((_) {
-            // Stream completed - finalize pagination state
-            Log.info(
-              'Historical events streaming completed for $subscriptionType. Total events: ${_eventLists[subscriptionType]?.length ?? 0}',
-              name: 'VideoEventService',
-              category: LogCategory.video,
-            );
+      _runDetached(
+        _queryHistoricalEvents(
+              subscriptionType: subscriptionType,
+              until: until,
+              limit: limit,
+            )
+            .then((_) {
+              // Stream completed - finalize pagination state
+              Log.info(
+                'Historical events streaming completed for $subscriptionType. Total events: ${_eventLists[subscriptionType]?.length ?? 0}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
 
-            // Complete the pagination query with the requested limit for proper hasMore tracking
-            paginationState.completeQuery(limit);
+              // Complete the pagination query with the requested limit for proper hasMore tracking
+              paginationState.completeQuery(limit);
 
-            // Final notification - will only fire if no frame update was scheduled
-            // This ensures UI updates even if no events were received
-            notifyListeners();
-          })
-          .catchError((error) {
-            Log.error(
-              'Historical query stream failed for $subscriptionType: $error',
-              name: 'VideoEventService',
-              category: LogCategory.video,
-            );
-            paginationState.isLoading = false;
-            notifyListeners();
-          });
+              // Final notification - will only fire if no frame update was scheduled
+              // This ensures UI updates even if no events were received
+              notifyListeners();
+            })
+            .catchError((error) {
+              Log.error(
+                'Historical query stream failed for $subscriptionType: $error',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
+              paginationState.isLoading = false;
+              notifyListeners();
+            }),
+        'load historical $subscriptionType events',
+      );
 
       // Don't await the query - return immediately and let events stream in
       Log.debug(
@@ -4062,7 +4002,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           category: LogCategory.video,
         );
         if (!completer.isCompleted) {
-          streamSubscription.cancel();
           completer.complete();
         }
       });
@@ -4084,7 +4023,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
                 category: LogCategory.video,
               );
               if (!completer.isCompleted) {
-                streamSubscription.cancel();
                 completer.complete();
               }
             });
@@ -4098,7 +4036,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           );
           timeoutTimer?.cancel();
           if (!completer.isCompleted) {
-            streamSubscription.cancel();
             completer.completeError(error as Object);
           }
         },
@@ -4111,14 +4048,18 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           );
           timeoutTimer?.cancel();
           if (!completer.isCompleted) {
-            streamSubscription.cancel();
             completer.complete();
           }
         },
       );
 
-      // Wait for completion
-      await completer.future;
+      // Wait for completion and always release the one-shot relay subscription.
+      try {
+        await completer.future;
+      } finally {
+        timeoutTimer?.cancel();
+        await streamSubscription.cancel();
+      }
     } catch (e) {
       Log.error(
         'Failed to execute historical query for $subscriptionType: $e',
@@ -4187,6 +4128,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
       final eventStream = _nostrService.subscribe([filter]);
       late StreamSubscription subscription;
+      Timer? timeoutTimer;
 
       subscription = eventStream.listen(
         (event) {
@@ -4199,7 +4141,11 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
             name: 'VideoEventService',
             category: LogCategory.video,
           );
-          subscription.cancel();
+          timeoutTimer?.cancel();
+          _runDetached(
+            subscription.cancel(),
+            'cancel the failed unlimited-content subscription',
+          );
         },
         onDone: () {
           // Stream closed - don't wait for this to complete business logic
@@ -4208,18 +4154,21 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
             name: 'VideoEventService',
             category: LogCategory.video,
           );
-          subscription.cancel();
+          timeoutTimer?.cancel();
         },
       );
 
       // Close subscription after timeout - events are processed immediately
-      Timer(const Duration(seconds: 45), () {
+      timeoutTimer = Timer(const Duration(seconds: 45), () {
         Log.debug(
           '⏰ Closing unlimited content query after 45s timeout',
           name: 'VideoEventService',
           category: LogCategory.video,
         );
-        subscription.cancel();
+        _runDetached(
+          subscription.cancel(),
+          'cancel the timed-out unlimited-content subscription',
+        );
       });
 
       // Return immediately - events will be processed as they arrive
@@ -4329,8 +4278,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           if (!completer.isCompleted) {
             completer.complete(foundEvent);
           }
-          timeoutTimer?.cancel();
-          subscription.cancel();
         } catch (e) {
           Log.error(
             'Error parsing video event: $e',
@@ -4348,8 +4295,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         if (!completer.isCompleted) {
           completer.completeError(error as Object);
         }
-        timeoutTimer?.cancel();
-        subscription.cancel();
       },
       onDone: () {
         // Stream closed naturally - complete with result if not already completed
@@ -4361,8 +4306,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         if (!completer.isCompleted) {
           completer.complete(foundEvent);
         }
-        timeoutTimer?.cancel();
-        subscription.cancel();
       },
     );
 
@@ -4374,12 +4317,16 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           name: 'VideoEventService',
           category: LogCategory.video,
         );
-        subscription.cancel();
         completer.complete(null);
       }
     });
 
-    return completer.future;
+    try {
+      return await completer.future;
+    } finally {
+      timeoutTimer.cancel();
+      await subscription.cancel();
+    }
   }
 
   /// Get video events by author
@@ -4480,19 +4427,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Cancel all existing subscriptions
   Future<void> _cancelExistingSubscriptions() async {
-    // Cancel managed subscriptions
-    if (_activeSubscriptionIds.isNotEmpty) {
-      Log.debug(
-        'Cancelling ${_activeSubscriptionIds.length} managed subscriptions...',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-      for (final subscriptionId in _activeSubscriptionIds) {
-        await _subscriptionManager.cancelSubscription(subscriptionId);
-      }
-      _activeSubscriptionIds.clear();
-    }
-
     // Cancel direct subscriptions
     if (_subscriptions.isNotEmpty) {
       Log.debug(
@@ -5136,7 +5070,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
     // If batch is full, execute immediately
     if (_pendingLikeCountVideoIds.length >= _likeCountBatchMaxSize) {
-      _executeLikeCountBatchFetch();
+      _runDetached(
+        _executeLikeCountBatchFetch(),
+        'fetch a full batch of video like counts',
+      );
       return;
     }
 
@@ -5478,21 +5415,18 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           category: LogCategory.video,
         );
 
-        subscribeToVideoFeed(
-          subscriptionType: subscriptionType,
-          authors: params['authors'] as List<String>?,
-          hashtags: params['hashtags'] as List<String>?,
-          group: params['group'] as String?,
-          since: params['since'] as int?,
-          until: params['until'] as int?,
-          limit: params['limit'] as int? ?? 50,
-        ).catchError((e) {
-          Log.error(
-            'Failed to reconnect $subscriptionType subscription: $e',
-            name: 'VideoEventService',
-            category: LogCategory.video,
-          );
-        });
+        _runDetached(
+          subscribeToVideoFeed(
+            subscriptionType: subscriptionType,
+            authors: params['authors'] as List<String>?,
+            hashtags: params['hashtags'] as List<String>?,
+            group: params['group'] as String?,
+            since: params['since'] as int?,
+            until: params['until'] as int?,
+            limit: params['limit'] as int? ?? 50,
+          ),
+          'reconnect the $subscriptionType subscription',
+        );
       }
     });
   }
@@ -5521,13 +5455,13 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   }
 
   /// Report empty feed condition to Crashlytics with full diagnostic context
-  void _reportEmptyFeedToCrashlytics({
+  Future<void> _reportEmptyFeedToCrashlytics({
     required SubscriptionType subscriptionType,
     required List<Filter> filters,
     required Duration eoseDuration,
     required bool relayConnected,
     required bool isOnline,
-  }) {
+  }) async {
     try {
       // Build comprehensive error context
       final context = StringBuffer();
@@ -5573,19 +5507,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       );
 
       // Set custom keys for filtering if needed later
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_empty_feed_type',
         subscriptionType.name,
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_empty_feed_relay_connected',
         relayConnected.toString(),
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_empty_feed_online',
         isOnline.toString(),
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_empty_feed_duration_ms',
         eoseDuration.inMilliseconds.toString(),
       );
@@ -5599,13 +5533,13 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   }
 
   /// Report feed loading timeout to Crashlytics with full diagnostic context
-  void _reportFeedLoadingTimeout({
+  Future<void> _reportFeedLoadingTimeout({
     required SubscriptionType subscriptionType,
     required List<Filter> filters,
     required Duration duration,
     required bool relayConnected,
     required bool isOnline,
-  }) {
+  }) async {
     try {
       // Build comprehensive error context
       final context = StringBuffer();
@@ -5704,19 +5638,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       );
 
       // Set custom keys for filtering if needed later
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_timeout_feed_type',
         subscriptionType.name,
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_timeout_relay_connected',
         relayConnected.toString(),
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_timeout_online',
         isOnline.toString(),
       );
-      _crashReporter.setCustomKey(
+      await _crashReporter.setCustomKey(
         'last_timeout_duration_ms',
         duration.inMilliseconds.toString(),
       );
@@ -5731,6 +5665,15 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   // Track whether the service has been disposed
   bool _isDisposed = false;
+
+  void _runDetached(Future<void> operation, String description) {
+    runDetached(
+      operation,
+      description,
+      logName: 'VideoEventService',
+      category: LogCategory.video,
+    );
+  }
 
   @override
   void dispose() {
@@ -5750,13 +5693,30 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _retryScheduler.dispose();
     _cancelRelayReadyRetrySubscription();
     _likeCountBatchTimer?.cancel();
-    _authStateSubscription?.cancel();
-    unawaited(_blocklistChangesSubscription?.cancel());
+    if (_authStateSubscription != null) {
+      _runDetached(
+        _authStateSubscription!.cancel(),
+        'cancel the authentication-state subscription during disposal',
+      );
+    }
+    final blocklistChangesSubscription = _blocklistChangesSubscription;
+    if (blocklistChangesSubscription != null) {
+      _runDetached(
+        blocklistChangesSubscription.cancel(),
+        'cancel the blocklist subscription during disposal',
+      );
+    }
     if (_ownsConnectionService) {
       _connectionService.dispose();
     }
-    unsubscribeFromVideoFeed();
-    unawaited(_removedVideoIdsController.close());
+    _runDetached(
+      unsubscribeFromVideoFeed(),
+      'unsubscribe from video feeds during disposal',
+    );
+    _runDetached(
+      _removedVideoIdsController.close(),
+      'close the removed-video stream during disposal',
+    );
     super.dispose();
   }
 
@@ -6057,8 +6017,13 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _eventLists[SubscriptionType.search]?.clear();
 
     // Cancel search subscription if active
-    _subscriptions['search']?.cancel();
-    _subscriptions.remove('search');
+    final searchSubscription = _subscriptions.remove('search');
+    if (searchSubscription != null) {
+      _runDetached(
+        searchSubscription.cancel(),
+        'cancel the cleared search subscription',
+      );
+    }
 
     Log.debug(
       'Search results cleared',

@@ -11,12 +11,9 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
@@ -33,7 +30,6 @@ void main() {
 
   group('subscribeToVideoFeed concurrency', () {
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockAppDatabase mockDatabase;
     late _MockNostrEventsDao mockNostrEventsDao;
     late VideoEventService service;
@@ -53,7 +49,6 @@ void main() {
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockDatabase = _MockAppDatabase();
       mockNostrEventsDao = _MockNostrEventsDao();
       cacheReadGate = Completer<List<Event>>();
@@ -82,7 +77,6 @@ void main() {
 
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
         eventRouter: EventRouter(mockDatabase),
       );

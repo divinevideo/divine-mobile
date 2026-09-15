@@ -15,6 +15,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -115,7 +116,10 @@ void main() {
       // circuits initialize() past Hive.openBox entirely, so this suite can
       // inherit a previous suite's box -- and the non-destructive test below
       // then asserts on rows it never wrote.
-      await TestHelpers.cleanupHiveBox('pending_uploads');
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+      // UserDataCleanupService clears push preferences through the Hive-backed
+      // store, so this suite also owns the notifications box it opens.
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
 
       uploadManager = UploadManager(
         backgroundActivityManager: BackgroundActivityManager(),
@@ -147,7 +151,8 @@ void main() {
       await db.close();
       PathProviderPlatform.instance = originalPathProviderInstance;
       try {
-        await TestHelpers.cleanupHiveBox('pending_uploads');
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
       } finally {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
@@ -567,6 +572,62 @@ void main() {
       expect(
         Hive.box<hive_model.PendingUpload>('pending_uploads').values,
         isEmpty,
+      );
+    });
+
+    PendingReport reportFor(String id, String pubkey) => PendingReport(
+      reportId: id,
+      userPubkey: pubkey,
+      eventJson: '{}',
+      zendeskPayload: '{}',
+      createdAt: DateTime.utc(2026),
+    );
+
+    test(
+      'destructive cleanup purges the departing user pending reports (#8053)',
+      () async {
+        await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
+        await db.pendingReportsDao.enqueue(reportFor('rb', _pubkeyB));
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        expect(service.onDatabaseCleanup, isNotNull);
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await db.pendingReportsDao.getById('ra'), isNull);
+        expect(
+          await db.pendingReportsDao.getById('rb'),
+          isNotNull,
+          reason: 'only the departing account queue is purged',
+        );
+      },
+    );
+
+    test('non-destructive cleanup preserves pending reports (#8053)', () async {
+      await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      expect(service.onDatabaseCleanup, isNotNull);
+      await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      expect(
+        await db.pendingReportsDao.getById('ra'),
+        isNotNull,
+        reason: 'a plain switch must not drop an undelivered report',
       );
     });
 

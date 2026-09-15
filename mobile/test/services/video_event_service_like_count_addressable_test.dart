@@ -9,12 +9,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
@@ -25,13 +22,11 @@ void main() {
     const videoUrl = 'https://example.com/video.mp4';
 
     late _MockNostrClient mockNostrClient;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockLikesRepository mockLikesRepository;
     late VideoEventService service;
 
     setUp(() {
       mockNostrClient = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockLikesRepository = _MockLikesRepository();
 
       when(() => mockNostrClient.isInitialized).thenReturn(true);
@@ -45,7 +40,6 @@ void main() {
 
       service = VideoEventService(
         mockNostrClient,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       service.setLikesRepository(mockLikesRepository);

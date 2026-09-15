@@ -342,13 +342,13 @@ void main() {
           });
 
           final accountAToken = await service.createAuthToken(
-            url: 'https://invites.divine.video/v1/invite-status',
+            url: 'https://api.divine.video/v1/resource',
             method: HttpMethod.get,
           );
 
           activePubkey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
           final accountBToken = await service.createAuthToken(
-            url: 'https://invites.divine.video/v1/invite-status',
+            url: 'https://api.divine.video/v1/resource',
             method: HttpMethod.get,
           );
 

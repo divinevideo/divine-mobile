@@ -45,6 +45,7 @@ class ZendeskSupportService {
   static String? _userName;
   static String? _userEmail;
   static String? _userNpub;
+  static int _identityGeneration = 0;
 
   /// Stored references for JWT refresh (set at login, used by _ensureFreshJwt)
   static Nip98AuthService? _nip98Service;
@@ -61,6 +62,7 @@ class ZendeskSupportService {
   /// Reset all static state. Only for use in tests.
   @visibleForTesting
   static void resetForTesting() {
+    _identityGeneration++;
     _initialized = false;
     _userName = null;
     _userEmail = null;
@@ -200,6 +202,7 @@ class ZendeskSupportService {
     String? displayName,
     String? nip05,
   }) {
+    if (_userNpub != npub) _identityGeneration++;
     _userNpub = npub;
 
     // Determine display name: prefer displayName, fall back to NIP-05, then npub
@@ -259,6 +262,7 @@ class ZendeskSupportService {
 
   /// Clear user identity (call on logout)
   static Future<void> clearUserIdentity() async {
+    _identityGeneration++;
     _userName = null;
     _userEmail = null;
     _userNpub = null;
@@ -319,6 +323,7 @@ class ZendeskSupportService {
     required Nip98AuthService nip98Service,
     required String relayManagerUrl,
   }) {
+    if (!identical(_nip98Service, nip98Service)) _identityGeneration++;
     _nip98Service = nip98Service;
     _relayManagerUrl = relayManagerUrl;
     _lastJwtRefreshAt = null;
@@ -345,12 +350,14 @@ class ZendeskSupportService {
       return true;
     }
 
+    final generation = _identityGeneration;
     try {
       final refreshJwt = _jwtIdentityRefreshOverride ?? setJwtIdentity;
       final result = await refreshJwt(
         nip98Service: _nip98Service!,
         relayManagerUrl: _relayManagerUrl!,
       );
+      if (generation != _identityGeneration) return false;
       if (result) {
         _lastJwtRefreshAt = _now();
         Log.info(
@@ -449,7 +456,9 @@ class ZendeskSupportService {
     required Nip98AuthService nip98Service,
     required String relayManagerUrl,
   }) async {
+    final generation = _identityGeneration;
     await _awaitInitialization();
+    if (generation != _identityGeneration) return false;
 
     if (!_initialized) {
       Log.warning(
@@ -465,10 +474,12 @@ class ZendeskSupportService {
         relayManagerUrl: relayManagerUrl,
       );
 
+      if (generation != _identityGeneration) return false;
       final result = await _channel.invokeMethod('setJwtIdentity', {
         'userToken': preAuthToken,
       });
 
+      if (generation != _identityGeneration) return false;
       if (result == true) {
         Log.info(
           'Zendesk JWT: Identity set with pre-auth token',
@@ -656,8 +667,16 @@ class ZendeskSupportService {
     int? ticketFormId,
     List<Map<String, dynamic>>? customFields,
     List<String>? attachmentPaths,
+    String? externalId,
+    String? expectedNpub,
   }) async {
+    final generation = _identityGeneration;
+    bool ownsTicket() =>
+        generation == _identityGeneration &&
+        (expectedNpub == null || expectedNpub == _userNpub);
+    if (!ownsTicket()) return false;
     await _awaitInitialization();
+    if (!ownsTicket()) return false;
     if (!_initialized) {
       Log.warning(
         'Zendesk not initialized - cannot create ticket',
@@ -670,6 +689,7 @@ class ZendeskSupportService {
     // so any delay between login and ticket creation will cause "unauthorized".
     // This gets a fresh token every time, regardless of how long the user waited.
     await _ensureFreshJwt();
+    if (!ownsTicket()) return false;
 
     final sanitizedSubject = sanitizeDiagnosticText(subject);
     final sanitizedDescription = sanitizeDiagnosticText(description);
@@ -710,6 +730,7 @@ class ZendeskSupportService {
         return false;
       }
     } on MissingPluginException {
+      if (!ownsTicket()) return false;
       // Native SDK not available (macOS, Windows, Web)
       // Fall back to REST API
       Log.info(
@@ -722,8 +743,10 @@ class ZendeskSupportService {
         requesterName: _userName,
         requesterEmail: _userEmail,
         tags: tags,
+        externalId: externalId,
       );
     } on PlatformException catch (e) {
+      if (!ownsTicket()) return false;
       if (e.code == 'UPLOAD_FAILED') {
         Log.error(
           'Zendesk attachment upload failed: ${e.message}',
@@ -750,6 +773,7 @@ class ZendeskSupportService {
         );
         try {
           final anonymousSet = await setAnonymousIdentityWithUserInfo();
+          if (!ownsTicket()) return false;
           if (anonymousSet) {
             final retryResult = await _channel.invokeMethod('createTicket', {
               'subject': sanitizedSubject,
@@ -778,6 +802,7 @@ class ZendeskSupportService {
         }
       }
 
+      if (!ownsTicket()) return false;
       // Fall back to REST API on SDK error
       Log.info(
         '🔄 Falling back to REST API after SDK error',
@@ -789,6 +814,7 @@ class ZendeskSupportService {
         requesterName: _userName,
         requesterEmail: _userEmail,
         tags: tags,
+        externalId: externalId,
       );
     } catch (e, stackTrace) {
       Log.error(
@@ -841,6 +867,7 @@ class ZendeskSupportService {
     String? requesterEmail,
     String? requesterName,
     List<String>? tags,
+    String? externalId,
   }) async {
     if (!ZendeskConfig.isRestApiConfigured) {
       Log.error(
@@ -867,6 +894,11 @@ class ZendeskSupportService {
             email: requesterEmail,
           ),
           if (tags != null && tags.isNotEmpty) 'tags': tags,
+          // Best-effort idempotency handle for retried report tickets (#8053).
+          // Zendesk does not upsert on external_id, so this does not prevent a
+          // duplicate on a lost-ACK retry; it lets moderation tooling merge the
+          // rare duplicate by report id.
+          'external_id': ?externalId,
         },
       };
 

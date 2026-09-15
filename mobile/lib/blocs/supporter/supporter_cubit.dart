@@ -63,7 +63,7 @@ class SupporterCubit extends Cubit<SupporterState> {
         ),
       ),
     );
-    loadTiers();
+    unawaited(loadTiers());
     if (_repository.hasServerClient) unawaited(_refreshFromServer());
   }
 
@@ -245,10 +245,12 @@ class SupporterCubit extends Cubit<SupporterState> {
   }
 
   @override
-  Future<void> close() {
-    _entitlementSub?.cancel();
-    _lifecycleSub?.cancel();
-    return super.close();
+  Future<void> close() async {
+    final entitlementCancelled = _entitlementSub?.cancel();
+    final lifecycleCancelled = _lifecycleSub?.cancel();
+    await super.close();
+    await entitlementCancelled;
+    await lifecycleCancelled;
   }
 
   static void _noopAnalytics(String _) {}

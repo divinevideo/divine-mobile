@@ -264,6 +264,44 @@ void main() {
     });
 
     group('stop', () {
+      test('announces stopping before the recorder has stopped', () async {
+        final cubit = buildCubit(_FakePermissions(PermissionStatus.granted));
+        await cubit.requestPermissionAndStart();
+        recorder.emitAmplitude(0.5);
+        await flush();
+        final statuses = <VoiceOverStatus>[];
+        final subscription = cubit.stream.listen(
+          (state) => statuses.add(state.status),
+        );
+        addTearDown(subscription.cancel);
+
+        final stopping = cubit.stop();
+
+        // Emitted synchronously, before the first await in stop(): the
+        // preview behind the recorder holds on this, not on the take landing.
+        expect(cubit.state.status, equals(VoiceOverStatus.stopping));
+        expect(cubit.state.isRecording, isFalse);
+        expect(cubit.state.hasLiveTake, isTrue);
+        expect(recorder.stopCount, equals(0));
+        // The live take keeps its length while it lands.
+        expect(
+          cubit.state.currentDuration,
+          equals(VoiceOverCubit.amplitudeInterval),
+        );
+
+        await stopping;
+        // The state stream delivers asynchronously; let the last emit land.
+        await flush();
+
+        expect(
+          statuses,
+          equals([VoiceOverStatus.stopping, VoiceOverStatus.idle]),
+        );
+        expect(cubit.state.takes, hasLength(1));
+
+        await cubit.close();
+      });
+
       test('appends a take with the measured duration', () async {
         final cubit = buildCubit(_FakePermissions(PermissionStatus.granted));
         await cubit.requestPermissionAndStart();

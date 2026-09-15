@@ -538,6 +538,40 @@ void main() {
         expect(result.errorDescription, contains('500'));
       });
 
+      test('classifies a 429 without a machine code', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'error': 'rate_limited', 'message': 'Slow down'}),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, 'rate_limited');
+        expect(result.errorDescription, 'Slow down');
+      });
+
+      test('classifies a non-JSON 429', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('rate limited', 429);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, 'rate_limited');
+      });
+
       test('returns error on invalid JSON response', () async {
         final mockClient = MockClient((request) async {
           return http.Response('not valid json {{{', 200);
@@ -765,6 +799,103 @@ void main() {
 
         expect(result.errorCode, 'INVALID_EMAIL');
         expect(result.failure, KeycastLoginFailure.invalidEmail);
+      });
+
+      test('classifies TOO_MANY_ATTEMPTS 429', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'code': 'TOO_MANY_ATTEMPTS',
+              'error': 'Too many sign-in attempts',
+            }),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorCode, 'TOO_MANY_ATTEMPTS');
+        expect(result.failure, KeycastLoginFailure.rateLimited);
+      });
+
+      test('classifies a 429 without a machine code', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'error': 'rate_limited', 'message': 'Slow down'}),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorCode, 'TOO_MANY_ATTEMPTS');
+        expect(result.failure, KeycastLoginFailure.rateLimited);
+        expect(result.errorDescription, 'Slow down');
+      });
+
+      test('classifies a non-JSON 429', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('rate limited', 429);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorCode, 'TOO_MANY_ATTEMPTS');
+        expect(result.failure, KeycastLoginFailure.rateLimited);
+      });
+
+      test(
+        'uses error_description when no message or error is present',
+        () async {
+          final mockClient = MockClient((request) async {
+            return http.Response(
+              jsonEncode({'error_description': 'Slow down for a bit'}),
+              429,
+            );
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final (result, _) = await oauth.headlessLogin(
+            email: 'test@example.com',
+            password: 'password123',
+          );
+
+          expect(result.errorCode, 'TOO_MANY_ATTEMPTS');
+          expect(result.failure, KeycastLoginFailure.rateLimited);
+          expect(result.errorDescription, 'Slow down for a bit');
+        },
+      );
+
+      test('prefers error_description over an OAuth error token', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'temporarily_unavailable',
+              'error_description': 'Please try again shortly',
+            }),
+            429,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessLogin(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.errorDescription, 'Please try again shortly');
       });
 
       test('returns error on SocketException', () async {

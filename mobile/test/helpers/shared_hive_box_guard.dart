@@ -2,9 +2,12 @@
 // ABOUTME: Guards the #6748 merged-isolate leak class where a suite leaves a
 // ABOUTME: box open by name and the next suite inherits its rows.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 
 import 'test_helpers.dart';
 
@@ -22,6 +25,72 @@ const Set<String> sharedHiveBoxNames = HiveBoxNames.all;
 /// tests can drive the failure path; production callers take the default.
 typedef HiveBoxCleanup = Future<void> Function(String boxName);
 
+const _pendingOpenTimeout = Duration(seconds: 1);
+
+/// One app-owned Hive open that has not settled yet.
+final class PendingHiveBoxOpen {
+  const PendingHiveBoxOpen({required this.boxName, required this.future});
+
+  final String boxName;
+  final Future<Object?> future;
+}
+
+final class _PendingHiveOpenTimeout implements Exception {
+  const _PendingHiveOpenTimeout();
+}
+
+/// Runs Hive opens outside `testWidgets` fake async and records them until they
+/// settle, giving root teardown visibility into Hive's otherwise-private
+/// opening registry.
+final class SharedHiveBoxOpenObserver implements HiveBoxOpenObserver {
+  SharedHiveBoxOpenObserver(this._realAsyncZone);
+
+  final Zone _realAsyncZone;
+  final Map<Object, PendingHiveBoxOpen> _pending = {};
+
+  List<PendingHiveBoxOpen> get pending => List.unmodifiable(_pending.values);
+
+  @override
+  Future<T> observe<T>(String boxName, Future<T> Function() open) {
+    final callerZone = Zone.current;
+    if (identical(callerZone, _realAsyncZone)) {
+      return _track(boxName, open());
+    }
+
+    // Complete synchronously so a fake-async caller cannot trap the proxy's
+    // completion microtask after the real-zone Hive work has settled.
+    final result = Completer<T>.sync();
+    _realAsyncZone.run(() {
+      final hiveOpen = _track(boxName, open());
+      unawaited(
+        hiveOpen.then<void>(
+          (value) => callerZone.run(() => result.complete(value)),
+          onError: (Object error, StackTrace stackTrace) {
+            callerZone.run(() => result.completeError(error, stackTrace));
+          },
+        ),
+      );
+    });
+    return result.future;
+  }
+
+  Future<T> _track<T>(String boxName, Future<T> future) {
+    final operation = Object();
+    _pending[operation] = PendingHiveBoxOpen(boxName: boxName, future: future);
+    unawaited(
+      future.then<void>(
+        (_) {
+          _pending.remove(operation);
+        },
+        onError: (Object _, StackTrace _) {
+          _pending.remove(operation);
+        },
+      ),
+    );
+    return future;
+  }
+}
+
 /// Shared Hive boxes still open at the moment this is called — i.e. a test
 /// finished without closing one. Pure: no side effects.
 List<String> findSharedHiveBoxViolations() => [
@@ -34,16 +103,34 @@ List<String> findSharedHiveBoxViolations() => [
 /// in the merged isolate starts from an empty one. When [strict] is true, also
 /// `fail()` the test that left it.
 ///
-/// During the soak period cleanup always runs but blame is gated by [strict].
-/// Hive does not expose opens still pending in its private `_openingBoxes`
-/// registry, so unconditional blame could attribute a late open to the test
-/// after the actual owner.
+/// App-owned opens are observable through [SharedHiveBoxOpenObserver]. Cleanup
+/// always runs, while attribution is gated by [strict]. A pending operation
+/// that cannot be healed still fails in soak mode so later tests cannot receive
+/// a misleading timeout.
 Future<void> healAndBlameSharedHiveBoxes({
   required bool strict,
+  SharedHiveBoxOpenObserver? openObserver,
+  Duration pendingOpenTimeout = _pendingOpenTimeout,
   HiveBoxCleanup cleanup = TestHelpers.cleanupHiveBox,
 }) async {
+  final pendingAtTeardown = openObserver?.pending ?? const [];
+  final timedOut = <String>[];
+  for (final pending in pendingAtTeardown) {
+    try {
+      await pending.future.timeout(
+        pendingOpenTimeout,
+        onTimeout: () => throw const _PendingHiveOpenTimeout(),
+      );
+    } on _PendingHiveOpenTimeout {
+      timedOut.add(pending.boxName);
+    } on Object {
+      // The production caller owns the open error. For the harness, settlement
+      // is enough: Hive has removed the operation from its opening registry.
+    }
+  }
+
   final violations = findSharedHiveBoxViolations();
-  if (violations.isEmpty) return;
+  if (violations.isEmpty && pendingAtTeardown.isEmpty) return;
 
   // Heal each box independently. An unguarded `await` here would let the first
   // failing cleanup abandon every box after it — leaking the exact rows this
@@ -59,15 +146,23 @@ Future<void> healAndBlameSharedHiveBoxes({
     }
   }
 
-  if (!strict) return;
+  if (!strict && timedOut.isEmpty) return;
+
+  final pendingNames = pendingAtTeardown.map((open) => open.boxName).toSet();
 
   fail(
-    'This test left shared Hive box(es) ${violations.join(', ')} open. Under '
+    'This test started shared Hive box open(s) '
+    '${pendingNames.isEmpty ? 'none' : pendingNames.join(', ')} that were still '
+    'pending at teardown, or left fully-open box(es) '
+    '${violations.isEmpty ? 'none' : violations.join(', ')}. Under '
     'very_good --optimization every suite shares one isolate and Hive '
-    'registers boxes by name, so the next suite opening the same name gets '
-    "this test's box back — rows and backing directory included (#6748). Add "
-    'await TestHelpers.cleanupHiveBox(<name>) to the suite tearDown. '
+    'registers both opening and open boxes by name, so the next suite can '
+    'inherit rows or wait forever on this test (#9053). Await initialization '
+    'and close the box, or replace the production provider in this test. '
     'See .claude/rules/testing.md (VGV merged isolate).'
+    '${timedOut.isEmpty ? '' : ' Open(s) ${timedOut.join(', ')} did not settle '
+              'within ${pendingOpenTimeout.inMilliseconds}ms; the harness did '
+              'not mutate Hive private state, so stop this merged run.'}'
     '${healFailures.isEmpty ? '' : ' Cleanup itself then failed for '
               '${healFailures.join('; ')}, so those boxes are still open and the '
               'next suite will inherit them.'}',

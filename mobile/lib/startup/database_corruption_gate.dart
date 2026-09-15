@@ -162,17 +162,23 @@ class _CloseAppAffordanceState extends State<_CloseAppAffordance> {
       if (!completion.isCompleted) completion.complete();
     });
     _persistenceTimer = timer;
-    source.then(
-      (_) {
-        timer.cancel();
-        if (!completion.isCompleted) completion.complete();
-      },
-      onError: (Object error, StackTrace stack) {
-        timer.cancel();
-        if (!completion.isCompleted) completion.completeError(error, stack);
-      },
-    );
+    unawaited(_settlePersistence(source, completion, timer));
     return completion.future;
+  }
+
+  Future<void> _settlePersistence(
+    Future<void> source,
+    Completer<void> completion,
+    Timer timer,
+  ) async {
+    try {
+      await source;
+      timer.cancel();
+      if (!completion.isCompleted) completion.complete();
+    } on Object catch (error, stack) {
+      timer.cancel();
+      if (!completion.isCompleted) completion.completeError(error, stack);
+    }
   }
 
   @override

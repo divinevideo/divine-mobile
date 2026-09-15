@@ -413,6 +413,19 @@ class KeycastOAuth {
         );
       }
 
+      // Keycast's register handler does not emit 429 today. Anything in front
+      // of it can, and waiting is the only useful action — do not flatten it.
+      if (response.statusCode == 429) {
+        return (
+          HeadlessRegisterResult.error(
+            _errorMessageFrom(response) ??
+                'Too many attempts. Please try again later.',
+            code: 'rate_limited',
+          ),
+          verifier,
+        );
+      }
+
       if (response.statusCode >= 500) {
         return (
           HeadlessRegisterResult.error(
@@ -521,6 +534,18 @@ class KeycastOAuth {
           HeadlessLoginResult.error(
             'Login endpoint not available. Please try again later.',
             code: 'endpoint_not_found',
+          ),
+          verifier,
+        );
+      }
+
+      // Keycast's login handler does not emit 429 today. Anything in front of
+      // it can, and waiting is the only useful action — do not flatten it.
+      if (response.statusCode == 429) {
+        return (
+          HeadlessLoginResult.error(
+            _errorMessageFrom(response) ?? 'Too many sign-in attempts',
+            code: 'TOO_MANY_ATTEMPTS',
           ),
           verifier,
         );
@@ -985,12 +1010,12 @@ class KeycastOAuth {
     return ResendVerificationError.declined;
   }
 
-  /// The server's own `message` (falling back to `error`) from a JSON error
-  /// body, or null when the body is absent or not JSON.
+  /// The server's own message from a JSON error body, or null when absent.
   static String? _errorMessageFrom(http.Response response) {
     try {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return json['message'] as String? ?? json['error'] as String?;
+      final json = _decodeJsonObject(response.body);
+      final message = _responseErrorMessage(json, '');
+      return message.isEmpty ? null : message;
     } catch (_) {
       return null;
     }

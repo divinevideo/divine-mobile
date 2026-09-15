@@ -18,7 +18,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
-import 'package:hive_ce/hive_ce.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -40,6 +39,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -353,7 +353,7 @@ ProfileRepository? profileRepository(Ref ref) {
     return null;
   }
 
-  return _buildProfileRepository(ref, warmCache: true);
+  return _buildProfileRepository(ref);
 }
 
 /// Read-only profile access gated on **identity-known** (a pubkey is
@@ -371,11 +371,10 @@ ProfileRepository? profileRepository(Ref ref) {
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
-/// this provider cannot publish by accident. Everything that signs must keep
-/// using [profileRepository] — today that is
-/// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
-/// `profileSaveRetryService`.
+/// `claimUsername` or `drivePendingSave`, so a consumer of this provider
+/// cannot publish by accident. Everything that signs must keep using
+/// [profileRepository] — today that is `MonetizationLinksSettingsCubit`,
+/// `ProfileEditorBloc`, and `profileSaveRetryService`.
 ///
 /// It does NOT warm the Kind-0 cache — that side effect belongs to the
 /// relay-backed [profileRepository].
@@ -394,13 +393,11 @@ ProfileReader? profileReadRepository(Ref ref) {
     return null;
   }
 
-  return _buildProfileRepository(ref, warmCache: false);
+  return _buildProfileRepository(ref);
 }
 
 /// Shared construction for [profileRepository] and [profileReadRepository].
-/// When [warmCache] is true, pre-loads known cached pubkeys into the
-/// SubscriptionManager so Kind-0 relay requests skip already-cached authors.
-ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
+ProfileRepository _buildProfileRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
   final userProfilesDao = ref.watch(databaseProvider).userProfilesDao;
   final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
@@ -446,10 +443,9 @@ ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
     blockFilter: blockFilter,
   );
 
-  // Unconditional, not gated on warmCache: the write-path guards in
-  // cacheProfile depend on this set, and every construction of the repository
-  // needs them — a relay Kind 0 can resurrect an evicted account regardless of
-  // whether this instance warms the cache.
+  // Every construction of the repository needs this: the write-path guards in
+  // cacheProfile depend on this set, and a relay Kind 0 can resurrect an
+  // evicted account on any instance.
   unawaited(repo.loadVanishedPubkeys());
   // Prime the vanish source before DM surfaces mount, so the synchronous
   // derived value does not sample it during its initial AsyncLoading state.
@@ -457,18 +453,6 @@ ProfileRepository _buildProfileRepository(Ref ref, {required bool warmCache}) {
   // profileIdentityResolvingProvider; nothing in the graph couples them.
   // Pinned by test/providers/repository_providers_test.dart.
   ref.listen(vanishedProfilePubkeysProvider, (_, _) {});
-
-  if (warmCache) {
-    // Pre-load known cached pubkeys and wire into SubscriptionManager
-    // so Kind 0 relay requests skip already-cached authors.
-    unawaited(
-      repo.loadKnownCachedPubkeys().then((_) {
-        ref
-            .read(subscriptionManagerProvider)
-            .setCacheLookup(hasProfileCached: repo.hasProfile);
-      }),
-    );
-  }
 
   return repo;
 }
@@ -543,7 +527,7 @@ const String _peopleListsBoxName = HiveBoxNames.peopleLists;
 PeopleListsRepository peopleListsRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
   final cache = LocalPeopleListsCache(
-    openBox: () => Hive.openBox<dynamic>(_peopleListsBoxName),
+    openBox: () => HiveBoxOpener.open<dynamic>(_peopleListsBoxName),
   );
 
   return PeopleListsRepositoryImpl(

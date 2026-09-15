@@ -22,16 +22,20 @@ Before keeping a test, it must satisfy all of these:
 
 > **LLM-generated tests skew hard toward coverage theatre** — asserting constructor parameters, mock-then-verify-the-mock, one trivial test per line. Reject these on the "can it fail?" bar even when the coverage number looks fine.
 
-### The two most literal shapes are frozen at zero
+### The three most literal shapes are frozen at zero
 
-Judgement is needed for most of the bar above, but two shapes need none, so
+Judgement is needed for most of the bar above, but three shapes need none, so
 they are enforced: `check_placeholder_tests.sh` (#3340) freezes at **zero**
 
 1. a test whose every assertion is trivially satisfied —
    `expect(true, isTrue)`, `expect(1, 1)`, `expect(x, equals(x))` for a
    literal `x`; and
 2. a `*_test.dart` that declares no `test` / `testWidgets` / `blocTest` /
-   `patrolTest` / `group` at all.
+   `patrolTest` / `group` at all; and
+3. a `group` whose callback tree declares no test. Lifecycle calls and bare
+   assertions do not
+   count, and unknown bare calls are conservatively treated as possible local
+   or imported test-declaring helpers.
 
 #3340 removed all 93 sites — 38 of them one 602-line accessibility suite in
 which every single test was `expect(true, isTrue)`, and 24 in seven ProofMode
@@ -45,7 +49,7 @@ assertion, since a provider mutated during `initState`/`dispose` surfaces as a
 framework exception. There is deliberately no inline ignore: a genuine
 exception earns a reviewed baseline entry.
 
-Two boundaries worth knowing, because they are the reason the guard is
+Three boundaries worth knowing, because they are the reason the guard is
 trustworthy:
 
 - **A tautology beside a real assertion is not flagged.** The test as a whole
@@ -56,6 +60,11 @@ trustworthy:
   an imported helper. 91 such tests exist; most are good. That population needs
   helper-aware triage, not a gate, so the bar above still applies to it by
   judgement.
+- **A custom test wrapper keeps a group populated.** A bare call such as
+  `testWidgetsWithSurfaceSize(...)` or `defineFutureDelayedCeilingTests(...)`
+  may declare tests in another function or file, so the detector exempts it.
+  Calls inside `setUp` and other lifecycle callbacks do not count, and neither
+  does a bare `expect(...)` or `verify(...)` sitting in the group body.
 
 ```bash
 cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integration_test packages --path-prefix . --detail
@@ -63,7 +72,7 @@ cd mobile && dart run scripts/lib/placeholder_test_detector.dart test integratio
 
 ### An unchanged-assertion needs a pinned baseline
 
-The third frozen shape is not literal, which is why the placeholder guard cannot
+The fourth frozen shape is not literal, which is why the placeholder guard cannot
 see it. Read a value into a local, act, and assert the same read still equals
 the local:
 
@@ -410,7 +419,7 @@ blocTest<MyBloc, MyState>(
   build: () => MyBloc(),
   act: (bloc) async {
     bloc.add(ChangeValue(add: 1));
-    await Future<void>.delayed(Duration.zero);  // Ensure order
+    await pumpEventQueue(); // Let the first event settle before adding another.
     bloc.add(ChangeValue(remove: 1));
   },
   expect: () => const [
@@ -419,6 +428,10 @@ blocTest<MyBloc, MyState>(
   ],
 );
 ```
+
+Tests must not use `Future.delayed` for synchronization. The
+`mobile/scripts/check_future_delayed_ceiling.sh` ratchet enforces this while the
+remaining test debt tracked by #4837 is paid down.
 
 ---
 
@@ -796,8 +809,9 @@ it can leak between files in the same package. Packages do not have a
 process-global isolation is enforced by two static guards:
 `check_package_channel_isolation.sh` for channel handlers (baseline
 `mobile/scripts/baseline/package_channel_raw_installs.txt`, shrink-only) and
-`check_process_global_mutations.sh` for singletons and irreversible
-initializers. Both run in CI in the `Generated Files` job. A package test that
+`check_process_global_mutations.sh` for singletons, irreversible
+initializers and owned initializers. Both run in CI in the `Generated Files`
+job. A package test that
 trips the channel ratchet should null its handler in `tearDown`; regenerate the
 baseline only when an entry is genuinely removed.
 
@@ -819,7 +833,8 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
-| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` heals any box left **open** and blames under `DIVINE_STRICT_HIVE_BOXES`; the rest of the row is convention, not a check. |
+| Hive's process-global home path (`Hive.init(path)`) | Go through a helper that owns the reset: `TestHelpers.setHiveHomeForTesting(path)` in the app tree, `setHiveTestHome(path)` in `people_lists_repository`. A bare `Hive.init` in a `*_test.dart` is banned even when paired with an inline `Hive.init(null)`, because a throw before that reset strands the override (`check_process_global_mutations.sh` enforces, hard zero). |
+| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | Production opens go through `HiveBoxOpener`; tests use `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. A root `tearDown` observes pending app opens, heals any box left **open**, and blames under `DIVINE_STRICT_HIVE_BOXES`. |
 | A service you registered with `BackgroundActivityManager` (`AuthService`, `UploadManager`, `AnalyticsService`) | Dispose the service. All three unregister in `dispose()`. If a test drives a manager directly, keep that exact instance and call `addTearDown(manager.resetForTesting)`. Each provider container owns a separate manager, so constructing a new manager cannot reset the instance under test. |
 
 ### Heal-and-blame harness (the 5 shared channels)
@@ -874,16 +889,21 @@ hook and the repo has exactly one, under `mobile/test/`. `mobile/integration_tes
 and `mobile/packages/*/test` get no guard, no heal and no signal — nothing there
 opens a shared box today, so this is a gap to know about rather than a live one.
 
-**What the guard can and cannot see.** It observes one thing: whether a box in
-`HiveBoxNames.all` is still open when a test ends. So `await Hive.close()`
+**What the guard can and cannot see.** Production opens use `HiveBoxOpener`,
+whose test observer starts Hive's operation outside `testWidgets` fake async
+and records it until settlement. Root teardown can therefore await and
+attribute an app-owned open that was still pending when the test ended. It also
+observes whether a box in `HiveBoxNames.all` is still open. So `await Hive.close()`
 satisfies it too — twelve suites clean up that way — and an `openBox` still
-in flight is invisible to `Hive.isBoxOpen`, which reads `HiveImpl._boxes` while
-a pending open sits in `_openingBoxes`. Neither is enforcement of the row above:
+started directly by test code is invisible to `Hive.isBoxOpen`, which reads
+`HiveImpl._boxes` while a pending open sits in `_openingBoxes`. Neither is
+enforcement of the row above:
 "clean up with `cleanupHiveBox`, in both `setUp` and `tearDown`" is the
 convention, and only the open-box half is mechanically checked. The
 MethodChannel harness pairs its runtime guard with a static
-`check_shared_channel_overrides.sh` ratchet for exactly this reason; there is
-no Hive equivalent yet.
+`check_shared_channel_overrides.sh` ratchet for exactly this reason; the Hive
+production ratchet likewise prevents app code from bypassing its observable
+seam.
 
 Package suites have no equivalent runtime harness; see the package-specific
 guard below.

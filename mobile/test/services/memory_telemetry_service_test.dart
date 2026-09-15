@@ -37,7 +37,7 @@ void main() {
         queueDepth: queueDepth,
         imageCacheBytes: imageCacheBytes,
         imageCacheLiveCount: imageCacheLiveCount,
-        emit: emitted.add,
+        emit: (snapshot, _) => emitted.add(snapshot),
         interval: interval,
       );
     }
@@ -187,11 +187,11 @@ void main() {
         readPeakRssBytes: _zero,
         nativeControllerCount: _zero,
         queueDepth: _zero,
-        emit: emitted.add,
+        emit: (snapshot, _) => emitted.add(snapshot),
       )..sampleOnce();
-      final message = const JSONMessageCodec().encodeMessage(
-        <String, dynamic>{'type': 'memoryPressure'},
-      );
+      final message = const JSONMessageCodec().encodeMessage(<String, dynamic>{
+        'type': 'memoryPressure',
+      });
       await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
         SystemChannels.system.name,
         message,

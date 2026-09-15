@@ -57,14 +57,6 @@ enum FeatureFlag {
         'rollout sign-off.',
     audience: FeatureFlagAudience.internal,
   ),
-  divineSupporters(
-    'Divine Supporters',
-    'Optional monthly supporter subscription via in-app purchase. '
-        'Nothing is gated — it keeps Divine running and recognizes supporters.',
-    // Purchases must not be exposed to ordinary users until the build has a
-    // configured verification service that can claim and acknowledge them.
-    audience: FeatureFlagAudience.internal,
-  ),
   newPostNotifications(
     'New Post Notifications',
     'Turn on a bell for creators you follow to get notified when they post. '

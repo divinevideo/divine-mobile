@@ -13,12 +13,14 @@ import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
@@ -93,9 +96,10 @@ void main() {
   // The shell reads SharedPreferences, the app version and the relay-status
   // surface through Riverpod. A bare ProviderContainer throws inside
   // AppShellSideEffects before anything renders.
-  ProviderContainer container() => ProviderContainer(
+  ProviderContainer container({SharedPreferences? prefs}) => ProviderContainer(
     overrides: [
       ...getStandardTestOverrides(
+        mockSharedPreferences: prefs,
         mockAuthService: authenticatedAuth(),
         mockNostrService: createMockNostrServiceWithRelayStatus(),
       ),
@@ -448,6 +452,71 @@ void main() {
 
       // Should navigate to canonical home path, not back to /home/7
       expect(currentLocation(c), VideoFeedPage.pathForIndex(0));
+
+      await unmount(tester, c);
+    });
+  });
+
+  group('E) Campaign landing', () {
+    testWidgets(
+      'renders the Following feed despite a persisted non-Following source',
+      (
+        tester,
+      ) async {
+        final prefs = createMockSharedPreferences();
+        when(
+          () => prefs.getString('selected_feed_mode_$syntheticTestPubkey'),
+        ).thenReturn(FeedMode.latest.name);
+        final c = container(prefs: prefs);
+
+        await pumpShell(tester, c);
+
+        c.read(goRouterProvider).go(RoutePaths.followingNew);
+        await tester.pump();
+        await tester.pump();
+
+        expect(currentLocation(c), RoutePaths.followingNew);
+        expect(selectedTab(tester), equals(0));
+
+        final bloc = BlocProvider.of<VideoFeedBloc>(
+          tester.element(find.byType(VideoFeedView)),
+        );
+        expect(bloc.state.source.type, VideoFeedSourceType.following);
+
+        // The forced start must not rewrite the account's stored source.
+        verifyNever(
+          () => prefs.setString(
+            'selected_feed_mode_$syntheticTestPubkey',
+            FeedMode.following.name,
+          ),
+        );
+
+        await unmount(tester, c);
+      },
+    );
+
+    testWidgets('tapping Home returns to the normal home feed', (tester) async {
+      final c = container();
+
+      await pumpShell(tester, c);
+
+      c.read(goRouterProvider).go(RoutePaths.followingNew);
+      await tester.pump();
+      await tester.pump();
+      expect(currentLocation(c), RoutePaths.followingNew);
+
+      await tester.tap(find.bySemanticsIdentifier('home_tab'));
+      await tester.pump();
+      await tester.pump();
+
+      // The campaign landing lives in the home branch, so Home reads as
+      // already selected; the tap must still escape to the home feed instead
+      // of running an in-place refresh.
+      expect(currentLocation(c), VideoFeedPage.pathForIndex(0));
+      final retapCubit = BlocProvider.of<HomeFeedRetapCubit>(
+        tester.element(find.byType(VineBottomNav)),
+      );
+      expect(retapCubit.state.isRefreshing, isFalse);
 
       await unmount(tester, c);
     });

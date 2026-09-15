@@ -9,8 +9,8 @@ on:
   pull_request:
     branches: [main]
 
-# The 13 Linux-runnable suites have two dependency shapes. Eleven have a
-# focused closure across ten packages and five app files. Two widget-level
+# The 14 Linux-runnable suites have two dependency shapes. Eleven have a
+# focused closure across ten packages and five app files. Three widget-level
 # suites import the provider/router graph, which reaches nearly all mobile/lib
 # and mobile/packages production code. A 60-PR sample found those scopes on
 # 37% and 77% of changes respectively; running every suite costs about 14
@@ -136,10 +136,7 @@ jobs:
       # axes. The generated-files guard accounts for every suite against these
       # lists or service_suite_exclusions.txt.
       #
-      # local_stack cannot start on a GitHub runner at all:
-      # divine-invite-darshan:e2e is a private GHCR package, compose resolves
-      # every image before starting any, so zero containers come up. The
-      # suites below need none of it — they stand up their own in-process relay
+      # The suites below need no local stack — they stand up their own in-process relay
       # (integration_test/helpers/fake_relay.dart).
       - name: 🚀 Run service integration tests
         env:
@@ -163,6 +160,7 @@ jobs:
           app_suites=(
             integration_test/e2e/reel_reply_retry_double_send_test.dart
             integration_test/e2e/block_leaves_kind3_follow_test.dart
+            integration_test/e2e/video_creation_flow_test.dart
           )
           # SERVICE_SUITE_LIST_END
           suites=()

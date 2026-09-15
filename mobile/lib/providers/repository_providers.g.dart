@@ -416,7 +416,7 @@ final class ProfileRepositoryProvider
   }
 }
 
-String _$profileRepositoryHash() => r'92a8519f8d195b5c33727803820aa82e94a8b0b2';
+String _$profileRepositoryHash() => r'89273d8f2507effaf89d0daf942fa8994ed5057f';
 
 /// Read-only profile access gated on **identity-known** (a pubkey is
 /// available) rather than the full `nostrReady` relay-connect settle.
@@ -433,11 +433,10 @@ String _$profileRepositoryHash() => r'92a8519f8d195b5c33727803820aa82e94a8b0b2';
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
-/// this provider cannot publish by accident. Everything that signs must keep
-/// using [profileRepository] — today that is
-/// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
-/// `profileSaveRetryService`.
+/// `claimUsername` or `drivePendingSave`, so a consumer of this provider
+/// cannot publish by accident. Everything that signs must keep using
+/// [profileRepository] — today that is `MonetizationLinksSettingsCubit`,
+/// `ProfileEditorBloc`, and `profileSaveRetryService`.
 ///
 /// It does NOT warm the Kind-0 cache — that side effect belongs to the
 /// relay-backed [profileRepository].
@@ -460,11 +459,10 @@ final profileReadRepositoryProvider = ProfileReadRepositoryProvider._();
 /// **The return type is the security boundary.** The identity-known phase
 /// carries a pubkey but no client, so signing there is unsafe even though
 /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-/// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
-/// this provider cannot publish by accident. Everything that signs must keep
-/// using [profileRepository] — today that is
-/// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
-/// `profileSaveRetryService`.
+/// `claimUsername` or `drivePendingSave`, so a consumer of this provider
+/// cannot publish by accident. Everything that signs must keep using
+/// [profileRepository] — today that is `MonetizationLinksSettingsCubit`,
+/// `ProfileEditorBloc`, and `profileSaveRetryService`.
 ///
 /// It does NOT warm the Kind-0 cache — that side effect belongs to the
 /// relay-backed [profileRepository].
@@ -487,11 +485,10 @@ final class ProfileReadRepositoryProvider
   /// **The return type is the security boundary.** The identity-known phase
   /// carries a pubkey but no client, so signing there is unsafe even though
   /// Drift reads are not. [ProfileReader] cannot express `saveProfileEvent`,
-  /// `claimUsername`, `releaseUsername` or `drivePendingSave`, so a consumer of
-  /// this provider cannot publish by accident. Everything that signs must keep
-  /// using [profileRepository] — today that is
-  /// `MonetizationLinksSettingsCubit`, `ProfileEditorBloc`, and
-  /// `profileSaveRetryService`.
+  /// `claimUsername` or `drivePendingSave`, so a consumer of this provider
+  /// cannot publish by accident. Everything that signs must keep using
+  /// [profileRepository] — today that is `MonetizationLinksSettingsCubit`,
+  /// `ProfileEditorBloc`, and `profileSaveRetryService`.
   ///
   /// It does NOT warm the Kind-0 cache — that side effect belongs to the
   /// relay-backed [profileRepository].
@@ -529,7 +526,7 @@ final class ProfileReadRepositoryProvider
 }
 
 String _$profileReadRepositoryHash() =>
-    r'6a1e6da7d10b16ef607eaf7c1b771201ebb753a4';
+    r'2ca21e064d13b26a175f71d17f152295b242c275';
 
 /// Curation Service - manages NIP-51 video curation sets
 
@@ -701,7 +698,7 @@ final class PeopleListsRepositoryProvider
 }
 
 String _$peopleListsRepositoryHash() =>
-    r'd62acfadef10fcaab46ba5f74352e7feacf3a63d';
+    r'486b3f30391906e12735ed541fe1ba87672ed796';
 
 /// Repository for the reserved kind 30000 `d=notify` subscription list.
 ///

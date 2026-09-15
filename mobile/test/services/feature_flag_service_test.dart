@@ -248,19 +248,19 @@ void main() {
 
     group('state queries', () {
       test('exposes user and internal flag metadata', () {
-        final supporters = service.getFlagMetadata(
-          FeatureFlag.divineSupporters,
+        final analytics = service.getFlagMetadata(
+          FeatureFlag.enhancedAnalytics,
         );
         final contentWarnings = service.getFlagMetadata(
           FeatureFlag.communityContentWarnings,
         );
 
-        expect(supporters.flag.displayName, equals('Divine Supporters'));
+        expect(analytics.flag.displayName, equals('Enhanced Analytics'));
         expect(
           contentWarnings.flag.displayName,
           equals('Community Content Warnings'),
         );
-        expect(supporters.isEnabled, isFalse);
+        expect(analytics.isEnabled, isFalse);
         expect(contentWarnings.isEnabled, isFalse);
       });
 

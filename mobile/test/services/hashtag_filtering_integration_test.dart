@@ -5,7 +5,6 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Simple mock for testing basic functionality
@@ -80,10 +79,8 @@ void main() {
 
       // This verifies the method exists in the class definition
       final mockNostrService = MinimalMockNostrService();
-      final mockSubscriptionManager = SubscriptionManager(mockNostrService);
       final videoService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
 
@@ -92,7 +89,6 @@ void main() {
 
       // Clean up
       videoService.dispose();
-      mockSubscriptionManager.dispose();
     });
   });
 }

@@ -220,7 +220,6 @@ bool _isAuthEntryLocation(String location) {
       location.startsWith('${WelcomeScreen.path}/') ||
       location.startsWith(KeyImportScreen.path) ||
       location.startsWith(NostrConnectScreen.path) ||
-      location == WelcomeScreen.inviteGatePath ||
       location.startsWith(WelcomeScreen.resetPasswordPath) ||
       location.startsWith(ResetPasswordScreen.path) ||
       location.startsWith(EmailVerificationScreen.path) ||
@@ -449,7 +448,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   // Only bounce to the loading screen on a true cold load (no value yet).
   // Riverpod keeps the previous value during a background refetch
   // (isLoading == true while hasValue == true), e.g. when
-  // currentAuthStateProvider re-invalidates on an authStateStream event.
+  // currentAuthStateProvider publishes a new auth state.
   // Treating those transient refetches as "loading" would redirect away
   // from the current route to the review loading screen and back, which
   // tears down and rebuilds the video feed.
@@ -524,7 +523,6 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   if (authState == AuthState.authenticated &&
       (location == WelcomeScreen.path ||
           location == NostrConnectScreen.path ||
-          location == WelcomeScreen.inviteGatePath ||
           location == WelcomeScreen.createAccountPath ||
           location == WelcomeScreen.loginOptionsPath)) {
     // A live NIP-46 pairing returns through divine://nostrconnect, which

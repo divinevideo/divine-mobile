@@ -20,7 +20,9 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/video_editor_scaffold.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -78,6 +80,7 @@ void main() {
 
     Widget buildWidget({
       required bool isLoading,
+      VideoEditorMainBloc? mainBlocOverride,
       ClipEditorBloc? clipBlocOverride,
       ProImageEditorState? editorOverride,
       ThemeData? theme,
@@ -106,7 +109,9 @@ void main() {
           fromLibrary: false,
           child: MultiBlocProvider(
             providers: [
-              BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+              BlocProvider<VideoEditorMainBloc>.value(
+                value: mainBlocOverride ?? mainBloc,
+              ),
               BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
               BlocProvider<ClipEditorBloc>.value(
                 value: clipBlocOverride ?? clipBloc,
@@ -181,6 +186,54 @@ void main() {
 
       expect(find.bySemanticsLabel('Add element'), findsNothing);
     });
+
+    testWidgets(
+      'collapses the timeline and its own controls under the voice-over '
+      'recorder',
+      (tester) async {
+        // Created inside the test so its state stream runs in the test's own
+        // zone; a bloc from setUp delivers its states on the real event loop,
+        // which a pump never turns.
+        final mainBloc = VideoEditorMainBloc();
+        addTearDown(mainBloc.close);
+        SizeTransition collapseSection() => tester.widget<SizeTransition>(
+          find
+              .ancestor(
+                of: find.byType(VideoEditorTimelineScaffold),
+                matching: find.byType(SizeTransition),
+              )
+              .last,
+        );
+
+        await tester.pumpWidget(
+          buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+        );
+        await tester.pump();
+
+        expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
+        expect(collapseSection().sizeFactor.value, 1);
+
+        mainBloc.add(
+          const VideoEditorMainOpenSubEditor(SubEditorType.voiceOver),
+        );
+        // The loading scaffold spins forever, so settle the 240ms switch
+        // animation by hand.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // The recorder brings its own toolbar over the preview, and the
+        // section collapses whole so the video fills the screen behind it.
+        expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
+        expect(collapseSection().sizeFactor.value, 0);
+
+        mainBloc.add(const VideoEditorMainSubEditorClosed());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
+        expect(collapseSection().sizeFactor.value, 1);
+      },
+    );
 
     testWidgets('hides FAB when an overlay item is selected', (tester) async {
       overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));

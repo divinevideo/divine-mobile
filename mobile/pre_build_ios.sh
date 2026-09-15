@@ -58,8 +58,8 @@ fi
 if [ ! -f "Pods/Manifest.lock" ] || [ ! -d "Pods" ]; then
     echo "⚠️  CocoaPods not found, running pod install..."
     "$POD_CMD" install --verbose
-elif [ "Podfile.lock" -nt "Pods/Manifest.lock" ]; then
-    echo "⚠️  Podfile.lock is newer than Manifest.lock, running pod install..."
+elif [ "Podfile.lock" -nt "Pods/Manifest.lock" ] || [ "Podfile" -nt "Pods/Manifest.lock" ]; then
+    echo "⚠️  CocoaPods inputs are newer than Manifest.lock, running pod install..."
     "$POD_CMD" install --verbose
 else
     echo "✅ CocoaPods dependencies are up to date"

@@ -3213,9 +3213,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Tillbaka till inbjudningskod';
-
-  @override
   String get authUseDivineNoBackup => 'Använd Divine utan backup';
 
   @override
@@ -3332,17 +3329,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte verifiera e-post. Kolla din anslutning och försök igen.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Du är på listan!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Vi delar uppdateringar på $email.\nNär fler inbjudningskoder blir tillgängliga skickar vi dem till dig.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Försök igen';
 
   @override
@@ -3352,35 +3338,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Kunde inte öppna $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Lägg till din inbjudningskod';
-
-  @override
-  String get authInviteCodeLabel => 'Inbjudningskod';
-
-  @override
-  String get authEnterYourCode => 'Ange din kod';
-
-  @override
-  String get authNext => 'Nästa';
-
-  @override
-  String get authJoinWaitlist => 'Ansluta till väntelistan';
-
-  @override
-  String get authJoinWaitlistTitle => 'Ansluta till väntelistan';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Dela din e-post så skickar vi uppdateringar när åtkomst öppnas.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Skicka mig inspiration från Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Hjälp med inbjudningsåtkomst';
 
   @override
   String get authGeneratingConnection => 'Genererar anslutning...';
@@ -3560,50 +3517,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Kodinmatning är inte tillgänglig just nu. Tryck på länken i din e-post eller skicka igen för att få en ny.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Ange en inbjudningskod som ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Den inbjudningskoden ser inte giltig ut.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Den inbjudningskoden är redan använd eller återkallad.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Den här kreatörens inbjudningar är slut';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Den inbjudningskoden är inte tillgänglig. Ställ dig i kön så skickar vi en inbjudan när det finns plats.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Vi kunde inte kontrollera koden. Försök igen.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Något gick fel. Försök med din inbjudningskod igen.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Den inbjudningskoden är inte längre tillgänglig. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Den inbjudningskoden kan inte användas just nu. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Vi kunde inte bekräfta din inbjudan just nu. Gå tillbaka till din inbjudningskod och försök igen, eller kontakta supporten.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Vi kunde inte aktivera din inbjudan. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.';
 
   @override
   String get shareSheetSave => 'Spara';
@@ -4275,15 +4188,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get notificationsVideoThumbnail => 'Videominiatyr';
 
   @override
-  String get notificationsInviteSingular =>
-      'Du har 1 inbjudan att dela med en vän!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Du har $count inbjudningar att dela med vänner!';
-  }
-
-  @override
   String notificationsTabBadges(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4654,6 +4558,9 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte öppna supportmeddelanden';
 
   @override
+  String get supportChatNotAvailable => 'Support chat not available';
+
+  @override
   String supportCouldNotOpenPage(String pageName) {
     return 'Kunde inte öppna $pageName';
   }
@@ -4780,11 +4687,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportFailed => 'Kunde inte rapportera innehåll. Försök igen.';
 
   @override
-  String get reportNotSent =>
-      'Kunde inte skicka din anmälan. Kontrollera din anslutning och försök igen.';
-
-  @override
-  String get reportReceivedTitle => 'Rapport mottagen';
+  String get reportReceivedTitle => 'Anmälan sparad';
 
   @override
   String get reportReceivedThankYou =>
@@ -4792,11 +4695,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get reportReceivedReviewNotice =>
-      'Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.';
-
-  @override
-  String get reportModerationDmDelayed =>
-      'Vi kunde inte nå modereringsteamet direkt just nu, men din anmälan togs emot och kommer att granskas.';
+      'Vi skickar den automatiskt när du är ansluten. Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.';
 
   @override
   String get reportContactModeration => 'Meddela modereringsteamet';
@@ -7714,62 +7613,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Publicering på Bluesky är tillfälligt otillgänglig. Försök igen.';
 
   @override
-  String get invitesTitle => 'Bjud in vänner';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count inbjudningar redo att skapas',
-      one: '1 inbjudan redo att skapas',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Skapa en kod när du är redo att dela en.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Skapa inbjudan';
-
-  @override
-  String get invitesNoneAvailable => 'Inga inbjudningar tillgängliga just nu';
-
-  @override
-  String get invitesShareWithPeople => 'Dela Divine med folk du känner';
-
-  @override
-  String get invitesUsedInvites => 'Använda inbjudningar';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Häng med mig på Divine! Använd inbjudningskoden $code för att komma igång:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Kopiera inbjudan';
-
-  @override
-  String get invitesCopied => 'Inbjudan kopierad!';
-
-  @override
-  String get invitesShareInvite => 'Dela inbjudan';
-
-  @override
-  String get invitesShareSubject => 'Häng med mig på Divine';
-
-  @override
-  String get invitesClaimed => 'Inlöst';
-
-  @override
-  String get invitesCouldNotLoad => 'Kunde inte ladda inbjudningar';
-
-  @override
-  String get invitesRetry => 'Försök igen';
-
-  @override
   String get searchSomethingWentWrong => 'Något gick fel';
 
   @override
@@ -10222,6 +10065,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get appealOpenSupportCenter => 'Öppna supportcentret';
 
   @override
+  String get accountStatusMessageSupport => 'Message support';
+
+  @override
   String get minorAccountReviewOpenModerationMessage =>
       'Öppna modereringsmeddelandet';
 
@@ -10628,70 +10474,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Överstyrningen för skyddad minderårig rensad';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Registreringsinbjudningar';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Nuvarande status';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Servervärde: läser in';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'Servervärde: på';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => 'Servervärde: av';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => 'Servervärde: okänt';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Överstyrning: använd servervärdet';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Överstyrning: tvinga på';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Överstyrning: tvinga av';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Använd servervärdet';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Följ inbjudningstjänstens onboardingMode';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Tvinga på';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Visa registreringsinbjudningarnas grindar och hantering lokalt';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Tvinga av';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Dölj gränssnittet för registreringsinbjudningar lokalt utan att ändra servern';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Registreringsinbjudningar följer nu servern';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Registreringsinbjudningar tvingade på';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Registreringsinbjudningar tvingade av';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Spela in videokommentar';

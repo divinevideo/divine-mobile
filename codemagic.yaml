@@ -66,10 +66,10 @@ definitions:
     - &check_supporters_config
       name: Check supporter subscription config
       script: |
-        # Both variables below are interpolated unconditionally by every build
-        # step, so an unset one ships an empty --dart-define that overrides the
-        # in-app default. Empty fails safe here but fails silently; this rejects
-        # the combination that ships broken (flag on, no server).
+        # No build step passes a supporter --dart-define any more: the app
+        # carries a compiled default. This guards the two ways that can still
+        # break — a malformed compiled default, and an override that would be
+        # interpolated empty and silently disable the client.
         ./scripts/check_supporters_config.sh
     - &check_signing_endpoint
       name: Check C2PA signing endpoint
@@ -222,20 +222,12 @@ definitions:
           PROOFMODE_SIGNING_SERVER_TOKEN
         ]
 
-        optional_names = %w[
-          SUPPORTERS_API_BASE_URL
-          FF_DIVINE_SUPPORTERS
-        ]
-
         missing = required_names.reject { |name| ENV.key?(name) && !ENV.fetch(name).empty? }
         unless missing.empty?
           abort("missing Shorebird dart-define environment variables: #{missing.join(', ')}")
         end
 
         defines = required_names.to_h { |name| [name, ENV.fetch(name)] }
-        optional_names.each do |name|
-          defines[name] = ENV.fetch(name, '')
-        end
         defines['DEFAULT_ENV'] = ENV.fetch('DEFAULT_ENV')
 
         File.write(
@@ -476,9 +468,20 @@ definitions:
         # Shorebird wraps `flutter build appbundle` with its own engine so the
         # release carries the updater. A plain `flutter build` here would ship
         # a permanently unpatchable version to Play.
+        #
+        # Everything after `--` goes to `flutter build appbundle`. Shorebird's
+        # Flutter fork still runs gen_snapshot with --strip on Android, so AGP
+        # finds libapp.so already stripped and emits no libapp.so.sym; Play
+        # Console then cannot symbolicate Dart frames in native crashes.
+        # --no-strip hands the stripping to AGP, which also writes the .sym
+        # into BUNDLE-METADATA. The libapp.so that reaches devices is
+        # byte-identical either way, so patching is unaffected (#7990). The
+        # patch command below deliberately does not carry the flag: its
+        # libapp.so comes out the same, and Play never sees patched code.
         shorebird release android --flutter-version=$FLUTTER_VERSION --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER \
           --dart-define-from-file=build/shorebird/dart_defines.json \
-          --public-key-path=build/shorebird/patch_public_key.pem
+          --public-key-path=build/shorebird/patch_public_key.pem \
+          -- --extra-gen-snapshot-options=--no-strip
     - &confirm_patch
       name: Confirm patch to production
       script: |
@@ -533,9 +536,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &package_macos_dmg
       name: Package macOS DMG
       script: |
@@ -610,6 +611,12 @@ definitions:
         # Shorebird archive before later steps can promote its artifacts.
         bash scripts/check_privacy_manifest_coverage.sh \
           --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+
+        # Prove FIREBASE_ANALYTICS_WITHOUT_ADID reached Swift package
+        # resolution: the archive must link FirebaseAnalyticsCore, not the
+        # ads-measurement SDK the default product carries (#7303).
+        bash scripts/check_ios_analytics_product.sh \
+          --app build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |
@@ -691,17 +698,9 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
-    # GH_ACTIONS_PR_PREVIEW sets forceOpenOnboarding on the invite client
-    # (main.dart), so getClientConfig() reports OnboardingMode.open and the
-    # invite gate self-redirects to account creation. Without it every flow
-    # that signs up stops at "Add your invite code" and the suite would need
-    # a live invite code as a managed, expirable secret. The gate itself is
-    # covered directly by invite_gate_screen_test.dart.
-    # The flag is named for its original PR-preview use; it is not
-    # GitHub-Actions specific.
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
+        bash scripts/check_ios_analytics_product.sh \
+          --app build/ios/iphonesimulator/Runner.app
     - &build_ios_e2e
       name: Build iOS Simulator app
       script: |
@@ -710,11 +709,8 @@ definitions:
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
-          --dart-define=GH_ACTIONS_PR_PREVIEW=true \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &build_android_e2e
       name: Build Android debug APK
       script: |
@@ -723,11 +719,8 @@ definitions:
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
           --dart-define=DEFAULT_ENV=$DEFAULT_ENV \
-          --dart-define=GH_ACTIONS_PR_PREVIEW=true \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
-          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
-          --dart-define=SUPPORTERS_API_BASE_URL=$SUPPORTERS_API_BASE_URL \
-          --dart-define=FF_DIVINE_SUPPORTERS=$FF_DIVINE_SUPPORTERS
+          --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
     - &install_maestro
       name: Install Maestro CLI
       script: |
@@ -977,6 +970,12 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+        # firebase_analytics links FirebaseAnalyticsCore — no IDFA support, no
+        # Google ads-measurement SDK — when this is present while Xcode
+        # evaluates its Package.swift (#7303). Presence is what counts, not the
+        # value. scripts/check_ios_analytics_product.sh proves it reached the
+        # build product.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: co.openvine.app
@@ -1039,6 +1038,9 @@ workflows:
       groups:
         - zendesk_credentials
         - proofmode_credentials
+      vars:
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1204,6 +1206,8 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: co.openvine.app
@@ -1400,6 +1404,8 @@ workflows:
         # resolve and render playback chrome. Never replace this with a private
         # account credential or mutable search result.
         QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
+        # Same analytics product as ios-build (#7303); see the comment there.
+        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1456,6 +1462,8 @@ workflows:
   perf-feed-ttff:
     name: Feed Time to First Frame (Android)
     working_directory: mobile
+    # Pinned at 20 by test_codemagic_shorebird_config.py as part of this lane's
+    # bounded profile; raising it needs measured lane wall time, not a guess.
     max_build_duration: 20
     instance_type: linux_x2
     environment:
@@ -1541,6 +1549,106 @@ workflows:
       - test_reports/*.jsonl
       - test_reports/feed_ttff_fixture_server.log
       - test_reports/feed_ttff_emulator.txt
+
+  perf-feed-frame:
+    name: Feed Frame Timing (Android)
+    working_directory: mobile
+    # One benchmark per lane: a slow TTFF run must not take the frame report
+    # down with it. Pinned at 20 by test_codemagic_shorebird_config.py as part
+    # of this lane's bounded profile; raising it needs measured wall time, not
+    # a guess.
+    max_build_duration: 20
+    instance_type: linux_x2
+    environment:
+      flutter: 3.47.2
+      java: 17
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    triggering:
+      # #7504 tracks reconnecting the Codemagic webhook. Once connected, this
+      # non-blocking lane runs only for PRs that can affect feed playback.
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: false
+      cancel_previous_builds: true
+    when:
+      changeset:
+        includes:
+          - codemagic.yaml
+          - mobile/assets/seed_media/videos/
+          - mobile/integration_test/perf/
+          - mobile/lib/widgets/video_feed_item/
+          - mobile/packages/divine_video_player/
+          - mobile/packages/infinite_video_feed/
+          - mobile/packages/media_cache/
+          - mobile/scripts/ci/serve_ttff_fixtures.py
+    scripts:
+      - *flutter_pub_get
+      - *setup_local_properties
+      - *launch_android_emulator
+      - name: Run deterministic feed frame timing
+        script: |
+          set -euo pipefail
+          mkdir -p test_reports
+          cleanup() {
+            {
+              echo "## getprop"
+              timeout 10s adb shell getprop || true
+              echo "## cpuinfo"
+              timeout 10s adb shell cat /proc/cpuinfo || true
+              echo "## SurfaceFlinger"
+              timeout 10s adb shell dumpsys SurfaceFlinger || true
+              echo "## media.codec"
+              timeout 10s adb shell dumpsys media.codec || true
+              echo "## top"
+              timeout 10s adb shell top -b -n 1 || true
+              echo "## impeller"
+              timeout 10s adb logcat -d -s flutter Flutter 2>/dev/null \
+                | grep -i "impeller" | tail -5 || true
+            } > test_reports/feed_frame_emulator.txt 2>&1 || true
+            kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          python3 scripts/ci/serve_ttff_fixtures.py \
+            --directory assets/seed_media/videos \
+            --rate 625000 > test_reports/feed_frame_fixture_server.log 2>&1 &
+          FIXTURE_SERVER_PID=$!
+          FIXTURE_PROBE_ATTEMPTS=0
+          until curl --fail --silent --range 0-0 \
+            http://127.0.0.1:8765/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4 \
+            >/dev/null; do
+            kill -0 "$FIXTURE_SERVER_PID"
+            FIXTURE_PROBE_ATTEMPTS=$((FIXTURE_PROBE_ATTEMPTS + 1))
+            if [ "$FIXTURE_PROBE_ATTEMPTS" -ge 30 ]; then
+              echo "Fixture server did not serve the readiness fixture within 30 seconds" >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          adb reverse tcp:8765 tcp:8765
+          # A boot-complete emulator can still be behind keyguard. ExoPlayer
+          # will decode there, but no frame reaches the SurfaceTexture, so the
+          # harness never sees a first frame.
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
+          DEVICE_ID=$(adb get-serialno)
+          # Frame timing for #9045: UI/raster frame times while the pooled feed
+          # player plays and transitions between pages. Raster is reported, not
+          # gated, on an emulator; a budget-device run uses the same command
+          # against a real phone.
+          flutter test integration_test/perf/feed_frame_test.dart \
+            -d "$DEVICE_ID" \
+            --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
+            --machine | tee test_reports/feed_frame.jsonl
+    artifacts:
+      - test_reports/feed_frame.jsonl
+      - test_reports/feed_frame_fixture_server.log
+      - test_reports/feed_frame_emulator.txt
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)

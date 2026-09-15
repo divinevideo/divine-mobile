@@ -192,8 +192,7 @@ void main() {
           () => mockAuthService.currentPublicKeyHex,
         ).thenReturn(_ownerA);
 
-        // Invalidating currentAuthStateProvider simulates the
-        // authStateStream listener firing inside currentAuthStateProvider.
+        // Invalidating currentAuthStateProvider simulates an auth-state change.
         container.invalidate(currentAuthStateProvider);
 
         await Future<void>.delayed(Duration.zero);
@@ -253,8 +252,8 @@ void main() {
         ).called(1);
 
         // Sign out — auth service emits `unauthenticated`. The stream
-        // event invalidates `currentAuthStateProvider`, which rebuilds
-        // with a genuinely different enum value and propagates.
+        // event becomes `currentAuthStateProvider`'s new state, a genuinely
+        // different enum value, so dependents rebuild.
         when(
           () => mockAuthService.authState,
         ).thenReturn(AuthState.unauthenticated);

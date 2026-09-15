@@ -9,6 +9,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -214,6 +215,13 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
       sourceOffset:
           DetachedClipLayerData.sourceOffsetOf(widget.meta) ?? Duration.zero,
     );
+    // A remount under the voice-over recorder picks the pooled player back up
+    // muted, and a player opened there starts muted.
+    _applyMute(_mainBloc?.state.isVoiceOverPreview ?? false);
+  }
+
+  void _applyMute(bool muted) {
+    unawaited(_player?.setMuted(muted: muted));
   }
 
   /// The timeline bloc, or `null` outside the editor.
@@ -223,6 +231,15 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   TimelineOverlayBloc? get _overlayBloc {
     try {
       return context.read<TimelineOverlayBloc>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  /// The editor's main bloc, or `null` outside the editor (see [_overlayBloc]).
+  VideoEditorMainBloc? get _mainBloc {
+    try {
+      return context.read<VideoEditorMainBloc>();
     } on ProviderNotFoundException {
       return null;
     }
@@ -321,37 +338,67 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     return _WindowChangeListener(
       enabled: _overlayBloc != null,
       onChanged: _follow,
-      child: _DetachedClipFrame(
-        clip: clip,
-        // The key wraps the poster as well as the surface: both show the same
-        // footage, and a poster left unkeyed would fill the removed area with
-        // the very screen the key takes out. Transparent stays transparent —
-        // the canvas underneath is the backdrop here, not a checkerboard.
-        child: ChromaKeyedVideo(
-          chromaKey: _chromaKey,
-          previewTransparency: false,
-          // The poster sits under the surface rather than beside it, so a
-          // frame the texture has not painted yet shows the clip's own still
-          // instead of a hole. The player is mounted once and kept:
-          // rebuilding it per playhead tick — 60 times a second — is what a
-          // `builder` around it would do.
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _ClipThumbnail(clip: clip),
-              _WindowVisibility(
-                playhead: playhead,
-                isVisible: player.isWithinWindow,
-                child: DivineVideoPlayer(
-                  controller: player.controller,
-                  placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
-                  crossFadePlaceholder: !_resumed,
+      child: _VoiceOverPreviewListener(
+        enabled: _mainBloc != null,
+        onChanged: _applyMute,
+        child: _DetachedClipFrame(
+          clip: clip,
+          // The key wraps the poster as well as the surface: both show the
+          // same footage, and a poster left unkeyed would fill the removed
+          // area with the very screen the key takes out. Transparent stays
+          // transparent — the canvas underneath is the backdrop here, not a
+          // checkerboard.
+          child: ChromaKeyedVideo(
+            chromaKey: _chromaKey,
+            previewTransparency: false,
+            // The poster sits under the surface rather than beside it, so a
+            // frame the texture has not painted yet shows the clip's own
+            // still instead of a hole. The player is mounted once and kept:
+            // rebuilding it per playhead tick — 60 times a second — is what
+            // a `builder` around it would do.
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _ClipThumbnail(clip: clip),
+                _WindowVisibility(
+                  playhead: playhead,
+                  isVisible: player.isWithinWindow,
+                  child: DivineVideoPlayer(
+                    controller: player.controller,
+                    placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
+                    crossFadePlaceholder: !_resumed,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Calls [onChanged] when the voice-over recorder opens or closes over the
+/// editor, so the companion falls silent with the rest of the preview.
+class _VoiceOverPreviewListener extends StatelessWidget {
+  const _VoiceOverPreviewListener({
+    required this.enabled,
+    required this.onChanged,
+    required this.child,
+  });
+
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+      listenWhen: (previous, current) =>
+          previous.isVoiceOverPreview != current.isVoiceOverPreview,
+      listener: (_, state) => onChanged(state.isVoiceOverPreview),
+      child: child,
     );
   }
 }

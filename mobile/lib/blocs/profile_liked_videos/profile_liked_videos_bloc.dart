@@ -884,10 +884,12 @@ class ProfileLikedVideosBloc
   }
 
   @override
-  Future<void> close() {
-    _removedVideoIdsSubscription.cancel();
-    _blocklistSubscription.cancel();
-    return super.close();
+  Future<void> close() async {
+    final removedVideoIdsCancelled = _removedVideoIdsSubscription.cancel();
+    final blocklistCancelled = _blocklistSubscription.cancel();
+    await super.close();
+    await removedVideoIdsCancelled;
+    await blocklistCancelled;
   }
 }
 

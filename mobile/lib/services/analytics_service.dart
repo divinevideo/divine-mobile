@@ -830,6 +830,7 @@ class AnalyticsService implements BackgroundAwareService {
           status: PendingViewEventStatus.pending,
           createdAt: createdAt,
           phase: phase.name,
+          appVersion: _recordingAppVersion,
         ),
       );
     } catch (e) {
@@ -851,6 +852,19 @@ class AnalyticsService implements BackgroundAwareService {
       );
     }
     return true;
+  }
+
+  /// The version a queued view row records as the build that captured it.
+  ///
+  /// Read from the publisher, not from `_appVersion`: that is the
+  /// product-analytics release, which a staging smoke build replaces with its
+  /// `staging-smoke-<hex>` marker, whereas view events carry the shipped
+  /// runtime version (#9068). Taking the publisher's value means the row says
+  /// exactly what a live publish would have said. A blank version collapses
+  /// to null so an unknown build has one representation in the table.
+  String? get _recordingAppVersion {
+    final version = _viewEventPublisher?.appVersion;
+    return version == null || version.isEmpty ? null : version;
   }
 
   /// Publish Kind 22236 ephemeral view event to Nostr relays.

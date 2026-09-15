@@ -1,39 +1,9 @@
 // ABOUTME: Static guards for the Android unprocessed-audio capture contract.
 // ABOUTME: Pins that Music mode reaches the recording audio source (#8079).
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-String _readNativeSource(String fileName) {
-  const packagePath = 'android/src/main/kotlin/co/openvine/divine_camera';
-  final file = [
-    File('$packagePath/$fileName'),
-    File('packages/divine_camera/$packagePath/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-/// Returns the Kotlin declaration starting at [signature] up to its closing
-/// brace, so an assertion cannot match an identical line elsewhere in the
-/// file, nor a line that sits outside the scope being asserted on.
-String _declarationAt(String source, String signature) {
-  final start = source.indexOf(signature);
-  if (start < 0) {
-    throw StateError('No declaration starting with "$signature".');
-  }
-
-  var depth = 0;
-  for (var i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] == '{') depth++;
-    if (source[i] == '}') {
-      depth--;
-      if (depth == 0) return source.substring(start, i + 1);
-    }
-  }
-  throw StateError('Unbalanced braces after "$signature".');
-}
+import 'helpers/native_source.dart';
 
 void main() {
   group('Android unprocessed audio contract', () {
@@ -42,9 +12,9 @@ void main() {
     late final String resolveAudioSource;
 
     setUpAll(() {
-      pluginSource = _readNativeSource('DivineCameraPlugin.kt');
-      controllerSource = _readNativeSource('CameraController.kt');
-      resolveAudioSource = _declarationAt(
+      pluginSource = readAndroidNativeSource('DivineCameraPlugin.kt');
+      controllerSource = readAndroidNativeSource('CameraController.kt');
+      resolveAudioSource = declarationAt(
         controllerSource,
         'private fun resolveAudioSource(',
       );
@@ -64,7 +34,7 @@ void main() {
 
     test('the plugin forwards it to the controller', () {
       expect(
-        _declarationAt(pluginSource, 'private fun initializeCamera('),
+        declarationAt(pluginSource, 'private fun initializeCamera('),
         contains('enableAutoLensSwitch, preferUnprocessedAudio)'),
       );
     });
@@ -77,7 +47,7 @@ void main() {
         contains('private var prefersUnprocessedAudio: Boolean = false'),
       );
       expect(
-        _declarationAt(controllerSource, '    fun initialize('),
+        declarationAt(controllerSource, '    fun initialize('),
         contains('this.prefersUnprocessedAudio = preferUnprocessedAudio'),
       );
     });

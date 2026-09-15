@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 13** (see `app_database.dart`).
+**Version: 14** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -64,6 +64,17 @@ trimmed to a per-owner cap. The `from < 13` step creates the indexes explicitly,
 because `createTable` does not emit `@TableIndex.sql` indexes and a fresh install
 would otherwise disagree with an upgraded database — the same divergence v7 had to
 backfill.
+
+Version 14 adds `pending_view_events.app_version` (#9077), the version of the
+build that recorded a queued view. The healthy path flushes a row immediately,
+so the published `version` tag normally matches the recording build; a failed
+row can outlive an app update, and replaying it with the successor's runtime
+version understated the release that dropped the view and inflated the one that
+restored publishing. Pre-existing rows stay NULL and replay without a `version`
+tag: nothing on such a row says which build recorded it, and the build replaying
+it is by construction a later one. The step is idempotent and is part of the
+guarded `beforeOpen` recovery chain, with the column in the repair probe beside
+`phase`.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

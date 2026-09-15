@@ -10,10 +10,8 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/invite_availability_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
-import 'package:openvine/router/invite_availability_redirects.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
@@ -38,7 +36,6 @@ import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 import 'package:openvine/screens/settings/content_preferences_screen.dart';
 import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
-import 'package:openvine/screens/settings/invites_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
@@ -99,15 +96,6 @@ List<RouteBase> settingsRoutes(Ref ref) {
         state,
         (coordinate) => BadgeAwardScreen(coordinate: coordinate),
       ),
-    ),
-    GoRoute(
-      path: InvitesScreen.path,
-      name: InvitesScreen.routeName,
-      redirect: (_, state) => invitesScreenRedirectIfDisabled(
-        ref.read(inviteAvailabilityCubitProvider),
-        state,
-      ),
-      builder: (_, _) => const InvitesScreen(),
     ),
     GoRoute(
       path: AccountStatusScreen.path,
@@ -191,7 +179,7 @@ List<RouteBase> settingsRoutes(Ref ref) {
     GoRoute(
       path: SupporterScreen.path,
       name: SupporterScreen.routeName,
-      redirect: (_, _) => supporterRedirectIfDisabled(ref),
+      redirect: (_, _) => supporterRedirectIfUnavailable(ref),
       builder: (_, _) => const SupporterScreen(),
     ),
     GoRoute(
@@ -321,12 +309,8 @@ String? monetizationLinksRedirectIfDisabled(Ref ref) {
   return SettingsScreen.path;
 }
 
-String? supporterRedirectIfDisabled(Ref ref) {
-  final enabled = ref.read(
-    isFeatureEnabledProvider(FeatureFlag.divineSupporters),
-  );
-  final verificationAvailable = ref.read(supporterApiClientProvider) != null;
-  if (enabled && verificationAvailable) return null;
+String? supporterRedirectIfUnavailable(Ref ref) {
+  if (ref.read(supporterApiConfiguredProvider)) return null;
   return SettingsScreen.path;
 }
 

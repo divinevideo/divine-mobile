@@ -19,6 +19,7 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
+import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -43,7 +44,6 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
-import 'package:openvine/screens/video_editor/voice_over_take_placement.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -278,12 +278,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       );
 
       // A restored draft's text layers carry only the serialized Google Font
-      // family name. Re-register the editor fonts before the canvas imports
+      // family name. Re-register the fonts they name before the canvas imports
       // the state history, otherwise the imported overlays fall back to the
       // default font (see #5181).
-      if (mounted &&
-          ref.read(videoEditorProvider).editorStateHistory.isNotEmpty) {
-        await preloadEditorTextFonts();
+      if (mounted) {
+        final editorStateHistory = ref
+            .read(videoEditorProvider)
+            .editorStateHistory;
+        if (editorStateHistory.isNotEmpty) {
+          await preloadEditorTextFonts(
+            fontFamilies: textFontFamiliesInHistory(editorStateHistory),
+          );
+        }
       }
 
       if (mounted) {
@@ -769,8 +775,15 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     );
   }
 
-  /// Opens the full-screen voice-over recorder and appends the recorded takes
-  /// to the editor timeline.
+  /// Opens the voice-over recorder over the editor and appends the recorded
+  /// takes to the editor timeline.
+  ///
+  /// The recorder is a translucent route: the preview keeps playing beneath
+  /// it — muted, with the timeline stepped aside — so a take can be timed
+  /// against the picture. The recorder drives playback itself from the
+  /// [VideoEditorMainBloc] handed to it; here the editor is only paused up
+  /// front and, once the recorder closes, restarted from the beginning so the
+  /// new takes play back in place.
   ///
   /// Takes are laid back-to-back: the first starts at the beginning and each
   /// subsequent take starts where the previous one ended, clamped to
@@ -789,26 +802,26 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       voiceOverIdPrefix: VoiceOverCubit.voiceOverIdPrefix,
     );
 
-    // Pause editor playback so the preview's audio isn't captured into the
-    // voice-over while the recorder is open.
-    mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: true));
+    // Opening the sub-editor mutes the preview and clears the editor's own
+    // chrome from under the recorder; the pause holds it still until the
+    // first take starts.
+    mainBloc
+      ..add(const VideoEditorMainOpenSubEditor(.voiceOver))
+      ..add(const VideoEditorExternalPauseRequested(isPaused: true));
     final takes = await Navigator.of(context).push<List<AudioEvent>>(
       PageRouteBuilder<List<AudioEvent>>(
         settings: const RouteSettings(name: 'voice_over_recorder'),
-        pageBuilder: (_, _, _) => VoiceOverRecorderScreen(
-          availableDuration: availableDuration,
-          priorTakeCount: priorTakeCount,
+        opaque: false,
+        pageBuilder: (_, _, _) => BlocProvider.value(
+          value: mainBloc,
+          child: VoiceOverRecorderScreen(
+            availableDuration: availableDuration,
+            priorTakeCount: priorTakeCount,
+            playTime: _playTimeNotifier,
+          ),
         ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Classic Material "fade upwards": slides up slightly while fading in.
-          return const FadeUpwardsPageTransitionsBuilder().buildTransitions(
-            null,
-            context,
-            animation,
-            secondaryAnimation,
-            child,
-          );
-        },
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
     );
     // Committed (Done) takes whose files never reach the timeline belong to no
@@ -819,7 +832,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       await deleteVoiceOverTakeFiles(takes);
       return;
     }
-    mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));
+    // The recorder left the preview wherever its last take stopped.
+    mainBloc
+      ..add(const VideoEditorMainSubEditorClosed())
+      ..add(const VideoEditorSeekRequested(Duration.zero))
+      ..add(const VideoEditorExternalPauseRequested(isPaused: false));
     if (takes == null || takes.isEmpty) return;
 
     // The recorder's per-take duration is derived from amplitude-sample counts

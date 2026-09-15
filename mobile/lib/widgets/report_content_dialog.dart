@@ -197,17 +197,9 @@ class ReportContentDialog extends ConsumerWidget {
       create: (_) => ReportSubmissionCubit(
         // Account-scoped dependencies are resolved late rather than watched
         // here. The primary report service is read per submit so account
-        // switches and Nostr client rebuilds use the current signer; the
-        // moderation DM's transport is read inside the cubit's dispatch, where
-        // a throw stays a DM-only failure instead of breaking the sheet.
+        // switches use the current account's durable reporting queue.
         resolveContentReportingService: () =>
             ref.read(contentReportingServiceProvider.future),
-        resolveModerationDmTransport: () => (
-          repository: ref.read(dmRepositoryProvider),
-          pubkey: ref
-              .read(moderationLabelServiceProvider)
-              .divineModerationPubkeyHex,
-        ),
         target: _target,
       ),
       child: _ReportContentView(
@@ -350,7 +342,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
             controller: _scrollController,
             padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
             child: submitted
-                ? const _ConfirmationBody()
+                ? const ReportConfirmationBody()
                 : _ReportFormBody(
                     selectedReason: _selectedReason,
                     onReasonSelected: _onReasonSelected,
@@ -447,9 +439,6 @@ class _ReportContentViewState extends State<_ReportContentView> {
     final status = cubit.state.status;
     setState(() {
       _errorMessage = switch (status) {
-        // Nothing left the device, so the confirmation would be false in four
-        // places at once. Surface the failure and leave Submit live.
-        ReportSubmissionStatus.notSent => l10n.reportNotSent,
         ReportSubmissionStatus.failure => l10n.reportFailed,
         _ => null,
       };
@@ -473,20 +462,6 @@ class _ReportContentViewState extends State<_ReportContentView> {
     _detailsFocusNode.dispose();
     _fallbackScrollController.dispose();
     super.dispose();
-  }
-}
-
-/// The post-submit confirmation, carrying the caveat when the moderation team
-/// could not be reached directly.
-class _ConfirmationBody extends StatelessWidget {
-  const _ConfirmationBody();
-
-  @override
-  Widget build(BuildContext context) {
-    final moderationDmFailed = context.select(
-      (ReportSubmissionCubit cubit) => cubit.state.moderationDmFailed,
-    );
-    return ReportConfirmationBody(moderationDmFailed: moderationDmFailed);
   }
 }
 

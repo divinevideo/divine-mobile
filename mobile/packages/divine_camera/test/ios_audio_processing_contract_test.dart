@@ -1,38 +1,9 @@
 // ABOUTME: Static guards for the iOS unprocessed-audio capture contract.
 // ABOUTME: Pins the Music mode audio-session mode mapping (#7796).
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-String _readNativeSource(String fileName) {
-  final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-/// Returns the Swift declaration starting at [signature] up to its closing
-/// brace, so an assertion cannot match an identical line elsewhere in the
-/// file, nor a line that sits outside the scope being asserted on.
-String _declarationAt(String source, String signature) {
-  final start = source.indexOf(signature);
-  if (start < 0) {
-    throw StateError('No declaration starting with "$signature".');
-  }
-
-  var depth = 0;
-  for (var i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] == '{') depth++;
-    if (source[i] == '}') {
-      depth--;
-      if (depth == 0) return source.substring(start, i + 1);
-    }
-  }
-  throw StateError('Unbalanced braces after "$signature".');
-}
+import 'helpers/native_source.dart';
 
 void main() {
   group('iOS unprocessed audio contract', () {
@@ -42,13 +13,13 @@ void main() {
     late final String attachAudioToSession;
 
     setUpAll(() {
-      controllerSource = _readNativeSource('CameraController.swift');
-      pluginSource = _readNativeSource('DivineCameraPlugin.swift');
-      configureAudioSession = _declarationAt(
+      controllerSource = readIosNativeSource('CameraController.swift');
+      pluginSource = readIosNativeSource('DivineCameraPlugin.swift');
+      configureAudioSession = declarationAt(
         controllerSource,
         'private func configureAudioSessionForRecording(',
       );
-      attachAudioToSession = _declarationAt(
+      attachAudioToSession = declarationAt(
         controllerSource,
         'private func attachAudioToSessionIfNeeded(',
       );
