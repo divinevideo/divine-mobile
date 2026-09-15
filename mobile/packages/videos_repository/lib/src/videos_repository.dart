@@ -821,7 +821,6 @@ class VideosRepository {
         return _recentVideosResult(
           hydrated,
           limit: limit,
-          until: until,
           serverHasMore: page.serverHasMore,
           paginationCursor: page.nextCursor,
           cacheResult: until == null && cursor == null,
@@ -850,7 +849,6 @@ class VideosRepository {
     return _recentVideosResult(
       hydrated,
       limit: limit,
-      until: until,
       serverHasMore: page.nextBefore != null,
       paginationCursor: page.nextBefore == null
           ? null
@@ -869,7 +867,6 @@ class VideosRepository {
   HomeFeedResult _recentVideosResult(
     List<VideoEvent> videos, {
     required int limit,
-    required int? until,
     bool? serverHasMore,
     String? paginationCursor,
     bool cacheResult = false,
