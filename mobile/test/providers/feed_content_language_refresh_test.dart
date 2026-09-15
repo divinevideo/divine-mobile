@@ -133,7 +133,7 @@ void main() {
         hasLength(2),
         reason: 'the language change must trigger a second request',
       );
-      expect(requestedLanguages.last?.first, 'es');
+      expect(requestedLanguages.last?.first, equals('es'));
     });
 
     test('for you refetches with the newly chosen language', () async {
@@ -190,7 +190,7 @@ void main() {
         hasLength(2),
         reason: 'the language change must trigger a second request',
       );
-      expect(requestedLanguages.last?.first, 'es');
+      expect(requestedLanguages.last?.first, equals('es'));
     });
   });
 }

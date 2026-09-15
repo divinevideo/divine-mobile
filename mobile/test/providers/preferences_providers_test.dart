@@ -49,28 +49,28 @@ void main() {
         (_, next) => versions.add(next),
       );
 
-      expect(container.read(languagePreferenceVersionProvider), 0);
-      expect(service.addListenerCalls, 1);
+      expect(container.read(languagePreferenceVersionProvider), equals(0));
+      expect(service.addListenerCalls, equals(1));
 
       await service.setContentLanguage('es');
       await pumpEventQueue();
-      expect(container.read(languagePreferenceVersionProvider), 1);
+      expect(container.read(languagePreferenceVersionProvider), equals(1));
 
       // The service notifies on every call, including a repeat of the same
       // language, and the provider turns each notification into a new version.
       await service.setContentLanguage('es');
       await pumpEventQueue();
-      expect(container.read(languagePreferenceVersionProvider), 2);
-      expect(versions, [1, 2]);
+      expect(container.read(languagePreferenceVersionProvider), equals(2));
+      expect(versions, equals([1, 2]));
       expect(
         service.addListenerCalls,
-        1,
+        equals(1),
         reason: 'a notification must not rebuild the provider subscription',
       );
 
       // Kept alive: its subscription is released when the container closes.
       container.dispose();
-      expect(service.removeListenerCalls, 1);
+      expect(service.removeListenerCalls, equals(1));
     });
   });
 }
