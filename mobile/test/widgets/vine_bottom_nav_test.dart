@@ -10,6 +10,7 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
+import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 
@@ -108,8 +109,9 @@ void main() {
 
     Future<void> pumpSubjectWithRouter(
       WidgetTester tester,
-      MockGoRouter router,
-    ) async {
+      MockGoRouter router, {
+      bool isCampaignLanding = false,
+    }) async {
       await tester.pumpWidget(
         withBadgeProviders(
           testProviderScope(
@@ -119,7 +121,12 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: MockGoRouterProvider(
                 goRouter: router,
-                child: const Scaffold(body: VineBottomNav(currentIndex: 0)),
+                child: Scaffold(
+                  body: VineBottomNav(
+                    currentIndex: 0,
+                    isCampaignLanding: isCampaignLanding,
+                  ),
+                ),
               ),
             ),
           ),
@@ -424,5 +431,23 @@ void main() {
         },
       );
     });
+
+    testWidgets(
+      'tapping Home on the campaign landing navigates to the home feed '
+      'instead of refreshing in place',
+      (tester) async {
+        final router = MockGoRouter();
+        await pumpSubjectWithRouter(tester, router, isCampaignLanding: true);
+
+        await tester.tap(find.bySemanticsIdentifier('home_tab'));
+        await tester.pump();
+
+        // The landing's Home tab reads as active, so the retap-refresh path
+        // would otherwise fire and leave the user stranded on the campaign
+        // screen with no way back to the home feed.
+        verify(() => router.go(VideoFeedPage.pathForIndex(0))).called(1);
+        expect(retapCubit.state.isRefreshing, isFalse);
+      },
+    );
   });
 }

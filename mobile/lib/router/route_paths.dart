@@ -32,6 +32,14 @@ abstract final class RoutePaths {
   static const explore = '/explore';
   static const followersBase = '/followers';
   static const followingBase = '/following';
+
+  /// Subject segment of [followingNew].
+  ///
+  /// The route parses as a `RouteType.following` context whose subject is
+  /// this literal, so callers that must recognize the campaign landing
+  /// compare against this instead of a bare string.
+  static const followingNewSubject = 'new';
+  static const followingNew = '$followingBase/$followingNewSubject';
   static const generalSettings = '/general-settings';
   static const hashtagBase = '/hashtag';
   static const inbox = '/inbox';

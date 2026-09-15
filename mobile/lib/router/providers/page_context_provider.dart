@@ -129,6 +129,20 @@ class RouteContext {
   );
 }
 
+/// Whether this context is the campaign landing route ([RoutePaths.followingNew]).
+///
+/// The route is registered as an exact shell route (ahead of
+/// `/following/:pubkey`) and parses as a [RouteType.following] context whose
+/// subject is the literal [RoutePaths.followingNewSubject]. Distinguishing it
+/// from a following *people list* matters where the two need different
+/// navigation: the campaign landing renders the home branch's Following feed
+/// with no owning tab, so back and the bottom-nav Home tap both target the
+/// normal home feed instead of a people-list push.
+extension CampaignFollowingRouteContext on RouteContext {
+  bool get isCampaignFollowing =>
+      type == RouteType.following && npub == RoutePaths.followingNewSubject;
+}
+
 /// Decodes a URL path segment, returning the raw input on malformed
 /// percent-encoding instead of throwing. See #3413.
 ///
