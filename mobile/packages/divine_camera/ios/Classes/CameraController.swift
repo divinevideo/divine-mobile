@@ -3106,6 +3106,9 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         let rawPTS = timing.presentationTimeStamp
         let convertedPTS = CMSyncConvertTime(rawPTS, from: audioClock, to: videoClock)
+        guard convertedPTS.isNumeric else {
+            return sampleBuffer
+        }
         if audioClockOffset == nil {
             audioClockOffset = convertedPTS - rawPTS
         }

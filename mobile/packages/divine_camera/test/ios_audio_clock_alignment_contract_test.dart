@@ -101,6 +101,16 @@ void main() {
       );
     });
 
+    test('rejects a converted timestamp the sync call could not produce', () {
+      // CMSyncConvertTime can return a non-numeric CMTime; appending that to
+      // the writer would fail the whole asset-writer session rather than
+      // just this buffer, which is worse than the pre-fix misalignment.
+      final convert = retime.indexOf('let convertedPTS = CMSyncConvertTime(');
+      final guardLine = retime.indexOf('guard convertedPTS.isNumeric else {');
+      expect(convert, greaterThan(-1));
+      expect(guardLine, greaterThan(convert));
+    });
+
     test('reports the measured clock offset per recording', () {
       // Whether a device is affected at all is a property of its clocks, not
       // of the code, so the breadcrumb has to carry the offset the fix
